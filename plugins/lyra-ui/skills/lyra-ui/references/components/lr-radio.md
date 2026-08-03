@@ -2,7 +2,7 @@
 
 # `lr-radio`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-radio.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRadio`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -56,7 +56,9 @@ internal control's native `focus` and `blur` are re-dispatched as bubbling, comp
 each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
-**Slots:** default label content.
+**Slots:** default label content. Flattened forwarding-slot assignment and later mutations keep the
+visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain it. A host
+`aria-label` wins on the internal radio by presence, including `aria-label=""`.
 
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,

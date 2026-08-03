@@ -6,6 +6,11 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './thinking-panel.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_open, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ThinkingPanelMode = 'live' | 'post-hoc';
 
@@ -123,6 +128,21 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  * @since 4.0.0
  */
 export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    open: LYRA_DEFAULT_open,
+    thinking: LYRA_DEFAULT_thinking,
+    thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
+    thoughtFor: LYRA_DEFAULT_thoughtFor,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Header text. Localized (`thinkingPanelLabel`) when left at its default
@@ -147,7 +167,10 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private readonly bodyId = nextId('thinking-panel-body');
 
   private contentObserver?: MutationObserver;
+  private contentObserverDocument?: Document;
   private scrollRafId?: number;
+  private scrollRafOwner?: Window;
+  private realmGeneration = 0;
 
   // Whether the body was left within NEAR_BOTTOM_PX of its own max scroll
   // position the last time a real (user-driven) scroll was recorded -- see
@@ -162,18 +185,54 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     // [part="body"] wrapper -- the slotted reasoning content actually lives
     // here, as this element's children. See the class doc for why this
     // (rather than `slotchange`) is what detects streamed-in content.
-    this.contentObserver = new MutationObserver(this.onContentMutated);
-    this.contentObserver.observe(this, { childList: true, subtree: true, characterData: true });
+    this.armContentObserver();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetOwnerRealmWork();
+  }
+
+  adoptedCallback(): void {
+    // Do not re-arm while detached. The next connectedCallback binds all work to the new owner.
+    this.resetOwnerRealmWork();
+  }
+
+  private armContentObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.contentObserver && this.contentObserverDocument === ownerDocument) return;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
-    if (this.scrollRafId !== undefined) {
-      cancelAnimationFrame(this.scrollRafId);
-      this.scrollRafId = undefined;
-    }
+    this.contentObserverDocument = undefined;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.realmGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.contentObserver !== observer ||
+        this.contentObserverDocument !== ownerDocument ||
+        this.realmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onContentMutated();
+    });
+    this.contentObserver = observer;
+    this.contentObserverDocument = ownerDocument;
+    observer.observe(this, { childList: true, subtree: true, characterData: true });
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.realmGeneration += 1;
+    this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+    this.contentObserverDocument = undefined;
+    if (this.scrollRafId !== undefined) this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
+    this.scrollRafId = undefined;
+    this.scrollRafOwner = undefined;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -211,8 +270,22 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     // succession, each individually cheap to react to but wasteful (and
     // visually janky) to lay out for separately.
     if (this.scrollRafId !== undefined) return;
-    this.scrollRafId = requestAnimationFrame(() => {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.realmGeneration;
+    const handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.scrollRafId !== handle ||
+        this.scrollRafOwner !== ownerWindow ||
+        this.realmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.scrollRafId = undefined;
+      this.scrollRafOwner = undefined;
       // Re-check the same guard here, not just in the caller: mode/expanded/
       // stickToBottom can all change in the ~1-frame window between this
       // mutation being observed and this callback actually firing (e.g. the
@@ -220,6 +293,8 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
       // reflects state as of the moment the scroll would actually happen.
       if (this.mode === 'live' && this.expanded && this.stickToBottom) this.scrollToBottom();
     });
+    this.scrollRafId = handle;
+    this.scrollRafOwner = ownerWindow;
   };
 
   private toggle = (): void => {

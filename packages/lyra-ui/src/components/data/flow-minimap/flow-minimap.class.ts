@@ -4,8 +4,17 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-minimap.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The subset of `LyraFlowCanvas`'s public surface this companion drives — a structural type so
  *  this module never imports `LyraFlowCanvas` as a value (only its types, elsewhere), keeping
@@ -23,7 +32,9 @@ interface FlowCanvasLike extends HTMLElement {
  * a draggable viewport rectangle, for orientation and fast navigation on canvases larger than the
  * screen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never
  * reads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so
- * the two can never disagree.
+ * the two can never disagree. The initial companion snapshot is silent; interaction-requested
+ * viewport changes append to the document's shared light-DOM polite sink, including identical
+ * repeats, while `[part="live-region"]` remains an aria-hidden mirror.
  *
  * @customElement lr-flow-minimap
  * @csspart base - The root wrapper.
@@ -31,7 +42,8 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart node - One rect per node.
  * @csspart viewport - The draggable, focusable view rectangle.
  * @csspart instructions - Visually hidden keyboard instructions for the viewport.
- * @csspart live-region - Visually hidden viewport-change announcements.
+ * @csspart live-region - An aria-hidden shadow mirror of viewport-change announcements; the actual
+ *   announcements use the shared light-DOM polite sink.
  * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
  * @cssprop [--lr-flow-minimap-node-color=var(--lr-color-border-strong)] - Fill of nodes without
@@ -45,6 +57,20 @@ interface FlowCanvasLike extends HTMLElement {
  * @since 4.0.0
  */
 export class LyraFlowMinimap extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    flowMinimapInstructions: LYRA_DEFAULT_flowMinimapInstructions,
+    flowMinimapLabel: LYRA_DEFAULT_flowMinimapLabel,
+    flowMinimapViewport: LYRA_DEFAULT_flowMinimapViewport,
+    flowMinimapViewportChanged: LYRA_DEFAULT_flowMinimapViewportChanged,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Id of the target `lr-flow-canvas`. When empty, the nearest ancestor is used (the
@@ -55,9 +81,12 @@ export class LyraFlowMinimap extends LyraElement {
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
   @state() private liveText = '';
+  private announcementSink?: AnnouncementSink;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private dragState?: { pointerId: number; startClientX: number; startClientY: number; startViewport: { x: number; y: number; zoom: number } };
+  /** Window that owns the active viewport drag's global pointer listeners. */
+  private dragEventWindow?: Window;
   /** Set once an in-progress viewport drag actually moves. A completed pointer drag makes the
    *  browser synthesize a `click` on the captured element afterward, which bubbles up into the
    *  map's own `@click` (click-to-center) handler -- without this, releasing the viewport rect
@@ -71,24 +100,43 @@ export class LyraFlowMinimap extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncAnnouncementSink();
     this.watchForCanvas();
     this.resolveAndAttach();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseAnnouncementSink();
+    this.announceNextSnapshot = false;
+    this.liveText = '';
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.canvasEl = undefined;
     this.canvasWatcher?.disconnect();
     this.canvasWatcher = undefined;
-    // If the element is removed mid-drag, nothing else ever detaches the window-level drag
+    // If the element is removed mid-drag, nothing else ever detaches the owner-window drag
     // listeners, so they are removed unconditionally here.
     this.dragState = undefined;
-    window.removeEventListener('pointermove', this.onViewportPointerMove);
-    window.removeEventListener('pointerup', this.onViewportPointerUp);
-    window.removeEventListener('pointercancel', this.onViewportPointerUp);
-    window.removeEventListener('lostpointercapture', this.onViewportPointerUp);
+    this.detachViewportDragListeners();
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`
@@ -129,11 +177,13 @@ export class LyraFlowMinimap extends LyraElement {
           style: 'percent',
           maximumFractionDigits: 1,
         });
-        this.liveText = this.localize('flowMinimapViewportChanged', undefined, {
+        const text = this.localize('flowMinimapViewportChanged', undefined, {
           x: number.format(snapshot.viewport.x),
           y: number.format(snapshot.viewport.y),
           zoom: percent.format(snapshot.viewport.zoom),
         });
+        this.liveText = text;
+        this.announcementSink?.announce(text);
       }
     });
   }
@@ -141,8 +191,22 @@ export class LyraFlowMinimap extends LyraElement {
   private watchForCanvas(): void {
     if (this.canvasWatcher) return;
     const root = this.getRootNode() as Document | ShadowRoot;
-    this.canvasWatcher = new MutationObserver(() => this.resolveAndAttach());
-    this.canvasWatcher.observe(root, { childList: true, subtree: true });
+    const owner = this.ownerDocument.defaultView;
+    const MutationObserverCtor = owner?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    let observer: MutationObserver | undefined;
+    observer = new MutationObserverCtor(() => {
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner ||
+        this.canvasWatcher !== observer
+      ) {
+        return;
+      }
+      this.resolveAndAttach();
+    });
+    this.canvasWatcher = observer;
+    observer.observe(root, { childList: true, subtree: true });
   }
 
   private contentBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
@@ -196,17 +260,20 @@ export class LyraFlowMinimap extends LyraElement {
   };
 
   private onViewportPointerDown = (e: PointerEvent): void => {
-    if (!this.canvasEl || !this.snapshot) return;
+    const dragEventWindow = this.ownerDocument.defaultView;
+    if (!this.canvasEl || !this.snapshot || !dragEventWindow) return;
     e.stopPropagation();
+    this.detachViewportDragListeners();
     this.dragState = { pointerId: e.pointerId, startClientX: e.clientX, startClientY: e.clientY, startViewport: { ...this.snapshot.viewport } };
     (e.target as SVGElement).setPointerCapture?.(e.pointerId);
-    window.addEventListener('pointermove', this.onViewportPointerMove);
-    window.addEventListener('pointerup', this.onViewportPointerUp);
+    this.dragEventWindow = dragEventWindow;
+    dragEventWindow.addEventListener('pointermove', this.onViewportPointerMove);
+    dragEventWindow.addEventListener('pointerup', this.onViewportPointerUp);
     // A touch scroll takeover can fire `pointercancel` (never `pointerup`), and losing capture
     // (e.g. element removed) fires `lostpointercapture` -- both need the same teardown as
     // pointerup or the drag listeners outlive the gesture.
-    window.addEventListener('pointercancel', this.onViewportPointerUp);
-    window.addEventListener('lostpointercapture', this.onViewportPointerUp);
+    dragEventWindow.addEventListener('pointercancel', this.onViewportPointerUp);
+    dragEventWindow.addEventListener('lostpointercapture', this.onViewportPointerUp);
   };
 
   private onViewportPointerMove = (e: PointerEvent): void => {
@@ -229,11 +296,18 @@ export class LyraFlowMinimap extends LyraElement {
   private onViewportPointerUp = (e: PointerEvent): void => {
     if (!this.dragState || e.pointerId !== this.dragState.pointerId) return;
     this.dragState = undefined;
-    window.removeEventListener('pointermove', this.onViewportPointerMove);
-    window.removeEventListener('pointerup', this.onViewportPointerUp);
-    window.removeEventListener('pointercancel', this.onViewportPointerUp);
-    window.removeEventListener('lostpointercapture', this.onViewportPointerUp);
+    this.detachViewportDragListeners();
   };
+
+  private detachViewportDragListeners(): void {
+    const dragEventWindow = this.dragEventWindow;
+    if (!dragEventWindow) return;
+    dragEventWindow.removeEventListener('pointermove', this.onViewportPointerMove);
+    dragEventWindow.removeEventListener('pointerup', this.onViewportPointerUp);
+    dragEventWindow.removeEventListener('pointercancel', this.onViewportPointerUp);
+    dragEventWindow.removeEventListener('lostpointercapture', this.onViewportPointerUp);
+    this.dragEventWindow = undefined;
+  }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
     if (!this.canvasEl || !this.snapshot) return;
@@ -324,7 +398,7 @@ export class LyraFlowMinimap extends LyraElement {
       <div part="instructions" class="sr-only" id=${this.instructionsId}>
         ${this.localize('flowMinimapInstructions')}
       </div>
-      <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      <div part="live-region" class="sr-only" aria-hidden="true">
         ${this.liveText}
       </div>
     </div>`;

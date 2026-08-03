@@ -1,7 +1,10 @@
 /**
- * Optional integrations are loaded dynamically at runtime. Keeping their
- * implementation types opaque in emitted declarations lets consumers use the
- * core package without installing every optional peer first; applications
- * that install a peer can narrow the returned value to that peer's own types.
+ * Unknown value crossing an optional-peer module boundary.
+ *
+ * Keep the shared boundary honest: a loader must validate or narrow the
+ * capability it consumes instead of turning every optional package into
+ * `any`. Public component APIs expose owned structural interfaces rather than
+ * this type, so importing Lyra's root declarations never requires every
+ * optional peer package to be installed.
  */
-export type OptionalPeerApi = any;
+export type OptionalPeerApi = unknown;

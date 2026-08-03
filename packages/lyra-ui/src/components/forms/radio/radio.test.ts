@@ -5,6 +5,38 @@ import './radio-group.js';
 import type { LyraRadio } from './radio.js';
 import type { LyraRadioGroup } from './radio-group.js';
 
+it('applies group required and disabled states when server rendering provides no light-DOM query API', () => {
+  const group = document.createElement('lr-radio-group') as LyraRadioGroup;
+  let requiredError = '';
+  let disabledError = '';
+  let wasMissing = false;
+  let wasBarred = false;
+
+  Object.defineProperty(group, 'querySelectorAll', { configurable: true, value: undefined });
+  try {
+    try {
+      group.required = true;
+    } catch (error) {
+      requiredError = error instanceof Error ? error.message : String(error);
+    }
+    wasMissing = group.validity.valueMissing;
+
+    try {
+      group.disabled = true;
+    } catch (error) {
+      disabledError = error instanceof Error ? error.message : String(error);
+    }
+    wasBarred = !group.validity.valueMissing;
+  } finally {
+    delete (group as unknown as { querySelectorAll?: ParentNode['querySelectorAll'] }).querySelectorAll;
+  }
+
+  expect(requiredError, 'the required setter must not require browser light-DOM traversal').to.equal('');
+  expect(disabledError, 'the disabled setter must not require browser light-DOM traversal').to.equal('');
+  expect(wasMissing, 'required still computes the empty-group violation').to.be.true;
+  expect(wasBarred, 'disabled still bars the required violation').to.be.true;
+});
+
 it('emits one cancelable group-owned lr-invalid alias when its aggregate validity fails a check', async () => {
   const group = (await fixture(html`
     <lr-radio-group required label="Choice">
@@ -47,6 +79,104 @@ it('cancels the native invalid event when the group-owned lr-invalid alias is ca
   expect(natives[0].defaultPrevented).to.be.true;
 });
 
+it('recreates the group membership observer in the adopted owner realm and ignores its stale callback', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group><lr-radio value="a">A</lr-radio></lr-radio-group>
+  `)) as LyraRadioGroup;
+  await group.updateComplete;
+  group.remove();
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let groupCallback: MutationCallback | undefined;
+  let groupObservations = 0;
+  let groupDisconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private readonly callback: MutationCallback;
+    private observesGroup = false;
+    constructor(callback: MutationCallback) { this.callback = callback; }
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target !== group || !options?.attributeFilter?.includes('checked')) return;
+      this.observesGroup = true;
+      groupObservations += 1;
+      groupCallback = this.callback;
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesGroup) groupDisconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.adoptNode(group);
+    expect(groupObservations, 'detached adoption must not arm an observer').to.equal(0);
+    frameDocument.body.append(group);
+    await group.updateComplete;
+    expect(groupObservations, 'the destination window observes group membership').to.equal(1);
+    expect(groupCallback).to.be.a('function');
+    const staleCallback = groupCallback!;
+
+    document.adoptNode(group);
+    document.body.append(group);
+    await group.updateComplete;
+    await Promise.resolve();
+    expect(groupDisconnects, 'adoption disconnects the destination observer').to.equal(1);
+
+    const internals = group as unknown as { syncRadios(): void };
+    const syncRadios = internals.syncRadios.bind(group);
+    let staleSyncs = 0;
+    internals.syncRadios = () => {
+      staleSyncs += 1;
+      syncRadios();
+    };
+    staleCallback([], {} as MutationObserver);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(staleSyncs, 'a callback retained by the old realm is inert after reconnect').to.equal(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (group.ownerDocument !== document) document.adoptNode(group);
+    group.remove();
+    frame.remove();
+  }
+});
+
+it('accepts an owned radio-shaped invalid target from another realm without instanceof', async () => {
+  const group = (await fixture(html`<lr-radio-group></lr-radio-group>`)) as LyraRadioGroup;
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const foreignRadio = frameDocument.createElement('lr-radio');
+  const internals = group as unknown as {
+    ownsRadio(target: Element): boolean;
+    onInvalid(event: Event): void;
+  };
+  const ownsRadio = internals.ownsRadio.bind(group);
+  internals.ownsRadio = (target) => target === foreignRadio;
+  const invalid = new frameWindow.Event('invalid', { cancelable: true });
+  Object.defineProperty(invalid, 'target', { configurable: true, value: foreignRadio });
+  let aliases = 0;
+  group.addEventListener('lr-invalid', () => { aliases += 1; });
+
+  try {
+    internals.onInvalid(invalid);
+    expect(aliases).to.equal(1);
+  } finally {
+    internals.ownsRadio = ownsRadio;
+    frame.remove();
+  }
+});
+
 it('renders radio semantics and explicit false states', async () => {
   const el = (await fixture(html`<lr-radio>One</lr-radio>`)) as LyraRadio;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -55,6 +185,17 @@ it('renders radio semantics and explicit false states', async () => {
   expect(base.getAttribute('aria-disabled')).to.equal('false');
   expect(base.getAttribute('aria-required')).to.equal('false');
   await expect(el).to.be.accessible();
+});
+
+it('preserves an explicitly empty host aria-label on both internal radio appearances', async () => {
+  for (const appearance of ['default', 'button'] as const) {
+    const el = (await fixture(html`
+      <lr-radio aria-label="" appearance=${appearance}>Visible label</lr-radio>
+    `)) as LyraRadio;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    expect(base.hasAttribute('aria-label'), appearance).to.be.true;
+    expect(base.getAttribute('aria-label'), appearance).to.equal('');
+  }
 });
 
 it('accepts appearance="button" on lr-radio and exports both WA and Shoelace parts', async () => {
@@ -80,6 +221,130 @@ it('exports control/checked-icon aliases in the default radio appearance', async
     'circle', 'control', 'control--checked',
   ]);
   expect(icon.getAttribute('part')!.split(/\s+/)).to.include.members(['dot', 'checked-icon']);
+});
+
+it('updates label presence when a direct slotted descendant mutates in place', async () => {
+  const el = (await fixture(html`<lr-radio></lr-radio>`)) as LyraRadio;
+  const assigned = el.ownerDocument.createTextNode(' ');
+  el.append(assigned);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hidden).to.be.true;
+
+  assigned.data = 'Direct radio label';
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(label.hidden).to.be.false;
+});
+
+it('tracks visual label presence through a forwarding slot without exposing its fallback', async () => {
+  const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const assigned = wrapper.ownerDocument.createTextNode(' ');
+  wrapper.append(assigned);
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <lr-radio aria-label="Explicit radio name">
+      <slot><span>Unrendered fallback</span></slot>
+    </lr-radio>
+  `;
+  const el = root.querySelector('lr-radio') as LyraRadio;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+  };
+
+  await settle();
+  expect(label.hidden, 'an empty assignment suppresses both itself and slot fallback').to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('Explicit radio name');
+
+  assigned.data = 'Forwarded radio label';
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  assigned.data = ' ';
+  await settle();
+  expect(label.hidden).to.be.true;
+
+  const visual = wrapper.ownerDocument.createElement('span');
+  visual.setAttribute('aria-label', 'Screen-reader override');
+  assigned.replaceWith(visual);
+  await settle();
+  expect(label.hidden, 'an element-only visual such as an icon keeps the wrapper').to.be.false;
+
+  visual.textContent = 'Decorative visual glyph';
+  visual.setAttribute('aria-hidden', ' TRUE ');
+  await settle();
+  expect(label.hidden, 'aria-hidden content can still be intentionally visual').to.be.false;
+
+  visual.removeAttribute('aria-hidden');
+  visual.style.display = 'none';
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  visual.style.removeProperty('display');
+  visual.hidden = true;
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  visual.hidden = false;
+  await settle();
+  expect(label.hidden).to.be.false;
+  expect(base.getAttribute('aria-label'), 'consumer host naming remains authoritative').to.equal(
+    'Explicit radio name',
+  );
+});
+
+it('constructs its label observer in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  let adoptedTarget: LyraRadio | undefined;
+  let labelHostObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if (
+        target === adoptedTarget &&
+        options?.childList &&
+        options.characterData &&
+        options.subtree
+      ) labelHostObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = (await fixture(html`<lr-radio><span>Parent label</span></lr-radio>`)) as LyraRadio;
+  adoptedTarget = el;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions).to.be.greaterThan(1);
+    expect(labelHostObservations).to.be.greaterThan(0);
+    expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden).to.be.false;
+  } finally {
+    el.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    } else {
+      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    }
+    frame.remove();
+  }
 });
 
 it('selects and emits the complete native and prefixed event pair exactly once', async () => {

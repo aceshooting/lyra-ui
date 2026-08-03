@@ -7,6 +7,11 @@ import {
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
 import { styles } from "./responsive-panel.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
@@ -132,6 +137,14 @@ export function resolveEffectiveMode(
  * @since 4.0.0
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in
@@ -176,6 +189,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private lastTrigger?: HTMLElement;
   private overlayHandle?: OverlayHandle;
   private headerObserver?: MutationObserver;
+  private headerObserverDocument?: Document;
+  private headerObserverGeneration = 0;
+  private ownerRealmGeneration = 0;
   /** Whether the overlay-only mechanics (scroll-lock and shared overlay registration) are currently
    *  engaged -- derived from `effectiveMode === 'overlay' && open`, tracked separately from those
    *  two properties so willUpdate can diff "was engaged" vs "should be engaged now" regardless of
@@ -294,11 +310,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       } else {
         this.activateOverlayChrome();
       }
-      queueMicrotask(() => this.overlayHandle?.focusInitial());
+      this.queueOwnerMicrotask(() => this.overlayHandle?.focusInitial());
     }
     if (this.hasUpdated) {
-      queueMicrotask(() => {
-        if (!this.isConnected) return;
+      this.queueOwnerMicrotask(() => {
         const slot = this.shadowRoot?.querySelector<HTMLSlotElement>(
           'slot[name="header"]'
         );
@@ -312,8 +327,35 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.mediaQuery?.removeEventListener("change", this.onMediaChange);
     this.mediaQuery = undefined;
     this.overlayHandle?.suspend();
-    this.headerObserver?.disconnect();
-    this.headerObserver = undefined;
+    this.resetOwnerRealmWork();
+  }
+
+  adoptedCallback(): void {
+    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
+    this.mediaQuery = undefined;
+    this.resetOwnerRealmWork();
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
+    this.resetHeaderObserver();
+  }
+
+  private queueOwnerMicrotask(callback: VoidFunction): void {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.ownerRealmGeneration;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      callback();
+    });
   }
 
   private activateOverlayChrome(): void {
@@ -347,6 +389,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private onMediaChange = (e: MediaQueryListEvent): void => {
+    if (!this.isConnected || e.currentTarget !== this.mediaQuery) return;
     this.handleBreakpointChange(e.matches);
   };
 
@@ -366,19 +409,40 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private syncHeaderSlot(assigned: Element[]): void {
     this.hasHeaderSlot = assigned.length > 0;
     this.headingText = this.detectHeadingText();
-    this.headerObserver?.disconnect();
-    this.headerObserver = undefined;
+    this.resetHeaderObserver();
     if (assigned.length === 0 || !this.isConnected) return;
-    this.headerObserver = new MutationObserver(() => {
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.headerObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.headerObserver !== observer ||
+        this.headerObserverDocument !== ownerDocument ||
+        this.headerObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.headingText = this.detectHeadingText();
     });
+    this.headerObserver = observer;
+    this.headerObserverDocument = ownerDocument;
     for (const element of assigned) {
-      this.headerObserver.observe(element, {
+      observer.observe(element, {
         childList: true,
         characterData: true,
         subtree: true,
       });
     }
+  }
+
+  private resetHeaderObserver(): void {
+    this.headerObserverGeneration += 1;
+    this.headerObserver?.disconnect();
+    this.headerObserver = undefined;
+    this.headerObserverDocument = undefined;
   }
 
   private onFooterSlotChange = (e: Event): void => {

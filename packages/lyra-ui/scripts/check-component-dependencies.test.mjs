@@ -11,7 +11,12 @@
 // tags named only in comments or in plain string literals, and suppressed cycle-bound pairs).
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
+  analyzeComponentDependencies,
+  collectSources,
   findMissingDependencies,
   htmlTemplateChunks,
   renderedTags,
@@ -35,6 +40,19 @@ function test(name, fn) {
 }
 
 const tagsOf = (source) => [...renderedTags(source)].sort();
+
+test('collectSources keys files relative to the supplied package, not the checker installation', () => {
+  const packageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-component-deps-'));
+  try {
+    const nested = path.join(packageRoot, 'src', 'components', 'x');
+    fs.mkdirSync(nested, { recursive: true });
+    fs.writeFileSync(path.join(nested, 'x.ts'), 'export const x = true;');
+    const files = collectSources(path.join(packageRoot, 'src'), new Map());
+    assert.deepEqual([...files.keys()], ['src/components/x/x.ts']);
+  } finally {
+    fs.rmSync(packageRoot, { recursive: true, force: true });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Template scanning
@@ -182,9 +200,50 @@ test('passes once the registration entry imports the dependency registration', (
   assert.deepEqual(findings, []);
 });
 
+test('emits deterministic direct and transitive component dependency metadata', () => {
+  const fixture = toolResultViewFixture({ entryImports: "import '../../utility/copy-button/copy-button.js';" });
+  fixture.components.push({
+    tag: 'lr-tool-timeline',
+    classModule: 'src/components/agent-tools/tool-timeline/tool-timeline.class.ts',
+    registrationModule: 'src/components/agent-tools/tool-timeline/tool-timeline.ts',
+  });
+  fixture.files.set(
+    'src/components/agent-tools/tool-timeline/tool-timeline.ts',
+    REGISTRATION('tool-timeline', "import '../tool-result-view/tool-result-view.js';"),
+  );
+  fixture.files.set('src/components/agent-tools/tool-timeline/tool-timeline.class.ts', 'export class Lyra {}');
+
+  const { findings, graph } = analyzeComponentDependencies(fixture);
+  assert.deepEqual(findings, []);
+  assert.deepEqual(graph.find((entry) => entry.tag === 'lr-tool-result-view')?.directComponents, ['lr-copy-button']);
+  assert.deepEqual(graph.find((entry) => entry.tag === 'lr-tool-result-view')?.transitiveComponents, []);
+  assert.deepEqual(graph.find((entry) => entry.tag === 'lr-tool-timeline')?.directComponents, ['lr-tool-result-view']);
+  assert.deepEqual(graph.find((entry) => entry.tag === 'lr-tool-timeline')?.transitiveComponents, ['lr-copy-button']);
+});
+
 test('a side-effect-free .class.js import in the entry does NOT satisfy the dependency', () => {
   const findings = findMissingDependencies(
     toolResultViewFixture({ entryImports: "import '../../utility/copy-button/copy-button.class.js';" }),
+  );
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /<lr-copy-button>/);
+});
+
+test('a type-only import of a registration entry does NOT register the dependency', () => {
+  const findings = findMissingDependencies(
+    toolResultViewFixture({
+      entryImports: "import type { LyraCopyButton } from '../../utility/copy-button/copy-button.js';",
+    }),
+  );
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /<lr-copy-button>/);
+});
+
+test('a type-only re-export of a registration entry does NOT register the dependency', () => {
+  const findings = findMissingDependencies(
+    toolResultViewFixture({
+      entryImports: "export type { LyraCopyButton } from '../../utility/copy-button/copy-button.js';",
+    }),
   );
   assert.equal(findings.length, 1);
   assert.match(findings[0], /<lr-copy-button>/);
@@ -214,6 +273,18 @@ test('lazy import() registration counts, as in phone-input -> lr-flag', () => {
     classImports: "const registration = import('../../utility/copy-button/copy-button.js');",
   });
   assert.deepEqual(findMissingDependencies(fixture), []);
+});
+
+test('an import expression shown only in a string or template example does NOT register a dependency', () => {
+  for (const example of [
+    `const docs = "import('../../utility/copy-button/copy-button.js')";`,
+    "const docs = `import('../../utility/copy-button/copy-button.js')`;",
+  ]) {
+    const fixture = toolResultViewFixture({ classImports: example });
+    const findings = findMissingDependencies(fixture);
+    assert.equal(findings.length, 1, example);
+    assert.match(findings[0], /<lr-copy-button>/);
+  }
 });
 
 test('an inherited render reaches the subclass entry, as in dropdown-item -> lr-menu', () => {

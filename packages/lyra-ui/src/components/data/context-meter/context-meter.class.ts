@@ -3,10 +3,16 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
 export type ContextMeterTone = LyraVariant;
@@ -41,7 +47,7 @@ const STROKE = 12;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function formatCount(n: number, locale: string): string {
-  return Math.round(finiteNumber(n, 0)).toLocaleString(locale);
+  return Math.round(finiteNumber(n, 0)).toLocaleString(resolveIntlLocale(locale));
 }
 
 /**
@@ -69,6 +75,20 @@ function formatCount(n: number, locale: string): string {
  * @since 4.0.0
  */
 export class LyraContextMeter extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    contextMeterLabeledSummary: LYRA_DEFAULT_contextMeterLabeledSummary,
+    contextMeterSegmentLabel: LYRA_DEFAULT_contextMeterSegmentLabel,
+    contextMeterUsed: LYRA_DEFAULT_contextMeterUsed,
+    contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */

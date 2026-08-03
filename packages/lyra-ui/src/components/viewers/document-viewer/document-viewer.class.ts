@@ -14,6 +14,12 @@ import {
 import type { AnchorResultDetail, LyraAnchor, LyraHighlight } from './anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { styles } from './document-viewer.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLabel, LYRA_DEFAULT_download, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type DocumentViewerCloseReason = DialogCloseReason;
 
@@ -37,13 +43,30 @@ export interface LyraDocumentViewerEventMap {
  *   produces `{ found: false }`; the `<lr-document-preview>` fallback reports its actual anchor
  *   result. An anchor-capable renderer reports its own jump result through its embedded
  *   `DocumentAnchorTarget` mixin, which composes up through this element unchanged.
- * @csspart body - Wrapper around the active renderer or fallback preview.
+ * @csspart body - Wrapper around the active renderer or fallback preview. It exposes explicit
+ *   `aria-busy`; visible loading/error text is ordinary content and transitions announce through
+ *   the shared document-level polite/assertive sinks.
  * @csspart download-link - The native download action shown when `src` is safe.
  * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
  * @status stable
  * @since 4.0.0
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewGenericError: LYRA_DEFAULT_documentPreviewGenericError,
+    documentViewerLabel: LYRA_DEFAULT_documentViewerLabel,
+    download: LYRA_DEFAULT_download,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the viewer is open. */
@@ -86,6 +109,21 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private generation = 0;
   private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
   @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
+  private readonly announcements = new ViewerAnnouncementController(this);
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.announcements.connect();
+  }
+
+  override disconnectedCallback(): void {
+    this.announcements.disconnect();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -109,6 +147,17 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     ) {
       void this.resolve();
     }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.announcements.transition(
+      'renderer',
+      this.renderState.kind,
+      this.renderState.kind === 'error'
+        ? this.localize('documentPreviewGenericError')
+        : this.localize('loadingDocument'),
+    );
   }
 
   private currentFile(): DocumentFile {
@@ -250,9 +299,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       case 'rendered':
         return this.renderState.template;
       case 'loading':
-        return html`<p role="status">${this.localize('loadingDocument')}</p>`;
+        return html`<p>${this.localize('loadingDocument')}</p>`;
       case 'error':
-        return html`<div role="alert">${this.localize('documentPreviewGenericError')}</div>`;
+        return html`<div>${this.localize('documentPreviewGenericError')}</div>`;
       case 'fallback':
       default:
         return html`

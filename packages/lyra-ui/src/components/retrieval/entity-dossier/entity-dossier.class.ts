@@ -25,6 +25,11 @@ import '../../layout/tab-group/tab-group.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The exact `lr-graph.nodeTypes` entry shape -- see `lr-entity-card`'s and
  *  `lr-provenance-panel`'s identical local aliases for why this isn't imported from `lr-graph`
@@ -116,6 +121,22 @@ export interface LyraEntityDossierEventMap
  * @since 4.1.0
  */
 export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    neighborListLabel: LYRA_DEFAULT_neighborListLabel,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state in place of the whole dossier. */

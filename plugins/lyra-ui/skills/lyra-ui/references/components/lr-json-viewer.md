@@ -2,7 +2,7 @@
 
 # `lr-json-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-json-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -70,6 +70,13 @@ present for row alignment on leaf/empty nodes),
 clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
 `copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
 budget truncates rendering or search — absent entirely for any document within budget)
+
+Active-match position changes are appended to Lyra's shared light-DOM polite announcement sink.
+The shadow tree keeps only an `aria-hidden` text mirror, so the same result is not announced twice;
+initial connection and reconnection—including a detached cursor update whose render settles during
+reattachment—do not replay the current cursor. Search navigation while the viewer or a composed
+ancestor is accessibility-hidden also stays silent. After cross-document adoption, smooth-scroll
+motion preferences and best-effort clipboard writes use the viewer's current owner window.
 
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),

@@ -41,6 +41,23 @@ it('derives the pageCount and totalPages aliases plus a localized item-range sum
   );
 });
 
+it('recognizes a pending focus target created in another realm as inside the host', async () => {
+  const el = await pagination();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const target = iframe.contentDocument!.createElement('button');
+    el.append(target);
+    expect(target instanceof Node, 'fixture really crosses constructor realms').to.equal(false);
+    const inside = (el as unknown as {
+      focusTargetIsInside(target: EventTarget): boolean;
+    }).focusTargetIsInside(target);
+    expect(inside).to.equal(true);
+  } finally {
+    iframe.remove();
+  }
+});
+
 it('publishes the disabled CSS custom state only for the public disabled property', async () => {
   const el = await pagination();
 

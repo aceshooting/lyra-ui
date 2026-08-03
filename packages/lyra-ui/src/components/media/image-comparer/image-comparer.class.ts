@@ -7,11 +7,17 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './image-comparer.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraImageComparerOrientation = 'horizontal' | 'vertical';
 
 export interface LyraImageComparerEventMap {
   'lr-position-change': CustomEvent<{ position: number }>;
+  'lr-change': CustomEvent<undefined>;
   change: Event;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
@@ -26,6 +32,7 @@ export interface LyraImageComparerEventMap {
  * @slot after - The after-state image or content.
  * @slot handle - Custom decorative content inside the draggable handle.
  * @event lr-position-change - Divider moved. `detail: { position }`, where position is 0–100.
+ * @event lr-change - Emitted when the range gesture commits.
  * @event {Event} change - Bubbling, composed native change event emitted when the range gesture
  *   commits a new position.
  * @event focus - Re-dispatched from the native range handle as a bubbling, composed event.
@@ -45,6 +52,16 @@ export interface LyraImageComparerEventMap {
  * @since 4.0.0
  */
 export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    imageComparerLabel: LYRA_DEFAULT_imageComparerLabel,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private readonly internals = attachInternalsSafely(this);
@@ -70,6 +87,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private onChange = (event: Event): void => {
     this.position = Number((event.currentTarget as HTMLInputElement).value);
     relayNativeEvent(this, event);
+    this.emit('lr-change');
   };
 
   private onPointerDown = (event: PointerEvent): void => {

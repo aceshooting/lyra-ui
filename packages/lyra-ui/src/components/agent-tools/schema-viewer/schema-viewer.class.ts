@@ -1,11 +1,17 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './schema-viewer.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_open, LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface JsonSchemaNode {
   $ref?: string;
@@ -74,6 +80,24 @@ const MAX_SCHEMA_DEPTH = 100;
  * @since 7.0.0
  */
 export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    items: LYRA_DEFAULT_items,
+    open: LYRA_DEFAULT_open,
+    schemaViewerCircular: LYRA_DEFAULT_schemaViewerCircular,
+    schemaViewerEmpty: LYRA_DEFAULT_schemaViewerEmpty,
+    schemaViewerIssueLimit: LYRA_DEFAULT_schemaViewerIssueLimit,
+    schemaViewerLabel: LYRA_DEFAULT_schemaViewerLabel,
+    schemaViewerLimit: LYRA_DEFAULT_schemaViewerLimit,
+    schemaViewerRequired: LYRA_DEFAULT_schemaViewerRequired,
+    schemaViewerType: LYRA_DEFAULT_schemaViewerType,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) schema: JsonSchemaNode | null = null;
@@ -82,6 +106,50 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
   @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
   @property() label = '';
+  private announcementSink?: AnnouncementSink;
+  private previousNodeLimitText = '';
+  private previousIssueLimitText = '';
+  private suppressNextLimitAnnouncement = true;
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.announcementSink?.release();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+    // A reconnected or adopted component first snapshots the limits already visible in its new
+    // context. They are resting content, not fresh transitions caused after that connection.
+    if (this.hasUpdated) {
+      this.suppressNextLimitAnnouncement = true;
+      this.requestUpdate();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    this.suppressNextLimitAnnouncement = true;
+  }
+
+  protected override updated(_changed: PropertyValues<this>): void {
+    const nodeText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
+    const issueText = this.renderRoot.querySelector('[part="issue-limit"]')?.textContent?.trim() ?? '';
+    if (!this.suppressNextLimitAnnouncement) {
+      if (nodeText && nodeText !== this.previousNodeLimitText) this.announcementSink?.announce(nodeText);
+      if (issueText && issueText !== this.previousIssueLimitText) this.announcementSink?.announce(issueText);
+    }
+    this.previousNodeLimitText = nodeText;
+    this.previousIssueLimitText = issueText;
+    this.suppressNextLimitAnnouncement = false;
+  }
 
   private pointerSegment(value: string): string {
     return value.replace(/~/g, '~0').replace(/\//g, '~1');
@@ -239,12 +307,12 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
           ${tree}
         </ul>
         ${budget.truncated
-          ? html`<p part="limit" role="status">${this.localize('schemaViewerLimit', undefined, {
+          ? html`<p part="limit">${this.localize('schemaViewerLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_NODES),
               })}</p>`
           : nothing}
         ${this.issues.length > MAX_RENDERED_SCHEMA_ISSUES
-          ? html`<p part="issue-limit" role="status">${this.localize('schemaViewerIssueLimit', undefined, {
+          ? html`<p part="issue-limit">${this.localize('schemaViewerIssueLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_ISSUES),
               })}</p>`
           : nothing}

@@ -9,6 +9,11 @@ import {
   type FormatDisplay,
   type RelativeTimeNumeric,
 } from './format-options.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_date } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type {
   FormatDisplay as RelativeTimeFormat,
@@ -37,6 +42,14 @@ const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
  * @since 4.0.0
  */
 export class LyraRelativeTime extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    date: LYRA_DEFAULT_date,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = new Date();
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';
@@ -44,12 +57,15 @@ export class LyraRelativeTime extends LyraElement {
   @property() numeric: RelativeTimeNumeric = 'auto';
   @property({ type: Boolean, attribute: 'sync' }) sync = false;
   private timer?: number;
+  private timerOwner?: Window;
+  private timerDocument?: Document;
+  private timerGeneration = 0;
   override connectedCallback(): void { super.connectedCallback(); this.schedule(); }
   override disconnectedCallback(): void {
-    if (this.timer !== undefined) window.clearTimeout(this.timer);
-    this.timer = undefined;
+    this.clearTimer();
     super.disconnectedCallback();
   }
+  adoptedCallback(): void { this.clearTimer(); }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
@@ -63,9 +79,11 @@ export class LyraRelativeTime extends LyraElement {
   }
 
   private schedule(): void {
-    if (this.timer !== undefined) window.clearTimeout(this.timer);
-    this.timer = undefined;
+    this.clearTimer();
     if (!this.sync || !this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
     const state = this.relativeState();
     if (!state) return;
 
@@ -86,11 +104,35 @@ export class LyraRelativeTime extends LyraElement {
     }
     const secondsUntilChange = Math.min(...candidates.filter((candidate) => candidate > 0));
     const delay = finiteDuration(secondsUntilChange * 1000, 1000, 20);
-    this.timer = window.setTimeout(() => {
+    const generation = this.timerGeneration;
+    const handle = ownerWindow.setTimeout(() => {
+      if (
+        this.timer !== handle ||
+        this.timerOwner !== ownerWindow ||
+        this.timerDocument !== ownerDocument ||
+        this.timerGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.timer = undefined;
+      this.timerOwner = undefined;
+      this.timerDocument = undefined;
       this.requestUpdate();
       this.schedule();
     }, delay);
+    this.timer = handle;
+    this.timerOwner = ownerWindow;
+    this.timerDocument = ownerDocument;
+  }
+
+  private clearTimer(): void {
+    this.timerGeneration += 1;
+    if (this.timer !== undefined) this.timerOwner?.clearTimeout(this.timer);
+    this.timer = undefined;
+    this.timerOwner = undefined;
+    this.timerDocument = undefined;
   }
 
   private relativeState(): {

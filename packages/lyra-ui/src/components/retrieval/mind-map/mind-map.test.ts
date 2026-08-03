@@ -2,6 +2,15 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
 import { styles } from './mind-map.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(): string[] {
+  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+}
 
 const topics: LyraTopic[] = [
   {
@@ -138,6 +147,133 @@ it('exposes the visible topic hierarchy as a nested ARIA tree', async () => {
   expect(root.getAttribute('aria-expanded')).to.equal('true');
   const group = root.querySelector(':scope > [role="group"]')!;
   expect(group.querySelectorAll(':scope > [role="treeitem"]').length).to.equal(2);
+});
+
+it('announces keyboard focus through light DOM while retaining a non-live shadow description', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
+  expect(mirror.textContent).to.include('Knowledge Graph RAG');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+  expect(mirror.hasAttribute('aria-hidden')).to.equal(false);
+  expect(svg.getAttribute('aria-describedby')).to.equal(mirror.id);
+  expect(sinkTexts().at(-1)).to.include('Knowledge Graph RAG');
+});
+
+it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+  document.body.append(el);
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+});
+
+it('rebinds resize observation and its coalesced frame to the adopted owner realm', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+  let resizeCallback: ResizeObserverCallback | undefined;
+  let observerDisconnects = 0;
+  const frames = new Map<number, FrameRequestCallback>();
+  const cancelledFrames: number[] = [];
+  class OwnerResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) { resizeCallback = callback; }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void { observerDisconnects += 1; }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    frames.set(44, callback);
+    return 44;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((handle: number): void => {
+    cancelledFrames.push(handle);
+    frames.delete(handle);
+  }) as typeof frameWindow.cancelAnimationFrame;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(resizeCallback, 'the destination window constructs the resize observer').to.be.a('function');
+    resizeCallback!(
+      [{ contentRect: { width: 333, height: 222 } } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    const staleFrame = frames.get(44);
+    expect(staleFrame, 'the resize callback schedules through its owner window').to.be.a('function');
+
+    document.adoptNode(el);
+    expect(observerDisconnects, 'adoption disconnects the old observer').to.equal(1);
+    expect(cancelledFrames, 'adoption cancels through the scheduling window').to.deep.equal([44]);
+    let updateCalls = 0;
+    el.requestUpdate = () => { updateCalls += 1; };
+    staleFrame!(0);
+    expect(updateCalls, 'a stale old-realm frame cannot update the adopted element').to.equal(0);
+  } finally {
+    frameWindow.ResizeObserver = originalResizeObserver;
+    frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('resolves token units through the adopted owner realm', async () => {
+  const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalGetComputedStyle = window.getComputedStyle;
+  const originalFrameGetComputedStyle = frameWindow.getComputedStyle;
+  let destinationStyleReads = 0;
+  window.getComputedStyle = (() => {
+    throw new Error('The originating realm must not resolve styles for an adopted element.');
+  }) as typeof window.getComputedStyle;
+  frameWindow.getComputedStyle = ((element: Element) => {
+    destinationStyleReads += 1;
+    return {
+      fontSize: element === frameDocument.documentElement ? '11px' : '13px',
+      getPropertyValue: (name: string) => name === '--lr-mind-map-ring-gap' ? '2rem' : '',
+    } as CSSStyleDeclaration;
+  }) as typeof frameWindow.getComputedStyle;
+
+  try {
+    frameDocument.adoptNode(el);
+    const internals = el as unknown as { ringGapPx(): number };
+    expect(internals.ringGapPx()).to.equal(22);
+    expect(destinationStyleReads).to.equal(2);
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+    frameWindow.getComputedStyle = originalFrameGetComputedStyle;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
 });
 
 it('reconciles keyboard focus when the focused topic disappears', async () => {

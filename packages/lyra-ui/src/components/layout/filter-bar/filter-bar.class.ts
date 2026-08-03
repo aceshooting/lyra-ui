@@ -15,6 +15,11 @@ import "../../overlays/chip/chip.class.js";
 import "../../overlays/chip/chip-group.class.js";
 import "../../forms/button/button.class.js";
 import "../../overlays/spinner/spinner.class.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Which existing Lyra input family renders a given filter -- this component composes these,
  *  it never invents a new filter-input type of its own. `'date'` and `'date-range'` both map
@@ -229,6 +234,23 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @since 4.1.0
  */
 export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
+    filterBarReset: LYRA_DEFAULT_filterBarReset,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {

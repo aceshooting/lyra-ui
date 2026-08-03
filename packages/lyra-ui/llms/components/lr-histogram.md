@@ -2,7 +2,7 @@
 
 # `lr-histogram`
 
-- **Import** `import '@aceshooting/lyra-ui/components/charts/chart/histogram.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-histogram.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -50,8 +50,9 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
-rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load —
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
+failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,

@@ -3,6 +3,11 @@ import { query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './compare-panel.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_compareResponseB, LYRA_DEFAULT_compareVoteBetter, LYRA_DEFAULT_compareVoteBothBad, LYRA_DEFAULT_compareVoteLabel, LYRA_DEFAULT_compareVoteRecorded, LYRA_DEFAULT_compareVoteTie } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
@@ -41,6 +46,21 @@ export interface LyraComparePanelEventMap {
  * @since 4.0.0
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    comparePanel: LYRA_DEFAULT_comparePanel,
+    compareResponseA: LYRA_DEFAULT_compareResponseA,
+    compareResponseB: LYRA_DEFAULT_compareResponseB,
+    compareVoteBetter: LYRA_DEFAULT_compareVoteBetter,
+    compareVoteBothBad: LYRA_DEFAULT_compareVoteBothBad,
+    compareVoteLabel: LYRA_DEFAULT_compareVoteLabel,
+    compareVoteRecorded: LYRA_DEFAULT_compareVoteRecorded,
+    compareVoteTie: LYRA_DEFAULT_compareVoteTie,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
@@ -70,6 +90,10 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private _disabled = false;
   private pendingScrollReset = false;
   private suppressSync = false;
+  private syncScrollRafId?: number;
+  private syncScrollRafOwner?: Window;
+  private syncScrollRafDocument?: Document;
+  private ownerRealmGeneration = 0;
 
   get labelA(): string {
     return this._labelA;
@@ -154,6 +178,26 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.hasPromptSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
   };
 
+  override disconnectedCallback(): void {
+    this.resetScrollSyncFrame();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetScrollSyncFrame();
+  }
+
+  private resetScrollSyncFrame(): void {
+    this.ownerRealmGeneration += 1;
+    if (this.syncScrollRafId !== undefined) {
+      this.syncScrollRafOwner?.cancelAnimationFrame(this.syncScrollRafId);
+    }
+    this.syncScrollRafId = undefined;
+    this.syncScrollRafOwner = undefined;
+    this.syncScrollRafDocument = undefined;
+    this.suppressSync = false;
+  }
+
   private castVote(choice: CompareVote): void {
     if (this.disabled) return;
     const itemId = this.itemId;
@@ -187,16 +231,37 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       const fromMax = from.scrollHeight - from.clientHeight;
       const toMax = to.scrollHeight - to.clientHeight;
       if (fromMax <= 0) return;
+      const ownerDocument = this.ownerDocument;
+      const ownerWindow = ownerDocument.defaultView;
+      if (!ownerWindow || !this.isConnected) return;
       const fraction = from.scrollTop / fromMax;
       this.suppressSync = true;
       to.scrollTop = fraction * toMax;
-      requestAnimationFrame(() => {
+      const generation = this.ownerRealmGeneration;
+      const handle = ownerWindow.requestAnimationFrame(() => {
+        if (
+          this.syncScrollRafId !== handle ||
+          this.syncScrollRafOwner !== ownerWindow ||
+          this.syncScrollRafDocument !== ownerDocument ||
+          this.ownerRealmGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.syncScrollRafId = undefined;
+        this.syncScrollRafOwner = undefined;
+        this.syncScrollRafDocument = undefined;
         this.suppressSync = false;
       });
+      this.syncScrollRafId = handle;
+      this.syncScrollRafOwner = ownerWindow;
+      this.syncScrollRafDocument = ownerDocument;
     };
   };
 
-  protected override updated(_changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
+    if (changed.has('syncScroll') && !this.syncScroll) this.resetScrollSyncFrame();
     if (this.pendingScrollReset) {
       this.pendingScrollReset = false;
       if (this.paneAEl) this.paneAEl.scrollTop = 0;

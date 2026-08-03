@@ -6,6 +6,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { styles } from './embedding-explorer.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const WIDTH = 640;
 const HEIGHT = 360;
@@ -57,6 +62,16 @@ export interface LyraEmbeddingExplorerEventMap {
  * @since 6.2.0
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    embeddingExplorerEmpty: LYRA_DEFAULT_embeddingExplorerEmpty,
+    embeddingExplorerLabel: LYRA_DEFAULT_embeddingExplorerLabel,
+    embeddingExplorerPoint: LYRA_DEFAULT_embeddingExplorerPoint,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Projected points in host order. Non-finite coordinates are omitted. */

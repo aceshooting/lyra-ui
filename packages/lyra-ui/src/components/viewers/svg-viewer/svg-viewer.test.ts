@@ -95,7 +95,8 @@ describe('lr-svg-viewer', () => {
   it('rejects unsafe URLs and emits render errors for failed fetches', async () => {
     const el = (await fixture(html`<lr-svg-viewer src="javascript:alert(1)"></lr-svg-viewer>`)) as LyraSvgViewer;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('', false))) as typeof window.fetch;
     try {

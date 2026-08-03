@@ -1,6 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { ReactiveControllerHost } from 'lit';
-import { OrientationBreakpointController } from './orientation-breakpoint.js';
+import {
+  CollapseBreakpointController,
+  OrientationBreakpointController,
+} from './orientation-breakpoint.js';
 
 /** A minimal ReactiveControllerHost backed by a real element, so the controller
  *  can resolve `em` against a genuine computed font size. Mirrors
@@ -21,12 +24,21 @@ async function makeHost(style = ''): Promise<ReactiveControllerHost & Element> {
  *  crossing to happen while the controller has no `change` listener attached — nothing a real
  *  `MediaQueryList` can be made to do here. Only bare `px` queries are understood, which is what
  *  `arm()` serializes for these tests. Restore in a `finally`. */
-function installMatchMediaStub(initialWidth: number): { setWidth(width: number): void; restore(): void } {
-  const original = window.matchMedia;
+function installMatchMediaStub(
+  initialWidth: number,
+  owner: Window = window,
+): {
+  setWidth(width: number): void;
+  queryCount(): number;
+  listenerCount(): number;
+  queries(): string[];
+  restore(): void;
+} {
+  const original = owner.matchMedia;
   let width = initialWidth;
   const lists: Array<{ media: string; max: number; listeners: Set<(e: MediaQueryListEvent) => void> }> = [];
 
-  window.matchMedia = ((query: string) => {
+  owner.matchMedia = ((query: string) => {
     const match = /\(max-width:\s*([\d.]+)px\)/.exec(query);
     const max = match ? Number.parseFloat(match[1]) : Number.NaN;
     const entry = { media: query, max, listeners: new Set<(e: MediaQueryListEvent) => void>() };
@@ -51,8 +63,17 @@ function installMatchMediaStub(initialWidth: number): { setWidth(width: number):
         for (const fn of [...entry.listeners]) fn({ matches, media: entry.media } as MediaQueryListEvent);
       });
     },
+    queryCount(): number {
+      return lists.length;
+    },
+    listenerCount(): number {
+      return lists.reduce((count, entry) => count + entry.listeners.size, 0);
+    },
+    queries(): string[] {
+      return lists.map(({ media }) => media);
+    },
     restore(): void {
-      window.matchMedia = original;
+      owner.matchMedia = original;
     },
   };
 }
@@ -242,5 +263,142 @@ describe('OrientationBreakpointController', () => {
     c.hostConnected();
     expect(fired).to.equal(0);
     expect(c.isBelow(0)).to.be.false;
+  });
+
+  it('binds to the host owner window and re-arms in the new realm after adoption', async () => {
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+    const ambient = installMatchMediaStub(1000);
+    const destination = installMatchMediaStub(500, frameWindow);
+    const host = Object.assign(frameDocument.createElement('div'), {
+      addController() {},
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+    frameDocument.body.append(host);
+
+    try {
+      const c = new OrientationBreakpointController(host, () => {});
+      c.configure('600px', 'viewport');
+      expect(destination.queryCount()).to.equal(1);
+      expect(destination.listenerCount()).to.equal(1);
+      expect(ambient.queryCount(), 'the ambient realm must stay inert').to.equal(0);
+      expect(c.isBelow(0)).to.be.true;
+
+      c.hostDisconnected();
+      expect(destination.listenerCount()).to.equal(0);
+      document.adoptNode(host);
+      document.body.append(host);
+      c.hostConnected();
+      expect(ambient.queryCount()).to.equal(1);
+      expect(ambient.listenerCount()).to.equal(1);
+      expect(c.isBelow(0)).to.be.false;
+    } finally {
+      host.remove();
+      destination.restore();
+      ambient.restore();
+      frame.remove();
+    }
+  });
+
+  it('does not re-arm from a detached configure and uses the latest query once reconnected', async () => {
+    const media = installMatchMediaStub(500);
+    const host = await makeHost();
+    try {
+      const c = new OrientationBreakpointController(host, () => {});
+      c.configure('600px', 'viewport');
+      expect(c.isBelow(0)).to.be.true;
+      expect(media.queryCount()).to.equal(1);
+
+      c.hostDisconnected();
+      host.remove();
+      c.configure('700px', 'viewport');
+      expect(media.queryCount(), 'detached configuration must not bind a query').to.equal(1);
+      expect(media.listenerCount()).to.equal(0);
+      expect(c.isBelow(0), 'the last connected state remains stable while detached').to.be.true;
+
+      document.body.append(host);
+      c.hostConnected();
+      expect(media.queryCount()).to.equal(2);
+      expect(media.queries()[1]).to.equal('(max-width: 700px)');
+      expect(media.listenerCount()).to.equal(1);
+    } finally {
+      host.remove();
+      media.restore();
+    }
+  });
+});
+
+describe('CollapseBreakpointController', () => {
+  it('binds both queries to the host owner window and replaces them after adoption', async () => {
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+    const ambient = installMatchMediaStub(1000);
+    const destination = installMatchMediaStub(500, frameWindow);
+    const host = Object.assign(frameDocument.createElement('div'), {
+      addController() {},
+      removeController() {},
+      requestUpdate() {},
+      updateComplete: Promise.resolve(true),
+    }) as unknown as ReactiveControllerHost & Element;
+    frameDocument.body.append(host);
+
+    try {
+      const c = new CollapseBreakpointController(host, () => {});
+      c.configure('600px', '300px', 'viewport');
+      expect(destination.queryCount()).to.equal(2);
+      expect(destination.listenerCount()).to.equal(2);
+      expect(ambient.queryCount()).to.equal(0);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('rail');
+
+      c.hostDisconnected();
+      expect(destination.listenerCount()).to.equal(0);
+      document.adoptNode(host);
+      document.body.append(host);
+      c.hostConnected();
+      expect(ambient.queryCount()).to.equal(2);
+      expect(ambient.listenerCount()).to.equal(2);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('wide');
+    } finally {
+      host.remove();
+      destination.restore();
+      ambient.restore();
+      frame.remove();
+    }
+  });
+
+  it('keeps its connected band and arms no queries during detached reconfiguration', async () => {
+    const media = installMatchMediaStub(500);
+    const host = await makeHost();
+    try {
+      const c = new CollapseBreakpointController(host, () => {});
+      c.configure('600px', '300px', 'viewport');
+      expect(c.classify(1000)).to.equal('rail');
+      expect(media.queryCount()).to.equal(2);
+
+      c.hostDisconnected();
+      host.remove();
+      c.configure('700px', '200px', 'viewport');
+      expect(media.queryCount()).to.equal(2);
+      expect(media.listenerCount()).to.equal(0);
+      expect(c.classify(1000)).to.equal('rail');
+
+      document.body.append(host);
+      c.hostConnected();
+      expect(media.queryCount()).to.equal(4);
+      expect(media.queries().slice(-2)).to.deep.equal([
+        '(max-width: 700px)',
+        '(max-width: 200px)',
+      ]);
+      expect(media.listenerCount()).to.equal(2);
+    } finally {
+      host.remove();
+      media.restore();
+    }
   });
 });

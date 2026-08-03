@@ -3,6 +3,11 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './breadcrumb.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_breadcrumb } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * `<lr-breadcrumb>` — a responsive navigation trail.
@@ -17,6 +22,14 @@ import { styles } from './breadcrumb.styles.js';
  * @since 4.0.0
  */
 export class LyraBreadcrumb extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    breadcrumb: LYRA_DEFAULT_breadcrumb,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   /** Host-level `aria-label` override for the trail's accessible name --
    *  wins over the localized default ("Breadcrumb"). Set as a plain

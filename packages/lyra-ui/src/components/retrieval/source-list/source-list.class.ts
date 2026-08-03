@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { styles } from './source-list.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SourceListToggleDetail {
   expanded: boolean;
@@ -49,6 +54,17 @@ export interface LyraSourceListEventMap {
  * @since 4.0.0
  */
 export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the card list is currently shown. Starts collapsed by default
@@ -71,7 +87,11 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private readonly listId = nextId('source-list-region');
   private readonly previousRoles = new Map<Element, string | null>();
-  private readonly roleObserver = new MutationObserver((records) => {
+  private roleObserver?: MutationObserver;
+  private roleObserverDocument?: Document;
+  private roleObserverGeneration = 0;
+
+  private onRoleMutations(records: MutationRecord[]): void {
     const changed = new Set<Element>();
     for (const record of records) {
       const element = record.target as Element;
@@ -80,13 +100,33 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
       changed.add(element);
     }
     if (changed.size === 0) return;
-    this.roleObserver.disconnect();
+    this.roleObserver?.disconnect();
     for (const element of changed) element.setAttribute('role', 'listitem');
     this.observeRoleChanges();
-  });
+  }
 
   private observeRoleChanges(): void {
     if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (!this.roleObserver || this.roleObserverDocument !== ownerDocument) {
+      this.resetRoleObserver();
+      const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+      if (!MutationObserverCtor) return;
+      const generation = this.roleObserverGeneration;
+      const observer = new MutationObserverCtor((records) => {
+        if (
+          this.roleObserver !== observer ||
+          this.roleObserverGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.onRoleMutations(records);
+      });
+      this.roleObserver = observer;
+      this.roleObserverDocument = ownerDocument;
+    }
     this.roleObserver.observe(this, {
       attributes: true,
       attributeFilter: ['role'],
@@ -95,7 +135,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 
   private syncItemRoles(elements: Element[]): void {
-    this.roleObserver.disconnect();
+    this.roleObserver?.disconnect();
     const assigned = new Set(elements);
     for (const [element, role] of this.previousRoles) {
       if (assigned.has(element)) continue;
@@ -122,14 +162,37 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     super.connectedCallback();
     this.observeRoleChanges();
     if (this.hasUpdated) {
-      void this.updateComplete.then(() => this.reconcileAssignedItems());
+      const ownerDocument = this.ownerDocument;
+      const generation = this.roleObserverGeneration;
+      void this.updateComplete.then(() => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument ||
+          this.roleObserverGeneration !== generation
+        ) {
+          return;
+        }
+        this.reconcileAssignedItems();
+      });
     }
   }
 
   override disconnectedCallback(): void {
-    this.roleObserver.disconnect();
+    this.roleObserver?.disconnect();
     this.syncItemRoles([]);
+    this.resetRoleObserver();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetRoleObserver();
+  }
+
+  private resetRoleObserver(): void {
+    this.roleObserverGeneration += 1;
+    this.roleObserver?.disconnect();
+    this.roleObserver = undefined;
+    this.roleObserverDocument = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {

@@ -2,7 +2,7 @@
 
 # `lr-calendar-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-calendar-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCalendarViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -27,7 +27,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-calendar search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
 `event-description`, `spinner`, and `error`.

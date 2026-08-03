@@ -2,7 +2,7 @@
 
 # `lr-avatar-group`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/avatar-group/avatar-group.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-avatar-group.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAvatarGroup`, also available unregistered from `@aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

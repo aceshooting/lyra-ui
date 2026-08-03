@@ -1,3 +1,5 @@
+import { resolveIntlLocale } from './intl-cache.js';
+
 /** Shared behavior for catalog-backed pickers with string shorthand and stale-value retention. */
 export interface CatalogEntry {
   id: string;
@@ -31,10 +33,10 @@ export function filterCatalogEntries<T>(
   locale: string,
   fields: (entry: T) => readonly string[],
 ): T[] {
-  const normalized = query.trim().toLocaleLowerCase(locale);
+  const intlLocale = resolveIntlLocale(locale);
+  const normalized = query.trim().toLocaleLowerCase(intlLocale);
   if (!normalized) return [...entries];
   return entries.filter((entry) =>
-    fields(entry).some((value) => value.toLocaleLowerCase(locale).includes(normalized)),
+    fields(entry).some((value) => value.toLocaleLowerCase(intlLocale).includes(normalized)),
   );
 }
-

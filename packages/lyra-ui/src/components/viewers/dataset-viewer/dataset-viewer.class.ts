@@ -2,8 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
+import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
@@ -15,9 +14,20 @@ import { LatestTask } from '../../../internal/latest-task.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
 type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
+type OwnedAnimationFrameWait = {
+  owner: Window;
+  handle?: number;
+  resolve: (isCurrent: boolean) => void;
+};
 const MAX_SEARCH_MATCHES = 1_000;
 
 export interface LyraDatasetViewerEventMap extends LyraAnchorTargetEventMap {
@@ -84,6 +94,32 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
+    datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
+    datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
+    datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDataset: LYRA_DEFAULT_documentPreviewTypeDataset,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
@@ -106,9 +142,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   private lastSearchLocale = '';
   private loadTask = new LatestTask();
   private lastLoadSrc = '';
+  private readonly announcements = new ViewerAnnouncementController(this);
+  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -116,7 +155,36 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   override disconnectedCallback(): void {
     this.loadTask.next();
+    this.cancelPendingAnimationFrames();
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.cancelPendingAnimationFrames();
+    this.announcements.adopted();
+  }
+
+  private waitForOwnerAnimationFrame(): Promise<boolean> {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      const pending: OwnedAnimationFrameWait = { owner, resolve };
+      this.pendingAnimationFrames.add(pending);
+      pending.handle = owner.requestAnimationFrame(() => {
+        if (!this.pendingAnimationFrames.delete(pending)) return;
+        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
+      });
+    });
+  }
+
+  private cancelPendingAnimationFrames(): void {
+    const pendingFrames = [...this.pendingAnimationFrames];
+    this.pendingAnimationFrames.clear();
+    for (const pending of pendingFrames) {
+      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
+      pending.resolve(false);
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -133,6 +201,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
@@ -147,8 +220,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -156,7 +229,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
@@ -175,7 +248,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   /** Resolves `null` (not a thrown error) for a well-formed file that parses to zero fields/rows --
    *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
-   *  or an oversized file, and must not be funneled into the same role="alert" chrome as those
+   *  or an oversized file, and must not be funneled into the same error chrome/assertive announcement as those
    *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
   private async parse(text: string, generation: number): Promise<DatasetTable | null | undefined> {
     const papa = await loadPapaParseCached();
@@ -257,11 +330,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   private async scrollColumnIntoView(col: number): Promise<void> {
     const list = this.renderRoot.querySelector('lr-virtual-list') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    if (!await this.waitForOwnerAnimationFrame()) return;
     const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
     const target = row?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
     target?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
       block: 'nearest',
       inline: 'nearest',
     });
@@ -375,9 +448,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
           </div>
         `;
       }
-      case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'empty': return html`<p class="empty-note">${this.localize('datasetViewerEmpty')}</p>`;
-      case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDataset') })}</p>`;
     }

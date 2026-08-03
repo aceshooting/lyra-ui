@@ -2,7 +2,7 @@
 
 # `lr-responsive-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-responsive-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraResponsivePanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

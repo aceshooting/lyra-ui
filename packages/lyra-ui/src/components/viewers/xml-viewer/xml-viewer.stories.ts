@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './xml-viewer.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'DocumentViewer/XmlViewer', component: 'lr-xml-viewer', tags: ['autodocs'] };
 export default meta;

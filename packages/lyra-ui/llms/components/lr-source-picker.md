@@ -2,7 +2,7 @@
 
 # `lr-source-picker`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/source-picker/source-picker.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-source-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSourcePicker`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/source-picker/source-picker.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

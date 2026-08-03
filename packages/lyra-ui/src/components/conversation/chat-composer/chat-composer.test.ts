@@ -577,6 +577,68 @@ it('re-arms the width-triggered auto-resize after a disconnect/reconnect (e.g. a
   expect(parseFloat(ta.style.height)).to.be.greaterThan(wideHeight);
 });
 
+it('rebinds textarea observation and coalesced resize frames to the adopted owner realm', async () => {
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+  let resizeCallback: ResizeObserverCallback | undefined;
+  let observerDisconnects = 0;
+  const frames = new Map<number, FrameRequestCallback>();
+  const cancelledFrames: number[] = [];
+  class OwnerResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) { resizeCallback = callback; }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void { observerDisconnects += 1; }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    frames.set(52, callback);
+    return 52;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((handle: number): void => {
+    cancelledFrames.push(handle);
+    frames.delete(handle);
+  }) as typeof frameWindow.cancelAnimationFrame;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(resizeCallback, 'the destination window constructs the textarea observer').to.be.a('function');
+    resizeCallback!(
+      [{ contentBoxSize: [{ inlineSize: 123 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    const staleFrame = frames.get(52);
+    expect(staleFrame, 'the observer schedules through the destination window').to.be.a('function');
+
+    document.adoptNode(el);
+    expect(observerDisconnects, 'adoption disconnects the old observer').to.equal(1);
+    expect(cancelledFrames, 'adoption cancels through the scheduling window').to.deep.equal([52]);
+    let resizeCalls = 0;
+    (el as unknown as { resizeTextarea(): void }).resizeTextarea = () => { resizeCalls += 1; };
+    staleFrame!(0);
+    expect(resizeCalls, 'a stale old-realm frame cannot resize the adopted composer').to.equal(0);
+  } finally {
+    frameWindow.ResizeObserver = originalResizeObserver;
+    frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('participates in a form: submits its value under name', async () => {
   const form = (await fixture(html`
     <form><lr-chat-composer name="message" value="hello world"></lr-chat-composer></form>

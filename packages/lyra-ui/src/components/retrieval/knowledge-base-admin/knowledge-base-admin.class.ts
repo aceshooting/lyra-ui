@@ -6,6 +6,11 @@ import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js'
 import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 let knowledgeBaseAdminInstance = 0;
 
@@ -51,6 +56,16 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @since 6.2.0
  */
 export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    knowledgeBaseAdminIngestionTab: LYRA_DEFAULT_knowledgeBaseAdminIngestionTab,
+    knowledgeBaseAdminLabel: LYRA_DEFAULT_knowledgeBaseAdminLabel,
+    knowledgeBaseAdminSourcesTab: LYRA_DEFAULT_knowledgeBaseAdminSourcesTab,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Knowledge-base source connectors. */

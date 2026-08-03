@@ -5,12 +5,22 @@ import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numb
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './audio-visualizer.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_audioVisualizerLabel, LYRA_DEFAULT_audioVisualizerListening, LYRA_DEFAULT_audioVisualizerSpeaking, LYRA_DEFAULT_audioVisualizerThinking, LYRA_DEFAULT_thinking } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type AudioVisualizerVariant = 'bars' | 'waveform';
 export type AudioVisualizerState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 const WAVEFORM_SAMPLES = 64;
 const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
+
+interface OwnedAnimationFrame {
+  owner: Window;
+  handle: number;
+}
 
 /**
  * `<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or
@@ -41,6 +51,19 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  * @since 4.0.0
  */
 export class LyraAudioVisualizer extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
+    audioVisualizerLabel: LYRA_DEFAULT_audioVisualizerLabel,
+    audioVisualizerListening: LYRA_DEFAULT_audioVisualizerListening,
+    audioVisualizerSpeaking: LYRA_DEFAULT_audioVisualizerSpeaking,
+    audioVisualizerThinking: LYRA_DEFAULT_audioVisualizerThinking,
+    thinking: LYRA_DEFAULT_thinking,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) stream: MediaStream | null = null;
@@ -59,8 +82,10 @@ export class LyraAudioVisualizer extends LyraElement {
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
   private dprQuery?: MediaQueryList;
+  private dprChangeListener?: (event: MediaQueryListEvent) => void;
   private motionQuery?: MediaQueryList;
-  private rafId?: number;
+  private motionChangeListener?: (event: MediaQueryListEvent) => void;
+  private drawFrameRequest?: OwnedAnimationFrame;
   private lastAmbientDrawMs = 0;
   private authorSuppliedRole = false;
   private generatedAriaLabel = '';
@@ -107,50 +132,84 @@ export class LyraAudioVisualizer extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver((entries) => {
-      const rect = entries[entries.length - 1]?.contentRect;
-      if (rect) this.hostSize = { width: rect.width, height: rect.height };
-      this.scheduleDraw();
-    });
-    this.resizeObserver.observe(this);
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const ResizeObserverCtor = owner.ResizeObserver;
+    if (ResizeObserverCtor) {
+      let observer: ResizeObserver;
+      observer = new ResizeObserverCtor((entries) => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner ||
+          this.resizeObserver !== observer
+        ) {
+          return;
+        }
+        const rect = entries[entries.length - 1]?.contentRect;
+        if (rect) this.hostSize = { width: rect.width, height: rect.height };
+        this.scheduleDraw();
+      });
+      this.resizeObserver = observer;
+      observer.observe(this);
+    }
     this.watchDpr();
     // The draw loop parks itself while ambient output is static under reduced motion, so a
     // preference flip must restart it (and re-simplify/re-animate the pattern) explicitly.
-    this.motionQuery =
-      typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
-    this.motionQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    if (typeof owner.matchMedia === 'function') {
+      const query = owner.matchMedia('(prefers-reduced-motion: reduce)');
+      const listener = (): void => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner ||
+          this.motionQuery !== query
+        ) {
+          return;
+        }
+        this.scheduleDraw();
+      };
+      this.motionQuery = query;
+      this.motionChangeListener = listener;
+      query.addEventListener('change', listener);
+    }
     this.resolvedColors = undefined; // a reconnect may land under a different theme scope
     this.syncAnalyser();
     this.visible = true; // a reconnect may land at a different scroll position than last observed
-    if (typeof IntersectionObserver !== 'undefined') {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
+    const IntersectionObserverCtor = owner.IntersectionObserver;
+    if (IntersectionObserverCtor) {
+      let observer: IntersectionObserver;
+      observer = new IntersectionObserverCtor((entries) => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner ||
+          this.intersectionObserver !== observer
+        ) {
+          return;
+        }
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
         if (this.visible && !wasVisible) {
           this.scheduleDraw();
-        } else if (!this.visible && this.rafId !== undefined) {
-          cancelAnimationFrame(this.rafId);
-          this.rafId = undefined;
+        } else if (!this.visible) {
+          this.cancelDrawFrame();
         }
       });
-      this.intersectionObserver.observe(this);
+      this.intersectionObserver = observer;
+      observer.observe(this);
     }
+    this.lastAmbientDrawMs = 0;
     this.scheduleDraw();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
     this.hostSize = undefined;
-    this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.motionQuery?.removeEventListener('change', this.onMotionPreferenceChange);
-    this.motionQuery = undefined;
+    this.clearDprWatcher();
+    this.clearMotionWatcher();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
-    if (this.rafId !== undefined) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = undefined;
-    }
+    this.cancelDrawFrame();
     this.closeAudioContext();
   }
 
@@ -158,17 +217,41 @@ export class LyraAudioVisualizer extends LyraElement {
     // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it was
     // built for means building a fresh one for the new ratio — remove the previous instance's
     // listener first, or it leaks (disconnectedCallback only ever cleans up whichever is current).
-    this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.dprQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
-    this.dprQuery.addEventListener('change', this.onDprChange);
+    this.clearDprWatcher();
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || typeof owner.matchMedia !== 'function') return;
+    const query = owner.matchMedia(`(resolution: ${owner.devicePixelRatio}dppx)`);
+    const listener = (): void => {
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner ||
+        this.dprQuery !== query
+      ) {
+        return;
+      }
+      this.watchDpr();
+      this.scheduleDraw();
+    };
+    this.dprQuery = query;
+    this.dprChangeListener = listener;
+    query.addEventListener('change', listener);
   }
-  private onDprChange = (): void => {
-    this.watchDpr();
-    this.scheduleDraw();
-  };
-  private onMotionPreferenceChange = (): void => {
-    this.scheduleDraw();
-  };
+
+  private clearDprWatcher(): void {
+    if (this.dprQuery && this.dprChangeListener) {
+      this.dprQuery.removeEventListener('change', this.dprChangeListener);
+    }
+    this.dprQuery = undefined;
+    this.dprChangeListener = undefined;
+  }
+
+  private clearMotionWatcher(): void {
+    if (this.motionQuery && this.motionChangeListener) {
+      this.motionQuery.removeEventListener('change', this.motionChangeListener);
+    }
+    this.motionQuery = undefined;
+    this.motionChangeListener = undefined;
+  }
 
   /** Redraws canvas content after an upstream token or theme change. */
   refreshTheme(): void {
@@ -181,10 +264,12 @@ export class LyraAudioVisualizer extends LyraElement {
    *  is what actually closes it. */
   private syncAnalyser(): void {
     if (this.stream) {
+      const owner = this.ownerDocument.defaultView;
+      if (!owner) return;
       if (!this.audioCtx) {
         const AudioCtxCtor =
-          window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          owner.AudioContext ??
+          (owner as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioCtxCtor) return;
         this.audioCtx = new AudioCtxCtor();
         // `resume()`/`suspend()` settle asynchronously, and the parked draw loop only animates while
@@ -200,7 +285,7 @@ export class LyraAudioVisualizer extends LyraElement {
       this.analyser = this.audioCtx.createAnalyser();
       this.analyser.fftSize = this.variant === 'waveform' ? 2048 : 256;
       this.sourceNode.connect(this.analyser);
-      this.timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+      this.timeDomainData = new owner.Uint8Array(this.analyser.frequencyBinCount);
     } else {
       this.sourceNode?.disconnect();
       this.sourceNode = undefined;
@@ -273,28 +358,33 @@ export class LyraAudioVisualizer extends LyraElement {
   private get isTimeDriven(): boolean {
     if (this.analyser && this.audioCtx?.state === 'running') return true;
     if (this.level != null) return false;
-    if (prefersReducedMotion()) return false;
+    if (prefersReducedMotion(this.ownerDocument.defaultView)) return false;
     return this.state !== 'idle';
   }
 
   private scheduleDraw = (): void => {
     if (!this.visible) return; // becoming visible again resumes via the IntersectionObserver above
-    if (this.rafId !== undefined) return;
-    this.rafId = requestAnimationFrame(this.drawFrame);
+    if (this.drawFrameRequest) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return;
+    const request: OwnedAnimationFrame = { owner, handle: 0 };
+    request.handle = owner.requestAnimationFrame((nowMs) => this.drawFrame(request, nowMs));
+    this.drawFrameRequest = request;
   };
 
-  private drawFrame = (nowMs: number): void => {
-    this.rafId = undefined;
-    if (!this.isConnected) return;
+  private drawFrame(request: OwnedAnimationFrame, nowMs: number): void {
+    if (this.drawFrameRequest !== request) return;
+    this.drawFrameRequest = undefined;
+    if (!this.isConnected || this.ownerDocument.defaultView !== request.owner) return;
     // Belt-and-suspenders alongside `scheduleDraw()`'s own gate: `IntersectionObserver` callbacks
     // are asynchronously batched, so a frame already in flight when visibility flips off could
     // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
     // catches up. Redraws resume once the observer reports intersecting again via `scheduleDraw()`.
     if (!this.visible) return;
-    const reduced = prefersReducedMotion();
+    const reduced = prefersReducedMotion(request.owner);
     if (reduced && !this.hasLiveSignal) {
       if (nowMs - this.lastAmbientDrawMs < AMBIENT_REDUCED_MOTION_INTERVAL_MS) {
-        this.rafId = requestAnimationFrame(this.drawFrame);
+        this.scheduleDraw();
         return;
       }
       this.lastAmbientDrawMs = nowMs;
@@ -303,8 +393,14 @@ export class LyraAudioVisualizer extends LyraElement {
     // Static output parks the loop after this frame; `scheduleDraw()` restarts it from every input
     // that could change the picture (reactive properties, resize, DPR/theme/motion changes,
     // `AudioContext` state transitions).
-    if (this.isTimeDriven) this.rafId = requestAnimationFrame(this.drawFrame);
-  };
+    if (this.isTimeDriven) this.scheduleDraw();
+  }
+
+  private cancelDrawFrame(): void {
+    const request = this.drawFrameRequest;
+    if (request) request.owner.cancelAnimationFrame(request.handle);
+    this.drawFrameRequest = undefined;
+  }
 
   private barsFromTimeDomain(data: Uint8Array, barCount: number): number[] {
     const segmentSize = Math.max(1, Math.floor(data.length / barCount));
@@ -358,16 +454,16 @@ export class LyraAudioVisualizer extends LyraElement {
       const n = this.variant === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
       return new Array(n).fill(this.effectiveLevel);
     }
-    return this.ambientAmplitudes(nowMs, prefersReducedMotion());
+    return this.ambientAmplitudes(nowMs, prefersReducedMotion(this.ownerDocument.defaultView));
   }
 
   /** Resolves the two drawing colors once; the theme/color-scheme observers and `refreshTheme()`
    *  invalidate the cached pair, so steady-state frames never pay for `getComputedStyle`. */
   private resolveColors(): { active: string; quiet: string } {
-    const cs = getComputedStyle(this);
+    const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     return {
-      active: cs.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da',
-      quiet: cs.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff',
+      active: cs?.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da',
+      quiet: cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff',
     };
   }
 
@@ -380,7 +476,7 @@ export class LyraAudioVisualizer extends LyraElement {
     const size = this.hostSize ?? this.getBoundingClientRect();
     const w = Math.max(1, size.width);
     const h = Math.max(1, size.height || 48);
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
     // Assigning `width`/`height` reallocates and clears the backing store even when the value is
     // unchanged, so only touch them when the target really differs (canvas dimensions truncate
     // fractional assignments, hence the floor). `setTransform` (absolute, unlike a relative

@@ -2,7 +2,7 @@
 
 # `lr-slider`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/slider/slider.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-slider.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSlider`, also available unregistered from `@aceshooting/lyra-ui/components/forms/slider/slider.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

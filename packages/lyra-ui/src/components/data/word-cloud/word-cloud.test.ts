@@ -3,6 +3,16 @@ import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 const WORDS = [
   { text: 'alpha', weight: 10 },
@@ -81,7 +91,7 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
   expect(svgEl(el).getAttribute('tabindex')).to.equal('0');
   expect(svgEl(el).getAttribute('role')).to.be.null;
   expect(svgEl(el).getAttribute('aria-label')).to.be.null;
-  expect(svgEl(el).getAttribute('aria-describedby')).to.equal('live-region');
+  expect(svgEl(el).getAttribute('aria-describedby')).to.equal(null);
   expect(el.getAttribute('role')).to.equal('group');
   expect(el.getAttribute('aria-label')).to.equal('Word cloud of 3 words');
 });
@@ -341,6 +351,44 @@ it('moves roving focus with arrow keys, wraps at neither end, and Home/End jump 
   keydown(el, ' ');
   const event2 = await eventPromise2;
   expect((event2 as CustomEvent).detail.text).to.equal('alpha'); // first in declaration order
+});
+
+it('routes word-focus feedback through a light-DOM sink and repeats identical edge announcements', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud .words=${[{ text: 'alpha', weight: 10 }]}></lr-word-cloud>`,
+  )) as LyraWordCloud;
+  const mirror = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+  expect(sinkTexts(), 'the initial layout must stay silent').to.deep.equal([]);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+
+  keydown(el, 'ArrowRight');
+  keydown(el, 'ArrowRight');
+  await el.updateComplete;
+  expect(sinkTexts()).to.deep.equal(['alpha, 10', 'alpha, 10']);
+
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+});
+
+it('re-targets word-focus announcements after cross-document adoption', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud .words=${[{ text: 'alpha', weight: 10 }]}></lr-word-cloud>`,
+  )) as LyraWordCloud;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  try {
+    frameDocument.body.append(el);
+    keydown(el, 'ArrowRight');
+    await el.updateComplete;
+    expect(sinkElement() === null, 'the original document must release the adopted cloud').to.be.true;
+    expect(sinkTexts(frameDocument)).to.deep.equal(['alpha, 10']);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
 });
 
 it('swaps which arrow key advances/retreats roving focus under dir="rtl"', async () => {

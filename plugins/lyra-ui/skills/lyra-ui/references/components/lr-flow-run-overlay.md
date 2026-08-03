@@ -2,7 +2,7 @@
 
 # `lr-flow-run-overlay`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/flow-run-overlay/flow-run-overlay.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flow-run-overlay.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowRunOverlay`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-run-overlay/flow-run-overlay.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -2,7 +2,7 @@
 
 # `lr-message-feedback`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-message-feedback.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMessageFeedback`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

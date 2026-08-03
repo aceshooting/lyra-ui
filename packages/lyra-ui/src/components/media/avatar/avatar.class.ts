@@ -112,13 +112,15 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
 
   private hasDefaultSlotContent(nodes: Iterable<Node>): boolean {
     return Array.from(nodes).some((node) => {
-      if (node instanceof Element) return !node.hasAttribute('slot');
-      return node.nodeType === Node.TEXT_NODE && (node.textContent?.trim().length ?? 0) > 0;
+      if (node.nodeType === 1) return !(node as Element).hasAttribute('slot');
+      return node.nodeType === 3 && (node.textContent?.trim().length ?? 0) > 0;
     });
   }
 
   private hasIconSlotContent(nodes: Iterable<Node>): boolean {
-    return Array.from(nodes).some((node) => node instanceof Element && node.getAttribute('slot') === 'icon');
+    return Array.from(nodes).some(
+      (node) => node.nodeType === 1 && (node as Element).getAttribute('slot') === 'icon',
+    );
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {

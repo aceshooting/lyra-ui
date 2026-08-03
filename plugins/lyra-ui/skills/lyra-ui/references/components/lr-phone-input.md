@@ -2,7 +2,7 @@
 
 # `lr-phone-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-phone-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPhoneInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -153,6 +153,10 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `country-trigger` (visible, `aria-hidden` closed-state box), `flag` (the `<lr-flag>`, only with
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
+
+`error` is ordinary visible validation text referenced by the native telephone input through
+`aria-describedby`, not a shadow `role="alert"`. Native invalid/focus feedback therefore has one
+description path instead of being duplicated by a second live-region announcement.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so

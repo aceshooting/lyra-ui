@@ -5,6 +5,11 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface MentionItem {
@@ -30,8 +35,10 @@ export interface MentionSelectDetail {
 type TextControl = HTMLTextAreaElement | HTMLInputElement;
 
 function isTextControl(el: Element): el is TextControl {
-  if (el instanceof HTMLTextAreaElement) return true;
-  return el instanceof HTMLInputElement && (el.type === 'text' || el.type === 'search');
+  const view = el.ownerDocument.defaultView;
+  if (!view) return false;
+  if (el instanceof view.HTMLTextAreaElement) return true;
+  return el instanceof view.HTMLInputElement && (el.type === 'text' || el.type === 'search');
 }
 
 // Computed-style properties that affect text layout/measurement, copied
@@ -81,11 +88,14 @@ const MIRROR_CSS_PROPS = [
  * for a zero-size (e.g. `display: none`) control.
  */
 function caretClientRect(el: TextControl): DOMRect | null {
+  const owner = el.ownerDocument;
+  const view = owner.defaultView;
+  if (!view) return null;
   const elRect = el.getBoundingClientRect();
   if (elRect.width === 0 || elRect.height === 0) return null;
 
-  const computed = window.getComputedStyle(el);
-  const mirror = document.createElement('div');
+  const computed = view.getComputedStyle(el);
+  const mirror = owner.createElement('div');
   mirror.style.position = 'absolute';
   mirror.style.visibility = 'hidden';
   mirror.style.top = '0';
@@ -93,28 +103,28 @@ function caretClientRect(el: TextControl): DOMRect | null {
   // <textarea> soft-wraps; a single-line <input> never does -- mismatching
   // this makes the mirror wrap where the real control wouldn't (or vice
   // versa), throwing off every offset past the first line/character run.
-  mirror.style.whiteSpace = el instanceof HTMLTextAreaElement ? 'pre-wrap' : 'pre';
+  mirror.style.whiteSpace = el instanceof view.HTMLTextAreaElement ? 'pre-wrap' : 'pre';
   mirror.style.overflowWrap = 'break-word';
   for (const prop of MIRROR_CSS_PROPS) {
     mirror.style.setProperty(prop, computed.getPropertyValue(prop));
   }
 
   const index = el.selectionStart ?? el.value.length;
-  mirror.append(document.createTextNode(el.value.slice(0, index)));
-  const marker = document.createElement('span');
+  mirror.append(owner.createTextNode(el.value.slice(0, index)));
+  const marker = owner.createElement('span');
   // A marker with no content at all collapses to zero width -- a hair of
   // content keeps it reliably measurable even for a caret sitting at the
   // very end of the value.
   marker.textContent = el.value.slice(index) || '​';
   mirror.appendChild(marker);
-  document.body.appendChild(mirror);
+  owner.body.appendChild(mirror);
 
   const mirrorRect = mirror.getBoundingClientRect();
   const markerRect = marker.getBoundingClientRect();
   mirror.remove();
 
   const lineHeight = parseFloat(computed.lineHeight) || markerRect.height || 16;
-  return new DOMRect(
+  return new view.DOMRect(
     elRect.left + (markerRect.left - mirrorRect.left) - el.scrollLeft,
     elRect.top + (markerRect.top - mirrorRect.top) - el.scrollTop,
     1,
@@ -251,6 +261,20 @@ export interface LyraMentionPopoverEventMap {
  * @since 4.0.0
  */
 export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    items: LYRA_DEFAULT_items,
+    mentionSuggestions: LYRA_DEFAULT_mentionSuggestions,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The element to position the popup relative to. When this is a plain
@@ -432,7 +456,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** The currently-highlighted shadow option for ARIA element reflection. */
   get activeDescendantElement(): HTMLElement | null {
     const id = this.activeDescendantId;
-    return id ? this.renderRoot.querySelector<HTMLElement>(`#${CSS.escape(id)}`) : null;
+    const escape = this.ownerDocument.defaultView?.CSS.escape;
+    return id && escape
+      ? this.renderRoot.querySelector<HTMLElement>(`#${escape(id)}`)
+      : null;
   }
 
   /**
@@ -560,14 +587,19 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (isTextControl(anchor)) {
       const rect = caretClientRect(anchor);
       if (rect) {
-        const virtual = this.virtualAnchor ?? (this.virtualAnchor = document.createElement('div'));
+        const owner = anchor.ownerDocument;
+        if (this.virtualAnchor && this.virtualAnchor.ownerDocument !== owner) {
+          this.virtualAnchor.remove();
+          this.virtualAnchor = null;
+        }
+        const virtual = this.virtualAnchor ?? (this.virtualAnchor = owner.createElement('div'));
         virtual.style.position = 'fixed';
         virtual.style.left = `${rect.left}px`;
         virtual.style.top = `${rect.top}px`;
         virtual.style.width = '0';
         virtual.style.height = `${rect.height}px`;
         virtual.style.pointerEvents = 'none';
-        if (!virtual.isConnected) document.body.appendChild(virtual);
+        if (!virtual.isConnected) owner.body.appendChild(virtual);
         return virtual;
       }
     }

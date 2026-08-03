@@ -2,7 +2,7 @@
 
 # `lr-highlight-layer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-highlight-layer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHighlightLayer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

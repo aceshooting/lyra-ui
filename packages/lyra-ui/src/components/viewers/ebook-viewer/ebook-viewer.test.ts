@@ -5,6 +5,7 @@ import type { LyraEbookViewer } from './ebook-viewer.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { styles } from './ebook-viewer.styles.js';
 import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function response(ok = true): Response {
   const binary = atob(MINIMAL_EPUB_BASE64);
@@ -49,6 +50,30 @@ function stubFetch(): () => void {
   window.fetch = (() => Promise.resolve(response())) as typeof window.fetch;
   return () => { window.fetch = original; };
 }
+
+it('resolves highlight tokens through the adopted document window', async () => {
+  const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerWindow = iframe.contentWindow!;
+  const originalGetComputedStyle = ownerWindow.getComputedStyle;
+  let calls = 0;
+  ownerWindow.getComputedStyle = (() => {
+    calls++;
+    return { getPropertyValue: () => 'rgb(1, 2, 3)' } as CSSStyleDeclaration;
+  }) as typeof ownerWindow.getComputedStyle;
+  try {
+    iframe.contentDocument!.body.append(el);
+    const fill = (el as unknown as {
+      resolveHighlightFill(value: { token: string; fallback: string }): { fill: string };
+    }).resolveHighlightFill({ token: '--lr-test-highlight', fallback: 'transparent' });
+    expect(calls).to.equal(1);
+    expect(fill).to.deep.equal({ fill: 'rgb(1, 2, 3)' });
+  } finally {
+    el.remove();
+    ownerWindow.getComputedStyle = originalGetComputedStyle;
+    iframe.remove();
+  }
+});
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
   let resolve!: (value: T) => void;
@@ -645,7 +670,7 @@ describe('location', () => {
       el.location = 'epubcfi(/6/reject!)';
       await errorPromise;
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized location failure.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Localized location failure.');
     } finally {
       restore();
     }
@@ -673,7 +698,7 @@ describe('rendition actions', () => {
       (el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).click();
       await waitUntil(() => errorCount === 2);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized navigation failure.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Localized navigation failure.');
     } finally {
       restore();
     }
@@ -755,7 +780,8 @@ describe('lr-ebook-viewer search', () => {
       (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
       await el.search('match');
       await aTimeout(10);
-      expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.include(new Intl.NumberFormat('ar').format(1));
+      const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+      expect(sink?.lastElementChild?.textContent).to.include(new Intl.NumberFormat('ar').format(1));
     } finally { restore(); }
   });
 
@@ -969,7 +995,7 @@ describe('lr-ebook-viewer search', () => {
     }
   });
 
-  it('announces search results through the visually-hidden live region', async () => {
+  it('announces search results through the document-level polite region', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'no match', 'ch2.xhtml': 'the treasure map' });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
@@ -978,7 +1004,11 @@ describe('lr-ebook-viewer search', () => {
       await aTimeout(20);
       await el.search('treasure');
       await aTimeout(600); // the shared Announcer's default throttle window
-      expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('Match 1 of 1');
+      const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+      expect(sink?.lastElementChild?.textContent).to.equal('Match 1 of 1');
+      const mirror = el.shadowRoot!.querySelector('[part="announcer"]')!;
+      expect(mirror.textContent).to.equal('');
+      expect(mirror.getAttribute('aria-hidden')).to.equal('true');
     } finally {
       restore();
     }
@@ -1071,7 +1101,7 @@ describe('scrollToAnchor (ebook)', () => {
       await el.updateComplete;
       expect(resultCount).to.equal(1);
       expect(found).to.be.false;
-      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized ebook failure.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Localized ebook failure.');
     } finally {
       restore();
     }
@@ -1293,14 +1323,14 @@ describe('back-compat', () => {
   });
 });
 
-it('exposes loading through a busy state owner and one status region', async () => {
+it('exposes loading through a busy state owner without a shadow-root live region', async () => {
   const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
   (el as unknown as { ebookState: unknown }).ebookState = { kind: 'loading' };
   el.requestUpdate();
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-busy')).to.equal('true');
-  expect(base.querySelectorAll('[role="status"]').length).to.equal(3);
+  expect(base.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length).to.equal(0);
 });
 
 describe('styling', () => {

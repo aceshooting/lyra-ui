@@ -5,6 +5,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import '../../layout/scroller/scroller.class.js';
 import { styles } from './suggestion-chips.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ChatSuggestion {
   id: string;
@@ -38,6 +43,14 @@ export interface LyraSuggestionChipsEventMap {
  * @since 4.0.0
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    suggestionsLabel: LYRA_DEFAULT_suggestionsLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The suggestions to render, in order. Empty renders nothing at all. */

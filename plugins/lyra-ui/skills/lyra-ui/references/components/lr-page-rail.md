@@ -2,7 +2,7 @@
 
 # `lr-page-rail`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-page-rail.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPageRail`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -49,6 +49,9 @@ State variants each carry a second name in the element's part list rather than a
 because `::part()` cannot be followed by an attribute selector: the current row is
 `part="page page-current"` and a danger marker is `part="heat-dot heat-dot-danger"`, and `::part()`
 matches with `part~=` semantics, so both names select the same element.
+
+Loading thumbnail skeletons are aria-hidden and non-announcing. Each page button already carries
+the localized page name, so thumbnail work does not create one live region per virtualized row.
 
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —

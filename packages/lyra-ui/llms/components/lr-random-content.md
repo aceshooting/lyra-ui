@@ -2,7 +2,7 @@
 
 # `lr-random-content`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/random-content/random-content.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-random-content.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRandomContent`, also available unregistered from `@aceshooting/lyra-ui/components/utility/random-content/random-content.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -35,20 +35,32 @@ children; nothing is moved or cloned.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
 **Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
-`hidden`/`aria-hidden`, emits `lr-content-change`, and returns the elements now shown. Does **not**
-reset or restart the autoplay timer.
+`hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
+polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
+Does **not** reset or restart the autoplay timer.
 
 **Events:** `lr-content-change` (`detail: { items: HTMLElement[] }` — the exact elements now shown,
 in display order). Fires on first render, on `randomize()`, on a real slot-content change, and on
 each autoplay tick; never when the eligible pool is empty.
 
-**Slots:** default — the candidate pool. Only direct **element** children are eligible.
+**Slots:** default — the candidate pool. Direct **element** children are eligible. When a wrapper
+places a forwarding `<slot>` directly in the pool, its flattened projected elements become the
+candidates; an arbitrary nested custom-element subtree remains one opaque direct candidate.
 
-**CSS parts:** `base` — the wrapper around the default slot; carries `role="status"`,
-`aria-atomic="true"`, and `aria-live="polite"`, downgraded to `aria-live="off"` while `autoplay` is
-on (a self-rotating region announcing on every tick would be spam). A host `aria-label` attribute is
-forwarded onto it. `pause-button` — the localized autoplay pause/resume action, rendered only while
-`autoplay` is enabled and exposed as a toggle with `aria-pressed`.
+**CSS parts:** `base` — the ordinary wrapper around the default slot; a host `aria-label` gives it
+a non-live `role="group"` and is included as announcement context. Selection changes after mount
+are appended to Lyra's shared light-DOM polite announcement sink; nested `hidden`, `inert`,
+`aria-hidden="true"`, `display:none`, and `content-visibility:hidden` branches are omitted. A
+`visibility:hidden|collapse` wrapper suppresses its own text but not a descendant that restores
+`visibility:visible`. Timer-driven autoplay ticks stay silent to avoid spam,
+but a direct `randomize()` call still announces while `autoplay` is enabled. Initial connection and
+reconnection are also silent, including a detached reactive selection change whose update settles
+during reattachment; changes while the component or a composed ancestor is accessibility-hidden
+stay silent too. A nested forwarding slot contributes flattened assigned content rather than its
+fallback; later assignment and assigned-node text/style/visibility changes announce only when they
+change the currently exposed selection, while initial distribution remains silent. `pause-button`
+— the localized autoplay pause/resume action, rendered
+only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
 `--animation-easing` (default `ease`), and `--animation-translate` (default
@@ -56,6 +68,11 @@ forwarded onto it. `pause-button` — the localized autoplay pause/resume action
 `--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
 `--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
 `--lr-random-content-animation-translate` names remain fallbacks.
+
+**Web Awesome migration note:** this mapping requires manual review rather than a mechanical tag
+rename. Candidate eligibility and selection semantics differ, and Lyra additionally suppresses
+autoplay under `prefers-reduced-motion: reduce` and renders a visible localized pause/resume
+control. Review all four behaviors before replacing `<wa-random-content>`.
 
 **Known gotchas:**
 

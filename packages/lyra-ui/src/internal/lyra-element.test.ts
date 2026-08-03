@@ -4,6 +4,10 @@ import { LyraElement } from './lyra-element.js';
 import { tag } from './prefix.js';
 
 class Demo extends LyraElement {
+  beginLoadForTest(): AbortSignal | undefined {
+    return this.beginAbortableLoad();
+  }
+
   render() {
     return html`<span>hi</span>`;
   }
@@ -50,10 +54,135 @@ it('emit() dispatches a composed, bubbling lyra event', async () => {
   let caught: CustomEvent | undefined;
   el.addEventListener('lr-ping', (e) => (caught = e as CustomEvent));
   (el as unknown as { emit: (n: string, d?: unknown) => void }).emit('lr-ping', { ok: true });
-  expect(caught).to.exist;
+  expect(caught !== undefined).to.equal(true);
   expect(caught!.bubbles).to.be.true;
   expect(caught!.composed).to.be.true;
   expect((caught!.detail as { ok: boolean }).ok).to.be.true;
+});
+
+it('emit() constructs events in the adopted owner document realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  el.remove();
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    let caught: Event | undefined;
+    el.addEventListener('lr-ping', (event) => {
+      caught = event;
+    });
+    (el as unknown as { emit: (name: string, detail?: unknown) => void }).emit('lr-ping', {
+      owner: true,
+    });
+
+    expect(caught !== undefined).to.equal(true);
+    expect(caught instanceof frameWindow.CustomEvent).to.be.true;
+    expect(caught instanceof window.CustomEvent).to.be.false;
+    expect(caught!.bubbles).to.be.true;
+    expect(caught!.composed).to.be.true;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('emit() preserves an inert owner document creator realm and exact event options', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const inertDocument = frame.contentDocument!.implementation.createHTMLDocument('inert owner');
+  expect(inertDocument.defaultView === null).to.be.true;
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  el.remove();
+
+  try {
+    inertDocument.adoptNode(el);
+    let caught: CustomEvent | undefined;
+    el.addEventListener('lr-ping', (event) => {
+      caught = event as CustomEvent;
+      event.preventDefault();
+    });
+    const emitted = (
+      el as unknown as {
+        emit: (name: string, detail: unknown, options: { cancelable: boolean }) => CustomEvent;
+      }
+    ).emit('lr-ping', { inert: true }, { cancelable: true });
+
+    expect(caught === emitted).to.equal(true);
+    expect(emitted instanceof frameWindow.CustomEvent).to.be.true;
+    expect(emitted instanceof window.CustomEvent).to.be.false;
+    expect(emitted.detail).to.deep.equal({ inert: true });
+    expect(emitted.bubbles).to.be.true;
+    expect(emitted.composed).to.be.true;
+    expect(emitted.cancelable).to.be.true;
+    expect(emitted.defaultPrevented).to.be.true;
+  } finally {
+    frame.remove();
+  }
+});
+
+it('creates abort controllers in the current owner realm and fails closed without one', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  const ParentAbortController = window.AbortController;
+  const OwnerAbortController = frameWindow.AbortController;
+  let parentCreations = 0;
+  let ownerCreations = 0;
+  let latestOwnerSignal: AbortSignal | undefined;
+
+  class ParentTrackedAbortController extends ParentAbortController {
+    constructor() {
+      super();
+      parentCreations++;
+    }
+  }
+  class OwnerTrackedAbortController extends OwnerAbortController {
+    constructor() {
+      super();
+      ownerCreations++;
+      latestOwnerSignal = this.signal;
+    }
+  }
+
+  try {
+    window.AbortController = ParentTrackedAbortController;
+    frameWindow.AbortController = OwnerTrackedAbortController;
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+
+    const first = el.beginLoadForTest();
+    expect(first !== undefined).to.be.true;
+    expect(first === latestOwnerSignal).to.equal(true);
+    expect(parentCreations).to.equal(0);
+    expect(ownerCreations).to.equal(1);
+
+    const second = el.beginLoadForTest();
+    expect(first!.aborted, 'a replacement load must abort the previous owner signal').to.be.true;
+    expect(second?.aborted).to.be.false;
+    expect(ownerCreations).to.equal(2);
+
+    el.remove();
+    expect(second!.aborted, 'disconnect must abort the retained owner controller').to.be.true;
+
+    const inertDocument = frameDocument.implementation.createHTMLDocument('inert owner');
+    expect(inertDocument.defaultView === null).to.be.true;
+    inertDocument.adoptNode(el);
+    expect(el.beginLoadForTest() === undefined).to.be.true;
+    expect(parentCreations, 'an ownerless document must not fall back to the ambient realm').to.equal(0);
+    expect(ownerCreations).to.equal(2);
+  } finally {
+    el.remove();
+    window.AbortController = ParentAbortController;
+    frameWindow.AbortController = OwnerAbortController;
+    frame.remove();
+  }
 });
 
 it('resolves the inherited locale at most once per update cycle', async () => {
@@ -217,6 +346,45 @@ it('inherits and reacts to locale context across a shadow-root host boundary', a
   await el.updateComplete;
 
   expect(el.exposedLocale).to.equal('lt');
+});
+
+it('rebinds locale, direction and ancestor observation after adoption into an iframe realm', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  // Upgrade and render in the defining realm first. This is the real adoption path for a custom
+  // element; constructing a main-realm class for the first time in another document would ask Lit
+  // to share a constructed stylesheet across documents, which the platform intentionally rejects.
+  const el = await fixture<DemoLocale>(html`<lr-demo-locale></lr-demo-locale>`);
+  const foreignDocument = frame.contentDocument!;
+  foreignDocument.documentElement.lang = 'lt';
+  const context = foreignDocument.createElement('section');
+  context.lang = 'tr';
+  context.dir = 'rtl';
+  const shadow = context.attachShadow({ mode: 'open' });
+  el.remove();
+  foreignDocument.adoptNode(el);
+  shadow.append(el);
+  foreignDocument.body.append(context);
+
+  try {
+    await el.updateComplete;
+    expect(el.ownerDocument === foreignDocument).to.be.true;
+    expect(el.exposedMessageLocale).to.equal('tr');
+    expect(el.exposedDirection).to.equal('rtl');
+
+    context.lang = 'et';
+    context.dir = 'ltr';
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(el.exposedMessageLocale).to.equal('et');
+    expect(el.exposedDirection).to.equal('ltr');
+
+    context.removeAttribute('lang');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(el.exposedMessageLocale).to.equal('lt');
+  } finally {
+    frame.remove();
+  }
 });
 
 it('makes notifications non-cancelable unless a caller opts into veto semantics', async () => {

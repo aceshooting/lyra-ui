@@ -2,6 +2,15 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './flow-node.js';
 import type { LyraFlowNode } from './flow-node.js';
 
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
 it('defaults to empty heading, no status, in/out handles, horizontal orientation', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
   expect(el.heading).to.equal('');
@@ -126,6 +135,57 @@ it('a header child appended after the initial render still replaces the built-in
   expect(assigned[0].textContent).to.equal('Custom header');
 });
 
+it('keeps server-only header and pulse state for the first hydrating update, then corrects in place', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-flow-node') as LyraFlowNode;
+  el.status = 'running';
+  // A pre-existing root is LyraElement's hydration signal. The repository-wide hydration gate
+  // supplies real declarative shadow DOM and proves server-node claiming; this focused fixture
+  // makes the component's first/second-update state sequence deterministic in every test engine.
+  el.attachShadow({ mode: 'open' });
+  el.innerHTML = '<span slot="header">Stateful header</span>';
+  container.append(el);
+
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector('[part~="card"]') as HTMLElement;
+  expect(card.hasAttribute('data-pulse')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="header"]') !== null).to.equal(true);
+
+  // Firefox can settle the first update promise before the deferred seed queues its correction.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part~="card"]') === card).to.be.true;
+  expect(card.hasAttribute('data-pulse')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+});
+
+it('resamples header-slot state after delayed detached mutations on reconnect', async () => {
+  const mount = (await fixture(html`<div>
+    <lr-flow-node><span slot="header">Custom header</span></lr-flow-node>
+  </div>`)) as HTMLDivElement;
+  const el = mount.querySelector('lr-flow-node') as LyraFlowNode;
+  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+
+  el.remove();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  el.querySelector('[slot="header"]')!.remove();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  mount.append(el);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="header"]') !== null).to.equal(true);
+
+  el.remove();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const replacement = el.ownerDocument.createElement('span');
+  replacement.slot = 'header';
+  replacement.textContent = 'Replacement header';
+  el.append(replacement);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  mount.append(el);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+});
+
 it('is accessible with a status, progress, and handles', async () => {
   const el = (await fixture(
     html`<lr-flow-node heading="Fetch" status="running" progress="40"></lr-flow-node>`,
@@ -222,6 +282,72 @@ describe('reduced-motion running pulse', () => {
       expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.be.false;
     } finally {
       window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('re-evaluates a running pulse against the adopted owner window', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const el = document.createElement('lr-flow-node') as LyraFlowNode;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      el.status = 'running';
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.be.true;
+
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      el.status = 'success';
+      await el.updateComplete;
+      el.status = 'running';
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.be.false;
+    } finally {
+      el.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      frame.remove();
+    }
+  });
+
+  it('resamples an unchanged running pulse when reconnecting in a differently configured owner realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const el = document.createElement('lr-flow-node') as LyraFlowNode;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      el.status = 'running';
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.equal(true);
+
+      el.remove();
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(el.status).to.equal('running');
+      expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.equal(false);
+
+      el.remove();
+      document.body.append(document.adoptNode(el));
+      await el.updateComplete;
+      expect(el.status).to.equal('running');
+      expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.equal(true);
+    } finally {
+      el.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      frame.remove();
     }
   });
 });

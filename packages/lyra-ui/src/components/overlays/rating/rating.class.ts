@@ -18,6 +18,11 @@ import { styles } from './rating.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_MAX = 5;
 /** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
@@ -139,6 +144,16 @@ function starSolid(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    rating: LYRA_DEFAULT_rating,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -222,7 +237,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);

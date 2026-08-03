@@ -2,7 +2,7 @@
 
 # `lr-resize-observer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-resize-observer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraResizeObserver`, also available unregistered from `@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

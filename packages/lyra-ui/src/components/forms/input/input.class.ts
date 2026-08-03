@@ -21,6 +21,11 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraInputType =
   | 'text'
@@ -178,6 +183,26 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @since 4.0.0
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    hidePassword: LYRA_DEFAULT_hidePassword,
+    inputLabel: LYRA_DEFAULT_inputLabel,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    showPassword: LYRA_DEFAULT_showPassword,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
   // both spellings of every tier (`s` and `small`, …) work with no per-component rule.

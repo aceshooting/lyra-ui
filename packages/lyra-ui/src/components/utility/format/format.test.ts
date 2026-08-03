@@ -293,6 +293,47 @@ it('schedules sync relative-time at the next rounded unit boundary instead of fi
   }
 });
 
+it('schedules and clears relative-time refreshes through the adopted owner window', async () => {
+  const el = (await fixture(html`<lr-relative-time></lr-relative-time>`)) as LyraRelativeTime;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalSetTimeout = frameWindow.setTimeout;
+  const originalClearTimeout = frameWindow.clearTimeout;
+  let scheduledCallback: VoidFunction | undefined;
+  const cleared: number[] = [];
+  frameWindow.setTimeout = ((handler: TimerHandler): number => {
+    scheduledCallback = handler as VoidFunction;
+    return 88;
+  }) as typeof frameWindow.setTimeout;
+  frameWindow.clearTimeout = ((handle?: number): void => {
+    if (handle !== undefined) cleared.push(handle);
+  }) as typeof frameWindow.clearTimeout;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    el.date = new Date(Date.now() + 100_000);
+    el.sync = true;
+    await el.updateComplete;
+    expect(scheduledCallback, 'the destination window schedules the refresh').to.be.a('function');
+
+    document.adoptNode(el);
+    expect(cleared, 'adoption clears through the window that returned the handle').to.include(88);
+  } finally {
+    frameWindow.setTimeout = originalSetTimeout;
+    frameWindow.clearTimeout = originalClearTimeout;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`);
   await expect(el).to.be.accessible();

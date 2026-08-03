@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './chip-group.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ChipGroupOverflowToggleDetail {
   expanded: boolean;
@@ -51,6 +56,16 @@ export interface LyraChipGroupEventMap {
  * @since 4.0.0
  */
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    showLess: LYRA_DEFAULT_showLess,
+    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
+    showMoreCount: LYRA_DEFAULT_showMoreCount,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _maxVisible?: number;
@@ -82,15 +97,39 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   private readonly observedChildren = new Set<HTMLElement>();
   private readonly pendingHiddenWrites = new Map<HTMLElement, boolean[]>();
   private visibilityObserver?: MutationObserver;
+  private visibilityObserverDocument?: Document;
+  private visibilityObserverGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.visibilityObserver ??= new MutationObserver((records) => {
-      if (this.processHiddenMutations(records)) this.syncChildVisibility();
-    });
+    this.armVisibilityObserver();
     // A synchronous disconnect/reconnect has no reactive property change, so updated() does not
     // rerun. Re-snapshot the restored author state and reapply collapse ownership immediately.
     if (this.hasUpdated) this.syncChildVisibility();
+  }
+
+  private armVisibilityObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.visibilityObserver && this.visibilityObserverDocument === ownerDocument) return;
+    this.resetVisibilityObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.visibilityObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.visibilityObserver !== observer ||
+        this.visibilityObserverDocument !== ownerDocument ||
+        this.visibilityObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      if (this.processHiddenMutations(records)) this.syncChildVisibility();
+    });
+    this.visibilityObserver = observer;
+    this.visibilityObserverDocument = ownerDocument;
   }
 
   protected override willUpdate(): void {
@@ -127,11 +166,24 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.visibilityObserver?.disconnect();
+    this.resetVisibilityObserver();
     this.observedChildren.clear();
     this.pendingHiddenWrites.clear();
     this.restoreChildVisibility();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetVisibilityObserver();
+    this.observedChildren.clear();
+    this.pendingHiddenWrites.clear();
+  }
+
+  private resetVisibilityObserver(): void {
+    this.visibilityObserverGeneration += 1;
+    this.visibilityObserver?.disconnect();
+    this.visibilityObserver = undefined;
+    this.visibilityObserverDocument = undefined;
   }
 
   private get hasOverflow(): boolean {

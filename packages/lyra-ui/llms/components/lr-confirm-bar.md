@@ -2,7 +2,7 @@
 
 # `lr-confirm-bar`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-confirm-bar.js';` (stable tag alias; registers the tag)
 - **Class** `LyraConfirmBar`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -2,7 +2,7 @@
 
 # `lr-animated-image`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/animated-image/animated-image.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-animated-image.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAnimatedImage`, also available unregistered from `@aceshooting/lyra-ui/components/media/animated-image/animated-image.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

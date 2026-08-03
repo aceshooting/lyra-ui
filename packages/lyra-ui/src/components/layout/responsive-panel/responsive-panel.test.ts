@@ -680,6 +680,53 @@ it("restores header text observation after reconnect", async () => {
   expect(panel.getAttribute("aria-label")).to.equal("After reconnect");
 });
 
+it("recreates its header observer in the adopted owner realm", async () => {
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="overlay" open><span slot="header">Owner heading</span></lr-responsive-panel>`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const heading = el.querySelector('[slot="header"]')!;
+  el.remove();
+  const iframe = document.createElement("iframe");
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error("The iframe realm was unavailable.");
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let observations = 0;
+  let disconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private observesHeading = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node): void {
+      if (target === heading) {
+        this.observesHeading = true;
+        observations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesHeading) disconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(observations, "the destination window observes the slotted header").to.be.greaterThan(0);
+    document.adoptNode(el);
+    expect(disconnects, "adoption disconnects the old header observer").to.be.greaterThan(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it("prefers a heading element within the header slot over its full text when both are present", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel mode="overlay" open

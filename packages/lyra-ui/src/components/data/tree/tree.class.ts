@@ -14,6 +14,11 @@ import type { LyraTreeItem } from './tree-item.class.js';
 // tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
 import type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection } from './tree-types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 export type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection };
 
 export interface LyraTreeEventMap {
@@ -49,7 +54,7 @@ const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'l
  */
 function isInertWithin(node: Element, root: Element): boolean {
   for (let current: Element | null = node; current && current !== root; current = current.parentElement) {
-    if (current instanceof HTMLElement && current.inert) return true;
+    if (current.hasAttribute('inert')) return true;
   }
   return false;
 }
@@ -115,6 +120,18 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @since 4.0.0
  */
 export class LyraTree extends LyraElement<LyraTreeEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) data: TreeItem[] = [];
@@ -474,7 +491,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * top-level ancestor.
    */
   private deepFocusedNode(): LyraTreeItem | null {
-    const active = deepActiveElementIn(document);
+    const active = deepActiveElementIn(this.ownerDocument);
     if (!active || active.localName !== tag('tree-item')) return null;
     const node = active as LyraTreeItem;
     return this.visibleNodeElements().some((n) => n.nodeId === node.nodeId) ? node : null;
@@ -508,12 +525,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     // be re-focused or receive input either way).
     if (!inertMutation || this.activeId == null) return;
     if (displaced == null || displaced !== this.lastFocusedNodeId) return;
-    const active = deepActiveElementIn(document);
+    const ownerDocument = this.ownerDocument;
+    const active = deepActiveElementIn(ownerDocument);
     const strandedOnDisplaced =
-      active instanceof HTMLElement &&
+      active?.nodeType === 1 &&
       active.localName === tag('tree-item') &&
       (active as LyraTreeItem).nodeId === displaced;
-    if (active !== null && active !== document.body && !strandedOnDisplaced) return;
+    if (active !== null && active !== ownerDocument.body && !strandedOnDisplaced) return;
     this.pendingFocusId = this.activeId;
   }
 
@@ -521,7 +539,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private onTreeFocusIn = (e: FocusEvent): void => {
     const item = e.composedPath().find(
       (target): target is LyraTreeItem =>
-        target instanceof HTMLElement && target.localName === tag('tree-item'),
+        (target as Partial<Node>).nodeType === 1 &&
+        (target as Partial<Element>).localName === tag('tree-item'),
     );
     if (item) this.lastFocusedNodeId = item.nodeId;
   };
@@ -608,6 +627,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  `selected`/`disabled`/`lazy` changes because those affect the tree-owned selection engine;
    *  each item still owns its own child-slot reconciliation. */
   private childObserver?: MutationObserver;
+  private childObserverDocument?: Document;
+  private childObserverGeneration = 0;
 
   /** The observer's own entry point: it additionally records whether an `inert` toggle was among
    *  the records, which `resolveActiveFromDom()` needs to tell a platform-caused focus loss apart
@@ -619,8 +640,32 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.childObserver = new MutationObserver(this.onChildMutations);
-    this.childObserver.observe(this, {
+    this.armChildObserver();
+  }
+
+  private armChildObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.childObserver && this.childObserverDocument === ownerDocument) return;
+    this.resetChildObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.childObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.childObserver !== observer ||
+        this.childObserverDocument !== ownerDocument ||
+        this.childObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onChildMutations(records);
+    });
+    this.childObserver = observer;
+    this.childObserverDocument = ownerDocument;
+    observer.observe(this, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -630,8 +675,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetChildObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetChildObserver();
+  }
+
+  private resetChildObserver(): void {
+    this.childObserverGeneration += 1;
     this.childObserver?.disconnect();
     this.childObserver = undefined;
+    this.childObserverDocument = undefined;
   }
 
   /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`. */
@@ -646,7 +701,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
       let node = reused;
       if (!node) {
-        node = document.createElement(tag('tree-item')) as LyraTreeItem;
+        node = this.ownerDocument.createElement(tag('tree-item')) as LyraTreeItem;
         this.generatedNodes.add(node);
       }
       node.item = item;

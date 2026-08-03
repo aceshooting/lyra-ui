@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An accessible two-pane layout with percent/pixel positioning, optional primary-pane preservation, constraints, snapping, keyboard resizing, and horizontal or vertical orientation.',
+          'An accessible two-pane layout with percent/pixel positioning, optional primary-pane preservation, constraints, snapping, keyboard resizing, and horizontal or vertical orientation. String snap points reflect to the `snap` attribute; callback snap functions are property-only.',
       },
     },
   },

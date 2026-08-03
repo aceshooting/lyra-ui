@@ -18,6 +18,12 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './image-viewer.styles.js';
 import { sanitizePercentRect } from '../../../internal/safe-css.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ImageFit = 'contain' | 'width' | 'actual';
 export type ImageRotation = 0 | 90 | 180 | 270;
@@ -104,7 +110,9 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @csspart highlight - One highlight box (`data-tone`, `data-active`).
  * @csspart highlight-label - A highlight's visible label.
  * @csspart annotation-box - The in-progress draft rectangle.
- * @csspart error - The error region.
+ * @csspart error - Ordinary visible failure text. Fresh post-mount image/source failures append
+ *   the localized message to the shared light-DOM assertive announcement sink; an already-unsafe
+ *   initial `src` renders visibly without interrupting on mount.
  * @cssprop [--lr-image-viewer-annotate-active-bg=var(--lr-color-brand-quiet)] - Background of
  *   `[part="annotate-toggle"]` while annotation mode is on. The toggle carries its own glyph in
  *   `--lr-color-text`, so keep a 4.5:1 ratio against it.
@@ -130,6 +138,36 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewTypeImage: LYRA_DEFAULT_documentPreviewTypeImage,
+    imageViewerAnnotate: LYRA_DEFAULT_imageViewerAnnotate,
+    imageViewerAnnotationAdded: LYRA_DEFAULT_imageViewerAnnotationAdded,
+    imageViewerAnnotationBoxPosition: LYRA_DEFAULT_imageViewerAnnotationBoxPosition,
+    imageViewerAnnotationCancelled: LYRA_DEFAULT_imageViewerAnnotationCancelled,
+    imageViewerAnnotationHint: LYRA_DEFAULT_imageViewerAnnotationHint,
+    imageViewerFailedToLoad: LYRA_DEFAULT_imageViewerFailedToLoad,
+    imageViewerFitActual: LYRA_DEFAULT_imageViewerFitActual,
+    imageViewerFitContain: LYRA_DEFAULT_imageViewerFitContain,
+    imageViewerFitLabel: LYRA_DEFAULT_imageViewerFitLabel,
+    imageViewerFitWidth: LYRA_DEFAULT_imageViewerFitWidth,
+    imageViewerHighlightsLabel: LYRA_DEFAULT_imageViewerHighlightsLabel,
+    imageViewerLabel: LYRA_DEFAULT_imageViewerLabel,
+    imageViewerRotate: LYRA_DEFAULT_imageViewerRotate,
+    imageViewerUnlabeledHighlight: LYRA_DEFAULT_imageViewerUnlabeledHighlight,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Image URL; validated with `safeMediaSrc` before it ever reaches the `<img>`. */
@@ -171,6 +209,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   @state() private loadState: ImageLoadState = { kind: 'idle' };
   @state() private draft: AnnotationDraft | null = null;
+  private errorAnnouncementSink?: AnnouncementSink;
 
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
@@ -193,7 +232,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       this.cancelPointerDraft();
-      this.loadState = this.src && safeMediaSrc(this.src) ? { kind: 'loading' } : this.src ? { kind: 'error' } : { kind: 'idle' };
+      const safeSrc = this.src ? safeMediaSrc(this.src) : null;
+      this.loadState = safeSrc ? { kind: 'loading' } : this.src ? { kind: 'error' } : { kind: 'idle' };
+      if (this.hasUpdated && this.src && !safeSrc) this.announceLoadError();
     }
     if (changed.has('annotatable') && !this.annotatable) this.cancelPointerDraft();
   }
@@ -231,8 +272,38 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private onImgError = (): void => {
     this.loadState = { kind: 'error' };
+    this.announceLoadError();
     this.emit('lr-render-error', { error: new Error('The image failed to load.') });
   };
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncErrorAnnouncementSink();
+  }
+
+  adoptedCallback(): void {
+    this.releaseErrorAnnouncementSink();
+    this.syncErrorAnnouncementSink();
+  }
+
+  private syncErrorAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseErrorAnnouncementSink();
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseErrorAnnouncementSink(): void {
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+  }
+
+  private announceLoadError(): void {
+    this.errorAnnouncementSink?.announce(this.localize('imageViewerFailedToLoad'));
+  }
 
   private onFrameZoomChange = (event: CustomEvent<{ zoom: number }>): void => {
     this.zoom = event.detail.zoom;
@@ -431,7 +502,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private renderBody(): TemplateResult {
     if (this.loadState.kind === 'error') {
-      return html`<div part="error" role="alert">${this.localize('imageViewerFailedToLoad')}</div>`;
+      return html`<div part="error">${this.localize('imageViewerFailedToLoad')}</div>`;
     }
     if (this.loadState.kind === 'idle') {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
@@ -492,6 +563,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   override disconnectedCallback(): void {
     this.cancelPointerDraft();
+    this.releaseErrorAnnouncementSink();
     super.disconnectedCallback();
   }
 }

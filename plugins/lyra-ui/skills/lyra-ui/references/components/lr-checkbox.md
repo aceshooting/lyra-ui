@@ -2,7 +2,7 @@
 
 # `lr-checkbox`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/checkbox/checkbox.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-checkbox.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCheckbox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox/checkbox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -60,6 +60,11 @@ survives every toggle and a form reset; `setCustomValidity('')` or `resetValidit
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
 host so the control still has an accessible name. `hint` is the WA supporting-text slot;
 `help-text` is the Shoelace spelling for the same described-by surface.
+
+The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
+visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
+independently of whether that node contributes to the accessible name. A host `aria-label` wins by
+presence and is forwarded verbatim, including `aria-label=""`.
 
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains

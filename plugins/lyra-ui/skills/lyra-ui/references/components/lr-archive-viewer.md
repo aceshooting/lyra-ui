@@ -2,7 +2,7 @@
 
 # `lr-archive-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-archive-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraArchiveViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

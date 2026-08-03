@@ -2,7 +2,7 @@
 
 # `lr-date-picker`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/date-picker/date-picker.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-date-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

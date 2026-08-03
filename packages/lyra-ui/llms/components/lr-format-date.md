@@ -2,7 +2,7 @@
 
 # `lr-format-date`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/format/format-date.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-format-date.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFormatDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

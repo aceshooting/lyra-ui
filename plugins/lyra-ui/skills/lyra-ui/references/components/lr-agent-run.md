@@ -2,7 +2,7 @@
 
 # `lr-agent-run`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-agent-run.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAgentRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

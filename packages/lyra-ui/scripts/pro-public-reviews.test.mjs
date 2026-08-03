@@ -12,6 +12,7 @@ import {
   reviewedWebAwesomeFileInput,
   reviewedWebAwesomeSparkline,
   reviewedWebAwesomeVideo,
+  reviewedWebAwesomeVideoPlaylist,
   reviewedMappingNormalizations,
 } from './generate-component-inventory.mjs';
 
@@ -27,14 +28,43 @@ const chartDefaults = new Map([
   ['wa-scatter-chart', 'scatter'],
 ]);
 
+const evidenceHashes = new Map([
+  ['wa-chart', '5165e2b004b5b1214a29aea843670e5b963ef5424cb27379c2b58b1611b8ee0e'],
+  ['wa-bar-chart', 'fe2969c238434c32679554cf9e36e66f32d2faf8aa2100b4efa491967e2f7d43'],
+  ['wa-bubble-chart', 'c18a710316888476a09008ce4f7ba0fa864f6a7c5d96ab7e972a50e492e46dbd'],
+  ['wa-doughnut-chart', 'f0537eda572288c36700e54917f6915d3970126bdfb7b9718d93e3a4d3bfec57'],
+  ['wa-line-chart', 'f318b950f8a0c7cdae1d436bd1d2cd2b02b8b678ef0164f86907309a87da54a2'],
+  ['wa-pie-chart', 'a5ebc5a5fb6cae11d7d602ca37f536db81267a6af54e1bc9d9bfaeaf442238ff'],
+  ['wa-polar-area-chart', 'b00297da3a51e7b5a5ce922cfe1f5c158a95b34669c3a55a53c8b47665b08ea5'],
+  ['wa-radar-chart', '5d54d45a9263bf16a2fde8a95e41e31c4fcfe428884d271cca537c1bc63bc53c'],
+  ['wa-scatter-chart', '1f5a3191e2895f28efc75aa5e441deb7eb1293d7ab48787c807c04ea93414a2a'],
+  ['wa-sparkline', 'f1ad77432edfdb1f5f45a2caf5a707187478d851295a66a4968c02fe78770516'],
+  ['wa-date-input', 'f02d777c5ea505c9eeafee76a0418647b83aeff513e2830915547937cda418b9'],
+  ['wa-date-picker', '9dc70a6ef8da5c99193cb82cb30887972f25133691f74963daf90f316678d6ff'],
+  ['wa-data-grid', '4712e4032ddfb07bf32bacf18733c478b7b939e0af766609826d04d836d8239e'],
+  ['wa-combobox', '878fceb16d17a6ced71602f22d51339958c16138a470858f5dccf2d8d6419ec3'],
+  ['wa-file-input', 'ce9311420d7f5e29ebfd736d8e99a61aeb412e36765729113fa23b84990a3b05'],
+  ['wa-video', '3823f6e9dbf7330a333dde9612e987b851f3fa8762b6cd007d93ccd1d71f6362'],
+  ['wa-video-playlist', 'bcb3e7ea61f1a5f5e3ced4b3be538e790c3ba8e1b22832576dbc44da0e1ef75a'],
+]);
+
 function assertCompleteEvidence(review) {
   assert.equal(review.review.status, 'complete');
   assert.equal(review.review.source, 'official-public-documentation');
   assert.equal(review.review.sourceVersion, '3.11.0');
   assert.equal(review.review.reviewedAt, '2026-08-02');
   assert.match(review.review.sourceUrl, /^https:\/\/webawesome\.com\/docs\/components\//);
-  assert.match(review.review.sourceSha256, /^[a-f0-9]{64}$/);
+  assert.equal(review.review.sourceSha256, evidenceHashes.get(review.tag));
+  assert.equal(review.review.sourceHashNormalization, 'cloudflare-data-cfemail-v1');
   assert.deepEqual(review.review.unreviewedSections, []);
+}
+
+function assertNoInventedMethodReturns(review) {
+  assert.ok(
+    review.surface.methods.every(({ overloads }) =>
+      overloads.every(({ returnType }) => returnType === 'unspecified-public-documentation')),
+    `${review.tag}: rendered public method tables do not publish return types`,
+  );
 }
 
 function assertNativeContract(review, name, expected) {
@@ -83,7 +113,10 @@ test('reviewed Sparkline, Combobox, and File Input snapshots are member-complete
   const sparkline = reviewedWebAwesomeSparkline();
   const combobox = reviewedWebAwesomeCombobox();
   const fileInput = reviewedWebAwesomeFileInput();
-  for (const review of [sparkline, combobox, fileInput]) assertCompleteEvidence(review);
+  for (const review of [sparkline, combobox, fileInput]) {
+    assertCompleteEvidence(review);
+    assertNoInventedMethodReturns(review);
+  }
 
   assert.deepEqual(
     [
@@ -104,6 +137,24 @@ test('reviewed Sparkline, Combobox, and File Input snapshots are member-complete
     [30, 7, 11, 17, 7],
   );
   assert.equal(combobox.surface.events.find(({ name }) => name === 'wa-create').cancelable, 'always');
+  assert.equal(
+    combobox.surface.properties.find(({ name }) => name === 'autocapitalize').type,
+    "'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'",
+  );
+  assert.equal(
+    combobox.surface.properties.find(({ name }) => name === 'filter').type,
+    '((option: WaOption, query: string) => boolean) | null',
+  );
+  assert.equal(
+    combobox.surface.properties.find(({ name }) => name === 'getTag').type,
+    '(option: WaOption, index: number) => TemplateResult | string | HTMLElement',
+  );
+  assert.equal(combobox.surface.properties.find(({ name }) => name === 'value').attribute, 'value');
+  assert.deepEqual(
+    combobox.surface.methods.find(({ name }) => name === 'formStateRestoreCallback')
+      .overloads[0].parameters.map(({ name }) => name),
+    ['state', 'reason'],
+  );
   assert.deepEqual(
     [
       fileInput.surface.properties.length,
@@ -112,9 +163,31 @@ test('reviewed Sparkline, Combobox, and File Input snapshots are member-complete
       fileInput.surface.parts.length,
       fileInput.surface.methods.length,
     ],
-    [17, 4, 5, 17, 5],
+    [17, 3, 5, 17, 5],
   );
-  assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').readonly, true);
+  assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').readonly, false);
+  assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').attribute, null);
+  assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').reflects, false);
+  assert.equal(fileInput.surface.properties.find(({ name }) => name === 'fileCount').readonly, false);
+  assert.deepEqual(
+    fileInput.surface.properties.filter(({ reflects }) => reflects).map(({ name }) => name),
+    ['multiple', 'name', 'required', 'size'],
+  );
+  assert.deepEqual(fileInput.surface.slots.map(({ name }) => name), ['dropzone', 'hint', 'label']);
+  assert.deepEqual(
+    fileInput.surface.methods.find(({ name }) => name === 'formStateRestoreCallback')
+      .overloads[0].parameters.map(({ name }) => name),
+    ['state', 'reason'],
+  );
+  assert.match(
+    combobox.surface.parts.find(({ name }) => name === 'label').deprecated,
+    /form-control-label/,
+  );
+  assert.match(fileInput.surface.parts.find(({ name }) => name === 'base').deprecated, /file-input/);
+  assert.match(
+    fileInput.surface.parts.find(({ name }) => name === 'label').deprecated,
+    /form-control-label/,
+  );
   assert.equal(fileInput.surface.form.associated, true);
   assertNativeContract(combobox, 'input', {
     constructor: 'InputEvent | CustomEvent<{ value: string | string[] }>',
@@ -147,6 +220,7 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
   const datePicker = reviewedWebAwesomeDatePicker();
   const dataGrid = reviewedWebAwesomeDataGrid();
   for (const review of [dateInput, datePicker, dataGrid]) assertCompleteEvidence(review);
+  for (const review of [dateInput, datePicker, dataGrid]) assertNoInventedMethodReturns(review);
 
   assert.deepEqual(
     {
@@ -195,6 +269,17 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
     { properties: 27, slots: 4, events: 4, parts: 35, methods: 4 },
   );
   assert.equal(datePicker.maturity.status, 'experimental');
+  assert.equal(
+    dateInput.surface.properties.find(({ name }) => name === 'isDateDisabled').type,
+    '(date: Date) => boolean | undefined',
+  );
+  assert.equal(
+    datePicker.surface.properties.find(({ name }) => name === 'isDateDisabled').type,
+    '(date: Date) => boolean | undefined',
+  );
+  assert.equal(datePicker.surface.properties.find(({ name }) => name === 'valueAsDate').readonly, true);
+  assert.equal(datePicker.surface.properties.find(({ name }) => name === 'valueAsRange').readonly, true);
+  assert.equal(dataGrid.surface.properties.find(({ name }) => name === 'selectedRows').readonly, false);
   for (const component of [dateInput, datePicker]) {
     assert.ok(
       component.surface.methods.every(({ overloads }) =>
@@ -222,9 +307,14 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
   );
 });
 
-test('reviewed Video native media events retain platform propagation flags', () => {
+test('reviewed Video and Video Playlist snapshots retain their complete experimental contracts', () => {
   const video = reviewedWebAwesomeVideo();
-  assertCompleteEvidence(video);
+  const playlist = reviewedWebAwesomeVideoPlaylist();
+  for (const review of [video, playlist]) {
+    assertCompleteEvidence(review);
+    assertNoInventedMethodReturns(review);
+    assert.equal(review.maturity.status, 'experimental');
+  }
   for (const name of ['ended', 'error', 'loadedmetadata', 'pause', 'play', 'timeupdate', 'volumechange']) {
     assertNativeContract(video, name, {
       constructor: 'Event',
@@ -233,6 +323,21 @@ test('reviewed Video native media events retain platform propagation flags', () 
       cancelable: 'never',
     });
   }
+  assert.deepEqual(
+    {
+      properties: playlist.surface.properties.length,
+      slots: playlist.surface.slots.length,
+      events: playlist.surface.events.length,
+      parts: playlist.surface.parts.length,
+      methods: playlist.surface.methods.length,
+    },
+    { properties: 2, slots: 1, events: 1, parts: 7, methods: 3 },
+  );
+  assert.equal(video.surface.properties.find(({ name }) => name === 'currentTime').attribute, 'currentTime');
+  assert.match(video.surface.parts.find(({ name }) => name === 'base').deprecated, /video-wrapper/);
+  assert.match(playlist.surface.parts.find(({ name }) => name === 'base').deprecated, /video-playlist/);
+  assert.equal(playlist.surface.properties.find(({ name }) => name === 'controls').default, 'full');
+  assert.equal(playlist.surface.events[0].name, 'wa-video-change');
 });
 
 test('origin-aware analyzer normalizations are comparison-only and narrowly scoped', () => {
@@ -264,7 +369,17 @@ test('origin-aware analyzer normalizations are comparison-only and narrowly scop
     ]),
   );
   assert.deepEqual(slSelect.inferredAttributeSuppressions, [
-    { attribute: 'get-tag', property: 'getTag' },
+    { attribute: 'getTag', property: 'getTag', explicit: true },
+  ]);
+  assert.deepEqual(reviewedMappingNormalizations('sl-dropdown').inferredAttributeSuppressions, []);
+  assert.deepEqual(reviewedMappingNormalizations('sl-range').inferredAttributeSuppressions, []);
+  assert.deepEqual(reviewedMappingNormalizations('sl-popup').inferredAttributeSuppressions, [
+    { attribute: 'autoSizeBoundary', property: 'autoSizeBoundary', explicit: true },
+    { attribute: 'flipBoundary', property: 'flipBoundary', explicit: true },
+    { attribute: 'shiftBoundary', property: 'shiftBoundary', explicit: true },
+  ]);
+  assert.deepEqual(reviewedMappingNormalizations('sl-rating').inferredAttributeSuppressions, [
+    { attribute: 'getSymbol', property: 'getSymbol', explicit: true },
   ]);
   assert.deepEqual(waInput.defaultEquivalences, [
     { memberKind: 'attribute', member: 'name', upstream: null, target: '' },

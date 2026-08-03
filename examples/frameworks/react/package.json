@@ -1,0 +1,23 @@
+{
+  "name": "lyra-framework-recipe-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc --noEmit",
+    "build": "pnpm run check && vite build"
+  },
+  "dependencies": {
+    "@aceshooting/lyra-ui": "^8.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.5",
+    "typescript": "5.9.3",
+    "vite": "8.2.0"
+  }
+}

@@ -4,15 +4,16 @@ import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
 import {
   isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import {
@@ -24,9 +25,22 @@ import {
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from '../highlight-layer/highlight-layer.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
-import { loadPdfJs, type PdfJsApi } from './pdf-loader.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import {
+  loadPdfJs,
+  type PdfDocumentApi,
+  type PdfJsApi,
+  type PdfOutlineEntryApi,
+  type PdfPageApi,
+  type PdfViewportApi,
+} from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
 import { getNumberFormat, getSegmenter } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
@@ -55,7 +69,9 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
   let current: Node | null = node;
   while (current) {
     if (current === ancestor) return true;
-    current = current instanceof ShadowRoot ? current.host : current.parentNode;
+    current = current.nodeType === 11 && 'host' in current
+      ? (current as ShadowRoot).host
+      : current.parentNode;
   }
   return false;
 }
@@ -63,7 +79,7 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
 type PdfLoadState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ready'; doc: PdfJsApi; pageCount: number }
+  | { kind: 'ready'; doc: PdfDocumentApi; pageCount: number }
   | { kind: 'error'; message: string };
 
 /** One entry of a PDF's table of contents, as returned by `getOutline()`. `page` is a 1-based page
@@ -97,13 +113,7 @@ interface SearchCaseSegment {
 }
 
 function searchCaseFold(value: string, locale: string): string {
-  let lowered: string;
-  try {
-    lowered = value.toLocaleLowerCase(locale);
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    lowered = value.toLowerCase();
-  }
+  const lowered = value.toLocaleLowerCase(resolveIntlLocale(locale));
   // Unicode caseless matching treats the medial and final lowercase sigma forms as equivalent.
   return lowered.replaceAll('ς', 'σ');
 }
@@ -238,7 +248,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @csspart base - The root viewer container.
+ * @csspart base - The named root viewer container with explicit `aria-busy`.
  * @csspart toolbar - Pagination and zoom controls.
  * @csspart previous-button - The previous-page button.
  * @csspart next-button - The next-page button.
@@ -253,8 +263,10 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart text-span - One generated text run inside a page's text layer.
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
- * @csspart error - The error message region.
- * @csspart spinner - The loading status region.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
+ * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
+ *   transitions announce through the shared document-level polite region.
  * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
  * @cssprop [--lr-pdf-viewer-toolbar-button-hover-bg=var(--lr-color-surface)] - Hover fill of the
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
@@ -264,6 +276,34 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    pdfViewerCurrentZoom: LYRA_DEFAULT_pdfViewerCurrentZoom,
+    pdfViewerLabel: LYRA_DEFAULT_pdfViewerLabel,
+    pdfViewerMissingLibrary: LYRA_DEFAULT_pdfViewerMissingLibrary,
+    pdfViewerNextPage: LYRA_DEFAULT_pdfViewerNextPage,
+    pdfViewerPageOf: LYRA_DEFAULT_pdfViewerPageOf,
+    pdfViewerPreviousPage: LYRA_DEFAULT_pdfViewerPreviousPage,
+    pdfViewerZoomIn: LYRA_DEFAULT_pdfViewerZoomIn,
+    pdfViewerZoomOut: LYRA_DEFAULT_pdfViewerZoomOut,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as a PDF document. */
@@ -309,12 +349,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly pageHighlightLayerElements = new Map<number, LyraHighlightLayer>();
   private readonly highlightLayerRefs = new Map<number, (element: Element | undefined) => void>();
   private textSelectionCleanup?: () => void;
+  private readonly pendingPageMountWaitCancels = new Set<() => void>();
 
   @state() private searchMatches: PdfSearchMatch[] = [];
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private searchGeneration = 0;
   private anchorOperationGeneration = 0;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
@@ -340,6 +382,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.loadState.kind,
+      this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) {
       this.scheduleAfterUpdate(() => {
         void this.load();
@@ -369,6 +416,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated) {
       const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
       if (base && !this.textSelectionCleanup) this.bindTextSelection(base);
@@ -381,6 +429,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.searchGeneration++;
     this.anchorOperationGeneration++;
     this.beginAbortableLoad();
+    this.cancelPendingPageMountWaits();
     this.textSelectionCleanup?.();
     this.textSelectionCleanup = undefined;
     for (const task of this.pageRenderTasks.values()) task.cancel();
@@ -397,7 +446,17 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.thumbnailRenderVersions.clear();
     this.destroyLoadedDoc();
     this.loadState = { kind: 'idle' };
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.cancelPendingPageMountWaits();
+    this.announcements.adopted();
+  }
+
+  private cancelPendingPageMountWaits(): void {
+    for (const cancel of [...this.pendingPageMountWaitCancels]) cancel();
   }
 
   /** Releases the current PDF.js document's worker and buffered pages before replacing or dropping
@@ -424,8 +483,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.loadState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.loadState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -433,7 +492,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     this.loadState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const data = await readResponseArrayBuffer(response);
@@ -492,20 +551,27 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private waitForPageMount(page: number): Promise<boolean> {
     if (this.pageCanvases.has(page)) return Promise.resolve(true);
     const list = this.shadowRoot?.querySelector('lr-virtual-list');
-    if (!list) return Promise.resolve(false);
+    const view = this.ownerDocument.defaultView;
+    if (!list || !view) return Promise.resolve(false);
     return new Promise((resolve) => {
-      const onRange = (): void => {
-        if (this.pageCanvases.has(page)) {
-          list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
-          clearTimeout(timeoutId);
-          resolve(true);
-        }
-      };
-      list.addEventListener('lr-visible-range-changed', onRange as EventListener);
-      const timeoutId = setTimeout(() => {
+      let settled = false;
+      let timeoutId: number | undefined;
+      let cancel!: () => void;
+      const finish = (mounted: boolean): void => {
+        if (settled) return;
+        settled = true;
         list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
-        resolve(false);
-      }, 500);
+        if (timeoutId !== undefined) view.clearTimeout(timeoutId);
+        this.pendingPageMountWaitCancels.delete(cancel);
+        resolve(mounted);
+      };
+      const onRange = (): void => {
+        if (this.pageCanvases.has(page)) finish(true);
+      };
+      cancel = () => finish(false);
+      this.pendingPageMountWaitCancels.add(cancel);
+      list.addEventListener('lr-visible-range-changed', onRange as EventListener);
+      timeoutId = view.setTimeout(() => finish(false), 500);
     });
   }
 
@@ -554,7 +620,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  private isCurrentAnchorOperation(operation: number, doc: PdfJsApi): boolean {
+  private isCurrentAnchorOperation(operation: number, doc: PdfDocumentApi): boolean {
     return (
       operation === this.anchorOperationGeneration
       && this.loadState.kind === 'ready'
@@ -576,7 +642,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private async applyTextQuoteAnchor(
     anchor: Extract<LyraAnchor, { kind: 'text-quote' }>,
     operation: number,
-    doc: PdfJsApi,
+    doc: PdfDocumentApi,
   ): Promise<boolean> {
     if (!this.isCurrentAnchorOperation(operation, doc) || this.loadState.kind !== 'ready') return false;
     const quote = normalizeQuoteText(anchor.quote);
@@ -624,7 +690,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private async applyRegionAnchor(
     anchor: Extract<LyraAnchor, { kind: 'region' }>,
     operation: number,
-    doc: PdfJsApi,
+    doc: PdfDocumentApi,
   ): Promise<boolean> {
     const rect = sanitizePercentRect(anchor.rect);
     if (
@@ -662,7 +728,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (!rect || !scrollContainer) return;
     const containerRect = scrollContainer.getBoundingClientRect();
     const offset = rect.top - containerRect.top - containerRect.height / 2 + rect.height / 2;
-    scrollContainer.scrollBy({ top: offset, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    scrollContainer.scrollBy({
+      top: offset,
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+    });
   }
 
   private scrollPercentRectIntoView(pageEl: HTMLElement, rect: { x: number; y: number; width: number; height: number }): void {
@@ -672,7 +741,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const containerRect = scrollContainer.getBoundingClientRect();
     const targetY = pageRect.top + (rect.y / 100) * pageRect.height;
     const offset = targetY - containerRect.top - containerRect.height / 2;
-    scrollContainer.scrollBy({ top: offset, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    scrollContainer.scrollBy({
+      top: offset,
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+    });
   }
 
   // -- anchor-target: selection -> anchor ------------------------------------------------------------
@@ -712,11 +784,17 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  `containsAcrossShadowBoundaries()`, which also follows a `ShadowRoot`'s `.host` link. */
   protected bindTextSelection(contentRoot: Element): void {
     this.textSelectionCleanup?.();
+    const ownerDocument = contentRoot.ownerDocument;
+    const view = ownerDocument.defaultView;
+    if (!view) {
+      this.textSelectionCleanup = undefined;
+      return;
+    }
 
     const resolveSelectionRange = (): Range | null => {
       const hostShadowRoot = this.shadowRoot;
       const listShadowRoot = this.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot ?? null;
-      const globalSelection = window.getSelection() as
+      const globalSelection = view.getSelection() as
         | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
         | null;
 
@@ -725,7 +803,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         const [composed] = globalSelection.getComposedRanges({ shadowRoots });
         if (!composed) return null;
         if (composed.startContainer === composed.endContainer && composed.startOffset === composed.endOffset) return null;
-        const range = document.createRange();
+        const range = ownerDocument.createRange();
         range.setStart(composed.startContainer, composed.startOffset);
         range.setEnd(composed.endContainer, composed.endOffset);
         return range;
@@ -748,10 +826,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.emit('lr-text-select', { text, anchor, rects });
     };
 
-    let debounceHandle: ReturnType<typeof requestAnimationFrame> | undefined;
+    let debounceHandle: number | undefined;
     const onSelectionChange = (): void => {
-      if (debounceHandle !== undefined) cancelAnimationFrame(debounceHandle);
-      debounceHandle = requestAnimationFrame(() => {
+      if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
+      debounceHandle = view.requestAnimationFrame(() => {
         debounceHandle = undefined;
         onSelectionEnd();
       });
@@ -759,13 +837,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
     contentRoot.addEventListener('pointerup', onSelectionEnd);
     contentRoot.addEventListener('keyup', onSelectionEnd);
-    document.addEventListener('selectionchange', onSelectionChange);
+    ownerDocument.addEventListener('selectionchange', onSelectionChange);
 
     this.textSelectionCleanup = () => {
       contentRoot.removeEventListener('pointerup', onSelectionEnd);
       contentRoot.removeEventListener('keyup', onSelectionEnd);
-      document.removeEventListener('selectionchange', onSelectionChange);
-      if (debounceHandle !== undefined) cancelAnimationFrame(debounceHandle);
+      ownerDocument.removeEventListener('selectionchange', onSelectionChange);
+      if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
     };
   }
 
@@ -800,9 +878,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.loadState.kind !== 'ready') throw new Error('No PDF document is loaded.');
     const doc = this.loadState.doc;
     const pdfPage = await doc.getPage(page);
-    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMException('Superseded', 'AbortError');
+    const DOMExceptionCtor = this.ownerDocument.defaultView?.DOMException ?? DOMException;
+    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
     const content = await pdfPage.getTextContent();
-    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMException('Superseded', 'AbortError');
+    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
     let text = '';
     for (const item of content.items as { str?: string; hasEOL?: boolean }[]) {
       text += item.str ?? '';
@@ -835,7 +914,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (!Number.isFinite(unscaledViewport.width) || unscaledViewport.width <= 0) return false;
     const scale = width / unscaledViewport.width;
     const viewport = pdfPage.getViewport({ scale });
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
     canvas.width = Math.floor(viewport.width * dpr);
     canvas.height = Math.floor(viewport.height * dpr);
     canvas.style.width = `${viewport.width}px`;
@@ -876,7 +955,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     ) return [];
     const result = await this.mapOutlineItems(
       doc,
-      raw as PdfJsApi[],
+      raw,
       1,
       new WeakSet<object>(),
       { count: 0 },
@@ -885,8 +964,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   private async mapOutlineItems(
-    doc: PdfJsApi,
-    rawItems: PdfJsApi[],
+    doc: PdfDocumentApi,
+    rawItems: PdfOutlineEntryApi[],
     depth: number,
     seen: WeakSet<object>,
     budget: { count: number },
@@ -904,7 +983,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       budget.count++;
       const page = await this.resolveOutlineDestPage(doc, rawItem.dest);
       if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) return [];
-      const rawChildren = Array.isArray(rawItem.items) ? rawItem.items as PdfJsApi[] : [];
+      const rawChildren = Array.isArray(rawItem.items) ? rawItem.items : [];
       const children = depth < MAX_OUTLINE_DEPTH
         ? await this.mapOutlineItems(doc, rawChildren, depth + 1, seen, budget)
         : [];
@@ -917,7 +996,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return mapped;
   }
 
-  private async resolveOutlineDestPage(doc: PdfJsApi, dest: unknown): Promise<number | undefined> {
+  private async resolveOutlineDestPage(
+    doc: PdfDocumentApi,
+    dest: unknown,
+  ): Promise<number | undefined> {
     if (!dest) return undefined;
     try {
       const explicitDest = typeof dest === 'string' ? await doc.getDestination(dest) : dest;
@@ -1058,7 +1140,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       .map((match, matchIndex) => ({ ...match, matchIndex }))
       .filter((match) => match.page === page);
     if (pageMatches.length === 0) return;
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const doc = container.ownerDocument;
+    const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
+    const walker = doc.createTreeWalker(container, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
     const ranges: { node: Text; start: number; end: number }[] = [];
     let cursor = 0;
     let node: Text | null;
@@ -1085,7 +1169,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       let currentNode: Text = r.node;
       let currentNodeRawStart = r.start;
       for (const m of intersecting) {
-        const range = document.createRange();
+        const range = doc.createRange();
         try {
           range.setStart(currentNode, m.start - currentNodeRawStart);
           range.setEnd(currentNode, m.end - currentNodeRawStart);
@@ -1095,7 +1179,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
           // page's painting.
           continue;
         }
-        const mark = document.createElement('mark');
+        const mark = doc.createElement('mark');
         const parts = ['search-match'];
         if (m.matchIndex === this.searchActiveIndex) parts.push('search-match-active');
         mark.setAttribute('part', parts.join(' '));
@@ -1110,8 +1194,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         // after it in a new sibling Text node right after the inserted <mark> -- that's where a
         // further match in this same original node now lives, starting at this match's raw end.
         const remainder = mark.nextSibling;
-        if (remainder instanceof Text) {
-          currentNode = remainder;
+        if (remainder?.nodeType === textNodeType) {
+          const remainderText = remainder as Text;
+          currentNode = remainderText;
           currentNodeRawStart = m.end;
         } else {
           break; // nothing left in this node for a further match to land in
@@ -1192,9 +1277,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Pointer-activation hit-test for a page's painted highlights -- see the class doc for why this
    *  exists instead of relying on the highlight layer's own click handling. */
   private onPageClick(pageNumber: number, e: MouseEvent): void {
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) return;
     const canvas = this.pageCanvases.get(pageNumber);
+    const selection = canvas?.ownerDocument.defaultView?.getSelection();
+    if (selection && !selection.isCollapsed) return;
     const items = this.pageHighlightItems.get(pageNumber);
     if (!canvas || !items || items.length === 0) return;
     const pageRect = canvas.getBoundingClientRect();
@@ -1251,7 +1336,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.pageCanvases.get(pageNumber) !== canvas
     ) return;
     const viewport = page.getViewport({ scale: zoom });
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
     canvas.width = Math.floor(viewport.width * dpr);
     canvas.height = Math.floor(viewport.height * dpr);
     canvas.style.width = `${viewport.width}px`;
@@ -1284,8 +1369,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async renderTextLayer(
     pageNumber: number,
-    page: PdfJsApi,
-    viewport: PdfJsApi,
+    page: PdfPageApi,
+    viewport: PdfViewportApi,
     version: number,
   ): Promise<void> {
     const container = this.textLayerContainers.get(pageNumber);
@@ -1393,8 +1478,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         const items = Array.from({ length: this.loadState.pageCount }, (_unused, index) => index + 1);
         return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
-      case 'loading': return html`<div part="spinner"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
-      case 'error': return html`<div part="error" role="alert">${this.loadState.message}</div>`;
+      case 'loading': return html`<div part="spinner">
+        <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+        <span class="sr-only">${this.localize('loadingDocument')}</span>
+      </div>`;
+      case 'error': return html`<div part="error">${this.loadState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }
@@ -1403,6 +1491,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return html`<div
       part="base"
       role="region"
+      aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
       style=${sanitizeCssLength(this.maxHeight)
         ? styleMap({ '--lr-pdf-viewer-height': sanitizeCssLength(this.maxHeight)! })
         : nothing}

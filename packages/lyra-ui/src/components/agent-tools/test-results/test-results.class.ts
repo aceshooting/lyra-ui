@@ -7,6 +7,11 @@ import { styles } from './test-results.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
 
@@ -116,6 +121,32 @@ export interface LyraTestResultsEventMap {
  * @since 4.0.0
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    expand: LYRA_DEFAULT_expand,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    statusError: LYRA_DEFAULT_statusError,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSkipped: LYRA_DEFAULT_statusSkipped,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    testResultsCollapseTest: LYRA_DEFAULT_testResultsCollapseTest,
+    testResultsCompleteAnnounce: LYRA_DEFAULT_testResultsCompleteAnnounce,
+    testResultsExpandTest: LYRA_DEFAULT_testResultsExpandTest,
+    testResultsFailed: LYRA_DEFAULT_testResultsFailed,
+    testResultsFilterLabel: LYRA_DEFAULT_testResultsFilterLabel,
+    testResultsLabel: LYRA_DEFAULT_testResultsLabel,
+    testResultsPassed: LYRA_DEFAULT_testResultsPassed,
+    testResultsRunning: LYRA_DEFAULT_testResultsRunning,
+    testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The suites to render, grouped in order. Controlled and never mutated by this component --

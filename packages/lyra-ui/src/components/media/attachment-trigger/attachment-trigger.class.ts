@@ -7,6 +7,11 @@ import type { LyraMenu, MenuSelectDetail } from '../../layout/menu/menu.class.js
 import '../../layout/menu/menu.class.js';
 import '../../layout/menu/menu-item.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type AttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
 
@@ -166,6 +171,25 @@ export interface LyraAttachmentTriggerEventMap {
  * @since 4.0.0
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    attachmentAdd: LYRA_DEFAULT_attachmentAdd,
+    attachmentMenuAudio: LYRA_DEFAULT_attachmentMenuAudio,
+    attachmentMenuCamera: LYRA_DEFAULT_attachmentMenuCamera,
+    attachmentMenuFiles: LYRA_DEFAULT_attachmentMenuFiles,
+    attachmentMenuImage: LYRA_DEFAULT_attachmentMenuImage,
+    attachmentTriggerAudio: LYRA_DEFAULT_attachmentTriggerAudio,
+    attachmentTriggerCamera: LYRA_DEFAULT_attachmentTriggerCamera,
+    attachmentTriggerFiles: LYRA_DEFAULT_attachmentTriggerFiles,
+    attachmentTriggerImage: LYRA_DEFAULT_attachmentTriggerImage,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Which attachment capabilities to offer, in display order. A single

@@ -9,6 +9,11 @@ import { prefersReducedMotion } from "../../../internal/motion.js";
 import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { styles } from "./segmented.styles.js";
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SegmentedItem {
   value: string;
@@ -85,6 +90,14 @@ export interface LyraSegmentedEventMap {
  * @since 4.0.0
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    items: LYRA_DEFAULT_items,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
 
   /** The button row's items. */
@@ -147,7 +160,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.segmentButtonAt(index)?.scrollIntoView({
       block: "nearest",
       inline: "nearest",
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? "auto" : "smooth",
     });
   }
 

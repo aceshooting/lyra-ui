@@ -4,6 +4,15 @@ import './node-palette.js';
 import type { LyraNodePalette, LyraNodePaletteEventMap, PaletteItem } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
 import { styles } from './node-palette.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(): string[] {
+  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+}
 
 const items: PaletteItem[] = [
   { type: 'http-request', label: 'HTTP Request', category: 'Data', keywords: ['fetch', 'api'] },
@@ -320,8 +329,13 @@ it('is accessible with items, groups, and a disabled item', async () => {
 it('never announces the initial item count on mount, but does announce a later filter change', async () => {
   const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
-  const liveRegionText = () => el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? '';
+  const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
+  const liveRegionText = () => mirror.textContent ?? '';
   expect(liveRegionText()).to.equal('');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(sinkTexts()).to.deep.equal([]);
   // Real timer, margined past the Announcer's default 500ms throttle -- long enough for a
   // regression that re-introduces an unguarded mount announcement to actually flush and fail
   // this assertion, per this repo's "no fake timers under wtr" testing convention.
@@ -334,6 +348,7 @@ it('never announces the initial item count on mount, but does announce a later f
   await el.updateComplete;
   await new Promise((r) => setTimeout(r, 600));
   expect(liveRegionText()).to.include('1');
+  expect(sinkTexts().at(-1)).to.include('1');
 });
 
 it('localizes the whole filtered-result announcement and formats its count with the effective locale', async () => {
@@ -355,6 +370,18 @@ it('localizes the whole filtered-result announcement and formats its count with 
   await new Promise((r) => setTimeout(r, 600));
 
   expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('٢ نتائج');
+  expect(sinkTexts().at(-1)).to.equal('٢ نتائج');
+});
+
+it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-node-palette></lr-node-palette>`)) as LyraNodePalette;
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+  document.body.append(el);
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
 });
 
 it('gives the search field a focus-visible ring and resets the native search-cancel glyph', () => {

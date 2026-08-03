@@ -1,0 +1,3524 @@
+{
+  "schemaVersion": 1,
+  "properties": [
+    {
+      "name": "--lr-border-width-medium",
+      "description": "Canonical shared component token for border width medium.",
+      "references": [
+        "--lr-theme-border-width-medium"
+      ]
+    },
+    {
+      "name": "--lr-border-width-thick",
+      "description": "Canonical shared component token for border width thick.",
+      "references": [
+        "--lr-theme-border-width-thick"
+      ]
+    },
+    {
+      "name": "--lr-border-width-thin",
+      "description": "Canonical shared component token for border width thin.",
+      "references": [
+        "--lr-theme-border-width-thin"
+      ]
+    },
+    {
+      "name": "--lr-color-border",
+      "description": "Canonical shared component token for color border.",
+      "references": [
+        "--lr-theme-color-surface-border"
+      ]
+    },
+    {
+      "name": "--lr-color-border-strong",
+      "description": "Canonical shared component token for color border strong.",
+      "references": [
+        "--lr-theme-color-border-strong"
+      ]
+    },
+    {
+      "name": "--lr-color-brand",
+      "description": "Canonical shared component token for color brand.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-brand-border-loud",
+      "description": "Canonical shared component token for color brand border loud.",
+      "references": [
+        "--lr-theme-color-brand-border-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-border-normal",
+      "description": "Canonical shared component token for color brand border normal.",
+      "references": [
+        "--lr-theme-color-brand-border-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-border-quiet",
+      "description": "Canonical shared component token for color brand border quiet.",
+      "references": [
+        "--lr-theme-color-brand-border-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-fill-loud",
+      "description": "Canonical shared component token for color brand fill loud.",
+      "references": [
+        "--lr-theme-color-brand-fill-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-fill-normal",
+      "description": "Canonical shared component token for color brand fill normal.",
+      "references": [
+        "--lr-theme-color-brand-fill-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-fill-quiet",
+      "description": "Canonical shared component token for color brand fill quiet.",
+      "references": [
+        "--lr-theme-color-brand-fill-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-on-loud",
+      "description": "Canonical shared component token for color brand on loud.",
+      "references": [
+        "--lr-theme-color-brand-on-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-on-normal",
+      "description": "Canonical shared component token for color brand on normal.",
+      "references": [
+        "--lr-theme-color-brand-on-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-on-quiet",
+      "description": "Canonical shared component token for color brand on quiet.",
+      "references": [
+        "--lr-theme-color-brand-on-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-brand-quiet",
+      "description": "Canonical shared component token for color brand quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-chart-1",
+      "description": "Canonical shared component token for color chart 1.",
+      "references": [
+        "--lr-theme-color-chart-1"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-2",
+      "description": "Canonical shared component token for color chart 2.",
+      "references": [
+        "--lr-theme-color-chart-2"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-3",
+      "description": "Canonical shared component token for color chart 3.",
+      "references": [
+        "--lr-theme-color-chart-3"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-4",
+      "description": "Canonical shared component token for color chart 4.",
+      "references": [
+        "--lr-theme-color-chart-4"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-5",
+      "description": "Canonical shared component token for color chart 5.",
+      "references": [
+        "--lr-theme-color-chart-5"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-6",
+      "description": "Canonical shared component token for color chart 6.",
+      "references": [
+        "--lr-theme-color-chart-6"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-7",
+      "description": "Canonical shared component token for color chart 7.",
+      "references": [
+        "--lr-theme-color-chart-7"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-8",
+      "description": "Canonical shared component token for color chart 8.",
+      "references": [
+        "--lr-theme-color-chart-8"
+      ]
+    },
+    {
+      "name": "--lr-color-danger",
+      "description": "Canonical shared component token for color danger.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-danger-border-loud",
+      "description": "Canonical shared component token for color danger border loud.",
+      "references": [
+        "--lr-theme-color-danger-border-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-border-normal",
+      "description": "Canonical shared component token for color danger border normal.",
+      "references": [
+        "--lr-theme-color-danger-border-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-border-quiet",
+      "description": "Canonical shared component token for color danger border quiet.",
+      "references": [
+        "--lr-theme-color-danger-border-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-fill-loud",
+      "description": "Canonical shared component token for color danger fill loud.",
+      "references": [
+        "--lr-theme-color-danger-fill-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-fill-normal",
+      "description": "Canonical shared component token for color danger fill normal.",
+      "references": [
+        "--lr-theme-color-danger-fill-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-fill-quiet",
+      "description": "Canonical shared component token for color danger fill quiet.",
+      "references": [
+        "--lr-theme-color-danger-fill-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-on-loud",
+      "description": "Canonical shared component token for color danger on loud.",
+      "references": [
+        "--lr-theme-color-danger-on-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-on-normal",
+      "description": "Canonical shared component token for color danger on normal.",
+      "references": [
+        "--lr-theme-color-danger-on-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-on-quiet",
+      "description": "Canonical shared component token for color danger on quiet.",
+      "references": [
+        "--lr-theme-color-danger-on-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-danger-quiet",
+      "description": "Canonical shared component token for color danger quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-mix-active",
+      "description": "Canonical shared component token for color mix active.",
+      "references": [
+        "--lr-theme-color-mix-active"
+      ]
+    },
+    {
+      "name": "--lr-color-mix-hover",
+      "description": "Canonical shared component token for color mix hover.",
+      "references": [
+        "--lr-theme-color-mix-hover"
+      ]
+    },
+    {
+      "name": "--lr-color-mix-partner",
+      "description": "Canonical shared component token for color mix partner.",
+      "references": [
+        "--lr-theme-color-mix-partner"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral",
+      "description": "Canonical shared component token for color neutral.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-neutral-border-loud",
+      "description": "Canonical shared component token for color neutral border loud.",
+      "references": [
+        "--lr-theme-color-neutral-border-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-border-normal",
+      "description": "Canonical shared component token for color neutral border normal.",
+      "references": [
+        "--lr-theme-color-neutral-border-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-border-quiet",
+      "description": "Canonical shared component token for color neutral border quiet.",
+      "references": [
+        "--lr-theme-color-neutral-border-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-fill-loud",
+      "description": "Canonical shared component token for color neutral fill loud.",
+      "references": [
+        "--lr-theme-color-neutral-fill-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-fill-normal",
+      "description": "Canonical shared component token for color neutral fill normal.",
+      "references": [
+        "--lr-theme-color-neutral-fill-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-fill-quiet",
+      "description": "Canonical shared component token for color neutral fill quiet.",
+      "references": [
+        "--lr-theme-color-neutral-fill-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-on-loud",
+      "description": "Canonical shared component token for color neutral on loud.",
+      "references": [
+        "--lr-theme-color-neutral-on-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-on-normal",
+      "description": "Canonical shared component token for color neutral on normal.",
+      "references": [
+        "--lr-theme-color-neutral-on-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-neutral-on-quiet",
+      "description": "Canonical shared component token for color neutral on quiet.",
+      "references": [
+        "--lr-theme-color-neutral-on-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-no-data",
+      "description": "Canonical shared component token for color no data.",
+      "references": [
+        "--lr-theme-color-no-data"
+      ]
+    },
+    {
+      "name": "--lr-color-on-brand",
+      "description": "Canonical shared component token for color on brand.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-on-danger",
+      "description": "Canonical shared component token for color on danger.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-on-neutral",
+      "description": "Canonical shared component token for color on neutral.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-on-success",
+      "description": "Canonical shared component token for color on success.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-on-warning",
+      "description": "Canonical shared component token for color on warning.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-overlay",
+      "description": "Canonical shared component token for color overlay.",
+      "references": [
+        "--lr-theme-color-overlay"
+      ]
+    },
+    {
+      "name": "--lr-color-overlay-strong",
+      "description": "Canonical shared component token for color overlay strong.",
+      "references": [
+        "--lr-theme-color-overlay-strong"
+      ]
+    },
+    {
+      "name": "--lr-color-shadow",
+      "description": "Canonical shared component token for color shadow.",
+      "references": [
+        "--lr-theme-color-shadow"
+      ]
+    },
+    {
+      "name": "--lr-color-success",
+      "description": "Canonical shared component token for color success.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-success-border-loud",
+      "description": "Canonical shared component token for color success border loud.",
+      "references": [
+        "--lr-theme-color-success-border-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-success-border-normal",
+      "description": "Canonical shared component token for color success border normal.",
+      "references": [
+        "--lr-theme-color-success-border-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-success-border-quiet",
+      "description": "Canonical shared component token for color success border quiet.",
+      "references": [
+        "--lr-theme-color-success-border-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-success-fill-loud",
+      "description": "Canonical shared component token for color success fill loud.",
+      "references": [
+        "--lr-theme-color-success-fill-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-success-fill-normal",
+      "description": "Canonical shared component token for color success fill normal.",
+      "references": [
+        "--lr-theme-color-success-fill-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-success-fill-quiet",
+      "description": "Canonical shared component token for color success fill quiet.",
+      "references": [
+        "--lr-theme-color-success-fill-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-success-on-loud",
+      "description": "Canonical shared component token for color success on loud.",
+      "references": [
+        "--lr-theme-color-success-on-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-success-on-normal",
+      "description": "Canonical shared component token for color success on normal.",
+      "references": [
+        "--lr-theme-color-success-on-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-success-on-quiet",
+      "description": "Canonical shared component token for color success on quiet.",
+      "references": [
+        "--lr-theme-color-success-on-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-success-quiet",
+      "description": "Canonical shared component token for color success quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-surface",
+      "description": "Canonical shared component token for color surface.",
+      "references": [
+        "--lr-theme-color-surface-default"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-overlay",
+      "description": "Canonical shared component token for color surface overlay.",
+      "references": [
+        "--lr-theme-color-surface-overlay"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-raised",
+      "description": "Canonical shared component token for color surface raised.",
+      "references": [
+        "--lr-theme-color-surface-raised"
+      ]
+    },
+    {
+      "name": "--lr-color-text",
+      "description": "Canonical shared component token for color text.",
+      "references": [
+        "--lr-theme-color-text-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-text-quiet",
+      "description": "Canonical shared component token for color text quiet.",
+      "references": [
+        "--lr-theme-color-text-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-warning",
+      "description": "Canonical shared component token for color warning.",
+      "references": []
+    },
+    {
+      "name": "--lr-color-warning-border-loud",
+      "description": "Canonical shared component token for color warning border loud.",
+      "references": [
+        "--lr-theme-color-warning-border-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-border-normal",
+      "description": "Canonical shared component token for color warning border normal.",
+      "references": [
+        "--lr-theme-color-warning-border-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-border-quiet",
+      "description": "Canonical shared component token for color warning border quiet.",
+      "references": [
+        "--lr-theme-color-warning-border-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-fill-loud",
+      "description": "Canonical shared component token for color warning fill loud.",
+      "references": [
+        "--lr-theme-color-warning-fill-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-fill-normal",
+      "description": "Canonical shared component token for color warning fill normal.",
+      "references": [
+        "--lr-theme-color-warning-fill-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-fill-quiet",
+      "description": "Canonical shared component token for color warning fill quiet.",
+      "references": [
+        "--lr-theme-color-warning-fill-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-on-loud",
+      "description": "Canonical shared component token for color warning on loud.",
+      "references": [
+        "--lr-theme-color-warning-on-loud"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-on-normal",
+      "description": "Canonical shared component token for color warning on normal.",
+      "references": [
+        "--lr-theme-color-warning-on-normal"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-on-quiet",
+      "description": "Canonical shared component token for color warning on quiet.",
+      "references": [
+        "--lr-theme-color-warning-on-quiet"
+      ]
+    },
+    {
+      "name": "--lr-color-warning-quiet",
+      "description": "Canonical shared component token for color warning quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-duration-ambient",
+      "description": "Canonical shared component token for duration ambient.",
+      "references": [
+        "--lr-theme-duration-slow"
+      ]
+    },
+    {
+      "name": "--lr-duration-base",
+      "description": "Canonical shared component token for duration base.",
+      "references": [
+        "--lr-theme-duration-normal"
+      ]
+    },
+    {
+      "name": "--lr-duration-fast",
+      "description": "Canonical shared component token for duration fast.",
+      "references": [
+        "--lr-theme-duration-fast"
+      ]
+    },
+    {
+      "name": "--lr-duration-icon",
+      "description": "Canonical shared component token for duration icon.",
+      "references": [
+        "--lr-theme-duration-icon"
+      ]
+    },
+    {
+      "name": "--lr-easing-emphasized",
+      "description": "Canonical shared component token for easing emphasized.",
+      "references": [
+        "--lr-theme-easing-emphasized"
+      ]
+    },
+    {
+      "name": "--lr-easing-linear",
+      "description": "Canonical shared component token for easing linear.",
+      "references": [
+        "--lr-theme-easing-linear"
+      ]
+    },
+    {
+      "name": "--lr-easing-standard",
+      "description": "Canonical shared component token for easing standard.",
+      "references": [
+        "--lr-theme-easing-standard"
+      ]
+    },
+    {
+      "name": "--lr-focus-ring-color",
+      "description": "Canonical shared component token for focus ring color.",
+      "references": [
+        "--lr-theme-color-focus"
+      ]
+    },
+    {
+      "name": "--lr-focus-ring-offset",
+      "description": "Canonical shared component token for focus ring offset.",
+      "references": [
+        "--lr-theme-focus-ring-offset"
+      ]
+    },
+    {
+      "name": "--lr-focus-ring-width",
+      "description": "Canonical shared component token for focus ring width.",
+      "references": [
+        "--lr-theme-focus-ring-width"
+      ]
+    },
+    {
+      "name": "--lr-font",
+      "description": "Canonical shared component token for font.",
+      "references": [
+        "--lr-theme-font-family-body"
+      ]
+    },
+    {
+      "name": "--lr-font-mono",
+      "description": "Canonical shared component token for font mono.",
+      "references": [
+        "--lr-theme-font-family-mono"
+      ]
+    },
+    {
+      "name": "--lr-font-size-2xl",
+      "description": "Canonical shared component token for font size 2xl.",
+      "references": [
+        "--lr-theme-font-size-2xl"
+      ]
+    },
+    {
+      "name": "--lr-font-size-2xs",
+      "description": "Canonical shared component token for font size 2xs.",
+      "references": [
+        "--lr-theme-font-size-2xs"
+      ]
+    },
+    {
+      "name": "--lr-font-size-3xl",
+      "description": "Canonical shared component token for font size 3xl.",
+      "references": [
+        "--lr-theme-font-size-3xl"
+      ]
+    },
+    {
+      "name": "--lr-font-size-3xs",
+      "description": "Canonical shared component token for font size 3xs.",
+      "references": [
+        "--lr-theme-font-size-3xs"
+      ]
+    },
+    {
+      "name": "--lr-font-size-lg",
+      "description": "Canonical shared component token for font size lg.",
+      "references": [
+        "--lr-theme-font-size-lg"
+      ]
+    },
+    {
+      "name": "--lr-font-size-m",
+      "description": "Canonical shared component token for font size m.",
+      "references": [
+        "--lr-theme-font-size-m"
+      ]
+    },
+    {
+      "name": "--lr-font-size-md-sm",
+      "description": "Canonical shared component token for font size md sm.",
+      "references": [
+        "--lr-theme-font-size-md-sm"
+      ]
+    },
+    {
+      "name": "--lr-font-size-sm",
+      "description": "Canonical shared component token for font size sm.",
+      "references": [
+        "--lr-theme-font-size-sm"
+      ]
+    },
+    {
+      "name": "--lr-font-size-xl",
+      "description": "Canonical shared component token for font size xl.",
+      "references": [
+        "--lr-theme-font-size-xl"
+      ]
+    },
+    {
+      "name": "--lr-font-size-xs",
+      "description": "Canonical shared component token for font size xs.",
+      "references": [
+        "--lr-theme-font-size-xs"
+      ]
+    },
+    {
+      "name": "--lr-font-weight-bold",
+      "description": "Canonical shared component token for font weight bold.",
+      "references": [
+        "--lr-theme-font-weight-bold"
+      ]
+    },
+    {
+      "name": "--lr-font-weight-medium",
+      "description": "Canonical shared component token for font weight medium.",
+      "references": [
+        "--lr-theme-font-weight-medium"
+      ]
+    },
+    {
+      "name": "--lr-font-weight-normal",
+      "description": "Canonical shared component token for font weight normal.",
+      "references": [
+        "--lr-theme-font-weight-normal"
+      ]
+    },
+    {
+      "name": "--lr-font-weight-semibold",
+      "description": "Canonical shared component token for font weight semibold.",
+      "references": [
+        "--lr-theme-font-weight-semibold"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-1",
+      "description": "Canonical shared component token for graph cat 1.",
+      "references": [
+        "--lr-theme-graph-cat-1"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-2",
+      "description": "Canonical shared component token for graph cat 2.",
+      "references": [
+        "--lr-theme-graph-cat-2"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-3",
+      "description": "Canonical shared component token for graph cat 3.",
+      "references": [
+        "--lr-theme-graph-cat-3"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-4",
+      "description": "Canonical shared component token for graph cat 4.",
+      "references": [
+        "--lr-theme-graph-cat-4"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-5",
+      "description": "Canonical shared component token for graph cat 5.",
+      "references": [
+        "--lr-theme-graph-cat-5"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-6",
+      "description": "Canonical shared component token for graph cat 6.",
+      "references": [
+        "--lr-theme-graph-cat-6"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-7",
+      "description": "Canonical shared component token for graph cat 7.",
+      "references": [
+        "--lr-theme-graph-cat-7"
+      ]
+    },
+    {
+      "name": "--lr-graph-cat-8",
+      "description": "Canonical shared component token for graph cat 8.",
+      "references": [
+        "--lr-theme-graph-cat-8"
+      ]
+    },
+    {
+      "name": "--lr-hover-brightness",
+      "description": "Canonical shared component token for hover brightness.",
+      "references": [
+        "--lr-theme-hover-brightness"
+      ]
+    },
+    {
+      "name": "--lr-icon-button-size",
+      "description": "Canonical shared component token for icon button size.",
+      "references": [
+        "--lr-theme-icon-button-size"
+      ]
+    },
+    {
+      "name": "--lr-layer-base",
+      "description": "Canonical shared component token for layer base.",
+      "references": [
+        "--lr-theme-z-index-base"
+      ]
+    },
+    {
+      "name": "--lr-layer-content",
+      "description": "Canonical shared component token for layer content.",
+      "references": [
+        "--lr-theme-z-index-content"
+      ]
+    },
+    {
+      "name": "--lr-layer-dropdown",
+      "description": "Canonical shared component token for layer dropdown.",
+      "references": [
+        "--lr-theme-z-index-dropdown"
+      ]
+    },
+    {
+      "name": "--lr-layer-modal",
+      "description": "Canonical shared component token for layer modal.",
+      "references": [
+        "--lr-theme-z-index-modal"
+      ]
+    },
+    {
+      "name": "--lr-layer-popover",
+      "description": "Canonical shared component token for layer popover.",
+      "references": [
+        "--lr-theme-z-index-popover"
+      ]
+    },
+    {
+      "name": "--lr-layer-toast",
+      "description": "Canonical shared component token for layer toast.",
+      "references": [
+        "--lr-theme-z-index-toast"
+      ]
+    },
+    {
+      "name": "--lr-line-height-1-4",
+      "description": "Canonical shared component token for line height 1 4.",
+      "references": [
+        "--lr-theme-line-height-1-4"
+      ]
+    },
+    {
+      "name": "--lr-line-height-compact",
+      "description": "Canonical shared component token for line height compact.",
+      "references": [
+        "--lr-theme-line-height-compact"
+      ]
+    },
+    {
+      "name": "--lr-line-height-loose",
+      "description": "Canonical shared component token for line height loose.",
+      "references": [
+        "--lr-theme-line-height-loose"
+      ]
+    },
+    {
+      "name": "--lr-line-height-none",
+      "description": "Canonical shared component token for line height none.",
+      "references": [
+        "--lr-theme-line-height-none"
+      ]
+    },
+    {
+      "name": "--lr-line-height-normal",
+      "description": "Canonical shared component token for line height normal.",
+      "references": [
+        "--lr-theme-line-height-normal"
+      ]
+    },
+    {
+      "name": "--lr-line-height-snug",
+      "description": "Canonical shared component token for line height snug.",
+      "references": [
+        "--lr-theme-line-height-snug"
+      ]
+    },
+    {
+      "name": "--lr-mask-opaque",
+      "description": "Canonical shared component token for mask opaque.",
+      "references": []
+    },
+    {
+      "name": "--lr-opacity-disabled",
+      "description": "Canonical shared component token for opacity disabled.",
+      "references": [
+        "--lr-theme-opacity-disabled"
+      ]
+    },
+    {
+      "name": "--lr-opacity-muted",
+      "description": "Canonical shared component token for opacity muted.",
+      "references": [
+        "--lr-theme-opacity-muted"
+      ]
+    },
+    {
+      "name": "--lr-otp-input-segment-size",
+      "description": "Canonical shared component token for otp input segment size.",
+      "references": [
+        "--lr-theme-otp-input-segment-size"
+      ]
+    },
+    {
+      "name": "--lr-popover-viewport-clamp",
+      "description": "Canonical shared component token for popover viewport clamp.",
+      "references": [
+        "--lr-theme-popover-viewport-clamp"
+      ]
+    },
+    {
+      "name": "--lr-radius",
+      "description": "Canonical shared component token for radius.",
+      "references": [
+        "--lr-theme-border-radius-m"
+      ]
+    },
+    {
+      "name": "--lr-radius-pill",
+      "description": "Canonical shared component token for radius pill.",
+      "references": [
+        "--lr-theme-border-radius-pill"
+      ]
+    },
+    {
+      "name": "--lr-radius-xs",
+      "description": "Canonical shared component token for radius xs.",
+      "references": [
+        "--lr-theme-border-radius-xs"
+      ]
+    },
+    {
+      "name": "--lr-ramp-brand-05",
+      "description": "Canonical shared component token for ramp brand 05.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-10",
+      "description": "Canonical shared component token for ramp brand 10.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-20",
+      "description": "Canonical shared component token for ramp brand 20.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-30",
+      "description": "Canonical shared component token for ramp brand 30.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-40",
+      "description": "Canonical shared component token for ramp brand 40.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-50",
+      "description": "Canonical shared component token for ramp brand 50.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-60",
+      "description": "Canonical shared component token for ramp brand 60.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-70",
+      "description": "Canonical shared component token for ramp brand 70.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-80",
+      "description": "Canonical shared component token for ramp brand 80.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-90",
+      "description": "Canonical shared component token for ramp brand 90.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-brand-95",
+      "description": "Canonical shared component token for ramp brand 95.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-05",
+      "description": "Canonical shared component token for ramp danger 05.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-10",
+      "description": "Canonical shared component token for ramp danger 10.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-20",
+      "description": "Canonical shared component token for ramp danger 20.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-30",
+      "description": "Canonical shared component token for ramp danger 30.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-40",
+      "description": "Canonical shared component token for ramp danger 40.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-50",
+      "description": "Canonical shared component token for ramp danger 50.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-60",
+      "description": "Canonical shared component token for ramp danger 60.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-70",
+      "description": "Canonical shared component token for ramp danger 70.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-80",
+      "description": "Canonical shared component token for ramp danger 80.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-90",
+      "description": "Canonical shared component token for ramp danger 90.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-danger-95",
+      "description": "Canonical shared component token for ramp danger 95.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-05",
+      "description": "Canonical shared component token for ramp neutral 05.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-10",
+      "description": "Canonical shared component token for ramp neutral 10.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-20",
+      "description": "Canonical shared component token for ramp neutral 20.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-30",
+      "description": "Canonical shared component token for ramp neutral 30.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-40",
+      "description": "Canonical shared component token for ramp neutral 40.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-50",
+      "description": "Canonical shared component token for ramp neutral 50.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-60",
+      "description": "Canonical shared component token for ramp neutral 60.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-70",
+      "description": "Canonical shared component token for ramp neutral 70.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-80",
+      "description": "Canonical shared component token for ramp neutral 80.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-90",
+      "description": "Canonical shared component token for ramp neutral 90.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-neutral-95",
+      "description": "Canonical shared component token for ramp neutral 95.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-05",
+      "description": "Canonical shared component token for ramp success 05.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-10",
+      "description": "Canonical shared component token for ramp success 10.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-20",
+      "description": "Canonical shared component token for ramp success 20.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-30",
+      "description": "Canonical shared component token for ramp success 30.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-40",
+      "description": "Canonical shared component token for ramp success 40.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-50",
+      "description": "Canonical shared component token for ramp success 50.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-60",
+      "description": "Canonical shared component token for ramp success 60.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-70",
+      "description": "Canonical shared component token for ramp success 70.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-80",
+      "description": "Canonical shared component token for ramp success 80.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-90",
+      "description": "Canonical shared component token for ramp success 90.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-success-95",
+      "description": "Canonical shared component token for ramp success 95.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-05",
+      "description": "Canonical shared component token for ramp warning 05.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-10",
+      "description": "Canonical shared component token for ramp warning 10.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-20",
+      "description": "Canonical shared component token for ramp warning 20.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-30",
+      "description": "Canonical shared component token for ramp warning 30.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-40",
+      "description": "Canonical shared component token for ramp warning 40.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-50",
+      "description": "Canonical shared component token for ramp warning 50.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-60",
+      "description": "Canonical shared component token for ramp warning 60.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-70",
+      "description": "Canonical shared component token for ramp warning 70.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-80",
+      "description": "Canonical shared component token for ramp warning 80.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-90",
+      "description": "Canonical shared component token for ramp warning 90.",
+      "references": []
+    },
+    {
+      "name": "--lr-ramp-warning-95",
+      "description": "Canonical shared component token for ramp warning 95.",
+      "references": []
+    },
+    {
+      "name": "--lr-safe-area-bottom",
+      "description": "Canonical shared component token for safe area bottom.",
+      "references": []
+    },
+    {
+      "name": "--lr-safe-area-inline-end",
+      "description": "Canonical shared component token for safe area inline end.",
+      "references": []
+    },
+    {
+      "name": "--lr-safe-area-inline-start",
+      "description": "Canonical shared component token for safe area inline start.",
+      "references": []
+    },
+    {
+      "name": "--lr-safe-area-top",
+      "description": "Canonical shared component token for safe area top.",
+      "references": []
+    },
+    {
+      "name": "--lr-scroll-fade-size",
+      "description": "Canonical shared component token for scroll fade size.",
+      "references": [
+        "--lr-theme-scroll-fade-size"
+      ]
+    },
+    {
+      "name": "--lr-shadow",
+      "description": "Canonical shared component token for shadow.",
+      "references": []
+    },
+    {
+      "name": "--lr-shadow-color",
+      "description": "Canonical shared component token for shadow color.",
+      "references": [
+        "--lr-theme-shadow-color"
+      ]
+    },
+    {
+      "name": "--lr-shadow-l",
+      "description": "Canonical shared component token for shadow l.",
+      "references": [
+        "--lr-theme-shadow-l"
+      ]
+    },
+    {
+      "name": "--lr-shadow-m",
+      "description": "Canonical shared component token for shadow m.",
+      "references": [
+        "--lr-theme-shadow-m"
+      ]
+    },
+    {
+      "name": "--lr-shadow-s",
+      "description": "Canonical shared component token for shadow s.",
+      "references": [
+        "--lr-theme-shadow-s"
+      ]
+    },
+    {
+      "name": "--lr-shadow-xl",
+      "description": "Canonical shared component token for shadow xl.",
+      "references": [
+        "--lr-theme-shadow-xl"
+      ]
+    },
+    {
+      "name": "--lr-shadow-xs",
+      "description": "Canonical shared component token for shadow xs.",
+      "references": [
+        "--lr-theme-shadow-xs"
+      ]
+    },
+    {
+      "name": "--lr-size-0-02em",
+      "description": "Canonical shared component token for size 0 02em.",
+      "references": [
+        "--lr-theme-size-0-02em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-03em",
+      "description": "Canonical shared component token for size 0 03em.",
+      "references": [
+        "--lr-theme-size-0-03em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-04em",
+      "description": "Canonical shared component token for size 0 04em.",
+      "references": [
+        "--lr-theme-size-0-04em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-05rem",
+      "description": "Canonical shared component token for size 0 05rem.",
+      "references": [
+        "--lr-theme-size-0-05rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-0625rem",
+      "description": "Canonical shared component token for size 0 0625rem.",
+      "references": [
+        "--lr-theme-size-0-0625rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-09375rem",
+      "description": "Canonical shared component token for size 0 09375rem.",
+      "references": [
+        "--lr-theme-size-0-09375rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-125rem",
+      "description": "Canonical shared component token for size 0 125rem.",
+      "references": [
+        "--lr-theme-size-0-125rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-15rem",
+      "description": "Canonical shared component token for size 0 15rem.",
+      "references": [
+        "--lr-theme-size-0-15rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-1875rem",
+      "description": "Canonical shared component token for size 0 1875rem.",
+      "references": [
+        "--lr-theme-size-0-1875rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-1rem",
+      "description": "Canonical shared component token for size 0 1rem.",
+      "references": [
+        "--lr-theme-size-0-1rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-25rem",
+      "description": "Canonical shared component token for size 0 25rem.",
+      "references": [
+        "--lr-theme-size-0-25rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-3125rem",
+      "description": "Canonical shared component token for size 0 3125rem.",
+      "references": [
+        "--lr-theme-size-0-3125rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-35em",
+      "description": "Canonical shared component token for size 0 35em.",
+      "references": [
+        "--lr-theme-size-0-35em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-375rem",
+      "description": "Canonical shared component token for size 0 375rem.",
+      "references": [
+        "--lr-theme-size-0-375rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-3em",
+      "description": "Canonical shared component token for size 0 3em.",
+      "references": [
+        "--lr-theme-size-0-3em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-4375rem",
+      "description": "Canonical shared component token for size 0 4375rem.",
+      "references": [
+        "--lr-theme-size-0-4375rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-4em",
+      "description": "Canonical shared component token for size 0 4em.",
+      "references": [
+        "--lr-theme-size-0-4em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-4rem",
+      "description": "Canonical shared component token for size 0 4rem.",
+      "references": [
+        "--lr-theme-size-0-4rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-5em",
+      "description": "Canonical shared component token for size 0 5em.",
+      "references": [
+        "--lr-theme-size-0-5em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-5rem",
+      "description": "Canonical shared component token for size 0 5rem.",
+      "references": [
+        "--lr-theme-size-0-5rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-625rem",
+      "description": "Canonical shared component token for size 0 625rem.",
+      "references": [
+        "--lr-theme-size-0-625rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-6875rem",
+      "description": "Canonical shared component token for size 0 6875rem.",
+      "references": [
+        "--lr-theme-size-0-6875rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-6rem",
+      "description": "Canonical shared component token for size 0 6rem.",
+      "references": [
+        "--lr-theme-size-0-6rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-75em",
+      "description": "Canonical shared component token for size 0 75em.",
+      "references": [
+        "--lr-theme-size-0-75em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-75rem",
+      "description": "Canonical shared component token for size 0 75rem.",
+      "references": [
+        "--lr-theme-size-0-75rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-7em",
+      "description": "Canonical shared component token for size 0 7em.",
+      "references": [
+        "--lr-theme-size-0-7em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-875em",
+      "description": "Canonical shared component token for size 0 875em.",
+      "references": [
+        "--lr-theme-size-0-875em"
+      ]
+    },
+    {
+      "name": "--lr-size-0-8rem",
+      "description": "Canonical shared component token for size 0 8rem.",
+      "references": [
+        "--lr-theme-size-0-8rem"
+      ]
+    },
+    {
+      "name": "--lr-size-0-9375rem",
+      "description": "Canonical shared component token for size 0 9375rem.",
+      "references": [
+        "--lr-theme-size-0-9375rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-0625rem",
+      "description": "Canonical shared component token for size 1 0625rem.",
+      "references": [
+        "--lr-theme-size-1-0625rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-1rem",
+      "description": "Canonical shared component token for size 1 1rem.",
+      "references": [
+        "--lr-theme-size-1-1rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-25rem",
+      "description": "Canonical shared component token for size 1 25rem.",
+      "references": [
+        "--lr-theme-size-1-25rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-5em",
+      "description": "Canonical shared component token for size 1 5em.",
+      "references": [
+        "--lr-theme-size-1-5em"
+      ]
+    },
+    {
+      "name": "--lr-size-1-5rem",
+      "description": "Canonical shared component token for size 1 5rem.",
+      "references": [
+        "--lr-theme-size-1-5rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-75rem",
+      "description": "Canonical shared component token for size 1 75rem.",
+      "references": [
+        "--lr-theme-size-1-75rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1-875rem",
+      "description": "Canonical shared component token for size 1 875rem.",
+      "references": [
+        "--lr-theme-size-1-875rem"
+      ]
+    },
+    {
+      "name": "--lr-size-10px",
+      "description": "Canonical shared component token for size 10px.",
+      "references": [
+        "--lr-theme-size-10px"
+      ]
+    },
+    {
+      "name": "--lr-size-10rem",
+      "description": "Canonical shared component token for size 10rem.",
+      "references": [
+        "--lr-theme-size-10rem"
+      ]
+    },
+    {
+      "name": "--lr-size-12em",
+      "description": "Canonical shared component token for size 12em.",
+      "references": [
+        "--lr-theme-size-12em"
+      ]
+    },
+    {
+      "name": "--lr-size-12rem",
+      "description": "Canonical shared component token for size 12rem.",
+      "references": [
+        "--lr-theme-size-12rem"
+      ]
+    },
+    {
+      "name": "--lr-size-14px",
+      "description": "Canonical shared component token for size 14px.",
+      "references": [
+        "--lr-theme-size-14px"
+      ]
+    },
+    {
+      "name": "--lr-size-14rem",
+      "description": "Canonical shared component token for size 14rem.",
+      "references": [
+        "--lr-theme-size-14rem"
+      ]
+    },
+    {
+      "name": "--lr-size-15rem",
+      "description": "Canonical shared component token for size 15rem.",
+      "references": [
+        "--lr-theme-size-15rem"
+      ]
+    },
+    {
+      "name": "--lr-size-16px",
+      "description": "Canonical shared component token for size 16px.",
+      "references": [
+        "--lr-theme-size-16px"
+      ]
+    },
+    {
+      "name": "--lr-size-16rem",
+      "description": "Canonical shared component token for size 16rem.",
+      "references": [
+        "--lr-theme-size-16rem"
+      ]
+    },
+    {
+      "name": "--lr-size-18rem",
+      "description": "Canonical shared component token for size 18rem.",
+      "references": [
+        "--lr-theme-size-18rem"
+      ]
+    },
+    {
+      "name": "--lr-size-1em",
+      "description": "Canonical shared component token for size 1em.",
+      "references": [
+        "--lr-theme-size-1em"
+      ]
+    },
+    {
+      "name": "--lr-size-1px",
+      "description": "Canonical shared component token for size 1px.",
+      "references": [
+        "--lr-theme-size-1px"
+      ]
+    },
+    {
+      "name": "--lr-size-1rem",
+      "description": "Canonical shared component token for size 1rem.",
+      "references": [
+        "--lr-theme-size-1rem"
+      ]
+    },
+    {
+      "name": "--lr-size-2-25rem",
+      "description": "Canonical shared component token for size 2 25rem.",
+      "references": [
+        "--lr-theme-size-2-25rem"
+      ]
+    },
+    {
+      "name": "--lr-size-2-5ch",
+      "description": "Canonical shared component token for size 2 5ch.",
+      "references": [
+        "--lr-theme-size-2-5ch"
+      ]
+    },
+    {
+      "name": "--lr-size-2-5rem",
+      "description": "Canonical shared component token for size 2 5rem.",
+      "references": [
+        "--lr-theme-size-2-5rem"
+      ]
+    },
+    {
+      "name": "--lr-size-20rem",
+      "description": "Canonical shared component token for size 20rem.",
+      "references": [
+        "--lr-theme-size-20rem"
+      ]
+    },
+    {
+      "name": "--lr-size-22rem",
+      "description": "Canonical shared component token for size 22rem.",
+      "references": [
+        "--lr-theme-size-22rem"
+      ]
+    },
+    {
+      "name": "--lr-size-24px",
+      "description": "Canonical shared component token for size 24px.",
+      "references": [
+        "--lr-theme-size-24px"
+      ]
+    },
+    {
+      "name": "--lr-size-24rem",
+      "description": "Canonical shared component token for size 24rem.",
+      "references": [
+        "--lr-theme-size-24rem"
+      ]
+    },
+    {
+      "name": "--lr-size-280px",
+      "description": "Canonical shared component token for size 280px.",
+      "references": [
+        "--lr-theme-size-280px"
+      ]
+    },
+    {
+      "name": "--lr-size-28px",
+      "description": "Canonical shared component token for size 28px.",
+      "references": [
+        "--lr-theme-size-28px"
+      ]
+    },
+    {
+      "name": "--lr-size-28rem",
+      "description": "Canonical shared component token for size 28rem.",
+      "references": [
+        "--lr-theme-size-28rem"
+      ]
+    },
+    {
+      "name": "--lr-size-2px",
+      "description": "Canonical shared component token for size 2px.",
+      "references": [
+        "--lr-theme-size-2px"
+      ]
+    },
+    {
+      "name": "--lr-size-2rem",
+      "description": "Canonical shared component token for size 2rem.",
+      "references": [
+        "--lr-theme-size-2rem"
+      ]
+    },
+    {
+      "name": "--lr-size-3-5em",
+      "description": "Canonical shared component token for size 3 5em.",
+      "references": [
+        "--lr-theme-size-3-5em"
+      ]
+    },
+    {
+      "name": "--lr-size-3-5rem",
+      "description": "Canonical shared component token for size 3 5rem.",
+      "references": [
+        "--lr-theme-size-3-5rem"
+      ]
+    },
+    {
+      "name": "--lr-size-30rem",
+      "description": "Canonical shared component token for size 30rem.",
+      "references": [
+        "--lr-theme-size-30rem"
+      ]
+    },
+    {
+      "name": "--lr-size-32rem",
+      "description": "Canonical shared component token for size 32rem.",
+      "references": [
+        "--lr-theme-size-32rem"
+      ]
+    },
+    {
+      "name": "--lr-size-36rem",
+      "description": "Canonical shared component token for size 36rem.",
+      "references": [
+        "--lr-theme-size-36rem"
+      ]
+    },
+    {
+      "name": "--lr-size-38rem",
+      "description": "Canonical shared component token for size 38rem.",
+      "references": [
+        "--lr-theme-size-38rem"
+      ]
+    },
+    {
+      "name": "--lr-size-3ch",
+      "description": "Canonical shared component token for size 3ch.",
+      "references": [
+        "--lr-theme-size-3ch"
+      ]
+    },
+    {
+      "name": "--lr-size-3px",
+      "description": "Canonical shared component token for size 3px.",
+      "references": [
+        "--lr-theme-size-3px"
+      ]
+    },
+    {
+      "name": "--lr-size-3rem",
+      "description": "Canonical shared component token for size 3rem.",
+      "references": [
+        "--lr-theme-size-3rem"
+      ]
+    },
+    {
+      "name": "--lr-size-48rem",
+      "description": "Canonical shared component token for size 48rem.",
+      "references": [
+        "--lr-theme-size-48rem"
+      ]
+    },
+    {
+      "name": "--lr-size-4ch",
+      "description": "Canonical shared component token for size 4ch.",
+      "references": [
+        "--lr-theme-size-4ch"
+      ]
+    },
+    {
+      "name": "--lr-size-4px",
+      "description": "Canonical shared component token for size 4px.",
+      "references": [
+        "--lr-theme-size-4px"
+      ]
+    },
+    {
+      "name": "--lr-size-4rem",
+      "description": "Canonical shared component token for size 4rem.",
+      "references": [
+        "--lr-theme-size-4rem"
+      ]
+    },
+    {
+      "name": "--lr-size-5em",
+      "description": "Canonical shared component token for size 5em.",
+      "references": [
+        "--lr-theme-size-5em"
+      ]
+    },
+    {
+      "name": "--lr-size-5rem",
+      "description": "Canonical shared component token for size 5rem.",
+      "references": [
+        "--lr-theme-size-5rem"
+      ]
+    },
+    {
+      "name": "--lr-size-6ch",
+      "description": "Canonical shared component token for size 6ch.",
+      "references": [
+        "--lr-theme-size-6ch"
+      ]
+    },
+    {
+      "name": "--lr-size-6em",
+      "description": "Canonical shared component token for size 6em.",
+      "references": [
+        "--lr-theme-size-6em"
+      ]
+    },
+    {
+      "name": "--lr-size-6px",
+      "description": "Canonical shared component token for size 6px.",
+      "references": [
+        "--lr-theme-size-6px"
+      ]
+    },
+    {
+      "name": "--lr-size-6rem",
+      "description": "Canonical shared component token for size 6rem.",
+      "references": [
+        "--lr-theme-size-6rem"
+      ]
+    },
+    {
+      "name": "--lr-size-7rem",
+      "description": "Canonical shared component token for size 7rem.",
+      "references": [
+        "--lr-theme-size-7rem"
+      ]
+    },
+    {
+      "name": "--lr-size-8em",
+      "description": "Canonical shared component token for size 8em.",
+      "references": [
+        "--lr-theme-size-8em"
+      ]
+    },
+    {
+      "name": "--lr-size-8rem",
+      "description": "Canonical shared component token for size 8rem.",
+      "references": [
+        "--lr-theme-size-8rem"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-0-15rem",
+      "description": "Canonical shared component token for size neg 0 15rem.",
+      "references": [
+        "--lr-theme-size-neg-0-15rem"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-0-25rem",
+      "description": "Canonical shared component token for size neg 0 25rem.",
+      "references": [
+        "--lr-theme-size-neg-0-25rem"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-1px",
+      "description": "Canonical shared component token for size neg 1px.",
+      "references": [
+        "--lr-theme-size-neg-1px"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-4px",
+      "description": "Canonical shared component token for size neg 4px.",
+      "references": [
+        "--lr-theme-size-neg-4px"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-6px",
+      "description": "Canonical shared component token for size neg 6px.",
+      "references": [
+        "--lr-theme-size-neg-6px"
+      ]
+    },
+    {
+      "name": "--lr-size-neg-8px",
+      "description": "Canonical shared component token for size neg 8px.",
+      "references": [
+        "--lr-theme-size-neg-8px"
+      ]
+    },
+    {
+      "name": "--lr-space-2xl",
+      "description": "Canonical shared component token for space 2xl.",
+      "references": [
+        "--lr-theme-space-2xl"
+      ]
+    },
+    {
+      "name": "--lr-space-2xs",
+      "description": "Canonical shared component token for space 2xs.",
+      "references": [
+        "--lr-theme-space-2xs"
+      ]
+    },
+    {
+      "name": "--lr-space-l",
+      "description": "Canonical shared component token for space l.",
+      "references": [
+        "--lr-theme-space-l"
+      ]
+    },
+    {
+      "name": "--lr-space-m",
+      "description": "Canonical shared component token for space m.",
+      "references": [
+        "--lr-theme-space-m"
+      ]
+    },
+    {
+      "name": "--lr-space-s",
+      "description": "Canonical shared component token for space s.",
+      "references": [
+        "--lr-theme-space-s"
+      ]
+    },
+    {
+      "name": "--lr-space-xs",
+      "description": "Canonical shared component token for space xs.",
+      "references": [
+        "--lr-theme-space-xs"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-black",
+      "description": "Canonical shared component token for terminal bg black.",
+      "references": [
+        "--lr-theme-terminal-bg-black"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-blue",
+      "description": "Canonical shared component token for terminal bg blue.",
+      "references": [
+        "--lr-theme-terminal-bg-blue"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-black",
+      "description": "Canonical shared component token for terminal bg bright black.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-black"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-blue",
+      "description": "Canonical shared component token for terminal bg bright blue.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-blue"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-cyan",
+      "description": "Canonical shared component token for terminal bg bright cyan.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-cyan"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-green",
+      "description": "Canonical shared component token for terminal bg bright green.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-green"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-magenta",
+      "description": "Canonical shared component token for terminal bg bright magenta.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-magenta"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-red",
+      "description": "Canonical shared component token for terminal bg bright red.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-red"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-white",
+      "description": "Canonical shared component token for terminal bg bright white.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-white"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-bright-yellow",
+      "description": "Canonical shared component token for terminal bg bright yellow.",
+      "references": [
+        "--lr-theme-terminal-bg-bright-yellow"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-cyan",
+      "description": "Canonical shared component token for terminal bg cyan.",
+      "references": [
+        "--lr-theme-terminal-bg-cyan"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-green",
+      "description": "Canonical shared component token for terminal bg green.",
+      "references": [
+        "--lr-theme-terminal-bg-green"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-magenta",
+      "description": "Canonical shared component token for terminal bg magenta.",
+      "references": [
+        "--lr-theme-terminal-bg-magenta"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-red",
+      "description": "Canonical shared component token for terminal bg red.",
+      "references": [
+        "--lr-theme-terminal-bg-red"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-white",
+      "description": "Canonical shared component token for terminal bg white.",
+      "references": [
+        "--lr-theme-terminal-bg-white"
+      ]
+    },
+    {
+      "name": "--lr-terminal-bg-yellow",
+      "description": "Canonical shared component token for terminal bg yellow.",
+      "references": [
+        "--lr-theme-terminal-bg-yellow"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-black",
+      "description": "Canonical shared component token for terminal color black.",
+      "references": [
+        "--lr-theme-terminal-color-black"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-blue",
+      "description": "Canonical shared component token for terminal color blue.",
+      "references": [
+        "--lr-theme-terminal-color-blue"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-black",
+      "description": "Canonical shared component token for terminal color bright black.",
+      "references": [
+        "--lr-theme-terminal-color-bright-black"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-blue",
+      "description": "Canonical shared component token for terminal color bright blue.",
+      "references": [
+        "--lr-theme-terminal-color-bright-blue"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-cyan",
+      "description": "Canonical shared component token for terminal color bright cyan.",
+      "references": [
+        "--lr-theme-terminal-color-bright-cyan"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-green",
+      "description": "Canonical shared component token for terminal color bright green.",
+      "references": [
+        "--lr-theme-terminal-color-bright-green"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-magenta",
+      "description": "Canonical shared component token for terminal color bright magenta.",
+      "references": [
+        "--lr-theme-terminal-color-bright-magenta"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-red",
+      "description": "Canonical shared component token for terminal color bright red.",
+      "references": [
+        "--lr-theme-terminal-color-bright-red"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-white",
+      "description": "Canonical shared component token for terminal color bright white.",
+      "references": [
+        "--lr-theme-terminal-color-bright-white"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-bright-yellow",
+      "description": "Canonical shared component token for terminal color bright yellow.",
+      "references": [
+        "--lr-theme-terminal-color-bright-yellow"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-cyan",
+      "description": "Canonical shared component token for terminal color cyan.",
+      "references": [
+        "--lr-theme-terminal-color-cyan"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-green",
+      "description": "Canonical shared component token for terminal color green.",
+      "references": [
+        "--lr-theme-terminal-color-green"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-magenta",
+      "description": "Canonical shared component token for terminal color magenta.",
+      "references": [
+        "--lr-theme-terminal-color-magenta"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-red",
+      "description": "Canonical shared component token for terminal color red.",
+      "references": [
+        "--lr-theme-terminal-color-red"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-white",
+      "description": "Canonical shared component token for terminal color white.",
+      "references": [
+        "--lr-theme-terminal-color-white"
+      ]
+    },
+    {
+      "name": "--lr-terminal-color-yellow",
+      "description": "Canonical shared component token for terminal color yellow.",
+      "references": [
+        "--lr-theme-terminal-color-yellow"
+      ]
+    },
+    {
+      "name": "--lr-theme-border-radius-m",
+      "description": "Canonical application theme input for border radius m.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-radius-pill",
+      "description": "Application input for --lr-radius-pill; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-radius-xs",
+      "description": "Application input for --lr-radius-xs; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-width-medium",
+      "description": "Application input for --lr-border-width-medium; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-width-thick",
+      "description": "Application input for --lr-border-width-thick; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-width-thin",
+      "description": "Application input for --lr-border-width-thin; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-border-strong",
+      "description": "Canonical application theme input for color border strong.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-border-loud",
+      "description": "Canonical application theme input for color brand border loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-border-normal",
+      "description": "Canonical application theme input for color brand border normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-border-quiet",
+      "description": "Canonical application theme input for color brand border quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-loud",
+      "description": "Canonical application theme input for color brand fill loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-normal",
+      "description": "Canonical application theme input for color brand fill normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-quiet",
+      "description": "Canonical application theme input for color brand fill quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-on-loud",
+      "description": "Canonical application theme input for color brand on loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-on-normal",
+      "description": "Canonical application theme input for color brand on normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-brand-on-quiet",
+      "description": "Canonical application theme input for color brand on quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-1",
+      "description": "Canonical application theme input for color chart 1.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-2",
+      "description": "Canonical application theme input for color chart 2.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-3",
+      "description": "Canonical application theme input for color chart 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-4",
+      "description": "Canonical application theme input for color chart 4.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-5",
+      "description": "Canonical application theme input for color chart 5.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-6",
+      "description": "Canonical application theme input for color chart 6.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-7",
+      "description": "Canonical application theme input for color chart 7.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-8",
+      "description": "Canonical application theme input for color chart 8.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-border-loud",
+      "description": "Canonical application theme input for color danger border loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-border-normal",
+      "description": "Canonical application theme input for color danger border normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-border-quiet",
+      "description": "Canonical application theme input for color danger border quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-loud",
+      "description": "Canonical application theme input for color danger fill loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-normal",
+      "description": "Canonical application theme input for color danger fill normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-quiet",
+      "description": "Canonical application theme input for color danger fill quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-on-loud",
+      "description": "Canonical application theme input for color danger on loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-on-normal",
+      "description": "Canonical application theme input for color danger on normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-danger-on-quiet",
+      "description": "Canonical application theme input for color danger on quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-focus",
+      "description": "Canonical application theme input for color focus.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-mix-active",
+      "description": "Application input for --lr-color-mix-active; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-mix-hover",
+      "description": "Application input for --lr-color-mix-hover; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-mix-partner",
+      "description": "Application input for --lr-color-mix-partner; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-loud",
+      "description": "Canonical application theme input for color neutral border loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-normal",
+      "description": "Canonical application theme input for color neutral border normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-quiet",
+      "description": "Canonical application theme input for color neutral border quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-loud",
+      "description": "Canonical application theme input for color neutral fill loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-normal",
+      "description": "Canonical application theme input for color neutral fill normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-quiet",
+      "description": "Canonical application theme input for color neutral fill quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-loud",
+      "description": "Canonical application theme input for color neutral on loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-normal",
+      "description": "Canonical application theme input for color neutral on normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-quiet",
+      "description": "Canonical application theme input for color neutral on quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-no-data",
+      "description": "Canonical application theme input for color no data.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-overlay",
+      "description": "Canonical application theme input for color overlay.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-overlay-strong",
+      "description": "Canonical application theme input for color overlay strong.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-shadow",
+      "description": "Application input for --lr-color-shadow; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-border-loud",
+      "description": "Canonical application theme input for color success border loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-border-normal",
+      "description": "Canonical application theme input for color success border normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-border-quiet",
+      "description": "Canonical application theme input for color success border quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-fill-loud",
+      "description": "Canonical application theme input for color success fill loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-fill-normal",
+      "description": "Canonical application theme input for color success fill normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-fill-quiet",
+      "description": "Canonical application theme input for color success fill quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-on-loud",
+      "description": "Canonical application theme input for color success on loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-on-normal",
+      "description": "Canonical application theme input for color success on normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-success-on-quiet",
+      "description": "Canonical application theme input for color success on quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-border",
+      "description": "Canonical application theme input for color surface border.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-default",
+      "description": "Canonical application theme input for color surface default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-overlay",
+      "description": "Canonical application theme input for color surface overlay.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-raised",
+      "description": "Canonical application theme input for color surface raised.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-text-normal",
+      "description": "Canonical application theme input for color text normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-text-quiet",
+      "description": "Canonical application theme input for color text quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-border-loud",
+      "description": "Canonical application theme input for color warning border loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-border-normal",
+      "description": "Canonical application theme input for color warning border normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-border-quiet",
+      "description": "Canonical application theme input for color warning border quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-loud",
+      "description": "Canonical application theme input for color warning fill loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-normal",
+      "description": "Canonical application theme input for color warning fill normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-quiet",
+      "description": "Canonical application theme input for color warning fill quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-on-loud",
+      "description": "Canonical application theme input for color warning on loud.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-on-normal",
+      "description": "Canonical application theme input for color warning on normal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-warning-on-quiet",
+      "description": "Canonical application theme input for color warning on quiet.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-duration-fast",
+      "description": "Application input for --lr-duration-fast; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-duration-icon",
+      "description": "Application input for --lr-duration-icon; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-duration-normal",
+      "description": "Application input for --lr-duration-base; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-duration-slow",
+      "description": "Application input for --lr-duration-ambient; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-easing-emphasized",
+      "description": "Application input for --lr-easing-emphasized; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-easing-linear",
+      "description": "Application input for --lr-easing-linear; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-easing-standard",
+      "description": "Application input for --lr-easing-standard; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-focus-ring-offset",
+      "description": "Canonical application theme input for focus ring offset.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-focus-ring-width",
+      "description": "Canonical application theme input for focus ring width.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-family-body",
+      "description": "Canonical application theme input for font family body.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-family-mono",
+      "description": "Canonical application theme input for font family mono.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-2xl",
+      "description": "Canonical application theme input for font size 2xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-2xs",
+      "description": "Canonical application theme input for font size 2xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-3xl",
+      "description": "Canonical application theme input for font size 3xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-3xs",
+      "description": "Canonical application theme input for font size 3xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-lg",
+      "description": "Canonical application theme input for font size lg.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-m",
+      "description": "Canonical application theme input for font size m.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-md-sm",
+      "description": "Canonical application theme input for font size md sm.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-sm",
+      "description": "Canonical application theme input for font size sm.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-xl",
+      "description": "Canonical application theme input for font size xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-size-xs",
+      "description": "Canonical application theme input for font size xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-weight-bold",
+      "description": "Application input for --lr-font-weight-bold; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-weight-medium",
+      "description": "Application input for --lr-font-weight-medium; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-weight-normal",
+      "description": "Application input for --lr-font-weight-normal; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-weight-semibold",
+      "description": "Application input for --lr-font-weight-semibold; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-1",
+      "description": "Canonical application theme input for graph cat 1.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-2",
+      "description": "Canonical application theme input for graph cat 2.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-3",
+      "description": "Canonical application theme input for graph cat 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-4",
+      "description": "Canonical application theme input for graph cat 4.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-5",
+      "description": "Canonical application theme input for graph cat 5.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-6",
+      "description": "Canonical application theme input for graph cat 6.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-7",
+      "description": "Canonical application theme input for graph cat 7.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-graph-cat-8",
+      "description": "Canonical application theme input for graph cat 8.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-hover-brightness",
+      "description": "Application input for --lr-hover-brightness; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-icon-button-size",
+      "description": "Canonical application theme input for icon button size.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-1-4",
+      "description": "Application input for --lr-line-height-1-4; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-compact",
+      "description": "Application input for --lr-line-height-compact; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-loose",
+      "description": "Application input for --lr-line-height-loose; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-none",
+      "description": "Application input for --lr-line-height-none; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-normal",
+      "description": "Application input for --lr-line-height-normal; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-height-snug",
+      "description": "Application input for --lr-line-height-snug; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-opacity-disabled",
+      "description": "Application input for --lr-opacity-disabled; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-opacity-muted",
+      "description": "Application input for --lr-opacity-muted; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-otp-input-segment-size",
+      "description": "Application input for --lr-otp-input-segment-size; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-popover-viewport-clamp",
+      "description": "Application input for --lr-popover-viewport-clamp; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-scroll-fade-size",
+      "description": "Application input for --lr-scroll-fade-size; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-color",
+      "description": "Canonical application theme input for shadow color.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-l",
+      "description": "Canonical application theme input for shadow l.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-m",
+      "description": "Canonical application theme input for shadow m.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-s",
+      "description": "Canonical application theme input for shadow s.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-xl",
+      "description": "Canonical application theme input for shadow xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-shadow-xs",
+      "description": "Canonical application theme input for shadow xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-02em",
+      "description": "Application input for --lr-size-0-02em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-03em",
+      "description": "Application input for --lr-size-0-03em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-04em",
+      "description": "Application input for --lr-size-0-04em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-05rem",
+      "description": "Application input for --lr-size-0-05rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-0625rem",
+      "description": "Application input for --lr-size-0-0625rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-09375rem",
+      "description": "Application input for --lr-size-0-09375rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-125rem",
+      "description": "Application input for --lr-size-0-125rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-15rem",
+      "description": "Application input for --lr-size-0-15rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-1875rem",
+      "description": "Application input for --lr-size-0-1875rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-1rem",
+      "description": "Application input for --lr-size-0-1rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-25rem",
+      "description": "Application input for --lr-size-0-25rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-3125rem",
+      "description": "Application input for --lr-size-0-3125rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-35em",
+      "description": "Application input for --lr-size-0-35em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-375rem",
+      "description": "Application input for --lr-size-0-375rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-3em",
+      "description": "Application input for --lr-size-0-3em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-4375rem",
+      "description": "Application input for --lr-size-0-4375rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-4em",
+      "description": "Application input for --lr-size-0-4em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-4rem",
+      "description": "Application input for --lr-size-0-4rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-5em",
+      "description": "Application input for --lr-size-0-5em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-5rem",
+      "description": "Application input for --lr-size-0-5rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-625rem",
+      "description": "Application input for --lr-size-0-625rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-6875rem",
+      "description": "Application input for --lr-size-0-6875rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-6rem",
+      "description": "Application input for --lr-size-0-6rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-75em",
+      "description": "Application input for --lr-size-0-75em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-75rem",
+      "description": "Application input for --lr-size-0-75rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-7em",
+      "description": "Application input for --lr-size-0-7em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-875em",
+      "description": "Application input for --lr-size-0-875em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-8rem",
+      "description": "Application input for --lr-size-0-8rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-0-9375rem",
+      "description": "Application input for --lr-size-0-9375rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-0625rem",
+      "description": "Application input for --lr-size-1-0625rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-1rem",
+      "description": "Application input for --lr-size-1-1rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-25rem",
+      "description": "Application input for --lr-size-1-25rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-5em",
+      "description": "Application input for --lr-size-1-5em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-5rem",
+      "description": "Application input for --lr-size-1-5rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-75rem",
+      "description": "Application input for --lr-size-1-75rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1-875rem",
+      "description": "Application input for --lr-size-1-875rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-10px",
+      "description": "Application input for --lr-size-10px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-10rem",
+      "description": "Application input for --lr-size-10rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-12em",
+      "description": "Application input for --lr-size-12em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-12rem",
+      "description": "Application input for --lr-size-12rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-14px",
+      "description": "Application input for --lr-size-14px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-14rem",
+      "description": "Application input for --lr-size-14rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-15rem",
+      "description": "Application input for --lr-size-15rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-16px",
+      "description": "Application input for --lr-size-16px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-16rem",
+      "description": "Application input for --lr-size-16rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-18rem",
+      "description": "Application input for --lr-size-18rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1em",
+      "description": "Application input for --lr-size-1em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1px",
+      "description": "Application input for --lr-size-1px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-1rem",
+      "description": "Application input for --lr-size-1rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-2-25rem",
+      "description": "Application input for --lr-size-2-25rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-2-5ch",
+      "description": "Application input for --lr-size-2-5ch; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-2-5rem",
+      "description": "Application input for --lr-size-2-5rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-20rem",
+      "description": "Application input for --lr-size-20rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-22rem",
+      "description": "Application input for --lr-size-22rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-24px",
+      "description": "Application input for --lr-size-24px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-24rem",
+      "description": "Application input for --lr-size-24rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-280px",
+      "description": "Application input for --lr-size-280px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-28px",
+      "description": "Application input for --lr-size-28px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-28rem",
+      "description": "Application input for --lr-size-28rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-2px",
+      "description": "Application input for --lr-size-2px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-2rem",
+      "description": "Application input for --lr-size-2rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-3-5em",
+      "description": "Application input for --lr-size-3-5em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-3-5rem",
+      "description": "Application input for --lr-size-3-5rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-30rem",
+      "description": "Application input for --lr-size-30rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-32rem",
+      "description": "Application input for --lr-size-32rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-36rem",
+      "description": "Application input for --lr-size-36rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-38rem",
+      "description": "Application input for --lr-size-38rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-3ch",
+      "description": "Application input for --lr-size-3ch; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-3px",
+      "description": "Application input for --lr-size-3px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-3rem",
+      "description": "Application input for --lr-size-3rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-48rem",
+      "description": "Application input for --lr-size-48rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-4ch",
+      "description": "Application input for --lr-size-4ch; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-4px",
+      "description": "Application input for --lr-size-4px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-4rem",
+      "description": "Application input for --lr-size-4rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-5em",
+      "description": "Application input for --lr-size-5em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-5rem",
+      "description": "Application input for --lr-size-5rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-6ch",
+      "description": "Application input for --lr-size-6ch; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-6em",
+      "description": "Application input for --lr-size-6em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-6px",
+      "description": "Application input for --lr-size-6px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-6rem",
+      "description": "Application input for --lr-size-6rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-7rem",
+      "description": "Application input for --lr-size-7rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-8em",
+      "description": "Application input for --lr-size-8em; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-8rem",
+      "description": "Application input for --lr-size-8rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-0-15rem",
+      "description": "Application input for --lr-size-neg-0-15rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-0-25rem",
+      "description": "Application input for --lr-size-neg-0-25rem; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-1px",
+      "description": "Application input for --lr-size-neg-1px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-4px",
+      "description": "Application input for --lr-size-neg-4px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-6px",
+      "description": "Application input for --lr-size-neg-6px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-size-neg-8px",
+      "description": "Application input for --lr-size-neg-8px; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-2xl",
+      "description": "Canonical application theme input for space 2xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-2xs",
+      "description": "Canonical application theme input for space 2xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-l",
+      "description": "Canonical application theme input for space l.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-m",
+      "description": "Canonical application theme input for space m.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-s",
+      "description": "Canonical application theme input for space s.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-space-xs",
+      "description": "Canonical application theme input for space xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-black",
+      "description": "Canonical application theme input for terminal bg black.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-blue",
+      "description": "Canonical application theme input for terminal bg blue.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-black",
+      "description": "Canonical application theme input for terminal bg bright black.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-blue",
+      "description": "Canonical application theme input for terminal bg bright blue.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-cyan",
+      "description": "Canonical application theme input for terminal bg bright cyan.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-green",
+      "description": "Canonical application theme input for terminal bg bright green.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-magenta",
+      "description": "Canonical application theme input for terminal bg bright magenta.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-red",
+      "description": "Canonical application theme input for terminal bg bright red.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-white",
+      "description": "Canonical application theme input for terminal bg bright white.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-yellow",
+      "description": "Canonical application theme input for terminal bg bright yellow.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-cyan",
+      "description": "Canonical application theme input for terminal bg cyan.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-green",
+      "description": "Canonical application theme input for terminal bg green.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-magenta",
+      "description": "Canonical application theme input for terminal bg magenta.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-red",
+      "description": "Canonical application theme input for terminal bg red.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-white",
+      "description": "Canonical application theme input for terminal bg white.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-bg-yellow",
+      "description": "Canonical application theme input for terminal bg yellow.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-black",
+      "description": "Canonical application theme input for terminal color black.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-blue",
+      "description": "Canonical application theme input for terminal color blue.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-black",
+      "description": "Canonical application theme input for terminal color bright black.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-blue",
+      "description": "Canonical application theme input for terminal color bright blue.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-cyan",
+      "description": "Canonical application theme input for terminal color bright cyan.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-green",
+      "description": "Canonical application theme input for terminal color bright green.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-magenta",
+      "description": "Canonical application theme input for terminal color bright magenta.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-red",
+      "description": "Canonical application theme input for terminal color bright red.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-white",
+      "description": "Canonical application theme input for terminal color bright white.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-yellow",
+      "description": "Canonical application theme input for terminal color bright yellow.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-cyan",
+      "description": "Canonical application theme input for terminal color cyan.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-green",
+      "description": "Canonical application theme input for terminal color green.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-magenta",
+      "description": "Canonical application theme input for terminal color magenta.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-red",
+      "description": "Canonical application theme input for terminal color red.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-white",
+      "description": "Canonical application theme input for terminal color white.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-terminal-color-yellow",
+      "description": "Canonical application theme input for terminal color yellow.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-transition-fast",
+      "description": "Application input for --lr-transition-fast; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-transition-normal",
+      "description": "Application input for --lr-transition-base; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-transition-slow",
+      "description": "Application input for --lr-transition-ambient; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-base",
+      "description": "Canonical application theme input for z index base.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-content",
+      "description": "Canonical application theme input for z index content.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-dropdown",
+      "description": "Canonical application theme input for z index dropdown.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-modal",
+      "description": "Canonical application theme input for z index modal.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-popover",
+      "description": "Canonical application theme input for z index popover.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-z-index-toast",
+      "description": "Canonical application theme input for z index toast.",
+      "references": []
+    },
+    {
+      "name": "--lr-transition-ambient",
+      "description": "Canonical shared component token for transition ambient.",
+      "references": [
+        "--lr-theme-transition-slow"
+      ]
+    },
+    {
+      "name": "--lr-transition-base",
+      "description": "Canonical shared component token for transition base.",
+      "references": [
+        "--lr-theme-transition-normal"
+      ]
+    },
+    {
+      "name": "--lr-transition-fast",
+      "description": "Canonical shared component token for transition fast.",
+      "references": [
+        "--lr-theme-transition-fast"
+      ]
+    }
+  ]
+}

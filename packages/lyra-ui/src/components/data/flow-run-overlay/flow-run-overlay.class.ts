@@ -12,6 +12,11 @@ import {
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { FlowRunDecorations, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-run-overlay.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flowRunOverlayLabel, LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary, LYRA_DEFAULT_open, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Container treatment for `<lr-flow-run-overlay>`'s root. The library-wide {@linkcode LyraFrame}
  *  vocabulary under this component's own export name. */
@@ -52,6 +57,25 @@ interface FlowCanvasLike extends HTMLElement {
  * @since 4.0.0
  */
 export class LyraFlowRunOverlay extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    flowRunOverlayLabel: LYRA_DEFAULT_flowRunOverlayLabel,
+    flowRunStatusCount: LYRA_DEFAULT_flowRunStatusCount,
+    flowRunStepStatus: LYRA_DEFAULT_flowRunStepStatus,
+    flowRunSummary: LYRA_DEFAULT_flowRunSummary,
+    open: LYRA_DEFAULT_open,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() for = '';
@@ -84,9 +108,14 @@ export class LyraFlowRunOverlay extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
     this.watchCanvasTarget();
     this.rebindCanvas();
   }
@@ -103,6 +132,11 @@ export class LyraFlowRunOverlay extends LyraElement {
     this.announcer.cancel();
     this.sink?.release();
     this.sink = undefined;
+  }
+
+  adoptedCallback(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
 
   // `announceTransitions()` runs from `willUpdate()`, not `updated()`: it force-flushes into the
@@ -143,7 +177,9 @@ export class LyraFlowRunOverlay extends LyraElement {
   private watchCanvasTarget(): void {
     if (this.canvasWatcher) return;
     const root = this.getRootNode() as Document | ShadowRoot;
-    this.canvasWatcher = new MutationObserver(() => this.rebindCanvas());
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.canvasWatcher = new MutationObserverCtor(() => this.rebindCanvas());
     this.canvasWatcher.observe(root, { childList: true, subtree: true });
   }
 

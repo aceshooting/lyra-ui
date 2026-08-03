@@ -256,12 +256,6 @@
       "from": "selected",
       "to": "selected",
       "upstream": "sl-tree-item"
-    },
-    {
-      "component": "lr-slider",
-      "from": "default-value",
-      "to": "value",
-      "upstream": "sl-range"
     }
   ]
 }

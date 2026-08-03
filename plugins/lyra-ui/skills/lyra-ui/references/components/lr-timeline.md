@@ -2,7 +2,7 @@
 
 # `lr-timeline`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/timeline/timeline.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-timeline.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTimeline`, also available unregistered from `@aceshooting/lyra-ui/components/data/timeline/timeline.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

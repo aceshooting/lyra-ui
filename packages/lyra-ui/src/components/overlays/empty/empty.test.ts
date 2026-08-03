@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
 
@@ -49,6 +50,34 @@ class EmptyHeadingDescriptionForwardWrapper extends HTMLElement {
 }
 customElements.define('empty-heading-description-forward-wrapper', EmptyHeadingDescriptionForwardWrapper);
 
+class EmptyLiveTextForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const empty = document.createElement('lr-empty');
+
+    const headingWrapper = document.createElement('span');
+    headingWrapper.slot = 'heading';
+    const headingSlot = document.createElement('slot');
+    headingSlot.name = 'heading';
+    headingSlot.textContent = 'Fallback heading';
+    headingWrapper.append(headingSlot);
+
+    const descriptionWrapper = document.createElement('span');
+    descriptionWrapper.slot = 'description';
+    const descriptionSlot = document.createElement('slot');
+    descriptionSlot.name = 'description';
+    descriptionSlot.textContent = 'Fallback description';
+    descriptionWrapper.append(descriptionSlot);
+
+    empty.append(headingWrapper, descriptionWrapper);
+    root.append(empty);
+  }
+}
+if (!customElements.get('empty-live-text-forward-wrapper')) {
+  customElements.define('empty-live-text-forward-wrapper', EmptyLiveTextForwardWrapper);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function asAny(el: LyraEmpty): any {
   return el;
@@ -68,13 +97,274 @@ it('renders heading, description, and slotted content', async () => {
   expect(actionsSlot.assignedElements().length).to.equal(1);
 });
 
-it('does not announce the initial empty state as a live update, then announces later content changes', async () => {
+it('announces only later meaningful heading/description changes and deduplicates hidden chrome', async () => {
   const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.getAttribute('aria-live')).to.equal('off');
+  const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+  const sink = document.querySelector<HTMLElement>(selector)!;
+  expect(Boolean(sink), 'the sink is mounted before the first update').to.be.true;
+  expect(sink.childElementCount).to.equal(0);
+  expect(base.hasAttribute('role')).to.be.false;
+  expect(base.hasAttribute('aria-live')).to.be.false;
+
+  const icon = document.createElement('span');
+  icon.textContent = 'Decorative empty-state artwork';
+  const actions = document.createElement('button');
+  actions.slot = 'actions';
+  actions.textContent = 'Reset filters';
+  el.append(icon, actions);
+  await Promise.resolve();
+  expect(sink.childElementCount, 'icon and action chrome are never announced').to.equal(0);
+
   el.heading = 'No matching results';
   await el.updateComplete;
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    'No matching results',
+  ]);
+
+  const description = document.createElement('span');
+  description.slot = 'description';
+  description.append('Try ');
+  const ariaHidden = document.createElement('span');
+  ariaHidden.setAttribute('aria-hidden', 'true');
+  ariaHidden.textContent = 'decorative hidden text';
+  const hidden = document.createElement('span');
+  hidden.hidden = true;
+  hidden.textContent = 'hidden text';
+  const inert = document.createElement('span');
+  inert.setAttribute('inert', '');
+  inert.textContent = 'inert text';
+  const displayNone = document.createElement('span');
+  displayNone.style.display = 'none';
+  displayNone.textContent = 'not rendered';
+  const named = document.createElement('span');
+  named.setAttribute('aria-label', 'another filter.');
+  named.textContent = 'unlabelled descendant leak';
+  description.append(ariaHidden, hidden, inert, displayNone, named);
+  el.append(description);
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'No matching results Try another filter.',
+  );
+
+  const announcementCount = sink.childElementCount;
+  ariaHidden.textContent = 'changed decorative hidden text';
+  actions.textContent = 'Different action label';
+  await Promise.resolve();
+  expect(
+    sink.childElementCount,
+    'mutations that do not change accessible heading/description text are deduplicated',
+  ).to.equal(announcementCount);
+
+  const richHeading = document.createElement('strong');
+  richHeading.slot = 'heading';
+  richHeading.textContent = 'Slotted heading';
+  el.append(richHeading);
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Slotted heading Try another filter.');
+
+  richHeading.remove();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'No matching results Try another filter.',
+  );
+
+  el.remove();
+  expect(document.querySelector(selector) === null).to.be.true;
+  el.heading = 'Detached replacement';
+  document.body.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  const reconnected = document.querySelector<HTMLElement>(selector);
+  expect(reconnected?.childElementCount).to.equal(0);
+
+  el.heading = 'Connected replacement';
+  await el.updateComplete;
+  expect(reconnected?.lastElementChild?.textContent).to.equal(
+    'Connected replacement Try another filter.',
+  );
+  el.remove();
+});
+
+it('does not announce updates while the host or a composed ancestor is hidden', async () => {
+  const wrapper = await fixture(html`
+    <section><lr-empty heading="Initial empty state"></lr-empty></section>
+  `);
+  const el = wrapper.querySelector('lr-empty') as LyraEmpty;
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.hidden = true;
+  el.heading = 'Hidden host update';
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(sink.childElementCount, 'a hidden host is not a live update').to.equal(0);
+
+  el.hidden = false;
+  await Promise.resolve();
+  const afterHostReveal = sink.childElementCount;
+  wrapper.style.display = 'none';
+  el.heading = 'CSS-hidden ancestor update';
+  await el.updateComplete;
+  expect(sink.childElementCount).to.equal(afterHostReveal);
+
+  wrapper.style.display = '';
+  wrapper.setAttribute('aria-hidden', 'true');
+  el.heading = 'ARIA-hidden ancestor update';
+  await el.updateComplete;
+  expect(sink.childElementCount).to.equal(afterHostReveal);
+
+  wrapper.removeAttribute('aria-hidden');
+  el.heading = 'Visible empty-state update';
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal('Visible empty-state update');
+});
+
+it('does not leak property fallbacks when assigned heading/description slots extract to empty text', async () => {
+  const el = (await fixture(html`
+    <lr-empty heading="Property heading" description="Property description"></lr-empty>
+  `)) as LyraEmpty;
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  const hiddenHeading = document.createElement('span');
+  hiddenHeading.slot = 'heading';
+  hiddenHeading.setAttribute('aria-hidden', ' TRUE ');
+  hiddenHeading.textContent = 'Hidden assigned heading';
+  const emptyDescription = document.createElement('span');
+  emptyDescription.slot = 'description';
+  el.append(hiddenHeading, emptyDescription);
+  await Promise.resolve();
+  expect(sink.childElementCount).to.equal(0);
+
+  emptyDescription.textContent = 'Visible assigned description';
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Visible assigned description');
+  expect(sink.textContent).to.not.include('Property heading');
+  expect(sink.textContent).to.not.include('Property description');
+});
+
+it('extracts a visibility override nested under a visibility-hidden slotted wrapper', async () => {
+  const el = (await fixture(html`
+    <lr-empty>
+      <span slot="heading" style="visibility: hidden">
+        Hidden wrapper text
+        <span id="exposed" style="visibility: visible">Visible override</span>
+      </span>
+    </lr-empty>
+  `)) as LyraEmpty;
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.querySelector('#exposed')!.textContent = 'Updated visible override';
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Updated visible override');
+  expect(sink.textContent).to.not.include('Hidden wrapper text');
+});
+
+it('extracts and observes assigned text behind nested forwarding slots without mount noise', async () => {
+  const wrapper = (await fixture(html`
+    <empty-live-text-forward-wrapper>
+      <strong id="forwarded-heading" slot="heading">Forwarded heading</strong>
+      <span id="forwarded-description" slot="description">Initial forwarded description</span>
+    </empty-live-text-forward-wrapper>
+  `)) as EmptyLiveTextForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(sink.childElementCount, 'initial forwarded content stays silent').to.equal(0);
+
+  wrapper.querySelector('#forwarded-description')!.textContent = 'Updated forwarded description';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded description',
+  );
+  expect(sink.textContent).to.not.include('Fallback');
+
+  const description = wrapper.querySelector('#forwarded-description') as HTMLElement;
+  description.style.display = 'none';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Forwarded heading');
+  description.style.removeProperty('display');
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded description',
+  );
+
+  const forwardingSlot = el.querySelector<HTMLSlotElement>('slot[name="description"]')!;
+  const slotChanged = oneEvent(forwardingSlot, 'slotchange');
+  const detail = document.createElement('span');
+  detail.slot = 'description';
+  detail.textContent = 'Added forwarded detail';
+  wrapper.append(detail);
+  await slotChanged;
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded description Added forwarded detail',
+  );
+  expect(sink.textContent).to.not.include('Fallback');
+});
+
+it('announces composed slotted text and image alternatives without unrendered light-DOM leakage', async () => {
+  const el = document.createElement('lr-empty') as LyraEmpty;
+  const headingHost = document.createElement('span');
+  headingHost.slot = 'heading';
+  const shadow = headingHost.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<span>Rendered empty shadow</span><slot></slot>';
+  const assigned = document.createElement('span');
+  assigned.textContent = 'Rendered empty assignment';
+  const unassigned = document.createElement('span');
+  unassigned.slot = 'missing';
+  unassigned.textContent = 'Unassigned empty leak';
+  headingHost.append(assigned, unassigned);
+  const image = document.createElement('img');
+  image.slot = 'description';
+  image.alt = 'Empty-state diagram';
+  el.append(headingHost, image);
+  document.body.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  image.alt = 'Updated empty-state diagram';
+  await Promise.resolve();
+
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Rendered empty shadow Rendered empty assignment Updated empty-state diagram',
+  );
+  el.remove();
+});
+
+it('keeps later visible heading and description text live when the host has an aria-label', async () => {
+  const el = (await fixture(html`
+    <lr-empty aria-label="Search empty state" heading="No results"></lr-empty>
+  `)) as LyraEmpty;
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.description = 'Try another filter.';
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal('No results Try another filter.');
 });
 
 it('is accessible', async () => {
@@ -82,11 +372,12 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('retains status semantics while suppressing an initial mount announcement', async () => {
+it('keeps visible empty-state content semantic without a shadow live-region role', async () => {
   const el = (await fixture(html`<lr-empty heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.getAttribute('role')).to.equal('status');
-  expect(base.getAttribute('aria-live')).to.equal('off');
+  expect(base.getAttribute('role')).to.equal(null);
+  expect(base.getAttribute('aria-live')).to.equal(null);
+  expect(base.textContent).to.contain('Nothing here');
 });
 
 it('collapses the icon wrapper when no default-slot content is provided', async () => {

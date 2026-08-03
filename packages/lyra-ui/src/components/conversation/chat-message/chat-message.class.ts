@@ -7,6 +7,11 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './chat-message.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_open, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
 export type ChatMessageStatus = 'sending' | 'sent' | 'failed' | 'streaming';
@@ -175,6 +180,24 @@ export interface LyraChatMessageEventMap {
  * @since 4.0.0
  */
 export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chatCompleteAnnounce: LYRA_DEFAULT_chatCompleteAnnounce,
+    chatFailedAnnounce: LYRA_DEFAULT_chatFailedAnnounce,
+    chatFailedToSend: LYRA_DEFAULT_chatFailedToSend,
+    chatResponding: LYRA_DEFAULT_chatResponding,
+    chatSending: LYRA_DEFAULT_chatSending,
+    collapse: LYRA_DEFAULT_collapse,
+    collapseMessage: LYRA_DEFAULT_collapseMessage,
+    details: LYRA_DEFAULT_details,
+    expandMessage: LYRA_DEFAULT_expandMessage,
+    open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
@@ -324,13 +347,13 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
   }
 
-  /** Whether `document.activeElement` is (or is inside) one of this host's `slot="failure"`
-   *  children. Slotting doesn't move an element out of the light DOM -- `document.activeElement`
-   *  reports the actual focused node regardless of where Shadow DOM projects it for rendering --
-   *  so this walks the host's real children, same as `hasSlotted` above, rather than anything
-   *  shadow-root-relative. */
+  /** Whether this component's owner document has focus in one of the host's `slot="failure"`
+   *  children. Slotting doesn't move an element out of the light DOM -- the owner document's
+   *  `activeElement` reports the actual focused node regardless of where Shadow DOM projects it
+   *  for rendering -- so this walks the host's real children, same as `hasSlotted` above, rather
+   *  than anything shadow-root-relative. */
   private isFocusWithinFailureSlot(): boolean {
-    const active = document.activeElement;
+    const active = this.ownerDocument.activeElement;
     if (!active) return false;
     return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));
   }

@@ -3,10 +3,17 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
+import { compactManifest } from './manifest-compact.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(packageDir, 'src', 'components');
 const manifestPath = path.join(packageDir, 'custom-elements.json');
+
+// The pinned public wa-video table publishes this exact camel-case attribute spelling. HTML
+// normalizes it to `currenttime` at runtime, and the component also retains `current-time` as a
+// compatibility alias. Keep the manifest exception tag-scoped so no other noncanonical attribute
+// can enter the package unnoticed.
+const REVIEWED_NONCANONICAL_ATTRIBUTES = new Set(['lr-video\0currentTime']);
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -244,7 +251,8 @@ for (const module of manifest.modules ?? []) {
       }
     }
     for (const attribute of declaration.attributes ?? []) {
-      if (!/^[a-z][a-z0-9-]*$/.test(attribute.name) || attribute.name.startsWith('wa-')) {
+      const reviewed = REVIEWED_NONCANONICAL_ATTRIBUTES.has(`${declaration.tagName}\0${attribute.name}`);
+      if ((!reviewed && !/^[a-z][a-z0-9-]*$/.test(attribute.name)) || attribute.name.startsWith('wa-')) {
         errors.push(`${module.path}: invalid or forbidden attribute name ${JSON.stringify(attribute.name)}`);
       }
     }
@@ -256,11 +264,11 @@ const generatedManifest = await analyzeManifest({
   cwd: packageDir,
   noWrite: true,
 });
-const expectedText = `${JSON.stringify(generatedManifest, null, 2)}\n`;
+const expectedText = `${JSON.stringify(compactManifest(generatedManifest))}\n`;
 const actualText = fs.readFileSync(manifestPath, 'utf8');
 if (actualText !== expectedText) {
   errors.push(
-    'custom-elements.json is stale or nondeterministic; run `pnpm --filter @aceshooting/lyra-ui manifest` and commit the result',
+    'custom-elements.json is stale, expanded, or nondeterministic; run `pnpm --filter @aceshooting/lyra-ui manifest` and commit the result',
   );
 }
 

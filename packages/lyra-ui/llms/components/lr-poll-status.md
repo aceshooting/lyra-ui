@@ -2,7 +2,7 @@
 
 # `lr-poll-status`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/poll-status/poll-status.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-poll-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPollStatus`, also available unregistered from `@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -10,6 +10,7 @@ import {
   isResourceLimitError,
   LyraUserFacingError,
   readResponseText,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -20,6 +21,12 @@ import {
   sanitizeCssLength,
   sanitizePercentRect,
 } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
 
@@ -141,20 +148,12 @@ export interface LyraDocumentPreviewEventMap {
  * malformed URLs never reach `fetch()`, an image `src`, or an anchor `href`;
  * they render a non-interactive fallback/error instead.
  *
- * Accessibility: the `"converting"` state (no numeric `progress`) is a
- * `role="status"` region wrapping a visually-hidden "Converting document…"
- * string. This is a *plain* static region, not routed through
- * `<lr-live-region>`/`Announcer` — like `<lr-typing-indicator>`'s
- * identical judgement call (see that component's class doc), this only ever
- * has one thing to announce (entering the state), not a rapidly-repeating
- * stream of updates, so the coalescing machinery a high-frequency component
- * needs would be pure overhead here. Once real `progress` is available, the
- * region becomes a standard `role="progressbar"` instead, which is
- * self-describing via `aria-valuenow` with no extra live-region wiring
- * needed. `status="error"` renders `[part="error"]` as `role="alert"` — an
- * assertive, one-shot failure notice, the same native-role shortcut
- * `<lr-live-region>`'s own `mode="assertive"` maps to, without requiring
- * the announcer machinery here either.
+ * Accessibility: entering an indeterminate converting/loading state is announced through the
+ * pre-mounted shared document-level polite region, while its visible `[part="spinner"]` remains
+ * ordinary shadow content. Once real `progress` is available, the spinner becomes a standard
+ * `role="progressbar"`, self-describing via `aria-valuenow`. Error transitions use the shared
+ * assertive region; `[part="error"]` remains visible ordinary text so it is still encountered in
+ * reading order without relying on a shadow-root live region.
  *
  * @customElement lr-document-preview
  * @slot unsupported - Escape hatch: when populated, its content renders
@@ -175,8 +174,8 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart header - The row above the body, holding `filename`. Hidden entirely when `filename` is unset.
  * @csspart filename - The filename text.
  * @csspart body - The wrapper around whichever content is currently showing (text/image preview, the generic fallback, the spinner, or the error message).
- * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
- * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
+ * @csspart spinner - The converting/loading indicator — ordinary content while indeterminate or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
+ * @csspart error - The visible ordinary-text error region, used both for `status="error"` and for a failed text fetch; transitions announce through the shared assertive sink.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
  * @csspart frame-viewport - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
  * @csspart frame-content - Forwarded from the internal `<lr-pan-zoom>` when `zoomable` (image format only).
@@ -210,6 +209,33 @@ export interface LyraDocumentPreviewEventMap {
  * @since 4.0.0
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    convertingDocument: LYRA_DEFAULT_convertingDocument,
+    details: LYRA_DEFAULT_details,
+    documentPreviewAlt: LYRA_DEFAULT_documentPreviewAlt,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewGenericError: LYRA_DEFAULT_documentPreviewGenericError,
+    documentPreviewGenericFile: LYRA_DEFAULT_documentPreviewGenericFile,
+    documentPreviewNotAvailable: LYRA_DEFAULT_documentPreviewNotAvailable,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewTypeImage: LYRA_DEFAULT_documentPreviewTypeImage,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    download: LYRA_DEFAULT_download,
+    highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch (for `text`/`application/json`) or display (`image`, or as
@@ -270,9 +296,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // same guard <lr-tool-result-view>'s resolve() uses.
   private generation = 0;
   private invalidUrlReportedFor: string | null = null;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text') {
       this.textFetch = IDLE_TEXT_FETCH;
       this.scheduleAfterUpdate(() => {
@@ -286,7 +314,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.generation++;
     this.beginAbortableLoad();
     this.textFetch = IDLE_TEXT_FETCH;
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -298,6 +331,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncAnnouncementState();
 
     const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
@@ -329,12 +363,59 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     }
   }
 
+  private syncAnnouncementState(): void {
+    if (this.status === 'converting') {
+      if (this.progress != null && Number.isFinite(this.progress)) {
+        this.announcements.transition('preview', 'progress');
+        return;
+      }
+      this.announcements.transition('preview', 'loading', this.localize('convertingDocument'));
+      return;
+    }
+    if (this.status === 'error') {
+      this.announcements.transition(
+        'preview',
+        'error',
+        this.errorMessage || this.localize('documentPreviewGenericError'),
+      );
+      return;
+    }
+    if (classifyFormat(this.mimeType) !== 'text' || this.src === '') {
+      this.announcements.transition('preview', 'idle');
+      return;
+    }
+    if (safeFetchUrl(this.src) === null) {
+      this.announcements.transition(
+        'preview',
+        'error',
+        this.localize('documentPreviewUrlNotAllowed'),
+      );
+      return;
+    }
+    if (this.textFetch.kind === 'error') {
+      this.announcements.transition('preview', 'error', this.textFetch.message);
+      return;
+    }
+    if (this.textFetch.kind === 'loaded') {
+      this.announcements.transition('preview', 'loaded');
+      return;
+    }
+    this.announcements.transition('preview', 'loading', this.localize('loadingDocument'));
+  }
+
   private async fetchText(url: string): Promise<void> {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
+    const fetchTarget = resolveOwnerFetchTarget(this, url);
+    if (!fetchTarget) {
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.textFetch = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
+      return;
+    }
     this.textFetch = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
@@ -356,8 +437,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.emit('lr-download', { src: this.src, filename: this.filename });
   };
 
-  /** Renders `[part="spinner"]` -- indeterminate (`role="status"` + a
-   *  visually-hidden label, per the class doc's accessibility note) when
+  /** Renders `[part="spinner"]` -- indeterminate ordinary content plus a
+   *  visually-hidden label (the spoken transition uses the shared sink) when
    *  `progressValue` is absent, or a `role="progressbar"` once it's a finite
    *  0-100 number. Shared by the host-driven `"converting"` state and this
    *  component's own in-flight text fetch (which never has a numeric
@@ -390,7 +471,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       `;
     }
     return html`
-      <div part="spinner" role="status">
+      <div part="spinner">
         <span class="ring" aria-hidden="true"></span>
         <span class="sr-only">${label}</span>
       </div>
@@ -398,7 +479,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderError(message: string): TemplateResult {
-    return html`<div part="error" role="alert">${message || this.localize('documentPreviewGenericError')}</div>`;
+    return html`<div part="error">${message || this.localize('documentPreviewGenericError')}</div>`;
   }
 
   private renderTextPreview(): TemplateResult {
@@ -578,11 +659,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const ready = classifyFormat(this.mimeType) === 'image' && safeMediaSrc(this.src) !== null;
     if (!highlight || !anchor || anchor.kind !== 'region' || !ready) return false;
     await this.updateComplete;
-    const region = this.renderRoot.querySelector(
-      `[part="region-highlight"][data-id="${CSS.escape(highlight.id)}"]`,
-    );
+    // A constant selector plus exact comparison works in partial/adopted DOM realms without
+    // depending on the ambient `CSS.escape`, and accepts ids containing selector punctuation.
+    const region = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
+      .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
-    const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
     region.scrollIntoView({ behavior, block: 'center', inline: 'center' });
     return true;
   }

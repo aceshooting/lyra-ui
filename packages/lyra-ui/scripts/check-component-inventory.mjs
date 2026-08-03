@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { validateInventory, validatePinnedManifests } from './component-inventory.mjs';
+import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -33,7 +34,9 @@ try {
   const options = parseArguments(process.argv.slice(2));
   const inventory = readJson(path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'));
   const upstreamTags = readJson(path.join(packageDir, 'scripts', 'fixtures', 'upstream-tags.json'));
-  const lyraManifest = readJson(path.join(packageDir, 'custom-elements.json'));
+  const lyraManifest = expandLyraInventoryManifest(
+    readJson(path.join(packageDir, 'custom-elements.json')),
+  );
   const findings = validateInventory(inventory, { upstreamTags, lyraManifest, strict: options.strict });
   if (options.webawesomeManifest) {
     findings.push(
@@ -69,4 +72,3 @@ try {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 }
-

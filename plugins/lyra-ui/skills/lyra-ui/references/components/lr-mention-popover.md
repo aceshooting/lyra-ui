@@ -2,7 +2,7 @@
 
 # `lr-mention-popover`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-mention-popover.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMentionPopover`, also available unregistered from `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

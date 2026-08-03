@@ -311,11 +311,37 @@ describe('text selection (lr-text-select)', () => {
     const selection = shadowSelection ?? window.getSelection()!;
     selection.removeAllRanges();
     selection.addRange(range);
-    const listener = oneEvent(el, 'lr-text-select');
-    body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
-    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
-    expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
-    expect(event.detail.text.length).to.be.greaterThan(0);
+    // WebKit rejects a programmatic Selection whose endpoints live in a shadow tree. Its native
+    // drag selection is exposed through getComposedRanges(), so provide that same range shape when
+    // the setup was rejected and restore the browser global in finally.
+    const needsSelectionFacade = selection.rangeCount === 0 || selection.isCollapsed;
+    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+    if (needsSelectionFacade) {
+      const composedRange = {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      } as StaticRange;
+      const facade = { getComposedRanges: () => [composedRange] } as unknown as Selection;
+      Object.defineProperty(window, 'getSelection', { configurable: true, value: () => facade });
+    }
+    try {
+      const listener = oneEvent(el, 'lr-text-select');
+      body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+      const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+      expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
+      expect(event.detail.text.length).to.be.greaterThan(0);
+    } finally {
+      selection.removeAllRanges();
+      if (needsSelectionFacade) {
+        if (ownGetSelectionDescriptor) {
+          Object.defineProperty(window, 'getSelection', ownGetSelectionDescriptor);
+        } else {
+          Reflect.deleteProperty(window, 'getSelection');
+        }
+      }
+    }
   });
 
   it('does not emit lr-text-select when there is no active selection on mouseup', async () => {
@@ -473,6 +499,71 @@ describe('copy button', () => {
       expect(button.textContent!.trim()).to.equal('Copy');
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+    }
+  });
+
+  it('uses the adopted owner clipboard and timer and fails closed while ownerless', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const nativeFrameSetTimeout = frameWindow.setTimeout.bind(frameWindow);
+    const nativeFrameClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
+    const nativeMainSetTimeout = window.setTimeout;
+    let mainWrites = 0;
+    const frameWrites: string[] = [];
+    let frameTimers = 0;
+    let ownerlessMainTimers = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+    });
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      frameTimers++;
+      return nativeFrameSetTimeout(handler, timeout, ...args);
+    }) as typeof frameWindow.setTimeout;
+    const el = (await fixture(
+      html`<lr-code-block-core .code=${'const owner = true;'}></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      button.click();
+      await el.updateComplete;
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.deep.equal(['const owner = true;']);
+      expect(frameTimers).to.be.greaterThan(0);
+
+      el.remove();
+      ownerlessDocument.adoptNode(el);
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+        ownerlessMainTimers++;
+        return nativeMainSetTimeout(handler, timeout, ...args);
+      }) as typeof window.setTimeout;
+      button.click();
+      await Promise.resolve();
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.have.length(1);
+      expect(ownerlessMainTimers).to.equal(0);
+    } finally {
+      el.remove();
+      window.setTimeout = nativeMainSetTimeout;
+      frameWindow.setTimeout = nativeFrameSetTimeout;
+      frameWindow.clearTimeout = nativeFrameClearTimeout;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
     }
   });
 

@@ -8,7 +8,8 @@
 //
 // Regenerate the SHAPE (never the translations) with:
 //   node scripts/scaffold-translation.mjs zh-CN --force
-import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localization.js';
+import { registerLyraLocale } from '../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: '无数据',
@@ -40,6 +41,8 @@ const strings: LyraLocaleStrings = {
   carouselLabel: '轮播',
   carouselSlide: '幻灯片',
   carouselSlidePosition: '第{index}张幻灯片，共{total}张',
+  carouselSlideAnnouncement: '{position}：{content}',
+  carouselSlideAnnouncementSeparator: '。',
   carouselIndicators: '轮播幻灯片',
   carouselGoTo: '转到第{index}张幻灯片',
   imageComparerLabel: '图片对比',

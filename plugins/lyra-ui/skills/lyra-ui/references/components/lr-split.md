@@ -2,7 +2,7 @@
 
 # `lr-split`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/split/split.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-split.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSplit`, also available unregistered from `@aceshooting/lyra-ui/components/layout/split/split.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

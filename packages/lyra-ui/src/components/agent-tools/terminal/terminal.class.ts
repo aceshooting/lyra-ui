@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
@@ -21,6 +22,11 @@ import type {
 import { styles } from './terminal.styles.js';
 import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_open, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface TerminalCell {
   char: string;
@@ -175,7 +181,25 @@ export interface LyraTerminalEventMap {
  * @since 4.0.0
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
+    collapse: LYRA_DEFAULT_collapse,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    jumpToLatest: LYRA_DEFAULT_jumpToLatest,
+    open: LYRA_DEFAULT_open,
+    terminalDownload: LYRA_DEFAULT_terminalDownload,
+    terminalHighlightLine: LYRA_DEFAULT_terminalHighlightLine,
+    terminalLabel: LYRA_DEFAULT_terminalLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) all normalize
@@ -204,7 +228,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private lineSeq = 0;
   private column = 0;
   private readonly ansiParser = createAnsiParser();
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimeoutId?: number;
+  private copyTimeoutWindow?: Window;
   /** Plain text appended since the last announcer flush -- coalesced so a burst of small
    *  `write()` chunks (a common line-by-line stdout pattern) becomes one throttled announcement
    *  instead of one per chunk. Reset in the announcer's own `onFlush` callback below, so it always
@@ -230,19 +255,29 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all, and
     // streamed output can start in the same task the element is appended in.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTimeout(this.copyTimeoutId);
+    this.clearCopyTimeout();
     this.justCopied = false;
     this.cancelPendingAnnouncement();
     this.sink?.release();
     this.sink = undefined;
+  }
+
+  adoptedCallback(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
 
   override firstUpdated(): void {
@@ -534,18 +569,29 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private onCopy = (): void => {
     const text = this.getPlainText();
+    const ownerWindow = this.ownerDocument.defaultView;
     try {
-      void navigator.clipboard?.writeText(text)?.catch(() => {});
+      void ownerWindow?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // best-effort
     }
     this.emit('lr-copy', { text });
     this.justCopied = true;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = setTimeout(() => {
+    this.clearCopyTimeout();
+    if (!ownerWindow) return;
+    this.copyTimeoutWindow = ownerWindow;
+    this.copyTimeoutId = ownerWindow.setTimeout(() => {
+      this.copyTimeoutId = undefined;
+      this.copyTimeoutWindow = undefined;
       this.justCopied = false;
     }, 1500);
   };
+
+  private clearCopyTimeout(): void {
+    if (this.copyTimeoutId !== undefined) this.copyTimeoutWindow?.clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = undefined;
+    this.copyTimeoutWindow = undefined;
+  }
 
   private cancelPendingAnnouncement(): void {
     this.pendingAnnounceText = '';
@@ -560,13 +606,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     // (e.g. routing a large log through a server-side export), matching <lr-media-card>'s
     // `lr-open` convention. See the class doc's event list.
     if (this.emit('lr-download', { filename }, { cancelable: true }).defaultPrevented) return;
-    const blob = new Blob([this.getPlainText()], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const blob = new ownerWindow.Blob([this.getPlainText()], { type: 'text/plain' });
+    const url = ownerWindow.URL.createObjectURL(blob);
+    const a = this.ownerDocument.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    ownerWindow.setTimeout(() => ownerWindow.URL.revokeObjectURL(url), 5000);
   };
 
   // --- Follow tracking via virtual-list's visible-range event ---------------
@@ -601,14 +649,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
       (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
     const listShadow = this.renderRoot.querySelector('lr-virtual-list')?.shadowRoot;
-    const selection = shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? document.getSelection();
+    const selection =
+      shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
     const text = selection?.toString() ?? '';
     if (!selection || selection.isCollapsed || text === '') return;
     const lineNumberOf = (node: Node | null): number | null => {
       let el: Node | null = node;
       while (el) {
-        if (el instanceof Element) {
-          const attr = el.getAttribute('data-line-number');
+        if (el.nodeType === 1) {
+          const attr = (el as Element).getAttribute('data-line-number');
           if (attr !== null) return Number(attr);
         }
         el = (el as ParentNode).parentNode ?? (el as unknown as { host?: Node }).host ?? null;

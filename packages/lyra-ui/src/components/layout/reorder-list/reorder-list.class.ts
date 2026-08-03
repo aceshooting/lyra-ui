@@ -6,6 +6,11 @@ import type { LyraReorderItem } from "./reorder-item.class.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./reorder-list.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ReorderDetail {
   order: string[];
@@ -56,6 +61,14 @@ export interface LyraReorderListEventMap {
  * @since 6.0.0
  */
 export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    reorderItemMoved: LYRA_DEFAULT_reorderItemMoved,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Accessible-name fallback for the internal `role="list"` element when the host has no

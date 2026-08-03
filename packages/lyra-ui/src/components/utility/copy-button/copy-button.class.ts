@@ -6,6 +6,11 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { styles } from './copy-button.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How long the confirmation/failure state lasts before reverting -- matches
  *  `lr-code-block`'s own `COPY_CONFIRM_MS`. */
@@ -82,6 +87,21 @@ export type LyraCopyButtonTooltip = 'full' | 'copy' | 'none';
 export type LyraCopyButtonTooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
 
 type CopyStatus = 'rest' | 'success' | 'error';
+
+function isElementValue(value: unknown): value is Element {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as Partial<Element>;
+  return candidate.nodeType === 1 && typeof candidate.getAttribute === 'function';
+}
+
+function isHtmlElementValue(value: unknown): value is HTMLElement {
+  if (!isElementValue(value)) return false;
+  const candidate = value as Partial<HTMLElement>;
+  return candidate.namespaceURI === 'http://www.w3.org/1999/xhtml'
+    && typeof candidate.focus === 'function'
+    && typeof candidate.blur === 'function'
+    && typeof candidate.click === 'function';
+}
 
 /** Distinguishes "there is no Clipboard API here at all" from a real rejection, so `lr-copy-error`
  *  can report `unsupported` instead of guessing from a `DOMException` name. */
@@ -161,6 +181,21 @@ export interface LyraCopyButtonEventMap {
  * @since 4.0.0
  */
 export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    copyFailed: LYRA_DEFAULT_copyFailed,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The plain text to copy. */
@@ -222,7 +257,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.internals.role = 'group';
   }
 
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimer?: { owner: Window; handle: number; generation: number };
 
   /** Bumped by every activation, every source change, and every disconnect, so an in-flight
    *  clipboard promise that settles late can tell whether its outcome still describes the text
@@ -242,7 +277,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Acquired on connect, not on the first outcome: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all, and the first copy
     // can land in the same task this element is appended in.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override disconnectedCallback(): void {
@@ -252,10 +290,23 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.sink = undefined;
   }
 
+  adoptedCallback(): void {
+    // Adoption may occur while already disconnected, so defensively retire old-realm resources
+    // even when no additional disconnected callback will run.
+    this.resetFeedback();
+    this.sink?.release();
+    this.sink = undefined;
+  }
+
+  private cancelFeedbackTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
+  }
+
   private resetFeedback(): void {
     this.copyGeneration += 1;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = undefined;
+    this.cancelFeedbackTimer();
     this.setStatus('rest');
   }
 
@@ -267,7 +318,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private customTrigger(): HTMLElement | undefined {
     return this.defaultSlot?.assignedElements({ flatten: true }).find(
-      (element): element is HTMLElement => element instanceof HTMLElement,
+      isHtmlElementValue,
     );
   }
 
@@ -288,8 +339,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.activeTrigger()?.click();
   }
 
-  private async writeClipboard(text: string): Promise<void> {
-    const clipboard = navigator.clipboard;
+  private async writeClipboard(text: string, ownerWindow: Window): Promise<void> {
+    const clipboard = ownerWindow.navigator.clipboard;
     // Absent in insecure contexts and older browsers. Some engines also throw synchronously from
     // writeText() rather than rejecting -- inside this async function both arrive at the same
     // catch below.
@@ -297,9 +348,15 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     await clipboard.writeText(text);
   }
 
-  private sourceById(id: string): HTMLElement | null {
+  private sourceById(id: string): Element | null {
     const root = this.getRootNode();
-    if (root instanceof Document || root instanceof ShadowRoot) return root.getElementById(id);
+    if (
+      (root.nodeType === 9 || root.nodeType === 11)
+      && typeof (root as Partial<Document | ShadowRoot>).getElementById === 'function'
+    ) {
+      const source = (root as Document | ShadowRoot).getElementById(id);
+      return isElementValue(source) ? source : null;
+    }
     return null;
   }
 
@@ -334,25 +391,43 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private failureReason(error: unknown): LyraCopyErrorReason {
     if (error instanceof ClipboardUnsupportedError) return 'unsupported';
-    if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
+    const name = error !== null && typeof error === 'object'
+      ? (error as { name?: unknown }).name
+      : undefined;
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
       return 'denied';
     }
     return 'failed';
   }
 
   private showStatus(status: CopyStatus): void {
+    const owner = this.ownerDocument.defaultView;
+    if (!this.isConnected || !owner) return;
     this.setStatus(status);
     // Announced from the transition, not from a rendered text change: the shared region appends
     // each announcement as its own node, so copying twice in a row is read twice instead of the
     // second one being a silent no-op.
     this.sink?.announce(this.statusLabel(status));
-    clearTimeout(this.copyTimeoutId);
+    this.cancelFeedbackTimer();
     // A NaN/negative feedbackDuration (a bad attribute, or a stray programmatic assignment) must
     // not reach setTimeout() unsanitized -- self-heals to the constructed default instead.
     const duration = finiteDuration(this.feedbackDuration, DEFAULT_FEEDBACK_DURATION, 0);
-    this.copyTimeoutId = setTimeout(() => {
+    const generation = this.copyGeneration;
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      const timer = this.copyTimer;
+      if (
+        timer?.owner !== owner
+        || timer.handle !== handle
+        || timer.generation !== generation
+        || generation !== this.copyGeneration
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.copyTimer = undefined;
       this.setStatus('rest');
     }, duration);
+    this.copyTimer = { owner, handle, generation };
   }
 
   private reportFailure(text: string, error: unknown): void {
@@ -364,6 +439,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   private async copy(): Promise<void> {
     if (this.disabled) return;
     const generation = ++this.copyGeneration;
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     let text = '';
     try {
       text = this.resolveCopyText();
@@ -373,19 +449,22 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
       return;
     }
     this.emit('lr-copy', { text });
+    if (!owner) return;
     try {
-      await this.writeClipboard(text);
+      await this.writeClipboard(text, owner);
     } catch (error) {
-      if (!this.isCurrentCopy(generation)) return;
+      if (!this.isCurrentCopy(generation, owner)) return;
       this.reportFailure(text, error);
       return;
     }
-    if (!this.isCurrentCopy(generation)) return;
+    if (!this.isCurrentCopy(generation, owner)) return;
     this.showStatus('success');
   }
 
-  private isCurrentCopy(generation: number): boolean {
-    return this.isConnected && generation === this.copyGeneration;
+  private isCurrentCopy(generation: number, owner?: Window): boolean {
+    return this.isConnected
+      && generation === this.copyGeneration
+      && (owner === undefined || this.ownerDocument.defaultView === owner);
   }
 
   private onClick = (): void => {
@@ -396,7 +475,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     const slot = event.currentTarget as HTMLSlotElement;
     const hasCustomTrigger = slot
       .assignedElements({ flatten: true })
-      .some((element) => element instanceof HTMLElement);
+      .some(isHtmlElementValue);
     if (hasCustomTrigger !== this.hasCustomTrigger) this.hasCustomTrigger = hasCustomTrigger;
   };
 

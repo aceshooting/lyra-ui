@@ -111,7 +111,7 @@ export const CopyFailure: Story = {
     docs: {
       description: {
         story:
-          'A clipboard write can be refused — an insecure origin with no Clipboard API at all (`reason: "unsupported"`), a denied permission or an unfocused document (`reason: "denied"`), or any other platform failure (`reason: "failed"`). The button then shows its failure glyph instead of the checkmark, announces the outcome through a visually hidden `role="status"` region, and emits `lr-error` plus the detailed `lr-copy-error` alias. This story swaps in a clipboard that always rejects so the state is reachable in the docs.',
+          'A clipboard write can be refused — an insecure origin with no Clipboard API at all (`reason: "unsupported"`), a denied permission or an unfocused document (`reason: "denied"`), or any other platform failure (`reason: "failed"`). The button then shows its failure glyph instead of the checkmark, announces the outcome through the shared light-DOM polite sink, and emits `lr-error` plus the detailed `lr-copy-error` alias. This story swaps in a clipboard that always rejects so the state is reachable in the docs.',
       },
     },
   },

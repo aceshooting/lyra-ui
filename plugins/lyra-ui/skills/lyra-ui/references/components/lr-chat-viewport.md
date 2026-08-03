@@ -2,7 +2,7 @@
 
 # `lr-chat-viewport`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/chat-viewport/chat-viewport.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-chat-viewport.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChatViewport`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-viewport/chat-viewport.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -24,9 +24,13 @@ content growth re-scrolls to the end; release happens only on a user-intent gest
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
-`follow`. The internal log defaults to `live="off"`, which avoids announcing every streaming token;
-consumers that append complete messages at an announcement-safe cadence can opt into `polite` or
-`assertive`.
+`follow`. The shadow `role="log"` always remains `aria-live="off"`, which avoids announcing every
+streaming token. Consumers that append complete messages at an announcement-safe cadence can opt
+into `polite` or `assertive`; each newly appended direct child's accessibility-exposed text is then
+copied to the matching shared light-DOM announcement sink in the component's `ownerDocument`.
+Hidden, inert, `aria-hidden`, and CSS-hidden content is omitted. Existing declarative children stay
+silent on mount, and appending the same text again creates another announcement. `off` acquires no
+sink and produces no announcements.
 
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
@@ -34,8 +38,9 @@ it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distanc
 counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
-'off'` (reflected) — live-region policy forwarded to the internal `role="log"`; keep `off` for
-token-by-token streaming and opt in only when messages are committed at an announcement-safe cadence.
+'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
+remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
+appended as direct children at an announcement-safe cadence.
 `label: string = ''` — accessible name
 for the log region, defaults to the localized `chatViewportLabel`. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
@@ -52,8 +57,8 @@ scroll-up release, or reaching the bottom again). Never fired for the initial mo
 
 **Slots:** default — the transcript: ordinary element children, or exactly one `lr-virtual-list`.
 
-**CSS parts:** `base` (the positioning root), `scroll` (the scroll container, `role="log"`,
-`tabindex="0"`; in virtual mode it stops scrolling itself but keeps the role), `content` (the
+**CSS parts:** `base` (the positioning root), `scroll` (the scroll container, non-live `role="log"`,
+`tabindex="0"`; in virtual mode it stops scrolling itself, keeps the role, and drops its tab stop), `content` (the
 slotted-content wrapper the growth observers watch), `jump-pill` (the built-in jump-to-latest button,
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).

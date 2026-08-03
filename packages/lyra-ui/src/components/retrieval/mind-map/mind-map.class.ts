@@ -5,8 +5,14 @@ import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { layoutMindMap, type LyraTopic, type MindMapLayoutResult, type PlacedTopic } from './mind-map-layout.js';
 import { styles } from './mind-map.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraTopic };
 
@@ -49,6 +55,22 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * @since 4.0.0
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    mindMapCollapsed: LYRA_DEFAULT_mindMapCollapsed,
+    mindMapExpanded: LYRA_DEFAULT_mindMapExpanded,
+    mindMapLabel: LYRA_DEFAULT_mindMapLabel,
+    mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
+    mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'dir', 'lang'])];
@@ -75,40 +97,97 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private cachedLayout: MindMapLayoutResult = { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };
   private resizeObserver?: ResizeObserver;
+  private resizeObserverDocument?: Document;
   private resizeRafId?: number;
+  private resizeRafOwner?: Window;
+  private resizeRafDocument?: Document;
+  private ownerRealmGeneration = 0;
   private observedSize = '';
   private layoutInvalidated = true;
   private layoutContext = '';
+  private announcementSink?: AnnouncementSink;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
     this.layoutInvalidated = true;
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver((entries) => {
-        const rect = entries[0]?.contentRect;
-        const size = rect ? `${rect.width}:${rect.height}` : '';
-        if (size && size === this.observedSize) return;
-        this.observedSize = size;
-        if (this.resizeRafId != null) cancelAnimationFrame(this.resizeRafId);
-        this.resizeRafId = requestAnimationFrame(() => {
-          this.resizeRafId = undefined;
-          if (this.isConnected) {
-            this.layoutInvalidated = true;
-            this.requestUpdate();
-          }
-        });
+    this.armResizeObserver();
+  }
+
+  private armResizeObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!this.isConnected || !ownerWindow?.ResizeObserver) return;
+    if (this.resizeObserver && this.resizeObserverDocument === ownerDocument) return;
+    this.resetResizeWork();
+    const generation = this.ownerRealmGeneration;
+    const observer = new ownerWindow.ResizeObserver((entries) => {
+      if (
+        this.resizeObserver !== observer ||
+        this.resizeObserverDocument !== ownerDocument ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      const rect = entries[0]?.contentRect;
+      const size = rect ? `${rect.width}:${rect.height}` : '';
+      if (size && size === this.observedSize) return;
+      this.observedSize = size;
+      if (this.resizeRafId != null) this.resizeRafOwner?.cancelAnimationFrame(this.resizeRafId);
+      const handle = ownerWindow.requestAnimationFrame(() => {
+        if (
+          this.resizeRafId !== handle ||
+          this.resizeRafOwner !== ownerWindow ||
+          this.resizeRafDocument !== ownerDocument ||
+          this.ownerRealmGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.resizeRafId = undefined;
+        this.resizeRafOwner = undefined;
+        this.resizeRafDocument = undefined;
+        this.layoutInvalidated = true;
+        this.requestUpdate();
       });
-      this.resizeObserver.observe(this);
-    }
+      this.resizeRafId = handle;
+      this.resizeRafOwner = ownerWindow;
+      this.resizeRafDocument = ownerDocument;
+    });
+    this.resizeObserver = observer;
+    this.resizeObserverDocument = ownerDocument;
+    observer.observe(this);
   }
 
   override disconnectedCallback(): void {
-    if (this.resizeRafId != null) cancelAnimationFrame(this.resizeRafId);
+    this.resetResizeWork();
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetResizeWork();
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private resetResizeWork(): void {
+    this.ownerRealmGeneration += 1;
+    if (this.resizeRafId != null) this.resizeRafOwner?.cancelAnimationFrame(this.resizeRafId);
     this.resizeRafId = undefined;
+    this.resizeRafOwner = undefined;
+    this.resizeRafDocument = undefined;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.resizeObserverDocument = undefined;
     this.observedSize = '';
-    super.disconnectedCallback();
   }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
@@ -134,17 +213,23 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   /** Resolves `--lr-mind-map-ring-gap` to a real used pixel value for whatever unit it carries --
    *  a live root/host font-size read for rem/em, matching `lr-table`'s own `minimumResizeWidth()`
    *  fix for the identical problem (a hardcoded `* 16` gets ring spacing wrong on any page whose
-   *  root font-size isn't the browser default 16px). */
+  *  root font-size isn't the browser default 16px). */
   private ringGapPx(): number {
-    const raw = getComputedStyle(this).getPropertyValue('--lr-mind-map-ring-gap').trim();
+    const ownerWindow = this.ownerDocument.defaultView;
+    const hostStyle = ownerWindow?.getComputedStyle(this) ?? this.style;
+    const raw = hostStyle.getPropertyValue('--lr-mind-map-ring-gap').trim();
     if (!raw) return DEFAULT_RING_GAP_PX;
     const value = parseFloat(raw);
     if (!Number.isFinite(value)) return DEFAULT_RING_GAP_PX;
     if (raw.endsWith('rem')) {
-      return value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const rootStyle = ownerWindow?.getComputedStyle(this.ownerDocument.documentElement)
+        ?? this.ownerDocument.documentElement.style;
+      const rootFontSize = Number.parseFloat(rootStyle.fontSize);
+      return Number.isFinite(rootFontSize) ? value * rootFontSize : DEFAULT_RING_GAP_PX;
     }
     if (raw.endsWith('em')) {
-      return value * Number.parseFloat(getComputedStyle(this).fontSize);
+      const hostFontSize = Number.parseFloat(hostStyle.fontSize);
+      return Number.isFinite(hostFontSize) ? value * hostFontSize : DEFAULT_RING_GAP_PX;
     }
     return value;
   }
@@ -179,13 +264,22 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     }
   }
 
-  private toggle(node: PlacedTopic): void {
+  private setAnnouncement(text: string): void {
+    this.liveText = text;
+    this.announcementSink?.announce(text);
+  }
+
+  private toggle(node: PlacedTopic, announce = true): void {
     const expanded = !this.isExpanded(node.id, node.depth);
     const next = new Map(this.expandedOverrides);
     next.set(node.id, expanded);
     this.expandedOverrides = next;
     this.emit('lr-topic-toggle', { id: node.id, expanded });
-    this.liveText = this.localize(expanded ? 'mindMapExpanded' : 'mindMapCollapsed', undefined, { label: node.label });
+    if (announce) {
+      this.setAnnouncement(
+        this.localize(expanded ? 'mindMapExpanded' : 'mindMapCollapsed', undefined, { label: node.label }),
+      );
+    }
   }
 
   private activate(node: PlacedTopic): void {
@@ -203,16 +297,18 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private announce(node: PlacedTopic): void {
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    this.liveText = node.hasChildren
-      ? this.localize('mindMapTopicStatus', undefined, {
-          label: node.label,
-          level: numberFormat.format(node.depth + 1),
-          count: numberFormat.format(this.childrenOf(node.id).length),
-        })
-      : this.localize('mindMapLeafStatus', undefined, {
-          label: node.label,
-          level: numberFormat.format(node.depth + 1),
-        });
+    this.setAnnouncement(
+      node.hasChildren
+        ? this.localize('mindMapTopicStatus', undefined, {
+            label: node.label,
+            level: numberFormat.format(node.depth + 1),
+            count: numberFormat.format(this.childrenOf(node.id).length),
+          })
+        : this.localize('mindMapLeafStatus', undefined, {
+            label: node.label,
+            level: numberFormat.format(node.depth + 1),
+          }),
+    );
   }
 
   private focusNodeById(id: string): void {
@@ -242,7 +338,9 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     }
     if (e.key === 'ArrowDown') {
       if (!current.hasChildren) return;
-      if (!this.isExpanded(current.id, current.depth)) this.toggle(current);
+      // The destination topic status is the useful announcement for this single gesture. The old
+      // shadow live region batched the intermediate expansion text away in the same Lit update.
+      if (!this.isExpanded(current.id, current.depth)) this.toggle(current, false);
       const child = this.childrenOf(current.id)[0];
       if (child) this.focusNodeById(child.id);
       return;
@@ -265,8 +363,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private onNodeClick(node: PlacedTopic): void {
     this.focusedId = node.id;
-    this.announce(node);
     this.svgEl?.focus();
+    // A parent activation ends in its expanded/collapsed state; a leaf has no toggle text, so its
+    // positional status remains the announcement. This preserves the old single-update behavior.
+    if (!node.hasChildren) this.announce(node);
     this.activate(node);
   }
 
@@ -344,7 +444,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
         <div class="sr-only" role="tree" aria-label=${ariaLabel}>
           ${(childrenByParent.get(null) ?? []).map((topic) => this.renderSemanticNode(topic, childrenByParent))}
         </div>
-        <div id="mind-map-live" part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+        <div id="mind-map-live" part="live-region" class="sr-only">${this.liveText}</div>
       </div>
     `;
   }

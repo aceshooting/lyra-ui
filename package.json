@@ -26,7 +26,8 @@
     "storybook:check": "node scripts/check-storybook.mjs",
     "readme:check": "node scripts/check-readme-freshness.mjs",
     "skill:check": "node scripts/check-skill-manifest.mjs",
-    "check:packed-consumer": "node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs",
+    "check:framework-recipes": "node --test scripts/check-framework-recipes.test.mjs && node scripts/check-framework-recipes.mjs",
+    "check:packed-consumer": "node --test scripts/check-packed-consumer.test.mjs && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:dead-code": "knip",
     "check:secrets": "node scripts/check-secrets.mjs",
     "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
@@ -65,5 +66,5 @@
     "vite": "^8.2.0"
   },
   "packageManager": "pnpm@11.18.0",
-  "customElements": "custom-elements.json"
+  "customElements": "packages/lyra-ui/custom-elements.json"
 }

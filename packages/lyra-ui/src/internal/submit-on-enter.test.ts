@@ -69,6 +69,51 @@ it('returns null when the form has no submit control at all', async () => {
   expect(findImplicitSubmitter(form)).to.equal(null);
 });
 
+it('recognizes foreign-created native submit controls after adoption', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const foreignForm = frameDocument.createElement('form');
+    foreignForm.innerHTML = `
+      <input name="q">
+      <button type="submit" id="off" disabled>Off</button>
+      <input type="submit" id="go" value="Go">
+    `;
+    const foreignSubmitter = foreignForm.querySelector('#go')!;
+    expect(foreignSubmitter instanceof frameWindow.HTMLInputElement, 'the creator-realm brand').to.be.true;
+    expect(foreignSubmitter instanceof HTMLInputElement, 'not the ambient-realm brand').to.be.false;
+
+    const adoptedForm = document.adoptNode(foreignForm);
+    document.body.append(adoptedForm);
+    expect(findImplicitSubmitter(adoptedForm)?.id).to.equal('go');
+    adoptedForm.remove();
+  } finally {
+    frame.remove();
+  }
+});
+
+it('classifies native controls structurally when ambient element constructors are unavailable', () => {
+  const inertDocument = document.implementation.createHTMLDocument('form realm');
+  const form = inertDocument.createElement('form');
+  form.innerHTML = '<input name="q"><button type="submit" id="go">Go</button>';
+  const runtime = globalThis as unknown as {
+    HTMLButtonElement?: typeof HTMLButtonElement;
+    HTMLInputElement?: typeof HTMLInputElement;
+  };
+  const NativeButton = runtime.HTMLButtonElement;
+  const NativeInput = runtime.HTMLInputElement;
+  try {
+    runtime.HTMLButtonElement = undefined;
+    runtime.HTMLInputElement = undefined;
+    expect(findImplicitSubmitter(form)?.id).to.equal('go');
+  } finally {
+    runtime.HTMLButtonElement = NativeButton;
+    runtime.HTMLInputElement = NativeInput;
+  }
+});
+
 // -- submitOnEnter() ------------------------------------------------------
 
 it('submits through the native submit button, naming it as SubmitEvent.submitter', async () => {
@@ -136,6 +181,44 @@ it('submits a submit-button-less form only while the pressed control is its one 
   const crowdedSubmits = countSubmits(crowded);
   expect(submitOnEnter(crowded.querySelector('#a') as HTMLInputElement, enterEvent())).to.be.false;
   expect(crowdedSubmits(), 'two blocking fields and no submit button never submits, as native does').to.equal(0);
+});
+
+it('preserves submitter and blocking-field semantics for foreign-created controls after adoption', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const frameDocument = frame.contentDocument!;
+
+    const foreignForm = frameDocument.createElement('form');
+    foreignForm.innerHTML = `
+      <input id="field" name="q">
+      <button type="submit" id="go" name="intent" value="save">Go</button>
+    `;
+    const adoptedForm = document.adoptNode(foreignForm);
+    document.body.append(adoptedForm);
+    const field = adoptedForm.querySelector('#field') as HTMLInputElement;
+    let submitterId: string | null = null;
+    adoptedForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitterId = ((event as SubmitEvent).submitter as HTMLElement | null)?.id ?? null;
+    });
+
+    expect(submitOnEnter(field, enterEvent())).to.be.true;
+    expect(submitterId).to.equal('go');
+    adoptedForm.remove();
+
+    const foreignCrowded = frameDocument.createElement('form');
+    foreignCrowded.innerHTML = '<input id="a" name="a"><input name="b">';
+    const adoptedCrowded = document.adoptNode(foreignCrowded);
+    document.body.append(adoptedCrowded);
+    const submits = countSubmits(adoptedCrowded);
+
+    expect(submitOnEnter(adoptedCrowded.querySelector('#a') as HTMLInputElement, enterEvent())).to.be.false;
+    expect(submits()).to.equal(0);
+    adoptedCrowded.remove();
+  } finally {
+    frame.remove();
+  }
 });
 
 it('runs the form\'s own constraint validation, so an invalid field blocks the submission', async () => {

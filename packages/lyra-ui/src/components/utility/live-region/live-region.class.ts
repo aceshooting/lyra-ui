@@ -10,6 +10,11 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { styles } from './live-region.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LiveRegionMode = 'polite' | 'assertive';
 
@@ -72,6 +77,16 @@ export type LiveRegionMode = 'polite' | 'assertive';
  * @since 4.0.0
  */
 export class LyraLiveRegion extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** `polite` (role="status") waits for the user to be idle; `assertive`
@@ -125,6 +140,8 @@ export class LyraLiveRegion extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const timerHost = this.ownerDocument.defaultView;
+    if (timerHost) this.announcer.setTimerHost(timerHost);
     // Acquired on connect, not on first announcement: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced reliably, so the shared
     // region is mounted ahead of any text this element ever writes.
@@ -170,7 +187,10 @@ export class LyraLiveRegion extends LyraElement {
     if (held) return;
     this.releaseSink();
     this.sinkPoliteness = politeness;
-    this.sink = acquireAnnouncementSink(politeness, { document: this.ownerDocument });
+    this.sink = acquireAnnouncementSink(politeness, {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   private releaseSink(): void {
@@ -222,4 +242,3 @@ declare global {
     'lr-live-region': LyraLiveRegion;
   }
 }
-

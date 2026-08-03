@@ -2,7 +2,7 @@
 
 # `lr-flow-minimap`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flow-minimap.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowMinimap`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -61,6 +61,8 @@ success, danger, and warning colors respectively. Their expanded names are
 **Additional API surface:**
 
 - `part="instructions"` — Visually hidden keyboard instructions for the viewport.
-- `part="live-region"` — Visually hidden viewport-change announcements.
+- `part="live-region"` — Visually hidden, `aria-hidden` mirror of the latest viewport-change text.
+  The initial companion snapshot is silent; interaction-requested changes append to the document's
+  shared light-DOM polite sink, including repeated identical snapshots.
 
 ---

@@ -31,18 +31,6 @@ type ContractName = 'reconnect-smoke' | 'leak-contract' | 'focusable-name-contra
  */
 const OPT_OUTS: ReadonlyMap<string, Partial<Record<ContractName, string>>> = new Map([
   [
-    'lr-heatmap',
-    {
-      'focusable-name-contract':
-        'KNOWN-ISSUE: with accessible-cells off (the default), the keyboard tab stop is the bare ' +
-        '<canvas part="canvas"> with no role and no accessible name. The host deliberately takes ' +
-        'role="group" plus a computed summary aria-label instead of role="img" (an img host would ' +
-        'flatten the focusable canvas and the live region out of the accessibility tree — see ' +
-        'heatmap.test.ts), so naming the canvas itself needs a designed role choice for an ' +
-        'arrow-key-interactive canvas, not a mechanical attribute addition.',
-    },
-  ],
-  [
     'lr-virtual-list',
     {
       'focusable-name-contract':

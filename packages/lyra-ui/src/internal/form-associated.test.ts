@@ -102,6 +102,43 @@ const tagListAdapter: FormValueAdapter<readonly string[]> = {
   fromFormState: (state) => readStringArrayFormDataState(state),
 };
 
+it('restores string-array state from a foreign-realm FormData without accepting lookalikes', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const frameWindow = frame.contentWindow!;
+    const foreignState = new frameWindow.FormData();
+    foreignState.append('old-name', 'alpha');
+    foreignState.append('old-name', 'beta');
+    expect(foreignState instanceof FormData, 'not the ambient-realm brand').to.be.false;
+    expect(readStringArrayFormDataState(foreignState)).to.deep.equal(['alpha', 'beta']);
+
+    const withFile = new frameWindow.FormData();
+    withFile.append('value', new frameWindow.File(['unsafe'], 'value.txt'));
+    expect(readStringArrayFormDataState(withFile), 'non-string entries still fail closed').to.deep.equal([]);
+
+    const lookalike = {
+      [Symbol.toStringTag]: 'FormData',
+      values: () => ['spoofed'],
+    } as unknown as FormData;
+    expect(readStringArrayFormDataState(lookalike), 'a branded-looking object is not FormData').to.deep.equal([]);
+
+    const runtime = globalThis as unknown as { FormData?: typeof FormData };
+    const NativeFormData = runtime.FormData;
+    try {
+      runtime.FormData = undefined;
+      expect(
+        readStringArrayFormDataState(foreignState),
+        'without a brand-checking intrinsic, restoration fails closed',
+      ).to.deep.equal([]);
+    } finally {
+      runtime.FormData = NativeFormData;
+    }
+  } finally {
+    frame.remove();
+  }
+});
+
 class TagsCtl extends FormAssociated(LyraElement, tagListAdapter) {
   render() {
     return html``;
@@ -244,6 +281,17 @@ it('restores its own explicit `disabled` after an ancestor fieldset re-enables, 
   withFormDisabledCallback.formDisabledCallback(false);
   expect(ctl.effectiveDisabled).to.be.true; // own explicit disabled still applies
   expect(ctl.disabled).to.be.true; // never force-cleared by the fieldset
+});
+
+it('honors a per-instance fieldRequired string through the shared form mixin', async () => {
+  const ctl = (await fixture(html`
+    <lr-demo-ctl
+      required
+      .strings=${{ fieldRequired: 'Choose a value.' }}
+    ></lr-demo-ctl>
+  `)) as unknown as Ctl;
+  await ctl.updateComplete;
+  expect(ctl.validationMessage).to.equal('Choose a value.');
 });
 
 it('exposes native-like form ownership, label, and constraint-validation state', async () => {
@@ -566,6 +614,53 @@ describe('setCustomValidity()', () => {
 // so the six custom states must go quiet the same way rather than painting a disabled required
 // field with the documented `:state(user-invalid)` error styling.
 describe('barred from constraint validation', () => {
+  it('honors platform willValidate from a genuine foreign-realm ElementInternals only', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameWindow = frame.contentWindow!;
+      const frameDocument = frame.contentDocument!;
+      // Construct the class with the iframe's Function intrinsic so its constructor realm, not
+      // only its HTMLElement base class, is genuinely foreign in every engine.
+      const ForeignValidationControl = frameWindow.Function(`
+        return class extends HTMLElement {
+          static formAssociated = true;
+          faceInternals = this.attachInternals();
+        };
+      `)() as CustomElementConstructor;
+      frameWindow.customElements.define('x-foreign-validation-control', ForeignValidationControl);
+
+      const fieldset = frameDocument.createElement('fieldset');
+      fieldset.disabled = true;
+      const control = frameDocument.createElement('x-foreign-validation-control') as HTMLElement & {
+        faceInternals: ElementInternals;
+      };
+      fieldset.append(control);
+      frameDocument.body.append(fieldset);
+      expect(control.faceInternals instanceof frameWindow.ElementInternals, 'the creator-realm brand').to.be.true;
+      expect(control.faceInternals instanceof ElementInternals, 'not the ambient-realm brand').to.be.false;
+      expect(control.faceInternals.willValidate, 'barred by the disabled fieldset').to.be.false;
+      expect(isBarredFromValidation({}, control.faceInternals)).to.be.true;
+
+      const lookalike = { willValidate: false } as ElementInternals;
+      expect(isBarredFromValidation({}, lookalike), 'a fallback/lookalike cannot suppress validation').to.be.false;
+
+      const runtime = globalThis as unknown as { ElementInternals?: typeof ElementInternals };
+      const NativeElementInternals = runtime.ElementInternals;
+      try {
+        runtime.ElementInternals = undefined;
+        expect(
+          isBarredFromValidation({}, control.faceInternals),
+          'without a brand-checking intrinsic, local constraint validation remains enabled',
+        ).to.be.false;
+      } finally {
+        runtime.ElementInternals = NativeElementInternals;
+      }
+    } finally {
+      frame.remove();
+    }
+  });
+
   it('drops the intrinsic violation and both validity states while the control is disabled', async function () {
     if (!supportsCustomStates) this.skip();
     const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
@@ -1158,5 +1253,22 @@ describe('isEmptyFormValue()', () => {
     expect(isEmptyFormValue(populated), 'a populated FormData').to.be.false;
     expect(isEmptyFormValue(new FormData()), 'an empty FormData is not key-counted').to.be.false;
     expect(isEmptyFormValue(new Map([['a', 1]])), 'a populated Map').to.be.false;
+  });
+
+  it('recognizes foreign-realm plain objects without key-counting class instances', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameWindow = frame.contentWindow!;
+      const empty = frameWindow.JSON.parse('{}') as Record<string, unknown>;
+      const populated = frameWindow.JSON.parse('{"answer":42}') as Record<string, unknown>;
+      const ForeignValue = frameWindow.Function('return class Value {}')() as new () => object;
+      expect(Object.getPrototypeOf(empty) === Object.prototype, 'not the ambient Object prototype').to.be.false;
+      expect(isEmptyFormValue(empty), 'foreign empty plain object').to.be.true;
+      expect(isEmptyFormValue(populated), 'foreign populated plain object').to.be.false;
+      expect(isEmptyFormValue(new ForeignValue()), 'foreign class instance').to.be.false;
+    } finally {
+      frame.remove();
+    }
   });
 });

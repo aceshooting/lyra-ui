@@ -3,6 +3,28 @@ import './chip.js';
 import type { LyraChip } from './chip.js';
 import { styles } from './chip.styles.js';
 
+class ChipLabelForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const chip = this.ownerDocument.createElement('lr-chip');
+    chip.setAttribute('removable', '');
+    chip.append(this.ownerDocument.createElement('slot'));
+    root.append(chip);
+  }
+}
+customElements.define('chip-label-forward-wrapper', ChipLabelForwardWrapper);
+
+const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
+
+async function mountServerRenderedChip(markup: string): Promise<LyraChip> {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+    setHTMLUnsafe(value: string): void;
+  };
+  container.setHTMLUnsafe(markup);
+  return container.firstElementChild as LyraChip;
+}
+
 /** Resolves a `--lr-*` token to the concrete computed string `getComputedStyle` reports for a
  *  rendered element, via a throwaway probe in the chip's own light DOM (custom properties inherit
  *  into slotted children, so the probe sees the identical cascade the shadow tree does). Reading
@@ -199,6 +221,60 @@ it('renders the default slot as the label', async () => {
   expect(text).to.equal('research');
 });
 
+it('can render every public action-label branch before a browser render root exists', () => {
+  for (const mode of ['removable', 'selected', 'toggleable'] as const) {
+    const el = document.createElement('lr-chip') as LyraChip;
+    el.append('Research');
+    el[mode] = true;
+    expect(() => el.render(), mode).not.to.throw();
+  }
+});
+
+it('keeps the server-first remove name during hydration, then adopts the declarative label', async () => {
+  const el = await mountServerRenderedChip(
+    `<lr-chip removable>${SERVER_SHADOW}Research</lr-chip>`,
+  );
+  await el.updateComplete;
+  expect(
+    el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
+  ).to.equal('Remove');
+
+  await el.updateComplete;
+  expect(
+    el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
+  ).to.equal('Remove Research');
+});
+
+it('keeps the server-first icon state during hydration, then adopts the declarative icon', async () => {
+  const el = await mountServerRenderedChip(
+    `<lr-chip removable>${SERVER_SHADOW}<span slot="icon">●</span>Research</lr-chip>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.true;
+
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('derives the removable name before the first paint on a browser-only mount', async () => {
+  const el = document.createElement('lr-chip') as LyraChip;
+  el.removable = true;
+  const icon = document.createElement('span');
+  icon.slot = 'icon';
+  icon.textContent = '●';
+  el.append(icon, 'Research');
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(
+      el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
+    ).to.equal('Remove Research');
+    expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+  } finally {
+    el.remove();
+  }
+});
+
 describe('icon slot', () => {
   it('hides [part="icon"] when nothing is slotted', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
@@ -243,6 +319,21 @@ describe('remove affordance', () => {
     const el = (await fixture(html`<lr-chip removable>research</lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
+  });
+
+  it('renders a per-instance .strings override in the remove button accessible name', async () => {
+    const el = (await fixture(html`
+      <lr-chip
+        removable
+        .strings=${{ removeWithContext: 'Retirer {label}' }}
+      >research</lr-chip>
+    `)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="remove-button"]',
+    );
+
+    expect(btn !== null).to.be.true;
+    expect(btn?.getAttribute('aria-label')).to.equal('Retirer research');
   });
 
   it('lets a host aria-label override the computed remove-button label', async () => {
@@ -436,6 +527,131 @@ describe('selected', () => {
     expect(el.shadowRoot!.activeElement).to.equal(null);
     el.click();
     expect(el.selected).to.be.true;
+  });
+
+  it('tracks action names through a forwarding slot and preserves explicit-empty host labels', async () => {
+    const wrapper = (await fixture(html`
+      <chip-label-forward-wrapper><span data-label>Alpha</span></chip-label-forward-wrapper>
+    `)) as ChipLabelForwardWrapper;
+    const el = wrapper.shadowRoot!.querySelector('lr-chip') as LyraChip;
+    await el.updateComplete;
+    const label = wrapper.querySelector<HTMLElement>('[data-label]')!;
+    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Alpha');
+
+    label.textContent = 'Beta';
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Beta');
+
+    label.setAttribute('aria-label', 'Gamma');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Gamma');
+
+    el.setAttribute('aria-label', '');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(remove.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    el.removable = false;
+    el.toggleable = true;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle-button"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Gamma');
+
+    const replacement = wrapper.ownerDocument.createElement('span');
+    replacement.textContent = 'Delta';
+    const reassigned = oneEvent(el.querySelector('slot')!, 'slotchange');
+    label.replaceWith(replacement);
+    await reassigned;
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Delta');
+  });
+
+  it('keeps visibility-overridden descendant text after a forwarded-label mutation', async () => {
+    const wrapper = (await fixture(html`
+      <chip-label-forward-wrapper><span data-label>Alpha</span></chip-label-forward-wrapper>
+    `)) as ChipLabelForwardWrapper;
+    const el = wrapper.shadowRoot!.querySelector('lr-chip') as LyraChip;
+    await el.updateComplete;
+    const label = wrapper.querySelector<HTMLElement>('[data-label]')!;
+    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+
+    label.textContent = 'Excluded parent text ';
+    const visibleChild = wrapper.ownerDocument.createElement('span');
+    visibleChild.style.visibility = 'visible';
+    visibleChild.textContent = 'Visible child';
+    label.append(visibleChild);
+    label.style.visibility = 'hidden';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Visible child');
+  });
+
+  it('constructs its live-label observer in the adopted owner realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const descriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+    const NativeMutationObserver = frameWindow.MutationObserver;
+    let constructions = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructions += 1;
+      }
+    }
+    Object.defineProperty(frameWindow, 'MutationObserver', {
+      configurable: true,
+      value: TrackingMutationObserver,
+    });
+    const el = (await fixture(html`<lr-chip removable>Alpha</lr-chip>`)) as LyraChip;
+    el.remove();
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(constructions, 'base and label observers use the adopted window').to.be.greaterThan(1);
+    } finally {
+      el.remove();
+      if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
+      else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      frame.remove();
+    }
+  });
+
+  it('refreshes a cached action name after the label changes while disconnected', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Alpha</lr-chip>`)) as LyraChip;
+    el.remove();
+    el.textContent = 'Beta';
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(
+        el.shadowRoot?.querySelector('[part="toggle-button"]')?.getAttribute('aria-label'),
+      ).to.equal('Beta');
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('refreshes icon presence after an icon is added while disconnected', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Alpha</lr-chip>`)) as LyraChip;
+    el.remove();
+    const icon = document.createElement('span');
+    icon.slot = 'icon';
+    icon.textContent = '●';
+    el.append(icon);
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+    } finally {
+      el.remove();
+    }
   });
 
   it('stays clickable after toggling off -- a second click flips selected back to true', async () => {

@@ -2,7 +2,7 @@
 
 # `lr-retrieval-results`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-retrieval-results.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRetrievalResults`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -54,8 +54,10 @@ Large sets window through an internal `lr-virtual-list`.
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
   virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
-- `error: string = ''` — non-empty replaces the whole result view with a `role="alert"` message.
-  Caller-supplied text, not localized (app/network data, not library copy)
+- `error: string = ''` — non-empty replaces the whole result view with a neutral visible message.
+  Caller-supplied text is not localized (app/network data, not library copy). A new non-empty value
+  is announced through a shared assertive light-DOM region; initial and reconnect content is not
+  replayed
 - `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
 
 **Events:**
@@ -70,9 +72,9 @@ Large sets window through an internal `lr-virtual-list`.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `error` (`role="alert"`, while `error` is non-empty), `spinner` (initial-load
-`lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is empty and
-neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
+**CSS parts:** `base`, `error` (neutral visible message while `error` is non-empty), `spinner`
+(initial-load `lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is
+empty and neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when

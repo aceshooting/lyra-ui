@@ -3,6 +3,11 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './handoff-divider.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffLabel, LYRA_DEFAULT_handoffToAgent } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * `<lr-handoff-divider>` — a labeled semantic separator marking control transfer between agents
@@ -26,6 +31,16 @@ import { styles } from './handoff-divider.styles.js';
  * @since 4.0.0
  */
 export class LyraHandoffDivider extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
+    handoffLabel: LYRA_DEFAULT_handoffLabel,
+    handoffToAgent: LYRA_DEFAULT_handoffToAgent,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The agent now in control. With nothing else set, renders `'Transferred to {agent}'`. */

@@ -6,6 +6,11 @@ import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { styles } from './approval-queue.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_approvalQueueEmpty, LYRA_DEFAULT_approvalQueueLabel, LYRA_DEFAULT_approvalQueueOpen, LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_approvalQueuePendingCount, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ApprovalRequestStatus = 'pending' | 'approved' | 'denied';
 
@@ -49,6 +54,20 @@ export interface LyraApprovalQueueEventMap {
  * @since 6.2.0
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    approvalQueueEmpty: LYRA_DEFAULT_approvalQueueEmpty,
+    approvalQueueLabel: LYRA_DEFAULT_approvalQueueLabel,
+    approvalQueueOpen: LYRA_DEFAULT_approvalQueueOpen,
+    approvalQueuePending: LYRA_DEFAULT_approvalQueuePending,
+    approvalQueuePendingCount: LYRA_DEFAULT_approvalQueuePendingCount,
+    confirmApproved: LYRA_DEFAULT_confirmApproved,
+    confirmDenied: LYRA_DEFAULT_confirmDenied,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Requests in display order. Controlled and never mutated by this component. */

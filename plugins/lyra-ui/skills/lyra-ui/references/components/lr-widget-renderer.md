@@ -2,12 +2,12 @@
 
 # `lr-widget-renderer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-widget-renderer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraWidgetRenderer`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

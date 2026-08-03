@@ -2,7 +2,7 @@
 
 # `lr-query-builder`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/query-builder/query-builder.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-query-builder.js';` (stable tag alias; registers the tag)
 - **Class** `LyraQueryBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/query-builder/query-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

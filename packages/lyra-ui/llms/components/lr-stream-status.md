@@ -2,7 +2,7 @@
 
 # `lr-stream-status`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-stream-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraStreamStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

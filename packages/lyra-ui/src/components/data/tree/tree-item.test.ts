@@ -57,6 +57,385 @@ describe('tree-item declarative child model', () => {
     expect(renderedLabel(el)).to.equal('Docs');
   });
 
+  it('updates the rendered label and internal checkbox name for direct descendant mutations', async () => {
+    const el = (await fixture(html`<lr-tree-item label="Fallback"></lr-tree-item>`)) as LyraTreeItem;
+    const assigned = el.ownerDocument.createTextNode(' ');
+    el.append(assigned);
+    el.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    const checkbox = (): HTMLElement =>
+      el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
+    const settle = async (): Promise<void> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+    };
+
+    expect(renderedLabel(el), 'an empty element does not suppress the label fallback').to.equal(
+      'Fallback',
+    );
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    assigned.data = 'Direct tree label';
+    await settle();
+    expect(renderedLabel(el)).to.equal('Direct tree label');
+    expect(el.nodeLabel).to.equal('Direct tree label');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Direct tree label');
+
+    assigned.data = ' ';
+    await settle();
+    expect(renderedLabel(el)).to.equal('Fallback');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+  });
+
+  it('resamples cached label and child presence after delayed mutations while detached', async () => {
+    const mount = (await fixture(html`<div>
+      <lr-tree-item label="Fallback" expanded>
+        <lr-tree-item label="Original child"></lr-tree-item>
+      </lr-tree-item>
+    </div>`)) as HTMLDivElement;
+    const el = mount.querySelector('lr-tree-item') as LyraTreeItem;
+    await el.updateComplete;
+    expect(renderedLabel(el)).to.equal('Fallback');
+    expect(el.shadowRoot!.querySelector('[part="group"]') !== null).to.equal(true);
+
+    el.remove();
+    // Ensure the mutation occurs after disconnectedCallback() has torn down the observer rather
+    // than inside the same mutation checkpoint as removal.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    el.querySelector('lr-tree-item')!.remove();
+    el.append(el.ownerDocument.createTextNode('Detached label'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    mount.append(el);
+    await el.updateComplete;
+    expect(renderedLabel(el)).to.equal('Detached label');
+    expect(el.hasChildren).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="group"]') === null).to.equal(true);
+    expect(el.hasAttribute('aria-expanded')).to.be.false;
+  });
+
+  it('tracks flattened accessible labels through a forwarding slot and keeps host naming authoritative', async () => {
+    const details = (await fixture(html`
+      <details open>
+        <summary>Forwarded tree fixture</summary>
+        <div></div>
+      </details>
+    `)) as HTMLDetailsElement;
+    const wrapper = details.querySelector('div')!;
+    const assignedText = wrapper.ownerDocument.createTextNode(' ');
+    wrapper.append(assignedText);
+    const root = wrapper.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <style>
+        :host(.hide-forwarded-label) slot::slotted([data-label]) { display: none; }
+        slot::slotted([data-label]) {
+          visibility: var(--forwarded-label-visibility, visible);
+        }
+      </style>
+      <lr-tree-item label="Fallback">
+        <slot><span>Forwarding fallback</span></slot>
+      </lr-tree-item>
+    `;
+    const el = root.querySelector('lr-tree-item') as LyraTreeItem;
+    el.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+    const forwardingSlot = el.querySelector('slot')!;
+    const checkbox = (): HTMLElement =>
+      el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
+    const settle = async (): Promise<void> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+    };
+
+    await settle();
+    expect(renderedLabel(el), 'an empty assignment suppresses slot fallback').to.equal('Fallback');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    assignedText.data = 'Forwarded tree label';
+    await settle();
+    expect(renderedLabel(el)).to.equal('Forwarded tree label');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+
+    wrapper.setAttribute('aria-hidden', ' TRUE ');
+    await settle();
+    expect(
+      checkbox().getAttribute('aria-label'),
+      'a hard-hidden composed parent prunes a forwarded root Text node',
+    ).to.equal('Fallback');
+
+    wrapper.removeAttribute('aria-hidden');
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+
+    details.open = false;
+    await settle();
+    expect(
+      checkbox().getAttribute('aria-label'),
+      'a closed details ancestor prunes a forwarded root Text node',
+    ).to.equal('Fallback');
+
+    details.open = true;
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+
+    assignedText.data = ' ';
+    await settle();
+    expect(renderedLabel(el)).to.equal('Fallback');
+
+    const assigned = wrapper.ownerDocument.createElement('span');
+    assigned.setAttribute('data-label', '');
+    assigned.setAttribute('aria-label', 'Forwarded accessible name');
+    assignedText.replaceWith(assigned);
+    await settle();
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+
+    assigned.textContent = 'Decorative tree glyph';
+    assigned.setAttribute('aria-hidden', ' TRUE ');
+    await settle();
+    expect(
+      el.shadowRoot!.querySelector('[part="label"] slot') !== null,
+      'aria-hidden visual content still selects the authored slot',
+    ).to.be.true;
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    assigned.removeAttribute('aria-hidden');
+    assigned.style.display = 'none';
+    await settle();
+    expect(el.shadowRoot!.querySelector('[part="label"] slot') !== null).to.be.true;
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    assigned.style.removeProperty('display');
+    assigned.hidden = true;
+    await settle();
+    expect(el.shadowRoot!.querySelector('[part="label"] slot') !== null).to.be.true;
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    assigned.hidden = false;
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+
+    wrapper.classList.add('hide-forwarded-label');
+    await settle();
+    expect(
+      checkbox().getAttribute('aria-label'),
+      'a forwarding-host class mutation refreshes the checkbox name',
+    ).to.equal('Fallback');
+
+    wrapper.classList.remove('hide-forwarded-label');
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+
+    wrapper.style.setProperty('--forwarded-label-visibility', 'hidden');
+    await settle();
+    expect(
+      checkbox().getAttribute('aria-label'),
+      'a forwarding-host style mutation refreshes the checkbox name',
+    ).to.equal('Fallback');
+
+    wrapper.style.removeProperty('--forwarded-label-visibility');
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+
+    forwardingSlot.setAttribute('aria-hidden', 'true');
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    forwardingSlot.removeAttribute('aria-hidden');
+    forwardingSlot.style.display = 'none';
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+
+    forwardingSlot.style.removeProperty('display');
+    await settle();
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+
+    el.setAttribute('aria-label', 'Explicit tree item name');
+    await el.updateComplete;
+    assigned.textContent = 'Later visible text';
+    await settle();
+    expect(checkbox().getAttribute('aria-label'), 'the consumer host name keeps precedence').to.equal(
+      'Explicit tree item name',
+    );
+
+    el.removeAttribute('aria-label');
+    const reassigned = new Promise<void>((resolve) =>
+      forwardingSlot.addEventListener('slotchange', () => resolve(), { once: true }),
+    );
+    assigned.remove();
+    await reassigned;
+    await settle();
+    expect(renderedLabel(el)).to.equal('Forwarding fallback');
+    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarding fallback');
+  });
+
+  it('constructs its child-label observer in the adopted owner realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+    const NativeMutationObserver = frameWindow.MutationObserver;
+    let constructions = 0;
+    let adoptedTarget: LyraTreeItem | undefined;
+    let labelHostObservations = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructions += 1;
+      }
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if (
+          target === adoptedTarget &&
+          options?.childList &&
+          options.characterData &&
+          options.subtree
+        ) labelHostObservations += 1;
+        super.observe(target, options);
+      }
+    }
+    Object.defineProperty(frameWindow, 'MutationObserver', {
+      configurable: true,
+      value: TrackingMutationObserver,
+    });
+    const el = (await fixture(html`
+      <lr-tree-item label="Fallback"><span>Parent label</span></lr-tree-item>
+    `)) as LyraTreeItem;
+    adoptedTarget = el;
+    el.remove();
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(constructions).to.be.greaterThan(1);
+      expect(labelHostObservations).to.be.greaterThan(0);
+      expect(el.nodeLabel).to.equal('Parent label');
+    } finally {
+      el.remove();
+      if (observerDescriptor) {
+        Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+      } else {
+        delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver })
+          .MutationObserver;
+      }
+      frame.remove();
+    }
+  });
+
+  it('retains the timer owner while adopting and reads motion state from the new owner realm', async () => {
+    const frame = document.createElement('iframe');
+    const loaded = oneEvent(frame, 'load');
+    frame.srcdoc = '<!doctype html><html><body></body></html>';
+    document.body.append(frame);
+    await loaded;
+
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const originalParentSetTimeout = window.setTimeout;
+    const originalParentClearTimeout = window.clearTimeout;
+    const originalFrameSetTimeout = frameWindow.setTimeout;
+    const originalFrameClearTimeout = frameWindow.clearTimeout;
+    const originalFrameMatchMedia = frameWindow.matchMedia;
+    const originalFrameGetComputedStyle = frameWindow.getComputedStyle;
+    const parentCallbacks = new Map<number, VoidFunction>();
+    const frameCallbacks = new Map<number, VoidFunction>();
+    const parentSchedules: Array<{ handle: number; delay: number }> = [];
+    const frameSchedules: Array<{ handle: number; delay: number }> = [];
+    const parentClears: number[] = [];
+    const frameClears: number[] = [];
+    let parentHandle = 801;
+    let frameHandle = 901;
+    let frameMotionQueries = 0;
+    let frameStyleReads = 0;
+    let el: LyraTreeItem | undefined;
+
+    window.setTimeout = ((handler: TimerHandler, delay = 0) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected a timer callback.');
+      const handle = parentHandle++;
+      parentCallbacks.set(handle, handler as VoidFunction);
+      parentSchedules.push({ handle, delay });
+      return handle;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) parentClears.push(handle);
+    }) as typeof window.clearTimeout;
+    frameWindow.setTimeout = ((handler: TimerHandler, delay = 0) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected a timer callback.');
+      const handle = frameHandle++;
+      frameCallbacks.set(handle, handler as VoidFunction);
+      frameSchedules.push({ handle, delay });
+      return handle;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) frameClears.push(handle);
+    }) as typeof frameWindow.clearTimeout;
+    frameWindow.matchMedia = ((query: string) => {
+      if (query === '(prefers-reduced-motion: reduce)') frameMotionQueries += 1;
+      return { matches: false, media: query } as MediaQueryList;
+    }) as typeof frameWindow.matchMedia;
+    frameWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      if (element === el) frameStyleReads += 1;
+      return originalFrameGetComputedStyle.call(frameWindow, element, pseudo);
+    }) as typeof frameWindow.getComputedStyle;
+
+    try {
+      el = (await fixture(html`
+        <lr-tree-item
+          label="Parent"
+          style="--show-duration: 19ms; --hide-duration: 23ms"
+        >
+          <lr-tree-item label="Child"></lr-tree-item>
+        </lr-tree-item>
+      `)) as LyraTreeItem;
+      await el.updateComplete;
+
+      let afterExpand = 0;
+      let afterCollapse = 0;
+      el.addEventListener('lr-after-expand', () => afterExpand++);
+      el.addEventListener('lr-after-collapse', () => afterCollapse++);
+
+      el.expand();
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(parentSchedules.map(({ delay }) => delay)).to.eql([19]);
+      const oldTimer = parentSchedules[0]!.handle;
+      const staleCallback = parentCallbacks.get(oldTimer)!;
+
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(parentClears, 'disconnect cancels through the retained old timer owner').to.include(
+        oldTimer,
+      );
+
+      el.collapse();
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(frameSchedules.map(({ delay }) => delay)).to.eql([23]);
+      expect(parentSchedules, 'the adopted item never schedules another parent timer').to.have
+        .length(1);
+      expect(frameMotionQueries, 'reduced-motion state comes from the adopted window').to.be
+        .greaterThan(0);
+      expect(frameStyleReads, 'motion custom properties come from the adopted window').to.be
+        .greaterThan(0);
+
+      staleCallback();
+      expect(afterExpand, 'a canceled old-realm callback stays stale after adoption').to.equal(0);
+      expect(afterCollapse).to.equal(0);
+
+      frameCallbacks.get(frameSchedules[0]!.handle)!();
+      expect(afterCollapse).to.equal(1);
+      expect(frameClears).to.eql([]);
+    } finally {
+      el?.remove();
+      window.setTimeout = originalParentSetTimeout;
+      window.clearTimeout = originalParentClearTimeout;
+      frameWindow.setTimeout = originalFrameSetTimeout;
+      frameWindow.clearTimeout = originalFrameClearTimeout;
+      frameWindow.matchMedia = originalFrameMatchMedia;
+      frameWindow.getComputedStyle = originalFrameGetComputedStyle;
+      frame.remove();
+    }
+  });
+
   it('projects nested items into the group slot rather than the label, and offers a toggle', async () => {
     const el = (await fixture(html`
       <lr-tree-item label="Parent">

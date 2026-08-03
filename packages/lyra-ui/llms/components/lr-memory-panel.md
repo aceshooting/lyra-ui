@@ -2,7 +2,7 @@
 
 # `lr-memory-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-memory-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMemoryPanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -1378,7 +1378,10 @@ export type LyraCalendarViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraCalendarViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-calendar-viewer-max-height',
   {
     'max-height'?: LyraCalendarViewer['maxHeight'];
@@ -2323,7 +2326,10 @@ export type LyraContactViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraContactViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-contact-viewer-max-height',
   {
     'max-height'?: LyraContactViewer['maxHeight'];
@@ -2523,6 +2529,7 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
   | 'selectable'
   | 'selectableRows'
   | 'selectedKeys'
+  | 'selectedRows'
   | 'server'
   | 'size'
   | 'sort'
@@ -3305,8 +3312,11 @@ export type LyraEmailViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraEmailViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-attachment-open'
-  | 'lr-render-error',
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-email-viewer-max-height',
   {
     'fold-quotes'?: LyraEmailViewer['foldQuotes'];
@@ -3596,6 +3606,8 @@ export type LyraFileInputVueProps = LyraVueCustomElement<
   | 'customError'
   | 'directory'
   | 'disabled'
+  | 'dragging'
+  | 'fileCount'
   | 'files'
   | 'forbiddenMimeTypes'
   | 'form'
@@ -3636,7 +3648,6 @@ export type LyraFileInputVueProps = LyraVueCustomElement<
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
     'custom-error'?: LyraFileInput['customError'];
-    'dragging'?: LyraFileInput['dragging'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
     'with-hint'?: LyraFileInput['withHint'];
@@ -3964,7 +3975,10 @@ export type LyraGeojsonViewVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraGeojsonViewEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -4280,7 +4294,10 @@ export type LyraHtmlViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraHtmlViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-html-viewer-max-height',
   {
     'max-height'?: LyraHtmlViewer['maxHeight'];
@@ -4414,6 +4431,7 @@ export type LyraImageComparerVueProps = LyraVueCustomElement<
   | 'blur'
   | 'change'
   | 'focus'
+  | 'lr-change'
   | 'lr-position-change',
   | '--divider-width'
   | '--handle-size',
@@ -4479,9 +4497,12 @@ export type LyraIncludeVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraIncludeEventMap,
+  | 'lr-anchor-result'
   | 'lr-error'
   | 'lr-include-error'
-  | 'lr-load',
+  | 'lr-load'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -5619,6 +5640,7 @@ export type LyraNotebookViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraNotebookViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
   | 'lr-search-change',
@@ -6361,9 +6383,12 @@ export type LyraPptxViewerVueProps = LyraVueCustomElement<
   | 'src'
   | 'strings',
   LyraPptxViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
-  | 'lr-slide-change',
+  | 'lr-search-change'
+  | 'lr-slide-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -9170,7 +9195,6 @@ export type LyraVideoVueProps = LyraVueCustomElement<
   {
     'autoplay-muted'?: LyraVideo['autoplayMuted'];
     'autoplay-on-visible'?: LyraVideo['autoplayOnVisible'];
-    'current-time'?: LyraVideo['currentTime'];
     'icon-library'?: LyraVideo['iconLibrary'];
   }
 >;
@@ -9383,6 +9407,7 @@ export type LyraXmlViewerVueProps = LyraVueCustomElement<
   | 'strings'
   | 'xml',
   LyraXmlViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-copy'
   | 'lr-render-error'
   | 'lr-search-change',

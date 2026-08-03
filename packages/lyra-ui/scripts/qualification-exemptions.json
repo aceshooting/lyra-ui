@@ -1,4 +1,38 @@
 {
-  "$comment": "Reviewed exemptions from the stable-qualification gate (scripts/check-qualification.mjs). This file is a ratchet: an exemption whose evidence has since landed is reported as stale and must be deleted, so the list can only shrink. Adding an entry requires a substantive reason. It is empty because every component claiming maturity \"stable\" carries a populated-state axe assertion in its own directory -- an exemption here is an exception, never a starting point. See docs/agents/component-qualification.md.",
-  "exemptions": []
+  "$comment": "Narrow reviewed exceptions to per-tag qualification evidence. These do not change semver maturity, do not claim human review, and become stale as soon as matching evidence lands.",
+  "schemaVersion": 2,
+  "exemptions": [
+    {
+      "tag": "lr-skeleton",
+      "dimension": "accessibility",
+      "scope": "populated/open-state evidence",
+      "reason": "The component is itself an intrinsic loading placeholder and has no populated or open state; its rendered default is the complete semantic surface.",
+      "reviewer": {
+        "kind": "automated-agent",
+        "name": "Lyra automated source-evidence review"
+      },
+      "recordedAt": "2026-08-02",
+      "evidence": [
+        "src/components/overlays/skeleton/skeleton.test.ts#is accessible",
+        "src/components/overlays/skeleton/skeleton.class.ts"
+      ],
+      "humanReview": "not-claimed"
+    },
+    {
+      "tag": "lr-spinner",
+      "dimension": "accessibility",
+      "scope": "populated/open-state evidence",
+      "reason": "The component is an intrinsic busy-status indicator with no data-bearing or open state; its rendered default is the complete semantic surface.",
+      "reviewer": {
+        "kind": "automated-agent",
+        "name": "Lyra automated source-evidence review"
+      },
+      "recordedAt": "2026-08-02",
+      "evidence": [
+        "src/components/overlays/spinner/spinner.test.ts#renders a localized busy status",
+        "src/components/overlays/spinner/spinner.class.ts"
+      ],
+      "humanReview": "not-claimed"
+    }
+  ]
 }

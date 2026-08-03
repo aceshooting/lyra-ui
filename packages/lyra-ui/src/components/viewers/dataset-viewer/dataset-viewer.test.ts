@@ -15,6 +15,109 @@ function shrinkAnchorRetry(el: LyraDatasetViewer): void {
   (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
 }
 
+async function assertScrollFrameFollowsAdoption(
+  el: HTMLElement & { updateComplete: Promise<unknown> },
+  scrollColumnIntoView: () => Promise<void>,
+): Promise<void> {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow;
+  const frameDocument = frame.contentDocument;
+  if (!frameWindow || !frameDocument) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+
+  const originalRequest = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  const originalFrameRequest = frameWindow.requestAnimationFrame;
+  const originalFrameCancel = frameWindow.cancelAnimationFrame;
+  const originalMatchMedia = window.matchMedia;
+  const originalFrameMatchMedia = frameWindow.matchMedia;
+  const renderRoot = el.shadowRoot!;
+  const originalQuerySelector = renderRoot.querySelector.bind(renderRoot);
+  const queued = new Map<number, FrameRequestCallback>();
+  const cancelled: number[] = [];
+  const scrollBehaviors: ScrollBehavior[] = [];
+  let nextHandle = 0;
+  let topRequests = 0;
+  let frameRequests = 0;
+  let topMotionQueries = 0;
+  let frameMotionQueries = 0;
+
+  const target = { scrollIntoView: (options: ScrollIntoViewOptions) => {
+    if (options.behavior) scrollBehaviors.push(options.behavior);
+  } };
+  const row = { querySelectorAll: () => [target, target] };
+  const list = { updateComplete: Promise.resolve(), shadowRoot: { querySelector: () => row } };
+  renderRoot.querySelector = ((selector: string) => (
+    selector.startsWith('lr-virtual-list') ? list : originalQuerySelector(selector)
+  )) as typeof renderRoot.querySelector;
+  window.matchMedia = (() => {
+    topMotionQueries++;
+    return { matches: false } as MediaQueryList;
+  }) as typeof window.matchMedia;
+  frameWindow.matchMedia = (() => {
+    frameMotionQueries++;
+    return { matches: true } as MediaQueryList;
+  }) as typeof frameWindow.matchMedia;
+
+  window.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    topRequests++;
+    const handle = ++nextHandle;
+    queued.set(handle, callback);
+    return handle;
+  }) as typeof window.requestAnimationFrame;
+  window.cancelAnimationFrame = ((handle: number): void => {
+    cancelled.push(handle);
+    queued.delete(handle);
+  }) as typeof window.cancelAnimationFrame;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    frameRequests++;
+    const handle = ++nextHandle;
+    queueMicrotask(() => callback(0));
+    return handle;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = (() => {}) as typeof frameWindow.cancelAnimationFrame;
+
+  try {
+    const staleScroll = scrollColumnIntoView();
+    await waitUntil(() => topRequests === 1);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    for (const [handle, callback] of [...queued]) {
+      queued.delete(handle);
+      callback(0);
+    }
+    await staleScroll;
+
+    const currentScroll = scrollColumnIntoView();
+    await waitUntil(() => frameRequests === 1 || topRequests === 2);
+    for (const [handle, callback] of [...queued]) {
+      queued.delete(handle);
+      callback(0);
+    }
+    await currentScroll;
+
+    expect(el.ownerDocument === frameDocument).to.be.true;
+    expect(topRequests).to.equal(1);
+    expect(cancelled).to.deep.equal([1]);
+    expect(frameRequests).to.equal(1);
+    expect(topMotionQueries).to.equal(0);
+    expect(frameMotionQueries).to.equal(1);
+    expect(scrollBehaviors).to.deep.equal(['auto']);
+  } finally {
+    window.requestAnimationFrame = originalRequest;
+    window.cancelAnimationFrame = originalCancel;
+    frameWindow.requestAnimationFrame = originalFrameRequest;
+    frameWindow.cancelAnimationFrame = originalFrameCancel;
+    window.matchMedia = originalMatchMedia;
+    frameWindow.matchMedia = originalFrameMatchMedia;
+    renderRoot.querySelector = originalQuerySelector as typeof renderRoot.querySelector;
+    frame.remove();
+  }
+}
+
 describe('lr-dataset-viewer', () => {
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
@@ -41,10 +144,10 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
     } finally { restore(); }
   });
-  it('renders a neutral empty-note, not the role="alert" error chrome, for a well-formed file with no rows', async () => {
+  it('renders a neutral empty-note, not assertively-announced error chrome, for a well-formed file with no rows', async () => {
     // Regression test: a delimited-text file that parses fine but has zero data rows (or zero
     // columns) used to throw the same LyraUserFacingError funneled through the generic catch
-    // block into `case 'error'` -- role="alert" and error-styled chrome for a state that isn't
+    // block into `case 'error'` -- assertive announcement and error-styled chrome for a state that isn't
     // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
     const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     let renderErrors = 0;
@@ -54,7 +157,7 @@ describe('lr-dataset-viewer', () => {
       el.src = 'https://example.test/empty.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This dataset has no rows.');
       expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('This dataset has no rows.');
-      expect(el.shadowRoot!.querySelector('[role="alert"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
       expect(renderErrors).to.equal(0);
     } finally { restore(); }
   });
@@ -97,7 +200,8 @@ describe('lr-dataset-viewer', () => {
     el.src = 'javascript:alert(1)';
     await event;
     await aTimeout(0);
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
     expect(count).to.equal(1);
   });
   it('registers tsv/psv/dat but not csv or unrelated files', () => {
@@ -317,6 +421,15 @@ describe('lr-dataset-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('cancels a stale scroll frame in its source realm and uses the current realm after iframe adoption', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const scrollColumnIntoView = (): Promise<void> => (
+        el as unknown as { scrollColumnIntoView: (col: number) => Promise<void> }
+      ).scrollColumnIntoView(1);
+
+      await assertScrollFrameFollowsAdoption(el, scrollColumnIntoView);
     });
 
     it('finds search matches ordered row -> column', async () => {

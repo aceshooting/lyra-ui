@@ -23,10 +23,13 @@ while content is still arriving.
   indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
   invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
   how tabs already inside rendered code are displayed.
-- `marked: Marked-compatible parser | undefined` (readonly, no attribute) — the configurable
+- `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the peer-neutral configurable
   `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
   while the optional peer is still resolving or unavailable; configuration installed with
-  `marked.use()` is copied into each parse.
+  variadic `marked.use(...extensions)` is copied into each parse. The peer-neutral type deliberately
+  models Lyra's stable `defaults`/`use()`/`parse()` configuration surface; consumers using
+  version-specific Marked tokenizers, constructors, or helpers should type that local reference
+  with their installed `marked` version.
 - `sanitize: boolean = true` — sanitize `marked`'s HTML output with DOMPurify before rendering
 - `escapeHtml: boolean = false` (attribute `escape-html`) — when `true`, overrides `marked`'s `html`
   renderer hook to emit the HTML-escaped source text instead of passing raw/sanitized markup through
@@ -601,7 +604,8 @@ validity and recomputes the current intrinsic constraints.
   composed unlike the native event
 - `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
   reason as `blur`
-- `lr-invalid` (no detail) — one bubbling/composed alias when native validity fails
+- `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
+  preventing it also prevents the native `invalid` event that produced it
 
 **Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
 attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button
@@ -1474,8 +1478,9 @@ highlighting).
 Set `line-numbers` when source context benefits from numbered lines. The option does not change the
 raw `code` value or the `lr-copy` event payload.
 
-A `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on the host) stands in only
-while shiki itself is loading for the very first time on the page and `language` is set — it is
+A decorative `<lr-skeleton variant="rect">` placeholder (with its own announcements disabled and
+`aria-busy="true"` on the host) stands in only while shiki itself is loading for the very first time
+on the page and `language` is set — it is
 deliberately *not* shown again for a later per-language grammar fetch (that's typically fast, and the
 plain-text fallback already reads fine as a placeholder for it). Internally, a shiki `transformer`
 (`partTransformer`) rewrites shiki's generated `<pre>`/`<code>` nodes in a single pass to carry this
@@ -1948,9 +1953,13 @@ content growth re-scrolls to the end; release happens only on a user-intent gest
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
-`follow`. The internal log defaults to `live="off"`, which avoids announcing every streaming token;
-consumers that append complete messages at an announcement-safe cadence can opt into `polite` or
-`assertive`.
+`follow`. The shadow `role="log"` always remains `aria-live="off"`, which avoids announcing every
+streaming token. Consumers that append complete messages at an announcement-safe cadence can opt
+into `polite` or `assertive`; each newly appended direct child's accessibility-exposed text is then
+copied to the matching shared light-DOM announcement sink in the component's `ownerDocument`.
+Hidden, inert, `aria-hidden`, and CSS-hidden content is omitted. Existing declarative children stay
+silent on mount, and appending the same text again creates another announcement. `off` acquires no
+sink and produces no announcements.
 
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
@@ -1958,8 +1967,9 @@ it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distanc
 counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
-'off'` (reflected) — live-region policy forwarded to the internal `role="log"`; keep `off` for
-token-by-token streaming and opt in only when messages are committed at an announcement-safe cadence.
+'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
+remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
+appended as direct children at an announcement-safe cadence.
 `label: string = ''` — accessible name
 for the log region, defaults to the localized `chatViewportLabel`. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
@@ -1976,8 +1986,8 @@ scroll-up release, or reaching the bottom again). Never fired for the initial mo
 
 **Slots:** default — the transcript: ordinary element children, or exactly one `lr-virtual-list`.
 
-**CSS parts:** `base` (the positioning root), `scroll` (the scroll container, `role="log"`,
-`tabindex="0"`; in virtual mode it stops scrolling itself but keeps the role), `content` (the
+**CSS parts:** `base` (the positioning root), `scroll` (the scroll container, non-live `role="log"`,
+`tabindex="0"`; in virtual mode it stops scrolling itself, keeps the role, and drops its tab stop), `content` (the
 slotted-content wrapper the growth observers watch), `jump-pill` (the built-in jump-to-latest button,
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
@@ -2643,6 +2653,11 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 `marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own
 fallback.
 
+Error parts remain ordinary visible content. After the initial baseline, each newly added error-part
+`id` is also appended through the shared assertive light-DOM announcement sink, using the caller's
+message or the localized fallback. Existing history and reconnect renders stay silent; removing an
+error id and later adding it again creates a new announcement.
+
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
 ```
@@ -2787,6 +2802,11 @@ composed push-to-talk events continue bubbling.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.
+
+Visible status and error text remain ordinary, non-live content. After the initial baseline,
+non-error `state` transitions are appended to the shared polite light-DOM announcement sink and a
+transition to `error` uses the shared assertive sink instead. Initial and reconnect renders stay
+silent, and sinks follow the component's `ownerDocument` when it is adopted.
 
 **Slots:** `controls` — provider-specific actions appended to the built-in session controls.
 **Optional peer deps:** none. Transport, credentials, capture permission, and media playback

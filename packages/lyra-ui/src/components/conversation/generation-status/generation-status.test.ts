@@ -393,6 +393,86 @@ it('resumes the ticker after being disconnected and reconnected while still acti
   ).to.be.greaterThan(before + 0.5);
 });
 
+it('schedules and clears its ticker through the exact owner window across adoption', async () => {
+  type GenerationStatusInternals = {
+    elapsedMs: number;
+    fallbackStartMs?: number;
+  };
+  const el = (await fixture(html`<lr-generation-status></lr-generation-status>`)) as LyraGenerationStatus;
+  await el.updateComplete;
+  el.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const originalMainSet = window.setInterval;
+  const originalMainClear = window.clearInterval;
+  const originalFrameSet = frameWindow.setInterval;
+  const originalFrameClear = frameWindow.clearInterval;
+  const mainCallbacks = new Map<number, VoidFunction>();
+  const frameCallbacks = new Map<number, VoidFunction>();
+  const frameCancellations: number[] = [];
+  let mainHandle = 6300;
+  let frameHandle = 7300;
+
+  window.setInterval = ((handler: TimerHandler) => {
+    if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+    const handle = ++mainHandle;
+    mainCallbacks.set(handle, handler as VoidFunction);
+    return handle;
+  }) as typeof window.setInterval;
+  window.clearInterval = ((handle?: number) => {
+    if (handle !== undefined) mainCallbacks.delete(handle);
+  }) as typeof window.clearInterval;
+  frameWindow.setInterval = ((handler: TimerHandler) => {
+    if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+    const handle = ++frameHandle;
+    frameCallbacks.set(handle, handler as VoidFunction);
+    return handle;
+  }) as typeof frameWindow.setInterval;
+  frameWindow.clearInterval = ((handle?: number) => {
+    if (handle !== undefined) {
+      frameCancellations.push(handle);
+      frameCallbacks.delete(handle);
+    }
+  }) as typeof frameWindow.clearInterval;
+
+  try {
+    frameDocument.adoptNode(el);
+    expect(frameCallbacks.size, 'detached adoption must not start a ticker').to.equal(0);
+
+    frameDocument.body.append(el);
+    el.active = true;
+    await el.updateComplete;
+    expect(mainCallbacks.size, 'the parent window must not own an iframe ticker').to.equal(0);
+    expect(frameCallbacks.size, 'only the current iframe interval stays armed').to.equal(1);
+    const [oldHandle, staleTick] = Array.from(frameCallbacks.entries())[0]!;
+
+    document.adoptNode(el);
+    expect(frameCancellations, 'adoption clears through the retained iframe owner').to.include(oldHandle);
+    expect(mainCallbacks.size, 'detached adoption must not arm the destination ticker').to.equal(0);
+    const internals = el as unknown as GenerationStatusInternals;
+    internals.elapsedMs = 321;
+    internals.fallbackStartMs = Date.now() - 5000;
+    staleTick();
+    expect(internals.elapsedMs, 'a canceled source-realm tick cannot update adopted state').to.equal(321);
+
+    document.body.append(el);
+    expect(mainCallbacks.size, 'reconnect resumes the ticker in the destination window').to.equal(1);
+    const currentTick = Array.from(mainCallbacks.values())[0]!;
+    internals.elapsedMs = 123;
+    internals.fallbackStartMs = Date.now() - 5000;
+    currentTick();
+    expect(internals.elapsedMs).to.be.greaterThan(4000);
+  } finally {
+    el.remove();
+    window.setInterval = originalMainSet;
+    window.clearInterval = originalMainClear;
+    frameWindow.setInterval = originalFrameSet;
+    frameWindow.clearInterval = originalFrameClear;
+    iframe.remove();
+  }
+});
+
 it('carries no role="status"/aria-live of its own -- see the class doc for why a per-second tick must not be announced', async () => {
   const el = (await fixture(html`<lr-generation-status active></lr-generation-status>`)) as LyraGenerationStatus;
   expect(el.getAttribute('role')).to.be.null;

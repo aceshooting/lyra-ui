@@ -2,7 +2,7 @@
 
 # `lr-message-parts`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-message-parts.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMessageParts`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -40,6 +40,11 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 **Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
 `marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own
 fallback.
+
+Error parts remain ordinary visible content. After the initial baseline, each newly added error-part
+`id` is also appended through the shared assertive light-DOM announcement sink, using the caller's
+message or the localized fallback. Existing history and reconnect renders stay silent; removing an
+error id and later adding it again creates a new announcement.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';

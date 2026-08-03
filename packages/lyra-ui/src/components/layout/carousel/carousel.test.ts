@@ -3,6 +3,7 @@ import "./carousel.js";
 import "./carousel-item.js";
 import type { LyraCarousel } from "./carousel.js";
 import { styles } from "./carousel.styles.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 async function carousel(
   template = html`
@@ -474,13 +475,17 @@ it("swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visuall
   expect(el.index).to.equal(0);
 });
 
-it("clamps a NaN, negative, or oversized index to a valid slide instead of NaN/out-of-range", async () => {
+it("clamps a non-finite, negative, or oversized index to a valid slide instead of NaN/out-of-range", async () => {
   const el = await carousel();
 
   el.index = NaN;
   await el.updateComplete;
   expect(el.index).to.equal(0);
   expect(([...el.children] as HTMLElement[])[0].inert).to.be.false;
+
+  el.index = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  expect(el.index).to.equal(0);
 
   el.index = -5;
   await el.updateComplete;
@@ -592,12 +597,502 @@ it("disables autoplay under prefers-reduced-motion", async () => {
     expect(
       el
         .shadowRoot!.querySelector('[part~="scroll-container"]')!
-        .getAttribute("aria-live")
-    ).to.equal("polite");
+        .hasAttribute("aria-live")
+    ).to.be.false;
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+    );
+    expect(
+      sink !== null,
+      "the light-DOM sink is mounted before any change"
+    ).to.be.true;
+    expect(sink!.childElementCount).to.equal(0);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(el.index).to.equal(0);
   } finally {
     window.matchMedia = originalMatchMedia;
+  }
+});
+
+it("announces manual slide changes through a pre-mounted light-DOM sink without replaying mount or reconnect state", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-carousel") as LyraCarousel;
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  el.innerHTML = "<div>One</div><div>Two</div><div>Three</div>";
+  container.append(el);
+  await el.updateComplete;
+
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="scroll-container"]'
+  )!;
+  let sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+  expect(viewport.hasAttribute("aria-live")).to.be.false;
+  expect(sink.childElementCount, "initial state stays silent").to.equal(0);
+
+  el.next("instant");
+  await el.updateComplete;
+  el.previous("instant");
+  await el.updateComplete;
+  el.next("instant");
+  await el.updateComplete;
+  expect([...sink.children].map((node) => node.textContent)).to.deep.equal([
+    "Slide 2 of 3: Two",
+    "Slide 1 of 3: One",
+    "Slide 2 of 3: Two",
+  ]);
+
+  el.remove();
+  expect(sink.isConnected, "disconnect releases the old sink").to.be.false;
+  container.append(el);
+  await Promise.resolve();
+  await el.updateComplete;
+  sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+  expect(sink.childElementCount, "reconnect does not replay the active slide").to.equal(0);
+
+  el.previous("instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal("Slide 1 of 3: One");
+});
+
+it("lets instance strings control announcement composition and separation", async () => {
+  const el = await carousel(html`
+    <lr-carousel slides-per-page="2">
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-carousel>
+  `);
+  el.strings = {
+    carouselSlideAnnouncement: "CONTENT={content}; POSITION={position}",
+    carouselSlideAnnouncementSeparator: " / ",
+  };
+  await el.updateComplete;
+
+  el.next("instant");
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "CONTENT=Two; POSITION=Slide 2 of 3 / CONTENT=Three; POSITION=Slide 3 of 3"
+  );
+});
+
+it("announces method, property, click, and key changes while autoplay is enabled", async () => {
+  const el = await carousel(html`
+    <lr-carousel autoplay autoplay-interval="10000" navigation pagination>
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-carousel>
+  `);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+  expect(sink.childElementCount).to.equal(0);
+
+  el.next("instant");
+  await el.updateComplete;
+  el.currentSlide = 2;
+  await el.updateComplete;
+  (
+    el.shadowRoot!.querySelector(
+      '[part~="navigation-button-previous"]'
+    ) as HTMLButtonElement
+  ).click();
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!
+    .dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+  await el.updateComplete;
+
+  expect([...sink.children].map((node) => node.textContent)).to.deep.equal([
+    "Slide 2 of 3: Two",
+    "Slide 3 of 3: Three",
+    "Slide 2 of 3: Two",
+    "Slide 1 of 3: One",
+  ]);
+});
+
+it("keeps manual page changes silent while the host or a composed ancestor is accessibility-hidden", async () => {
+  const container = (await fixture(html`
+    <div>
+      <lr-carousel>
+        <div>One</div>
+        <div>Two</div>
+      </lr-carousel>
+    </div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector("lr-carousel") as LyraCarousel;
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  const suppressedChanges: Array<{
+    label: string;
+    apply: () => void;
+    reset: () => void;
+  }> = [
+    {
+      label: "hidden host",
+      apply: () => { el.hidden = true; },
+      reset: () => { el.hidden = false; },
+    },
+    {
+      label: "inert ancestor",
+      apply: () => { container.inert = true; },
+      reset: () => { container.inert = false; },
+    },
+    {
+      label: "case-insensitive aria-hidden ancestor",
+      apply: () => { container.setAttribute("aria-hidden", " TRUE "); },
+      reset: () => { container.removeAttribute("aria-hidden"); },
+    },
+    ...[
+      "display: none",
+      "visibility: hidden",
+      "visibility: collapse",
+      "content-visibility: hidden",
+    ].map((style) => ({
+      label: style,
+      apply: () => { container.setAttribute("style", style); },
+      reset: () => { container.removeAttribute("style"); },
+    })),
+  ];
+
+  for (const suppression of suppressedChanges) {
+    suppression.apply();
+    el.goToSlide(el.currentSlide === 0 ? 1 : 0, "instant");
+    await el.updateComplete;
+    expect(sink.childElementCount, suppression.label).to.equal(0);
+    suppression.reset();
+  }
+
+  el.goToSlide(el.currentSlide === 0 ? 1 : 0, "instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.match(/^Slide [12] of 2:/);
+});
+
+it("excludes accessibility-hidden slide roots and descendants from page announcements", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div hidden aria-label="Hidden authored label">Hidden root content</div>
+      <div>
+        Visible content
+        <span aria-hidden=" TRUE ">ARIA hidden</span>
+        <span inert>Inert</span>
+        <span style="display: none">Display hidden</span>
+        <span style="visibility: hidden">Visibility hidden <span style="visibility: visible">Visibility override</span></span>
+        <span style="visibility: collapse">Visibility collapsed</span>
+        <span style="content-visibility: hidden">Content hidden</span>
+      </div>
+    </lr-carousel>
+  `);
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(
+    sink.childElementCount,
+    "an author-hidden selected slide emits no position or content"
+  ).to.equal(0);
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 3 of 3: Visible content Visibility override"
+  );
+});
+
+it("announces only a visible descendant that overrides a visibility-hidden slide root", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div style="visibility: hidden">
+        Hidden root text
+        <span style="visibility: visible">Visible root override</span>
+      </div>
+    </lr-carousel>
+  `);
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 2 of 2: Visible root override"
+  );
+  expect(sink.textContent).to.not.include("Hidden root text");
+});
+
+it("announces flattened assigned content from a nested forwarding slot without leaking its fallback", async () => {
+  const host = (await fixture(html`
+    <div><span id="forwarded-content">Assigned consumer text</span></div>
+  `)) as HTMLDivElement;
+  const shadow = host.attachShadow({ mode: "open" });
+  shadow.innerHTML = `
+    <lr-carousel>
+      <div>First slide</div>
+      <div><slot><span>Forwarding fallback</span></slot></div>
+    </lr-carousel>
+  `;
+  const el = shadow.querySelector("lr-carousel") as LyraCarousel;
+  const forwardingSlot = shadow.querySelector("slot")!;
+  const assigned = host.querySelector("#forwarded-content") as HTMLSpanElement;
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  await el.updateComplete;
+  expect(
+    forwardingSlot.assignedNodes().some((node) => node === assigned),
+    "precondition: the nested slot forwards the wrapper's consumer content"
+  ).to.be.true;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+  expect(sink.childElementCount, "initial state remains silent").to.equal(0);
+
+  const showForwardedSlide = async (): Promise<void> => {
+    el.goToSlide(0, "instant");
+    await el.updateComplete;
+    el.goToSlide(1, "instant");
+    await el.updateComplete;
+  };
+
+  await showForwardedSlide();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 2 of 2: Assigned consumer text"
+  );
+  expect(sink.lastElementChild?.textContent).to.not.include("Forwarding fallback");
+
+  assigned.textContent = "Updated assigned text";
+  await showForwardedSlide();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 2 of 2: Updated assigned text"
+  );
+
+  assigned.hidden = true;
+  await showForwardedSlide();
+  expect(sink.lastElementChild?.textContent).to.equal("Slide 2 of 2");
+  expect(sink.lastElementChild?.textContent).to.not.include("Forwarding fallback");
+
+  assigned.hidden = false;
+  assigned.style.display = "none";
+  await showForwardedSlide();
+  expect(sink.lastElementChild?.textContent).to.equal("Slide 2 of 2");
+  expect(sink.lastElementChild?.textContent).to.not.include("Forwarding fallback");
+
+  assigned.remove();
+  await Promise.resolve();
+  await showForwardedSlide();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 2 of 2: Forwarding fallback"
+  );
+});
+
+it("announces the rendered composed slide text, closed summary, and image alternative", async () => {
+  const el = document.createElement("lr-carousel") as LyraCarousel;
+  el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+  const first = document.createElement("div");
+  first.textContent = "First slide";
+  const second = document.createElement("div");
+  const shadowHost = document.createElement("div");
+  const shadow = shadowHost.attachShadow({ mode: "open" });
+  shadow.innerHTML = `<span>Rendered shadow slide</span><slot></slot>`;
+  const assigned = document.createElement("span");
+  assigned.textContent = "Rendered assigned slide";
+  const unassigned = document.createElement("span");
+  unassigned.slot = "missing";
+  unassigned.textContent = "Unassigned slide leak";
+  shadowHost.append(assigned, unassigned);
+  const details = document.createElement("details");
+  details.innerHTML = `<summary>Collapsed slide summary</summary><span>Collapsed slide body leak</span>`;
+  const image = document.createElement("img");
+  image.alt = "Slide diagram";
+  second.append(shadowHost, details, image);
+  el.append(first, second);
+  document.body.append(el);
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  el.next("instant");
+  await el.updateComplete;
+
+  expect(sink.lastElementChild?.textContent).to.equal(
+    "Slide 2 of 2: Rendered shadow slide Rendered assigned slide Collapsed slide summary Slide diagram"
+  );
+  el.remove();
+});
+
+it("keeps only timer-driven autoplay advances silent", async () => {
+  const originalSetInterval = window.setInterval;
+  const originalClearInterval = window.clearInterval;
+  let autoplayTick: (() => void) | undefined;
+  let el: LyraCarousel | undefined;
+  window.setInterval = ((handler: TimerHandler) => {
+    if (typeof handler === "function") autoplayTick = handler;
+    return 71;
+  }) as typeof window.setInterval;
+  window.clearInterval = (() => {}) as typeof window.clearInterval;
+
+  try {
+    el = await carousel(html`
+      <lr-carousel autoplay loop autoplay-interval="1000">
+        <div>One</div>
+        <div>Two</div>
+      </lr-carousel>
+    `);
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+    )!;
+    expect(typeof autoplayTick).to.equal("function");
+    autoplayTick!();
+    await el.updateComplete;
+
+    expect(el.currentSlide).to.equal(1);
+    expect(sink.childElementCount).to.equal(0);
+  } finally {
+    el?.remove();
+    window.setInterval = originalSetInterval;
+    window.clearInterval = originalClearInterval;
+  }
+});
+
+it("rebinds carousel globals, timers, slides, and announcements to an adopted iframe document", async () => {
+  const frame = document.createElement("iframe");
+  const loaded = new Promise<void>((resolve) =>
+    frame.addEventListener("load", () => resolve(), { once: true })
+  );
+  document.body.append(frame);
+  await loaded;
+
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const originalFrameMatchMedia = frameWindow.matchMedia;
+  const originalFrameSetInterval = frameWindow.setInterval;
+  const originalFrameClearInterval = frameWindow.clearInterval;
+  const visibilityDescriptor = Object.getOwnPropertyDescriptor(
+    frameDocument,
+    "visibilityState"
+  );
+  let frameMediaQueries = 0;
+  let frameIntervalSchedules = 0;
+  let frameIntervalClears = 0;
+  let autoplayTick: (() => void) | undefined;
+  let el: LyraCarousel | undefined;
+
+  frameWindow.matchMedia = ((query: string) => {
+    frameMediaQueries += 1;
+    return {
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList;
+  }) as typeof frameWindow.matchMedia;
+  frameWindow.setInterval = ((handler: TimerHandler) => {
+    frameIntervalSchedules += 1;
+    if (typeof handler === "function") autoplayTick = handler;
+    return 83;
+  }) as typeof frameWindow.setInterval;
+  frameWindow.clearInterval = (() => {
+    frameIntervalClears += 1;
+  }) as typeof frameWindow.clearInterval;
+  Object.defineProperty(frameDocument, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+
+  try {
+    el = document.createElement("lr-carousel") as LyraCarousel;
+    el.strings = { carouselSlidePosition: "Slide {index} of {total}" };
+    document.body.append(el);
+    await el.updateComplete;
+
+    frameDocument.body.append(el);
+    const first = frameDocument.createElement("div");
+    const second = frameDocument.createElement("div");
+    first.textContent = "Frame one";
+    second.textContent = "Frame two";
+    el.append(first, second);
+    await new Promise<void>((resolve) => frameWindow.requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+
+    expect(el.slides, "iframe-realm HTML elements remain valid slides").to.equal(2);
+    expect(frameMediaQueries, "reconnect reads the adopted document's media query").to.equal(1);
+    expect(
+      frameDocument.querySelector(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+      ) !== null,
+      "the sink moves into the adopted document"
+    ).to.be.true;
+
+    el.loop = true;
+    el.autoplay = true;
+    await el.updateComplete;
+    expect(frameIntervalSchedules, "autoplay uses the adopted window's timer").to.equal(1);
+
+    const schedulesBeforeVisibility = frameIntervalSchedules;
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(
+      frameIntervalSchedules,
+      "the previous document no longer controls the adopted carousel"
+    ).to.equal(schedulesBeforeVisibility);
+    frameDocument.dispatchEvent(new frameWindow.Event("visibilitychange"));
+    expect(
+      frameIntervalSchedules,
+      "the adopted document's visibility event restarts autoplay"
+    ).to.equal(schedulesBeforeVisibility + 1);
+    expect(frameIntervalClears).to.be.greaterThan(0);
+
+    expect(typeof autoplayTick).to.equal("function");
+    autoplayTick!();
+    await el.updateComplete;
+    const sink = frameDocument.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+    )!;
+    expect(el.currentSlide).to.equal(1);
+    expect(sink.childElementCount, "iframe autoplay stays silent").to.equal(0);
+
+    el.previous("instant");
+    await el.updateComplete;
+    expect(sink.lastElementChild?.textContent).to.equal(
+      "Slide 1 of 2: Frame one"
+    );
+
+    el.remove();
+    const schedulesAfterDisconnect = frameIntervalSchedules;
+    frameDocument.dispatchEvent(new frameWindow.Event("visibilitychange"));
+    expect(
+      frameIntervalSchedules,
+      "disconnect removes the adopted document's visibility listener"
+    ).to.equal(schedulesAfterDisconnect);
+  } finally {
+    el?.remove();
+    frameWindow.matchMedia = originalFrameMatchMedia;
+    frameWindow.setInterval = originalFrameSetInterval;
+    frameWindow.clearInterval = originalFrameClearInterval;
+    if (visibilityDescriptor) {
+      Object.defineProperty(frameDocument, "visibilityState", visibilityDescriptor);
+    } else {
+      delete (frameDocument as Document & { visibilityState?: string })
+        .visibilityState;
+    }
+    frame.remove();
   }
 });
 
@@ -780,6 +1275,21 @@ it("is accessible and supports a consumer supplied accessible label", async () =
     el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
   ).to.equal("Product screenshots");
   await expect(el).to.be.accessible();
+});
+
+it("preserves an explicitly empty host aria-label on both carousel landmarks", async () => {
+  const el = await carousel(html`
+    <lr-carousel aria-label="" accessible-label="Fallback name">
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const viewport = el.shadowRoot!.querySelector(
+    '[part~="viewport"]'
+  ) as HTMLElement;
+  expect(base.getAttribute("aria-label")).to.equal("");
+  expect(viewport.getAttribute("aria-label")).to.equal("");
 });
 
 it('names the focusable viewport with role="group", following the same label arbitration as the region', async () => {

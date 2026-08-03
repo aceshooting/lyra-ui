@@ -28,6 +28,10 @@ try {
   writeFileSync(join(componentDir, 'test-control.class.ts'), 'export class TestControl {}\n');
   writeFileSync(join(componentDir, 'test-control.ts'), 'defineElement();\n');
   writeFileSync(
+    join(fixtureRoot, 'src', 'components', 'lr-test-control.ts'),
+    "export * from './forms/test-control/test-control.js';\n",
+  );
+  writeFileSync(
     join(fixtureInventory, 'component-inventory.json'),
     `${JSON.stringify(
       {
@@ -51,6 +55,7 @@ try {
   writeFileSync(join(fixtureRoot, 'src', 'ssr', 'all.ts'), "import '../components/forms/index.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'autoloader.ts'), 'export function discover() {}\n');
   writeFileSync(join(fixtureRoot, 'src', 'autoloader-cdn.ts'), "start(document);\n");
+  writeFileSync(join(fixtureRoot, 'src', 'hydration.ts'), "installHydrationSupport();\n");
   writeFileSync(join(fixtureRoot, 'src', 'ssr-loader.ts'), "installHydrationSupport();\n");
   writeFileSync(join(stylesDir, 'native.css'), '.lr-native button { color: var(--lr-color-text); }\n');
   writeFileSync(join(stylesDir, 'utilities.css'), '.lr-stack { display: flex; }\n');
@@ -69,6 +74,10 @@ try {
           './ssr-loader.js': {
             types: './dist/ssr-loader.d.ts',
             default: './dist/ssr-loader.js',
+          },
+          './hydration.js': {
+            types: './dist/hydration.d.ts',
+            default: './dist/hydration.js',
           },
         },
         sideEffects: ['./stale.js'],
@@ -91,6 +100,8 @@ try {
     './dist/autoloader-cdn.js',
     './dist/components/forms/index.js',
     './dist/components/forms/test-control/test-control.js',
+    './dist/components/lr-test-control.js',
+    './dist/hydration.js',
     './dist/ssr-loader.js',
     './dist/ssr/all.js',
     './dist/styles/native.css',
@@ -101,6 +112,8 @@ try {
     './src/autoloader-cdn.ts',
     './src/components/forms/index.ts',
     './src/components/forms/test-control/test-control.ts',
+    './src/components/lr-test-control.ts',
+    './src/hydration.ts',
     './src/ssr-loader.ts',
     './src/ssr/all.ts',
     './src/styles/native.css',

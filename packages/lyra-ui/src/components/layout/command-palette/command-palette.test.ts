@@ -483,6 +483,72 @@ it("supports an explicit ctrl shortcut without requiring the platform mod key", 
   expect(el.open).to.be.true;
 });
 
+it("binds its global shortcut to the adopted owner window", async () => {
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const NativeResizeObserver = frameWindow.ResizeObserver;
+  const resizeDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "ResizeObserver");
+  const styleDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "getComputedStyle");
+  let constructions = 0;
+  let hostStyleReads = 0;
+  const observed: Element[] = [];
+  class TrackingResizeObserver extends NativeResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      observed.push(target);
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, "ResizeObserver", {
+    configurable: true,
+    value: TrackingResizeObserver,
+  });
+  const nativeGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+  const el = document.createElement("lr-command-palette") as LyraCommandPalette;
+  el.shortcut = "ctrl+p";
+  Object.defineProperty(frameWindow, "getComputedStyle", {
+    configurable: true,
+    value: (element: Element, pseudo?: string | null) => {
+      if (element === el) hostStyleReads += 1;
+      return nativeGetComputedStyle(element, pseudo);
+    },
+  });
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    el.openPalette();
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    await Promise.resolve();
+    const list = el.shadowRoot!.querySelector('[part="list"]')!;
+    expect(constructions).to.be.greaterThan(0);
+    expect(observed.includes(list)).to.be.true;
+    expect(hostStyleReads).to.be.greaterThan(0);
+    frameWindow.dispatchEvent(
+      new frameWindow.KeyboardEvent("keydown", {
+        key: "p",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  } finally {
+    el.remove();
+    if (resizeDescriptor) Object.defineProperty(frameWindow, "ResizeObserver", resizeDescriptor);
+    if (styleDescriptor) Object.defineProperty(frameWindow, "getComputedStyle", styleDescriptor);
+    frame.remove();
+  }
+});
+
 it("does not match the default mod+k shortcut when an extra Shift modifier is held", async () => {
   const el = (await fixture(
     html`<lr-command-palette></lr-command-palette>`

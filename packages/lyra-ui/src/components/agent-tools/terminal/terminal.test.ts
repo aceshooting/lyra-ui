@@ -488,6 +488,142 @@ describe('lr-terminal', () => {
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('');
   });
 
+  it('schedules and cancels queued announcements with the adopted document window', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const ownerWindow = iframe.contentWindow!;
+    const originalSetTimeout = ownerWindow.setTimeout;
+    const originalClearTimeout = ownerWindow.clearTimeout;
+    const callbacks = new Map<number, () => void>();
+    const clears: number[] = [];
+    ownerWindow.setTimeout = ((handler: TimerHandler) => {
+      if (typeof handler === 'function') callbacks.set(71, handler);
+      return 71;
+    }) as typeof ownerWindow.setTimeout;
+    ownerWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) {
+        clears.push(handle);
+        callbacks.delete(handle);
+      }
+    }) as typeof ownerWindow.clearTimeout;
+
+    try {
+      iframe.contentDocument!.body.append(el);
+      (el as unknown as { announcer: { announce(text: string): void } }).announcer.announce('frame output');
+      expect(callbacks.has(71), 'the adopted window must schedule the announcement').to.be.true;
+
+      el.remove();
+      expect(clears).to.include(71);
+      expect(callbacks.size).to.equal(0);
+    } finally {
+      el.remove();
+      ownerWindow.setTimeout = originalSetTimeout;
+      ownerWindow.clearTimeout = originalClearTimeout;
+      iframe.remove();
+    }
+  });
+
+  it('uses the adopted realm for clipboard, copy timing, downloads, and selection fallback', async () => {
+    const el = (await fixture(html`<lr-terminal downloadable></lr-terminal>`)) as LyraTerminal;
+    el.write('frame output');
+    await el.updateComplete;
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const ownerDocument = iframe.contentDocument!;
+    const ownerWindow = iframe.contentWindow!;
+    const originalClipboard = Object.getOwnPropertyDescriptor(ownerWindow.navigator, 'clipboard');
+    const originalSetTimeout = ownerWindow.setTimeout;
+    const originalClearTimeout = ownerWindow.clearTimeout;
+    const originalCreateObjectURL = ownerWindow.URL.createObjectURL;
+    const originalRevokeObjectURL = ownerWindow.URL.revokeObjectURL;
+    const originalAnchorClick = ownerWindow.HTMLAnchorElement.prototype.click;
+    const originalGetSelection = ownerDocument.getSelection;
+    const clipboardWrites: string[] = [];
+    const timers = new Map<number, { callback: () => void; delay: number }>();
+    const clears: number[] = [];
+    const blobs: Blob[] = [];
+    const revoked: string[] = [];
+    let nextHandle = 100;
+    let clickedAnchorDocument: Document | undefined;
+
+    Object.defineProperty(ownerWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { clipboardWrites.push(text); return Promise.resolve(); } },
+    });
+    ownerWindow.setTimeout = ((handler: TimerHandler, delay?: number) => {
+      const handle = ++nextHandle;
+      if (typeof handler === 'function') timers.set(handle, { callback: handler, delay: delay ?? 0 });
+      return handle;
+    }) as typeof ownerWindow.setTimeout;
+    ownerWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) {
+        clears.push(handle);
+        timers.delete(handle);
+      }
+    }) as typeof ownerWindow.clearTimeout;
+    ownerWindow.URL.createObjectURL = ((blob: Blob) => {
+      blobs.push(blob);
+      return 'blob:frame-terminal';
+    }) as typeof ownerWindow.URL.createObjectURL;
+    ownerWindow.URL.revokeObjectURL = ((url: string) => revoked.push(url)) as typeof ownerWindow.URL.revokeObjectURL;
+    ownerWindow.HTMLAnchorElement.prototype.click = function () {
+      clickedAnchorDocument = this.ownerDocument;
+    };
+
+    try {
+      ownerDocument.body.append(el);
+      await el.updateComplete;
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      expect(clipboardWrites).to.deep.equal(['frame output']);
+      const copyTimer = [...timers].find(([, timer]) => timer.delay === 1500)?.[0];
+      expect(copyTimer).to.be.a('number');
+
+      (el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement).click();
+      expect(blobs.length).to.equal(1);
+      expect(blobs[0] instanceof ownerWindow.Blob).to.be.true;
+      expect(clickedAnchorDocument === ownerDocument).to.be.true;
+      const revokeTimer = [...timers].find(([, timer]) => timer.delay === 5000)?.[0];
+      expect(revokeTimer).to.be.a('number');
+      timers.get(revokeTimer!)!.callback();
+      expect(revoked).to.deep.equal(['blob:frame-terminal']);
+
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const line = list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
+      const selection = {
+        isCollapsed: false,
+        anchorNode: line,
+        focusNode: line,
+        toString: () => 'frame output',
+        getRangeAt: () => ({ getClientRects: () => [] }),
+      } as unknown as Selection;
+      ownerDocument.getSelection = () => selection;
+      (list.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection = () => null;
+      (el.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection = () => null;
+      let anchor: unknown;
+      el.addEventListener('lr-text-select', (event) => {
+        anchor = (event as CustomEvent<{ anchor: unknown }>).detail.anchor;
+      }, { once: true });
+      el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(
+        new ownerWindow.PointerEvent('pointerup', { bubbles: true }),
+      );
+      expect(anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 1 });
+
+      el.remove();
+      expect(clears).to.include(copyTimer);
+    } finally {
+      el.remove();
+      if (originalClipboard) Object.defineProperty(ownerWindow.navigator, 'clipboard', originalClipboard);
+      else delete (ownerWindow.navigator as Navigator & { clipboard?: Clipboard }).clipboard;
+      ownerWindow.setTimeout = originalSetTimeout;
+      ownerWindow.clearTimeout = originalClearTimeout;
+      ownerWindow.URL.createObjectURL = originalCreateObjectURL;
+      ownerWindow.URL.revokeObjectURL = originalRevokeObjectURL;
+      ownerWindow.HTMLAnchorElement.prototype.click = originalAnchorClick;
+      ownerDocument.getSelection = originalGetSelection;
+      iframe.remove();
+    }
+  });
+
   it('trims immediately when maxScrollback is lowered after output already exists', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('one\ntwo\nthree');
@@ -509,12 +645,16 @@ describe('lr-terminal', () => {
     // reliably `firstChild` -- find it directly instead of assuming a fixed sibling position.
     const textNodeOf = (line: Element): Node =>
       [...line.querySelector('span')!.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
-    const range = document.createRange();
-    range.setStart(textNodeOf(lines[0]), 0);
-    range.setEnd(textNodeOf(lines[1]), 3);
-    const selection = (list.shadowRoot as unknown as { getSelection?: () => Selection }).getSelection?.() ?? window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
+    // WebKit does not expose ShadowRoot.getSelection(), so use a deterministic selection-shaped
+    // value here and leave native cross-shadow selection support to the component's fail-closed path.
+    const selection = {
+      isCollapsed: false,
+      anchorNode: textNodeOf(lines[0]),
+      focusNode: textNodeOf(lines[1]),
+      toString: () => 'first\nsec',
+      getRangeAt: () => ({ getClientRects: () => [] }),
+    } as unknown as Selection;
+    (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => selection;
     const listener = oneEvent(el, 'lr-text-select');
     el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     const event = (await listener) as CustomEvent<{ text: string; anchor: { kind: string; start: number; end: number } | null }>;

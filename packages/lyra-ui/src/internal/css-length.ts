@@ -7,8 +7,8 @@ const FALLBACK_FONT_SIZE_PX = 16;
 const BREAKPOINT_LENGTH_RE = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px|rem|em)?$/i;
 
 /** The element's computed `font-size` in px, or the CSS initial size if it has no computed style. */
-function fontSizePx(element: Element): number {
-  const size = Number.parseFloat(getComputedStyle(element).fontSize);
+function fontSizePx(element: Element, view: Window): number {
+  const size = Number.parseFloat(view.getComputedStyle(element).fontSize);
   return Number.isFinite(size) && size > 0 ? size : FALLBACK_FONT_SIZE_PX;
 }
 
@@ -63,11 +63,25 @@ export function resolveCssLength(value: number | string | undefined, host?: Elem
   const length = Number.parseFloat(match[1]!);
   if (!Number.isFinite(length)) return undefined;
 
+  const ownerDocument =
+    host?.ownerDocument ?? (typeof document === 'undefined' ? undefined : document);
+  const ownerWindow = ownerDocument?.defaultView;
+
   switch (match[2]?.toLowerCase()) {
     case 'rem':
-      return length * fontSizePx(document.documentElement);
+      if (!ownerDocument || !ownerWindow) return undefined;
+      return length * fontSizePx(ownerDocument.documentElement, ownerWindow);
     case 'em':
-      return length * fontSizePx(host ?? document.documentElement);
+      if (!ownerDocument || !ownerWindow) return undefined;
+      return (
+        length *
+        fontSizePx(
+          host && ownerWindow.getComputedStyle(host).fontSize
+            ? host
+            : ownerDocument.documentElement,
+          ownerWindow,
+        )
+      );
     default:
       return length;
   }

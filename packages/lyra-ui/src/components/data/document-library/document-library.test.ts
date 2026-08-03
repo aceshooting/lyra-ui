@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './document-library.js';
 import type { LyraDocumentLibrary, LibraryDocument } from './document-library.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const docs: LibraryDocument[] = [
   {
@@ -32,6 +33,15 @@ const docs: LibraryDocument[] = [
     updatedAt: '2024-03-15T00:00:00.000Z',
   },
 ];
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 function findCheckbox(table: HTMLElement, rowIndex: number): HTMLElement {
   const rows = table.shadowRoot!.querySelectorAll('[data-row-key]');
@@ -65,6 +75,46 @@ it('is accessible with populated, tagged, selected, sorted rows', async () => {
   expect(table.shadowRoot!.querySelectorAll('[data-row-key]')).to.have.length(3);
   expect(el.shadowRoot!.querySelector('[part="selection-bar"]')).to.exist;
   await expect(el).to.be.accessible();
+});
+
+it('announces post-mount selection counts as light-DOM additions while the visible bar stays non-live', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs} .selectedIds=${['d1']}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  const bar = el.shadowRoot!.querySelector('[part="selection-bar"]') as HTMLElement;
+  expect(sinkTexts(), 'preselection on mount must stay silent').to.deep.equal([]);
+  expect(bar.getAttribute('role')).to.equal(null);
+  expect(bar.getAttribute('aria-live')).to.equal(null);
+
+  el.selectedIds = ['d2'];
+  await el.updateComplete;
+  el.selectedIds = ['d2'];
+  await el.updateComplete;
+  el.selectedIds = [];
+  await el.updateComplete;
+  expect(sinkTexts()).to.deep.equal(['1 selected', '1 selected', '0 selected']);
+
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+});
+
+it('re-targets selection announcements after cross-document adoption', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  try {
+    frameDocument.body.append(el);
+    el.selectedIds = ['d1'];
+    await el.updateComplete;
+    expect(sinkElement() === null, 'the original document releases the adopted library').to.be.true;
+    expect(sinkTexts(frameDocument)).to.deep.equal(['1 selected']);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
 });
 
 it('filters by search text (name/owner/tag substring) and emits lr-filter-change with matchCount', async () => {

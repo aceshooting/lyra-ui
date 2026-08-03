@@ -6,29 +6,409 @@ import { fileURLToPath } from 'node:url';
 
 import {
   MIGRATION_ATTRIBUTE_EXCLUSIONS,
+  compareAccessibilityProfiles,
   compareMappedSurfaces,
   emptyNormalizations,
   emptyRewrites,
   normalizeDeclaration,
+  normalizeManifest,
+  validateAccessibilityContract,
   validateInventory,
   validateLocalMigrations,
   validateMappingNormalizations,
   validatePinnedManifests,
 } from './component-inventory.mjs';
 import {
+  assertAccessibilityProfilesReferenced,
+  accessibilityProfileCatalog,
+  migrationParityMetadata,
+  reviewedAccessibilityMetadata,
+  reviewedMigrationDecision,
   reviewedMappingNormalizations,
   reviewedWebAwesomeVideo,
   reviewedWebAwesomeVideoPlaylist,
   rootRegistrationMetadata,
+  expandLyraInventoryManifest,
 } from './generate-component-inventory.mjs';
 import cemConfig, {
   ACCESSOR_RUNTIME_CONTRACTS,
   EVENT_RUNTIME_CONTRACTS,
   INHERITED_PUBLIC_MEMBER_CONTRACTS,
 } from '../custom-elements-manifest.config.js';
+import { generateManifest } from './generate-manifest.mjs';
+import { expandManifestInheritance } from './manifest-compact.mjs';
+import { sourceEventTypeContracts } from './check-event-contracts.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (...segments) => JSON.parse(fs.readFileSync(path.join(packageDir, ...segments), 'utf8'));
+
+test('accessibility profiles compare every structured behavior dimension', () => {
+  const profiles = {
+    source: {
+      description: 'Synthetic source profile.',
+      semantics: ['button'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['disabled'],
+      announcements: [],
+      motion: [],
+    },
+    equivalent: {
+      description: 'Synthetic equivalent profile.',
+      semantics: ['button'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['disabled'],
+      announcements: [],
+      motion: [],
+    },
+    additive: {
+      description: 'Synthetic additive profile.',
+      semantics: ['button'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['focus-return', 'native-focus'],
+      states: ['disabled'],
+      announcements: [],
+      motion: [],
+    },
+    missing: {
+      description: 'Synthetic incomplete profile.',
+      semantics: ['button'],
+      naming: [],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['disabled'],
+      announcements: [],
+      motion: [],
+    },
+    inert: {
+      description: 'Synthetic profile with no tag-owned behavior.',
+      semantics: [],
+      naming: [],
+      keyboard: [],
+      focus: [],
+      states: [],
+      announcements: [],
+      motion: [],
+    },
+  };
+
+  assert.deepEqual(compareAccessibilityProfiles(profiles, 'source', 'equivalent'), {
+    status: 'equivalent',
+    missing: [],
+    additions: [],
+  });
+  assert.deepEqual(compareAccessibilityProfiles(profiles, 'source', 'additive'), {
+    status: 'target-additive',
+    missing: [],
+    additions: ['focus:focus-return'],
+  });
+  assert.deepEqual(compareAccessibilityProfiles(profiles, 'source', 'missing'), {
+    status: 'warning-required',
+    missing: ['naming:content-or-author-label'],
+    additions: [],
+  });
+  assert.deepEqual(compareAccessibilityProfiles(profiles, 'inert', 'inert'), {
+    status: 'not-applicable',
+    missing: [],
+    additions: [],
+  });
+  assert.throws(
+    () => compareAccessibilityProfiles(profiles, 'source', 'absent'),
+    /unknown target accessibility profile absent/,
+  );
+});
+
+test('spinner accessibility review records non-live indeterminate progress semantics', () => {
+  const profiles = accessibilityProfileCatalog();
+
+  assert.equal(
+    profiles['busy-status'],
+    undefined,
+    'the superseded live-status spinner profile is not retained as dead review metadata',
+  );
+
+  assert.deepEqual(profiles['indeterminate-progress'], {
+    description: 'An indeterminate operation is exposed as progress without creating a live status announcement.',
+    semantics: ['progressbar'],
+    naming: [],
+    keyboard: [],
+    focus: [],
+    states: ['busy'],
+    announcements: [],
+    motion: [],
+  });
+  assert.deepEqual(profiles['localized-indeterminate-progress'], {
+    description: 'A non-live indeterminate progressbar has a localized or authored name and suppresses ambient motion.',
+    semantics: ['progressbar'],
+    naming: ['content-or-author-label', 'control-labels-localized'],
+    keyboard: [],
+    focus: [],
+    states: ['busy'],
+    announcements: [],
+    motion: ['respects-reduced-motion', 'suppresses-animation'],
+  });
+
+  for (const upstreamTag of ['sl-spinner', 'wa-spinner']) {
+    const metadata = reviewedAccessibilityMetadata(upstreamTag, 'lr-spinner');
+    assert.equal(metadata.upstreamProfile, 'indeterminate-progress');
+    assert.equal(metadata.targetProfile, 'localized-indeterminate-progress');
+    assert.deepEqual(metadata.comparison, {
+      status: 'target-additive',
+      missing: [],
+      additions: [
+        'motion:respects-reduced-motion',
+        'motion:suppresses-animation',
+        'naming:content-or-author-label',
+        'naming:control-labels-localized',
+      ],
+    });
+  }
+
+  const metadata = reviewedAccessibilityMetadata('wa-spinner', 'lr-spinner');
+  profiles['localized-indeterminate-progress'].semantics = ['status'];
+  const findings = validateAccessibilityContract(profiles, [{
+    upstreamTag: 'wa-spinner',
+    classification: 'exact',
+    parity: { accessibility: metadata },
+  }]);
+  assert.ok(findings.some((finding) => finding.includes('stored accessibility comparison is stale')));
+  assert.ok(findings.some((finding) => finding.includes('automatic mapping has missing accessibility behavior')));
+});
+
+test('accessibility profile assignments fail closed on unreferenced review profiles', () => {
+  const profiles = {
+    source: { description: 'Source profile.' },
+    target: { description: 'Target profile.' },
+  };
+  const assignments = new Map([
+    ['wa-example', { upstreamProfile: 'source', targetProfile: 'target' }],
+  ]);
+
+  assert.doesNotThrow(() => assertAccessibilityProfilesReferenced(profiles, assignments));
+  assert.throws(
+    () => assertAccessibilityProfilesReferenced(
+      { ...profiles, stale: { description: 'No assignment reaches this profile.' } },
+      assignments,
+    ),
+    /unreferenced accessibility profile stale/u,
+  );
+});
+
+test('callout accessibility review records optional grouping and post-mount announcements as additions', () => {
+  const profiles = accessibilityProfileCatalog();
+
+  assert.deepEqual(profiles.callout, {
+    description: 'A callout preserves the semantics and reading order of its authored content.',
+    semantics: ['transparent-content'],
+    naming: [],
+    keyboard: [],
+    focus: [],
+    states: [],
+    announcements: [],
+    motion: [],
+  });
+  assert.deepEqual(profiles['reactive-callout'], {
+    description: 'Callout content remains readable, gains an optional authored group name, and announces only post-mount content changes.',
+    semantics: ['group', 'transparent-content'],
+    naming: ['content-or-author-label'],
+    keyboard: [],
+    focus: [],
+    states: [],
+    announcements: ['content-change', 'live-alert', 'live-status'],
+    motion: [],
+  });
+
+  const metadata = reviewedAccessibilityMetadata('wa-callout', 'lr-callout');
+  assert.equal(metadata.upstreamProfile, 'callout');
+  assert.equal(metadata.targetProfile, 'reactive-callout');
+  assert.deepEqual(metadata.comparison, {
+    status: 'target-additive',
+    missing: [],
+    additions: [
+      'announcements:content-change',
+      'announcements:live-alert',
+      'announcements:live-status',
+      'naming:content-or-author-label',
+      'semantics:group',
+    ],
+  });
+
+  profiles['reactive-callout'].announcements = [];
+  const findings = validateAccessibilityContract(profiles, [{
+    upstreamTag: 'wa-callout',
+    classification: 'exact',
+    parity: { accessibility: metadata },
+  }]);
+  assert.ok(findings.some((finding) => finding.includes('stored accessibility comparison is stale')));
+});
+
+test('checked-in accessibility profiles cover all 145 upstream mappings', () => {
+  const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
+  assert.equal(inventory.mappings.length, 145);
+  assert.deepEqual(inventory.accessibilityProfiles, accessibilityProfileCatalog());
+  assert.deepEqual(
+    validateAccessibilityContract(inventory.accessibilityProfiles, inventory.mappings),
+    [],
+  );
+  assert.equal(
+    inventory.mappings.filter((mapping) => mapping.parity.accessibility.reviewStatus === 'complete').length,
+    145,
+  );
+});
+
+test('compact Lyra manifests expand inherited public surfaces before inventory normalization', () => {
+  const compact = {
+    modules: [
+      {
+        path: 'src/base.ts',
+        declarations: [{
+          kind: 'class',
+          name: 'Base',
+          members: [{ kind: 'field', name: 'locale', type: { text: 'string' } }],
+          attributes: [{ name: 'locale', type: { text: 'string' } }],
+        }],
+      },
+      {
+        path: 'src/child.ts',
+        declarations: [{
+          kind: 'class',
+          name: 'Child',
+          tagName: 'lr-child',
+          customElement: true,
+          superclass: { name: 'Base', module: '/src/base.js' },
+          members: [{ kind: 'field', name: 'value', type: { text: 'string' } }],
+          attributes: [{ name: 'value', type: { text: 'string' } }],
+        }],
+      },
+    ],
+  };
+  const expanded = expandLyraInventoryManifest(compact);
+  const child = expanded.modules[1].declarations[0];
+  assert.deepEqual(child.members.map(({ name }) => name), ['locale', 'value']);
+  assert.deepEqual(child.attributes.map(({ name }) => name), ['locale', 'value']);
+});
+
+test('form association comes only from static/mixin truth and follows superclass inheritance', () => {
+  const manifest = {
+    modules: [
+      {
+        path: 'src/synthetic.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'StaticFace',
+            tagName: 'lr-static-face',
+            customElement: true,
+            members: [{ kind: 'field', name: 'formAssociated', static: true, default: 'true' }],
+          },
+          {
+            kind: 'class',
+            name: 'InheritedFace',
+            tagName: 'lr-inherited-face',
+            customElement: true,
+            superclass: { name: 'StaticFace', module: '/src/synthetic.js' },
+          },
+          {
+            kind: 'class',
+            name: 'MixinFace',
+            tagName: 'lr-mixin-face',
+            customElement: true,
+            mixins: [{ name: 'FormAssociated', module: '/src/internal/form-associated.js' }],
+          },
+          {
+            kind: 'class',
+            name: 'DisabledMixinFace',
+            tagName: 'lr-disabled-mixin-face',
+            customElement: true,
+            mixins: [{ name: 'FormAssociated', module: '/src/internal/form-associated.js' }],
+            members: [
+              {
+                kind: 'field',
+                name: 'formAssociated',
+                static: true,
+                default: 'false',
+              },
+            ],
+          },
+          {
+            kind: 'class',
+            name: 'MemberNamesOnly',
+            tagName: 'lr-member-names-only',
+            customElement: true,
+            members: [
+              { kind: 'field', name: 'form', type: { text: 'HTMLFormElement | null' } },
+              { kind: 'field', name: 'value', type: { text: 'string' } },
+              { kind: 'method', name: 'setCustomValidity' },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const byTag = new Map(
+    normalizeManifest(manifest, { ecosystem: 'lyra' }).map((component) => [component.tag, component]),
+  );
+  assert.equal(byTag.get('lr-static-face').surface.form.associated, true);
+  assert.equal(byTag.get('lr-inherited-face').surface.form.associated, true);
+  assert.equal(byTag.get('lr-mixin-face').surface.form.associated, true);
+  assert.equal(
+    byTag.get('lr-disabled-mixin-face').surface.form.associated,
+    false,
+    'an own static false overrides inherited or mixin form association',
+  );
+  assert.equal(
+    byTag.get('lr-member-names-only').surface.form.associated,
+    false,
+    'native-looking public member names do not make a custom element form-associated',
+  );
+});
+
+test('the live manifest resolves to the exact 34 runtime FACE tags', () => {
+  const associated = normalizeManifest(readJson('custom-elements.json'), { ecosystem: 'lyra' })
+    .filter((component) => component.surface.form.associated)
+    .map((component) => component.tag);
+  assert.deepEqual(associated, [
+    'lr-button',
+    'lr-chat-composer',
+    'lr-checkbox',
+    'lr-checkbox-group',
+    'lr-code-editor',
+    'lr-color-picker',
+    'lr-combobox',
+    'lr-date-input',
+    'lr-emoji-picker',
+    'lr-file-input',
+    'lr-graph-query-builder',
+    'lr-icon-button',
+    'lr-input',
+    'lr-known-date',
+    'lr-locale-picker',
+    'lr-model-select',
+    'lr-native-time-input',
+    'lr-number-input',
+    'lr-otp-input',
+    'lr-phone-input',
+    'lr-radio',
+    'lr-radio-button',
+    'lr-radio-group',
+    'lr-rating',
+    'lr-rubric-form',
+    'lr-select',
+    'lr-slider',
+    'lr-switch',
+    'lr-textarea',
+    'lr-time-input',
+    'lr-time-range',
+    'lr-token-input',
+    'lr-tool-param-form',
+    'lr-voice-picker',
+  ]);
+});
 
 test('the CEM FormAssociated projection is truthful, scoped, and idempotent', () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-form-associated-mixin-members');
@@ -122,7 +502,7 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
   }
 });
 
-test('the CEM default-value projection keeps the attribute public without publishing its reactive adapter', () => {
+test('the CEM default-value projection keeps the attribute public without publishing its reactive adapter', async () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-default-value-attribute-alias');
   assert.ok(plugin?.packageLinkPhase, 'the default-value alias projection plugin is installed');
 
@@ -210,23 +590,19 @@ test('the CEM default-value projection keeps the attribute public without publis
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
   assert.deepEqual(synthetic, once, 'running the alias projection twice is a no-op');
 
-  const liveManifest = readJson('custom-elements.json');
-  cemConfig.plugins
-    .find(({ name }) => name === 'lr-form-associated-mixin-members')
-    .packageLinkPhase({ customElementsManifest: liveManifest });
-  plugin.packageLinkPhase({ customElementsManifest: liveManifest });
+  const liveManifest = expandManifestInheritance((await generateManifest({ write: false })).manifest);
   for (const tagName of ['lr-input', 'lr-native-time-input', 'lr-number-input', 'lr-textarea']) {
     const declaration = liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
       .find((candidate) => candidate.tagName === tagName);
     const member = declaration.members.find((candidate) => candidate.name === 'defaultValueAlias');
     const attribute = declaration.attributes.find((candidate) => candidate.name === 'default-value');
-    assert.equal(member?.privacy, 'private', `${tagName} live adapter`);
+    assert.equal(member, undefined, `${tagName} compact public manifest omits the private adapter`);
     assert.equal(attribute?.fieldName, 'defaultValue', `${tagName} live attribute`);
   }
 });
 
-test('the CEM chart projection reports each runtime-locked subclass type default', () => {
+test('the CEM chart projection reports each runtime-locked subclass type default', async () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-locked-chart-type-defaults');
   assert.ok(plugin?.packageLinkPhase, 'the locked chart type projection plugin is installed');
 
@@ -277,8 +653,7 @@ test('the CEM chart projection reports each runtime-locked subclass type default
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
   assert.deepEqual(synthetic, once, 'running the projection twice is a no-op');
 
-  const liveManifest = readJson('custom-elements.json');
-  plugin.packageLinkPhase({ customElementsManifest: liveManifest });
+  const liveManifest = (await generateManifest({ write: false })).manifest;
   for (const [tagName, type] of lockedTypes) {
     const projected = liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
@@ -340,7 +715,7 @@ test('the CEM accessor projection publishes only reviewed runtime defaults and r
   assert.equal(member('lr-file-input', 'name').default, 'null');
   assert.equal(projectedAttribute('lr-popover', 'for').default, "''");
   assert.equal(projectedAttribute('lr-tooltip', 'for').default, "''");
-  assert.equal(member('lr-file-input', 'dragging').readonly, true);
+  assert.equal(member('lr-file-input', 'dragging').readonly, false);
   assert.equal(member('lr-file-input', 'dragging').reflects, true);
   assert.equal(member('lr-select', 'selectedOptions').readonly, false);
   assert.deepEqual(
@@ -366,6 +741,17 @@ test('the CEM accessor projection publishes only reviewed runtime defaults and r
     /lr-file-input: accessor projection requires public member files/,
     'a source rename cannot silently leave stale projected metadata behind',
   );
+});
+
+test('the live CEM records the pinned Shoelace caret reflection contract', () => {
+  const declaration = readJson('custom-elements.json').modules
+    .flatMap((module) => module.declarations ?? [])
+    .find(({ tagName }) => tagName === 'lr-button');
+  const caret = declaration.members.find(({ name }) => name === 'caret');
+  const attribute = declaration.attributes.find(({ name }) => name === 'caret');
+
+  assert.equal(caret.reflects, true);
+  assert.equal(attribute.fieldName, 'caret');
 });
 
 test('the CEM inherited-member projection repairs only reviewed runtime inheritance gaps', () => {
@@ -427,7 +813,7 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
   );
 });
 
-test('the CEM event projection preserves reviewed runtime constructors', () => {
+test('the CEM event projection preserves every concrete source EventMap schema', async () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-event-runtime-contracts');
   assert.ok(plugin?.packageLinkPhase, 'the event runtime projection plugin is installed');
 
@@ -475,6 +861,87 @@ test('the CEM event projection preserves reviewed runtime constructors', () => {
     /lr-input: event projection requires public event input/,
     'a source event rename cannot silently leave stale projected metadata behind',
   );
+
+  const missingDeclaration = structuredClone(synthetic);
+  missingDeclaration.modules[0].declarations = missingDeclaration.modules[0].declarations.filter(
+    ({ tagName }) => tagName !== 'lr-input',
+  );
+  assert.throws(
+    () => plugin.packageLinkPhase({ customElementsManifest: missingDeclaration }),
+    /lr-input: event projection requires component declaration/,
+    'a component rename or removal cannot silently leave stale projected metadata behind',
+  );
+
+  const liveManifest = expandManifestInheritance((await generateManifest({ write: false })).manifest);
+  const sourceContracts = sourceEventTypeContracts(liveManifest, packageDir);
+  const declarations = new Map(
+    liveManifest.modules.flatMap((module) => module.declarations ?? [])
+      .filter(({ tagName }) => tagName)
+      .map((declaration) => [declaration.tagName, declaration]),
+  );
+  for (const [tagName, contract] of sourceContracts) {
+    const declaration = declarations.get(tagName);
+    for (const [name, type] of Object.entries(contract)) {
+      assert.equal(
+        declaration?.events?.find((event) => event.name === name)?.type?.text,
+        type,
+        `${tagName}#${name} live EventMap projection`,
+      );
+    }
+  }
+
+  const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
+  const upstreamComponents = new Map(
+    Object.values(inventory.upstreams)
+      .flatMap(({ components }) => components)
+      .map((component) => [component.tag, component]),
+  );
+  const liveTargets = new Map(
+    normalizeManifest(liveManifest, { ecosystem: 'lyra' })
+      .map((component) => [component.tag, component]),
+  );
+  const eventDrift = [];
+  const reviewedEventDrift = [];
+  for (const mapping of inventory.mappings) {
+    const upstream = upstreamComponents.get(mapping.upstreamTag);
+    const target = liveTargets.get(mapping.targetTag);
+    assert.ok(upstream, `${mapping.upstreamTag} must have a pinned public surface`);
+    assert.ok(target, `${mapping.upstreamTag} must resolve ${mapping.targetTag} in the live manifest`);
+    const findings = compareMappedSurfaces(upstream.surface, target.surface, {
+      upstreamPrefix: mapping.upstream === 'webawesome' ? 'wa-' : 'sl-',
+      rewrites: mapping.rewrites,
+      normalizations: reviewedMappingNormalizations(mapping.upstreamTag),
+    }).filter(({ section }) => section === 'events');
+    eventDrift.push(...findings.map((finding) => ({ upstreamTag: mapping.upstreamTag, ...finding })));
+    reviewedEventDrift.push(
+      ...(reviewedMigrationDecision(mapping.upstreamTag)?.expectedDrift ?? [])
+        .filter(({ section }) => section === 'events')
+        .map((finding) => ({ upstreamTag: mapping.upstreamTag, ...finding })),
+    );
+  }
+  assert.deepEqual(
+    eventDrift,
+    reviewedEventDrift,
+    'every live event schema must match its reviewed upstream mapping or exact warning-required drift',
+  );
+});
+
+test('source EventMaps provide concrete event schemas for CEM and inventory projection', () => {
+  const contracts = sourceEventTypeContracts(readJson('custom-elements.json'), packageDir);
+  assert.equal(
+    contracts.get('lr-accordion')?.['lr-collapse'],
+    'CustomEvent<LyraAccordionEventDetail>',
+  );
+  assert.equal(
+    contracts.get('lr-menu')?.['lr-menu-select'],
+    'CustomEvent<MenuSelectDetail>',
+  );
+  for (const [tagName, contract] of contracts) {
+    for (const [event, type] of Object.entries(contract)) {
+      assert.doesNotMatch(type, /\bany\b/u, `${tagName}#${event}`);
+      assert.doesNotMatch(type, /^(?:unknown|CustomEvent\s*<\s*unknown\s*>)$/u, `${tagName}#${event}`);
+    }
+  }
 });
 
 test('root registration derives from reviewed peer policy without reading generated artifacts', () => {
@@ -515,8 +982,8 @@ test('the manual wa-video review records the complete public contract independen
   assert.equal(reviewed.surface.cssProperties.length, 3);
   assert.equal(
     reviewed.surface.methods.find(({ name }) => name === 'getState')?.overloads[0]?.returnType,
-    'VideoState',
-    'the upstream-compatible public alias remains the documented getState signature',
+    'unspecified-public-documentation',
+    'the rendered public table does not invent an undocumented getState return type',
   );
   assert.deepEqual(
     reviewed.surface.properties.filter((property) => property.reflects).map((property) => property.name),
@@ -1199,6 +1666,50 @@ test('surface comparison catches normalized attribute and property contract drif
     [{ expected: 'boolean', actual: undefined }],
     'a target member with no published type reports drift instead of crashing comparison',
   );
+
+  const anyTarget = structuredClone(compatibleTarget);
+  anyTarget.attributes[0].type = 'any';
+  anyTarget.properties[1].type = 'any';
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, anyTarget, { upstreamPrefix: 'wa-' })
+      .filter(({ code, member }) => code === 'type-mismatch' && ['active', 'controller'].includes(member))
+      .map(({ section, member, expected, actual }) => ({ section, member, expected, actual })),
+    [
+      { section: 'attributes', member: 'active', expected: 'boolean', actual: 'any' },
+      { section: 'properties', member: 'controller', expected: 'LyraController', actual: 'any' },
+    ],
+    '`any` is missing public type information, not a parity-compatible widening',
+  );
+
+  const anyUpstream = structuredClone(upstream);
+  const sameAnyTarget = structuredClone(compatibleTarget);
+  anyUpstream.attributes[0].type = 'any';
+  sameAnyTarget.attributes[0].type = 'any';
+  assert.deepEqual(
+    compareMappedSurfaces(anyUpstream, sameAnyTarget, { upstreamPrefix: 'wa-' })
+      .filter(({ code, member }) => code === 'type-mismatch' && member === 'active')
+      .map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'any', actual: 'any' }],
+    'matching `any` labels still describe no compatible public contract',
+  );
+
+  const reviewedAny = emptyNormalizations();
+  reviewedAny.typeEquivalences.push({
+    memberKind: 'property',
+    member: 'controller',
+    upstream: 'WaController',
+    target: 'any',
+  });
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, anyTarget, {
+      upstreamPrefix: 'wa-',
+      normalizations: reviewedAny,
+    })
+      .filter(({ code, member }) => code === 'type-mismatch' && member === 'controller')
+      .map(({ expected, actual }) => ({ expected, actual })),
+    [{ expected: 'LyraController', actual: 'any' }],
+    'an explicit reviewed equivalence cannot turn `any` into a public contract',
+  );
 });
 
 test('surface comparison applies every reviewed member rewrite before reporting drift', () => {
@@ -1384,6 +1895,289 @@ test('surface comparison validates complete rendered method overloads, including
   );
 });
 
+test('mapped event detail schemas are compared and unknown or any cannot satisfy parity', () => {
+  const base = {
+    attributes: [],
+    properties: [],
+    slots: [],
+    parts: [],
+    cssProperties: [],
+    cssStates: [],
+    methods: [],
+    native: { forwardedEvents: [], delegatedMethods: [] },
+    form: { associated: false, properties: [], methods: [] },
+  };
+  const upstream = {
+    ...base,
+    events: [{
+      name: 'wa-select',
+      type: '{ item: WaMenuItem; value: string | number }',
+      cancelable: 'never',
+    }],
+  };
+  const compatibleTarget = {
+    ...base,
+    events: [{
+      name: 'lr-select',
+      type: 'CustomEvent<{ item: LyraMenuItem, value: string | number }>',
+      cancelable: 'never',
+    }],
+  };
+
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, compatibleTarget, { upstreamPrefix: 'wa-' }),
+    [],
+    'an upstream detail-only schema matches the equivalent target CustomEvent detail schema',
+  );
+
+  for (const type of [
+    'CustomEvent<{ item: LyraMenuItem; value: string }>',
+    'CustomEvent<unknown>',
+    'CustomEvent<any>',
+    'unknown',
+  ]) {
+    const target = structuredClone(compatibleTarget);
+    target.events[0].type = type;
+    assert.deepEqual(
+      compareMappedSurfaces(upstream, target, { upstreamPrefix: 'wa-' })
+        .filter(({ code }) => code === 'event-type-mismatch')
+        .map(({ member, expected, actual }) => ({ member, expected, actual })),
+      [{
+        member: 'wa-select',
+        expected: '{ item: LyraMenuItem; value: string | number }',
+        actual: type,
+      }],
+      `${type} must not erase or narrow the published event detail schema`,
+    );
+  }
+
+  const unsafeUpstream = structuredClone(upstream);
+  unsafeUpstream.events[0].type = 'CustomEvent<any>';
+  const unsafeTarget = structuredClone(compatibleTarget);
+  unsafeTarget.events[0].type = 'CustomEvent<any>';
+  assert.equal(
+    compareMappedSurfaces(unsafeUpstream, unsafeTarget, { upstreamPrefix: 'wa-' })
+      .filter(({ code }) => code === 'event-type-mismatch').length,
+    1,
+    'matching any labels still do not constitute a reviewed event detail contract',
+  );
+
+  const reviewedAliasTarget = structuredClone(compatibleTarget);
+  reviewedAliasTarget.events[0].type = 'CustomEvent<MenuSelectionDetail>';
+  const reviewedAliasNormalizations = {
+    ...emptyNormalizations(),
+    typeEquivalences: [{
+      memberKind: 'event',
+      member: 'wa-select',
+      upstream: '{ item: WaMenuItem; value: string | number }',
+      target: 'CustomEvent<MenuSelectionDetail>',
+    }],
+  };
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, reviewedAliasTarget, {
+      upstreamPrefix: 'wa-',
+      normalizations: reviewedAliasNormalizations,
+    }),
+    [],
+    'an exact per-event review can relate an otherwise opaque concrete detail alias',
+  );
+  assert.deepEqual(
+    validateMappingNormalizations(
+      {
+        upstreamTag: 'wa-select',
+        rewrites: emptyRewrites(),
+        normalizations: reviewedAliasNormalizations,
+      },
+      { upstream, target: reviewedAliasTarget },
+    ),
+    [],
+    'event type reviews are validated against the mapped target event name and both exact types',
+  );
+
+  const unknownAliasTarget = structuredClone(compatibleTarget);
+  unknownAliasTarget.events[0].type = 'CustomEvent<unknown>';
+  const unknownAliasNormalizations = {
+    ...emptyNormalizations(),
+    typeEquivalences: [{
+      memberKind: 'event',
+      member: 'wa-select',
+      upstream: upstream.events[0].type,
+      target: unknownAliasTarget.events[0].type,
+    }],
+  };
+  assert.equal(
+    compareMappedSurfaces(upstream, unknownAliasTarget, {
+      upstreamPrefix: 'wa-',
+      normalizations: unknownAliasNormalizations,
+    }).filter(({ code }) => code === 'event-type-mismatch').length,
+    1,
+    'an exact review cannot turn an unknown top-level event detail into a public schema',
+  );
+  assert.ok(
+    validateMappingNormalizations(
+      {
+        upstreamTag: 'wa-select',
+        rewrites: emptyRewrites(),
+        normalizations: unknownAliasNormalizations,
+      },
+      { upstream, target: unknownAliasTarget },
+    ).some((finding) => finding.includes('unsafe unknown event type normalization event:wa-select')),
+  );
+
+  reviewedAliasTarget.events[0].type = 'CustomEvent<OtherSelectionDetail>';
+  assert.ok(
+    validateMappingNormalizations(
+      {
+        upstreamTag: 'wa-select',
+        rewrites: emptyRewrites(),
+        normalizations: reviewedAliasNormalizations,
+      },
+      { upstream, target: reviewedAliasTarget },
+    ).some((finding) => finding.includes('stale target type normalization event:wa-select')),
+    'a changed target alias invalidates the event-specific review',
+  );
+});
+
+test('target event details reject top-level unknown and implicit-any without blocking upstream bare-event reviews', () => {
+  const base = {
+    attributes: [],
+    properties: [],
+    slots: [],
+    parts: [],
+    cssProperties: [],
+    cssStates: [],
+    methods: [],
+    native: { forwardedEvents: [], delegatedMethods: [] },
+    form: { associated: false, properties: [], methods: [] },
+  };
+  const upstream = {
+    ...base,
+    events: [{
+      name: 'wa-select',
+      type: '{ item: WaMenuItem; value: string }',
+      cancelable: 'never',
+    }],
+  };
+  const target = {
+    ...base,
+    events: [{
+      name: 'lr-select',
+      type: 'CustomEvent<{ item: LyraMenuItem; value: string }>',
+      cancelable: 'never',
+    }],
+  };
+
+  for (const [unsafeTargetType, expectedFinding] of [
+    [
+      'CustomEvent<unknown | { item: LyraMenuItem; value: string }>',
+      'unsafe unknown event type normalization event:wa-select',
+    ],
+    ['CustomEvent', 'unsafe any type normalization event:wa-select'],
+  ]) {
+    const unsafeTarget = structuredClone(target);
+    unsafeTarget.events[0].type = unsafeTargetType;
+    const normalizations = {
+      ...emptyNormalizations(),
+      typeEquivalences: [{
+        memberKind: 'event',
+        member: 'wa-select',
+        upstream: upstream.events[0].type,
+        target: unsafeTargetType,
+      }],
+    };
+    assert.equal(
+      compareMappedSurfaces(upstream, unsafeTarget, {
+        upstreamPrefix: 'wa-',
+        normalizations,
+      }).filter(({ code }) => code === 'event-type-mismatch').length,
+      1,
+      `${unsafeTargetType} cannot become a target event schema through a reviewed equivalence`,
+    );
+    assert.ok(
+      validateMappingNormalizations(
+        {
+          upstreamTag: 'wa-select',
+          rewrites: emptyRewrites(),
+          normalizations,
+        },
+        { upstream, target: unsafeTarget },
+      ).some((finding) => finding.includes(expectedFinding)),
+      `${unsafeTargetType} is diagnosed as an unsafe target event type`,
+    );
+  }
+
+  const nestedUnknownUpstream = structuredClone(upstream);
+  nestedUnknownUpstream.events[0].type = '{ error: unknown }';
+  const nestedUnknownTarget = structuredClone(target);
+  nestedUnknownTarget.events[0].type = 'CustomEvent<{ error: unknown }>';
+  assert.deepEqual(
+    compareMappedSurfaces(nestedUnknownUpstream, nestedUnknownTarget, { upstreamPrefix: 'wa-' }),
+    [],
+    'unknown nested in a named detail field remains a concrete event schema',
+  );
+
+  const bareUpstream = structuredClone(upstream);
+  bareUpstream.events[0].type = 'CustomEvent';
+  const bareTarget = structuredClone(target);
+  bareTarget.events[0].type = 'CustomEvent';
+  assert.equal(
+    compareMappedSurfaces(bareUpstream, bareTarget, { upstreamPrefix: 'wa-' })
+      .filter(({ code }) => code === 'event-type-mismatch').length,
+    1,
+    'a bare target CustomEvent is implicit any even when the upstream manifest is equally broad',
+  );
+
+  const reviewedBareUpstream = {
+    ...emptyNormalizations(),
+    typeEquivalences: [{
+      memberKind: 'event',
+      member: 'wa-select',
+      upstream: 'CustomEvent',
+      target: target.events[0].type,
+    }],
+  };
+  assert.deepEqual(
+    compareMappedSurfaces(bareUpstream, target, {
+      upstreamPrefix: 'wa-',
+      normalizations: reviewedBareUpstream,
+    }),
+    [],
+    'a pinned upstream bare CustomEvent remains reviewable against a concrete target detail',
+  );
+  assert.deepEqual(
+    validateMappingNormalizations(
+      {
+        upstreamTag: 'wa-select',
+        rewrites: emptyRewrites(),
+        normalizations: reviewedBareUpstream,
+      },
+      { upstream: bareUpstream, target },
+    ),
+    [],
+  );
+
+  const propertyNamedAnyUpstream = structuredClone(upstream);
+  propertyNamedAnyUpstream.events[0].type = 'CustomEvent<{ any: string }>';
+  const propertyNamedAnyTarget = structuredClone(target);
+  propertyNamedAnyTarget.events[0].type = 'CustomEvent<{ any: string }>';
+  assert.deepEqual(
+    compareMappedSurfaces(propertyNamedAnyUpstream, propertyNamedAnyTarget, {
+      upstreamPrefix: 'wa-',
+    }),
+    [],
+    'an ordinary property named any is not mistaken for the any type keyword',
+  );
+
+  const actualAnyTarget = structuredClone(target);
+  actualAnyTarget.events[0].type = 'CustomEvent<{ value: any }>';
+  assert.equal(
+    compareMappedSurfaces(upstream, actualAnyTarget, { upstreamPrefix: 'wa-' })
+      .filter(({ code }) => code === 'event-type-mismatch').length,
+    1,
+    'any in an event detail type position still fails closed',
+  );
+});
+
 test('reviewed unknown upstream method returns are comparison wildcards only for named methods', () => {
   const surface = {
     attributes: [],
@@ -1498,11 +2292,24 @@ test('native event review compares constructors and propagation flags, not names
           type: { text: 'Event' },
           description: 'A non-bubbling and non-composed native media event.',
         },
+        {
+          name: 'change',
+          type: { text: 'Event & { readonly detail: { value: string } }' },
+          description: 'A bubbling, composed native change event with compatibility detail.',
+        },
       ],
     },
     { ecosystem: 'lyra' },
   );
   assert.deepEqual(normalized.events, [
+    {
+      name: 'change',
+      type: 'Event & { readonly detail: { value: string } }',
+      cancelable: 'never',
+      constructor: 'Event',
+      bubbles: true,
+      composed: true,
+    },
     {
       name: 'input',
       type: 'InputEvent',
@@ -1560,7 +2367,12 @@ test('native event review compares constructors and propagation flags, not names
   };
   assert.deepEqual(
     compareMappedSurfaces(upstream, target, { upstreamPrefix: 'wa-' }).map(({ code }) => code),
-    ['event-bubbles-mismatch', 'event-composed-mismatch', 'event-constructor-mismatch'],
+    [
+      'event-bubbles-mismatch',
+      'event-composed-mismatch',
+      'event-constructor-mismatch',
+      'event-type-mismatch',
+    ],
   );
 
   const published = normalizeDeclaration(
@@ -1767,6 +2579,26 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
   );
   assert.ok(
     hasTypeRule(
+      'wa-chart',
+      'property',
+      'config',
+      "ChartJS['config']",
+      'LyraChartConfiguration | undefined',
+    ),
+    'the owned chart configuration capability is pinned to its exact current manifest spelling',
+  );
+  assert.ok(
+    hasTypeRule(
+      'wa-markdown',
+      'property',
+      'marked',
+      'Marked',
+      'LyraMarkedParser | undefined',
+    ),
+    'the owned Markdown parser capability is pinned to its exact current manifest spelling',
+  );
+  assert.ok(
+    hasTypeRule(
       'wa-video-playlist',
       'attribute',
       'controls',
@@ -1774,6 +2606,17 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
       'LyraVideoControls',
     ),
     'manual upstream snapshots use the same exact type-normalization contract',
+  );
+  assert.equal(
+    hasTypeRule(
+      'wa-accordion',
+      'event',
+      'wa-expand',
+      '{ item: WaAccordionItem }',
+      'CustomEvent<LyraAccordionEventDetail>',
+    ),
+    false,
+    'an event-detail widening is a migration warning, not a type equivalence',
   );
   for (const [tag, members] of [
     ['wa-button', ['name']],
@@ -1804,8 +2647,8 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
   }
   for (const [tag, memberKind, member, upstream, target] of [
     ['sl-badge', 'attribute', 'variant', "'primary' | 'success' | 'neutral' | 'warning' | 'danger'", "BadgeVariant | 'primary'"],
-    ['sl-button', 'attribute', 'form-enctype', "'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'", 'ButtonFormEnctype'],
-    ['sl-button', 'attribute', 'form-method', "'post' | 'get'", 'ButtonFormMethod'],
+    ['sl-button', 'attribute', 'formenctype', "'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'", 'ButtonFormEnctype | undefined'],
+    ['sl-button', 'attribute', 'formmethod', "'post' | 'get'", 'ButtonFormMethod | undefined'],
     ['sl-button', 'attribute', 'variant', "'default' | 'primary' | 'success' | 'neutral' | 'warning' | 'danger' | 'text'", 'ButtonVariant'],
     ['sl-tag', 'attribute', 'variant', "'primary' | 'success' | 'neutral' | 'warning' | 'danger' | 'text'", "BadgeVariant | 'primary' | 'text'"],
     ['wa-badge', 'attribute', 'variant', "'brand' | 'neutral' | 'success' | 'warning' | 'danger'", "BadgeVariant | 'primary'"],
@@ -1822,10 +2665,100 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
     );
   }
   assert.equal(
+    reviewedMappingNormalizations('sl-button').typeEquivalences.some(
+      ({ member }) => member === 'form-enctype' || member === 'form-method',
+    ),
+    false,
+    'sl-button type equivalences use the published native attribute spellings, not stale aliases',
+  );
+  assert.equal(
     reviewedMappingNormalizations('wa-option').typeEquivalences.length,
     0,
     'an unrelated tag never inherits a global type alias exception',
   );
+});
+
+test('combobox lifecycle cancelability reviews match the live connected and disconnect paths', () => {
+  assert.deepEqual(
+    reviewedMappingNormalizations('wa-combobox').cancelabilityEquivalences,
+    [
+      { event: 'wa-hide', upstream: 'never', target: 'conditional' },
+      { event: 'wa-invalid', upstream: 'never', target: 'always' },
+      { event: 'wa-show', upstream: 'never', target: 'always' },
+    ],
+  );
+});
+
+test('accordion and carousel event-detail widenings require explicit migration review', () => {
+  const cases = [
+    {
+      upstreamTag: 'sl-carousel',
+      targetTag: 'lr-carousel',
+      event: 'sl-slide-change',
+      flags: ['event-detail-slide-type-widening'],
+      rationale: /arbitrary HTMLElement slides.*item-specific members/iu,
+      drift: [{
+        code: 'event-type-mismatch',
+        section: 'events',
+        member: 'sl-slide-change',
+        expected: '{ index: number, slide: LyraCarouselItem }',
+        actual: 'CustomEvent<{ index: number; slide: HTMLElement }>',
+      }],
+    },
+    {
+      upstreamTag: 'wa-carousel',
+      targetTag: 'lr-carousel',
+      event: 'wa-slide-change',
+      flags: ['event-detail-slide-type-widening'],
+      rationale: /arbitrary HTMLElement slides.*item-specific members/iu,
+      drift: [{
+        code: 'event-type-mismatch',
+        section: 'events',
+        member: 'wa-slide-change',
+        expected: '{ index: number, slide: LyraCarouselItem }',
+        actual: 'CustomEvent<{ index: number; slide: HTMLElement }>',
+      }],
+    },
+    {
+      upstreamTag: 'wa-accordion',
+      targetTag: 'lr-accordion',
+      event: 'wa-expand',
+      flags: ['event-detail-item-type-widening', 'legacy-details-panels'],
+      rationale: /legacy.*lr-details.*item-specific members/iu,
+      drift: ['wa-after-collapse', 'wa-after-expand', 'wa-collapse', 'wa-expand'].map((member) => ({
+        code: 'event-type-mismatch',
+        section: 'events',
+        member,
+        expected: '{ item: LyraAccordionItem }',
+        actual: 'CustomEvent<LyraAccordionEventDetail>',
+      })),
+    },
+  ];
+
+  for (const { upstreamTag, targetTag, event, flags, rationale, drift } of cases) {
+    assert.equal(
+      reviewedMappingNormalizations(upstreamTag).typeEquivalences.some(
+        (entry) => entry.memberKind === 'event' && entry.member === event,
+      ),
+      false,
+      `${upstreamTag} must not suppress the widened event detail as an equivalence`,
+    );
+    const decision = reviewedMigrationDecision(upstreamTag);
+    assert.equal(decision?.classification, 'warning-required');
+    assert.deepEqual(decision?.expectedDrift, drift);
+    assert.match(decision?.rationale ?? '', rationale);
+
+    const parity = migrationParityMetadata({
+      upstream: {
+        tag: upstreamTag,
+        review: { status: 'complete' },
+        surface: { slots: [{ name: '' }] },
+      },
+      target: { tag: targetTag, rootIncluded: true, optionalPeers: [] },
+      classification: 'warning-required',
+    });
+    assert.deepEqual(parity.behaviorReviewFlags, flags);
+  }
 });
 
 test('the checked-in sl-alert mapping carries the complete normalization schema', () => {
@@ -1977,6 +2910,27 @@ test('normalization validation rejects dangling, duplicate, stale, and explicit-
     validateMappingNormalizations(staleType, { upstream, target }).some((finding) =>
       finding.includes('stale target type normalization'),
     ),
+  );
+
+  const unsafeAnyType = structuredClone(mapping);
+  unsafeAnyType.normalizations.typeEquivalences[0].target = 'any';
+  const unsafeAnyTarget = structuredClone(target);
+  unsafeAnyTarget.attributes[0].type = 'any';
+  assert.ok(
+    validateMappingNormalizations(unsafeAnyType, { upstream, target: unsafeAnyTarget }).some((finding) =>
+      finding.includes('unsafe any type normalization attribute:size'),
+    ),
+    'a reviewed equivalence cannot name the TypeScript any keyword on either side',
+  );
+
+  const literalAnyType = structuredClone(mapping);
+  const literalAnyUpstream = structuredClone(upstream);
+  literalAnyUpstream.attributes[0].type = "'any' | 'small'";
+  literalAnyType.normalizations.typeEquivalences[0].upstream = literalAnyUpstream.attributes[0].type;
+  assert.ok(
+    validateMappingNormalizations(literalAnyType, { upstream: literalAnyUpstream, target })
+      .every((finding) => !finding.includes('unsafe any type normalization')),
+    'the string-literal member `any` is not the TypeScript any keyword',
   );
 
   const unreachableType = structuredClone(mapping);
@@ -2147,10 +3101,47 @@ test('surface comparison excludes only platform globals and the upstream hydrati
   assert.deepEqual(compareMappedSurfaces(upstream, target, { upstreamPrefix: 'wa-' }), []);
 });
 
+test('Random Content migration metadata names every behavior that requires manual review', () => {
+  const parity = migrationParityMetadata({
+    upstream: {
+      tag: 'wa-random-content',
+      review: { status: 'complete' },
+      surface: { slots: [{ name: '' }] },
+    },
+    target: {
+      tag: 'lr-random-content',
+      rootIncluded: true,
+      optionalPeers: [],
+    },
+    classification: 'warning-required',
+  });
+
+  assert.deepEqual(parity, {
+    staticApi: 'reviewed',
+    lightDom: 'warning-required',
+    runtime: {
+      registration: 'all',
+      optionalPeers: [],
+    },
+    accessibility: reviewedAccessibilityMetadata('wa-random-content', 'lr-random-content'),
+    behaviorReviewFlags: [
+      'light-dom-candidate-model',
+      'selection-semantics',
+      'reduced-motion-autoplay',
+      'visible-pause-control',
+    ],
+  });
+
+  const decision = reviewedMigrationDecision('wa-random-content');
+  assert.equal(decision.classification, 'warning-required');
+  assert.match(decision.rationale, /reduced-motion autoplay/i);
+  assert.match(decision.rationale, /visible pause\/resume control/i);
+});
+
 test('checked-in inventory covers every pinned tag and every Lyra declaration', () => {
   const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
   const upstreamTags = readJson('scripts', 'fixtures', 'upstream-tags.json');
-  const manifest = readJson('custom-elements.json');
+  const manifest = expandLyraInventoryManifest(readJson('custom-elements.json'));
   const findings = validateInventory(inventory, {
     upstreamTags,
     lyraManifest: manifest,
@@ -2164,11 +3155,25 @@ test('checked-in inventory covers every pinned tag and every Lyra declaration', 
   assert.equal(inventory.upstreams.webawesome.components.length, 87);
   assert.equal(inventory.upstreams.shoelace.components.length, 58);
   assert.equal(inventory.mappings.length, 145);
+  assert.deepEqual(inventory.accessibilityProfiles, accessibilityProfileCatalog());
 
   for (const mapping of inventory.mappings) {
     assert.match(mapping.classification, /^(exact|rewritten|warning-required|conceptual-only|unsupported)$/);
     if (mapping.classification === 'exact') assert.equal(mapping.rationale, null);
     else assert.ok(mapping.rationale?.trim(), `${mapping.upstreamTag} must explain its non-exact classification`);
+    assert.equal(mapping.parity.accessibility.reviewStatus, 'complete');
+    assert.match(mapping.parity.accessibility.rationale, /\S/);
+    assert.ok(inventory.accessibilityProfiles[mapping.parity.accessibility.upstreamProfile]);
+    assert.ok(inventory.accessibilityProfiles[mapping.parity.accessibility.targetProfile]);
+    assert.deepEqual(
+      mapping.parity.accessibility.comparison,
+      compareAccessibilityProfiles(
+        inventory.accessibilityProfiles,
+        mapping.parity.accessibility.upstreamProfile,
+        mapping.parity.accessibility.targetProfile,
+      ),
+      `${mapping.upstreamTag} must store a current accessibility comparison`,
+    );
   }
   for (const tag of ['sl-breadcrumb-item', 'wa-breadcrumb-item', 'sl-button', 'wa-button', 'sl-include', 'wa-include']) {
     assert.equal(
@@ -2177,6 +3182,29 @@ test('checked-in inventory covers every pinned tag and every Lyra declaration', 
       `${tag} must keep its explicit security warning`,
     );
   }
+});
+
+test('inventory accessibility validation fails closed on missing reviews, unknown behavior, and stale comparison', () => {
+  const inventory = structuredClone(readJson('scripts', 'fixtures', 'component-inventory.json'));
+  const upstreamTags = readJson('scripts', 'fixtures', 'upstream-tags.json');
+  const manifest = expandLyraInventoryManifest(readJson('custom-elements.json'));
+  const [missingReview, unknownBehavior, staleComparison, automaticGap] = inventory.mappings;
+
+  delete missingReview.parity.accessibility;
+  inventory.accessibilityProfiles[unknownBehavior.parity.accessibility.targetProfile].keyboard.push('invented-key-contract');
+  staleComparison.parity.accessibility.comparison.status = 'target-additive';
+  automaticGap.parity.accessibility.targetProfile = 'no-tag-owned-behavior';
+  automaticGap.parity.accessibility.comparison = compareAccessibilityProfiles(
+    inventory.accessibilityProfiles,
+    automaticGap.parity.accessibility.upstreamProfile,
+    automaticGap.parity.accessibility.targetProfile,
+  );
+
+  const findings = validateInventory(inventory, { upstreamTags, lyraManifest: manifest });
+  assert.ok(findings.some((finding) => finding.includes('missing accessibility parity review')));
+  assert.ok(findings.some((finding) => finding.includes('unknown keyboard behavior invented-key-contract')));
+  assert.ok(findings.some((finding) => finding.includes('stored accessibility comparison is stale')));
+  assert.ok(findings.some((finding) => finding.includes('automatic mapping has missing accessibility behavior')));
 });
 
 test('inventory validation fails closed on fictional, dangling, default, polarity, and review drift', () => {

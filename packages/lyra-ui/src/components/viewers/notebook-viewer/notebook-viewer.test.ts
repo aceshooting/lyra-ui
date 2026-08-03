@@ -578,8 +578,8 @@ describe('rendering non-text outputs', () => {
   // session: @web/test-runner-mocha copies `err.actual`/`err.expected` verbatim into the
   // `wtr-session-finished` message, and @web/dev-server-core's browser `sendMessage` serializes it
   // with `stable()`, whose first statement is `structuredClone(obj)` -- which throws DataCloneError
-  // on any DOM node. The message is never sent, so the run reports `0 passed, 0 failed` at the 180s
-  // `testsFinishTimeout`. Assert counts/strings (structured-cloneable values) instead.
+  // on any DOM node. The message is never sent, so the run reports `0 passed, 0 failed` only when
+  // the per-file `testsFinishTimeout` expires. Assert structured-cloneable counts/strings instead.
   it('shows a localized missing-sanitizer notice for HTML/SVG outputs when the optional dompurify peer is unavailable', async () => {
     __setNotebookSanitizerForTesting(null);
     const notebook = {
@@ -870,7 +870,11 @@ describe('node-path and fragment anchors', () => {
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     await el.updateComplete;
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [1] })).to.be.true;
+    const event = await eventPromise as CustomEvent<{ found: boolean }>;
+    expect(event.detail).to.deep.equal({ found: true });
+    expect(event.cancelable).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'fragment', id: 'raw1' })).to.be.true;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [99] })).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;

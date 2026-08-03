@@ -2,7 +2,7 @@
 
 # `lr-prompt-studio`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-prompt-studio.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPromptStudio`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

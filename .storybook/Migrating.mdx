@@ -27,18 +27,18 @@ rewrites, and remaining public-surface differences.
 
 ## Start with the report
 
-The repository ships a contract-aware codemod. It runs from a checkout of this repository; it is
-not part of the published npm package:
+The package ships the version-matched `lyra-ui-migrate` CLI. Replace `<version>` with the exact
+Lyra version you are migrating to:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run \
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check \
   --report=migration.json path/to/your/src
-node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate path/to/your/src
 ```
 
 The report is stable JSON suitable for review or CI. Each entry includes file, line, column,
-origin, tag/member, action, target, and warning code. Run the dry pass first, resolve every warning,
-apply, then run it again; the second applied pass is byte-idempotent.
+origin, tag/member, action, target, and warning code. Run the `--check` pass first, resolve every
+warning, apply, then run it again; the second applied pass is byte-idempotent.
 
 The default scan covers HTML, TypeScript/JavaScript and JSX variants, Vue, Svelte, Markdown, and
 MDX. Use `--ext=html,ts,tsx,…` to narrow it. Dependency/build/cache directories are skipped.
@@ -94,20 +94,20 @@ v8 moves deserve an explicit check:
 The corresponding granular registrations are:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
-import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
-import '@aceshooting/lyra-ui/components/layout/tab-group/tab-group.js';
-import '@aceshooting/lyra-ui/components/data/tree/tree-item.js';
-import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import '@aceshooting/lyra-ui/components/lr-split-panel.js';
+import '@aceshooting/lyra-ui/components/lr-alert.js';
+import '@aceshooting/lyra-ui/components/lr-tab-group.js';
+import '@aceshooting/lyra-ui/components/lr-tree-item.js';
+import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
 ```
 
-Page and media mappings register from their owning modules:
+Page and media mappings use the same stable tag-shaped registrations:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
-import '@aceshooting/lyra-ui/components/media/video/video.js';
-import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
+import '@aceshooting/lyra-ui/components/lr-video.js';
+import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
 ```
 
 ## Preserving Lyra 7 overlay defaults
@@ -115,7 +115,7 @@ import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
 This is a separate opt-in profile. The normal command never scans existing `lr-*` markup:
 
 ```bash
-node packages/lyra-ui/scripts/migrate-wa.mjs --origin=lyra-v7 --dry-run \
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check \
   --report=lyra-v7-migration.json path/to/your/src
 ```
 

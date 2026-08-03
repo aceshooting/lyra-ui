@@ -2,7 +2,7 @@
 
 # `lr-file-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/file-input/file-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-file-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -23,7 +23,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
-- `fileCount: number` and `dragging: boolean` (read-only)
+- `fileCount: number = 0` and `dragging: boolean = false` — writable public state. Assigning
+  `files` resynchronizes `fileCount` to the selected-file count; the next real drag event resumes
+  ownership of `dragging` and its accept/reject state.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`

@@ -253,6 +253,13 @@ it('does not set an empty aria-label on the inner element when the host has none
   expect(base.hasAttribute('aria-label')).to.be.false;
 });
 
+it('preserves an explicitly empty host aria-label on the internal checkbox role', async () => {
+  const el = (await fixture(html`<lr-checkbox aria-label="">Visible label</lr-checkbox>`)) as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-label')).to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('');
+});
+
 describe('aria-describedby forwarding', () => {
   it('resolves host description ids onto the inner role="checkbox" element', async () => {
     const el = (await fixture(html`
@@ -734,18 +741,135 @@ it('un-hides the label part when a slotted element mutates its own text content 
   // never for an already-slotted node mutating its own text in place -- so
   // this exercises the `labelObserver` MutationObserver fallback rather than
   // `onSlotChange`.
-  const el = (await fixture(html`<lr-checkbox><span id="lbl"></span></lr-checkbox>`)) as LyraCheckbox;
+  const el = (await fixture(html`<lr-checkbox></lr-checkbox>`)) as LyraCheckbox;
+  const assigned = el.ownerDocument.createTextNode(' ');
+  el.append(assigned);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   expect(label.hidden).to.be.true;
 
-  const span = el.querySelector('#lbl') as HTMLElement;
-  span.textContent = 'Accept terms';
+  assigned.data = 'Accept terms';
   // The MutationObserver callback runs in a separate microtask checkpoint;
   // give it (and the resulting re-render) a real turn of the event loop.
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
 
   expect(label.hidden).to.be.false;
+});
+
+it('tracks visual label presence through a forwarding slot without exposing its fallback', async () => {
+  const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const assigned = wrapper.ownerDocument.createTextNode(' ');
+  wrapper.append(assigned);
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <lr-checkbox aria-label="Explicit checkbox name">
+      <slot><span>Unrendered fallback</span></slot>
+    </lr-checkbox>
+  `;
+  const el = root.querySelector('lr-checkbox') as LyraCheckbox;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+  };
+
+  await settle();
+  expect(label.hidden, 'an empty assignment suppresses both itself and slot fallback').to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('Explicit checkbox name');
+
+  assigned.data = 'Forwarded checkbox label';
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  assigned.data = ' ';
+  await settle();
+  expect(label.hidden).to.be.true;
+
+  const visual = wrapper.ownerDocument.createElement('span');
+  visual.setAttribute('aria-label', 'Screen-reader override');
+  assigned.replaceWith(visual);
+  await settle();
+  expect(label.hidden, 'an element-only visual such as an icon keeps the wrapper').to.be.false;
+
+  visual.textContent = 'Decorative visual glyph';
+  visual.setAttribute('aria-hidden', ' TRUE ');
+  await settle();
+  expect(label.hidden, 'aria-hidden content can still be intentionally visual').to.be.false;
+
+  visual.removeAttribute('aria-hidden');
+  visual.style.display = 'none';
+  await settle();
+  expect(label.hidden, 'real assigned elements retain visual slot presence').to.be.false;
+
+  visual.style.removeProperty('display');
+  visual.hidden = true;
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  visual.hidden = false;
+  await settle();
+  expect(label.hidden).to.be.false;
+  expect(base.getAttribute('aria-label'), 'consumer host naming remains authoritative').to.equal(
+    'Explicit checkbox name',
+  );
+});
+
+it('constructs its label observer in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  let adoptedTarget: LyraCheckbox | undefined;
+  let labelHostObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if (
+        target === adoptedTarget &&
+        options?.childList &&
+        options.characterData &&
+        options.subtree
+      ) labelHostObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = (await fixture(html`<lr-checkbox><span>Parent label</span></lr-checkbox>`)) as LyraCheckbox;
+  adoptedTarget = el;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(
+      constructions,
+      'the base observer and label observer both use the adopted realm',
+    ).to.be.greaterThan(1);
+    expect(labelHostObservations, 'the adopted-realm label observer binds the checkbox host').to.be.greaterThan(0);
+    expect(
+      (el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden,
+    ).to.be.false;
+  } finally {
+    el.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    } else {
+      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    }
+    frame.remove();
+  }
 });
 
 it('does not emit native or prefixed value events for a programmatic .checked assignment', async () => {

@@ -2,7 +2,7 @@
 
 # `lr-button`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/button/button.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -87,7 +87,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
   internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
   `loading`, so the spinner has the button to itself
-- `caret: boolean = false` — Shoelace alias for `withCaret`; either spelling renders the same part
+- `caret: boolean = false` (attribute `caret`, reflected) — Shoelace alias for `withCaret`; either spelling renders the same part
 - `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
   Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
   assignment is observable
@@ -120,7 +120,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
-Shoelace's hyphenated spellings — `form-action`, `form-enctype`, `form-method`,
+The compatibility spellings — `form-action`, `form-enctype`, `form-method`,
 `form-no-validate`, and `form-target` — delegate to the same five properties. When both spellings
 are used, the most recent attribute change wins.
 

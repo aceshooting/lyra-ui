@@ -2,7 +2,7 @@
 
 # `lr-suggestion-chips`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-suggestion-chips.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSuggestionChips`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

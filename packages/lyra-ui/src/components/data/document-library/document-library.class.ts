@@ -5,7 +5,16 @@ import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache
 import type { DocumentRef } from '../../../ai/types.js';
 import type { TableColumn } from '../table/table.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import { styles } from './document-library.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn, LYRA_DEFAULT_open, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How recently a document's content was verified/updated, consumer-computed (this component
  *  performs no staleness calculation of its own -- it only renders whichever bucket the host
@@ -88,6 +97,9 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * `cell()`s render formatted dates and templates — which made the Updated column come out
  * alphabetical by month name rather than chronological. `sortKey`/`sortDir` are still passed
  * down: they drive the header's sort affordance, not the order.
+ * Post-mount selection-count changes announce through the document's shared light-DOM polite
+ * sink, including zero and repeated equal counts; initial declarative selection stays silent. The
+ * visible selection bar remains ordinary, non-live content.
  *
  * @customElement lr-document-library
  * @event lr-filter-change - The search text or tag facet changed. `detail: { text, tags, matchCount }`.
@@ -101,8 +113,9 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * @csspart search - The `<lr-input>` search field.
  * @csspart tag-filter - The `<lr-combobox>` tag facet filter. Only rendered while at least one
  *   document declares a `tags` entry.
- * @csspart selection-bar - The "N selected" / "Clear selection" bar. Only rendered while
- *   `selectedIds` is non-empty.
+ * @csspart selection-bar - The ordinary, non-live "N selected" / "Clear selection" bar. Only
+ *   rendered while `selectedIds` is non-empty; selection announcements use the shared light-DOM
+ *   polite sink.
  * @csspart selection-count - The selected-count text inside `selection-bar`.
  * @csspart clear-selection - The "Clear selection" button inside `selection-bar`.
  * @csspart table - The `<lr-table>` inventory grid.
@@ -114,6 +127,37 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * @since 4.1.0
  */
 export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentLibraryClearSelection: LYRA_DEFAULT_documentLibraryClearSelection,
+    documentLibraryEmptyHeading: LYRA_DEFAULT_documentLibraryEmptyHeading,
+    documentLibraryFilterByTag: LYRA_DEFAULT_documentLibraryFilterByTag,
+    documentLibraryFreshnessAging: LYRA_DEFAULT_documentLibraryFreshnessAging,
+    documentLibraryFreshnessColumn: LYRA_DEFAULT_documentLibraryFreshnessColumn,
+    documentLibraryFreshnessFresh: LYRA_DEFAULT_documentLibraryFreshnessFresh,
+    documentLibraryFreshnessStale: LYRA_DEFAULT_documentLibraryFreshnessStale,
+    documentLibraryLabel: LYRA_DEFAULT_documentLibraryLabel,
+    documentLibraryNameColumn: LYRA_DEFAULT_documentLibraryNameColumn,
+    documentLibraryNoMatchesHeading: LYRA_DEFAULT_documentLibraryNoMatchesHeading,
+    documentLibraryOwnerColumn: LYRA_DEFAULT_documentLibraryOwnerColumn,
+    documentLibrarySearchPlaceholder: LYRA_DEFAULT_documentLibrarySearchPlaceholder,
+    documentLibrarySelectAll: LYRA_DEFAULT_documentLibrarySelectAll,
+    documentLibrarySelectColumn: LYRA_DEFAULT_documentLibrarySelectColumn,
+    documentLibrarySelectDocument: LYRA_DEFAULT_documentLibrarySelectDocument,
+    documentLibrarySelectedCount: LYRA_DEFAULT_documentLibrarySelectedCount,
+    documentLibraryTagsColumn: LYRA_DEFAULT_documentLibraryTagsColumn,
+    documentLibraryTypeColumn: LYRA_DEFAULT_documentLibraryTypeColumn,
+    documentLibraryUpdatedColumn: LYRA_DEFAULT_documentLibraryUpdatedColumn,
+    documentLibraryVersionColumn: LYRA_DEFAULT_documentLibraryVersionColumn,
+    open: LYRA_DEFAULT_open,
+    select: LYRA_DEFAULT_select,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The full, unfiltered/unsorted inventory. */
@@ -145,6 +189,36 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @property() label = '';
 
   @state() private searchText = '';
+  private announcementSink?: AnnouncementSink;
+  private isMounting = true;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.releaseAnnouncementSink();
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     if ((changed.has('documents') || changed.has('selectedIds')) && this.selectedIds.length > 0) {
@@ -167,6 +241,20 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
         this.tagFilter = normalized;
       }
     }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!this.isMounting && changed.has('selectedIds')) {
+      this.announcementSink?.announce(this.selectionCountText());
+    }
+    this.isMounting = false;
+  }
+
+  private selectionCountText(): string {
+    return this.localize('documentLibrarySelectedCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(this.selectedIds.length),
+    });
   }
 
   private normalizeDate(value: Date | string | undefined): Date | undefined {
@@ -433,12 +521,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
             : nothing}
         </div>
         ${this.selectedIds.length > 0
-          ? html`<div part="selection-bar" role="status">
-              <span part="selection-count"
-                >${this.localize('documentLibrarySelectedCount', undefined, {
-                  count: getNumberFormat(this.effectiveLocale).format(this.selectedIds.length),
-                })}</span
-              >
+          ? html`<div part="selection-bar">
+              <span part="selection-count">${this.selectionCountText()}</span>
               <button type="button" part="clear-selection" @click=${this.clearSelection}>
                 ${this.localize('documentLibraryClearSelection')}
               </button>

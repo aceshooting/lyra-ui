@@ -2,7 +2,7 @@
 
 # `lr-agent-workspace`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/agent-workspace/agent-workspace.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-agent-workspace.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAgentWorkspace`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/agent-workspace/agent-workspace.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.2.0` — see the maturity and deprecation policy in `llms/shared.md`

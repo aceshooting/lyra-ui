@@ -117,6 +117,41 @@ it('adopts a same-id replacement target and releases the removed canvas', async 
   expect(replacement.decorations).to.deep.equal({ fetch: { status: 'success' } });
 });
 
+it('constructs and disconnects its target observer in the adopted document realm', async () => {
+  const overlay = (await fixture(html`<lr-flow-run-overlay></lr-flow-run-overlay>`)) as LyraFlowRunOverlay;
+  overlay.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerWindow = iframe.contentWindow!;
+  const originalMutationObserver = ownerWindow.MutationObserver;
+  let constructions = 0;
+  let observations = 0;
+  let disconnects = 0;
+
+  class FrameMutationObserver {
+    constructor(_callback: MutationCallback) { constructions++; }
+    observe(): void { observations++; }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { disconnects++; }
+  }
+  ownerWindow.MutationObserver = FrameMutationObserver as unknown as typeof MutationObserver;
+  try {
+    iframe.contentDocument!.adoptNode(overlay);
+    iframe.contentDocument!.body.append(overlay);
+    expect(constructions).to.be.greaterThan(0);
+    expect(observations).to.be.greaterThan(0);
+    expect(
+      (overlay as unknown as { canvasWatcher?: MutationObserver }).canvasWatcher instanceof FrameMutationObserver,
+    ).to.be.true;
+
+    overlay.remove();
+    expect(disconnects).to.be.greaterThan(0);
+  } finally {
+    overlay.remove();
+    ownerWindow.MutationObserver = originalMutationObserver;
+    iframe.remove();
+  }
+});
+
 it('warns when a foreign decorations value is about to be overwritten', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>

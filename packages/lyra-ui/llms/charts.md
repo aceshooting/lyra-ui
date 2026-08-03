@@ -20,7 +20,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
-- `plugins: object[] = []` — per-instance Chart.js plugins, combined without duplicates with Lyra's
+- `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
+  combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
@@ -87,7 +88,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
   receives separately labelled primary- and secondary-axis total columns. The table totals do not
   depend on the optional visual-label peer being installed
-- `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
+- `config?: LyraChartConfiguration` (attribute: false) — peer-neutral configuration structurally
+  compatible with Chart.js's `ChartConfiguration`, deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
   Explicit `config.data.labels` and `config.data.datasets` arrays are authoritative independently:
@@ -196,8 +198,9 @@ optional overlay content positioned at the chart area's center, useful for dough
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
-`center` slot), `error` (`role="alert"` message rendered in place of `canvas` when the optional
-`chart.js` peer dependency fails to load)
+`center` slot), `error` (neutral visible message rendered in place of `canvas` when the optional
+`chart.js` peer dependency fails to load; the failure transition is announced through the shared
+document-level light-DOM assertive sink)
 
 **Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
 `height` property; sizes the `plot` region and the host's minimum block size, while a visible table
@@ -538,8 +541,9 @@ index, label, value }`).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
-rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load — see
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
+failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
@@ -614,8 +618,9 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
-rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load —
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
+failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
@@ -682,8 +687,9 @@ its computed color swatches.
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
-`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (`role="alert"` message shown
-instead of `canvas` when the optional box-plot peer fails to load)
+`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
+announced through the shared document-level light-DOM assertive sink)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -716,7 +722,9 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
   A visible or slotted table and the wrapping legend remain in normal document flow, grow the
   component, and cannot overlap following content; oversized tables scroll inside the host.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
-  fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
+  fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
+  The transition into that state is announced through the shared document-level light-DOM
+  assertive sink.
 
 ---
 ## Chart streaming and export

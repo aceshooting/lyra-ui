@@ -19,13 +19,12 @@
 
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import type { ShikiTransformer } from 'shiki';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighterCore, type ShikiLanguageInput } from './code-loader.js';
+import type { ShikiTransformer } from './shiki-types.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
@@ -147,7 +146,9 @@ export async function scrollCodeBlockToAnchor(
   const lineEl = host.renderRoot.querySelector(`[data-line="${anchor.start}"]`) as HTMLElement | null;
   if (!body || !lineEl) return false;
   const offset = lineEl.offsetTop - body.clientHeight / 2;
-  body.scrollTo({ top: Math.max(0, offset), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  const ownerWindow = body.ownerDocument.defaultView;
+  const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+  body.scrollTo({ top: Math.max(0, offset), behavior: reducedMotion ? 'auto' : 'smooth' });
   return true;
 }
 
@@ -155,8 +156,16 @@ export async function scrollCodeBlockToAnchor(
  *  button at all. */
 export function codeBlockEventLine(e: Event): number | null {
   const target = e.composedPath()[0];
-  if (!(target instanceof Element)) return null;
-  const lineElement = target.closest<HTMLElement>('[data-line][part~="line-button"]');
+  if (
+    typeof target !== 'object' ||
+    target === null ||
+    (target as Node).nodeType !== 1 ||
+    typeof (target as Element).localName !== 'string' ||
+    typeof (target as Element).closest !== 'function'
+  ) {
+    return null;
+  }
+  const lineElement = (target as Element).closest<HTMLElement>('[data-line][part~="line-button"]');
   const line = Number(lineElement?.dataset['line']);
   return Number.isInteger(line) && line >= 1 ? line : null;
 }
@@ -188,16 +197,36 @@ export interface CodeBlockSelection {
 /** Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to
  *  report: no selection, a collapsed/whitespace-only one, or endpoints outside any `[data-line]`. */
 export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlockSelection | null {
-  // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib
-  // types -- same shadow-scoped-selection precedent as <lr-terminal>'s own onViewportPointerUp.
-  const shadowSelection = (
-    shadowRoot as unknown as { getSelection?: () => Selection | null } | null
-  )?.getSelection?.();
-  const selection = shadowSelection ?? window.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
-  const text = selection.toString();
+  if (!shadowRoot) return null;
+  const ownerDocument = shadowRoot.ownerDocument;
+  const globalSelection = ownerDocument.defaultView?.getSelection() as
+    | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
+    | null
+    | undefined;
+  let range: Range | null = null;
+  // WebKit and Chromium retarget a native shadow-tree selection's legacy Range to the document
+  // boundary. The composed-range API preserves the real endpoints; Firefox's legacy Range remains
+  // the fallback, as does Chromium's non-standard ShadowRoot.getSelection().
+  if (globalSelection?.getComposedRanges) {
+    const [composed] = globalSelection.getComposedRanges({ shadowRoots: [shadowRoot] });
+    if (
+      composed &&
+      (composed.startContainer !== composed.endContainer || composed.startOffset !== composed.endOffset)
+    ) {
+      range = ownerDocument.createRange();
+      range.setStart(composed.startContainer, composed.startOffset);
+      range.setEnd(composed.endContainer, composed.endOffset);
+    }
+  }
+  // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib.
+  const shadowSelection = (shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection?.();
+  const selection = shadowSelection ?? globalSelection;
+  if (!range) {
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+    range = selection.getRangeAt(0);
+  }
+  const text = range.toString();
   if (!text.trim()) return null;
-  const range = selection.getRangeAt(0);
   const lineOf = (node: Node): number | null => {
     const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
     const lineEl = el?.closest('[data-line]');
@@ -218,9 +247,10 @@ export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlo
  *  browsers, and some engines throw synchronously rather than rejecting -- either way the caller
  *  still emits `lr-copy` regardless of whether the OS clipboard was actually reached, the same
  *  convention `<lr-json-viewer>`'s own copy button follows. */
-export function writeCodeBlockClipboard(text: string): void {
+export function writeCodeBlockClipboard(text: string, ownerWindow: Window | null): void {
+  if (!ownerWindow) return;
   try {
-    void navigator.clipboard?.writeText(text)?.catch(() => {});
+    void ownerWindow.navigator.clipboard?.writeText(text)?.catch(() => {});
   } catch {
     // see above
   }
@@ -339,28 +369,29 @@ export interface CodeBlockLineTransformerOptions {
 export function codeBlockLineTransformer(options: CodeBlockLineTransformerOptions): ShikiTransformer {
   return {
     name: 'lr-code-block-parts',
-    pre(node: OptionalPeerApi) {
+    pre(node) {
       node.properties.part = ['pre'];
       if (options.lineNumbers) {
-        const classes = Array.isArray(node.properties.class)
-          ? node.properties.class
-          : node.properties.class
-            ? [node.properties.class]
+        const classValue = node.properties['class'];
+        const classes = Array.isArray(classValue)
+          ? classValue.map(String)
+          : classValue
+            ? [String(classValue)]
             : [];
-        node.properties.class = [...classes, 'line-numbers'];
+        node.properties['class'] = [...classes, 'line-numbers'];
       }
-      delete node.properties.tabindex;
+      delete node.properties['tabindex'];
     },
-    code(node: OptionalPeerApi) {
+    code(node) {
       node.properties.part = ['code'];
     },
-    line(node: OptionalPeerApi, line: number) {
+    line(node, line: number) {
       node.properties['data-line'] = String(line);
       const parts: string[] = [];
       if (options.interactiveLines && options.lineNumbers) {
         parts.push('line-button');
         node.properties.role = 'button';
-        node.properties.tabindex = String(options.focusedLine === line ? 0 : -1);
+        node.properties['tabindex'] = String(options.focusedLine === line ? 0 : -1);
         node.properties['aria-description'] = options.lineDescription(line);
       }
       if (options.highlightedLines.has(line)) {
@@ -588,7 +619,7 @@ export function renderCodeBlockShell(options: CodeBlockShellOptions): TemplateRe
           @focusin=${options.onBodyFocusIn}
         >
           ${options.showSkeleton
-            ? html`<lr-skeleton variant="rect"></lr-skeleton>`
+            ? html`<lr-skeleton variant="rect" .announce=${false}></lr-skeleton>`
             : options.highlightedHtml !== null
               ? unsafeHTML(options.highlightedHtml)
               : html`<pre part="pre" class=${options.lineNumbers ? 'line-numbers' : nothing}>${options.renderPlainCode()}</pre>`}

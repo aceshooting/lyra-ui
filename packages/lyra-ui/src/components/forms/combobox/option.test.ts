@@ -1,5 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './option.js';
+import './combobox.js';
+import '../select/select.js';
 import type { LyraOption } from './option.js';
 import {
   RESET_OPTION_SELECTED_FROM_OWNER,
@@ -38,6 +40,17 @@ it('reflects the pinned Web Awesome value property', async () => {
   el.value = 'alpha';
   await el.updateComplete;
   expect(el.getAttribute('value')).to.equal('alpha');
+});
+
+it('reflects the pinned Web Awesome disabled property in both directions', async () => {
+  const el = (await fixture(html`<lr-option>Alpha</lr-option>`)) as LyraOption;
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.getAttribute('disabled')).to.equal('');
+
+  el.removeAttribute('disabled');
+  await el.updateComplete;
+  expect(el.disabled).to.equal(false);
 });
 
 it('keeps owner synchronization pristine and clears consumer selectedness dirtyness on reset', async () => {
@@ -97,6 +110,297 @@ it('derives defaultLabel and getTextLabel() from plain default-slot text only', 
 
   expect(el.defaultLabel).to.equal('Alpha Beta');
   expect(el.getTextLabel()).to.equal('Alpha Beta');
+});
+
+it('notifies and updates defaultLabel when a direct slotted descendant mutates in place', async () => {
+  const el = (await fixture(html`<lr-option><span data-label></span></lr-option>`)) as LyraOption;
+  const assigned = el.querySelector('[data-label]') as HTMLElement;
+  let changes = 0;
+  el.addEventListener('lr-option-change', () => changes++);
+  expect(el.defaultLabel).to.equal('');
+
+  assigned.textContent = 'Direct option label';
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.defaultLabel).to.equal('Direct option label');
+  expect(changes).to.be.greaterThan(0);
+});
+
+it('tracks flattened accessible defaultLabel content through a forwarding slot', async () => {
+  const details = (await fixture(html`
+    <details open>
+      <summary>Forwarded option fixture</summary>
+      <div><span data-label></span></div>
+    </details>
+  `)) as HTMLDetailsElement;
+  const wrapper = details.querySelector('div')!;
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <style>
+      :host(.hide-forwarded-label) slot::slotted([data-label]) { display: none; }
+      slot::slotted([data-label]) {
+        visibility: var(--forwarded-label-visibility, visible);
+      }
+    </style>
+    <lr-option>
+      <slot><span>Forwarding fallback</span></slot>
+    </lr-option>
+  `;
+  const el = root.querySelector('lr-option') as LyraOption;
+  const assigned = wrapper.querySelector('[data-label]') as HTMLElement;
+  const forwardingSlot = el.querySelector('slot')!;
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+  };
+
+  el.label = 'Explicit picker label';
+  await settle();
+  expect(el.defaultLabel, 'an empty assignment suppresses slot fallback').to.equal('');
+  expect(el.label).to.equal('Explicit picker label');
+
+  assigned.textContent = 'Forwarded option label';
+  await settle();
+  expect(el.defaultLabel).to.equal('Forwarded option label');
+
+  assigned.textContent = '';
+  await settle();
+  expect(el.defaultLabel).to.equal('');
+
+  assigned.setAttribute('aria-label', 'Forwarded accessible name');
+  await settle();
+  expect(el.defaultLabel).to.equal('Forwarded accessible name');
+
+  assigned.setAttribute('aria-hidden', ' TRUE ');
+  await settle();
+  expect(el.defaultLabel).to.equal('');
+
+  assigned.removeAttribute('aria-hidden');
+  assigned.style.display = 'none';
+  await settle();
+  expect(el.defaultLabel).to.equal('');
+
+  assigned.style.removeProperty('display');
+  assigned.hidden = true;
+  await settle();
+  expect(el.defaultLabel).to.equal('');
+
+  assigned.hidden = false;
+  await settle();
+  expect(el.defaultLabel).to.equal('Forwarded accessible name');
+  expect(el.label, 'the explicit public label remains authoritative').to.equal(
+    'Explicit picker label',
+  );
+
+  let cachedLabel = el.defaultLabel;
+  const cacheLabel = (): void => {
+    cachedLabel = el.defaultLabel;
+  };
+  el.addEventListener('lr-option-change', cacheLabel);
+
+  wrapper.setAttribute('aria-hidden', ' TRUE ');
+  await settle();
+  expect(cachedLabel, 'a hard-hidden forwarding host prunes its assigned label').to.equal('');
+
+  wrapper.removeAttribute('aria-hidden');
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded accessible name');
+
+  details.open = false;
+  await settle();
+  expect(cachedLabel, 'a closed details ancestor prunes non-summary forwarded content').to.equal('');
+
+  details.open = true;
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded accessible name');
+
+  wrapper.classList.add('hide-forwarded-label');
+  await settle();
+  expect(cachedLabel, 'a forwarding-host class mutation invalidates an owner cache').to.equal('');
+
+  wrapper.classList.remove('hide-forwarded-label');
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded accessible name');
+
+  wrapper.style.setProperty('--forwarded-label-visibility', 'hidden');
+  await settle();
+  expect(cachedLabel, 'a forwarding-host style mutation invalidates an owner cache').to.equal('');
+
+  wrapper.style.removeProperty('--forwarded-label-visibility');
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded accessible name');
+  el.removeEventListener('lr-option-change', cacheLabel);
+
+  forwardingSlot.setAttribute('aria-hidden', 'true');
+  await settle();
+  expect(el.defaultLabel, 'a hidden forwarding slot prunes its flattened assignment').to.equal('');
+
+  forwardingSlot.removeAttribute('aria-hidden');
+  forwardingSlot.style.display = 'none';
+  await settle();
+  expect(el.defaultLabel).to.equal('');
+
+  forwardingSlot.style.removeProperty('display');
+  await settle();
+  expect(el.defaultLabel).to.equal('Forwarded accessible name');
+
+  const reassigned = new Promise<void>((resolve) =>
+    forwardingSlot.addEventListener('slotchange', () => resolve(), { once: true }),
+  );
+  assigned.remove();
+  await reassigned;
+  await settle();
+  expect(el.defaultLabel).to.equal('Forwarding fallback');
+});
+
+it('tracks composed exposure for a forwarded root Text node', async () => {
+  const details = (await fixture(html`
+    <details open>
+      <summary>Forwarded text fixture</summary>
+      <div>Forwarded option text</div>
+    </details>
+  `)) as HTMLDetailsElement;
+  const wrapper = details.querySelector('div')!;
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = '<lr-option><slot></slot></lr-option>';
+  const el = root.querySelector('lr-option') as LyraOption;
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+  };
+  let cachedLabel = el.defaultLabel;
+  el.addEventListener('lr-option-change', () => {
+    cachedLabel = el.defaultLabel;
+  });
+
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded option text');
+
+  wrapper.hidden = true;
+  await settle();
+  expect(cachedLabel, 'a hard-hidden composed parent prunes a forwarded root Text node').to.equal(
+    '',
+  );
+
+  wrapper.hidden = false;
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded option text');
+
+  details.open = false;
+  await settle();
+  expect(cachedLabel, 'a closed details ancestor prunes a forwarded root Text node').to.equal('');
+
+  details.open = true;
+  await settle();
+  expect(cachedLabel).to.equal('Forwarded option text');
+});
+
+for (const pickerTag of ['lr-select', 'lr-combobox'] as const) {
+  it(`keeps a forwarded label readable through ${pickerTag}'s hidden data-source slot`, async () => {
+    const details = (await fixture(html`
+      <details open>
+        <summary>Forwarded picker fixture</summary>
+        <div><span data-label>Forwarded picker label</span></div>
+      </details>
+    `)) as HTMLDetailsElement;
+    const wrapper = details.querySelector('div')!;
+    const root = wrapper.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <${pickerTag}>
+        <lr-option value="forwarded"><slot></slot></lr-option>
+      </${pickerTag}>
+    `;
+    const picker = root.querySelector(pickerTag) as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    const el = root.querySelector('lr-option') as LyraOption;
+    const assigned = wrapper.querySelector('[data-label]')!;
+    const settle = async (): Promise<void> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await Promise.all([picker.updateComplete, el.updateComplete]);
+    };
+    let cachedLabel = el.defaultLabel;
+    el.addEventListener('lr-option-change', () => {
+      cachedLabel = el.defaultLabel;
+    });
+
+    await settle();
+    expect(el.assignedSlot?.hidden, 'the picker really owns an intentionally hidden source slot').to
+      .be.true;
+    expect(el.defaultLabel).to.equal('Forwarded picker label');
+    expect(cachedLabel).to.equal('Forwarded picker label');
+
+    assigned.textContent = 'Updated picker label';
+    await settle();
+    expect(cachedLabel).to.equal('Updated picker label');
+
+    wrapper.setAttribute('aria-hidden', 'true');
+    await settle();
+    expect(cachedLabel, 'consumer-owned source ancestry still prunes the forwarded label').to.equal(
+      '',
+    );
+
+    wrapper.removeAttribute('aria-hidden');
+    await settle();
+    expect(cachedLabel).to.equal('Updated picker label');
+
+    details.open = false;
+    await settle();
+    expect(cachedLabel, 'closed source-side details content remains pruned').to.equal('');
+
+    details.open = true;
+    await settle();
+    expect(cachedLabel).to.equal('Updated picker label');
+  });
+}
+
+it('constructs its label observer in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  let adoptedTarget: LyraOption | undefined;
+  let labelHostObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if (
+        target === adoptedTarget &&
+        options?.childList &&
+        options.characterData &&
+        options.subtree
+      ) labelHostObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = (await fixture(html`<lr-option><span>Parent label</span></lr-option>`)) as LyraOption;
+  adoptedTarget = el;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions).to.be.greaterThan(1);
+    expect(labelHostObservations).to.be.greaterThan(0);
+    expect(el.defaultLabel).to.equal('Parent label');
+  } finally {
+    el.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    } else {
+      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    }
+    frame.remove();
+  }
 });
 
 it('keeps the manual WA label distinct from the generated default label', async () => {

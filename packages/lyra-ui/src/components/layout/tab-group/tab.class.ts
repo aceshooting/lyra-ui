@@ -3,6 +3,11 @@ import { property } from 'lit/decorators.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './tab.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraTabEventMap {
   'lr-close': CustomEvent<undefined>;
@@ -36,6 +41,14 @@ export interface LyraTabEventMap {
  * @since 8.0.0
  */
 export class LyraTab extends LyraElement<LyraTabEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The `name` of the `<lr-tab-panel>` this tab reveals. */

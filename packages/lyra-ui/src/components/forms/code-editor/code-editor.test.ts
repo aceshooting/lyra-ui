@@ -210,7 +210,10 @@ it('re-arms Tab indentation after the Escape bypass is cancelled by typing or by
 });
 
 it('is accessible', async () => {
-  const el = await fixture(html`<lr-code-editor label="Source"></lr-code-editor>`);
+  const el = (await fixture(
+    html`<lr-code-editor label="Source" value="const answer = 42;"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  expect(el.shadowRoot!.querySelector('textarea')!.value).to.equal('const answer = 42;');
   await expect(el).to.be.accessible();
 });
 

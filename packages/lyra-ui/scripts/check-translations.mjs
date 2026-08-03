@@ -42,6 +42,7 @@ import { validateTranslationReviews } from './translation-review.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const localizationFile = join(packageRoot, 'src/internal/localization.ts');
+const localizationRuntimeFile = join(packageRoot, 'src/internal/localization-runtime.ts');
 const translationsRoot = join(packageRoot, 'src/translations');
 const packageJsonPath = join(packageRoot, 'package.json');
 const reviewFixturePath = join(packageRoot, 'scripts/fixtures/translation-reviews.json');
@@ -220,11 +221,11 @@ function checkRegionalReachability(tags, localizationProgram, localizationSource
 
   const candidates = functionSource(localizationProgram, localizationSource, 'localeCandidates');
   if (candidates === undefined) {
-    return ['src/internal/localization.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
+    return ['src/internal/localization-runtime.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
   }
   if (candidates.includes('regionalFallbacks')) return [];
   return [
-    'src/internal/localization.ts: localeCandidates() dropped the base-language widening step ' +
+    'src/internal/localization-runtime.ts: localeCandidates() dropped the base-language widening step ' +
       '(regionalFallbacks), so these base languages resolve to English despite a fully translated ' +
       `catalog being registered: ${unreachable.join('; ')}`,
   ];
@@ -236,6 +237,11 @@ async function main() {
 
   const localizationSource = await readFile(localizationFile, 'utf8');
   const localizationProgram = parseProgram('src/internal/localization.ts', localizationSource);
+  const localizationRuntimeSource = await readFile(localizationRuntimeFile, 'utf8');
+  const localizationRuntimeProgram = parseProgram(
+    'src/internal/localization-runtime.ts',
+    localizationRuntimeSource,
+  );
   const defaults = namedObjectLiteral(localizationProgram, 'DEFAULT_STRINGS');
   if (!defaults) throw new Error('src/internal/localization.ts does not declare DEFAULT_STRINGS as an object literal');
   const englishEntries = messageEntries(defaults, 'src/internal/localization.ts', errors);
@@ -414,7 +420,11 @@ async function main() {
     summaries.push(`${tag} (${translated.size} keys, plural categories: ${categories.join('/')})`);
   }
 
-  errors.push(...checkRegionalReachability(registeredTags, localizationProgram, localizationSource));
+  errors.push(...checkRegionalReachability(
+    registeredTags,
+    localizationRuntimeProgram,
+    localizationRuntimeSource,
+  ));
 
   try {
     const [reviewSource, schemaSource, upstreamSource] = await Promise.all([

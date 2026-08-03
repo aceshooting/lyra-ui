@@ -2,10 +2,16 @@ import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './toast.styles.js';
-import { LyraToastItem, type ToastVariant } from './toast-item.class.js';
+import type { LyraToastItem, ToastVariant } from './toast-item.class.js';
 import './toast-item.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ToastPlacement =
   | 'top-start'
@@ -61,6 +67,16 @@ function attachInternalsSafely(host: HTMLElement): ElementInternals | undefined 
  * @since 4.0.0
  */
 export class LyraToast extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */
@@ -71,14 +87,15 @@ export class LyraToast extends LyraElement {
 
   private syncVisibleState = (): void => {
     const hasToast =
-      this.isConnected && Array.from(this.children).some((child) => child instanceof LyraToastItem);
+      this.isConnected && Array.from(this.children).some((child) => child.localName === tag('toast-item'));
     setCustomState(this.toastInternals, 'visible', hasToast);
   };
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (typeof MutationObserver === 'function') {
-      this.childObserver ??= new MutationObserver(this.syncVisibleState);
+    const MutationObserverConstructor = this.ownerDocument.defaultView?.MutationObserver;
+    if (MutationObserverConstructor) {
+      this.childObserver = new MutationObserverConstructor(this.syncVisibleState);
       this.childObserver.observe(this, { childList: true });
     }
     this.syncVisibleState();
@@ -86,6 +103,7 @@ export class LyraToast extends LyraElement {
 
   override disconnectedCallback(): void {
     this.childObserver?.disconnect();
+    this.childObserver = undefined;
     setCustomState(this.toastInternals, 'visible', false);
     super.disconnectedCallback();
   }
@@ -93,7 +111,15 @@ export class LyraToast extends LyraElement {
   /** Create and append a toast item programmatically; resolves to the item. Long size aliases in
    * `options` normalize through the same setter as declarative toast items. */
   async create(message: string, options: ToastCreateOptions = {}): Promise<LyraToastItem> {
-    const item = document.createElement('lr-toast-item') as LyraToastItem;
+    const itemTag = tag('toast-item');
+    const ownerRegistry = this.ownerDocument.defaultView?.customElements;
+    if (!ownerRegistry?.get(itemTag)) {
+      throw new TypeError(`${itemTag} is not registered in the toast owner document.`);
+    }
+    const item = this.ownerDocument.createElement(itemTag) as LyraToastItem;
+    if (typeof item.hide !== 'function' || !('updateComplete' in item)) {
+      throw new TypeError(`${itemTag} does not expose the Lyra toast-item contract.`);
+    }
     // Only assign what the caller actually specified -- a freshly-created
     // <lr-toast-item> already carries its own property defaults, so
     // falling back to a literal here (e.g. `?? 5000`) would duplicate those

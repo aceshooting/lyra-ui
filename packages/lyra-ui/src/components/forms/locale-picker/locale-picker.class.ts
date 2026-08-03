@@ -11,8 +11,8 @@ import {
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
   setLyraLocale,
-  type LyraLocaleDirection,
-} from '../../../internal/localization.js';
+} from '../../../internal/localization-runtime.js';
+import type { LyraLocaleDirection } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
@@ -26,6 +26,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
@@ -211,6 +216,20 @@ export interface LyraLocalePickerEventMap {
  * @since 6.0.0
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    localePickerLabel: LYRA_DEFAULT_localePickerLabel,
+    localePickerRequired: LYRA_DEFAULT_localePickerRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -266,6 +285,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
   private cleanup?: () => void;
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
   private stopRegistrySubscription?: () => void;
   private _value = '';
   private _fieldsetDisabled = false;
@@ -279,14 +300,17 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   // Standard listbox type-ahead: printable keystrokes accumulate into this buffer and reset
   // ~500ms after the last one, matching lr-select's identical buffer/timer pair.
   private typeAheadBuffer = '';
-  private typeAheadTimer?: ReturnType<typeof setTimeout>;
+  private typeAheadTimer?: number;
+  private typeAheadTimerWindow?: Window;
+  private typeAheadTimerGeneration = 0;
 
   constructor() {
     super();
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('');
   }
 
@@ -338,21 +362,30 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.stopRegistrySubscription = subscribeLyraLocaleRegistry(() => {
       this.registryTick += 1;
     });
+    if (this.hasUpdated && this.open) queueMicrotask(() => this.syncPopup());
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.unbindDocumentPointer();
     this.stopRegistrySubscription?.();
     this.stopRegistrySubscription = undefined;
-    clearTimeout(this.typeAheadTimer);
+    this.clearTypeAheadTimer();
+    this.typeAheadBuffer = '';
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers updated()'s open-driven
     // branch -- without this, `open` stays `true` across the disconnect/reconnect and
     // `changed.has('open')` never fires again, leaving the listbox rendered open with no
     // positioning and no outside-click listener.
     this.open = false;
+  }
+
+  adoptedCallback(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.unbindDocumentPointer();
+    this.clearTypeAheadTimer();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -589,21 +622,54 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private syncPopup(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    if (!this.open || !this.isConnected) {
+      this.unbindDocumentPointer();
+      return;
+    }
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) this.cleanup = place(anchor, listbox);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const reposition =
       changed.has('open') || (this.open && (changed.has('locales') || changed.has('registryTick')));
     if (reposition) {
-      this.cleanup?.();
-      this.cleanup = undefined;
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
-        const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
-        const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        if (anchor && listbox) this.cleanup = place(anchor, listbox);
-      } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-      }
+      this.syncPopup();
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
@@ -660,11 +726,25 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  matching Arrow-key nav); while closed it commits immediately, matching `<lr-select>`'s
    *  identical closed-state type-ahead. */
   private typeAhead(char: string): void {
-    clearTimeout(this.typeAheadTimer);
+    this.clearTypeAheadTimer();
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    this.typeAheadTimer = setTimeout(() => {
-      this.typeAheadBuffer = '';
-    }, 500);
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (this.isConnected && ownerWindow) {
+      const generation = this.typeAheadTimerGeneration;
+      this.typeAheadTimerWindow = ownerWindow;
+      this.typeAheadTimer = ownerWindow.setTimeout(() => {
+        if (
+          this.typeAheadTimerGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== ownerWindow
+        ) {
+          return;
+        }
+        this.typeAheadTimer = undefined;
+        this.typeAheadTimerWindow = undefined;
+        this.typeAheadBuffer = '';
+      }, 500);
+    }
 
     const rows = this.normalizedEntries;
     if (!rows.length) return;
@@ -683,6 +763,15 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         return;
       }
     }
+  }
+
+  private clearTypeAheadTimer(): void {
+    this.typeAheadTimerGeneration += 1;
+    if (this.typeAheadTimer !== undefined) {
+      this.typeAheadTimerWindow?.clearTimeout(this.typeAheadTimer);
+    }
+    this.typeAheadTimer = undefined;
+    this.typeAheadTimerWindow = undefined;
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

@@ -3,11 +3,16 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { getScratchCtx } from '../../../internal/canvas.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
 import { styles } from './qr-code.styles.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_SIZE = 128;
 const MIN_SIZE = 1;
@@ -82,9 +87,11 @@ function warnInvalidColor(value: string): void {
  * is needed here, only a validity check. Falls back to `fallbackHex` (with a one-time
  * `console.warn`, deduplicated per distinct bad value) when it doesn't.
  */
-function resolveQrColor(value: string, fallbackHex: string): string {
-  const ctx = getScratchCtx();
-  if (!ctx) return fallbackHex;
+function resolveQrColor(
+  value: string,
+  fallbackHex: string,
+  ctx: CanvasRenderingContext2D,
+): string {
   const sentinel = 'rgb(1, 2, 3)';
   ctx.fillStyle = sentinel;
   const sentinelNormalized = ctx.fillStyle;
@@ -150,13 +157,28 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * @csspart canvas - The rendered QR code canvas.
  * @csspart empty - Shown when `value` is empty.
  * @csspart loading - Shown while the optional `qrcode` peer is loading, the first time it's needed.
- * @csspart error - Shown when the peer is missing, or `value` failed to encode.
+ * @csspart error - Visible error shown when the peer is missing, or `value` failed to encode; the
+ *   transition is announced through the shared light-DOM assertive region.
  * @cssprop [--lr-qr-code-fill=var(--lr-color-text)] - Dark/foreground module color.
  * @cssprop [--lr-qr-code-background=var(--lr-color-surface)] - Light/background module color, including the quiet zone.
  * @status stable
  * @since 4.0.0
  */
 export class LyraQrCode extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    qrCodeGenerationFailed: LYRA_DEFAULT_qrCodeGenerationFailed,
+    qrCodeMissingLibrary: LYRA_DEFAULT_qrCodeMissingLibrary,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The data to encode. Empty renders `[part="empty"]` -- no encode is attempted. */
@@ -235,6 +257,7 @@ export class LyraQrCode extends LyraElement {
   @query('canvas') private canvasEl?: HTMLCanvasElement;
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
+  private errorAnnouncementSink?: AnnouncementSink;
 
   // Gates draw() while scrolled off-screen, same shape as <lr-chart>'s own visibility gate --
   // a page rendering many <lr-qr-code>s (e.g. a scrollable list of badge/ticket codes) never
@@ -261,9 +284,11 @@ export class LyraQrCode extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncErrorAnnouncementSink();
     this.watchDpr();
-    if (typeof IntersectionObserver !== 'undefined') {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
+    const IntersectionObserverCtor = this.ownerDocument.defaultView?.IntersectionObserver;
+    if (IntersectionObserverCtor) {
+      this.intersectionObserver = new IntersectionObserverCtor((entries) => {
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
         if (this.visible && !wasVisible) this.draw();
@@ -284,19 +309,49 @@ export class LyraQrCode extends LyraElement {
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.releaseErrorAnnouncementSink();
+    this.stopWatchingDpr();
     super.disconnectedCallback();
-    this.dprQuery?.removeEventListener('change', this.onDprChange);
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
+  }
+
+  adoptedCallback(): void {
+    this.releaseErrorAnnouncementSink();
+    this.syncErrorAnnouncementSink();
+  }
+
+  private syncErrorAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseErrorAnnouncementSink();
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseErrorAnnouncementSink(): void {
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
   }
 
   private watchDpr(): void {
     // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it
     // was built for means building a fresh one for the new ratio -- remove the previous
     // instance's listener first, or it leaks.
-    this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.dprQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    this.stopWatchingDpr();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    this.dprQuery = ownerWindow.matchMedia(
+      `(resolution: ${ownerWindow.devicePixelRatio}dppx)`,
+    );
     this.dprQuery.addEventListener('change', this.onDprChange);
+  }
+
+  private stopWatchingDpr(): void {
+    this.dprQuery?.removeEventListener('change', this.onDprChange);
+    this.dprQuery = undefined;
   }
 
   private onDprChange = (): void => {
@@ -340,7 +395,9 @@ export class LyraQrCode extends LyraElement {
     const api = await this.loadLibrary();
     if (generation !== this.generation || !this.isConnected) return;
     if (!api) {
-      this.loadState = { kind: 'error', message: this.localize('qrCodeMissingLibrary') };
+      const message = this.localize('qrCodeMissingLibrary');
+      this.loadState = { kind: 'error', message };
+      this.errorAnnouncementSink?.announce(message);
       return;
     }
     try {
@@ -357,12 +414,16 @@ export class LyraQrCode extends LyraElement {
       }
     } catch {
       if (generation !== this.generation) return;
-      this.loadState = { kind: 'error', message: this.localize('qrCodeGenerationFailed') };
+      const message = this.localize('qrCodeGenerationFailed');
+      this.loadState = { kind: 'error', message };
+      this.errorAnnouncementSink?.announce(message);
     }
   }
 
   private async loadEmbeddedImage(src: string): Promise<HTMLImageElement | undefined> {
-    const image = new Image();
+    const ImageCtor = this.ownerDocument.defaultView?.Image;
+    if (!ImageCtor) return undefined;
+    const image = new ImageCtor();
     image.decoding = 'async';
     const loaded = await new Promise<boolean>((resolve) => {
       image.addEventListener('load', () => resolve(true), { once: true });
@@ -380,20 +441,26 @@ export class LyraQrCode extends LyraElement {
     this.draw();
   }
 
-  private fillColor(): string {
+  private fillColor(ctx: CanvasRenderingContext2D): string {
     const raw =
       this.fill.trim() ||
-      getComputedStyle(this).getPropertyValue('--lr-qr-code-fill').trim() ||
+      this.ownerDocument.defaultView
+        ?.getComputedStyle(this)
+        .getPropertyValue('--lr-qr-code-fill')
+        .trim() ||
       FALLBACK_FILL;
-    return resolveQrColor(raw, FALLBACK_FILL);
+    return resolveQrColor(raw, FALLBACK_FILL, ctx);
   }
 
-  private backgroundColor(): string {
+  private backgroundColor(ctx: CanvasRenderingContext2D): string {
     const raw =
       this.background.trim() ||
-      getComputedStyle(this).getPropertyValue('--lr-qr-code-background').trim() ||
+      this.ownerDocument.defaultView
+        ?.getComputedStyle(this)
+        .getPropertyValue('--lr-qr-code-background')
+        .trim() ||
       FALLBACK_BACKGROUND;
-    return resolveQrColor(raw, FALLBACK_BACKGROUND);
+    return resolveQrColor(raw, FALLBACK_BACKGROUND, ctx);
   }
 
   private draw(): void {
@@ -406,7 +473,7 @@ export class LyraQrCode extends LyraElement {
     const canvas = this.canvasEl;
     if (!canvas) return;
     const { modules } = this.loadState;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
     const size = this.size;
     canvas.width = Math.round(size * dpr);
     canvas.height = Math.round(size * dpr);
@@ -417,8 +484,8 @@ export class LyraQrCode extends LyraElement {
     if (!ctx) return;
     ctx.scale(dpr, dpr);
 
-    const background = this.backgroundColor();
-    const fill = this.fillColor();
+    const background = this.backgroundColor(ctx);
+    const fill = this.fillColor(ctx);
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, size, size);
 
@@ -471,7 +538,11 @@ export class LyraQrCode extends LyraElement {
     const contentSize = boxSize - padding * 2;
     const boxStart = (size - boxSize) / 2;
     if (this.imageBackground?.trim()) {
-      ctx.fillStyle = resolveQrColor(this.imageBackground.trim(), this.backgroundColor());
+      ctx.fillStyle = resolveQrColor(
+        this.imageBackground.trim(),
+        this.backgroundColor(ctx),
+        ctx,
+      );
       ctx.fillRect(boxStart, boxStart, boxSize, boxSize);
     }
     if (contentSize <= 0) return;
@@ -492,7 +563,7 @@ export class LyraQrCode extends LyraElement {
       case 'loading':
         return html`<div part="loading">${this.localize('loading')}</div>`;
       case 'error':
-        return html`<div part="error" role="alert">${this.loadState.message}</div>`;
+        return html`<div part="error">${this.loadState.message}</div>`;
       case 'ready':
         return html`<canvas part="canvas" role="img" aria-label=${this.accessibleName()}></canvas>`;
     }

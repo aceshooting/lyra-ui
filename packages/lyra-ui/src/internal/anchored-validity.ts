@@ -19,6 +19,18 @@ export function resolveValidityAnchor(provider: unknown): HTMLElement | undefine
   return resolver.call(provider) ?? undefined;
 }
 
+/** Realm-neutral DOMException brand/name check that rejects `{ name: 'NotFoundError' }` lookalikes. */
+function isNotFoundDomException(error: unknown): boolean {
+  if (typeof DOMException !== 'function') return false;
+  const nameGetter = Object.getOwnPropertyDescriptor(DOMException.prototype, 'name')?.get;
+  if (typeof nameGetter !== 'function') return false;
+  try {
+    return nameGetter.call(error) === 'NotFoundError';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Keeps ElementInternals validity synchronous while refreshing its focus
  * anchor after every render. The refresh is required because validity can be
@@ -128,7 +140,7 @@ export class AnchoredValidityController implements ReactiveController {
         // A stale or incorrectly provided non-descendant anchor must not
         // break the host's update. Preserve validity and fall back to the
         // host until the next fresh render resolves a legal descendant.
-        if (!(error instanceof DOMException) || error.name !== 'NotFoundError') throw error;
+        if (!isNotFoundDomException(error)) throw error;
       }
     }
     this.internals.setValidity(this.flags, this.message);

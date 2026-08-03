@@ -100,9 +100,10 @@ Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), 
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `error` (`role="alert"` message shown instead of the graph when
-the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load —
-distinct from the empty state, which means the peers loaded fine but `nodes` is empty),
+`live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
+the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load; that transition is
+announced through a shared assertive light-DOM region — distinct from the empty state, which means
+the peers loaded fine but `nodes` is empty),
 `canvas`/`tooltip`/`cursor-items`/`cursor-item`
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
@@ -174,10 +175,12 @@ localized `part="error"` alert. Install with
 - zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive); pan/
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
-- while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows a
-  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
-  example, because they are not installed), the graph fails closed with a localized
-  `part="error"` / `role="alert"` message instead of leaving an empty SVG.
+- while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows an
+  unannounced decorative `<lr-skeleton>` sized to `width`/`height` plus an ordinary visually hidden,
+  localized loading label; the graph host itself carries `aria-busy="true"`. If the peers fail to
+  load (for example, because they are not installed), the graph fails closed with a localized
+  neutral `part="error"` message and announces the transition through a shared assertive light-DOM
+  region instead of leaving an empty SVG.
 - `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
   ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
@@ -1510,8 +1513,10 @@ Large sets window through an internal `lr-virtual-list`.
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
   virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
-- `error: string = ''` — non-empty replaces the whole result view with a `role="alert"` message.
-  Caller-supplied text, not localized (app/network data, not library copy)
+- `error: string = ''` — non-empty replaces the whole result view with a neutral visible message.
+  Caller-supplied text is not localized (app/network data, not library copy). A new non-empty value
+  is announced through a shared assertive light-DOM region; initial and reconnect content is not
+  replayed
 - `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
 
 **Events:**
@@ -1526,9 +1531,9 @@ Large sets window through an internal `lr-virtual-list`.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `error` (`role="alert"`, while `error` is non-empty), `spinner` (initial-load
-`lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is empty and
-neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
+**CSS parts:** `base`, `error` (neutral visible message while `error` is non-empty), `spinner`
+(initial-load `lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is
+empty and neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
@@ -1593,7 +1598,8 @@ submit. Fully controlled; performs no retrieval itself. Composes `lr-input type=
 - `loading: boolean = false` (reflected) — host-driven busy flag; this component cannot know when a
   request resolves
 - `errorText: string = ''` (attribute `error-text`) — last failed search's message, shown verbatim
-  (caller-owned text, not localized) in a `role="alert"` region
+  (caller-owned text, not localized) in a neutral visible region. A new non-empty value is announced
+  through a shared assertive light-DOM region; initial and reconnect content is not replayed
 - `empty: boolean = false` (reflected) — host-driven "the last completed search returned zero
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`)
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
@@ -1619,8 +1625,9 @@ submit. Fully controlled; performs no retrieval itself. Composes `lr-input type=
 
 **CSS parts:** `base` (the `role="search"` landmark), `row`, `query`, `mode`, `submit` (reads
 "Search" while idle, "Cancel" while `loading`), `filters` (omitted entirely when both `filters` and
-`scope` are empty), `spinner` (only while `loading`), `error` (`role="alert"`, only when `errorText`
-is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor `errorText`).
+`scope` are empty), `spinner` (only while `loading`), `error` (neutral visible message, only when
+`errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
+`errorText`).
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1698,17 +1705,19 @@ or source fetching.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
-(attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
-`showClaims: boolean = true` (attribute `show-claims`); `label: string = ''`; `accessibleLabel:
-string | null = null` (attribute `aria-label`).
+(attribute: false); `loading: boolean = false`; `error: string = ''` (neutral visible caller text;
+new non-empty values announce through a shared assertive light-DOM region, while initial and
+reconnect content is not replayed); `showSources: boolean = true`; `showClaims: boolean = true`
+(attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+`aria-label`).
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list.
 
-**CSS parts:** `base`, `answer`, `loading`, `error`, `retry`, `grounding`, `citations`,
-`citation-list`, `sources`, `source-list`, `section-heading`.
+**CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
+`grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.
 
 ## `lr-embedding-explorer`
 

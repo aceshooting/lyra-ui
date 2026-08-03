@@ -2,7 +2,7 @@
 
 # `lr-av-player`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/av-player/av-player.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-av-player.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -62,6 +62,11 @@ media notifications, these relays are non-bubbling, non-composed, and non-cancel
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
 `cue-time`, `cue-speaker`, `cue-text`, and `error`.
+
+`error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
+playback, or unsafe-source failure appends the localized message to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains visible but does
+not interrupt on mount; identical later failures append distinct children.
 
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a

@@ -14,6 +14,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The canonical size ladder. Kept as a local name so existing imports keep resolving; the
  *  `size` property itself accepts the upstream `small`/`medium`/`large` spellings too. */
@@ -188,6 +193,30 @@ function paginationItems(
  * @since 4.0.0
  */
 export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    item: LYRA_DEFAULT_item,
+    items: LYRA_DEFAULT_items,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    paginationApplied: LYRA_DEFAULT_paginationApplied,
+    paginationEmptySummary: LYRA_DEFAULT_paginationEmptySummary,
+    paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
+    paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
+    paginationLabel: LYRA_DEFAULT_paginationLabel,
+    paginationLastPage: LYRA_DEFAULT_paginationLastPage,
+    paginationPage: LYRA_DEFAULT_paginationPage,
+    paginationSummary: LYRA_DEFAULT_paginationSummary,
+    previous: LYRA_DEFAULT_previous,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
 
   /** The currently applied page. Controlled; this component never mutates it. */
@@ -262,17 +291,19 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private focusTargetIsInside(target: EventTarget): boolean {
-    return (
-      target instanceof Node &&
-      (this.contains(target) || this.renderRoot.contains(target))
-    );
+    if (typeof target !== 'object' || !('nodeType' in target)) return false;
+    const node = target as Node;
+    return this.contains(node) || this.renderRoot.contains(node);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     // Acquired on connect, not on the first page change: assistive tech has to have been observing
     // a live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override disconnectedCallback(): void {

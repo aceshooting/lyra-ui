@@ -4,6 +4,11 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './prompt-studio.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool';
 export interface PromptStudioMessage {
@@ -75,6 +80,30 @@ export interface LyraPromptStudioEventMap {
  * @since 7.0.0
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    promptStudioAddMessage: LYRA_DEFAULT_promptStudioAddMessage,
+    promptStudioLabel: LYRA_DEFAULT_promptStudioLabel,
+    promptStudioMessageContent: LYRA_DEFAULT_promptStudioMessageContent,
+    promptStudioMessageRole: LYRA_DEFAULT_promptStudioMessageRole,
+    promptStudioMessages: LYRA_DEFAULT_promptStudioMessages,
+    promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
+    promptStudioRemoveMessage: LYRA_DEFAULT_promptStudioRemoveMessage,
+    promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
+    promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
+    promptStudioRoleTool: LYRA_DEFAULT_promptStudioRoleTool,
+    promptStudioRoleUser: LYRA_DEFAULT_promptStudioRoleUser,
+    promptStudioRun: LYRA_DEFAULT_promptStudioRun,
+    promptStudioSave: LYRA_DEFAULT_promptStudioSave,
+    promptStudioVariableName: LYRA_DEFAULT_promptStudioVariableName,
+    promptStudioVariableValue: LYRA_DEFAULT_promptStudioVariableValue,
+    promptStudioVariables: LYRA_DEFAULT_promptStudioVariables,
+    promptStudioVersions: LYRA_DEFAULT_promptStudioVersions,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) messages: PromptStudioMessage[] = [];

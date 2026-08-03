@@ -2,7 +2,7 @@
 
 # `lr-tool-result-view`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-result-view/tool-result-view.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tool-result-view.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolResultView`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/tool-result-view.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -57,7 +57,8 @@ renderer's `matches()` predicate threw during dispatch, a renderer's `load()` re
 **Slots:** none.
 
 **CSS parts:** `base` — the root wrapper around the resolved renderer's output (or the loading/
-fallback view). `fallback-text` — the `<pre>` element for the `fallback="text"` kind's preformatted
+fallback view); it keeps `aria-busy="true"` while a lazy renderer is loading and explicitly returns
+to `aria-busy="false"` afterward. `fallback-text` — the `<pre>` element for the `fallback="text"` kind's preformatted
 result text (only present in that mode). `fallback-copy` — the `<lr-copy-button>` shown when
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
@@ -158,7 +159,10 @@ it:
    fires `lr-render-error`.
 
 Once a definition is found, if it carries `load`, `<lr-tool-result-view>` shows a
-`<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it. The resolved
+decorative `<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it.
+The nested skeleton has announcements disabled; the stable `base` busy state and an ordinary,
+visually hidden localized Loading label expose the in-progress state without creating a shadow-root
+live region. The resolved
 `load()` promise is cached keyed by *definition object identity* (a `WeakMap`, not by tool-name
 string) — two different registries that happen to reuse the same tool-name string get independently
 cached loads, and any given lazy definition's `load()` runs at most once no matter how many times

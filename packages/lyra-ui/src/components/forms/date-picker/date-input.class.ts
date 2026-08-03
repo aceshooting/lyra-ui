@@ -42,6 +42,11 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_openCalendar, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -273,6 +278,28 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @since 4.0.0
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chooseDate: LYRA_DEFAULT_chooseDate,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    dateInputFutureDisabled: LYRA_DEFAULT_dateInputFutureDisabled,
+    dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
+    dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
+    dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
+    dateInputPastDisabled: LYRA_DEFAULT_dateInputPastDisabled,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    openCalendar: LYRA_DEFAULT_openCalendar,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
@@ -377,12 +404,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private inputRelayedSinceCommit = false;
 
   private cleanupFn?: () => void;
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
+  private visibilityListenerDocument?: Document;
+  private visibilityListener?: () => void;
   private overlayHandle?: OverlayHandle;
   private restorePopupFocusOnClose = false;
   private transitionToken = 0;
   private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   private interactionListeners = new Map<string, EventListener>();
-  private validatorAttributeObserver?: MutationObserver;
+  private validatorAttributeObserver?: { observer: MutationObserver; owner: Window };
   private inputId = nextId('date-input');
   private popupId = nextId('date-popup');
   // Set on the date input's first `blur`; gates the `data-invalid`
@@ -793,6 +824,35 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.validityRevision++;
   };
 
+  private bindVisibilityListener(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.visibilityListenerDocument === ownerDocument && this.visibilityListener) return;
+    this.unbindVisibilityListener();
+    const listener = (): void => {
+      if (
+        this.visibilityListener !== listener ||
+        this.visibilityListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onVisibilityChange();
+    };
+    this.visibilityListenerDocument = ownerDocument;
+    this.visibilityListener = listener;
+    ownerDocument.addEventListener('visibilitychange', listener);
+  }
+
+  private unbindVisibilityListener(): void {
+    if (this.visibilityListenerDocument && this.visibilityListener) {
+      this.visibilityListenerDocument.removeEventListener('visibilitychange', this.visibilityListener);
+    }
+    this.visibilityListenerDocument = undefined;
+    this.visibilityListener = undefined;
+  }
+
   private get displayText(): string {
     const parts = this.value.split('/');
     // parts[0] always exists (String.split() on '/' never returns an empty array); only
@@ -814,10 +874,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
     }
     if (changed.has('open')) {
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
+      if (this.open && this.isConnected) {
+        this.bindDocumentPointer();
       } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+        this.unbindDocumentPointer();
       }
     }
   }
@@ -848,6 +908,56 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) void this.hide(false);
   };
+
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private reconnectOpenPopup(): void {
+    if (!this.isConnected || !this.open) return;
+    this.bindDocumentPointer();
+    this.cleanupFn?.();
+    const anchor = this.renderRoot.querySelector('[part="input-wrapper"]') as HTMLElement | null;
+    const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
+    if (!anchor || !popup) return;
+    this.cleanupFn = place(anchor, popup, {
+      placement: normalizeDateInputPlacement(this.placement),
+      offset: finiteNumber(this.distance, 0),
+    });
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
+      onEscape: () => { void this.hide(true); },
+      modal: false,
+      trapFocus: false,
+    });
+  }
 
   private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     const token = ++this.transitionToken;
@@ -883,10 +993,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.ownerDocument.addEventListener('visibilitychange', this.onVisibilityChange);
+    this.bindVisibilityListener();
     this.syncInteractionListeners();
     this.syncValidatorAttributeObserver();
     this.syncCustomStates();
+    if (this.hasUpdated && this.open) queueMicrotask(() => this.reconnectOpenPopup());
   }
 
   /** Clear the value. */
@@ -926,9 +1037,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private syncValidatorAttributeObserver(): void {
-    this.validatorAttributeObserver?.disconnect();
-    this.validatorAttributeObserver = undefined;
-    if (!this.isConnected || typeof MutationObserver === 'undefined') return;
+    this.disconnectValidatorAttributeObserver();
+    const owner = this.ownerDocument.defaultView;
+    const MutationObserverCtor = owner?.MutationObserver;
+    if (!this.isConnected || !owner || typeof MutationObserverCtor !== 'function') return;
 
     const attributes = new Set<string>();
     for (const validator of Array.isArray(this.validators) ? this.validators : []) {
@@ -946,17 +1058,30 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
     if (attributes.size === 0) return;
 
-    const observer = new MutationObserver(() => {
-      if (!this.isConnected) return;
+    const binding = {} as { observer: MutationObserver; owner: Window };
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.validatorAttributeObserver !== binding
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
       this.updateValidity();
       this.validityRevision++;
     });
+    binding.observer = observer;
+    binding.owner = owner;
     try {
       observer.observe(this, { attributes: true, attributeFilter: [...attributes] });
-      this.validatorAttributeObserver = observer;
+      this.validatorAttributeObserver = binding;
     } catch {
       observer.disconnect();
     }
+  }
+
+  private disconnectValidatorAttributeObserver(): void {
+    const binding = this.validatorAttributeObserver;
+    this.validatorAttributeObserver = undefined;
+    binding?.observer.disconnect();
   }
 
   private syncCustomStates(): void {
@@ -972,10 +1097,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.cleanupFn = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
-    this.ownerDocument.removeEventListener('visibilitychange', this.onVisibilityChange);
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-    this.validatorAttributeObserver?.disconnect();
-    this.validatorAttributeObserver = undefined;
+    this.unbindVisibilityListener();
+    this.unbindDocumentPointer();
+    this.disconnectValidatorAttributeObserver();
     this.restorePopupFocusOnClose = false;
     this.resolveTransitionWaiters('lr-after-show');
     this.resolveTransitionWaiters('lr-after-hide');
@@ -994,6 +1118,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     super.disconnectedCallback();
   }
 
+  adoptedCallback(): void {
+    this.cleanupFn?.();
+    this.cleanupFn = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
+    this.unbindVisibilityListener();
+    this.unbindDocumentPointer();
+    this.disconnectValidatorAttributeObserver();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
@@ -1009,7 +1143,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     ) {
       this.cleanupFn?.();
       this.cleanupFn = undefined;
-      if (this.open) {
+      if (this.open && this.isConnected) {
         const anchor = this.renderRoot.querySelector('[part="input-wrapper"]') as HTMLElement | null;
         const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
         if (anchor && popup) {
@@ -1021,7 +1155,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       }
     }
     if (changed.has('open')) {
-      if (this.open) {
+      if (this.open && this.isConnected) {
         const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
         if (popup) {
           this.overlayHandle = activateOverlay({
@@ -1032,7 +1166,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             trapFocus: false,
           });
         }
-      } else {
+      } else if (!this.open) {
         this.overlayHandle?.deactivate({ restoreFocus: this.restorePopupFocusOnClose });
         this.overlayHandle = undefined;
         this.restorePopupFocusOnClose = false;

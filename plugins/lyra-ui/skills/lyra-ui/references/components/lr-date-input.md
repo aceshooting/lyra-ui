@@ -2,7 +2,7 @@
 
 # `lr-date-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/date-picker/date-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-date-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDateInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

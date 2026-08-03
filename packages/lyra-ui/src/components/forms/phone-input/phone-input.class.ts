@@ -11,6 +11,11 @@ import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './phone-input.styles.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
@@ -238,7 +243,8 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @csspart calling-code - The selected country's calling code.
  * @csspart input - The native telephone input.
  * @csspart hint - The hint message.
- * @csspart error - The error or validation message.
+ * @csspart error - Ordinary error/validation text referenced by the native telephone input
+ *   through `aria-describedby`; it is not a live region, avoiding duplicate validation feedback.
  * @cssprop --lr-phone-input-padding-block - Input block-padding, scaled by `size`.
  * @cssprop --lr-phone-input-font-size - Input/flag/country-code/calling-code font size, scaled by `size`.
  * @cssprop --lr-phone-input-flag-size - Selected flag size, scaled by `size`.
@@ -268,6 +274,23 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @since 4.0.0
  */
 export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    phoneInputIncomplete: LYRA_DEFAULT_phoneInputIncomplete,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
   static override properties = {
     country: { noAccessor: true },
@@ -793,7 +816,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
           <slot name="hint" @slotchange=${this.onHintSlotChange}>${this.hint}</slot>
         </div>
-        <div id=${this.errorId} part="error" role="alert" ?hidden=${!hasError}>
+        <div id=${this.errorId} part="error" ?hidden=${!hasError}>
           <slot name="error" @slotchange=${this.onErrorSlotChange}>${renderedError}</slot>
         </div>
       </div>

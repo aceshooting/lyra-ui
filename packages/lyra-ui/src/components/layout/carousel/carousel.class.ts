@@ -1,11 +1,26 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query } from "lit/decorators.js";
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from "../../../internal/announcer.js";
+import {
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisible,
+  isAccessibilityVisibilityHidden,
+} from "../../../internal/accessibility-visibility.js";
+import { composedAccessibilityText } from "../../../internal/announcement-text.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { finiteDuration, finiteInteger } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { tag } from "../../../internal/prefix.js";
 import { styles } from "./carousel.styles.js";
 import type { LyraCarouselItem } from "./carousel-item.class.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 interface SlideSnapshot {
   hidden: boolean | "until-found";
@@ -21,6 +36,8 @@ interface RestingSlide {
   index: number;
   cloneSide?: "before" | "after";
 }
+
+type CarouselChangeOrigin = "manual" | "autoplay";
 
 export type LyraCarouselOrientation = "horizontal" | "vertical";
 
@@ -43,6 +60,15 @@ export interface LyraCarouselEventMap {
  * page, horizontal or vertical movement, autoplay, looping, and opt-in mouse dragging. The older
  * Lyra `index`/`showIndicators` names remain synchronized aliases of
  * `currentSlide`/`pagination`.
+ * Manual active-page changes are announced through a pre-mounted light-DOM live region even while
+ * autoplay is enabled. Only timer-driven advances stay silent, and neither initial connection nor
+ * reconnection replays the current page. Changes made while the carousel or a composed ancestor is
+ * accessibility-hidden stay silent. Subtree-pruned slide content is omitted; a visibility-hidden
+ * wrapper may still expose a descendant that explicitly restores visibility. Forwarding slots
+ * contribute their flattened assigned content; their fallback contributes only when the slot has
+ * no direct assignment, even when an assignment is itself accessibility-hidden. The localized
+ * `carouselSlideAnnouncement` and `carouselSlideAnnouncementSeparator` messages control the order,
+ * punctuation, and separation of spoken position/content summaries.
  *
  * @customElement lr-carousel
  * @slot - Slide elements. Each assigned element becomes one slide.
@@ -82,6 +108,26 @@ export interface LyraCarouselEventMap {
  * @since 4.0.0
  */
 export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    carousel: LYRA_DEFAULT_carousel,
+    carouselGoTo: LYRA_DEFAULT_carouselGoTo,
+    carouselIndicators: LYRA_DEFAULT_carouselIndicators,
+    carouselLabel: LYRA_DEFAULT_carouselLabel,
+    carouselSlide: LYRA_DEFAULT_carouselSlide,
+    carouselSlideAnnouncement: LYRA_DEFAULT_carouselSlideAnnouncement,
+    carouselSlideAnnouncementSeparator: LYRA_DEFAULT_carouselSlideAnnouncementSeparator,
+    carouselSlidePosition: LYRA_DEFAULT_carouselSlidePosition,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _currentSlide = 0;
@@ -105,7 +151,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return this._currentSlide;
   }
   set index(value: number) {
-    this.setCurrentSlideState(value);
+    this.setCurrentSlideState(finiteInteger(value, 0));
   }
 
   @property({ type: Boolean, reflect: true }) loop = false;
@@ -167,10 +213,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   @query('[data-clone-set="after"]') private afterClones?: HTMLElement;
 
   private timer?: number;
+  private timerWindow?: Window;
   private reduceMotion = false;
   private mediaQuery?: MediaQueryList;
+  private visibilityDocument?: Document;
   private readonly slideSnapshots = new Map<HTMLElement, SlideSnapshot>();
   private scrollSettleTimer?: number;
+  private scrollSettleTimerWindow?: Window;
   private adoptingScrolledSlide = false;
   private hasAlignedOnce = false;
   private pendingAlignIndex?: number;
@@ -186,6 +235,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private dragMoved = false;
   private suppressClick = false;
   private suppressClickTimer?: number;
+  private suppressClickTimerWindow?: Window;
+  private announcementSink?: AnnouncementSink;
+  private announcementsArmed = false;
+  private activeChangeOrigin: CarouselChangeOrigin = "manual";
+  private manualAnnouncementPending = false;
 
   constructor() {
     super();
@@ -200,16 +254,27 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const view = this.ownerDocument.defaultView;
+    this.announcementSink ??= acquireAnnouncementSink("polite", {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.announcementsArmed = false;
+    this.manualAnnouncementPending = false;
     this.mediaQuery =
-      typeof matchMedia === "function"
-        ? matchMedia("(prefers-reduced-motion: reduce)")
+      typeof view?.matchMedia === "function"
+        ? view.matchMedia("(prefers-reduced-motion: reduce)")
         : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
     this.mediaQuery?.addEventListener("change", this.onMotionPreferenceChange);
-    document.addEventListener("visibilitychange", this.onVisibilityChange);
+    this.visibilityDocument = this.ownerDocument;
+    this.visibilityDocument.addEventListener(
+      "visibilitychange",
+      this.onVisibilityChange
+    );
     this.restartAutoplay();
     if (this.hasUpdated) {
-      queueMicrotask(() => {
+      this.queueOwnerMicrotask(() => {
         if (!this.isConnected) return;
         this.handleSlidesChanged();
       });
@@ -217,12 +282,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    this.announcementsArmed = false;
+    this.manualAnnouncementPending = false;
     this.cancelDrag(false);
     this.stopAutoplay();
     this.cancelScrollSettle();
-    if (this.suppressClickTimer !== undefined)
-      window.clearTimeout(this.suppressClickTimer);
-    this.suppressClickTimer = undefined;
+    this.cancelClickSuppression();
     this.suppressClick = false;
     this.pointerInteracting = false;
     this.focusInteracting = false;
@@ -235,7 +302,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.onMotionPreferenceChange
     );
     this.mediaQuery = undefined;
-    document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    this.visibilityDocument?.removeEventListener(
+      "visibilitychange",
+      this.onVisibilityChange
+    );
+    this.visibilityDocument = undefined;
     this.restoreSlides();
     super.disconnectedCallback();
   }
@@ -253,6 +324,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    const shouldAnnounceActivePage =
+      this.announcementsArmed &&
+      (this.manualAnnouncementPending || changed.has("slidesPerPage"));
     this.syncSlides();
     if (
       this.loopClonesDirty ||
@@ -282,6 +356,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.alignToActiveSlide();
     }
     this.hasAlignedOnce = true;
+    if (shouldAnnounceActivePage) this.announceActivePage();
+    this.manualAnnouncementPending = false;
+    this.announcementsArmed = true;
   }
 
   private setCurrentSlideState(value: number): void {
@@ -289,6 +366,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const next = finiteInteger(value, 0);
     if (old === next) return;
     this._currentSlide = next;
+    if (this.activeChangeOrigin === "manual") {
+      this.manualAnnouncementPending = true;
+    }
     this.requestUpdate("currentSlide", old);
     this.requestUpdate("index", old);
   }
@@ -311,13 +391,21 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.restartAutoplay();
   };
 
+  private queueOwnerMicrotask(callback: () => void): void {
+    const view = this.ownerDocument.defaultView;
+    if (view) view.queueMicrotask(callback);
+    else queueMicrotask(callback);
+  }
+
   private effectiveOrientation(): LyraCarouselOrientation {
     return this.orientation === "vertical" ? "vertical" : "horizontal";
   }
 
   private slideElements(): HTMLElement[] {
     return (this.slideSlot?.assignedElements({ flatten: true }) ?? []).filter(
-      (element): element is HTMLElement => element instanceof HTMLElement
+      (element): element is HTMLElement =>
+        element.nodeType === 1 &&
+        element.namespaceURI === "http://www.w3.org/1999/xhtml"
     );
   }
 
@@ -364,6 +452,42 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       if (index >= 0 && index < count) visible.add(index);
     }
     return visible;
+  }
+
+  private announceActivePage(): void {
+    if (!isAccessibilityVisible(this)) return;
+    const slides = this.slideElements();
+    if (slides.length === 0) return;
+    const current = this.normalizedIndex(slides.length);
+    const visible = this.visibleIndices(slides.length, current);
+    const format = getNumberFormat(this.effectiveLocale);
+    const messages = slides.flatMap((slide, index) => {
+      if (!visible.has(index)) return [];
+      if (isAccessibilitySubtreeExcluded(slide)) return [];
+      const slideTextVisible = !isAccessibilityVisibilityHidden(slide);
+      const authoredLabel = slideTextVisible
+        ? this.slideSnapshots.get(slide)?.ariaLabel?.trim()
+        : "";
+      if (authoredLabel) return [authoredLabel];
+      const position = this.localize("carouselSlidePosition", undefined, {
+        index: format.format(index + 1),
+        total: format.format(slides.length),
+      });
+      const content = Array.from(slide.childNodes)
+        .map((node) => composedAccessibilityText(node, slideTextVisible))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!slideTextVisible && !content) return [];
+      return [
+        content && content !== position
+          ? this.localize("carouselSlideAnnouncement", undefined, { position, content })
+          : position,
+      ];
+    });
+    this.announcementSink?.announce(
+      messages.join(this.localize("carouselSlideAnnouncementSeparator"))
+    );
   }
 
   private restoreAttribute(
@@ -536,7 +660,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private changeTo(
     index: number,
-    behavior: ScrollBehavior = "smooth"
+    behavior: ScrollBehavior = "smooth",
+    origin: CarouselChangeOrigin = "manual"
   ): void {
     const slides = this.slideElements();
     const count = slides.length;
@@ -554,7 +679,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (next === this.currentSlide) return;
     this.requestedBehavior = behavior;
     this.requestedLoopSide = loopSide;
-    this.currentSlide = next;
+    const previousOrigin = this.activeChangeOrigin;
+    this.activeChangeOrigin = origin;
+    try {
+      this.currentSlide = next;
+    } finally {
+      this.activeChangeOrigin = previousOrigin;
+    }
     this.emit("lr-slide-change", { index: next, slide: slides[next]! });
   }
 
@@ -580,9 +711,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   /** Appends a carousel item. */
   addSlide(slide: LyraCarouselItem): void {
-    if (!(slide instanceof HTMLElement)) return;
+    if (
+      slide?.nodeType !== 1 ||
+      slide?.namespaceURI !== "http://www.w3.org/1999/xhtml"
+    ) {
+      return;
+    }
     this.append(slide);
-    queueMicrotask(() => {
+    this.queueOwnerMicrotask(() => {
       if (this.isConnected) this.handleSlidesChanged();
     });
   }
@@ -594,35 +730,44 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const target = slides[Math.trunc(index)];
     if (!target) return;
     target.remove();
-    queueMicrotask(() => {
+    this.queueOwnerMicrotask(() => {
       if (this.isConnected) this.handleSlidesChanged();
     });
   }
 
   private stopAutoplay(): void {
-    if (this.timer !== undefined) window.clearInterval(this.timer);
+    if (this.timer !== undefined) this.timerWindow?.clearInterval(this.timer);
     this.timer = undefined;
+    this.timerWindow = undefined;
   }
 
   private restartAutoplay(): void {
     this.stopAutoplay();
     const count = this.slideElements().length;
+    const doc = this.visibilityDocument ?? this.ownerDocument;
+    const view = doc.defaultView;
     if (
       !this.isConnected ||
+      !view ||
       !this.autoplay ||
       this.reduceMotion ||
       this.pointerInteracting ||
       this.focusInteracting ||
       this.dragPointerId !== undefined ||
-      document.visibilityState !== "visible" ||
+      doc.visibilityState !== "visible" ||
       count <= this.safeSlidesPerPage(count)
     ) {
       return;
     }
     const interval = finiteDuration(this.autoplayInterval, 3000, 1000);
-    this.timer = window.setInterval(() => {
+    this.timerWindow = view;
+    this.timer = view.setInterval(() => {
       if (this.loop || this.currentSlide < this.maxStartIndex())
-        this.next("smooth");
+        this.changeTo(
+          this.currentSlide + this.safeSlidesPerMove(),
+          "smooth",
+          "autoplay"
+        );
       else this.stopAutoplay();
     }, interval);
   }
@@ -721,14 +866,19 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private cancelScrollSettle(): void {
-    if (this.scrollSettleTimer !== undefined)
-      window.clearTimeout(this.scrollSettleTimer);
+    if (this.scrollSettleTimer !== undefined) {
+      this.scrollSettleTimerWindow?.clearTimeout(this.scrollSettleTimer);
+    }
     this.scrollSettleTimer = undefined;
+    this.scrollSettleTimerWindow = undefined;
   }
 
   private onViewportScroll = (): void => {
     this.cancelScrollSettle();
-    this.scrollSettleTimer = window.setTimeout(
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    this.scrollSettleTimerWindow = view;
+    this.scrollSettleTimer = view.setTimeout(
       this.settleScrolledSlide,
       SCROLL_SETTLE_MS
     );
@@ -752,6 +902,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private settleScrolledSlide = (): void => {
     this.scrollSettleTimer = undefined;
+    this.scrollSettleTimerWindow = undefined;
     if (!this.isConnected) return;
     const viewport = this.viewport;
     if (!viewport) return;
@@ -820,7 +971,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportFocusOut = (): void => {
-    queueMicrotask(() => {
+    this.queueOwnerMicrotask(() => {
       if (!this.isConnected) return;
       this.focusInteracting = this.matches(":focus-within");
       this.restartAutoplay();
@@ -893,12 +1044,18 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     if (moved) {
       this.suppressClick = true;
-      if (this.suppressClickTimer !== undefined)
-        window.clearTimeout(this.suppressClickTimer);
-      this.suppressClickTimer = window.setTimeout(() => {
+      this.cancelClickSuppression();
+      const view = this.ownerDocument.defaultView;
+      if (!view) {
         this.suppressClick = false;
-        this.suppressClickTimer = undefined;
-      }, DRAG_CLICK_SUPPRESSION_MS);
+      } else {
+        this.suppressClickTimerWindow = view;
+        this.suppressClickTimer = view.setTimeout(() => {
+          this.suppressClick = false;
+          this.suppressClickTimer = undefined;
+          this.suppressClickTimerWindow = undefined;
+        }, DRAG_CLICK_SUPPRESSION_MS);
+      }
     }
     if (canceled && viewport) {
       const active = this.slideElements()[this.normalizedIndex()];
@@ -913,6 +1070,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     if (!this.matches(":hover")) this.pointerInteracting = false;
     this.restartAutoplay();
+  }
+
+  private cancelClickSuppression(): void {
+    if (this.suppressClickTimer !== undefined) {
+      this.suppressClickTimerWindow?.clearTimeout(this.suppressClickTimer);
+    }
+    this.suppressClickTimer = undefined;
+    this.suppressClickTimerWindow = undefined;
   }
 
   private cancelDrag(realign: boolean): void {
@@ -980,10 +1145,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const hasNavigation =
       this.navigation && count > this.safeSlidesPerPage(count);
     const hasPagination = this.pagination && pageTargets.length > 1;
-    const label =
-      this.hostAccessibleLabel ||
-      this.accessibleLabel ||
-      this.localize("carouselLabel");
+    const label = this.hostAccessibleLabel !== null
+      ? this.hostAccessibleLabel
+      : this.accessibleLabel || this.localize("carouselLabel");
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const orientation = this.effectiveOrientation();
     const perPage = this.safeSlidesPerPage(count);
@@ -1005,7 +1169,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         role="group"
         aria-label=${label}
         tabindex="0"
-        aria-live=${this.autoplay && !this.reduceMotion ? "off" : "polite"}
         @keydown=${this.onViewportKeyDown}
         @scroll=${this.onViewportScroll}
         @scrollend=${this.onViewportScrollEnd}

@@ -15,6 +15,11 @@ import { styles } from "./menu.styles.js";
 import { LyraMenuItem } from "./menu-item.class.js";
 import type { ContainedMenuOwner, MenuFocusTarget } from "./menu-shared.js";
 import "./menu-item.class.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { MenuFocusTarget } from "./menu-shared.js";
 
@@ -41,6 +46,11 @@ const SUBMENU_OPEN_DELAY = 150;
  *  submenu -- deliberately longer than the open delay, so crossing a *sibling* submenu parent
  *  in transit neither dismisses the open one nor opens the sibling. */
 const SUBMENU_CLOSE_DELAY = 300;
+
+interface OwnedTimeout {
+  owner: Window;
+  handle: number;
+}
 
 export interface LyraMenuEventMap {
   "lr-show": CustomEvent<undefined>;
@@ -179,9 +189,8 @@ export interface LyraMenuEventMap {
  * value }` — the consolidated re-fire of that item's own
  * `lr-menu-item-select` (see `<lr-menu-item>`'s doc for why listening
  * here, rather than on every item, is the recommended approach). It is
- * followed by closing and focus return unless the matching cancelable
- * `lr-select` event is prevented or a containing dropdown has
- * `stay-open-on-select`. A
+ * not cancelable; prevent the matching cancelable `lr-select` event to stop
+ * closing and focus return, or set `stay-open-on-select` on a containing dropdown. A
  * selection inside a submenu surfaces through this same event on the
  * outermost menu, closing the whole chain behind it; a submenu's own
  * `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are
@@ -200,6 +209,17 @@ export interface LyraMenuEventMap {
  * @since 4.0.0
  */
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    menuLabel: LYRA_DEFAULT_menuLabel,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the menu is open. */
@@ -274,11 +294,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private triggerEl?: HTMLElement;
   private cleanup?: () => void;
   private itemStateObserver?: MutationObserver;
+  private pointerDocument?: Document;
   private _isFirstUpdate = true;
   private openVetoed = false;
   private pendingFocus: MenuFocusTarget = "first";
-  private submenuOpenTimer?: ReturnType<typeof setTimeout>;
-  private submenuCloseTimer?: ReturnType<typeof setTimeout>;
+  private submenuOpenTimer?: OwnedTimeout;
+  private submenuCloseTimer?: OwnedTimeout;
   private readonly generatedHostId = nextId("menu");
   private readonly listId = nextId("menu-list");
   // Standard menu type-ahead, mirroring lr-select's identical listbox
@@ -286,11 +307,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // after the last one, so "d" then "e" narrows to "de" instead of
   // restarting the search on every keystroke.
   private typeAheadBuffer = "";
-  private typeAheadTimer?: ReturnType<typeof setTimeout>;
+  private typeAheadTimer?: OwnedTimeout;
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (!this.id) this.id = this.generatedHostId;
+    if (this.hasUpdated) {
+      const slot = this.renderRoot.querySelector<HTMLSlotElement>("slot:not([name])");
+      if (slot) this.syncItemsFromSlot(slot);
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -318,7 +343,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
     // is announced without offering a veto nobody could honour.
     if (!this.isConnected) {
-      this.emit(name);
+      this.emit("lr-hide");
       return;
     }
     if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
@@ -381,9 +406,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // willUpdate().
       if (this.open) {
         if (!this.dropdownContained) {
-          document.addEventListener("pointerdown", this.onDocPointer);
+          this.bindDocumentPointer();
         } else {
-          document.removeEventListener("pointerdown", this.onDocPointer);
+          this.unbindDocumentPointer();
         }
         // Both reposition() and focusRoving() no-op gracefully if triggerEl/
         // items aren't populated yet -- for markup that renders `open` true
@@ -395,7 +420,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (!this.dropdownContained) this.reposition();
         this.focusRoving(this.pendingFocus);
       } else {
-        document.removeEventListener("pointerdown", this.onDocPointer);
+        this.unbindDocumentPointer();
         // The roving state is reset here, not in hide(), for the same reason every other
         // open-driven side effect lives here: `open` can become false through hide(), through a
         // consumer writing `el.open = false` directly, or through disconnectedCallback()'s
@@ -445,19 +470,42 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    clearTimeout(this.typeAheadTimer);
+    this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadTimer = undefined;
     this.typeAheadBuffer = "";
     this.clearSubmenuTimers();
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
-    document.removeEventListener("pointerdown", this.onDocPointer);
+    this.unbindDocumentPointer();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
     // fires again, leaving the menu rendered open with no positioning and
     // no outside-click listener.
     this.open = false;
+  }
+
+  private bindDocumentPointer(): void {
+    const owner = this.ownerDocument;
+    if (this.pointerDocument === owner) return;
+    this.unbindDocumentPointer();
+    owner.addEventListener("pointerdown", this.onDocPointer);
+    this.pointerDocument = owner;
+  }
+
+  private unbindDocumentPointer(): void {
+    this.pointerDocument?.removeEventListener("pointerdown", this.onDocPointer);
+    this.pointerDocument = undefined;
+  }
+
+  private scheduleOwnedTimeout(callback: () => void, delay: number): OwnedTimeout | undefined {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return undefined;
+    return { owner, handle: owner.setTimeout(callback, delay) };
+  }
+
+  private clearOwnedTimeout(timer: OwnedTimeout | undefined): void {
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   /**
@@ -580,6 +628,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   private onItemsSlotChange = (e: Event): void => {
+    this.syncItemsFromSlot(e.target as HTMLSlotElement);
+  };
+
+  private syncItemsFromSlot(slot: HTMLSlotElement): void {
     this.itemStateObserver?.disconnect();
     // A bounds check can't survive membership changes: adding, removing or
     // reordering items while open shifts survivors to new indices, so an
@@ -587,14 +639,19 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // identity instead.
     const previouslyActive =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
-    this.items = (e.target as HTMLSlotElement)
+    this.items = slot
       .assignedElements({ flatten: true })
       .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
     this.applyDropdownSize();
-    if (typeof MutationObserver !== "undefined") {
-      this.itemStateObserver = new MutationObserver(() =>
-        this.onItemStateChange()
-      );
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (MutationObserverCtor) {
+      const owner = this.ownerDocument;
+      let observer: MutationObserver;
+      observer = new MutationObserverCtor(() => {
+        if (this.itemStateObserver !== observer || this.ownerDocument !== owner) return;
+        this.onItemStateChange();
+      });
+      this.itemStateObserver = observer;
       for (const item of this.items) {
         this.itemStateObserver.observe(item, {
           attributes: true,
@@ -613,7 +670,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // claimed the roving focus yet (the "open from the start" race that
         // onTriggerSlotChange's reposition() call also covers).
         this.focusRoving(this.pendingFocus);
-      } else if (!this.contains(document.activeElement)) {
+      } else if (!this.contains(this.ownerDocument.activeElement)) {
         // Reordering an item moves the node, which blurs it and drops focus out
         // to <body> -- beyond reach of the list keydown handler, leaving an open
         // menu keyboard-dead. The guard keeps this from stealing focus a user
@@ -621,7 +678,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         this.items[this.activeIndex]!.focus();
       }
     }
-  };
+  }
 
   /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping
    *  onto one leaves `focus()` a silent no-op, so roving focus is stranded on whatever held it
@@ -726,8 +783,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   private clearSubmenuTimers(): void {
-    clearTimeout(this.submenuOpenTimer);
-    clearTimeout(this.submenuCloseTimer);
+    this.clearOwnedTimeout(this.submenuOpenTimer);
+    this.clearOwnedTimeout(this.submenuCloseTimer);
     this.submenuOpenTimer = undefined;
     this.submenuCloseTimer = undefined;
   }
@@ -895,11 +952,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private onPopupPointerOver = (e: PointerEvent): void => {
     if (!this.open) return;
     const hovered = this.ownItemFromEvent(e);
-    clearTimeout(this.submenuOpenTimer);
+    this.clearOwnedTimeout(this.submenuOpenTimer);
     this.submenuOpenTimer = undefined;
     const opened = this.openSubmenuItem();
     if (opened && opened === hovered) {
-      clearTimeout(this.submenuCloseTimer);
+      this.clearOwnedTimeout(this.submenuCloseTimer);
       this.submenuCloseTimer = undefined;
     } else if (opened) {
       this.scheduleSubmenuClose(opened);
@@ -912,7 +969,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     ) {
       return;
     }
-    this.submenuOpenTimer = setTimeout(() => {
+    this.submenuOpenTimer = this.scheduleOwnedTimeout(() => {
       this.submenuOpenTimer = undefined;
       if (!this.open || !this.items.includes(hovered)) return;
       this.closeSubmenus(hovered);
@@ -924,7 +981,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  exception: crossing the gap between a popup and its own submenu fires this too, which is
    *  why it schedules rather than closes. */
   private onPopupPointerLeave = (): void => {
-    clearTimeout(this.submenuOpenTimer);
+    this.clearOwnedTimeout(this.submenuOpenTimer);
     this.submenuOpenTimer = undefined;
     const opened = this.openSubmenuItem();
     if (opened) this.scheduleSubmenuClose(opened);
@@ -932,7 +989,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   private scheduleSubmenuClose(item: LyraMenuItem): void {
     if (this.submenuCloseTimer) return;
-    this.submenuCloseTimer = setTimeout(() => {
+    this.submenuCloseTimer = this.scheduleOwnedTimeout(() => {
       this.submenuCloseTimer = undefined;
       if (!item.submenuOpen) return;
       // A submenu the keyboard is inside was opened deliberately; dismissing it because the
@@ -1041,9 +1098,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  accumulated buffer, cycling from just after the currently active item
    *  -- mirrors `<lr-select>`'s identical listbox type-ahead. */
   private typeAhead(char: string): void {
-    clearTimeout(this.typeAheadTimer);
+    this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    this.typeAheadTimer = setTimeout(() => {
+    this.typeAheadTimer = this.scheduleOwnedTimeout(() => {
       this.typeAheadBuffer = "";
     }, 500);
 

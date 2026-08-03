@@ -147,9 +147,9 @@ changes. The full list, with what each one changes and what to search for, is in
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
-The family name is part of every granular import path —
-`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` for one element, or
-`@aceshooting/lyra-ui/components/<family>` to register the whole family at once.
+Use the stable tag alias `@aceshooting/lyra-ui/components/lr-<name>.js` to register one element;
+the alias stays valid if the component's internal family changes. Import
+`@aceshooting/lyra-ui/components/<family>` to register a whole family at once.
 
 | Family | Highlights |
 |---|---|
@@ -216,6 +216,9 @@ Custom Elements Manifest; they add template/ref/event/CSS-property types without
 or tag registration. Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and
 event-name casing notes:
 [`packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte).
+Complete React 19, Vue, and Svelte Vite applications live in
+[`examples/frameworks/`](./examples/frameworks/); each is typechecked and production-built against
+the packed package.
 
 ## SSR & Declarative Shadow DOM
 
@@ -258,9 +261,18 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 - **Accessibility:** [`docs/accessibility.md`](./docs/accessibility.md) — which guarantees a gate
   enforces on every commit, which are conventions, and which are not verified at all (no screen
   reader has been run against this library).
+- **Component qualification:** [`docs/component-quality.md`](./docs/component-quality.md) —
+  per-tag automated evidence, explicit exemptions, human-review status, and known limitations.
+- **Component integration:** [`docs/component-integration.md`](./docs/component-integration.md) —
+  stable/class imports, optional peers, component dependencies, and measured or pending gzip data.
 - **Support window:** [`docs/support-policy.md`](./docs/support-policy.md) — supported browser and
   Node versions, what CI actually proves for each, assistive-technology status, and the policy for
   engines outside the window.
+- **Getting help:** [`SUPPORT.md`](./SUPPORT.md) — issue routes, required reproduction details, and
+  the boundary between community support and private vulnerability reporting.
+- **Governance and substantial changes:** [`GOVERNANCE.md`](./GOVERNANCE.md) and the
+  [`docs/rfcs/`](./docs/rfcs/process.md) process — decision authority, RFC scope, lifecycle, and
+  proposal template.
 
 ## Claude Code plugin
 
@@ -275,17 +287,22 @@ on this library, plus commands for migrating off Web Awesome/Shoelace and auditi
 ```
 
 Prefer a standalone download (e.g. for claude.ai Skills, outside Claude Code's plugin system)?
-Grab [`skills/lyra-ui.skill`](./skills/lyra-ui.skill) directly from this repo.
+Grab [`skills/lyra-ui.skill`](./skills/lyra-ui.skill) for exact API lookup or
+[`skills/compose-lyra-interfaces.skill`](./skills/compose-lyra-interfaces.skill) for the
+interface-composition workflow directly from this repo.
 
 See [`plugins/lyra-ui`](./plugins/lyra-ui) for the plugin source, or
 [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) for the same component reference
-without Claude Code.
+without Claude Code. The plugin also includes `$compose-lyra-interfaces`, a focused workflow for
+turning product intent into responsive, accessible Lyra component compositions while the main
+`$lyra-ui` skill remains the exact API reference.
 
 ## Status
 
-`@aceshooting/lyra-ui` is published at `8.0.0`; `@aceshooting/lyra-flags` at `2.0.0` — see each
-package's own `CHANGELOG.md` for release history. The two are versioned independently (not always
-lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.
+`@aceshooting/lyra-ui` source is versioned at `8.0.0`; `@aceshooting/lyra-flags` source at `2.0.0`
+— see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
+source versions while a release is being qualified. The two are versioned independently (not
+always lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.
 
 Every component also carries machine-readable `stable` or `experimental` status plus its first
 published `since` version. Both statuses receive normal semver protection once published;

@@ -2,7 +2,7 @@
 
 # `lr-typing-indicator`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/typing-indicator/typing-indicator.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-typing-indicator.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTypingIndicator`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/typing-indicator/typing-indicator.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

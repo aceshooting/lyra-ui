@@ -1,8 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { assertTableDimensions, assertTableSize, isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
+import { assertTableDimensions, assertTableSize, isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -12,9 +11,20 @@ import { loadSheetJsCached, type SheetJsApi } from './spreadsheet-loader.js';
 import { styles } from './spreadsheet-viewer.styles.js';
 import { assertXlsxArchiveWithinLimits } from './xlsx-resource-guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_spreadsheetViewerLabel, LYRA_DEFAULT_spreadsheetViewerUnavailable } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 interface SpreadsheetSheet { name: string; rows: unknown[][]; }
 type SpreadsheetState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; sheets: SpreadsheetSheet[] } | { kind: 'error'; message: string };
+type OwnedAnimationFrameWait = {
+  owner: Window;
+  handle?: number;
+  resolve: (isCurrent: boolean) => void;
+};
 const MAX_SPREADSHEET_SHEETS = 256;
 const MAX_SPREADSHEET_CELLS = 1_000_000;
 const MAX_SEARCH_MATCHES = 1_000;
@@ -84,6 +94,31 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * @since 4.0.0
  */
 export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    spreadsheetViewerLabel: LYRA_DEFAULT_spreadsheetViewerLabel,
+    spreadsheetViewerUnavailable: LYRA_DEFAULT_spreadsheetViewerUnavailable,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
@@ -108,9 +143,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private generation = 0;
   private loadLibrary: () => Promise<SheetJsApi | null> = loadSheetJsCached;
   private lastLoadSrc = '';
+  private readonly announcements = new ViewerAnnouncementController(this);
+  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -118,7 +156,36 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.cancelPendingAnimationFrames();
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.cancelPendingAnimationFrames();
+    this.announcements.adopted();
+  }
+
+  private waitForOwnerAnimationFrame(): Promise<boolean> {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      const pending: OwnedAnimationFrameWait = { owner, resolve };
+      this.pendingAnimationFrames.add(pending);
+      pending.handle = owner.requestAnimationFrame(() => {
+        if (!this.pendingAnimationFrames.delete(pending)) return;
+        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
+      });
+    });
+  }
+
+  private cancelPendingAnimationFrames(): void {
+    const pendingFrames = [...this.pendingAnimationFrames];
+    this.pendingAnimationFrames.clear();
+    for (const pending of pendingFrames) {
+      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
+      pending.resolve(false);
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -136,6 +203,11 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
@@ -150,8 +222,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -159,7 +231,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const library = await this.loadLibrary();
@@ -332,7 +404,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
       const target = this.renderRoot
         .querySelector(`[part="sheet"][data-sheet-index="${sheetIndex}"] [part="header-row"]`)
         ?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
-      target?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+      target?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
       return !!target;
     }
     this.activeRowKey = bodyIndex;
@@ -354,10 +426,10 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private async scrollColumnIntoView(sheetIndex: number, col: number): Promise<void> {
     const list = this.renderRoot.querySelector(`lr-virtual-list[data-sheet-index="${sheetIndex}"]`) as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    if (!await this.waitForOwnerAnimationFrame()) return;
     const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
     const target = row?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
-    target?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+    target?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
   // -- search ---------------------------------------------------------------------------------------
@@ -433,7 +505,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };
 
   override render(): TemplateResult {
-    const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error" role="alert">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
+    const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     return html`<div part="base" role="region" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}>${body}${this.renderAnchorLiveRegion()}</div>`;
   }
 }

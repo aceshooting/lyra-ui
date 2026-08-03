@@ -8,11 +8,29 @@ import { LyraVirtualList, type VirtualListRange } from '../../layout/virtual-lis
 import { styles } from './chat-viewport.styles.js';
 import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
+import {
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+} from '../../../internal/accessibility-visibility.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ChatViewportLive = 'off' | 'polite' | 'assertive';
 
 export interface LyraChatViewportEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
+}
+
+interface OwnedAnimationFrame {
+  owner: Window;
+  handle: number;
 }
 
 /**
@@ -35,7 +53,11 @@ export interface LyraChatViewportEventMap {
  * `bottomThreshold` from the end -- a scroll caused by this component's own programmatic scrolling,
  * or by a layout shift, never releases it. Reaching the bottom again by any means re-engages `follow`.
  * The internal log defaults to `live="off"`, which avoids announcing every streaming token. Consumers
- * that append complete messages at an announcement-safe cadence can opt into `polite` or `assertive`.
+ * that append complete messages at an announcement-safe cadence can opt into `polite` or `assertive`;
+ * each newly appended direct child's accessibility-exposed text is then announced through the
+ * document's shared light-DOM sink. Hidden, inert, `aria-hidden`, and CSS-hidden content is omitted.
+ * Existing declarative children stay silent on mount, and appending the same text again creates a
+ * new announcement. The shadow log itself always remains `aria-live="off"`.
  *
  * **`scrollToUnread()` in virtual mode.** The target row is scrolled with `align: 'start'` so the
  * divider boundary lands at the top of the view with the unread content visible below it -- the
@@ -70,14 +92,30 @@ export interface LyraChatViewportEventMap {
  * @since 4.0.0
  */
 export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chatViewportLabel: LYRA_DEFAULT_chatViewportLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    jumpToLatest: LYRA_DEFAULT_jumpToLatest,
+    newMessageCount: LYRA_DEFAULT_newMessageCount,
+    newMessages: LYRA_DEFAULT_newMessages,
+    newMessagesCount: LYRA_DEFAULT_newMessagesCount,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
-  /** Live-region policy forwarded to the internal `role="log"`. Keep `off` for token-by-token
+  /** Live-region policy for newly appended direct children. Keep `off` for token-by-token
    * streaming; use `polite` or `assertive` only when messages are appended at an announcement-safe
-   * cadence. */
+   * cadence. Only accessibility-exposed text is copied. The shadow `role="log"` remains non-live;
+   * announcements use a shared light-DOM sink. */
   @property({ reflect: true }) live: ChatViewportLive = 'off';
 
   /** Px distance from the end still counted as "at bottom." */
@@ -102,17 +140,20 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   @query('[part="content"]') private contentEl?: HTMLElement;
 
   private pendingUserIntent = false;
-  /** `requestAnimationFrame` id of the in-flight proactive expiry scheduled by `markUserIntent()`
-   *  -- see that method and `cancelPendingUserIntentExpiry()`. */
-  private pendingUserIntentExpiryId?: number;
+  /** Owner-bound in-flight proactive expiry scheduled by `markUserIntent()` -- see that method and
+   *  `cancelPendingUserIntentExpiry()`. */
+  private pendingUserIntentExpiryFrame: OwnedAnimationFrame | null = null;
   private scrollbarDragActive = false;
+  private scrollbarDragWindow?: Window;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
   private contentResizeObserver?: ResizeObserver;
   private contentMutationObserver?: MutationObserver;
+  private announcementSink?: AnnouncementSink;
   private scrollResizeObserver?: ResizeObserver;
-  private growthRafId?: number;
+  private growthFrame: OwnedAnimationFrame | null = null;
   private listenedVirtualList?: LyraVirtualList;
+  private observerWindow?: Window;
   /** Which shape `armObservers()` last actually built watchers for -- `null` after a teardown.
    *  Guards against rebuilding on a redundant `armObservers()` call (see its own comment). */
   private armedMode: 'virtual' | 'slotted' | null = null;
@@ -143,18 +184,18 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncAnnouncementSink();
     if (this.hasUpdated) this.armObservers();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseAnnouncementSink();
     this.teardownObservers();
     // Safety net for a drag still in progress (pointerdown fired, no matching pointerup/
     // pointercancel/lostpointercapture yet) when this element is disconnected -- without this the
     // window listeners `onPointerDown` added would leak for the lifetime of the page.
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
-    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.releaseScrollbarDragListeners();
     // Safety net for a still-scheduled proactive user-intent expiry (see markUserIntent()).
     this.clearUserIntent();
     this.scrollbarDragActive = false;
@@ -166,6 +207,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('live')) this.syncAnnouncementSink();
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('follow')) {
@@ -178,7 +220,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         // scroll (`scrollToBottom()` re-engaging a released `follow`), not this initial one.
         const behavior = wasMounting
           ? 'auto'
-          : (this.pendingScrollBehavior ?? (prefersReducedMotion() ? 'auto' : 'smooth'));
+          : (this.pendingScrollBehavior ??
+            (prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth'));
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
@@ -199,7 +242,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `auto` under
    *  `prefers-reduced-motion`. */
   scrollToBottom(options?: { behavior?: 'auto' | 'smooth' }): void {
-    const behavior = prefersReducedMotion() ? 'auto' : (options?.behavior ?? 'smooth');
+    const behavior = prefersReducedMotion(this.ownerDocument.defaultView)
+      ? 'auto'
+      : (options?.behavior ?? 'smooth');
     if (this.follow) {
       this.performScrollToEnd(behavior);
     } else {
@@ -214,7 +259,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   scrollToUnread(options?: { behavior?: 'auto' | 'smooth' }): boolean {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
     if (unreadStartIndex == null) return false;
-    const behavior = prefersReducedMotion() ? 'auto' : (options?.behavior ?? 'smooth');
+    const behavior = prefersReducedMotion(this.ownerDocument.defaultView)
+      ? 'auto'
+      : (options?.behavior ?? 'smooth');
     const list = this.virtualListEl;
     if (list) {
       if (unreadStartIndex >= list.items.length) return false;
@@ -294,19 +341,34 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // event arriving soon after (e.g. the next streamed-token append, which can land far sooner
     // than any timeout long enough to be safe for a genuine gesture) would misattribute itself as
     // user-caused and release `follow`.
-    this.pendingUserIntentExpiryId = requestAnimationFrame(() => {
-      this.pendingUserIntentExpiryId = requestAnimationFrame(() => {
-        this.pendingUserIntentExpiryId = undefined;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) {
+      this.pendingUserIntent = false;
+      return;
+    }
+    const firstFrame: OwnedAnimationFrame = { owner, handle: 0 };
+    firstFrame.handle = owner.requestAnimationFrame(() => {
+      if (this.pendingUserIntentExpiryFrame !== firstFrame) return;
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner) {
+        this.pendingUserIntentExpiryFrame = null;
+        this.pendingUserIntent = false;
+        return;
+      }
+      const secondFrame: OwnedAnimationFrame = { owner, handle: 0 };
+      secondFrame.handle = owner.requestAnimationFrame(() => {
+        if (this.pendingUserIntentExpiryFrame !== secondFrame) return;
+        this.pendingUserIntentExpiryFrame = null;
         this.pendingUserIntent = false;
       });
+      this.pendingUserIntentExpiryFrame = secondFrame;
     });
+    this.pendingUserIntentExpiryFrame = firstFrame;
   };
 
   private cancelPendingUserIntentExpiry(): void {
-    if (this.pendingUserIntentExpiryId !== undefined) {
-      cancelAnimationFrame(this.pendingUserIntentExpiryId);
-      this.pendingUserIntentExpiryId = undefined;
-    }
+    const frame = this.pendingUserIntentExpiryFrame;
+    if (frame) frame.owner.cancelAnimationFrame(frame.handle);
+    this.pendingUserIntentExpiryFrame = null;
   }
 
   /** Clears the pending user-intent flag and cancels its proactive expiry, if one is still
@@ -331,21 +393,32 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // happens to be, not necessarily this element or one of its descendants. A listener bound
     // only here would never see that pointerup, leaving this flag stuck `true` and letting a
     // later, unrelated layout-shift scroll spuriously release `follow`.
-    window.addEventListener('pointerup', this.onPointerUp);
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || this.scrollbarDragWindow === owner) return;
+    this.releaseScrollbarDragListeners();
+    this.scrollbarDragWindow = owner;
+    owner.addEventListener('pointerup', this.onPointerUp);
     // A drag can also end without a pointerup ever firing: a system gesture / palm rejection can
     // fire `pointercancel` instead, and losing implicit pointer capture (e.g. the dragged element
     // is removed) fires `lostpointercapture` -- both need the same teardown as pointerup, or this
     // flag is stuck true just as surely as the pointerup-outside-the-element case above.
-    window.addEventListener('pointercancel', this.onPointerUp);
-    window.addEventListener('lostpointercapture', this.onPointerUp);
+    owner.addEventListener('pointercancel', this.onPointerUp);
+    owner.addEventListener('lostpointercapture', this.onPointerUp);
   };
 
   private onPointerUp = (): void => {
     this.scrollbarDragActive = false;
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
-    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.releaseScrollbarDragListeners();
   };
+
+  private releaseScrollbarDragListeners(): void {
+    const owner = this.scrollbarDragWindow;
+    if (!owner) return;
+    owner.removeEventListener('pointerup', this.onPointerUp);
+    owner.removeEventListener('pointercancel', this.onPointerUp);
+    owner.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.scrollbarDragWindow = undefined;
+  }
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'PageUp' || e.key === 'ArrowUp' || e.key === 'Home') this.markUserIntent();
@@ -395,15 +468,98 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   };
 
   private scheduleGrowthTick(): void {
-    if (this.growthRafId !== undefined) return;
-    this.growthRafId = requestAnimationFrame(() => {
-      this.growthRafId = undefined;
+    if (this.growthFrame) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const frame: OwnedAnimationFrame = { owner, handle: 0 };
+    frame.handle = owner.requestAnimationFrame(() => {
+      if (this.growthFrame !== frame) return;
+      this.growthFrame = null;
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
       this.updateUnreadDividerPosition();
       if (this.follow) this.performScrollToEnd('auto');
     });
+    this.growthFrame = frame;
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private syncAnnouncementSink(): void {
+    const politeness = this.live === 'polite' || this.live === 'assertive' ? this.live : undefined;
+    if (!this.isConnected || politeness === undefined) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (
+      this.announcementSink?.politeness === politeness &&
+      this.announcementSink.element.ownerDocument === this.ownerDocument
+    ) {
+      return;
+    }
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink(politeness, {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private onContentMutations = (records: MutationRecord[]): void => {
+    this.scheduleGrowthTick();
+    const sink = this.announcementSink;
+    if (!sink) return;
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        const text = this.announcementNodeText(node).replace(/\s+/g, ' ').trim();
+        if (text) sink.announce(text);
+      }
+    }
+  };
+
+  private announcementNodeText(node: Node, inheritedTextVisible = true): string {
+    if (node.nodeType === 3) return inheritedTextVisible ? node.textContent ?? '' : '';
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (
+      isAccessibilitySubtreeExcluded(element) ||
+      ['script', 'style', 'template'].includes(element.localName)
+    ) {
+      return '';
+    }
+    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+    const label = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
+    if (label) return label;
+    if (ownTextVisible && element.localName === 'img') {
+      const alt = element.getAttribute('alt')?.trim();
+      if (alt) return alt;
+    }
+
+    let renderedChildren: Node[];
+    if (element.localName === 'slot') {
+      const assigned = (element as HTMLSlotElement).assignedNodes();
+      renderedChildren = assigned.length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : Array.from(element.childNodes);
+    } else if (element.localName === 'details' && !element.hasAttribute('open')) {
+      const summary = Array.from(element.children).find((child) => child.localName === 'summary');
+      renderedChildren = summary ? [summary] : [];
+    } else if (element.shadowRoot) {
+      // A shadow host's raw light-DOM children include named-slot content that may not be assigned
+      // anywhere in the current render. Walk the composed branch through the open root instead;
+      // its slot elements flatten only content that is actually rendered.
+      renderedChildren = Array.from(element.shadowRoot.childNodes);
+    } else {
+      renderedChildren = Array.from(element.childNodes);
+    }
+    return Array.from(renderedChildren)
+      .map((child) => this.announcementNodeText(child, ownTextVisible))
+      .join(' ');
   }
 
   private armObservers(): void {
+    const owner = this.ownerDocument.defaultView;
     const list = this.virtualListEl;
     const mode: 'virtual' | 'slotted' = list ? 'virtual' : 'slotted';
     // `onSlotChange` calls this on *every* `slotchange`, including the very first one, which
@@ -416,8 +572,15 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // rebuild, undoing an unrelated scroll a host performs in between (e.g. `scrollToUnread()`
     // right after mount). Skip the rebuild when neither the mode nor, in virtual mode, the
     // specific list instance actually changed since the last arm.
-    if (this.armedMode === mode && (mode === 'slotted' || this.listenedVirtualList === list)) return;
+    if (
+      this.observerWindow === owner &&
+      this.armedMode === mode &&
+      (mode === 'slotted' || this.listenedVirtualList === list)
+    ) {
+      return;
+    }
     this.teardownObservers();
+    this.observerWindow = owner ?? undefined;
     this.armedMode = mode;
     if (list) {
       this.listenedVirtualList = list;
@@ -431,14 +594,26 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         // (this was the same asynchronous-baseline case caught below for the scroll container's
         // own observer -- see that comment for why it matters). Ignore exactly that first delivery.
         let baselineSeen = false;
-        this.contentResizeObserver = new ResizeObserver(() => {
-          if (!baselineSeen) {
-            baselineSeen = true;
-            return;
-          }
-          this.scheduleGrowthTick();
-        });
-        this.contentResizeObserver.observe(content);
+        const ResizeObserverCtor = owner?.ResizeObserver;
+        if (ResizeObserverCtor) {
+          let observer: ResizeObserver;
+          observer = new ResizeObserverCtor(() => {
+            if (
+              !this.isConnected ||
+              this.ownerDocument.defaultView !== owner ||
+              this.contentResizeObserver !== observer
+            ) {
+              return;
+            }
+            if (!baselineSeen) {
+              baselineSeen = true;
+              return;
+            }
+            this.scheduleGrowthTick();
+          });
+          this.contentResizeObserver = observer;
+          this.contentResizeObserver.observe(content);
+        }
       }
       // Slotted rows live in the light DOM; slot assignment doesn't reparent them into the shadow
       // tree, so a MutationObserver watching the shadow-side content wrapper would never see one
@@ -447,8 +622,22 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       // height (e.g. same-height rows reordered around the unread boundary), which the size-only
       // ResizeObserver above can't. `MutationObserver.observe()` has no equivalent guaranteed-first-
       // callback behavior, so it needs no baseline guard.
-      this.contentMutationObserver = new MutationObserver(() => this.scheduleGrowthTick());
-      this.contentMutationObserver.observe(this, { childList: true });
+      const MutationObserverCtor = owner?.MutationObserver;
+      if (MutationObserverCtor) {
+        let observer: MutationObserver;
+        observer = new MutationObserverCtor((records) => {
+          if (
+            !this.isConnected ||
+            this.ownerDocument.defaultView !== owner ||
+            this.contentMutationObserver !== observer
+          ) {
+            return;
+          }
+          this.onContentMutations(records);
+        });
+        this.contentMutationObserver = observer;
+        this.contentMutationObserver.observe(this, { childList: true });
+      }
     }
     const scrollEl = this.scrollEl;
     if (scrollEl) {
@@ -460,14 +649,26 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       // the end. Without this guard that race is real, not hypothetical: the baseline callback fires
       // unconditionally on every fresh `observe()` regardless of whether the size actually changed.
       let baselineSeen = false;
-      this.scrollResizeObserver = new ResizeObserver(() => {
-        if (!baselineSeen) {
-          baselineSeen = true;
-          return;
-        }
-        if (this.follow) this.performScrollToEnd('auto');
-      });
-      this.scrollResizeObserver.observe(scrollEl);
+      const ResizeObserverCtor = owner?.ResizeObserver;
+      if (ResizeObserverCtor) {
+        let observer: ResizeObserver;
+        observer = new ResizeObserverCtor(() => {
+          if (
+            !this.isConnected ||
+            this.ownerDocument.defaultView !== owner ||
+            this.scrollResizeObserver !== observer
+          ) {
+            return;
+          }
+          if (!baselineSeen) {
+            baselineSeen = true;
+            return;
+          }
+          if (this.follow) this.performScrollToEnd('auto');
+        });
+        this.scrollResizeObserver = observer;
+        this.scrollResizeObserver.observe(scrollEl);
+      }
     }
     // Deferred rather than called synchronously here: this is a real DOM-layout measurement that
     // necessarily writes reactive state (`unreadDividerTop`) reflecting it, and this method runs
@@ -496,12 +697,12 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       this.onVirtualRangeChanged as EventListener,
     );
     this.listenedVirtualList = undefined;
+    this.observerWindow = undefined;
     this.armedMode = null;
     this.armGeneration++;
-    if (this.growthRafId !== undefined) {
-      cancelAnimationFrame(this.growthRafId);
-      this.growthRafId = undefined;
-    }
+    const frame = this.growthFrame;
+    if (frame) frame.owner.cancelAnimationFrame(frame.handle);
+    this.growthFrame = null;
   }
 
   override render(): TemplateResult {
@@ -517,7 +718,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         <div
           part="scroll"
           role="log"
-          aria-live=${this.live}
+          aria-live="off"
           aria-label=${label}
           tabindex=${virtual ? nothing : '0'}
           @scroll=${this.onScroll}

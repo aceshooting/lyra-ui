@@ -3,7 +3,7 @@ import { html } from 'lit';
 import './tab-group.js';
 import './tab.js';
 import './tab-panel.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Tabs',

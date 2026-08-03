@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.lyra-ui.com/schemas/canonical-tokens.schema.json",
+  "title": "Lyra canonical design-token source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "source", "modes", "valueNamedTokenPolicy", "tokens"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "cleanRoom", "description"],
+      "properties": {
+        "authority": { "const": "tokens/canonical-tokens.json" },
+        "cleanRoom": { "const": true },
+        "description": { "type": "string", "minLength": 20 }
+      }
+    },
+    "modes": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "light" },
+        { "const": "dark" },
+        { "const": "forcedColors" },
+        { "const": "reducedMotion" }
+      ],
+      "items": false
+    },
+    "valueNamedTokenPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frozenCount", "allowedClassifications", "growthProhibited"],
+      "properties": {
+        "frozenCount": { "type": "integer", "minimum": 0 },
+        "allowedClassifications": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["semantic-global", "component-role", "audited-fixed-geometry"]
+          }
+        },
+        "growthProhibited": { "const": true }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^--lr-(?:theme-)?[a-z0-9-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/token" }
+    }
+  },
+  "$defs": {
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "group", "scope", "description", "values"],
+      "properties": {
+        "type": {
+          "enum": ["color", "dimension", "duration", "fontFamily", "fontWeight", "number", "shadow", "string"]
+        },
+        "group": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "scope": { "enum": ["theme-input", "shared"] },
+        "description": { "type": "string", "minLength": 12 },
+        "themeInput": { "type": "string", "pattern": "^--lr-theme-[a-z0-9-]+$" },
+        "values": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "light": { "type": "string", "minLength": 1 },
+            "dark": { "type": "string", "minLength": 1 },
+            "forcedColors": { "type": "string", "minLength": 1 },
+            "reducedMotion": { "type": "string", "minLength": 1 }
+          }
+        },
+        "valueNameClassification": {
+          "enum": ["semantic-global", "component-role", "audited-fixed-geometry"]
+        },
+        "canonicalRole": { "type": "string", "pattern": "^--lr-[a-z0-9-]+$" },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "status"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^--lr-size-[a-z0-9-]+$" },
+            "status": { "const": "retained" },
+            "aliasOf": { "type": "string", "pattern": "^--lr-[a-z0-9-]+$" }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 4 }
+        }
+      }
+    }
+  }
+}

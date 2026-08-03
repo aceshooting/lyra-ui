@@ -12,6 +12,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './generation-status.styles.js';
 import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
@@ -186,6 +191,19 @@ export interface LyraGenerationStatusEventMap {
  * @since 4.0.0
  */
 export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    elapsedMinutesSecondsTemplate: LYRA_DEFAULT_elapsedMinutesSecondsTemplate,
+    generationStatusElapsedSeconds: LYRA_DEFAULT_generationStatusElapsedSeconds,
+    generationStatusThroughput: LYRA_DEFAULT_generationStatusThroughput,
+    generationStatusTokenCount: LYRA_DEFAULT_generationStatusTokenCount,
+    generationStatusTokensCount: LYRA_DEFAULT_generationStatusTokensCount,
+    stopGenerating: LYRA_DEFAULT_stopGenerating,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether generation is currently in progress. The elapsed-time ticker
@@ -221,7 +239,10 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // `active` goes false -- see the class doc's "ticker" paragraph.
   @state() private elapsedMs = 0;
 
-  private tickTimer?: ReturnType<typeof setInterval>;
+  private tickTimer?: number;
+  private tickTimerOwner?: Window;
+  private tickTimerDocument?: Document;
+  private tickerGeneration = 0;
 
   // Only ever set/read while `startedAt` is unset -- see the class doc.
   private fallbackStartMs?: number;
@@ -243,8 +264,13 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.stopTicker();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.stopTicker();
+    if (this.isConnected && this.active) this.startTicker();
   }
 
   // Recomputing `elapsedMs` here (rather than in `updated()`) matters: Lit
@@ -294,21 +320,43 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
 
   private startTicker(): void {
     this.stopTicker();
+    if (!this.isConnected || !this.active) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const generation = this.tickerGeneration;
     // Setting `elapsedMs` here (unlike inside `updated()`, see that method's
     // doc) is fine: an interval callback is a wholly separate future task,
     // not a continuation of an in-progress Lit update, so this starts a
     // normal, self-contained update cycle rather than a same-tick "second
     // update" scheduled mid-render.
-    this.tickTimer = setInterval(() => {
+    const handle = ownerWindow.setInterval(() => {
+      if (
+        this.tickTimer !== handle ||
+        this.tickTimerOwner !== ownerWindow ||
+        this.tickTimerDocument !== ownerDocument ||
+        this.tickerGeneration !== generation ||
+        !this.isConnected ||
+        !this.active ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.elapsedMs = this.computeElapsedMs();
     }, 1000);
+    this.tickTimer = handle;
+    this.tickTimerOwner = ownerWindow;
+    this.tickTimerDocument = ownerDocument;
   }
 
   private stopTicker(): void {
+    this.tickerGeneration += 1;
     if (this.tickTimer !== undefined) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = undefined;
+      this.tickTimerOwner?.clearInterval(this.tickTimer);
     }
+    this.tickTimer = undefined;
+    this.tickTimerOwner = undefined;
+    this.tickTimerDocument = undefined;
   }
 
   // `startedAt` is host-supplied and, unlike `tokenCount`/`tokensPerSecond`

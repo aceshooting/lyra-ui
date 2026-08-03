@@ -91,13 +91,15 @@ describe('registry dispatch', () => {
     expect(el.shadowRoot!.querySelector('#pdf-output')).to.not.exist;
   });
 
-  it('renders an alert when a matched definition has no render function', async () => {
+  it('renders ordinary visible error text without a shadow-root live region', async () => {
     registerDocumentRenderer('application/pdf', { matches: () => true });
     const el = (await fixture(html`
       <lr-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="body"] [role="alert"]')).to.exist;
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    expect(body.textContent).to.include('Something went wrong.');
+    expect(body.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
   });
 
   it('supports a per-instance registry override', async () => {
@@ -131,7 +133,7 @@ describe('registry dispatch', () => {
     expect(observed).to.deep.equal([undefined, '', 'Diagram']);
   });
 
-  it('marks the lazy-renderer body busy and exposes loading text through a status owner', async () => {
+  it('marks the lazy-renderer body busy while keeping its visible loading text non-live', async () => {
     registerDocumentRenderer('application/pdf', {
       load: () => new Promise(() => {}),
     });
@@ -141,7 +143,8 @@ describe('registry dispatch', () => {
     await el.updateComplete;
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.getAttribute('aria-busy')).to.equal('true');
-    expect(body.querySelectorAll('[role="status"]').length).to.equal(1);
+    expect(body.textContent).to.include('Loading document…');
+    expect(body.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length).to.equal(0);
   });
 
   for (const [hook, definition] of [
@@ -175,8 +178,8 @@ describe('registry dispatch', () => {
       await el.updateComplete;
       await aTimeout(30);
 
-      expect(el.shadowRoot!.querySelector('[part="body"] [role="alert"]')?.textContent)
-        .to.equal('Localized display failure.');
+      expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent)
+        .to.include('Localized display failure.');
       expect(results).to.deep.equal([false]);
     });
   }

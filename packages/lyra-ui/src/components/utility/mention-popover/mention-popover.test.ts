@@ -499,6 +499,36 @@ it('anchors caret-precisely against a real <textarea>, tracking selectionStart a
   expect(secondLeft).to.not.equal(firstLeft);
 });
 
+it('creates caret measurement and virtual-anchor nodes in the adopted anchor document', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const textarea = frameDocument.createElement('textarea');
+  textarea.style.cssText = 'position:absolute; width:300px; height:80px; font:16px monospace;';
+  textarea.value = 'hello @world';
+  textarea.setSelectionRange(12, 12);
+  frameDocument.body.append(textarea);
+  const el = document.createElement('lr-mention-popover') as LyraMentionPopover;
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    el.anchor = textarea;
+    el.items = ITEMS;
+    el.open = true;
+    await el.updateComplete;
+    const virtual = (el as unknown as { virtualAnchor: HTMLDivElement | null }).virtualAnchor;
+    expect(virtual !== null).to.be.true;
+    expect(virtual!.ownerDocument === frameDocument).to.equal(true);
+    expect(virtual!.parentElement === frameDocument.body).to.equal(true);
+  } finally {
+    el.remove();
+    textarea.remove();
+    frame.remove();
+  }
+});
+
 it('defaults the listbox accessible name to "Suggestions", overridable via label', async () => {
   const el = await openWithItems();
   expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions');

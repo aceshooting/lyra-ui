@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: 'Run npm publish --dry-run instead of a real publish'
+        description: 'Validate and dry-run the existing release tarball instead of publishing it'
         required: false
         type: boolean
         default: false
@@ -19,20 +19,18 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  # All checkout, dependency, repository-script, and package lifecycle execution stays in this
+  # read-only job. The protected publish job consumes only the byte-verified artifact and digest.
+  verify:
     runs-on: ubuntu-latest
-    # A protected environment is the only thing that can hold a publish *before* the job's
-    # npm credentials are minted. Configure required reviewers on it in repository settings;
-    # the deployment gate then applies to `workflow_dispatch` re-publishes too, not just
-    # releases cut through the normal flow.
-    # (No `url:` here -- the deployment is created before any step runs, so the `steps` context
-    # is not yet populated and an expression over it would resolve to the empty string.)
-    environment: npm-publish
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
-      artifact-metadata: write
+      actions: read
+      checks: read
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      tag_sha: ${{ steps.source.outputs.sha }}
+      tarball_sha256: ${{ steps.asset_digest.outputs.sha256 }}
     steps:
       - name: Resolve release tag
         id: tag
@@ -45,96 +43,64 @@ jobs:
           else
             TAG="$RELEASE_TAG"
           fi
-          if [[ -z "$TAG" ]]; then
-            echo "::error::No tag resolved from the release event or workflow_dispatch input."
+          if [[ ! "$TAG" =~ ^lyra-(ui|flags)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Unsupported release tag '$TAG'. Expected a stable lyra-ui@<semver> or lyra-flags@<semver> tag."
             exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout tag
+      - name: Checkout tag without credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.tag.outputs.tag }}
+          persist-credentials: false
 
-      # Nothing else in this workflow proves the code being published was ever tested. A release
-      # can be cut from a commit whose CI never ran, ran on a *different* commit, or failed --
-      # and `npm publish` is irreversible for a given version. Require that every CI job this
-      # repository gates `main` on concluded `success` for the exact commit the tag resolves to.
-      - name: Require green CI for the exact release commit
+      - name: Validate source binding and required test runs
+        id: source
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
+          WORKFLOW_REF: ${{ github.ref }}
+          WORKFLOW_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           SHA="$(git rev-parse HEAD^{commit})"
-          echo "Tag '$TAG' resolves to commit $SHA"
+          TAG_OBJECT_TYPE="$(git cat-file -t "refs/tags/$TAG")"
+          TAG_SHA="$(git rev-parse --verify "refs/tags/$TAG^{commit}")"
+          node scripts/release-integrity.mjs validate-git-tag \
+            --tag "$TAG" \
+            --object-type "$TAG_OBJECT_TYPE" \
+            --checkout-sha "$SHA" \
+            --tag-commit-sha "$TAG_SHA"
+          node scripts/release-integrity.mjs validate-workflow-source \
+            --tag "$TAG" \
+            --event-name "$EVENT_NAME" \
+            --github-ref "$WORKFLOW_REF" \
+            --github-sha "$WORKFLOW_SHA" \
+            --tag-commit-sha "$TAG_SHA"
+          node scripts/release-integrity.mjs wait-ci \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow ci.yml \
+            --timeout-seconds 3600 \
+            --poll-seconds 20
+          node scripts/release-integrity.mjs wait-full-engine \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow full-engine.yml \
+            --timeout-seconds 7200 \
+            --poll-seconds 20
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
-          # `?per_page=100 --paginate` covers repos with more check runs than one page; the
-          # matrix legs of platform-contracts alone contribute four.
-          runs="$(gh api \
-            "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?per_page=100" \
-            --paginate --jq '.check_runs[] | [.name, .status, (.conclusion // "pending")] | @tsv')"
-
-          if [[ -z "$runs" ]]; then
-            echo "::error::No check runs recorded for $SHA -- CI never ran for this commit. Refusing to publish."
-            exit 1
-          fi
-
-          echo "Check runs for $SHA:"
-          printf '%s\n' "$runs" | awk -F'\t' '{printf "  %-46s %s/%s\n", $1, $2, $3}'
-
-          failed=0
-
-          # 1. Nothing may be failing or still in flight. `skipped` is accepted only for jobs a
-          #    path filter legitimately skipped; `neutral` likewise. Anything else is fatal.
-          while IFS=$'\t' read -r name status conclusion; do
-            [[ -z "$name" ]] && continue
-            if [[ "$status" != "completed" ]]; then
-              echo "::error::Check '$name' is '$status' for $SHA -- CI has not finished."
-              failed=1
-            elif [[ "$conclusion" != "success" && "$conclusion" != "skipped" && "$conclusion" != "neutral" ]]; then
-              echo "::error::Check '$name' concluded '$conclusion' for $SHA."
-              failed=1
-            fi
-          done <<< "$runs"
-
-          # 2. Every required job must be *present* and successful -- a deleted or never-started
-          #    job would otherwise pass step 1 vacuously.
-          for required in lint static-checks build-and-coverage packed-consumer docs-and-storybook visual-regression; do
-            if ! printf '%s\n' "$runs" | awk -F'\t' -v j="$required" '$1 == j && $3 == "success" {found=1} END {exit !found}'; then
-              echo "::error::Required CI job '$required' did not record a successful run for $SHA."
-              failed=1
-            fi
-          done
-
-          # 3. platform-contracts is a browser x Node matrix, so its check names are dynamic
-          #    ("firefox / Node 20", ...). Require at least one leg, and no failing leg (already
-          #    enforced by step 1).
-          if ! printf '%s\n' "$runs" | awk -F'\t' '$1 ~ /Node [0-9]+$/ && $3 == "success" {found=1} END {exit !found}'; then
-            echo "::error::No successful platform-contracts matrix leg recorded for $SHA."
-            failed=1
-          fi
-
-          if [[ "$failed" -ne 0 ]]; then
-            echo "::error::Refusing to publish $TAG -- CI is not green for $SHA."
-            exit 1
-          fi
-          echo "All required CI jobs are green for $SHA."
-
-      - name: Resolve package from tag
+      - name: Resolve source package identity from tag
         id: pkg
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          DIR_NAME="${TAG%@*}"
-          DIR="packages/$DIR_NAME"
-          if [[ ! -f "$DIR/package.json" ]]; then
-            echo "::error::No package.json at '$DIR' (resolved from tag '$TAG')."
-            exit 1
-          fi
-          PKG_NAME="$(node -p "require('./$DIR/package.json').name")"
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-          echo "name=$PKG_NAME" >> "$GITHUB_OUTPUT"
+          node scripts/release-integrity.mjs resolve-tag \
+            --tag "$TAG" \
+            --github-output "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
@@ -142,37 +108,148 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
+      - name: Install exact tagged dependencies
         run: pnpm install --frozen-lockfile
 
-      # Install the immutable npm 12.0.1 registry release. Using the registry package avoids
-      # intermittent failures while fetching npm CLI through GitHub's codeload path.
-      - name: Update npm CLI (trusted publishing needs >=11.5.1)
-        run: |
-          npm i -g npm@12.0.1
-          test "$(npm --version)" = "12.0.1"
-
-      # --if-present mirrors scripts/publish.sh's own per-package gate: lyra-flags has no "build"
-      # script (its generated index is produced by `prepack` at publish time), only lyra-ui does.
-      - name: Build package
-        run: pnpm --filter "${{ steps.pkg.outputs.name }}" run --if-present build
-
-      - name: Download release tarball
+      - name: Download and validate release tarball
         id: release_asset
-        if: ${{ github.event_name == 'release' || inputs.dry_run != true }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
+          set -euo pipefail
           dir="$RUNNER_TEMP/release-assets"
           mkdir -p "$dir"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$dir"
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=(--file "$file")
+          done < <(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print0)
+          node scripts/release-integrity.mjs validate-tarball \
+            --tag "$TAG" \
+            --github-output "$GITHUB_OUTPUT" \
+            "${files[@]}"
 
-          tarball="$(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
-          test -n "$tarball"
-          echo "path=$tarball" >> "$GITHUB_OUTPUT"
+      # Default actions/attest provenance identifies this workflow as the builder. Rebuild the
+      # exact tag and require byte identity so the later provenance statement remains truthful.
+      - name: Rebuild exact tagged source and compare release bytes
+        env:
+          PACKAGE_NAME: ${{ steps.pkg.outputs.name }}
+          RELEASE_TARBALL: ${{ steps.release_asset.outputs.path }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          rebuild_dir="$RUNNER_TEMP/tagged-source-rebuild"
+          mkdir -p "$rebuild_dir"
+          pnpm --filter "$PACKAGE_NAME" --fail-if-no-match pack --pack-destination "$rebuild_dir"
+          rebuilt=()
+          while IFS= read -r -d '' file; do
+            rebuilt+=("$file")
+          done < <(find "$rebuild_dir" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#rebuilt[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one tagged-source rebuild, found ${#rebuilt[@]}."
+            exit 1
+          fi
+          node scripts/release-integrity.mjs validate-tarball --tag "$TAG" --file "${rebuilt[0]}"
+          node scripts/release-integrity.mjs compare-rebuild \
+            --release-file "$RELEASE_TARBALL" \
+            --rebuilt-file "${rebuilt[0]}"
+
+      - name: Record verified tarball digest
+        id: asset_digest
+        env:
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+        run: |
+          echo "sha256=$(sha256sum "$TARBALL" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload byte-verified tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-release-tarball
+          path: ${{ steps.release_asset.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Download byte-verified tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-release-tarball
+          path: ${{ runner.temp }}/verified-release
+
+      - name: Verify transferred artifact digest
+        id: release_asset
+        env:
+          EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+        run: |
+          set -euo pipefail
+          tarballs=()
+          while IFS= read -r -d '' file; do
+            tarballs+=("$file")
+          done < <(find "$RUNNER_TEMP/verified-release" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#tarballs[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one verified tarball, found ${#tarballs[@]}."
+            exit 1
+          fi
+          actual_sha256="$(sha256sum "${tarballs[0]}" | cut -d ' ' -f1)"
+          if [[ "$actual_sha256" != "$EXPECTED_SHA256" ]]; then
+            echo "::error::Transferred tarball digest does not match the read-only verification job."
+            exit 1
+          fi
+          echo "path=${tarballs[0]}" >> "$GITHUB_OUTPUT"
+
+      # Environment approval can outlive the read-only job. Rebind both mutable GitHub surfaces
+      # to its outputs before attesting: the annotated tag must still peel to the verified commit,
+      # and the release must serve exactly the verified tarball bytes.
+      - name: Rebind release tag and tarball after approval
+        env:
+          EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+        run: |
+          set -euo pipefail
+          canonical="https://github.com/$GITHUB_REPOSITORY.git"
+          remote_sha="$(git ls-remote --tags "$canonical" "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ "$remote_sha" != "$EXPECTED_TAG_SHA" ]]; then
+            echo "::error::Release tag moved after read-only verification."
+            exit 1
+          fi
+          if [[ ! ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ) ]]; then
+            gh release upload "$TAG" "$TARBALL" --repo "$GITHUB_REPOSITORY" --clobber
+          fi
+          roundtrip="$RUNNER_TEMP/release-roundtrip"
+          mkdir -p "$roundtrip"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$roundtrip"
+          assets=()
+          while IFS= read -r -d '' file; do assets+=("$file"); done \
+            < <(find "$roundtrip" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#assets[@]}" -ne 1 || "$(sha256sum "${assets[0]}" | cut -d ' ' -f1)" != "$EXPECTED_SHA256" ]]; then
+            echo "::error::GitHub Release does not serve exactly the verified tarball."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm CLI (trusted publishing needs >=11.5.1)
+        run: |
+          npm i -g --ignore-scripts npm@12.0.1
+          test "$(npm --version)" = "12.0.1"
 
       - name: Generate release provenance
         id: attest
@@ -184,37 +261,41 @@ jobs:
       - name: Upload provenance to GitHub release
         if: ${{ github.event_name == 'release' || inputs.dry_run != true }}
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.tag.outputs.tag }}
-          TARBALL: ${{ steps.release_asset.outputs.path }}
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
           provenance="$TARBALL.sigstore.json"
-          intoto="$TARBALL.intoto.jsonl"
           cp "$BUNDLE" "$provenance"
-          cp "$BUNDLE" "$intoto"
-          gh release upload "$TAG" "$provenance" "$intoto" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "$provenance" --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Publish to npm
-        working-directory: ${{ steps.pkg.outputs.dir }}
         env:
+          EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
           TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ "$remote_sha" != "$EXPECTED_TAG_SHA" ]]; then
+            echo "::error::Release tag moved before npm publish."
+            exit 1
+          fi
+          final_asset="$RUNNER_TEMP/final-release-asset"
+          mkdir -p "$final_asset"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$final_asset"
+          assets=()
+          while IFS= read -r -d '' file; do assets+=("$file"); done \
+            < <(find "$final_asset" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#assets[@]}" -ne 1 || "$(sha256sum "${assets[0]}" | cut -d ' ' -f1)" != "$EXPECTED_SHA256" ]]; then
+            echo "::error::GitHub Release tarball changed before npm publish."
+            exit 1
+          fi
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
-            # No release tarball was downloaded for this path (the download step above is
-            # gated on the same condition being false) -- pack fresh from source. Harmless for
-            # a dry run, which writes nothing to the registry either way.
-            npm publish --access public --dry-run
+            npm publish "$TARBALL" --access public --dry-run
           else
-            # Publish the exact tarball already built by `pnpm pack` (scripts/publish.sh) and
-            # already provenance-attested above, instead of letting `npm publish` re-pack from
-            # this directory's live package.json. Re-packing here would matter: `pnpm pack`
-            # rewrites `workspace:*` peer/dev dependency specifiers (e.g.
-            # "@aceshooting/lyra-flags": "workspace:^1.4.0") to a real published semver range,
-            # but plain `npm pack`/`npm publish` treat `workspace:` as an opaque string and
-            # publish it verbatim -- breaking peer-dependency resolution for every consumer,
-            # even one with a correctly matching version installed. Publishing the pre-built
-            # tarball also guarantees the artifact npm registers is bit-for-bit the one that
-            # was just attested, not a second, separately-packed one.
             npm publish "$TARBALL" --access public
           fi

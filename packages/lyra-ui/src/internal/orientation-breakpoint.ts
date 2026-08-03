@@ -58,6 +58,7 @@ const VIEWPORT_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)?$/i;
  */
 export class OrientationBreakpointController implements ReactiveController {
   private mediaQuery?: MediaQueryList;
+  private mediaQueryListener?: (event: MediaQueryListEvent) => void;
   private belowViewport = false;
   private raw?: number | string;
   private basis: BreakpointBasis = 'container';
@@ -141,7 +142,16 @@ export class OrientationBreakpointController implements ReactiveController {
 
   private arm(): void {
     this.teardown();
-    if (this.basis !== 'viewport' || !this.active || typeof matchMedia !== 'function') {
+    if (this.basis !== 'viewport' || !this.active) {
+      this.belowViewport = false;
+      return;
+    }
+    // Property updates may still complete after a host has been removed. Keep the last connected
+    // state in that interval and let hostConnected() arm the latest authored value in its current
+    // owner realm.
+    if (!this.host.isConnected) return;
+    const ownerWindow = this.host.ownerDocument.defaultView;
+    if (!ownerWindow?.matchMedia) {
       this.belowViewport = false;
       return;
     }
@@ -154,21 +164,32 @@ export class OrientationBreakpointController implements ReactiveController {
     // since `matchMedia()` has no unitless default.
     const trimmed = typeof this.raw === 'number' ? `${this.raw}` : String(this.raw).trim();
     const length = BARE_NUMBER_RE.test(trimmed) ? `${trimmed}px` : trimmed;
-    this.mediaQuery = matchMedia(`(max-width: ${length})`);
-    this.mediaQuery.addEventListener('change', this.onChange);
-    this.belowViewport = this.mediaQuery.matches;
+    const mediaQuery = ownerWindow.matchMedia(`(max-width: ${length})`);
+    const listener = (event: MediaQueryListEvent): void => {
+      if (
+        this.mediaQuery !== mediaQuery ||
+        !this.host.isConnected ||
+        this.host.ownerDocument.defaultView !== ownerWindow
+      ) {
+        return;
+      }
+      if (event.matches === this.belowViewport) return;
+      this.belowViewport = event.matches;
+      this.onViewportChange();
+    };
+    this.mediaQuery = mediaQuery;
+    this.mediaQueryListener = listener;
+    mediaQuery.addEventListener('change', listener);
+    this.belowViewport = mediaQuery.matches;
   }
 
   private teardown(): void {
-    this.mediaQuery?.removeEventListener('change', this.onChange);
+    if (this.mediaQuery && this.mediaQueryListener) {
+      this.mediaQuery.removeEventListener('change', this.mediaQueryListener);
+    }
     this.mediaQuery = undefined;
+    this.mediaQueryListener = undefined;
   }
-
-  private onChange = (e: MediaQueryListEvent): void => {
-    if (e.matches === this.belowViewport) return;
-    this.belowViewport = e.matches;
-    this.onViewportChange();
-  };
 }
 
 /** The collapsing pane's responsive band, widest first. Structurally identical to `<lr-split>`'s
@@ -215,6 +236,7 @@ const DEFAULT_FLOAT_PX = 400;
 export class CollapseBreakpointController implements ReactiveController {
   private railQuery?: MediaQueryList;
   private floatQuery?: MediaQueryList;
+  private mediaQueryListener?: () => void;
   private rawRail?: number | string;
   private rawFloat?: number | string;
   private basis: BreakpointBasis = 'container';
@@ -268,6 +290,10 @@ export class CollapseBreakpointController implements ReactiveController {
       if (this.railQuery!.matches) return 'rail';
       return 'wide';
     }
+    // A detached viewport-driven host deliberately has no queries. Retain the last connected band
+    // until hostConnected() can read the current owner window instead of accidentally falling back
+    // to a container-width comparison while detached.
+    if (this.basis === 'viewport') return this.band;
     if (containerWidth < this.floatPx) return 'floating';
     if (containerWidth < this.railPx) return 'rail';
     return 'wide';
@@ -303,7 +329,13 @@ export class CollapseBreakpointController implements ReactiveController {
 
   private arm(): void {
     this.teardown();
-    if (this.basis !== 'viewport' || typeof matchMedia !== 'function') {
+    if (this.basis !== 'viewport') {
+      this.band = 'wide';
+      return;
+    }
+    if (!this.host.isConnected) return;
+    const ownerWindow = this.host.ownerDocument.defaultView;
+    if (!ownerWindow?.matchMedia) {
       this.band = 'wide';
       return;
     }
@@ -313,10 +345,27 @@ export class CollapseBreakpointController implements ReactiveController {
     // textually identical there, so they always agree and the `'rail'` band simply collapses away,
     // exactly as it does under container basis.
     const railLength = this.railUnclampedPx >= this.floatPx ? this.queryLength(this.rawRail, DEFAULT_RAIL_PX) : floatLength;
-    this.railQuery = matchMedia(`(max-width: ${railLength})`);
-    this.floatQuery = matchMedia(`(max-width: ${floatLength})`);
-    this.railQuery.addEventListener('change', this.onChange);
-    this.floatQuery.addEventListener('change', this.onChange);
+    const railQuery = ownerWindow.matchMedia(`(max-width: ${railLength})`);
+    const floatQuery = ownerWindow.matchMedia(`(max-width: ${floatLength})`);
+    const listener = (): void => {
+      if (
+        this.railQuery !== railQuery ||
+        this.floatQuery !== floatQuery ||
+        !this.host.isConnected ||
+        this.host.ownerDocument.defaultView !== ownerWindow
+      ) {
+        return;
+      }
+      const next = this.classify(Number.POSITIVE_INFINITY);
+      if (next === this.band) return;
+      this.band = next;
+      this.onViewportChange();
+    };
+    this.railQuery = railQuery;
+    this.floatQuery = floatQuery;
+    this.mediaQueryListener = listener;
+    railQuery.addEventListener('change', listener);
+    floatQuery.addEventListener('change', listener);
     this.band = this.classify(Number.POSITIVE_INFINITY);
   }
 
@@ -336,19 +385,12 @@ export class CollapseBreakpointController implements ReactiveController {
   }
 
   private teardown(): void {
-    this.railQuery?.removeEventListener('change', this.onChange);
-    this.floatQuery?.removeEventListener('change', this.onChange);
+    if (this.mediaQueryListener) {
+      this.railQuery?.removeEventListener('change', this.mediaQueryListener);
+      this.floatQuery?.removeEventListener('change', this.mediaQueryListener);
+    }
     this.railQuery = undefined;
     this.floatQuery = undefined;
+    this.mediaQueryListener = undefined;
   }
-
-  /** Shared by both queries: re-classify from scratch and report only a real band change. Crossing
-   *  both thresholds at once fires this twice, but the second call sees the band it already
-   *  applied and stays quiet. */
-  private onChange = (): void => {
-    const next = this.classify(Number.POSITIVE_INFINITY);
-    if (next === this.band) return;
-    this.band = next;
-    this.onViewportChange();
-  };
 }

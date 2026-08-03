@@ -2,7 +2,7 @@
 
 # `lr-map`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/map/map.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-map.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMap`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -16,12 +16,15 @@
 ## `lr-map`
 
 A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
-and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anything unexposed.
+and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for common imperative
+operations. Its runtime value is the underlying MapLibre map.
 
 **Properties:**
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
-- `mapStyle: StyleSpecification | string = DEFAULT_STYLE` (attribute: false) — the default is a
+- `mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE` (attribute: false) —
+  `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from MapLibre's
+  `StyleSpecification`, including its string or multi-sprite form. The default is a
   basic OSM raster tile style pointing at **OpenStreetMap's shared demo tile server**. Fine for
   local development, but its usage policy forbids bulk/production traffic, requires an identifying
   User-Agent, and rate-limits or IP-blocks non-compliant clients
@@ -62,7 +65,11 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
   `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
 
-**Getters:** `map` → the raw `maplibregl.Map` instance.
+**Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
+through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
+`resize()` subset so merely importing Lyra does not require `maplibre-gl` declarations. A consumer
+that installed the optional peer and needs its full imperative API can explicitly narrow the runtime
+value to `maplibregl.Map`.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
 (`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
@@ -70,9 +77,10 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (`role="alert"` message
-rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load, e.g.
-not installed)
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (ordinary localized visible
+text rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load,
+e.g. not installed). The post-mount failure is appended to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
@@ -117,8 +125,9 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   already calling `setCenter`/`setZoom`) — the choropleth and `dataLayers` are both automatically
   re-applied once the new style's own `'style.load'` fires, since a style change wipes every
   layer/source maplibre-gl knows about.
-- Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
-  hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- Point markers now have a declarative API (`markers`, above) with popup support — narrowing the
+  runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
+  way to place pins.
 - A marker uses `label` as its accessible name, falling back to the localized map label. Popup
   ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
@@ -135,8 +144,10 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   to the legend swatch's `background`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders).
-- while the `maplibre-gl` peer is resolving, the host shows a `<lr-skeleton variant="rect">` with
-  `aria-busy="true"` in place of the map container.
+- while the `maplibre-gl` peer is resolving, the host/base expose `aria-busy="true"` and show a
+  decorative `<lr-skeleton variant="rect" announce="false">` in place of the map container.
+  Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
+  region.
 - construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this
   element being observed intersecting the viewport (`IntersectionObserver`), independent of whether
   the `maplibre-gl` peer has already loaded — an off-screen `<lr-map>` swaps its skeleton for the

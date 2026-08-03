@@ -88,6 +88,33 @@ function fireResize(callback: ResizeObserverCallback, width: number): void {
   );
 }
 
+function installOwnerMatchMediaStub(owner: Window, width: number): {
+  queries: string[];
+  removed: string[];
+  restore(): void;
+} {
+  const original = owner.matchMedia;
+  const queries: string[] = [];
+  const removed: string[] = [];
+  owner.matchMedia = ((query: string) => {
+    queries.push(query);
+    const max = Number.parseFloat(/max-width:\s*([\d.]+)px/.exec(query)?.[1] ?? 'NaN');
+    return {
+      media: query,
+      matches: width <= max,
+      addEventListener: () => {},
+      removeEventListener: () => removed.push(query),
+    } as unknown as MediaQueryList;
+  }) as typeof owner.matchMedia;
+  return {
+    queries,
+    removed,
+    restore(): void {
+      owner.matchMedia = original;
+    },
+  };
+}
+
 describe("lr-stepper", () => {
   it("renders one step per entry with the right state-driven part/attribute", async () => {
     const el = (await fixture(
@@ -865,6 +892,42 @@ describe("lr-stepper", () => {
       await elementUpdated(el);
       expect(el.effectiveOrientation).to.equal("vertical");
       el.remove();
+    });
+
+    it("rebinds viewport breakpoints to the destination owner after adoption", async () => {
+      const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+      const frameDocument = frame.contentDocument;
+      const frameWindow = frame.contentWindow;
+      if (!frameDocument || !frameWindow)
+        throw new Error("The iframe realm was unavailable.");
+      const ambient = installOwnerMatchMediaStub(window, 1000);
+      const destination = installOwnerMatchMediaStub(frameWindow, 500);
+      let el: LyraStepper | undefined;
+
+      try {
+        el = (await fixture(html`
+          <lr-stepper
+            orientation-breakpoint="600px"
+            orientation-breakpoint-basis="viewport"
+            .steps=${steps()}
+          ></lr-stepper>
+        `)) as LyraStepper;
+        await elementUpdated(el);
+        expect(el.effectiveOrientation).to.equal("horizontal");
+        expect(ambient.queries).to.deep.equal(["(max-width: 600px)"]);
+
+        frameDocument.adoptNode(el);
+        frameDocument.body.append(el);
+        await elementUpdated(el);
+        expect(ambient.removed).to.deep.equal(["(max-width: 600px)"]);
+        expect(destination.queries).to.deep.equal(["(max-width: 600px)"]);
+        expect(el.effectiveOrientation).to.equal("vertical");
+      } finally {
+        el?.remove();
+        destination.restore();
+        ambient.restore();
+        frame.remove();
+      }
     });
 
     it("is accessible with a viewport-basis breakpoint set", async () => {

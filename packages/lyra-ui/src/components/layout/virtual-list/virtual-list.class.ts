@@ -7,6 +7,11 @@ import { prefersReducedMotion } from "../../../internal/motion.js";
 import { finiteAdd, finiteInteger } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./virtual-list.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Fallback per-row height (px) used for any row that hasn't been measured
  *  yet in `row-height="auto"` mode -- close enough to a typical single-line
@@ -227,6 +232,14 @@ export interface LyraVirtualListEventMap {
  * @since 4.0.0
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    items: LYRA_DEFAULT_items,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The full (non-windowed) item collection. */
@@ -419,6 +432,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private readonly observedRowKeys = new WeakMap<HTMLElement, string>();
   private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
   private scrollRafId?: number;
+  private scrollRafOwner?: Window;
+  private scrollRafDocument?: Document;
+  private scrollListenerTarget?: HTMLElement;
+  private ownerRealmGeneration = 0;
   /** True for the remainder of the frame in which any of this component's `ResizeObserver`s
    *  delivered -- so `syncRowObservers()` can tell that the re-render it is running inside is still
    *  part of the browser's current resize-observation loop. See `beginResizeDelivery()`. */
@@ -428,6 +445,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  drops an entry here whenever it drops the same identity there. */
   private readonly deferredRowObservations = new Map<string, HTMLElement>();
   private rowObserveRafId?: number;
+  private rowObserveRafOwner?: Window;
+  private rowObserveRafDocument?: Document;
 
   /** Reference-keyed memo for `activeId`'s resolved index. `render()` re-runs on every scroll
    *  frame (`scrollTop` drives reactive state), and resolving `activeId` means scanning `items`
@@ -469,11 +488,40 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.rowResizeObserver = new ResizeObserver(this.onRowsResized);
-    this.stickyResizeObserver = new ResizeObserver(this.onStickyResized);
-    this.stickyFocusObserver = new MutationObserver(
-      this.onStickyContentMutated
-    );
+    this.resetOwnerRealmWork();
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    const generation = this.ownerRealmGeneration;
+    const ResizeObserverCtor = ownerWindow?.ResizeObserver;
+    if (ResizeObserverCtor) {
+      const rowObserver = new ResizeObserverCtor((entries) => {
+        if (
+          this.rowResizeObserver !== rowObserver ||
+          !this.isCurrentOwnerWork(ownerDocument, generation)
+        ) return;
+        this.onRowsResized(entries);
+      });
+      const stickyObserver = new ResizeObserverCtor((entries) => {
+        if (
+          this.stickyResizeObserver !== stickyObserver ||
+          !this.isCurrentOwnerWork(ownerDocument, generation)
+        ) return;
+        this.onStickyResized(entries);
+      });
+      this.rowResizeObserver = rowObserver;
+      this.stickyResizeObserver = stickyObserver;
+    }
+    const MutationObserverCtor = ownerWindow?.MutationObserver;
+    if (MutationObserverCtor) {
+      const focusObserver = new MutationObserverCtor(() => {
+        if (
+          this.stickyFocusObserver !== focusObserver ||
+          !this.isCurrentOwnerWork(ownerDocument, generation)
+        ) return;
+        this.onStickyContentMutated();
+      });
+      this.stickyFocusObserver = focusObserver;
+    }
     // firstUpdated() only ever fires once per element instance -- a
     // disconnect/reconnect (e.g. a reparenting drag) needs its own
     // re-attach here, since the container observer/scroll listener were
@@ -490,16 +538,35 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.resetOwnerRealmWork();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmWork();
+  }
+
+  private isCurrentOwnerWork(ownerDocument: Document, generation: number): boolean {
+    return (
+      this.ownerRealmGeneration === generation &&
+      this.isConnected &&
+      this.ownerDocument === ownerDocument
+    );
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
     this.rowResizeObserver?.disconnect();
     this.rowResizeObserver = undefined;
     this.observedRows.clear();
     this.deferredRowObservations.clear();
     this.inResizeDelivery = false;
     if (this.rowObserveRafId !== undefined) {
-      cancelAnimationFrame(this.rowObserveRafId);
-      this.rowObserveRafId = undefined;
+      this.rowObserveRafOwner?.cancelAnimationFrame(this.rowObserveRafId);
     }
+    this.rowObserveRafId = undefined;
+    this.rowObserveRafOwner = undefined;
+    this.rowObserveRafDocument = undefined;
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
     this.stickyResizeObserver?.disconnect();
@@ -508,11 +575,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.stickyFocusObserver = undefined;
     this.observedSticky = undefined;
     if (this.scrollRafId !== undefined) {
-      cancelAnimationFrame(this.scrollRafId);
-      this.scrollRafId = undefined;
+      this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
     }
+    this.scrollRafId = undefined;
+    this.scrollRafOwner = undefined;
+    this.scrollRafDocument = undefined;
+    this.pendingScrollTop = null;
     this.pendingScrollCorrection = undefined;
-    this.scrollContainer?.removeEventListener("scroll", this.onScroll);
+    this.scrollListenerTarget?.removeEventListener("scroll", this.onScroll);
+    this.scrollListenerTarget = undefined;
   }
 
   override firstUpdated(): void {
@@ -703,22 +774,43 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private attachContainerListeners(): void {
     const base = this.scrollContainer;
-    if (!base) return;
-    this.containerResizeObserver = new ResizeObserver((entries) => {
-      this.beginResizeDelivery();
-      const entry = entries[0];
-      if (!entry) return;
-      this.viewportHeight =
-        entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-    });
-    this.containerResizeObserver.observe(base);
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!base || !this.isConnected || !ownerWindow) return;
+    this.containerResizeObserver?.disconnect();
+    this.scrollListenerTarget?.removeEventListener("scroll", this.onScroll);
+    const generation = this.ownerRealmGeneration;
+    const ResizeObserverCtor = ownerWindow.ResizeObserver;
+    if (ResizeObserverCtor) {
+      const observer = new ResizeObserverCtor((entries) => {
+        if (
+          this.containerResizeObserver !== observer ||
+          this.scrollListenerTarget !== base ||
+          !this.isCurrentOwnerWork(ownerDocument, generation)
+        ) return;
+        this.beginResizeDelivery();
+        const entry = entries[0];
+        if (!entry) return;
+        this.viewportHeight =
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+      });
+      this.containerResizeObserver = observer;
+      observer.observe(base);
+    } else {
+      this.containerResizeObserver = undefined;
+    }
     base.addEventListener("scroll", this.onScroll, { passive: true });
+    this.scrollListenerTarget = base;
     // Queue a one-time read as a fast path for browsers that delay the first
     // ResizeObserver callback. It runs after firstUpdated() returns, so these
     // reactive writes do not schedule an update from inside Lit's lifecycle
     // callback; the observer remains responsible for later measurements.
-    queueMicrotask(() => {
-      if (!this.isConnected || this.scrollContainer !== base) return;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        this.scrollListenerTarget !== base ||
+        this.scrollContainer !== base ||
+        !this.isCurrentOwnerWork(ownerDocument, generation)
+      ) return;
       const viewportHeight = base.clientHeight;
       const scrollTop = base.scrollTop;
       if (this.viewportHeight !== viewportHeight)
@@ -737,8 +829,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // from this same tick rather than a second rAF of its own, so a consumer
     // driving scroll-linked layout gets exactly one notification per frame,
     // already in sync with the range recompute.
-    this.scrollRafId = requestAnimationFrame(() => {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.ownerRealmGeneration;
+    const handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.scrollRafId !== handle ||
+        this.scrollRafOwner !== ownerWindow ||
+        this.scrollRafDocument !== ownerDocument ||
+        !this.isCurrentOwnerWork(ownerDocument, generation)
+      ) return;
       this.scrollRafId = undefined;
+      this.scrollRafOwner = undefined;
+      this.scrollRafDocument = undefined;
       if (this.pendingScrollTop !== null) {
         const scrollTop = this.pendingScrollTop;
         this.pendingScrollTop = null;
@@ -752,6 +856,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         }
       }
     });
+    this.scrollRafId = handle;
+    this.scrollRafOwner = ownerWindow;
+    this.scrollRafDocument = ownerDocument;
   };
 
   private onRowsResized = (entries: ResizeObserverEntry[]): void => {
@@ -820,8 +927,23 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private beginResizeDelivery(): void {
     this.inResizeDelivery = true;
     if (this.rowObserveRafId !== undefined) return;
-    this.rowObserveRafId = requestAnimationFrame(() => {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) {
+      this.inResizeDelivery = false;
+      return;
+    }
+    const generation = this.ownerRealmGeneration;
+    const handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.rowObserveRafId !== handle ||
+        this.rowObserveRafOwner !== ownerWindow ||
+        this.rowObserveRafDocument !== ownerDocument ||
+        !this.isCurrentOwnerWork(ownerDocument, generation)
+      ) return;
       this.rowObserveRafId = undefined;
+      this.rowObserveRafOwner = undefined;
+      this.rowObserveRafDocument = undefined;
       this.inResizeDelivery = false;
       const ro = this.rowResizeObserver;
       for (const [identity, el] of this.deferredRowObservations) {
@@ -830,6 +952,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       }
       this.deferredRowObservations.clear();
     });
+    this.rowObserveRafId = handle;
+    this.rowObserveRafOwner = ownerWindow;
+    this.rowObserveRafDocument = ownerDocument;
   }
 
   /** Keeps the row `ResizeObserver` watching exactly the currently-rendered
@@ -902,7 +1027,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (target === null) return;
     base.scrollTo({
       top: Math.max(0, target),
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? "auto" : "smooth",
     });
   }
 
@@ -936,7 +1061,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // position APIs (offsetForIndex/indexAtOffset) already apply.
     const clamped = finiteInteger(index, 0, 0, n - 1);
     const align = options?.align ?? "auto";
-    const behavior: "auto" | "smooth" = prefersReducedMotion()
+    const behavior: "auto" | "smooth" = prefersReducedMotion(this.ownerDocument.defaultView)
       ? "auto"
       : options?.behavior ?? "smooth";
     this.performScrollTo(clamped, align, behavior);

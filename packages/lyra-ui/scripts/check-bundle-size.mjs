@@ -4,8 +4,7 @@
 // anyone notices. This script bundles (esbuild: bundle + esm + minify) the published entry points a
 // consumer would import, gzips the result, and compares against the budgets checked in at
 // scripts/bundle-budgets.json. Run after `pnpm build` (it measures dist/, the actual published
-// form). Regenerate the budgets deliberately with `--write-budgets` (~10% headroom over the
-// current build, rounded up to the KB).
+// form). The checked-in ceilings are reviewed release limits, not generated snapshots.
 //
 // It doubles as the source of the size numbers this project publishes: the same pass measures every
 // per-component entry and records the average, alongside the whole-barrel total, in
@@ -31,13 +30,21 @@ const budgetsPath = join(packageDir, 'scripts', 'bundle-budgets.json');
 const statsPath = join(packageDir, 'scripts', 'bundle-stats.json');
 const manifestPath = join(packageDir, 'custom-elements.json');
 const taxonomyPath = join(packageDir, 'scripts', 'component-taxonomy.json');
-const writeBudgets = process.argv.includes('--write-budgets');
+const arguments_ = process.argv.slice(2);
+const unknownArguments = arguments_.filter(
+  (argument) => argument !== '--write-stats' && !argument.startsWith('--emit='),
+);
+if (unknownArguments.length > 0) throw new Error(`Unknown argument: ${unknownArguments[0]}`);
+const writeStats = arguments_.includes('--write-stats');
 
 // `--emit=<dir>` additionally writes the bundles this script already builds in memory. Nothing in
 // the repo produces a bundled artifact otherwise -- `pnpm build` is plain `tsc`, so dist/ is ~800
 // unbundled modules -- and Codecov bundle analysis needs real bundle output to report on. Opt-in
 // so the normal budget check stays a pure read. See scripts/codecov-bundle.mjs.
-const emitArg = process.argv.find((arg) => arg.startsWith('--emit='));
+const emitArguments = arguments_.filter((argument) => argument.startsWith('--emit='));
+if (emitArguments.length > 1) throw new Error('Only one --emit=<dir> argument is allowed');
+const emitArg = emitArguments[0];
+if (emitArg === '--emit=') throw new Error('--emit requires a directory');
 const emitDir = emitArg ? resolve(packageDir, emitArg.slice('--emit='.length)) : null;
 if (emitDir) rmSync(emitDir, { recursive: true, force: true });
 
@@ -49,51 +56,26 @@ const requireFromPackage = createRequire(join(packageDir, 'package.json'));
 const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
 const esbuild = requireFromLoaderHost('esbuild');
 
-// The side-effect-free localization runtime, both barrels, and five single-component entries
-// spanning the size range: a primitive (button), a form control with overlay machinery (select), a
-// canvas/SVG visualization (gauge), a document-viewer shell around an optional peer (pdf-viewer),
-// and the largest interactive family (flow-canvas). Budgeting representatives keeps the check fast
-// while still catching a regression in any of the shared layers (LyraElement base, form internals,
-// overlay stack, viewer chrome). The localization entry has its own tight budget so a component
-// registration import cannot silently enter that application-only runtime.
-//
-// Two barrels, because since 8.0.0 they measure different things and only one of them answers the
-// question the README badge asks. `dist/lyra.js` is the registration-free package root: it
-// re-exports every component class but defines no custom element, so its number is the ceiling a
-// consumer sees before tree-shaking drops the components they never name. `dist/all.js` is the
-// compatibility entry that registers the whole root-included set -- that is what a consumer pays
-// who imports every component, so it, not the root, is what `barrelGzipKb` reports.
-//
-// On the button budget, so nobody re-chases a target that was never reachable here. lr-button is
-// the smallest meaningful component, so its weight is the base layer every consumer pays.
-// Attributed by esbuild metafile + subtraction (gzip level 9, the same pass this script runs):
-//
-//   42.7 KB  dist/components/forms/button/button.js
-//   -14.4    the built-in English message catalog in src/internal/localization.ts
-//   -10.0    src/internal/tokens.styles.ts + src/internal/tokens/palette.styles.ts
-//    -5.6    button.styles.ts + internal/variants.styles.ts + internal/sizes.styles.ts
-//   =12.7    lit (6.2 of it), LyraElement, the localization runtime, button.class, form internals
-//
-// The catalog is the only lever big enough to matter, and it cannot be shrunk in place: its 1232
-// keys are all live (every one is referenced from src), and its content gzips to ~14.8 KB on its
-// own (6.9 keys + 8.0 values), so the bundled 14.4 KB is already at the entropy floor -- a denser
-// encoding buys nothing. It also cannot be tree-shaken, because `resolveLyraString` indexes it
-// with a runtime key, which pins the whole object for every component that extends LyraElement.
-// Getting button under ~30 KB therefore requires shipping *fewer keys per component*: a generated
-// per-component slice that each `*.class.ts` imports, with `resolveLyraString` reading a merged
-// registry and the complete catalog left behind the public `LYRA_DEFAULT_STRINGS` export. That is
-// a 237-file change plus a new generated artifact, and it must keep the English fallback rendering
-// synchronously with no locale registered -- so it belongs in its own change, not in a budget bump.
-const entries = [
-  'dist/localization.js',
-  'dist/lyra.js',
-  'dist/all.js',
-  'dist/components/forms/button/button.js',
-  'dist/components/forms/select/select.js',
-  'dist/components/data/gauge/gauge.js',
-  'dist/components/viewers/pdf-viewer/pdf-viewer.js',
-  'dist/components/data/flow-canvas/flow-canvas.js',
+const budgets = JSON.parse(readFileSync(budgetsPath, 'utf8'));
+const entries = Object.keys(budgets).filter((entry) => !entry.startsWith('$')).sort();
+const requiredBudgetCategories = [
+  'dist/hydration.js',
+  'dist/ssr.js',
+  'dist/ssr/all.js',
+  'dist/ssr-loader.js',
+  'dist/autoloader.js',
+  'dist/autoloader-cdn.js',
+  ...[
+    'agent-tools', 'charts', 'conversation', 'data', 'forms', 'layout',
+    'media', 'overlays', 'retrieval', 'utility', 'viewers',
+  ].map((family) => `dist/components/${family}/index.js`),
 ];
+for (const entry of requiredBudgetCategories) {
+  if (!Number.isFinite(budgets[entry])) throw new Error(`missing hard bundle budget for ${entry}`);
+}
+for (const aggregate of ['$componentP95GzipKb', '$componentMaxGzipKb']) {
+  if (!Number.isFinite(budgets[aggregate])) throw new Error(`missing hard bundle budget ${aggregate}`);
+}
 
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -195,33 +177,18 @@ if (missingEntries.length) {
   const avgComponentGzipKb = componentGzipBytes.length
     ? Number((componentGzipBytes.reduce((sum, bytes) => sum + bytes, 0) / componentGzipBytes.length / 1024).toFixed(1))
     : 0;
+  const sortedComponentBytes = [...componentGzipBytes].sort((a, b) => a - b);
+  const p95ComponentGzipBytes = sortedComponentBytes[
+    Math.max(0, Math.ceil(sortedComponentBytes.length * 0.95) - 1)
+  ] ?? 0;
+  const maxComponentGzipBytes = sortedComponentBytes.at(-1) ?? 0;
   // The second badge figure: the whole barrel, i.e. what a consumer pays who imports every
   // component at once. It is the upper bound the per-component average sits under. It reads
   // `dist/all.js` rather than the package root: the root stopped registering components in 8.0.0,
   // so its weight no longer answers "what does importing everything cost".
   const barrelGzipKb = Number(toKb(measured.find(({ entry }) => entry === 'dist/all.js')?.gzipBytes ?? 0));
 
-  if (writeBudgets) {
-    const budgets = {};
-    for (const { entry, gzipBytes } of measured) {
-      budgets[entry] = Math.ceil((gzipBytes * 1.1) / 1024);
-    }
-    writeFileSync(
-      budgetsPath,
-      `${JSON.stringify(
-        {
-          $comment:
-            'gzip budgets in KB (1024 bytes) for bundled+minified esm entries, optional peers externalized; ' +
-            'checked by scripts/check-bundle-size.mjs, regenerated via --write-budgets (~10% headroom)',
-          ...budgets,
-        },
-        null,
-        2,
-      )}\n`,
-    );
-    for (const { entry, minBytes, gzipBytes } of measured) {
-      console.log(`${entry}: min ${toKb(minBytes)} KB, gzip ${toKb(gzipBytes)} KB -> budget ${budgets[entry]} KB`);
-    }
+  if (writeStats) {
     writeFileSync(
       statsPath,
       `${JSON.stringify(
@@ -232,7 +199,7 @@ if (missingEntries.length) {
             'counted once in every per-component figure and barrelGzipKb is what importing everything ' +
             'costs -- measured from dist/all.js, the entry that registers the whole root-included set, ' +
             'since the package root itself is registration-free. Regenerated by ' +
-            'scripts/check-bundle-size.mjs --write-budgets; the normal check fails when the live build ' +
+            'scripts/check-bundle-size.mjs --write-stats; the normal check fails when the live build ' +
             'drifts from these.',
           // Kept for consumers of the pre-6.3 stats schema.
           componentCount: componentEntries.length,
@@ -248,23 +215,19 @@ if (missingEntries.length) {
       )}\n`,
     );
     console.log(
-      `bundle-size budgets written for ${measured.length} entries to scripts/bundle-budgets.json; ` +
-        `${componentEntries.length} components average ${avgComponentGzipKb} KB gzip -> scripts/bundle-stats.json`,
+      `${componentEntries.length} component measurements written to scripts/bundle-stats.json; ` +
+        `reviewed budgets were not changed`,
     );
-  } else if (!existsSync(budgetsPath)) {
-    console.error('scripts/bundle-budgets.json not found -- generate it with `node scripts/check-bundle-size.mjs --write-budgets`');
-    process.exitCode = 1;
-  } else {
-    const budgets = JSON.parse(readFileSync(budgetsPath, 'utf8'));
+  }
     for (const entry of entries) {
       if (typeof budgets[entry] !== 'number') {
-        errors.push(`${entry}: no budget in scripts/bundle-budgets.json -- regenerate with --write-budgets`);
+        errors.push(`${entry}: no hard budget in scripts/bundle-budgets.json`);
       }
     }
     // A budget for an entry this script no longer measures is drift (typically an entry rename):
     // it looks covered but guards nothing.
     for (const key of Object.keys(budgets)) {
-      if (key !== '$comment' && !entries.includes(key)) {
+      if (!key.startsWith('$') && !entries.includes(key)) {
         errors.push(`scripts/bundle-budgets.json has a stale entry "${key}" that is no longer measured`);
       }
     }
@@ -278,50 +241,59 @@ if (missingEntries.length) {
         console.log(`${line} ok`);
       }
     }
+    for (const [label, actualBytes, budgetKey] of [
+      ['component p95', p95ComponentGzipBytes, '$componentP95GzipKb'],
+      ['component max', maxComponentGzipBytes, '$componentMaxGzipKb'],
+    ]) {
+      const budgetKb = budgets[budgetKey];
+      const line = `${label}: gzip ${toKb(actualBytes)} KB (budget ${budgetKb} KB)`;
+      if (actualBytes > budgetKb * 1024) errors.push(`${line} -- OVER BUDGET`);
+      else console.log(`${line} ok`);
+    }
 
     // The README badges render scripts/bundle-stats.json straight from main, so a stale file is a
     // published false claim rather than a private inconsistency. The component count is checked
     // exactly (adding or removing a component changes the average by definition); the two sizes get
     // a 5% band so ordinary churn inside existing components does not demand a regeneration commit.
     if (!existsSync(statsPath)) {
-      errors.push('scripts/bundle-stats.json not found -- generate it with `node scripts/check-bundle-size.mjs --write-budgets`');
+      errors.push('scripts/bundle-stats.json not found -- generate it with `node scripts/check-bundle-size.mjs --write-stats`');
     } else {
       const stats = JSON.parse(readFileSync(statsPath, 'utf8'));
       const drifted = (recorded, live) => typeof recorded !== 'number' || Math.abs(live - recorded) > recorded * 0.05;
       if (stats.componentCount !== componentEntries.length) {
         errors.push(
           `scripts/bundle-stats.json records ${stats.componentCount} components but ${componentEntries.length} are published ` +
-            '-- the README size badges are stale, regenerate with --write-budgets',
+            '-- the README size badges are stale, regenerate with --write-stats',
         );
       }
       if (stats.measuredEntrypointCount !== componentEntries.length) {
         errors.push(
           `scripts/bundle-stats.json records ${stats.measuredEntrypointCount} measured entry points but ` +
-            `${componentEntries.length} are published -- regenerate with --write-budgets`,
+            `${componentEntries.length} are published -- regenerate with --write-stats`,
         );
       }
       if (stats.publicTagCount !== publicTagCount) {
         errors.push(
           `scripts/bundle-stats.json records ${stats.publicTagCount} public tags but the manifest contains ` +
-            `${publicTagCount} -- regenerate with --write-budgets`,
+            `${publicTagCount} -- regenerate with --write-stats`,
         );
       }
       if (stats.aliasPresetCount !== aliasPresetCount || stats.primaryBehaviorCount !== primaryBehaviorCount) {
         errors.push(
           'scripts/bundle-stats.json taxonomy counts are stale -- update component-taxonomy.json if needed, ' +
-            'then regenerate with --write-budgets',
+            'then regenerate with --write-stats',
         );
       }
       if (drifted(stats.avgComponentGzipKb, avgComponentGzipKb)) {
         errors.push(
           `scripts/bundle-stats.json records an average of ${stats.avgComponentGzipKb} KB gzip per component but the build ` +
-            `measures ${avgComponentGzipKb} KB -- the README size badges are stale, regenerate with --write-budgets`,
+            `measures ${avgComponentGzipKb} KB -- the README size badges are stale, regenerate with --write-stats`,
         );
       }
       if (drifted(stats.barrelGzipKb, barrelGzipKb)) {
         errors.push(
           `scripts/bundle-stats.json records a ${stats.barrelGzipKb} KB gzip barrel but the build measures ${barrelGzipKb} KB ` +
-            '-- the README size badges are stale, regenerate with --write-budgets',
+            '-- the README size badges are stale, regenerate with --write-stats',
         );
       }
       if (!errors.length) {
@@ -335,8 +307,7 @@ if (missingEntries.length) {
     if (errors.length) {
       console.error(errors.join('\n'));
       console.error(
-        'If the growth is intentional, raise the affected budget in scripts/bundle-budgets.json ' +
-          '(or rerun with --write-budgets) and justify the increase in the PR description.',
+        'Bundle growth must be reduced or receive an explicit reviewed budget change with rationale.',
       );
       process.exitCode = 1;
     } else {
@@ -345,5 +316,4 @@ if (missingEntries.length) {
           `(${optionalPeers.length} optional peers externalized)`,
       );
     }
-  }
 }

@@ -1,5 +1,7 @@
 import type { ComplexAttributeConverter, LitElement, PropertyValues } from 'lit';
-import { resolveLyraString } from './localization.js';
+import { LYRA_DEFAULT_fieldRequired } from './default-strings.generated.js';
+import { resolveLyraString } from './localization-runtime.js';
+import type { LyraLocaleStrings } from './localization-types.js';
 import {
   AnchoredValidityController,
   SET_ANCHORED_VALIDITY,
@@ -10,6 +12,8 @@ import { installInvalidEventAlias } from './invalid-event-alias.js';
 import { omittedEmptyStringConverter } from './converters.js';
 
 type Constructor<T> = new (...args: any[]) => T;
+
+const FORM_ASSOCIATED_DEFAULT_STRINGS = Object.freeze({ fieldRequired: LYRA_DEFAULT_fieldRequired });
 
 /** A write to the public `form` IDL may name an owner by id while reads stay element-valued. */
 export type FormOwnerValue = string | HTMLFormElement | null;
@@ -47,8 +51,17 @@ export function createStringArrayFormDataState(name: string, values: readonly st
 export function readStringArrayFormDataState(
   state: string | File | FormData | null,
 ): string[] {
-  if (!(state instanceof FormData)) return [];
-  const entries = [...state.values()];
+  if (typeof FormData !== 'function') return [];
+  let entries: FormDataEntryValue[];
+  try {
+    // Invoke the intrinsic rather than an instance-supplied method. Web IDL's FormData brand check
+    // accepts a genuine object from another realm while rejecting structural/Symbol.toStringTag
+    // lookalikes, and it keeps this restoration path fail-closed when the callback receives a
+    // malformed state object.
+    entries = [...FormData.prototype.values.call(state as FormData)];
+  } catch {
+    return [];
+  }
   if (entries.some((entry) => typeof entry !== 'string')) return [];
   return entries as string[];
 }
@@ -151,7 +164,21 @@ export function isEmptyFormValue(value: unknown): boolean {
   if (Array.isArray(value)) return value.length === 0;
   if (typeof value === 'object') {
     const prototype = Object.getPrototypeOf(value);
-    if (prototype === Object.prototype || prototype === null) return Object.keys(value).length === 0;
+    if (prototype === null) return Object.keys(value).length === 0;
+    // A plain object's prototype is its creator realm's Object.prototype, whose own prototype is
+    // null and whose own constructor points back to it. Unlike an ambient Object.prototype
+    // identity comparison, this remains exact after values cross an iframe boundary while still
+    // rejecting class instances and custom prototype chains.
+    if (Object.getPrototypeOf(prototype) === null) {
+      const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value;
+      if (
+        typeof constructor === 'function' &&
+        constructor.name === 'Object' &&
+        constructor.prototype === prototype
+      ) {
+        return Object.keys(value).length === 0;
+      }
+    }
   }
   return false;
 }
@@ -233,13 +260,24 @@ export function isBarredFromValidation(
 ): boolean {
   if (host.effectiveDisabled ?? host.disabled) return true;
   if (host.readonly) return true;
-  if (internals && isNativeInternals(internals)) return !internals.willValidate;
+  if (internals) {
+    const willValidate = readNativeWillValidate(internals);
+    if (willValidate !== undefined) return !willValidate;
+  }
   return false;
 }
 
-/** Distinguishes a browser `ElementInternals` from {@linkcode createFallbackInternals}'s stand-in. */
-function isNativeInternals(internals: ElementInternals): boolean {
-  return typeof ElementInternals === 'function' && internals instanceof ElementInternals;
+/** Reads the branded platform value while rejecting {@linkcode createFallbackInternals}'s stand-in. */
+function readNativeWillValidate(internals: ElementInternals): boolean | undefined {
+  if (typeof ElementInternals !== 'function') return undefined;
+  const getter = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'willValidate')?.get;
+  if (typeof getter !== 'function') return undefined;
+  try {
+    const value = getter.call(internals);
+    return typeof value === 'boolean' ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface DirectCustomErrorHost extends LitElement {
@@ -506,7 +544,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // value serializes to `null` (an unchecked checkbox's shape) opts out of
       // that on purpose, which is the platform's own behaviour for it.
       this.commitFormValue(this._value);
-      installInvalidEventAlias(this, (init) =>
+      installInvalidEventAlias(this, (init: { cancelable: true }) =>
         (
           this as unknown as {
             emit(name: string, detail?: undefined, options?: { cancelable: boolean }): CustomEvent<undefined>;
@@ -783,8 +821,15 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // Emptiness is the adapter's answer, never `=== ''`: a `[]`, a `null` date and a `0` rating
       // are each "missing" for their own control and none of them is the empty string.
       if (this.required && adapter.isEmpty(this._value)) {
-        const localize = (this as unknown as { localize?: (key: string) => string }).localize;
-        const message = localize?.call(this, 'fieldRequired') ?? resolveLyraString(this, 'fieldRequired');
+        const overrides = (this as unknown as { strings?: LyraLocaleStrings }).strings;
+        const message = resolveLyraString(
+          this,
+          'fieldRequired',
+          overrides,
+          undefined,
+          undefined,
+          FORM_ASSOCIATED_DEFAULT_STRINGS,
+        );
         this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, message);
       } else {
         this[SET_ANCHORED_VALIDITY]({});

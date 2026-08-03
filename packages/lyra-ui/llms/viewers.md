@@ -86,9 +86,10 @@ download fallback for any `mime-type` this component doesn't natively support. I
 `mime-type` resolves to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
 
 **CSS parts:** `base`, `header` (hidden entirely when `filename` is unset), `filename`, `body`,
-`spinner` (indeterminate `role="status"`, or `role="progressbar"` once numeric progress is known —
-used both for `status="converting"` and this component's own in-flight text fetch), `error`
-(`role="alert"` — used both for `status="error"` and a failed text fetch), `download-link` (only
+`spinner` (ordinary non-live shadow content while indeterminate, or `role="progressbar"` once
+numeric progress is known — used both for `status="converting"` and this component's own in-flight
+text fetch), `error` (ordinary visible shadow text used both for `status="error"` and a failed text
+fetch; error transitions use the shared document-level assertive sink), `download-link` (only
 rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
@@ -147,13 +148,14 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 </lr-document-preview>
 ```
 
-Accessibility: the `"converting"` state without numeric `progress` is a `role="status"` region
-wrapping a visually-hidden "Converting document…" string — a *plain* static region, not routed
-through `<lr-live-region>`/`Announcer`, since (like `<lr-typing-indicator>`) it only ever has one
-thing to announce (entering the state), not a rapidly-repeating stream. Once real `progress` is
-available, the region becomes a standard `role="progressbar"` instead, self-describing via
-`aria-valuenow` with no extra live-region wiring. `status="error"` renders `[part="error"]` as
-`role="alert"` — a one-shot assertive notice, without needing the announcer machinery either.
+Accessibility: after the initial silent baseline, entering `"converting"` without numeric
+`progress` appends the localized "Converting document…" transition to the pre-mounted shared
+document-level polite sink; the visible spinner and its visually-hidden label remain ordinary,
+non-live shadow content. Once finite `progress` is available, the spinner becomes a standard
+`role="progressbar"`, self-describing via `aria-valuenow`, and does not duplicate that information
+through the live sink. A later finite-to-indeterminate transition is announced. `status="error"`
+keeps `[part="error"]` as ordinary visible text and appends later error transitions to the shared
+document-level assertive sink.
 
 **Known gotchas:**
 - `status="converting"`/`status="error"` always win over format dispatch, regardless of
@@ -225,7 +227,9 @@ type. First-party invention.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
-it renders explicit `aria-busy="true"|"false"`, and the loading text itself owns `role="status"`;
+it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live
+shadow content; later loading and error transitions use the pre-mounted shared document-level
+polite and assertive sinks, respectively;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -264,8 +268,9 @@ registerDocumentRenderer('application/x-example', {
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
 
-If a consumer matcher/renderer throws while an anchor is pending, the viewer renders a localized
-`role="alert"` and emits exactly one `lr-anchor-result` with `{ found: false }`.
+If a consumer matcher/renderer throws while an anchor is pending, the viewer renders localized
+ordinary error text, appends the transition to the shared document-level assertive sink, and emits
+exactly one `lr-anchor-result` with `{ found: false }`.
 
 ## `lr-docx-viewer`
 
@@ -362,9 +367,18 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
-`lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
-`Uint8Array` of the decoded attachment — an attachment button was activated.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
+  `Uint8Array` of the decoded attachment — an attachment button was activated.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-message search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered message.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
@@ -399,7 +413,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-calendar search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
 `event-description`, `spinner`, and `error`.
@@ -504,10 +527,12 @@ clears the query, matches, and painted search annotation.
 applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 
-**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; loading text owns `role="status"`),
+**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
+non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
-announce through).
+`mount`, `error` (ordinary visible text; later error transitions use the shared document-level
+assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
+compatibility; search results are appended to the shared document-level polite sink).
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
@@ -550,11 +575,24 @@ DOM text.
 `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
 available for renderer output that exposes DOM text.
 
-**Events:** `lr-load` (`detail: { slideCount }`), `lr-slide-change` (`detail: { index, count }`),
-and `lr-render-error` with `detail.error`.
+**Events:**
+- `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
+- `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
+- `lr-render-error` with `detail.error` when fetching or rendering fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-presentation search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
-**CSS parts:** `base`, `header`, `name`, `notice`, `error`, `nav`, `previous-button`,
-`previous-icon`, `slide-count`, `next-button`, `next-icon`, and `container`.
+The three shared text-viewer events bubble and compose and are non-cancelable.
+
+**CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
+`notice`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`, `next-button`,
+`next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
+visually-hidden localized label; later loading and error transitions use the shared document-level
+polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
@@ -562,8 +600,11 @@ filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textS
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer, so a deep link opened
 through `<lr-document-viewer>` survives the registry hop.
 
-Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the presentation.
+Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
+renderer opens the archive; exceeding either ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also
+expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
+malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.
 
 ## `lr-svg-viewer`
 
@@ -606,8 +647,11 @@ timers) rather than failing immediately.
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found.
 
-**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `anchor-live-region` (the visually-hidden
-`role="status"` element announcing anchor-jump results to assistive tech),
+**CSS parts:** `base`, `body`, `svg`, `spinner` (ordinary loading content; later transitions use the
+shared document-level polite sink), `error` (ordinary visible text; later transitions use the shared
+document-level assertive sink), `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree),
 `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
 `region-highlight-target` (transparent activation geometry with an independent minimum hit area),
@@ -650,7 +694,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-document search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered document.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
 
@@ -737,7 +790,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-contact search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
 `contact-email`, `contact-adr`, `spinner`, and `error`.
@@ -804,7 +866,8 @@ peer output is capped at 10,000 unique items and 100 levels, with cycles ignored
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `zoom-out-button`,
+**CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
+`previous-button`, `next-button`, `zoom-out-button`,
 `zoom-in-button` (the four toolbar controls — previously reachable only through `::part(toolbar)
 button`, which is invalid: a descendant combinator after `::part()` never matches, so each button now
 carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
@@ -815,7 +878,9 @@ text layer around one search match), `search-match-active` (the currently active
 `search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
 virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
 text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
-via `searchNext()`).
+via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
+localized label; later loading and error transitions use the shared document-level polite and
+assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
 `page`, `page-canvas`, `text-layer`, `text-span`, `search-match` and `search-match-active` are
 rendered inside the virtualizing `lr-virtual-list`'s own shadow root and forwarded out through
@@ -1005,6 +1070,14 @@ against the new fragment rather than leaving results from the previous content.
   also the name every other Lyra component uses for a load failure, so a generic page-level
   listener catches this one too. Listening to both names on the same element runs your handler
   twice for one failure.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever included-content search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the included content.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -1109,6 +1182,9 @@ because `::part()` cannot be followed by an attribute selector: the current row 
 `part="page page-current"` and a danger marker is `part="heat-dot heat-dot-danger"`, and `::part()`
 matches with `part~=` semantics, so both names select the same element.
 
+Loading thumbnail skeletons are aria-hidden and non-announcing. Each page button already carries
+the localized page name, so thumbnail work does not create one live region per virtualized row.
+
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —
 background of the `page-current` button, kept while the row is hovered so the current page stays
@@ -1152,7 +1228,9 @@ matches.
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
-`detail: { error }`, fetching, parsing, or validating the notebook failed.
+`detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
+non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
+`scrollToAnchor()` call is applied.
 
 Migration note: the previously declared `lr-highlight-activate` event was never emitted by
 `lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus
@@ -1225,7 +1303,8 @@ every element's tag name, attribute names/values, and own text (empty/whitespace
 
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
-parse error or exceeding the node cap.
+parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
+boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
@@ -1342,13 +1421,26 @@ text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
 text, independent of whether the optional map peer is available.
 
-**Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+**Events:**
+- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever serialized-metadata search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
 
-**CSS parts:** `base` (the root container), `status` (the feature-count status line, `role="status"`,
-shown only in the `<lr-map>` path), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
+The three shared text-viewer events bubble and compose and are non-cancelable.
+
+**CSS parts:** `base` (the root container with explicit `aria-busy="true"|"false"`), `status` (the
+ordinary feature-count line, shown only in the `<lr-map>` path; a successful transition uses the
+shared document-level polite sink), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
 rendered in both map and fallback paths), `missing-library` (the missing-`maplibre-gl` callout shown
-alongside the `lr-json-viewer` fallback), `error` (the error region, `role="alert"`), `spinner`
-(the loading status region).
+alongside the `lr-json-viewer` fallback; its transition uses the shared document-level assertive
+sink), `error` (ordinary visible error text; later transitions use the same assertive sink),
+`spinner` (a decorative skeleton plus an ordinary visually-hidden localized label; later loading
+transitions use the shared document-level polite sink). No active live semantics are rendered in
+the viewer's shadow tree.
 
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote

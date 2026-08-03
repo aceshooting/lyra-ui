@@ -4,7 +4,7 @@ import './page-rail.js';
 import '../pdf-viewer/pdf-viewer.js';
 import '../../layout/split/split.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/PageRail',

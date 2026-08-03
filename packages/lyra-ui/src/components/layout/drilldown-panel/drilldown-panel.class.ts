@@ -13,6 +13,11 @@ import '../../retrieval/entity-card/entity-card.class.js';
 import '../../retrieval/source-card/source-card.class.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_restore, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The exact `lr-graph.nodeTypes` entry shape -- see `lr-entity-card`'s, `lr-provenance-panel`'s,
  *  and `lr-entity-dossier`'s identical local aliases for why this isn't imported from `lr-graph`
@@ -125,6 +130,25 @@ interface DrilldownCategory {
  * @since 4.1.0
  */
 export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    drilldownDocuments: LYRA_DEFAULT_drilldownDocuments,
+    drilldownEmpty: LYRA_DEFAULT_drilldownEmpty,
+    drilldownRuns: LYRA_DEFAULT_drilldownRuns,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    provenanceEntities: LYRA_DEFAULT_provenanceEntities,
+    restore: LYRA_DEFAULT_restore,
+    sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The full breadcrumb trail, oldest first, current node last. Host-owned — see the class doc. */
@@ -158,22 +182,58 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   @state() private hasRunsSlot = false;
 
   private mutationObserver?: MutationObserver;
+  private mutationObserverDocument?: Document;
+  private mutationObserverGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncRunsSlot();
-    this.mutationObserver = new MutationObserver(this.syncRunsSlot);
+    this.armMutationObserver();
+  }
+
+  private armMutationObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.mutationObserver && this.mutationObserverDocument === ownerDocument) return;
+    this.resetMutationObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.mutationObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.mutationObserver !== observer ||
+        this.mutationObserverDocument !== ownerDocument ||
+        this.mutationObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.syncRunsSlot();
+    });
+    this.mutationObserver = observer;
+    this.mutationObserverDocument = ownerDocument;
     // `subtree: true` is required even though `runs` is only ever a *direct* child: without it,
     // `attributes: true` only watches the target node (`this`) itself, not its children -- a
     // `slot="runs"` attribute toggled on an already-connected child would silently never be
     // observed, only a brand-new child arriving via `childList` (which doesn't need subtree).
-    this.mutationObserver.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'], subtree: true });
+    observer.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'], subtree: true });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetMutationObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetMutationObserver();
+  }
+
+  private resetMutationObserver(): void {
+    this.mutationObserverGeneration += 1;
     this.mutationObserver?.disconnect();
     this.mutationObserver = undefined;
+    this.mutationObserverDocument = undefined;
   }
 
   private syncRunsSlot = (): void => {

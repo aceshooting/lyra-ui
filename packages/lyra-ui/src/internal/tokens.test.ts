@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { tag } from './prefix.js';
+import { specialistTokens } from './specialist-tokens.styles.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 
@@ -11,6 +12,14 @@ class TokenProbe extends LitElement {
   }
 }
 customElements.define(tag('token-probe'), TokenProbe);
+
+class SpecialistTokenProbe extends LitElement {
+  static styles = [palette, tokens, specialistTokens];
+  render() {
+    return html`<div part="probe"></div>`;
+  }
+}
+customElements.define(tag('specialist-token-probe'), SpecialistTokenProbe);
 
 // An intervening host: it carries the same token layer every LyraElement carries, and
 // renders another token-bearing element inside its own shadow root. Any --lr-* token is
@@ -25,8 +34,18 @@ class NestedTokenProbe extends LitElement {
 }
 customElements.define(tag('nested-token-probe'), NestedTokenProbe);
 
+const SPECIALIST_TOKEN_PATTERN = /^--lr-(?:color-chart-|graph-cat-|terminal-(?:color|bg)-)/;
+
+function needsSpecialistTokens(names: readonly string[]): boolean {
+  return names.some((name) => SPECIALIST_TOKEN_PATTERN.test(name));
+}
+
 async function probeVar(name: string): Promise<string> {
-  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  const el = (await fixture(
+    needsSpecialistTokens([name])
+      ? html`<lr-specialist-token-probe></lr-specialist-token-probe>`
+      : html`<lr-token-probe></lr-token-probe>`,
+  )) as TokenProbe | SpecialistTokenProbe;
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
@@ -62,8 +81,9 @@ function paletteBlock(mode: PaletteMode): string {
  */
 function fallbackHex(name: string, mode: PaletteMode): string {
   const escaped = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenCssText = needsSpecialistTokens([name]) ? specialistTokens.cssText : tokens.cssText;
 
-  const bridged = tokens.cssText.match(new RegExp(`${escaped(name)}:\\s*var\\((--lr-color-[a-z0-9-]+)\\)`, 'i'));
+  const bridged = tokenCssText.match(new RegExp(`${escaped(name)}:\\s*var\\((--lr-color-[a-z0-9-]+)\\)`, 'i'));
   if (bridged) {
     const block = paletteBlock(mode);
     const slot = block.match(
@@ -81,7 +101,7 @@ function fallbackHex(name: string, mode: PaletteMode): string {
   // once here. All of those copies MUST be the same colour -- dark meaning one thing when the OS
   // asked for it and another when the attribute did is the bug this shape exists to prevent.
   const values = [
-    ...tokens.cssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
+    ...tokenCssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
   ].map((match) => match[1]);
   expect(values.length, `${name} must define a light and at least one dark standalone fallback`).to.be.greaterThan(1);
   const [light, ...dark] = values;
@@ -256,7 +276,7 @@ it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lr
 });
 
 it('provides light, dark, and forced-colors categorical chart palette values', () => {
-  const cssText = tokens.cssText;
+  const cssText = specialistTokens.cssText;
   for (let index = 1; index <= 8; index++) {
     expect(cssText).to.include(`--lr-color-chart-${index}:`);
   }
@@ -271,13 +291,28 @@ it('provides light, dark, and forced-colors categorical chart palette values', (
 it('provides light, dark, and forced-colors categorical graph-node-type palette values, independently themeable from --lr-color-chart-*', async () => {
   const light = await probeVar('--lr-graph-cat-1');
   expect(light).to.match(/^#[0-9a-f]{6}$/i);
-  const darkBlockMatch = tokens.cssText.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n {2}\}/);
+  const darkBlockMatch = specialistTokens.cssText.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n {2}\}/);
   expect(darkBlockMatch![0]).to.include('--lr-graph-cat-1:');
-  const forcedBlockMatch = tokens.cssText.match(/@media \(forced-colors: active\) \{[\s\S]*?\n {2}\}/);
+  const forcedBlockMatch = specialistTokens.cssText.match(/@media \(forced-colors: active\) \{[\s\S]*?\n {2}\}/);
   expect(forcedBlockMatch![0]).to.include('--lr-graph-cat-1:');
   // Independently themeable: overriding the chart bridge alone must not move the graph palette.
-  expect(tokens.cssText).to.include('--lr-graph-cat-1: var(--lr-theme-graph-cat-1,');
-  expect(tokens.cssText).not.to.include('--lr-graph-cat-1: var(--lr-theme-color-chart-1,');
+  expect(specialistTokens.cssText).to.include('--lr-graph-cat-1: var(--lr-theme-graph-cat-1,');
+  expect(specialistTokens.cssText).not.to.include('--lr-graph-cat-1: var(--lr-theme-color-chart-1,');
+});
+
+it('keeps chart, graph, and terminal palettes out of the primitive token layer', async () => {
+  const base = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  const specialist = (await fixture(
+    html`<lr-specialist-token-probe></lr-specialist-token-probe>`,
+  )) as SpecialistTokenProbe;
+  const names = ['--lr-color-chart-1', '--lr-graph-cat-1', '--lr-terminal-color-red'];
+  const baseStyle = getComputedStyle(base);
+  const specialistStyle = getComputedStyle(specialist);
+
+  const leaked = names.filter((name) => baseStyle.getPropertyValue(name).trim() !== '');
+  expect(leaked.join('\n'), 'specialist tokens parsed by a primitive host').to.equal('');
+  const missing = names.filter((name) => specialistStyle.getPropertyValue(name).trim() === '');
+  expect(missing.join('\n'), 'specialist tokens absent from an opted-in host').to.equal('');
 });
 
 it('keeps every graph-cat-N slot present for both light and dark', () => {
@@ -357,20 +392,30 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
  * assertion about one real rendered element rather than about five unrelated ones.
  */
 async function probeVarsUnder(themeClass: string, names: readonly string[]): Promise<Map<string, string>> {
+  const specialist = needsSpecialistTokens(names);
   const wrapper = (await fixture(
-    html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
+    specialist
+      ? html`<div class=${themeClass}><lr-specialist-token-probe></lr-specialist-token-probe></div>`
+      : html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
   )) as HTMLElement;
-  const probe = wrapper.querySelector(tag('token-probe')) as TokenProbe;
+  const probe = wrapper.querySelector(
+    specialist ? tag('specialist-token-probe') : tag('token-probe'),
+  ) as TokenProbe | SpecialistTokenProbe;
   await probe.updateComplete;
   const computed = getComputedStyle(probe);
   return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
 }
 
 async function probeVarUnder(themeClass: string, name: string): Promise<string> {
+  const specialist = needsSpecialistTokens([name]);
   const wrapper = (await fixture(
-    html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
+    specialist
+      ? html`<div class=${themeClass}><lr-specialist-token-probe></lr-specialist-token-probe></div>`
+      : html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
   )) as HTMLElement;
-  const probe = wrapper.querySelector(tag('token-probe')) as TokenProbe;
+  const probe = wrapper.querySelector(
+    specialist ? tag('specialist-token-probe') : tag('token-probe'),
+  ) as TokenProbe | SpecialistTokenProbe;
   await probe.updateComplete;
   return getComputedStyle(probe).getPropertyValue(name).trim();
 }
@@ -395,6 +440,7 @@ const REQUIRED_THEME_INPUTS = [
   ...['2xs', 'xs', 's', 'm', 'l', '2xl'].map((step) => `--lr-theme-space-${step}`),
   ...['base', 'content', 'dropdown', 'popover', 'modal', 'toast'].map((layer) => `--lr-theme-z-index-${layer}`),
   ...Array.from({ length: 8 }, (_, index) => `--lr-theme-color-chart-${index + 1}`),
+  ...Array.from({ length: 8 }, (_, index) => `--lr-theme-graph-cat-${index + 1}`),
   // Foregrounds and backgrounds are two independent ramps: one shared set made a background slot
   // the same colour as the text drawn on it.
   ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-color-${slot}`),
@@ -407,12 +453,12 @@ it('declares every documented theme input in theme.css', async () => {
   expect(missing.join('\n')).to.equal('');
 });
 
-it('names only tokens that tokens.styles.ts actually reads', async () => {
+it('names only theme inputs that a component token layer actually reads', async () => {
   const { text } = await loadThemeCss();
   const declared = [...text.matchAll(/^\s*(--lr-theme-[\w-]+):/gm)].map((match) => match[1]);
-  // Both component layers count. The semantic grid's 45 inputs are read by `palette`, not by
-  // `tokens`, so checking only the latter would report every one of them as dead.
-  const read = `${tokens.cssText}\n${palette.cssText}`;
+  // All three component layers count. The semantic grid's 45 inputs are read by `palette`, while
+  // visualization and terminal inputs are read by the opt-in specialist layer.
+  const read = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
   const unused = declared.filter((name) => !read.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
 });
@@ -420,9 +466,9 @@ it('names only tokens that tokens.styles.ts actually reads', async () => {
 it('leaves every bridged token at its built-in value when theme.css is imported', async () => {
   // The chart and terminal entries below are SPOT SAMPLES of two generated ramps
   // (scripts/generate-chart-palette.mjs, scripts/generate-terminal-palette.mjs). Both generators
-  // write theme.css AND tokens.styles.ts's fallbacks in one pass, which is what actually prevents
-  // the drift this test detects; regenerating the ramp therefore means updating these four values
-  // from the generator's output, not hand-picking new ones.
+  // write theme.css AND specialist-tokens.styles.ts's fallbacks in one pass, which is what actually
+  // prevents the drift this test detects; regenerating the ramp therefore means updating these
+  // four values from the generator's output, not hand-picking new ones.
   const expected: Array<[name: string, value: string]> = [
     ['--lr-icon-button-size', '2.5rem'],
     ['--lr-focus-ring-width', '2px'],
@@ -469,9 +515,9 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
 
 it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
   await withThemeCss(async () => {
-    // .lr-dark must not disagree with the prefers-color-scheme: dark fallback block in
-    // tokens.styles.ts — a raised surface left at its light value on a dark page is the
-    // visible symptom.
+    // .lr-dark must not disagree with the prefers-color-scheme: dark fallback blocks in the base
+    // and specialist token sheets — a raised surface or chart series left at its light value on a
+    // dark page is the visible symptom.
     expect(await probeVarUnder('lr-dark', '--lr-color-surface')).to.equal('#1a1a1a');
     expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#22272e');
     expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#bbff94');
@@ -480,10 +526,17 @@ it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
 });
 
 it('changes no bridged token value anywhere when theme.css is imported', async () => {
-  // Exhaustive counterpart to the curated list above: every --lr-* token declared in the
-  // :host block must resolve identically with and without theme.css, in both modes.
-  const hostBlock = /:host\s*{([\s\S]*?)\n {2}}/.exec(tokens.cssText)![1];
-  const names = [...hostBlock.matchAll(/^\s*(--lr-[\w-]+):/gm)].map((match) => match[1]);
+  // Exhaustive counterpart to the curated list above: every --lr-* token declared in either
+  // opt-in level's light :host block must resolve identically with and without theme.css.
+  const hostTokenNames = (cssText: string, label: string): string[] => {
+    const hostBlock = /:host\s*{([\s\S]*?)\n {2}}/.exec(cssText)?.[1];
+    if (hostBlock === undefined) throw new Error(`expected the ${label} :host token block to be parsed`);
+    return [...hostBlock.matchAll(/^\s*(--lr-[\w-]+):/gm)].map((match) => match[1]);
+  };
+  const names = [
+    ...hostTokenNames(tokens.cssText, 'base'),
+    ...hostTokenNames(specialistTokens.cssText, 'specialist'),
+  ];
   expect(names.length, 'expected the :host token block to be parsed').to.be.greaterThan(100);
 
   const normalize = (value: string) =>
@@ -496,9 +549,9 @@ it('changes no bridged token value anywhere when theme.css is imported', async (
   // One fixture per phase, read for every token — a fixture per token is ~200x slower.
   async function snapshot(): Promise<Map<string, string>> {
     const wrapper = (await fixture(
-      html`<div class="lr-light"><lr-token-probe></lr-token-probe></div>`,
+      html`<div class="lr-light"><lr-specialist-token-probe></lr-specialist-token-probe></div>`,
     )) as HTMLElement;
-    const probe = wrapper.querySelector(tag('token-probe')) as TokenProbe;
+    const probe = wrapper.querySelector(tag('specialist-token-probe')) as SpecialistTokenProbe;
     await probe.updateComplete;
     const computed = getComputedStyle(probe);
     return new Map(names.map((name) => [name, normalize(computed.getPropertyValue(name))]));
@@ -610,11 +663,11 @@ it('keeps terminal black and white apart in both modes, and backgrounds off the 
 
 // --- data-lr-theme switches the WHOLE token surface, not half of it -------------------
 //
-// Two layers carry mode-dependent values: `palette` (the 45-slot semantic grid) and `tokens`
-// (surface / text / border / chart / graph / overlay / shadow / terminal). A mode signal honoured
-// by one and ignored by the other renders a MIXED state -- a light colour grid on dark surfaces,
-// or the reverse -- and no such combination was ever contrast-checked. Both layers must answer to
-// the same signal, in both directions.
+// Three layers carry mode-dependent values: `palette` (the 45-slot semantic grid), `tokens`
+// (surface / text / border / overlay / shadow), and the opt-in `specialistTokens` (chart / graph /
+// terminal). A mode signal honoured by one and ignored by another renders a MIXED state -- a light
+// colour grid or chart ramp on dark surfaces, or the reverse -- and no such combination was ever
+// contrast-checked. All three layers must answer to the same signal, in both directions.
 //
 // The runner cannot emulate the OS colour scheme (`@web/test-runner-commands` is not a dependency
 // of this package and adding a wtr command plugin for one assertion is not worth it), so the
@@ -622,15 +675,16 @@ it('keeps terminal black and white apart in both modes, and backgrounds off the 
 // through CSSOM. Every selector, declaration and cascade position stays exactly the one that
 // ships, and every assertion below reads a computed value off a mounted host.
 
-/** One token from each layer, plus a second `tokens` entry so a partial fix cannot pass. */
+/** One token from each layer, plus a second base-token entry so a partial fix cannot pass. */
 const MODE_SWITCHED_TOKENS = [
   '--lr-color-surface', // tokens layer
   '--lr-color-text', // tokens layer
   '--lr-color-brand-fill-loud', // palette layer
+  '--lr-color-chart-1', // specialistTokens layer
 ] as const;
 
 function schemeForcedSheets(prefersDark: boolean): CSSStyleSheet[] {
-  return [palette, tokens].map((layer) => {
+  return [palette, tokens, specialistTokens].map((layer) => {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(layer.cssText);
     for (const rule of Array.from(sheet.cssRules)) {
@@ -649,16 +703,16 @@ async function probeUnderScheme(
 ): Promise<Map<string, string>> {
   const el = (await fixture(
     themeAttribute === undefined
-      ? html`<lr-token-probe></lr-token-probe>`
-      : html`<lr-token-probe data-lr-theme=${themeAttribute}></lr-token-probe>`,
-  )) as TokenProbe;
+      ? html`<lr-specialist-token-probe></lr-specialist-token-probe>`
+      : html`<lr-specialist-token-probe data-lr-theme=${themeAttribute}></lr-specialist-token-probe>`,
+  )) as SpecialistTokenProbe;
   await el.updateComplete;
   el.shadowRoot!.adoptedStyleSheets = schemeForcedSheets(prefersDark);
   const computed = getComputedStyle(el);
   return new Map(MODE_SWITCHED_TOKENS.map((name) => [name, squash(computed.getPropertyValue(name))]));
 }
 
-it('moves both token layers together when the OS scheme alone decides the mode', async () => {
+it('moves all token layers together when the OS scheme alone decides the mode', async () => {
   // Guards the two tests below from passing vacuously: if forcing the media condition stopped
   // moving anything, "the override held" would be indistinguishable from "nothing ever changes".
   const light = await probeUnderScheme(false);
@@ -667,7 +721,7 @@ it('moves both token layers together when the OS scheme alone decides the mode',
   expect(stuck.join('\n'), 'tokens that did not move under a forced dark scheme').to.equal('');
 });
 
-it('honours data-lr-theme="light" in both token layers on a dark-scheme OS', async () => {
+it('honours data-lr-theme="light" in every token layer on a dark-scheme OS', async () => {
   const light = await probeUnderScheme(false);
   const overridden = await probeUnderScheme(true, 'light');
   const failures = MODE_SWITCHED_TOKENS.flatMap((name) =>
@@ -676,7 +730,7 @@ it('honours data-lr-theme="light" in both token layers on a dark-scheme OS', asy
   expect(failures.join('\n'), 'still rendering dark values under data-lr-theme="light"').to.equal('');
 });
 
-it('honours data-lr-theme="dark" in both token layers on a light-scheme OS', async () => {
+it('honours data-lr-theme="dark" in every token layer on a light-scheme OS', async () => {
   const light = await probeUnderScheme(false);
   const osDark = await probeUnderScheme(true);
   const overridden = await probeUnderScheme(false, 'dark');
@@ -690,4 +744,3 @@ it('honours data-lr-theme="dark" in both token layers on a light-scheme OS', asy
   );
   expect(disagree.join('\n'), 'the attribute route and the OS route disagree').to.equal('');
 });
-

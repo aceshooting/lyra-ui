@@ -3,6 +3,18 @@ import './toast-item.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
 
+class ToastMessageForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const toast = this.ownerDocument.createElement('lr-toast-item');
+    toast.duration = 0;
+    toast.append(this.ownerDocument.createElement('slot'));
+    root.append(toast);
+  }
+}
+customElements.define('toast-message-forward-wrapper', ToastMessageForwardWrapper);
+
 it('emits lifecycle events and uses an assertive role for danger', async () => {
   const el = (await fixture(
     html`<lr-toast-item variant="danger" duration="0">boom</lr-toast-item>`,
@@ -500,6 +512,47 @@ it('derives the close button aria-label from the toast message for a11y in multi
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
 });
 
+it('matches the server close label on the first hydration render, then adopts declarative text and reconnect overrides', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  // A shadow root present before first connection is the base class's hydration signal. Building
+  // that boundary directly keeps the regression portable to engines whose imperative HTML parser
+  // does not yet upgrade an empty declarative shadow root consistently in the test harness.
+  el.attachShadow({ mode: 'open' });
+  el.innerHTML = '<strong>Upload complete</strong>';
+  container.append(el);
+
+  await el.updateComplete;
+  const closeLabel = (): string | null =>
+    el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]')?.getAttribute('aria-label') ?? null;
+  expect(closeLabel()).to.equal('Close');
+
+  await el.updateComplete;
+  expect(closeLabel()).to.equal('Close: Upload complete');
+
+  el.strings = { closeWithContext: 'Dismiss {snippet}' };
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  expect(closeLabel()).to.equal('Dismiss Upload complete');
+});
+
+it('renders a per-instance .strings override in the close button accessible name', async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="0"
+      .strings=${{ closeWithContext: 'Dismiss {snippet}' }}
+    >Upload complete</lr-toast-item>
+  `)) as LyraToastItem;
+  const button = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="close-button"]',
+  );
+
+  expect(button !== null).to.be.true;
+  expect(button?.getAttribute('aria-label')).to.equal('Dismiss Upload complete');
+});
+
 it('derives and live-updates the close label from rich message markup', async () => {
   const el = (await fixture(
     html`<lr-toast-item duration="0"><strong>Upload complete</strong></lr-toast-item>`,
@@ -512,6 +565,118 @@ it('derives and live-updates the close label from rich message markup', async ()
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload failed');
+});
+
+it('tracks contextual close text through a forwarding slot', async () => {
+  const wrapper = (await fixture(html`
+    <toast-message-forward-wrapper><span data-message>Upload complete</span></toast-message-forward-wrapper>
+  `)) as ToastMessageForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-toast-item') as LyraToastItem;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  const message = wrapper.querySelector<HTMLElement>('[data-message]')!;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+
+  message.textContent = 'Upload failed';
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload failed');
+
+  message.hidden = true;
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close');
+
+  message.hidden = false;
+  message.setAttribute('aria-label', 'Upload retried');
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload retried');
+
+  const replacement = wrapper.ownerDocument.createElement('span');
+  replacement.textContent = 'Upload restored';
+  const reassigned = oneEvent(el.querySelector('slot')!, 'slotchange');
+  message.replaceWith(replacement);
+  await reassigned;
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload restored');
+});
+
+it('rebinds its observer, animation frame, and timers to the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  const originalRaf = frameWindow.requestAnimationFrame;
+  const originalCancelRaf = frameWindow.cancelAnimationFrame;
+  const originalSetTimeout = frameWindow.setTimeout;
+  const originalClearTimeout = frameWindow.clearTimeout;
+  let constructions = 0;
+  let nextRaf = 70;
+  let nextTimer = 170;
+  const rafCallbacks = new Map<number, FrameRequestCallback>();
+  const cancelledRafs: number[] = [];
+  const clearedTimers: number[] = [];
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    const handle = ++nextRaf;
+    rafCallbacks.set(handle, callback);
+    return handle;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((handle: number): void => {
+    cancelledRafs.push(handle);
+    rafCallbacks.delete(handle);
+  }) as typeof frameWindow.cancelAnimationFrame;
+  frameWindow.setTimeout = ((handler: TimerHandler): number => {
+    void handler;
+    return ++nextTimer;
+  }) as typeof frameWindow.setTimeout;
+  frameWindow.clearTimeout = ((handle?: number): void => {
+    if (handle !== undefined) clearedTimers.push(handle);
+  }) as typeof frameWindow.clearTimeout;
+
+  const el = (await fixture(html`<lr-toast-item duration="1000">Upload complete</lr-toast-item>`)) as LyraToastItem;
+  el.remove();
+  el.removeAttribute('data-visible');
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions, 'base and message observers use the adopted window').to.be.greaterThan(1);
+    const firstRaf = nextRaf;
+    expect(rafCallbacks.has(firstRaf), 'show schedules in the adopted window').to.be.true;
+    el.remove();
+    expect(cancelledRafs.includes(firstRaf), 'disconnect cancels through the scheduling window').to.be.true;
+
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    const secondRaf = nextRaf;
+    const show = rafCallbacks.get(secondRaf)!;
+    rafCallbacks.delete(secondRaf);
+    show(frameWindow.performance.now());
+    expect(nextTimer, 'show and auto-dismiss schedule adopted-window timers').to.be.greaterThan(170);
+    el.remove();
+    expect(clearedTimers.length, 'disconnect clears adopted-window timers').to.be.greaterThan(0);
+  } finally {
+    el.remove();
+    frameWindow.requestAnimationFrame = originalRaf;
+    frameWindow.cancelAnimationFrame = originalCancelRaf;
+    frameWindow.setTimeout = originalSetTimeout;
+    frameWindow.clearTimeout = originalClearTimeout;
+    if (observerDescriptor) Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    frame.remove();
+  }
 });
 
 it('falls back to a generic close label when the toast has no text content', async () => {
@@ -529,6 +694,7 @@ it('excludes an appended action button\'s text from the derived close label', as
   const action = document.createElement('button');
   action.type = 'button';
   action.textContent = 'Undo';
+  action.setAttribute('aria-label', 'Undo deletion');
   el.appendChild(action);
 
   // Force the same re-render that happens when the user presses close (or

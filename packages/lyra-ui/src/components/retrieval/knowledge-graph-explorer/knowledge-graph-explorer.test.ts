@@ -10,6 +10,15 @@ import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import type { LyraEntityCard } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborList } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(): string[] {
+  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+}
 
 // d3-force's own timer runs on requestAnimationFrame -- Chromium throttles this heavily on a
 // backgrounded tab, so tests that need the composed lr-graph to have actually rendered its
@@ -112,6 +121,11 @@ describe('lr-knowledge-graph-explorer', () => {
     // polonium is dimmed, so both links touching it (married_to doesn't, discovered does) --
     // only "discovered" (marie->polonium) should dim; "married_to" (marie<->pierre) shouldn't.
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->polonium']);
+    const searchMirror = el.shadowRoot!.querySelector('[part="search-results"] + .sr-only')!;
+    expect(searchMirror.getAttribute('role')).to.equal(null);
+    expect(searchMirror.getAttribute('aria-live')).to.equal(null);
+    expect(searchMirror.getAttribute('aria-hidden')).to.equal('true');
+    expect(sinkTexts().at(-1)).to.include('2');
 
     native.value = 'nonexistent';
     native.dispatchEvent(new Event('input', { bubbles: true }));
@@ -382,6 +396,11 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(event.detail).to.deep.equal({ pinnedNodeIds: ['marie'] });
     expect(el.pinnedNodeIds).to.deep.equal(['marie']);
     expect(el.shadowRoot!.querySelector('[part="pinned"]')).to.exist;
+    expect(sinkTexts().at(-1)).to.equal('Marie Curie pinned');
+    const pinMirror = el.shadowRoot!.querySelector('[part="pinned"] + .sr-only')!;
+    expect(pinMirror.getAttribute('role')).to.equal(null);
+    expect(pinMirror.getAttribute('aria-live')).to.equal(null);
+    expect(pinMirror.getAttribute('aria-hidden')).to.equal('true');
     // Only one pin so far -- no "Find path" action yet.
     const pinnedRow = () => el.shadowRoot!.querySelector('[part="pinned"]') as HTMLElement;
     expect(pinnedRow().querySelectorAll('lr-button').length).to.equal(0);
@@ -400,6 +419,201 @@ describe('lr-knowledge-graph-explorer', () => {
     (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement).click();
     event = await listener;
     expect(event.detail.pinnedNodeIds).to.have.members(['pierre']);
+  });
+
+  it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`,
+    )) as LyraKnowledgeGraphExplorer;
+    expect(sinkElement() !== null).to.be.true;
+    el.remove();
+    expect(sinkElement() === null).to.be.true;
+    document.body.append(el);
+    expect(sinkElement() !== null).to.be.true;
+    el.remove();
+    expect(sinkElement() === null).to.be.true;
+  });
+
+  it('settles skeleton frames on owner pagehide/adoption and resumes preset activation on reconnect', async () => {
+    type ExplorerInternals = {
+      activationGeneration: number;
+      activatePresetWhenGraphReady(
+        id: string,
+        graph: LyraGraph,
+        generation: number,
+      ): Promise<void>;
+      activateEntity(id: string): Promise<void>;
+    };
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalMainRequest = window.requestAnimationFrame;
+    const originalMainCancel = window.cancelAnimationFrame;
+    const originalFrameRequest = frameWindow.requestAnimationFrame;
+    const originalFrameCancel = frameWindow.cancelAnimationFrame;
+    const mainFrames = new Map<number, FrameRequestCallback>();
+    const frameFrames = new Map<number, FrameRequestCallback>();
+    const frameCancellations: number[] = [];
+    let mainHandle = 6600;
+    let frameHandle = 7600;
+
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++mainHandle;
+      mainFrames.set(handle, callback);
+      return handle;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((handle: number) => {
+      mainFrames.delete(handle);
+    }) as typeof window.cancelAnimationFrame;
+    frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++frameHandle;
+      frameFrames.set(handle, callback);
+      return handle;
+    }) as typeof frameWindow.requestAnimationFrame;
+    frameWindow.cancelAnimationFrame = ((handle: number) => {
+      frameCancellations.push(handle);
+      frameFrames.delete(handle);
+    }) as typeof frameWindow.cancelAnimationFrame;
+
+    try {
+      frameDocument.adoptNode(el);
+      expect(frameFrames.size, 'detached adoption must not start skeleton polling').to.equal(0);
+      frameDocument.body.append(el);
+      const internals = el as unknown as ExplorerInternals;
+      Object.defineProperty(el, 'selectedNodeId', {
+        configurable: true,
+        writable: true,
+        value: 'marie',
+      });
+      let activations = 0;
+      internals.activateEntity = async () => {
+        activations += 1;
+      };
+      const fakeGraph = {
+        updateComplete: Promise.resolve(true),
+        isConnected: true,
+        shadowRoot: {
+          querySelector: (selector: string) => (selector === 'lr-skeleton' ? ({} as Element) : null),
+        },
+      } as unknown as LyraGraph;
+      const originalPresetActivation = internals.activatePresetWhenGraphReady.bind(el);
+
+      const firstGeneration = ++internals.activationGeneration;
+      const pagehidePending = originalPresetActivation('marie', fakeGraph, firstGeneration);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(mainFrames.size, 'the parent window must not own an iframe skeleton frame').to.equal(0);
+      expect(frameFrames.size).to.equal(1);
+      const [pagehideHandle, pagehideStaleFrame] = Array.from(frameFrames.entries())[0]!;
+
+      frameWindow.dispatchEvent(new Event('pagehide'));
+      expect(frameCancellations).to.include(pagehideHandle);
+      const settledOnPagehide = await Promise.race([
+        pagehidePending.then(() => true),
+        aTimeout(100).then(() => false),
+      ]);
+      expect(settledOnPagehide, 'owner pagehide resolves the pending skeleton wait').to.be.true;
+      pagehideStaleFrame(0);
+      expect(activations, 'a page-hidden realm callback stays inert').to.equal(0);
+
+      const secondGeneration = ++internals.activationGeneration;
+      const adoptionPending = originalPresetActivation('marie', fakeGraph, secondGeneration);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(frameFrames.size).to.equal(1);
+      const [adoptionHandle, adoptionStaleFrame] = Array.from(frameFrames.entries())[0]!;
+
+      document.adoptNode(el);
+      expect(frameCancellations, 'adoption cancels through the retained iframe owner').to.include(adoptionHandle);
+      expect(mainFrames.size, 'detached adoption must not re-arm preset activation').to.equal(0);
+      const settledOnAdoption = await Promise.race([
+        adoptionPending.then(() => true),
+        aTimeout(100).then(() => false),
+      ]);
+      expect(settledOnAdoption, 'adoption resolves the pending skeleton wait').to.be.true;
+      adoptionStaleFrame(0);
+      expect(activations, 'a canceled source-realm frame cannot activate the adopted explorer').to.equal(0);
+
+      let reconnectActivations = 0;
+      internals.activatePresetWhenGraphReady = async () => {
+        reconnectActivations += 1;
+      };
+      document.body.append(el);
+      expect(reconnectActivations, 'reconnect resumes the selected preset in the destination').to.equal(1);
+    } finally {
+      el.remove();
+      window.requestAnimationFrame = originalMainRequest;
+      window.cancelAnimationFrame = originalMainCancel;
+      frameWindow.requestAnimationFrame = originalFrameRequest;
+      frameWindow.cancelAnimationFrame = originalFrameCancel;
+      iframe.remove();
+    }
+  });
+
+  it('uses the owner microtask and recognizes an iframe-realm graph node during direct activation', async () => {
+    type ExplorerInteractionInternals = {
+      activateEntity(id: string): Promise<void>;
+      resolveDirectClickAnchor(event: MouseEvent): {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+    };
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalQueueMicrotask = frameWindow.queueMicrotask;
+    const ownerMicrotasks: VoidFunction[] = [];
+    frameWindow.queueMicrotask = ((callback: VoidFunction) => {
+      ownerMicrotasks.push(callback);
+    }) as typeof frameWindow.queueMicrotask;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      const internals = el as unknown as ExplorerInteractionInternals;
+      const foreignNode = frameDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      foreignNode.setAttribute('part', 'node');
+      foreignNode.getBoundingClientRect = () =>
+        ({ left: 10, top: 20, width: 30, height: 40 } as DOMRect);
+      const anchor = internals.resolveDirectClickAnchor({
+        clientX: 1,
+        clientY: 2,
+        composedPath: () => [foreignNode],
+      } as unknown as MouseEvent);
+      expect(anchor).to.deep.equal({ x: 25, y: 20, width: 30, height: 40 });
+
+      let activations = 0;
+      internals.activateEntity = async () => {
+        activations += 1;
+      };
+      graphEl(el).dispatchEvent(
+        new CustomEvent('lr-node-click', {
+          detail: { id: 'marie', x: 0, y: 0 },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      expect(ownerMicrotasks.length, 'the iframe window owns the keyboard fallback microtask').to.equal(1);
+
+      document.adoptNode(el);
+      ownerMicrotasks[0]!();
+      expect(activations, 'a queued source-realm fallback cannot activate after adoption').to.equal(0);
+    } finally {
+      el.remove();
+      frameWindow.queueMicrotask = originalQueueMicrotask;
+      iframe.remove();
+    }
   });
 
   it('renders lr-path-strip only when path is non-empty', async () => {

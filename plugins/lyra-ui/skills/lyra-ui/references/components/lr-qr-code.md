@@ -2,7 +2,7 @@
 
 # `lr-qr-code`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-qr-code.js';` (stable tag alias; registers the tag)
 - **Class** `LyraQrCode`, also available unregistered from `@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -35,3 +35,8 @@ generation-guarded, including across disconnect/reconnect.
 `loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
 changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.
+
+`error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
+failure appends the localized message to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink; identical retries append distinct children, and sink
+ownership is released/reacquired across disconnect or document adoption.

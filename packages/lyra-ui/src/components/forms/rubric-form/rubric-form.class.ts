@@ -23,6 +23,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface RubricKeyOption {
   value: string;
@@ -79,6 +84,8 @@ export interface LyraRubricFormEventMap {
  * `lr-input`/`lr-validity-change`/`lr-submit`/`lr-skip`), not a
  * requirement: a consumer that never puts this inside a `<form>` loses
  * nothing.
+ * The outer `base` is a single accessible `role="group"`: a host `aria-label` or native external
+ * `<label for>` names the aggregate, while each rubric field keeps its own field-level name.
  *
  * @customElement lr-rubric-form
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
@@ -92,7 +99,8 @@ export interface LyraRubricFormEventMap {
  * @csspart label - A field's label.
  * @csspart description - A field's helper text.
  * @csspart scale - The rendered score/category/comment control's wrapper.
- * @csspart error - A field-level validation message.
+ * @csspart error - Ordinary field-level validation text composed into its control's accessible
+ *   name/description; it is not a live region, avoiding duplicate report-validity announcements.
  * @csspart footer - The row containing the actions slot and Submit/Skip buttons.
  * @csspart submit - The Submit button.
  * @csspart skip - The Skip button (only rendered when `skippable`).
@@ -113,6 +121,23 @@ export interface LyraRubricFormEventMap {
  * @since 4.0.0
  */
 export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    rubricSkip: LYRA_DEFAULT_rubricSkip,
+    rubricSubmit: LYRA_DEFAULT_rubricSubmit,
+    rubricSubmitAndNext: LYRA_DEFAULT_rubricSubmitAndNext,
+    unsupportedFieldType: LYRA_DEFAULT_unsupportedFieldType,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -312,6 +337,26 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return { ...this._errors };
   }
 
+  private fieldElement(key: string): HTMLElement | null {
+    const root = this.renderRoot;
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    if (typeof ownerCss?.escape === 'function') {
+      try {
+        const candidate = root.querySelector<HTMLElement>(
+          `[part="field"][data-key="${ownerCss.escape(key)}"]`,
+        );
+        if (candidate?.getAttribute('data-key') === key) return candidate;
+      } catch {
+        // A partial DOM can expose CSS.escape while rejecting selector construction.
+      }
+    }
+    return (
+      Array.from(root.querySelectorAll<HTMLElement>('[part="field"][data-key]')).find(
+        (candidate) => candidate.getAttribute('data-key') === key,
+      ) ?? null
+    );
+  }
+
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | undefined {
     const firstInvalidKey = Object.keys(this._errors)[0];
@@ -319,7 +364,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     // committed while this element is still detached (e.g. as part of assembling a template
     // fragment before it's inserted into the document) must not crash here.
     if (!firstInvalidKey || !this.renderRoot) return undefined;
-    const field = this.renderRoot.querySelector(`[part="field"][data-key="${CSS.escape(firstInvalidKey)}"]`);
+    const field = this.fieldElement(firstInvalidKey);
     return (field?.querySelector('.control') as HTMLElement | null) ?? undefined;
   }
 
@@ -524,7 +569,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private focusFirstControl(): void {
     const firstKey = this._keys[0];
     if (!firstKey) return;
-    const field = this.renderRoot.querySelector(`[part="field"][data-key="${CSS.escape(firstKey.key)}"]`);
+    const field = this.fieldElement(firstKey.key);
     const control = field?.querySelector('.control') as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
     if (!control) return;
     if (firstKey.type === 'score' && this.isSegmentedScore(firstKey)) {
@@ -738,17 +783,25 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
           : nothing}
         ${control}
         ${k.type === 'score' && k.description ? html`<p part="description">${k.description}</p>` : nothing}
-        ${k.type === 'score' && hasError ? html`<p part="error" id=${errId} role="alert">${this._errors[k.key]}</p>` : nothing}
+        ${k.type === 'score' && hasError ? html`<p part="error" id=${errId}>${this._errors[k.key]}</p>` : nothing}
       </div>
     `;
   }
 
   override render(): TemplateResult {
     if (this._keys.length === 0) {
-      return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
+      return html`<div
+        part="base"
+        role="group"
+        aria-label=${this.getAttribute('aria-label') || nothing}
+      ><p part="empty">${this.localize('noData')}</p></div>`;
     }
     return html`
-      <div part="base">
+      <div
+        part="base"
+        role="group"
+        aria-label=${this.getAttribute('aria-label') || nothing}
+      >
         ${repeat(
           (() => {
             const occurrences = new Map<string, number>();

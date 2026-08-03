@@ -19,13 +19,17 @@ const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'blob:', 'mailto:']);
 // absolute URLs are rejected instead of being mistaken for relative paths.
 const PARSE_BASE = 'https://lyra.invalid/';
 
-function safeUrlOrNull(url: unknown, allowedSchemes: ReadonlySet<string>): string | null {
+function safeUrlOrNull(
+  url: unknown,
+  allowedSchemes: ReadonlySet<string>,
+  URLCtor: typeof URL,
+): string | null {
   if (typeof url !== 'string') return null;
   const trimmed = url.trim();
   if (trimmed === '') return null;
 
   try {
-    const protocol = new URL(trimmed, PARSE_BASE).protocol;
+    const protocol = new URLCtor(trimmed, PARSE_BASE).protocol;
     return allowedSchemes.has(protocol) ? trimmed : null;
   } catch {
     return null;
@@ -36,15 +40,15 @@ function safeUrlOrNull(url: unknown, allowedSchemes: ReadonlySet<string>): strin
  * Relative URLs and `http:`, `https:`, `blob:`, and `data:` are allowed. The
  * platform parser performs the same control-character normalization as DOM
  * URL sinks, preventing obfuscated schemes such as `java\tscript:`. */
-export function safeMediaSrc(url: unknown): string | null {
-  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES);
+export function safeMediaSrc(url: unknown, URLCtor: typeof URL = URL): string | null {
+  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES, URLCtor);
 }
 
 /** Returns a trimmed URL safe to pass to `fetch()`, or `null`. This shares the
  * resource allowlist with media sources so text/image `data:` URLs remain
  * usable, while navigation-only and executable schemes are rejected. */
-export function safeFetchUrl(url: unknown): string | null {
-  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES);
+export function safeFetchUrl(url: unknown, URLCtor: typeof URL = URL): string | null {
+  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES, URLCtor);
 }
 
 /** Returns a trimmed URL safe for a *navigation* `<a href>`, or `null`.
@@ -53,8 +57,8 @@ export function safeFetchUrl(url: unknown): string | null {
  * document; `mailto:` is allowed because it hands off to the mail client
  * rather than navigating a document. Use `safeDownloadHref()` instead for an
  * anchor that retrieves a resource (one carrying a `download` attribute). */
-export function safeLinkHref(url: unknown): string | null {
-  return safeUrlOrNull(url, SAFE_LINK_SCHEMES);
+export function safeLinkHref(url: unknown, URLCtor: typeof URL = URL): string | null {
+  return safeUrlOrNull(url, SAFE_LINK_SCHEMES, URLCtor);
 }
 
 /** Returns a trimmed URL safe for a *download/open* `<a href>` pointing at a
@@ -63,6 +67,6 @@ export function safeLinkHref(url: unknown): string | null {
  * retrievable bytes, so pairing it with a `download` attribute is meaningless.
  * The allowlist is a strict subset of `safeMediaSrc()`'s, so a URL that fails
  * the media-src check necessarily fails this one too. */
-export function safeDownloadHref(url: unknown): string | null {
-  return safeUrlOrNull(url, SAFE_DOWNLOAD_SCHEMES);
+export function safeDownloadHref(url: unknown, URLCtor: typeof URL = URL): string | null {
+  return safeUrlOrNull(url, SAFE_DOWNLOAD_SCHEMES, URLCtor);
 }

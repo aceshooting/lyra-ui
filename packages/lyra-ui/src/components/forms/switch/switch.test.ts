@@ -487,6 +487,227 @@ it('shows the label part for plain slotted text (a text node, not an element)', 
   expect(label.hidden).to.be.false;
 });
 
+it('reproduces server-first slot state before adopting browser-only light DOM after hydration', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = container.ownerDocument.createElement('lr-switch') as LyraSwitch;
+  el.setAttribute('aria-label', 'Notification preference');
+  // A pre-existing shadow root is the cross-engine equivalent of what the declarative-shadow-DOM
+  // parser supplies before a server-rendered custom element's first connectedCallback().
+  el.attachShadow({ mode: 'open' });
+  el.append(
+    container.ownerDocument.createTextNode('Enable notifications'),
+    Object.assign(container.ownerDocument.createElement('span'), {
+      slot: 'hint',
+      textContent: 'You can change this later.',
+    }),
+    Object.assign(container.ownerDocument.createElement('span'), {
+      slot: 'error',
+      textContent: 'Choose a notification preference.',
+    }),
+  );
+  container.append(el);
+
+  await el.updateComplete;
+  const firstBase = el.shadowRoot!.querySelector('[part~="base"]');
+  expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden).to.be.true;
+
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part~="base"]') === firstBase).to.be.true;
+});
+
+it('refreshes label presence immediately when reconnected with changed light DOM', async () => {
+  const container = (await fixture(html`
+    <div><lr-switch>Enable notifications</lr-switch></div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector('lr-switch') as LyraSwitch;
+  const labelText = el.firstChild as Text;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hidden).to.be.false;
+
+  el.remove();
+  labelText.data = ' ';
+  container.append(el);
+  await el.updateComplete;
+  expect(label.hidden).to.be.true;
+
+  el.remove();
+  labelText.data = 'Enable alerts';
+  container.append(el);
+  await el.updateComplete;
+  expect(label.hidden).to.be.false;
+});
+
+it('refreshes every named-slot cache on reconnect after detached mutations', async () => {
+  const container = (await fixture(html`
+    <div>
+      <lr-switch aria-label="Notification preference">
+        <span slot="hint">Original hint</span>
+      </lr-switch>
+    </div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector('lr-switch') as LyraSwitch;
+  const namedContent = el.querySelector('span')!;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.true;
+  expect(base.getAttribute('aria-describedby')).to.equal('switch-hint');
+
+  el.remove();
+  namedContent.slot = 'error';
+  container.append(el);
+  await el.updateComplete;
+  expect(hint.hidden).to.be.true;
+  expect(error.hidden).to.be.false;
+  expect(base.getAttribute('aria-describedby')).to.equal('switch-error');
+
+  el.remove();
+  namedContent.slot = 'help-text';
+  container.append(el);
+  await el.updateComplete;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.true;
+  expect(base.getAttribute('aria-describedby')).to.equal('switch-hint');
+
+  el.remove();
+  namedContent.remove();
+  container.append(el);
+  await el.updateComplete;
+  expect(hint.hidden).to.be.true;
+  expect(error.hidden).to.be.true;
+  expect(base.hasAttribute('aria-describedby')).to.be.false;
+});
+
+it('updates label presence when a direct slotted descendant mutates in place', async () => {
+  const el = (await fixture(html`<lr-switch></lr-switch>`)) as LyraSwitch;
+  const assigned = el.ownerDocument.createTextNode(' ');
+  el.append(assigned);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hidden).to.be.true;
+
+  assigned.data = 'Enable notifications';
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(label.hidden).to.be.false;
+});
+
+it('tracks visual label presence through a forwarding slot without exposing its fallback', async () => {
+  const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const assigned = wrapper.ownerDocument.createTextNode(' ');
+  wrapper.append(assigned);
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <lr-switch aria-label="Explicit switch name">
+      <slot><span>Unrendered fallback</span></slot>
+    </lr-switch>
+  `;
+  const el = root.querySelector('lr-switch') as LyraSwitch;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+  };
+
+  await settle();
+  expect(label.hidden, 'an empty assignment suppresses both itself and slot fallback').to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('Explicit switch name');
+
+  assigned.data = 'Forwarded switch label';
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  assigned.data = ' ';
+  await settle();
+  expect(label.hidden).to.be.true;
+
+  const visual = wrapper.ownerDocument.createElement('span');
+  visual.setAttribute('aria-label', 'Screen-reader override');
+  assigned.replaceWith(visual);
+  await settle();
+  expect(label.hidden, 'an element-only visual such as an icon keeps the wrapper').to.be.false;
+
+  visual.textContent = 'Decorative visual glyph';
+  visual.setAttribute('aria-hidden', 'true');
+  await settle();
+  expect(label.hidden, 'aria-hidden content can still be intentionally visual').to.be.false;
+
+  visual.removeAttribute('aria-hidden');
+  visual.style.display = 'none';
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  visual.style.removeProperty('display');
+  visual.hidden = true;
+  await settle();
+  expect(label.hidden).to.be.false;
+
+  visual.hidden = false;
+  await settle();
+  expect(label.hidden).to.be.false;
+  expect(base.getAttribute('aria-label'), 'consumer host naming remains authoritative').to.equal(
+    'Explicit switch name',
+  );
+});
+
+it('constructs its label observer in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  let adoptedTarget: LyraSwitch | undefined;
+  let labelHostObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if (
+        target === adoptedTarget &&
+        options?.childList &&
+        options.characterData &&
+        options.subtree
+      ) labelHostObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = (await fixture(html`<lr-switch><span>Parent label</span></lr-switch>`)) as LyraSwitch;
+  adoptedTarget = el;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions).to.be.greaterThan(1);
+    expect(labelHostObservations).to.be.greaterThan(0);
+    expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden).to.be.false;
+  } finally {
+    el.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    } else {
+      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    }
+    frame.remove();
+  }
+});
+
 it('forwards a host aria-label onto the inner role="switch" element', async () => {
   const el = (await fixture(
     html`<lr-switch aria-label="Enable notifications"></lr-switch>`,
@@ -499,6 +720,13 @@ it('does not set an empty aria-label on the inner element when the host has none
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-label')).to.be.false;
+});
+
+it('preserves an explicitly empty host aria-label on the internal switch role', async () => {
+  const el = (await fixture(html`<lr-switch aria-label="">Visible label</lr-switch>`)) as LyraSwitch;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-label')).to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('');
 });
 
 it('participates in a form: submits value under name only when checked', async () => {

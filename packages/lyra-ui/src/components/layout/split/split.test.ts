@@ -91,6 +91,47 @@ function installStubResizeObserver(): {
   };
 }
 
+interface OwnerResizeObserverRecord {
+  callback: ResizeObserverCallback;
+  observed: Element[];
+  disconnectCalls: number;
+  observer: ResizeObserver;
+}
+
+function installOwnerResizeObserverStub(owner: Window): {
+  records: OwnerResizeObserverRecord[];
+  restore(): void;
+} {
+  const original = owner.ResizeObserver;
+  const records: OwnerResizeObserverRecord[] = [];
+  class OwnerResizeObserver implements ResizeObserver {
+    private readonly record: OwnerResizeObserverRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = { callback, observed: [], disconnectCalls: 0, observer: this };
+      records.push(this.record);
+    }
+
+    observe(target: Element): void {
+      this.record.observed.push(target);
+    }
+
+    unobserve(): void {}
+
+    disconnect(): void {
+      this.record.disconnectCalls += 1;
+    }
+  }
+  (owner as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    OwnerResizeObserver;
+  return {
+    records,
+    restore(): void {
+      (owner as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = original;
+    },
+  };
+}
+
 /** A `window.matchMedia` stand-in whose `(max-width: <n>px)` queries are evaluated against a
  *  mutable pretend viewport width, so a test can cross a viewport-basis breakpoint on demand —
  *  the real viewport can't be resized from inside the test page. `px` is the only unit understood
@@ -1396,6 +1437,77 @@ it("ignores a stray pointermove/pointerup/pointercancel after the element is dis
   expect(el.sizes).to.deep.equal(sizesAtDisconnect);
 });
 
+it("routes an adopted divider drag through its owner window and removes that realm's listeners on adoption", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  el.remove();
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  const originalRemoveEventListener = frameWindow.removeEventListener;
+  const removedPointerTypes: string[] = [];
+  frameWindow.removeEventListener = ((
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions
+  ) => {
+    if (type.startsWith("pointer") || type === "lostpointercapture") removedPointerTypes.push(type);
+    originalRemoveEventListener.call(frameWindow, type, listener, options);
+  }) as typeof frameWindow.removeEventListener;
+
+  try {
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await elementUpdated(el);
+    const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+    divider.setPointerCapture = () => {};
+    divider.dispatchEvent(
+      new frameWindow.PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 73,
+        clientX: 100,
+      })
+    );
+    const initial = [...el.sizes];
+
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 73, clientX: 140 })
+    );
+    expect(el.sizes, "the ambient window must not own the adopted drag").to.deep.equal(initial);
+
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent("pointermove", { pointerId: 73, clientX: 140 })
+    );
+    expect(el.sizes[0]).to.be.greaterThan(initial[0]!);
+    const resized = [...el.sizes];
+
+    document.adoptNode(el);
+    expect([...new Set(removedPointerTypes)].sort()).to.deep.equal([
+      "lostpointercapture",
+      "pointercancel",
+      "pointermove",
+      "pointerup",
+    ]);
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent("pointermove", { pointerId: 73, clientX: 160 })
+    );
+    expect(el.sizes, "the old owner window listener must be removed").to.deep.equal(resized);
+  } finally {
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    frameWindow.removeEventListener = originalRemoveEventListener;
+    el.remove();
+    frame.remove();
+  }
+});
+
 it("persists sizes to localStorage on pointerup, not just via keyboard commit", async () => {
   const storageKey = "test-split-pointer-persist-" + Math.random();
   localStorage.clear();
@@ -2081,6 +2193,54 @@ it('clamps the collapse="start" panel (index 0) to rail-width and marks it via d
     expect(el.getAttribute("data-collapse-state")).to.equal("rail");
   } finally {
     spy.restore();
+  }
+});
+
+it('replaces the responsive observer with the destination owner constructor after adoption and ignores stale callbacks', async () => {
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+  const ambient = installOwnerResizeObserverStub(window);
+  const destination = installOwnerResizeObserverStub(frameWindow);
+  let el: LyraSplit | undefined;
+
+  try {
+    el = (await fixture(html`
+      <lr-split collapse="start" rail-breakpoint="600" float-breakpoint="300">
+        <div>A</div><div>B</div>
+      </lr-split>
+    `)) as LyraSplit;
+    await elementUpdated(el);
+    expect(ambient.records.length).to.equal(1);
+    expect(ambient.records[0]!.observed.length).to.equal(1);
+
+    const stale = ambient.records[0]!;
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await elementUpdated(el);
+    expect(stale.disconnectCalls).to.be.greaterThan(0);
+    expect(destination.records.length).to.equal(1);
+    expect(destination.records[0]!.observed[0]!.ownerDocument === frameDocument).to.equal(true);
+
+    fireCollapseResize(destination.records[0]!.callback, 500);
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('rail');
+
+    fireCollapseResize(stale.callback, 1000);
+    await elementUpdated(el);
+    expect(el.collapseState, 'a callback retained by the old realm must be inert').to.equal('rail');
+
+    document.adoptNode(el);
+    document.body.append(el);
+    await elementUpdated(el);
+    expect(destination.records[0]!.disconnectCalls).to.be.greaterThan(0);
+    expect(ambient.records.length).to.equal(2);
+  } finally {
+    el?.remove();
+    destination.restore();
+    ambient.restore();
+    frame.remove();
   }
 });
 

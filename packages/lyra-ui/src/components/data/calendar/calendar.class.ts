@@ -7,6 +7,11 @@ import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './calendar.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth, LYRA_DEFAULT_date } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface CalendarEvent { id?: string; date: string; title: string; start?: string; end?: string; color?: string; data?: unknown; }
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
@@ -45,6 +50,18 @@ export type CalendarView = 'month' | 'agenda';
  * @since 4.0.0
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    calendarEmpty: LYRA_DEFAULT_calendarEmpty,
+    calendarLabel: LYRA_DEFAULT_calendarLabel,
+    calendarNextMonth: LYRA_DEFAULT_calendarNextMonth,
+    calendarPreviousMonth: LYRA_DEFAULT_calendarPreviousMonth,
+    date: LYRA_DEFAULT_date,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) events: CalendarEvent[] = [];
   @property() value = '';

@@ -10,6 +10,11 @@ import { styles } from './source-picker.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_sourcePickerSelection } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraSourceEntry {
   id: string;
@@ -66,6 +71,30 @@ interface SourceRow {
  * @since 4.0.0
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    noData: LYRA_DEFAULT_noData,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    selectAllSources: LYRA_DEFAULT_selectAllSources,
+    sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
+    sourcePickerSelection: LYRA_DEFAULT_sourcePickerSelection,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Flat (no `children`) or a tree. */

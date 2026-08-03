@@ -5,7 +5,13 @@ import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_mcpAppLabel, LYRA_DEFAULT_mcpAppLoading, LYRA_DEFAULT_mcpAppUnavailable, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface McpAppPermissions {
   camera?: boolean;
@@ -125,6 +131,19 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @since 7.0.0
  */
 export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    mcpAppLabel: LYRA_DEFAULT_mcpAppLabel,
+    mcpAppLoading: LYRA_DEFAULT_mcpAppLoading,
+    mcpAppUnavailable: LYRA_DEFAULT_mcpAppUnavailable,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) resource: McpAppResource | null = null;
@@ -136,20 +155,86 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   @state() private frameHeight = 320;
   private frameGeneration = 0;
   @query('iframe') private frame?: HTMLIFrameElement;
+  private loadingAnnouncementSink?: AnnouncementSink;
+  private errorAnnouncementSink?: AnnouncementSink;
+  private suppressNextResourceAnnouncement = true;
+  private messageWindow?: Window;
+
+  private resourceAvailable(resource: McpAppResource | null | undefined): boolean {
+    return Boolean(resource && (resource.html || safeMediaSrc(resource.src)));
+  }
+
+  private syncAnnouncementSinks(): void {
+    if (!this.isConnected) return;
+    const heldDocument = this.loadingAnnouncementSink?.element.ownerDocument;
+    if (
+      heldDocument === this.ownerDocument &&
+      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument
+    ) return;
+    this.loadingAnnouncementSink?.release();
+    this.errorAnnouncementSink?.release();
+    this.loadingAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    window.addEventListener('message', this.onMessage);
+    this.syncAnnouncementSinks();
+    if (this.hasUpdated) {
+      // Snapshot the resource already present at reconnect before announcing later replacements.
+      // This also suppresses a resource write queued while the element was detached.
+      this.suppressNextResourceAnnouncement = true;
+      this.requestUpdate();
+    }
+    this.bindMessageWindow();
   }
 
   override disconnectedCallback(): void {
-    window.removeEventListener('message', this.onMessage);
+    this.unbindMessageWindow();
     this.loaded = false;
+    this.loadingAnnouncementSink?.release();
+    this.errorAnnouncementSink?.release();
+    this.loadingAnnouncementSink = undefined;
+    this.errorAnnouncementSink = undefined;
+    this.suppressNextResourceAnnouncement = true;
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.syncAnnouncementSinks();
+    this.bindMessageWindow();
+  }
+
+  private bindMessageWindow(): void {
+    const nextWindow = this.isConnected ? this.ownerDocument.defaultView : null;
+    if (this.messageWindow === nextWindow) return;
+    this.unbindMessageWindow();
+    this.messageWindow = nextWindow ?? undefined;
+    this.messageWindow?.addEventListener('message', this.onMessage);
+  }
+
+  private unbindMessageWindow(): void {
+    this.messageWindow?.removeEventListener('message', this.onMessage);
+    this.messageWindow = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('resource')) {
+      if (this.hasUpdated && !this.suppressNextResourceAnnouncement) {
+        const wasAvailable = this.resourceAvailable(changed.get('resource') as McpAppResource | null | undefined);
+        const isAvailable = this.resourceAvailable(this.resource);
+        // Every valid resource replacement starts a fresh frame load. An unavailable transition is
+        // assertive, while the ordinary loading state is polite; neither resting state announces on
+        // initial mount.
+        if (isAvailable) this.loadingAnnouncementSink?.announce(this.localize('mcpAppLoading'));
+        else if (wasAvailable) this.errorAnnouncementSink?.announce(this.localize('mcpAppUnavailable'));
+      }
       this.loaded = false;
       this.frameGeneration++;
     }
@@ -161,6 +246,10 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         finiteRange(this.maxHeight, 800, 120, 10_000),
       );
     }
+  }
+
+  protected override updated(_changed: PropertyValues<this>): void {
+    this.suppressNextResourceAnnouncement = false;
   }
 
   private expectedOrigin(): 'null' | null {
@@ -187,6 +276,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   private onMessage = (event: MessageEvent): void => {
+    if (event.currentTarget !== this.messageWindow) return;
     if (!this.frame?.contentWindow || event.source !== this.frame.contentWindow) return;
     const expectedOrigin = this.expectedOrigin();
     if (expectedOrigin && event.origin !== expectedOrigin) return;
@@ -252,10 +342,10 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     const valid = Boolean(resource && (resource.html || src));
     const label = this.accessibleLabel || this.label || resource?.title || this.localize('mcpAppLabel');
     if (!valid) {
-      return html`<div part="base"><p part="error" role="alert">${this.localize('mcpAppUnavailable')}</p></div>`;
+      return html`<div part="base"><p part="error">${this.localize('mcpAppUnavailable')}</p></div>`;
     }
     return html`<div part="base">
-      ${this.loaded ? nothing : html`<p part="loading" role="status">${this.localize('mcpAppLoading')}</p>`}
+      ${this.loaded ? nothing : html`<p part="loading">${this.localize('mcpAppLoading')}</p>`}
       ${keyed(
         this.frameGeneration,
         html`<iframe

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -7,6 +7,12 @@ import { styles } from './browser-frame.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
@@ -77,7 +83,7 @@ export interface LyraBrowserFrameEventMap {
  * @csspart base - The root wrapper (`role="group"`).
  * @csspart toolbar - The header row.
  * @csspart url - The read-only address text.
- * @csspart status - The visible status text (`role="status"`).
+ * @csspart status - The visible, non-live status text.
  * @csspart controller-badge - The current controller indicator.
  * @csspart actions - The `actions` slot wrapper.
  * @csspart take-over-button - The take-over/hand-back button.
@@ -100,6 +106,28 @@ export interface LyraBrowserFrameEventMap {
  * @since 4.0.0
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    browserFrameControllerAgent: LYRA_DEFAULT_browserFrameControllerAgent,
+    browserFrameControllerUser: LYRA_DEFAULT_browserFrameControllerUser,
+    browserFrameHandBack: LYRA_DEFAULT_browserFrameHandBack,
+    browserFrameLabel: LYRA_DEFAULT_browserFrameLabel,
+    browserFrameStatusConnecting: LYRA_DEFAULT_browserFrameStatusConnecting,
+    browserFrameStatusIdle: LYRA_DEFAULT_browserFrameStatusIdle,
+    browserFrameStatusLive: LYRA_DEFAULT_browserFrameStatusLive,
+    browserFrameStatusStalled: LYRA_DEFAULT_browserFrameStatusStalled,
+    browserFrameStop: LYRA_DEFAULT_browserFrameStop,
+    browserFrameTakeOver: LYRA_DEFAULT_browserFrameTakeOver,
+    browserFrameUrlLabel: LYRA_DEFAULT_browserFrameUrlLabel,
+    browserFrameViewOf: LYRA_DEFAULT_browserFrameViewOf,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _frameSrc = '';
@@ -130,13 +158,36 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   @state() private contentRect: { left: number; top: number; width: number; height: number } | null = null;
 
   private viewportResizeObserver?: ResizeObserver;
+  private viewportObserverDocument?: Document;
+  private viewportObserverTarget?: Element;
+  private viewportObserverGeneration = 0;
+  private statusAnnouncementSink?: AnnouncementSink;
+  private suppressNextStatusAnnouncement = true;
+
+  private syncStatusAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.statusAnnouncementSink?.release();
+    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Mount the light-DOM live region before any transition text arrives. Re-resolving the owner
+    // document also makes adoption into an iframe announce where the component is now displayed.
+    this.syncStatusAnnouncementSink();
     // The viewport observer is torn down on disconnect, and a reattached, already-rendered frame
     // <img> fires no new load event -- re-arm and re-measure here so the content rect keeps
     // tracking resizes after a move within the DOM.
     if (this.hasUpdated) {
+      // Reconnect establishes the already-visible status as a new silent baseline. Lit keeps
+      // updates running while detached, so a write queued between remove() and append() must not
+      // become a fresh announcement merely because the sink was reacquired first.
+      this.suppressNextStatusAnnouncement = true;
+      this.requestUpdate();
       this.observeViewport();
       this.recomputeContentRect();
     }
@@ -144,15 +195,72 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.viewportResizeObserver?.disconnect();
-    this.viewportResizeObserver = undefined;
+    this.resetViewportObserver();
+    this.statusAnnouncementSink?.release();
+    this.statusAnnouncementSink = undefined;
+    this.suppressNextStatusAnnouncement = true;
+  }
+
+  adoptedCallback(): void {
+    // Adoption can happen while already detached, in which case no new disconnectedCallback runs.
+    // Drop all old-realm resources here and let the next connectedCallback bind the destination.
+    this.resetViewportObserver();
+    this.statusAnnouncementSink?.release();
+    this.statusAnnouncementSink = undefined;
+    this.suppressNextStatusAnnouncement = true;
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    // The status shown at mount is context, not a user-triggered change. Later lifecycle
+    // transitions are infrequent and useful, so announce each one as its own light-DOM addition.
+    if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('status')) {
+      this.statusAnnouncementSink?.announce(this.localize(STATUS_KEY[this.status]));
+    }
+  }
+
+  protected override updated(_changed: PropertyValues<this>): void {
+    this.suppressNextStatusAnnouncement = false;
   }
 
   private observeViewport(): void {
     const viewport = this.renderRoot.querySelector('[part="viewport"]');
-    if (!viewport || this.viewportResizeObserver) return;
-    this.viewportResizeObserver = new ResizeObserver(() => this.recomputeContentRect());
-    this.viewportResizeObserver.observe(viewport);
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected || !viewport) return;
+    if (
+      this.viewportResizeObserver &&
+      this.viewportObserverDocument === ownerDocument &&
+      this.viewportObserverTarget === viewport
+    ) {
+      return;
+    }
+    this.resetViewportObserver();
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const generation = this.viewportObserverGeneration;
+    const observer = new ResizeObserverCtor(() => {
+      if (
+        this.viewportResizeObserver !== observer ||
+        this.viewportObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.viewportObserverTarget !== viewport
+      ) {
+        return;
+      }
+      this.recomputeContentRect();
+    });
+    this.viewportResizeObserver = observer;
+    this.viewportObserverDocument = ownerDocument;
+    this.viewportObserverTarget = viewport;
+    observer.observe(viewport);
+  }
+
+  private resetViewportObserver(): void {
+    this.viewportObserverGeneration += 1;
+    this.viewportResizeObserver?.disconnect();
+    this.viewportResizeObserver = undefined;
+    this.viewportObserverDocument = undefined;
+    this.viewportObserverTarget = undefined;
   }
 
   private recomputeContentRect(): void {
@@ -210,7 +318,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
         <div part="toolbar">
           <span class="sr-only">${this.localize('browserFrameUrlLabel')}</span>
           <span part="url" dir="ltr" title=${this.url}>${this.url}</span>
-          <span part="status" role="status">${this.localize(STATUS_KEY[this.status])}</span>
+          <span part="status">${this.localize(STATUS_KEY[this.status])}</span>
           <span part="controller-badge">
             ${this.localize(
               this.controller === 'agent' ? 'browserFrameControllerAgent' : 'browserFrameControllerUser',

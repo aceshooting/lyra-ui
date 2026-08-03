@@ -35,6 +35,11 @@ import {
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_details, LYRA_DEFAULT_expandCode, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraCodeBlockEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -149,6 +154,25 @@ export interface LyraCodeBlockEventMap {
  * @since 4.0.0
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
+    codeRegion: LYRA_DEFAULT_codeRegion,
+    codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    collapse: LYRA_DEFAULT_collapse,
+    collapseCode: LYRA_DEFAULT_collapseCode,
+    copied: LYRA_DEFAULT_copied,
+    copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
+    copy: LYRA_DEFAULT_copy,
+    copyCode: LYRA_DEFAULT_copyCode,
+    details: LYRA_DEFAULT_details,
+    expandCode: LYRA_DEFAULT_expandCode,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The raw source text. */
@@ -258,13 +282,14 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // only the result matching the *current* token is ever applied.
   private highlightToken = 0;
 
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimer?: { owner: Window; handle: number };
   private defaultHighlighterLoading = false;
 
   private readonly bodyId = nextId('code-block-body');
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.stopThemeWatcher();
     this.isDarkTheme = resolveIsDarkTheme(this);
     this.stopWatchingTheme = watchDarkTheme(this, () => {
       this.isDarkTheme = resolveIsDarkTheme(this);
@@ -292,10 +317,29 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = undefined;
+    this.cancelCopyTimer();
     this.justCopied = false;
-    this.stopWatchingTheme?.();
+    this.stopThemeWatcher();
+  }
+
+  adoptedCallback(): void {
+    // A node can move between owner documents while already disconnected; always retire an
+    // old-realm confirmation timer even when no further disconnect callback will run.
+    this.cancelCopyTimer();
+    this.justCopied = false;
+    this.stopThemeWatcher();
+  }
+
+  private stopThemeWatcher(): void {
+    const stop = this.stopWatchingTheme;
+    this.stopWatchingTheme = undefined;
+    stop?.();
+  }
+
+  private cancelCopyTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   // The `languages` entry for the *current* `language`, if any -- shared by
@@ -503,13 +547,24 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   }
 
   private copy = (): void => {
-    writeCodeBlockClipboard(this.code);
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    writeCodeBlockClipboard(this.code, owner);
     this.emit('lr-copy', { text: this.code });
+    if (!owner) return;
     this.justCopied = true;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = setTimeout(() => {
+    this.cancelCopyTimer();
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.copyTimer?.owner !== owner
+        || this.copyTimer.handle !== handle
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.copyTimer = undefined;
       this.justCopied = false;
     }, CODE_BLOCK_COPY_CONFIRM_MS);
+    this.copyTimer = { owner, handle };
   };
 
   private toggleCollapsed = (): void => {

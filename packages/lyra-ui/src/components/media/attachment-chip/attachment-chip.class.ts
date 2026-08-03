@@ -9,6 +9,11 @@ import { styles } from './attachment-chip.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 
@@ -120,7 +125,9 @@ export interface LyraAttachmentChipEventMap {
  * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Plain visible text, so it reads normally once a user reaches the chip; the interrupting announcement that a transition *into* `status="error"` makes (so a screen-reader user not already focused on the chip still hears an upload failure) goes through the shared light-DOM assertive region (`acquireAnnouncementSink()` in `internal/announcer.ts`) rather than a shadow `role="alert"`, which is not reliably announced. The ticking `'uploading'` readout deliberately announces nothing at all, the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
- * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
+ * @csspart spinner - Decorative (`aria-hidden`) indeterminate upload spinner, shown instead of
+ *   `progress` while `status="uploading"` and `progress` is unset/0; the adjacent status text
+ *   carries the visible wording, and upload ticks never enter a live region.
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
  * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is available.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
@@ -144,6 +151,30 @@ export interface LyraAttachmentChipEventMap {
  * @since 4.0.0
  */
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    attachmentPreviewFile: LYRA_DEFAULT_attachmentPreviewFile,
+    attachmentPreviewName: LYRA_DEFAULT_attachmentPreviewName,
+    attachmentRetryWithContext: LYRA_DEFAULT_attachmentRetryWithContext,
+    attachmentUntitledFile: LYRA_DEFAULT_attachmentUntitledFile,
+    attachmentUploadFailed: LYRA_DEFAULT_attachmentUploadFailed,
+    attachmentUploadingIndeterminate: LYRA_DEFAULT_attachmentUploadingIndeterminate,
+    attachmentUploadingProgress: LYRA_DEFAULT_attachmentUploadingProgress,
+    attachmentUploadingWithContext: LYRA_DEFAULT_attachmentUploadingWithContext,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    open: LYRA_DEFAULT_open,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
@@ -295,8 +326,28 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     super.connectedCallback();
     // Acquired on connect, not on the first failure: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
+    this.syncAnnouncementSink();
     if (this.hasUpdated) this.requestUpdate();
+  }
+
+  adoptedCallback(): void {
+    this.releaseAnnouncementSink();
+    this.syncAnnouncementSink();
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.sink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.sink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -325,8 +376,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     super.disconnectedCallback();
     this.previewOpen = false;
     this.revokeObjectUrl();
-    this.sink?.release();
-    this.sink = undefined;
+    this.releaseAnnouncementSink();
   }
 
   /** The localized upload-failure message. Same override-wins-verbatim rule as `untitledLabel`;
@@ -461,7 +511,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
                   <div part="progress-fill" style=${`inline-size:${this.clampedProgress}%`}></div>
                 </div>
               `
-            : html`<span part="spinner" role="status" aria-label=${uploadingWithContext}></span>`
+            : html`<span part="spinner" aria-hidden="true"></span>`
           : nothing}
         ${this.status === 'error'
           ? html`<button part="retry-button" type="button" aria-label=${retryWithContext} @click=${this.onRetryClick}>

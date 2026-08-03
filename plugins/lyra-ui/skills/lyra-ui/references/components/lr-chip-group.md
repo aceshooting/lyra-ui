@@ -2,7 +2,7 @@
 
 # `lr-chip-group`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/chip/chip-group.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-chip-group.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChipGroup`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -75,6 +75,11 @@ Calling `preventDefault()` keeps the current `selected` state unchanged)
 **Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
 toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
 gap — when left empty)
+
+Toggle/remove action names follow the default slot's live visible accessible text through nested
+forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
+Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host `aria-label` wins by
+presence, so an explicitly empty value remains empty.
 
 **CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
 entirely while empty), `label` (non-interactive wrapper around the default slot), `toggle-button`

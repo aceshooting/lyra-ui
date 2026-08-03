@@ -2,7 +2,7 @@
 
 # `lr-path-strip`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/path-strip/path-strip.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-path-strip.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPathStrip`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/path-strip/path-strip.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

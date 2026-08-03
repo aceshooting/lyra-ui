@@ -1,5 +1,5 @@
-// Visual-regression harness: screenshots a representative sample of Storybook stories in
-// light theme, dark theme, and RTL, and diffs each capture against a committed baseline PNG.
+// Visual-regression harness: screenshots the machine-readable Storybook matrix in
+// visual-baselines/manifest.json and diffs each capture against a committed baseline PNG.
 //
 // *** See packages/lyra-ui/visual-baselines/README.md for what a mismatch does and doesn't prove
 // before trusting a baseline. This is a blocking CI gate (packages/lyra-ui/visual-baselines/README.md
@@ -14,31 +14,63 @@
 //
 // Usage (from packages/lyra-ui/, or via `pnpm --filter @aceshooting/lyra-ui test:visual`):
 //   node scripts/visual-regression.mjs                     # capture + diff against baselines
-//   node scripts/visual-regression.mjs --update-snapshots   # capture + overwrite baselines
+//   node scripts/visual-regression.mjs --update-snapshots   # promote human-reviewed captures
 //   node scripts/visual-regression.mjs --filter checkbox    # limit to matching story ids
+//   VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 node scripts/visual-regression.mjs
+//                                                        # run one deterministic capture shard
 //
 // Requires `storybook-static/` to already exist (`pnpm docs:build` from the repo root) and the
 // Playwright Chromium browser to be installed (`pnpm --filter @aceshooting/lyra-ui exec
 // playwright install --with-deps chromium`), same preconditions as check-storybook.mjs.
 
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 import { readFile, stat, mkdir, writeFile, rm, appendFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { PNG } from 'pngjs';
 import { comparePngs } from './visual-regression-compare.mjs';
+import {
+  readVisualShardCoordinates,
+  shardVisualCaptures,
+  visualCapturePlan,
+} from './visual-regression-shard.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 const staticRoot = join(repoRoot, 'storybook-static');
 const indexPath = join(staticRoot, 'index.json');
 const baselineDir = join(packageRoot, 'visual-baselines');
-const outputDir = join(packageRoot, '.visual-diff-output');
+const outputRootDir = join(packageRoot, '.visual-diff-output');
+const manifestPath = fileURLToPath(new URL('../visual-baselines/manifest.json', import.meta.url));
+const visualManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+const VISUAL_AXES = new Map(visualManifest.axes.map((axis) => [axis.name, axis]));
+const VISUAL_STORIES = visualManifest.stories;
+const EXPECTED_TAGS_BY_STORY = new Map(VISUAL_STORIES.map((story) => [story.id, []]));
+for (const [tagName, storyIds] of Object.entries(visualManifest.tagCoverage)) {
+  for (const storyId of storyIds) EXPECTED_TAGS_BY_STORY.get(storyId)?.push(tagName);
+}
 
 const args = process.argv.slice(2);
 const UPDATE = args.includes('--update-snapshots') || args.includes('-u');
 const filterArgIndex = args.indexOf('--filter');
 const FILTER = filterArgIndex !== -1 ? args[filterArgIndex + 1] : undefined;
+if (filterArgIndex !== -1 && !FILTER) throw new Error('--filter needs a story-id substring.');
+const { shardIndex: VISUAL_SHARD_INDEX, shardTotal: VISUAL_SHARD_TOTAL } =
+  readVisualShardCoordinates();
+const outputDir =
+  VISUAL_SHARD_TOTAL === 1
+    ? outputRootDir
+    : join(outputRootDir, `shard-${VISUAL_SHARD_INDEX}-of-${VISUAL_SHARD_TOTAL}`);
+
+function isEvidenceOnly(story, axis) {
+  return axis.artifactPolicy === 'evidence-only' || story.comparisonPolicy === 'evidence-only';
+}
+
+function sha256(buffer) {
+  return createHash('sha256').update(buffer).digest('hex');
+}
 
 // Determinism controls. Before these existed the harness's only settling step was a
 // `networkidle` + fixed 250ms wait, which let three independent noise sources move pixels
@@ -88,129 +120,6 @@ const VIEWPORT_OVERRIDES = {
   'responsivepanel--forced-overlay-bottom-sheet': { width: 390, height: 800 },
 };
 
-const AXES = [
-  { name: 'light', theme: 'light', direction: 'ltr' },
-  { name: 'dark', theme: 'dark', direction: 'ltr' },
-  { name: 'rtl', theme: 'light', direction: 'rtl' },
-];
-
-// Representative sample across component families -- not the full catalog.
-// Selection is risk-weighted, not proportional: beyond the original cross-section of families,
-// it deliberately over-samples the two areas where a screenshot catches what a unit test
-// structurally cannot -- canvas painters (pixels are the whole contract) and <lr-virtual-list>
-// `renderItem` consumers (styles must pierce a shadow boundary to reach data rows). Newly stable
-// tags contribute one meaningful visible state, with a second state only where
-// a component has materially different allocation or rendering modes (Page, Pagination, and Color
-// Picker). Extend this list incrementally; every id here must exist in storybook-static/index.json
-// (verified below) or the run fails loudly.
-const STORIES = [
-  // Form controls
-  'checkbox--default',
-  'input--default',
-  'input-native-time-input--default',
-  'select--default',
-  'input-radio-group--default',
-  'forms-radio-button--default',
-  'switch--default',
-  'textarea--default',
-  'slider--default',
-  'combobox--default',
-  'forms-otp-input--appearances-and-sizes',
-  'form-color-picker--open',
-  'form-color-picker--inline-compatibility',
-  'forms-phoneinput--default',
-  'form-rating--default',
-  // Overlays / dialogs
-  'dialog--open-initially',
-  'drawer--end',
-  'feedback-alert--variants',
-  'feedback-callout--appearances',
-  'overlay-dropdown--default',
-  'overlay-popover--default',
-  'overlay-tooltip--default',
-  'overlays-popup--with-arrow',
-  'toast--triggers',
-  'toolapprovaldialog--open-initially',
-  'menu--gear-menu',
-  // Data-viz
-  'charts-litechart--default',
-  'charts-bar--default',
-  'charts-line--default',
-  'gauge--radial',
-  'heatmap--default',
-  'data-sparkline--line',
-  'graph--default',
-  'map--default',
-  'wordcloud--default',
-  // Canvas-rendered -- these paint to a <canvas> 2D context, so their pixels ARE the entire
-  // contract: no DOM/part assertion in a unit test can see a wrong axis, a clipped slice, or a
-  // mis-mapped color the way a screenshot can. The Charts/Chart family was almost entirely
-  // uncovered (only the bar/line/litechart derivatives above had baselines) despite sharing one
-  // canvas base class (chart.class.ts); these add the remaining chart geometries plus the other
-  // standalone canvas painters (qr-code, audio-visualizer, animated-image).
-  'charts-chart--default',
-  'charts-pie--default',
-  'charts-doughnut--default',
-  'charts-radar--default',
-  'charts-scatter--default',
-  'charts-polararea--default',
-  'charts-bubble--default',
-  'charts-histogram--default',
-  'charts-boxplot--default',
-  'qr-code--default',
-  'audio-visualizer--idle',
-  'animatedimage--default',
-  // Viewers
-  'documentviewer-pdfviewer--default',
-  'jsonviewer--default',
-  'codeblock--default',
-  'markdown--default',
-  'documentviewer-csvviewer--quoted-fields',
-  'docxviewer--default',
-  // Virtual-list consumers -- these feed a per-row `renderItem` callback into <lr-virtual-list>,
-  // so every data row renders inside THAT element's shadow root, not the component's own. A plain
-  // `[part='row']` rule in the component's stylesheet cannot cross that boundary and silently
-  // dies, collapsing styled rows to unstyled block stacking (the exact bug fixed in csv-viewer /
-  // spreadsheet-viewer, commit 26f28acd, found via this harness). Coverage was inverted: the two
-  // lowest-risk consumers (csv-viewer: 4 pierce rules, pdf-viewer: 8) had baselines while the
-  // heaviest did not. These are the highest `::part`-rule-count consumers, ordered by that count.
-  'chunk-inspector--default', // 19 pierce rules
-  'ingestion-queue--default', // 17
-  'documentviewer-pagerail--mediated', // 14
-  'threadlist--default', // 14
-  'documentviewer-notebookviewer--default', // 12
-  'neighbor-list--default', // 12
-  'retrieval-results--default', // 11
-  'activityfeed--live-expanded', // 11
-  'documentviewer-datasetviewer--default', // 7
-  'archiveviewer--default', // 5
-  // New and materially-expanded v8 surfaces. These are grouped by rendered risk rather than by
-  // source family: pagination/tree exercise wrapping and hierarchy; media covers custom controls
-  // and nested playlists; layout covers allocation, divider, and explicit-element tab models.
-  'pagination--appearance',
-  'pagination--narrow-allocation',
-  'navigation-tree-node--declarative',
-  'media-pan-zoom--slotted-content',
-  'media-video--full-controls',
-  'media-video-playlist--full-controls',
-  // Layout primitives
-  'apprail--forced-icon-only',
-  'layout-menu-label--default',
-  'layout-page--desktop',
-  'layout-page--mobile-drawer',
-  'layout-split-panel--default',
-  'responsivepanel--forced-overlay-bottom-sheet',
-  'split--default',
-  'tabs--default',
-  'tabs--element-model',
-  'card--outlined',
-  'table--default',
-  'disclosure-accordion--default',
-  'styles-native-and-utilities--layout-and-prose',
-  // This story is focused before capture below, proving the skip-link state becomes visible.
-  'utility-visually-hidden--skip-link',
-];
-
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.gif': 'image/gif',
@@ -255,9 +164,251 @@ async function listen(server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
-async function captureStory(page, baseUrl, id, theme, direction) {
-  const viewport = VIEWPORT_OVERRIDES[id] ?? VIEWPORT;
+async function assertStoryReady(page, id, expectedTags) {
+  const evidence = await page.evaluate(async ({ storyId, expectedTagNames }) => {
+    const root = document.querySelector('#storybook-root');
+    if (!(root instanceof HTMLElement)) {
+      throw new Error(`${storyId} did not render #storybook-root.`);
+    }
+
+    // Include document-level portals and recursively inspect shadow roots. A shallow query rooted
+    // at #storybook-root can miss both an overlay's rendered surface and an inert lr-* dependency
+    // nested in another component's shadow tree.
+    const renderedElements = [];
+    const visit = (parent) => {
+      for (const element of parent.children) {
+        renderedElements.push(element);
+        if (element.shadowRoot) visit(element.shadowRoot);
+        visit(element);
+      }
+    };
+    visit(document.body);
+    const lyraElements = renderedElements.filter((element) => element.localName.startsWith('lr-'));
+    const renderedTagNames = new Set(lyraElements.map((element) => element.localName));
+    const missingExpectedTags = expectedTagNames.filter((tagName) => !renderedTagNames.has(tagName));
+    if (missingExpectedTags.length) {
+      throw new Error(
+        `${storyId} does not render manifest-enrolled tag(s): ${missingExpectedTags.join(', ')}.`,
+      );
+    }
+    const unregistered = [...new Set(
+      lyraElements
+        .filter((element) => !customElements.get(element.localName))
+        .map((element) => element.localName),
+    )];
+    if (unregistered.length) {
+      throw new Error(
+        `${storyId} contains inert custom element(s): ${unregistered.join(', ')}. ` +
+          'Storybook must import the registration entry before baselining.',
+      );
+    }
+
+    await Promise.all(
+      lyraElements.map((element) =>
+        typeof element.updateComplete?.then === 'function'
+          ? element.updateComplete
+          : Promise.resolve(),
+      ),
+    );
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const hasVisibleBox = (element) => {
+      const candidates = [
+        element,
+        ...(element.shadowRoot?.querySelectorAll('*') ?? []),
+        ...element.querySelectorAll('*'),
+      ];
+      return candidates.some((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        const style = getComputedStyle(candidate);
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.visibility !== 'hidden' &&
+          style.display !== 'none'
+        );
+      });
+    };
+    const visibleLyraElements = lyraElements.filter(hasVisibleBox);
+    if (lyraElements.length && !visibleLyraElements.length) {
+      throw new Error(`${storyId} registered lr-* elements, but none has a visible rendered box.`);
+    }
+
+    const hasMeaningfulFallback =
+      (root.textContent?.trim().length ?? 0) > 0 ||
+      Boolean(root.querySelector('canvas, img, svg, video, input, button, table'));
+    if (!lyraElements.length && !hasMeaningfulFallback) {
+      throw new Error(`${storyId} rendered neither a Lyra element nor meaningful native content.`);
+    }
+
+    return {
+      lyraElementCount: lyraElements.length,
+      visibleLyraElementCount: visibleLyraElements.length,
+    };
+  }, { storyId: id, expectedTagNames: expectedTags });
+
+  return evidence;
+}
+
+async function assertNarrowAllocation(page, story) {
+  if (story.narrowProbe !== 'viewport-fit') return;
+  await page.evaluate((storyId) => {
+    const root = document.querySelector('#storybook-root');
+    const scrollingElement = document.scrollingElement;
+    if (!(root instanceof HTMLElement) || !scrollingElement) {
+      throw new Error(`${storyId} narrow fixture did not render a measurable Storybook root.`);
+    }
+    if (window.innerWidth > 320) {
+      throw new Error(`${storyId} narrow axis rendered at ${window.innerWidth}px instead of 320px or less.`);
+    }
+    if (scrollingElement.scrollWidth > window.innerWidth + 1) {
+      throw new Error(
+        `${storyId} overflows its narrow allocation: ${scrollingElement.scrollWidth}px content in ` +
+          `${window.innerWidth}px viewport.`,
+      );
+    }
+    const rect = root.getBoundingClientRect();
+    if (rect.left < -1 || rect.right > window.innerWidth + 1) {
+      throw new Error(
+        `${storyId} Storybook root escapes its narrow viewport (${rect.left}px..${rect.right}px).`,
+      );
+    }
+  }, story.id);
+}
+
+function paintedPixelStats(pngBuffer) {
+  const png = PNG.sync.read(pngBuffer);
+  const cornerOffsets = [
+    0,
+    (png.width - 1) * 4,
+    (png.width * (png.height - 1)) * 4,
+    (png.width * png.height - 1) * 4,
+  ];
+  const cornerColors = cornerOffsets.map((offset) =>
+    `${png.data[offset]},${png.data[offset + 1]},${png.data[offset + 2]},${png.data[offset + 3]}`,
+  );
+  const background = cornerColors
+    .map((color) => ({ color, count: cornerColors.filter((candidate) => candidate === color).length }))
+    .sort((left, right) => right.count - left.count)[0].color.split(',').map(Number);
+
+  let paintedPixels = 0;
+  let chromaticPixels = 0;
+  const colorBuckets = new Set();
+  for (let offset = 0; offset < png.data.length; offset += 4) {
+    const red = png.data[offset];
+    const green = png.data[offset + 1];
+    const blue = png.data[offset + 2];
+    const alpha = png.data[offset + 3];
+    const backgroundDistance =
+      Math.abs(red - background[0]) +
+      Math.abs(green - background[1]) +
+      Math.abs(blue - background[2]) +
+      Math.abs(alpha - background[3]);
+    if (backgroundDistance > 24) paintedPixels += 1;
+    if (alpha > 0 && Math.max(red, green, blue) - Math.min(red, green, blue) >= 24) {
+      chromaticPixels += 1;
+      colorBuckets.add(`${red >> 4},${green >> 4},${blue >> 4}`);
+    }
+  }
+  return {
+    width: png.width,
+    height: png.height,
+    paintedPixels,
+    chromaticPixels,
+    chromaticBuckets: colorBuckets.size,
+    pixelSignature: png.data.toString('base64'),
+  };
+}
+
+function assertCaptureHasPaint(pngBuffer, label, minimumPaintedPixels = 64) {
+  const stats = paintedPixelStats(pngBuffer);
+  if (stats.paintedPixels < minimumPaintedPixels) {
+    throw new Error(
+      `${label} is visually empty: only ${stats.paintedPixels} pixels differ from the canvas background.`,
+    );
+  }
+  return stats;
+}
+
+async function assertForcedColorsPaintedPixels(page, story) {
+  const forcedColorsActive = await page.evaluate(() => matchMedia('(forced-colors: active)').matches);
+  if (!forcedColorsActive) {
+    throw new Error(`${story.id} forced-colors axis did not activate the browser media feature.`);
+  }
+
+  if (story.forcedColorsProbe === 'intrinsic-color') {
+    const grid = page.locator('lr-color-picker').locator('[part~="grid"]');
+    await grid.waitFor({ state: 'visible', timeout: 5_000 });
+    const gridPixels = await grid.screenshot({ animations: 'disabled' });
+    const stats = assertCaptureHasPaint(gridPixels, `${story.id} intrinsic color grid`, 256);
+    if (stats.chromaticPixels < 256 || stats.chromaticBuckets < 8) {
+      throw new Error(
+        `${story.id} intrinsic color pixels were flattened by forced colors: ` +
+          `${stats.chromaticPixels} chromatic pixels across ${stats.chromaticBuckets} color buckets.`,
+      );
+    }
+    return;
+  }
+
+  if (story.forcedColorsProbe === 'chart-encodings') {
+    await page.evaluate(async () => {
+      const chart = document.querySelector('lr-chart');
+      if (!(chart instanceof HTMLElement)) {
+        throw new Error('Chart painted-pixel fixture did not render lr-chart.');
+      }
+      chart.type = 'line';
+      chart.legend = true;
+      chart.labels = ['Q1', 'Q2', 'Q3'];
+      chart.datasets = Array.from({ length: 8 }, (_, index) => ({
+        label: `Series ${index + 1}`,
+        data: [index + 1, 9 - index, index + 2],
+        fill: true,
+      }));
+      await chart.updateComplete;
+      const deadline = performance.now() + 5_000;
+      while (!chart.chart && performance.now() < deadline) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      if (!chart.chart) throw new Error('Chart.js did not initialize for the painted-pixel fixture.');
+      chart.refreshTheme?.();
+      await chart.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+
+    const chartCanvas = page.locator('lr-chart').locator('canvas');
+    await chartCanvas.waitFor({ state: 'visible', timeout: 5_000 });
+    const canvasPixels = await chartCanvas.screenshot({ animations: 'disabled' });
+    assertCaptureHasPaint(canvasPixels, `${story.id} chart canvas`, 512);
+
+    const swatches = page.locator('lr-chart').locator('[part~="legend-swatch"]');
+    await swatches.first().waitFor({ state: 'visible', timeout: 5_000 });
+    const swatchCount = await swatches.count();
+    if (swatchCount !== 8) {
+      throw new Error(`${story.id} expected 8 forced-color legend encodings, found ${swatchCount}.`);
+    }
+    const signatures = [];
+    for (let index = 0; index < swatchCount; index += 1) {
+      const pixels = await swatches.nth(index).screenshot({ animations: 'disabled' });
+      signatures.push(paintedPixelStats(pixels).pixelSignature);
+    }
+    if (new Set(signatures).size !== 8) {
+      throw new Error(
+        `${story.id} painted ${new Set(signatures).size} distinct legend patterns for 8 repeated-color series.`,
+      );
+    }
+  }
+}
+
+async function captureStory(page, baseUrl, story, axis) {
+  const { id } = story;
+  const theme = axis.globals?.theme ?? 'light';
+  const direction = axis.globals?.direction ?? 'ltr';
+  const viewport = axis.viewport ?? VIEWPORT_OVERRIDES[id] ?? VIEWPORT;
   await page.setViewportSize(viewport);
+  await page.emulateMedia({
+    forcedColors: axis.emulation?.forcedColors ?? 'none',
+    reducedMotion: 'reduce',
+  });
   const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme};direction:${direction}`;
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   // Applied before the story's first component upgrade so canvas painters that measure text
@@ -314,6 +465,25 @@ async function captureStory(page, baseUrl, id, theme, direction) {
     await page.waitForFunction(() => {
       const host = document.querySelector('lr-visually-hidden');
       return host?.contains(document.activeElement) === true && getComputedStyle(host).clipPath === 'none';
+    });
+  }
+  if (id === 'layout-menu-label--default') {
+    // The label story composes labels inside a menu but intentionally has no trigger. A closed
+    // menu is visibility:hidden, so its resting screenshot is indistinguishable from an inert
+    // registration. Open the composed menu through its public state before accepting a baseline.
+    await page.evaluate(async () => {
+      const menu = document.querySelector('lr-menu');
+      if (!(menu instanceof HTMLElement)) {
+        throw new Error('Menu Label visual fixture did not render its containing menu.');
+      }
+      menu.open = true;
+      await menu.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('lr-menu');
+      const popup = menu?.shadowRoot?.querySelector('[part~="popup"]');
+      return menu?.open === true && popup instanceof HTMLElement && getComputedStyle(popup).visibility === 'visible';
     });
   }
   if (id === 'threadlist--default') {
@@ -391,7 +561,14 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   // resting state. `caret: 'hide'` is Playwright's default but is stated explicitly here because
   // the sampled form controls (input, textarea, combobox, select) autofocus in some stories and a
   // blinking caret is otherwise a coin-flip pixel.
-  return page.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' });
+  await assertStoryReady(page, id, EXPECTED_TAGS_BY_STORY.get(id) ?? []);
+  if (axis.name === 'forced-colors') {
+    await assertForcedColorsPaintedPixels(page, story);
+  }
+  if (axis.name === 'narrow') await assertNarrowAllocation(page, story);
+  const screenshot = await page.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' });
+  assertCaptureHasPaint(screenshot, `${id} / ${axis.name}`);
+  return screenshot;
 }
 
 // Escapes a value for safe placement inside a single markdown table cell. Order matters:
@@ -414,25 +591,107 @@ async function pathExists(path) {
   }
 }
 
+async function promoteReviewedCandidates() {
+  if (VISUAL_SHARD_TOTAL !== 1) {
+    throw new Error(
+      'Snapshot promotion requires an unsharded candidate report; unset VISUAL_SHARD_INDEX and ' +
+        'VISUAL_SHARD_TOTAL before using --update-snapshots.',
+    );
+  }
+  const baselineReview = visualManifest.baselineReview;
+  if (baselineReview.status !== 'complete') {
+    throw new Error(
+      'Baseline promotion is disabled while manifest.json records pending-human-review. Run the ' +
+        'normal harness, have a human inspect .visual-diff-output/current, and record that review ' +
+        'before using --update-snapshots.',
+    );
+  }
+
+  const reportPath = join(outputDir, 'report.json');
+  if (!(await pathExists(reportPath))) {
+    throw new Error('No reviewed candidate report exists; run the normal visual harness first.');
+  }
+  const report = JSON.parse(await readFile(reportPath, 'utf8'));
+  const results = new Map(report.map((result) => [`${result.id}/${result.axis}`, result]));
+  const targetStories = VISUAL_STORIES.filter((story) => !FILTER || story.id.includes(FILTER));
+  if (FILTER && targetStories.length === 0) {
+    throw new Error(`--filter ${FILTER} matched no stories in the visual manifest.`);
+  }
+
+  let promoted = 0;
+  let evidenceOnly = 0;
+  for (const story of targetStories) {
+    const profile = visualManifest.coverageProfiles[story.profile];
+    for (const axisName of profile.axes) {
+      const axis = VISUAL_AXES.get(axisName);
+      if (!axis) throw new Error(`${story.id} names unknown visual axis ${axisName}`);
+      if (isEvidenceOnly(story, axis)) {
+        evidenceOnly += 1;
+        continue;
+      }
+
+      const key = `${story.id}/${axisName}`;
+      const result = results.get(key);
+      if (!result || typeof result.candidateSha256 !== 'string') {
+        throw new Error(`${key} has no hash-bound candidate in ${reportPath}; run and review it first.`);
+      }
+      if (['error', 'console-error'].includes(result.status)) {
+        throw new Error(`${key} failed its semantic capture checks and cannot be promoted.`);
+      }
+      const candidatePath = join(outputDir, 'current', story.id, `${axisName}.png`);
+      const candidate = await readFile(candidatePath);
+      assertCaptureHasPaint(candidate, `${key} reviewed candidate`);
+      const actualSha256 = sha256(candidate);
+      if (actualSha256 !== result.candidateSha256) {
+        throw new Error(
+          `${key} changed after its candidate report was written (${actualSha256} != ` +
+            `${result.candidateSha256}); rerun and review the exact replacement.`,
+        );
+      }
+      await mkdir(join(baselineDir, story.id), { recursive: true });
+      await writeFile(join(baselineDir, story.id, `${axisName}.png`), candidate);
+      promoted += 1;
+    }
+  }
+  console.log(
+    `Promoted ${promoted} exact hash-verified, human-reviewed candidate PNG(s); ` +
+      `${evidenceOnly} evidence-only capture(s) remained ephemeral.`,
+  );
+}
+
 async function main() {
+  if (UPDATE) return promoteReviewedCandidates();
   if (!(await pathExists(indexPath))) {
     throw new Error(`${indexPath} is missing; run \`pnpm docs:build\` from the repo root first.`);
   }
   const index = JSON.parse(await readFile(indexPath, 'utf8'));
   const entries = new Set(Object.keys(index.entries ?? {}));
 
-  const targetStories = STORIES.filter((id) => !FILTER || id.includes(FILTER));
-  if (FILTER && targetStories.length === 0) {
+  const matchingCaptures = visualCapturePlan(visualManifest, FILTER);
+  if (FILTER && matchingCaptures.length === 0) {
     throw new Error(`--filter ${FILTER} matched no stories in this harness's sample list.`);
   }
+  const targetCaptures = shardVisualCaptures(
+    matchingCaptures,
+    VISUAL_SHARD_INDEX,
+    VISUAL_SHARD_TOTAL,
+  );
+  if (targetCaptures.length === 0) {
+    throw new Error(
+      `Visual shard ${VISUAL_SHARD_INDEX}/${VISUAL_SHARD_TOTAL} is empty for ` +
+        `${matchingCaptures.length} capture(s).`,
+    );
+  }
+  const targetStories = [
+    ...new Map(targetCaptures.map(({ story }) => [story.id, story])).values(),
+  ];
 
-  const missing = targetStories.filter((id) => !entries.has(id));
+  const missing = targetStories.filter((story) => !entries.has(story.id)).map((story) => story.id);
   if (missing.length) {
     throw new Error(`Storybook catalog is missing story id(s) sampled by this harness: ${missing.join(', ')}`);
   }
 
   await rm(outputDir, { recursive: true, force: true });
-  if (UPDATE) await mkdir(baselineDir, { recursive: true });
 
   const server = createServer(serve);
   const baseUrl = await listen(server);
@@ -455,71 +714,89 @@ async function main() {
 
   const results = [];
   try {
-    for (const id of targetStories) {
-      for (const axis of AXES) {
-        browserErrors.length = 0;
-        const label = `${id} / ${axis.name}`;
-        let screenshot;
-        try {
-          screenshot = await captureStory(page, baseUrl, id, axis.theme, axis.direction);
-        } catch (error) {
-          results.push({ id, axis: axis.name, status: 'error', message: error instanceof Error ? error.message : String(error) });
-          console.error(`  [error] ${label}: ${error instanceof Error ? error.message : error}`);
-          continue;
-        }
+    for (const { story, axisName } of targetCaptures) {
+      const axis = VISUAL_AXES.get(axisName);
+      if (!axis) throw new Error(`${story.id} names unknown visual axis ${axisName}`);
+      const { id } = story;
+      browserErrors.length = 0;
+      const label = `${id} / ${axis.name}`;
+      let screenshot;
+      try {
+        screenshot = await captureStory(page, baseUrl, story, axis);
+      } catch (error) {
+        results.push({ id, axis: axis.name, status: 'error', message: error instanceof Error ? error.message : String(error) });
+        console.error(`  [error] ${label}: ${error instanceof Error ? error.message : error}`);
+        continue;
+      }
 
-        const baselinePath = join(baselineDir, id, `${axis.name}.png`);
-        if (UPDATE) {
-          await mkdir(join(baselineDir, id), { recursive: true });
-          await writeFile(baselinePath, screenshot);
-          results.push({ id, axis: axis.name, status: 'updated' });
-          console.log(`  [updated] ${label}`);
-          continue;
-        }
+      if (browserErrors.length) {
+        results.push({
+          id,
+          axis: axis.name,
+          status: 'console-error',
+          message: browserErrors.join('; '),
+        });
+        console.error(`  [console-error] ${label}: ${browserErrors.join('; ')}`);
+        continue;
+      }
+      const candidateSha256 = sha256(screenshot);
 
-        await mkdir(join(outputDir, 'current', id), { recursive: true });
-        await writeFile(join(outputDir, 'current', id, `${axis.name}.png`), screenshot);
+      await mkdir(join(outputDir, 'current', id), { recursive: true });
+      await writeFile(join(outputDir, 'current', id, `${axis.name}.png`), screenshot);
 
-        if (!(await pathExists(baselinePath))) {
-          await mkdir(join(outputDir, 'new', id), { recursive: true });
-          await writeFile(join(outputDir, 'new', id, `${axis.name}.png`), screenshot);
-          results.push({ id, axis: axis.name, status: 'new' });
-          console.log(`  [new, no baseline yet] ${label}`);
-          continue;
-        }
+      if (isEvidenceOnly(story, axis)) {
+        await mkdir(join(outputDir, 'evidence', id), { recursive: true });
+        await writeFile(join(outputDir, 'evidence', id, `${axis.name}.png`), screenshot);
+        results.push({
+          id,
+          axis: axis.name,
+          status: 'evidence-only',
+          candidateSha256,
+          message:
+            story.comparisonReason ??
+            'This axis records semantic evidence but has no human-approved pixel baseline.',
+        });
+        console.log(`  [evidence-only] ${label}`);
+        continue;
+      }
 
-        const baselineBuffer = await readFile(baselinePath);
-        const comparison = comparePngs(baselineBuffer, screenshot);
-        if (comparison.status === 'match') {
-          results.push({ id, axis: axis.name, status: 'match', ratio: comparison.ratio });
-          console.log(`  [match] ${label} (${(comparison.ratio * 100).toFixed(3)}% diff)`);
-        } else if (comparison.status === 'mismatch') {
-          if (comparison.diffPng) {
-            await mkdir(join(outputDir, 'diff', id), { recursive: true });
-            await writeFile(join(outputDir, 'diff', id, `${axis.name}.png`), comparison.diffPng);
-          }
-          results.push({ id, axis: axis.name, status: 'mismatch', ratio: comparison.ratio ?? null, reason: comparison.reason });
-          console.log(`  [MISMATCH] ${label}${comparison.reason ? `: ${comparison.reason}` : ` (${(comparison.ratio * 100).toFixed(3)}% diff)`}`);
-        } else {
-          results.push({ id, axis: axis.name, status: 'error', message: comparison.message });
-          console.error(`  [error] ${label}: ${comparison.message}`);
-        }
+      const baselinePath = join(baselineDir, id, `${axis.name}.png`);
+      if (!(await pathExists(baselinePath))) {
+        await mkdir(join(outputDir, 'new', id), { recursive: true });
+        await writeFile(join(outputDir, 'new', id, `${axis.name}.png`), screenshot);
+        results.push({ id, axis: axis.name, status: 'new', candidateSha256 });
+        console.log(`  [new, no baseline yet] ${label}`);
+        continue;
+      }
 
-        if (browserErrors.length) {
-          results.push({ id, axis: axis.name, status: 'console-error', message: browserErrors.join('; ') });
+      const baselineBuffer = await readFile(baselinePath);
+      const comparison = comparePngs(baselineBuffer, screenshot);
+      if (comparison.status === 'match') {
+        results.push({ id, axis: axis.name, status: 'match', ratio: comparison.ratio, candidateSha256 });
+        console.log(`  [match] ${label} (${(comparison.ratio * 100).toFixed(3)}% diff)`);
+      } else if (comparison.status === 'mismatch') {
+        if (comparison.diffPng) {
+          await mkdir(join(outputDir, 'diff', id), { recursive: true });
+          await writeFile(join(outputDir, 'diff', id, `${axis.name}.png`), comparison.diffPng);
         }
+        results.push({
+          id,
+          axis: axis.name,
+          status: 'mismatch',
+          ratio: comparison.ratio ?? null,
+          reason: comparison.reason,
+          candidateSha256,
+        });
+        console.log(`  [MISMATCH] ${label}${comparison.reason ? `: ${comparison.reason}` : ` (${(comparison.ratio * 100).toFixed(3)}% diff)`}`);
+      } else {
+        results.push({ id, axis: axis.name, status: 'error', message: comparison.message });
+        console.error(`  [error] ${label}: ${comparison.message}`);
       }
     }
   } finally {
     await page.close();
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
-  }
-
-  if (UPDATE) {
-    console.log(`\nWrote/updated ${results.filter((r) => r.status === 'updated').length} baseline PNG(s) under ${baselineDir}.`);
-    console.log('These are unreviewed until a human visually confirms them -- see visual-baselines/README.md.');
-    return;
   }
 
   await mkdir(outputDir, { recursive: true });
@@ -537,7 +814,8 @@ async function main() {
     'the committed images, not that those images are inherently correct -- see',
     '`packages/lyra-ui/visual-baselines/README.md`.',
     '',
-    `Sampled ${targetStories.length} stories x ${AXES.length} axes (light/dark/rtl) = ${targetStories.length * AXES.length} captures.`,
+    `Sampled ${targetStories.length} stories across the manifest's ${VISUAL_AXES.size} axes = ${results.length} capture results ` +
+      `(shard ${VISUAL_SHARD_INDEX}/${VISUAL_SHARD_TOTAL}; ${matchingCaptures.length} capture(s) in the filtered plan).`,
     '',
     `| status | count |`,
     `| --- | --- |`,
@@ -558,7 +836,7 @@ async function main() {
     summaryLines.push(
       `## New captures with no existing baseline (${newBaselines.length})`,
       '',
-      'Run with `--update-snapshots` and have a human review the images before committing them.',
+      'Review `.visual-diff-output/current` as a human before recording approval and promoting captures.',
       '',
     );
   }

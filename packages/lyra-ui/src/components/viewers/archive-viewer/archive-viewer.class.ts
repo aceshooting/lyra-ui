@@ -4,8 +4,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, LyraResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   buildQuoteAnchor,
@@ -16,23 +15,21 @@ import {
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
-import { loadArchiveLibraryCached, type ArchiveLibraryApi } from './archive-loader.js';
+import {
+  loadArchiveLibraryCached,
+  type ArchiveFileApi,
+  type ArchiveLibraryApi,
+} from './archive-loader.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_archiveViewerUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
-interface ArchiveStream {
-  on(type: 'data', callback: (chunk: Uint8Array) => void): ArchiveStream;
-  on(type: 'error', callback: (error: unknown) => void): ArchiveStream;
-  on(type: 'end', callback: () => void): ArchiveStream;
-  pause?(): void;
-  resume(): void;
-}
-interface ArchiveFile {
-  name: string;
-  dir: boolean;
-  _data?: { uncompressedSize?: number };
-  internalStream?: (type: 'uint8array') => ArchiveStream;
-}
+type ArchiveFile = ArchiveFileApi;
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: string };
 export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
@@ -163,6 +160,35 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @since 4.0.0
  */
 export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    archiveViewerEmpty: LYRA_DEFAULT_archiveViewerEmpty,
+    archiveViewerFile: LYRA_DEFAULT_archiveViewerFile,
+    archiveViewerFolder: LYRA_DEFAULT_archiveViewerFolder,
+    archiveViewerUnavailable: LYRA_DEFAULT_archiveViewerUnavailable,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
@@ -218,15 +244,22 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private styledVirtualListRoot: ShadowRoot | null = null;
   private archiveNestedUpdatePending = false;
   private readonly archiveEntryKey = (item: unknown): string => (item as ArchiveEntry).name;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     this.syncArchiveNestedRoot();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -235,7 +268,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     this.archiveSelectionCleanup?.();
     this.archiveSelectionCleanup = undefined;
     this.archiveSelectionRoot = null;
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   /** The rows' real DOM lives inside the embedded virtual list, not the archive viewer's own body. */
@@ -292,8 +330,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new Error('Unsafe archive source URL');
       this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
       this.emit('lr-render-error', { error });
@@ -301,7 +339,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       if (!this.isConnected || generation !== this.generation) return;
       const library = await this.loadLibrary();
@@ -472,8 +510,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
-      case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
-      case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }

@@ -8,7 +8,8 @@
 //
 // Regenerate the SHAPE (never the translations) with:
 //   node scripts/scaffold-translation.mjs fa --force
-import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localization.js';
+import { registerLyraLocale } from '../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: 'داده‌ای وجود ندارد',
@@ -41,6 +42,8 @@ const strings: LyraLocaleStrings = {
   carouselLabel: 'چرخ‌وفلک',
   carouselSlide: 'اسلاید',
   carouselSlidePosition: 'اسلاید {index} از {total}',
+  carouselSlideAnnouncement: '{position}: {content}',
+  carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'اسلایدهای چرخ‌وفلک',
   carouselGoTo: 'رفتن به اسلاید {index}',
   imageComparerLabel: 'مقایسهٔ تصاویر',

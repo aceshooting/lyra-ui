@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -10,6 +11,11 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './json-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_details, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type JsonPathSegment = string | number;
 
@@ -122,6 +128,9 @@ export interface LyraJsonViewerEventMap {
  * Expand/collapse state is keyed by structural path (not by object identity),
  * so it survives a `data` reassignment that keeps the same shape -- e.g. a
  * streaming tool result being patched in place.
+ * Imperative search-cursor changes are appended to the shared light-DOM polite announcement sink;
+ * initial/reconnect state and changes while the host is accessibility-hidden are silent, and the
+ * shadow tree retains only an `aria-hidden` text mirror.
  *
  * @customElement lr-json-viewer
  * @event lr-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
@@ -156,6 +165,30 @@ export interface LyraJsonViewerEventMap {
  * @since 4.0.0
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    circularReference: LYRA_DEFAULT_circularReference,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    copyJson: LYRA_DEFAULT_copyJson,
+    details: LYRA_DEFAULT_details,
+    jsonArray: LYRA_DEFAULT_jsonArray,
+    jsonCollapseLabel: LYRA_DEFAULT_jsonCollapseLabel,
+    jsonCopyLabel: LYRA_DEFAULT_jsonCopyLabel,
+    jsonExpandLabel: LYRA_DEFAULT_jsonExpandLabel,
+    jsonItemCount: LYRA_DEFAULT_jsonItemCount,
+    jsonKeyCount: LYRA_DEFAULT_jsonKeyCount,
+    jsonObject: LYRA_DEFAULT_jsonObject,
+    jsonValue: LYRA_DEFAULT_jsonValue,
+    jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
@@ -186,6 +219,34 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
   private searchState: SearchState = EMPTY_SEARCH;
   private searchLocale = '';
+  private searchAnnouncementSink?: AnnouncementSink;
+  private searchAnnouncementsArmed = false;
+  private searchAnnouncementGeneration = 0;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.searchAnnouncementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.searchAnnouncementsArmed = false;
+    const generation = ++this.searchAnnouncementGeneration;
+    // A cursor move initiated while detached may leave its Lit update pending until this
+    // connection. Let that update settle as reconnect baseline before later moves become live.
+    void this.updateComplete.then(() => {
+      if (this.isConnected && generation === this.searchAnnouncementGeneration) {
+        this.searchAnnouncementsArmed = true;
+      }
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.searchAnnouncementGeneration += 1;
+    this.searchAnnouncementSink?.release();
+    this.searchAnnouncementSink = undefined;
+    this.searchAnnouncementsArmed = false;
+    super.disconnectedCallback();
+  }
 
   /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
@@ -230,7 +291,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       // and some engines throw synchronously rather than rejecting -- either
       // way this is best-effort; copy() below always emits lr-copy
       // regardless of whether the OS clipboard was actually reached.
-      void navigator.clipboard?.writeText(text)?.catch(() => {});
+      void this.ownerDocument.defaultView?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
     }
@@ -559,6 +620,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     }
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.searchAnnouncementsArmed && changed.has('activeSearchIndex')) {
+      this.searchAnnouncementSink?.announce(this.activeSearchAnnouncement());
+    }
+  }
+
   private emitSearchChange(): void {
     this.emit('lr-search-change', {
       query: this.search,
@@ -647,7 +715,10 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private async scrollActiveMatchIntoView(): Promise<void> {
     await this.updateComplete;
     const el = this.renderRoot.querySelector('[data-active]');
-    el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
+    el?.scrollIntoView({
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      block: 'nearest',
+    });
   }
 
   override render(): TemplateResult {
@@ -686,7 +757,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               depth: getNumberFormat(this.effectiveLocale).format(MAX_JSON_DEPTH),
             })}</p>`
           : nothing}
-        <span class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+        <span class="sr-only" aria-hidden="true"
           >${this.activeSearchAnnouncement()}</span
         >
       </div>

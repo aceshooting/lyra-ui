@@ -2,7 +2,7 @@
 
 # `lr-radio-group`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio-group.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-radio-group.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRadioGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -1,6 +1,15 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './graph-legend.js';
 import type { LyraGraphLegend } from './graph-legend.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(): string[] {
+  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+}
 
 const types = [
   { id: 'person', label: 'Person' },
@@ -38,8 +47,8 @@ it("uses a type's own color for its swatch when set, and a palette fallback othe
     '#7c3aed',
   );
   // 'person' has no explicit color -- falls back to the categorical palette. The design tokens
-  // define `--lr-graph-cat-1` (tokens.styles.ts), so the computed style resolves to that real
-  // token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
+  // define `--lr-graph-cat-1` (specialist-tokens.styles.ts), so the computed style resolves to
+  // that real token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
   const personFill = swatches[0]!.getAttribute('fill') ?? swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
   expect(personFill).to.equal('#8250df');
 });
@@ -80,7 +89,7 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
-it('announces the toggle through the internal live region', async () => {
+it('announces the toggle through the shared light-DOM region and keeps the shadow part inert', async () => {
   const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
@@ -89,6 +98,21 @@ it('announces the toggle through the internal live region', async () => {
   await el.updateComplete;
   const live = el.shadowRoot!.querySelector('[part="live-region"]')!;
   expect(live.textContent).to.equal('Person hidden');
+  expect(live.getAttribute('role')).to.equal(null);
+  expect(live.getAttribute('aria-live')).to.equal(null);
+  expect(live.getAttribute('aria-hidden')).to.equal('true');
+  expect(sinkTexts()).to.deep.equal(['Person hidden']);
+});
+
+it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+  document.body.append(el);
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
 });
 
 it('renders plain (non-interactive) items with no button and no toggling when interactive=false', async () => {
@@ -140,6 +164,7 @@ it('honors a .strings override of legendTypeHidden/legendTypeShown in the live-r
   button.click();
   await el.updateComplete;
   expect(live.textContent).to.equal('Person affiché');
+  expect(sinkTexts()).to.deep.equal(['Person masqué', 'Person affiché']);
 });
 
 it('interactive="false" (plain HTML attribute) renders a read-only legend, matching the .interactive=false property path', async () => {

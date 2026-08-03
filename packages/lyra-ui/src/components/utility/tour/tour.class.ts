@@ -18,6 +18,11 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './tour.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Default distance (px) between the target and the popover -- see `LyraTour.distance`. */
 const DEFAULT_DISTANCE = 12;
@@ -115,6 +120,20 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
   );
 }
 
+function isElementNode(value: unknown): value is Element {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as Node).nodeType === 1 &&
+    typeof (value as Element).localName === 'string' &&
+    typeof (value as Element).matches === 'function'
+  );
+}
+
+function isHtmlElementNode(value: unknown): value is HTMLElement {
+  return isElementNode(value) && value.namespaceURI === 'http://www.w3.org/1999/xhtml';
+}
+
 /**
  * `<lr-tour>` -- a spotlight-and-step guided walkthrough for first-run onboarding. A sequence
  * of steps, each anchored to a target element elsewhere in the page via the shared Floating UI
@@ -172,8 +191,9 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  *   skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
  *   `lr-slide-change`.
  * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
- *   `'completed'`). `detail: TourEndReason`. Cancelable, except in practice for `'unmount'` since
- *   the element is already being removed -- mirrors `lr-dialog-close` exactly.
+ *   `'completed'`). `detail: TourEndReason`. Conditionally cancelable: every ordinary end can be
+ *   vetoed, while `'unmount'` cannot because the element is already being removed -- mirrors
+ *   `lr-dialog-close` exactly.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
  *   auto-end; it renders that step's popover unanchored (viewport-centered, no spotlight cutout)
@@ -207,6 +227,21 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * @since 4.0.0
  */
 export class LyraTour extends LyraElement<LyraTourEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+    tourDone: LYRA_DEFAULT_tourDone,
+    tourSkip: LYRA_DEFAULT_tourSkip,
+    tourStepOf: LYRA_DEFAULT_tourStepOf,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the tour is open. Set this (or call `start()`/`end()`) -- there is no separate
@@ -451,7 +486,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
           : typeof target === 'function'
             ? target()
             : target;
-      return resolved instanceof HTMLElement && resolved.isConnected ? resolved : null;
+      return isHtmlElementNode(resolved) &&
+        resolved.isConnected &&
+        resolved.ownerDocument === this.ownerDocument
+        ? resolved
+        : null;
     } catch {
       return null;
     }
@@ -494,10 +533,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (!popover) return;
 
     if (options.scroll) {
+      const ownerWindow = target.ownerDocument.defaultView;
+      const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
       target.scrollIntoView({
         block: 'center',
         inline: 'nearest',
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        behavior: reducedMotion ? 'auto' : 'smooth',
       });
     }
 
@@ -602,7 +643,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private ownsDirectionalKeys(event: KeyboardEvent): boolean {
     return event.composedPath().some(
       (node) =>
-        node instanceof Element &&
+        isElementNode(node) &&
         node.matches(
           'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="grid"], [role="gridcell"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], [role="radiogroup"], [role="scrollbar"], [role="slider"], [role="spinbutton"], [role="tab"], [role="tablist"], [role="tree"], [role="treeitem"]',
         ),

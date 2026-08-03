@@ -933,6 +933,108 @@ describe('virtualized scroll handling', () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
 
+  it('rebinds both resize observers and virtual-scroll frames to the adopted owner realm', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    el.remove();
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      frame.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const originalResizeObserver = frameWindow.ResizeObserver;
+    const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+    const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+    let geometryCallback: ResizeObserverCallback | undefined;
+    let gridCallback: ResizeObserverCallback | undefined;
+    let relevantDisconnects = 0;
+    class OwnerResizeObserver implements ResizeObserver {
+      private readonly callback: ResizeObserverCallback;
+      private relevant = false;
+      constructor(callback: ResizeObserverCallback) { this.callback = callback; }
+      observe(target: Element): void {
+        const element = target as HTMLElement;
+        if (element.dataset['probe']) {
+          this.relevant = true;
+          geometryCallback = this.callback;
+        }
+        if (element.getAttribute('part') === 'grid') {
+          this.relevant = true;
+          gridCallback = this.callback;
+        }
+      }
+      unobserve(): void {}
+      disconnect(): void { if (this.relevant) relevantDisconnects += 1; }
+    }
+    let nextFrame = 1;
+    const frameCallbacks = new Map<number, FrameRequestCallback>();
+    const cancelledFrames: number[] = [];
+    frameWindow.ResizeObserver = OwnerResizeObserver;
+    frameWindow.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      const handle = nextFrame++;
+      frameCallbacks.set(handle, callback);
+      return handle;
+    };
+    frameWindow.cancelAnimationFrame = (handle: number): void => {
+      cancelledFrames.push(handle);
+      frameCallbacks.delete(handle);
+    };
+
+    try {
+      frameDocument.adoptNode(el);
+      expect(geometryCallback, 'detached adoption must not arm the geometry observer').to.equal(undefined);
+      expect(gridCallback, 'detached adoption must not arm the grid observer').to.equal(undefined);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(geometryCallback, 'the destination window observes geometry probes').to.be.a('function');
+      expect(gridCallback, 'the destination window observes the virtualized grid').to.be.a('function');
+
+      const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+      grid.scrollTop = 3000;
+      grid.dispatchEvent(new frameWindow.Event('scroll'));
+      expect(frameCallbacks.size, 'scroll scheduling uses the destination window').to.equal(1);
+      const [staleFrameHandle, staleFrameCallback] = [...frameCallbacks.entries()][0]!;
+      const staleGeometryCallback = geometryCallback!;
+      const staleGridCallback = gridCallback!;
+
+      document.adoptNode(el);
+      document.body.append(el);
+      await el.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      expect(relevantDisconnects, 'adoption disconnects both destination observers').to.be.at.least(2);
+      expect(cancelledFrames).to.include(staleFrameHandle);
+
+      const internals = el as unknown as {
+        geometryCache?: { itemSize: number; gap: number; rowHeight: number };
+      };
+      const sentinel = { itemSize: 7, gap: 11, rowHeight: 13 };
+      internals.geometryCache = sentinel;
+      let requestedUpdates = 0;
+      const requestUpdate = el.requestUpdate.bind(el);
+      (el as unknown as { requestUpdate(): void }).requestUpdate = () => {
+        requestedUpdates += 1;
+        requestUpdate();
+      };
+      staleGeometryCallback([], {} as ResizeObserver);
+      staleGridCallback([], {} as ResizeObserver);
+      staleFrameCallback(0);
+      expect(internals.geometryCache, 'the old geometry callback cannot invalidate the new realm cache').to.equal(sentinel);
+      expect(requestedUpdates, 'old observer/frame callbacks are inert after reconnect').to.equal(0);
+    } finally {
+      frameWindow.ResizeObserver = originalResizeObserver;
+      frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      frame.remove();
+    }
+  });
+
   it('tears down the scroll listener and resize observer when filtering shrinks the set below the virtualization threshold', async () => {
     const el = await connectEmojiPicker();
     el.style.inlineSize = '320px';

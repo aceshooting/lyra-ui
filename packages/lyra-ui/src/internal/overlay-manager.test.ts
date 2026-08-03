@@ -33,6 +33,78 @@ afterEach(() => {
   document.querySelectorAll('[data-overlay], [data-overlay-background]').forEach((el) => el.remove());
 });
 
+it('reads focus safely in a realm without a global document', async () => {
+  const moduleUrl = new URL('./overlay-manager.ts', import.meta.url).href;
+  const source = `
+    const hasDocument = typeof document !== 'undefined';
+    import(${JSON.stringify(moduleUrl)}).then(({ deepActiveElement }) => {
+      try {
+        postMessage({ hasDocument, returnedNull: deepActiveElement() === null });
+      } catch (error) {
+        postMessage({
+          hasDocument,
+          errorName: error instanceof Error ? error.name : typeof error,
+        });
+      }
+    }).catch((error) => {
+      postMessage({
+        hasDocument,
+        importError: error instanceof Error ? error.message : String(error),
+      });
+    });
+  `;
+  const workerUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  const worker = new Worker(workerUrl);
+  try {
+    const result = await new Promise<{
+      hasDocument: boolean;
+      returnedNull?: boolean;
+      errorName?: string;
+      importError?: string;
+    }>((resolve, reject) => {
+      worker.addEventListener('message', (event) => resolve(event.data), { once: true });
+      worker.addEventListener('error', () => reject(new Error('The document-less focus probe failed to run')), {
+        once: true,
+      });
+    });
+    expect(result.hasDocument).to.be.false;
+    expect(result.importError).to.equal(undefined);
+    expect(result.errorName).to.equal(undefined);
+    expect(result.returnedNull).to.be.true;
+  } finally {
+    worker.terminate();
+    URL.revokeObjectURL(workerUrl);
+  }
+});
+
+it('returns an inert handle when an overlay host has no owner document', () => {
+  const host = { ownerDocument: undefined } as unknown as HTMLElement;
+  let panelReads = 0;
+  let dismissals = 0;
+
+  const handle = activateOverlay({
+    host,
+    panel: () => {
+      panelReads++;
+      return null;
+    },
+    onEscape: () => dismissals++,
+    onBackdrop: () => dismissals++,
+  });
+
+  handle.focusInitial();
+  expect(handle.focusAutofocus()).to.be.false;
+  handle.updateRestoreFocusTo(null);
+  handle.suspend();
+  handle.resume();
+  expect(handle.isTopmost()).to.be.false;
+  expect(handle.isActive()).to.be.false;
+  expect(handle.dismissBackdrop()).to.be.false;
+  handle.deactivate();
+  expect(panelReads).to.equal(0);
+  expect(dismissals).to.equal(0);
+});
+
 it('routes Escape only to the topmost overlay across different overlay owners', () => {
   const bottom = createOverlay(document, 'dialog');
   const top = createOverlay(document, 'responsive-panel');

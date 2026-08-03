@@ -2,7 +2,7 @@
 
 # `lr-word-cloud`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-word-cloud.js';` (stable tag alias; registers the tag)
 - **Class** `LyraWordCloud`, also available unregistered from `@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -26,8 +26,10 @@ focus cursor to the next word in **declaration order** (not weight/placement ord
 `ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
 `lr-word-click` for the currently-focused word. A `[part="focus-ring"]` `<rect>` is drawn around
 the focused word (absent until a word has actually been focused via keyboard or click), and a
-visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) announces
-`"${text}, ${weight}"` on every focus move.
+shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
+and repeated edge movements append repeated announcements even when their text is identical.
+`[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
+no live-region role of its own.
 
 **Properties:**
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
@@ -66,7 +68,8 @@ the currently-focused word — a no-op if nothing is focused yet)
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `word` (each `<text>`), `focus-ring` (the rect around the roving-focus
-cursor's word), `live-region` (visually-hidden `role="status" aria-live="polite"` announcement text),
+cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the latest announcement;
+the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
 (the no-data placeholder)
 

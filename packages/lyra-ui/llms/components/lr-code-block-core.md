@@ -2,7 +2,7 @@
 
 # `lr-code-block-core`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-code-block-core.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCodeBlockCore`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

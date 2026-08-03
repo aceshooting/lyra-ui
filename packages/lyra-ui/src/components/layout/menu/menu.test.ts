@@ -327,6 +327,7 @@ it("clicking an item fires the consolidated lr-menu-select and closes the menu",
   );
   const ev = await oneEvent(el, "lr-menu-select");
   expect(ev.detail).to.deep.equal({ value: "duplicate" });
+  expect(ev.cancelable, 'lr-select is the separate veto point').to.be.false;
   expect(el.open).to.be.false;
 });
 
@@ -398,7 +399,7 @@ it("skips a disabled item during ArrowDown navigation", async () => {
  * unusable for a test that could plausibly assert against a *focus-loss* regression: on failure
  * the actual value would be `<body>`, and chai stringifies that actual value to build its
  * message, serializing the entire test page (mocha's own reporter DOM included) into one string.
- * That wedges the test runner into a 180s timeout instead of producing a failure. Comparing a
+ * That wedges the test runner until its per-file watchdog instead of producing a failure. Comparing a
  * short stable identity keeps the failure readable ("expected 'body' to equal 'item:a'") and is
  * strictly more informative than an element-identity diff.
  */
@@ -648,6 +649,69 @@ it("closes on a pointerdown outside the trigger and popup, without refocusing th
   );
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+it("binds outside-pointer dismissal to the adopted owner document", async () => {
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "MutationObserver");
+  let constructions = 0;
+  const observed: Node[] = [];
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      observed.push(target);
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(frameWindow, "MutationObserver", {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = document.createElement("lr-menu") as LyraMenu;
+  el.innerHTML = `
+    <button slot="trigger">Actions</button>
+    <lr-menu-item value="rename">Rename</lr-menu-item>
+    <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+  `;
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const [first, second] = items(el);
+    expect(constructions).to.be.greaterThan(0);
+    expect(observed.includes(first!)).to.be.true;
+    expect(frameDocument.activeElement === first).to.equal(true);
+    first!.disabled = true;
+    await first!.updateComplete;
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(frameDocument.activeElement === second).to.equal(true);
+    frameDocument.body.dispatchEvent(
+      new frameWindow.PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  } finally {
+    el.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, "MutationObserver", observerDescriptor);
+    }
+    frame.remove();
+  }
 });
 
 it("fires lr-show/lr-hide when `open` is set directly, bypassing click/keyboard", async () => {
@@ -1279,11 +1343,16 @@ describe("public show()/hide()", () => {
     outside.focus();
     expect(activeId()).to.equal("outside");
 
+    let teardownHide: CustomEvent | undefined;
+    el.addEventListener("lr-hide", (event) => (teardownHide = event as CustomEvent));
+
     // disconnectedCallback() sets `open = false` deliberately; that must never route through the
     // trigger-refocus path, or a teardown (route change, list re-render) yanks focus back.
     el.remove();
     await el.updateComplete;
     expect(el.open).to.be.false;
+    expect(teardownHide !== undefined).to.be.true;
+    expect(teardownHide!.cancelable, "a disconnected element cannot honour a hide veto").to.be.false;
     expect(activeId()).to.equal("outside");
     outside.remove();
   });

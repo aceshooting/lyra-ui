@@ -2,6 +2,7 @@ import {
   isAbortError,
   isResourceLimitError,
   readResponseText,
+  type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import {
   BoundedResourceCache,
@@ -21,6 +22,8 @@ const SANITIZE_CONFIG = {
   RETURN_DOM_FRAGMENT: true,
 } as const;
 const resources = new BoundedResourceCache<SVGSVGElement | null>(ICON_CACHE_ENTRIES);
+const ownerDocumentIds = new WeakMap<Document, number>();
+let nextOwnerId = 1;
 
 export class IconResourceError extends Error {
   constructor(
@@ -32,8 +35,14 @@ export class IconResourceError extends Error {
   }
 }
 
-function resourceKey(url: string): string {
-  return JSON.stringify([url, MAX_ICON_BYTES, SANITIZE_PROFILE]);
+function resourceKey(target: OwnerFetchTarget): string {
+  const ownerDocument = target.view.document;
+  let ownerId = ownerDocumentIds.get(ownerDocument);
+  if (ownerId === undefined) {
+    ownerId = nextOwnerId++;
+    ownerDocumentIds.set(ownerDocument, ownerId);
+  }
+  return JSON.stringify([ownerId, target.url, MAX_ICON_BYTES, SANITIZE_PROFILE]);
 }
 
 /**
@@ -41,12 +50,12 @@ function resourceKey(url: string): string {
  * the retained node is shared by all matching requests and is never inserted into a document.
  */
 export function acquireSanitizedIconResource(
-  url: string,
+  target: OwnerFetchTarget,
 ): ResourceCacheLease<SVGSVGElement | null> {
-  return resources.acquire(resourceKey(url), async (signal) => {
+  return resources.acquire(resourceKey(target), async (signal) => {
     let response: Response;
     try {
-      response = await fetch(url, signal ? { signal } : undefined);
+      response = await target.view.fetch(target.url, signal ? { signal } : undefined);
     } catch (error) {
       if (isAbortError(error)) throw error;
       throw new IconResourceError('load', error);

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compose Lyra Interfaces"
+  short_description: "Design accessible interfaces with Lyra UI"
+  default_prompt: "Use $compose-lyra-interfaces to design an accessible, responsive interface from Lyra UI components."

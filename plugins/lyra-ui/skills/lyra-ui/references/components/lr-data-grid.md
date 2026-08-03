@@ -2,7 +2,7 @@
 
 # `lr-data-grid`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/data-grid/data-grid.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-data-grid.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDataGrid`, also available unregistered from `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -67,7 +67,8 @@ mutation.
   `selectable` attribute means `multiple`.
 - `selectableRows: ((row) => boolean) | null = null` (JS-only).
 - `selectedKeys: Array<string | number> = []` (JS-only).
-- `selectedRows: Row[]` (read-only, JS-only).
+- `selectedRows: Row[]` (writable, JS-only) — assigning rows that belong to the current source
+  maps them to `selectedKeys`; detached rows are ignored and single-selection mode keeps the first.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: Array<{ id: string; desc: boolean }> = []` (JS-only).
@@ -160,6 +161,10 @@ consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live re
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
 document-level region rather than `::part(live-region)`; the part still tells you what the grid
 last announced.
+
+Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
+localized loading text to that shared polite sink, including repeated loading cycles. The visible
+`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`.
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,

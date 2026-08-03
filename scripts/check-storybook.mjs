@@ -283,7 +283,7 @@ async function auditComponentDocs(browser, baseUrl, entries) {
       try {
         await auditPage.setViewportSize({ width: matrix.width, height: matrix.height });
         await auditPage.goto(
-          `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:${matrix.direction};density:comfortable`,
+          `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:${matrix.direction}`,
           { waitUntil: 'domcontentloaded', timeout: 20_000 },
         );
         await auditPage.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
@@ -542,9 +542,9 @@ async function main() {
 
     // No high-contrast pass here: `LyraThemeMode` is `'light' | 'dark' | 'auto'` and theme.css
     // declares no high-contrast block, so the mode this used to select existed only in Storybook's
-    // former hand-maintained preview palette. Storybook now renders the production theme, and real
-    // forced-colors support is covered by src/forced-colors-intrinsic.test.ts and
-    // src/components/charts/chart/chart-forced-colors.test.ts, which assert rendered pixels.
+    // former hand-maintained preview palette. Storybook now renders the production theme. The
+    // unit tests cover the structural forced-color-adjust/encoding contract; the visual manifest's
+    // real Chromium forced-colors axis separately checks the resulting painted pixels.
 
     const landingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'light');
     const lightLanding = await landingFrame.evaluate(() => {

@@ -2,7 +2,7 @@
 
 # `lr-prompt-queue`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-prompt-queue.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPromptQueue`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

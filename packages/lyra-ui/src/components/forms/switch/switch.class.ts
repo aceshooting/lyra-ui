@@ -13,6 +13,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { hasRealContent } from '../../../internal/a11y.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -20,6 +21,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_switchRequired } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -85,12 +91,15 @@ export interface LyraSwitchEventMap {
  * unset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring
  * `<lr-select>`'s `form-control-label`: the default slot already *is* this control's visible,
  * clickable label (same as `<lr-checkbox>`), so a second label surface would be redundant.
+ * Its wrapper follows flattened rendered assignment and updates through forwarding slots. Visual
+ * elements, including decorative `aria-hidden` icons, retain the wrapper independently of their
+ * accessibility-tree contribution.
  *
  * @customElement lr-switch
  * @slot - Label text, rendered next to the track. Clicking it toggles the
  * switch, the same as clicking a checkbox's associated `<label>`. If left
- * empty, set `aria-label` on the host so the control still has an
- * accessible name.
+ * empty, set `aria-label` on the host so the control still has an accessible name. Host
+ * `aria-label` is forwarded by presence, including an explicitly empty value.
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
@@ -156,6 +165,19 @@ export interface LyraSwitchEventMap {
  * @since 4.0.0
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    switchRequired: LYRA_DEFAULT_switchRequired,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
@@ -217,6 +239,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasHelpTextSlot = false;
   @state() private hasErrorSlot = false;
+  private labelObserver?: MutationObserver;
   // Set on the control's first `blur`; gates the `aria-invalid` reflection
   // below so validity styling never flashes on first render, mirroring
   // `<lr-checkbox>`'s/`<lr-combobox>`'s identical `touched` field.
@@ -330,7 +353,8 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -381,6 +405,30 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.recomputeHasLabelSlot();
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.bindLabelObserverTargets();
+    if (this.hasUpdated) {
+      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
+      this.recomputeLightDomSlotState();
+    } else {
+      // Browser-only mounts still seed before their first paint. During hydration the base helper
+      // defers this browser-only light-DOM sample until the server render has been reproduced.
+      this.seedFirstRenderState(() => this.recomputeLightDomSlotState());
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.removeEventListener('slotchange', this.onLabelSlotChange);
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
+    super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -394,24 +442,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     ) {
       this.defaultChecked = this.shoelaceDefaultChecked;
       this.hadShoelaceDefaultChecked = this.hasAttribute('default-checked');
-    }
-    // Seed `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` from the light-DOM children synchronously
-    // before the very first render (same `!hasUpdated` guard as combobox/date-input's
-    // `hasHintSlot` etc.) so declaratively-provided label/hint/error content doesn't flash hidden
-    // for one frame while waiting on the first `slotchange` event.
-    if (!this.hasUpdated) {
-      // Excludes element children explicitly assigned to the named `hint`/`error` slots -- those
-      // are real childNodes of the host too, and without this filter their own textContent would
-      // wrongly count as default-slot label content (e.g. a bare `<lr-switch><span
-      // slot="hint">...</span></lr-switch>` with no actual label text).
-      this.hasLabelSlot = Array.from(this.childNodes).some(
-        (n) => !(n instanceof Element && n.slot) && (n.textContent ?? '').trim().length > 0,
-      );
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasHelpTextSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'help-text',
-      );
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
   }
 
@@ -568,10 +598,93 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     }
   };
 
-  private onSlotChange = (e: Event): void => {
-    const nodes = (e.target as HTMLSlotElement).assignedNodes({ flatten: true });
-    this.hasLabelSlot = nodes.some((n) => (n.textContent ?? '').trim().length > 0);
-  };
+  private isDefaultLabelNode(node: Node): boolean {
+    if (node.nodeType !== 1) return true;
+    const slotName = (node as Element).getAttribute('slot');
+    return slotName === null || slotName === '';
+  }
+
+  private labelForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return top.parentNode === this && this.isDefaultLabelNode(top);
+    });
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    for (const slot of this.labelForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
+  }
+
+  private recomputeHasLabelSlot(): void {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    if (!renderRoot || !childNodes) return;
+    const slot = renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    const nodes: Node[] = slot
+      ? slot.assignedNodes({ flatten: true })
+      : Array.from(childNodes)
+          .filter((node) => this.isDefaultLabelNode(node))
+          .flatMap((node) => {
+            if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
+            const forwardingSlot = node as HTMLSlotElement;
+            return forwardingSlot.assignedNodes().length > 0
+              ? forwardingSlot.assignedNodes({ flatten: true })
+              : Array.from(forwardingSlot.childNodes);
+          });
+    this.hasLabelSlot = hasRealContent(nodes);
+  }
+
+  private recomputeLightDomSlotState(): void {
+    this.recomputeHasLabelSlot();
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    if (!children) return;
+    this.hasHintSlot = Array.from(children).some(
+      (element) => element.getAttribute('slot') === 'hint',
+    );
+    this.hasHelpTextSlot = Array.from(children).some(
+      (element) => element.getAttribute('slot') === 'help-text',
+    );
+    this.hasErrorSlot = Array.from(children).some(
+      (element) => element.getAttribute('slot') === 'error',
+    );
+  }
+
+  private handleLabelSlotChange(event: Event): void {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (
+      target.getRootNode() !== this.renderRoot &&
+      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+    ) return;
+    this.bindLabelObserverTargets();
+    this.recomputeHasLabelSlot();
+  }
+
+  private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
+  private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
   private onHintSlotChange = (e: Event): void => {
     this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
@@ -602,7 +715,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-label=${this.getAttribute('aria-label') ?? nothing}
           aria-describedby=${describedBy || nothing}
           @click=${this.onClick}
           @keydown=${this.onKeyDown}

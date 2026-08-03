@@ -727,9 +727,8 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     )) as LyraLiteChart;
     const svgEl = el.shadowRoot!.querySelector('svg')!;
 
-    // First mount: connectedCallback() creates the observer, but svgEl isn't
-    // rendered yet at that synchronous point, so firstUpdated() is what
-    // actually arms it -- exactly one observe() call, on the real <svg>.
+    // First mount: connectedCallback() cannot create the observer while svgEl is still absent, so
+    // firstUpdated() creates and arms it -- exactly one observe() call, on the real <svg>.
     expect(observeCalls.length).to.equal(1);
     expect(observeCalls[0]).to.equal(svgEl);
 
@@ -760,6 +759,64 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     expect(viewBoxAfter).to.not.equal(viewBoxBefore);
   } finally {
     (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});
+
+it('constructs its resize observer in the adopted owner realm and ignores its stale callback', async () => {
+  const el = (await fixture(
+    html`<lr-lite-chart .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`,
+  )) as LyraLiteChart;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  let chartCallback: ResizeObserverCallback | undefined;
+  let disconnects = 0;
+  class OwnerResizeObserver implements ResizeObserver {
+    private readonly callback: ResizeObserverCallback;
+    private observesChart = false;
+    constructor(callback: ResizeObserverCallback) { this.callback = callback; }
+    observe(target: Element): void {
+      if (target === el.shadowRoot!.querySelector('svg')) {
+        this.observesChart = true;
+        chartCallback = this.callback;
+      }
+    }
+    unobserve(): void {}
+    disconnect(): void { if (this.observesChart) disconnects += 1; }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(chartCallback, 'the adopted owner constructs and arms the chart observer').to.be.a('function');
+    const before = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+    const staleCallback = chartCallback!;
+
+    document.adoptNode(el);
+    expect(disconnects, 'adoption disconnects the previous realm observer').to.equal(1);
+    staleCallback(
+      [{ contentBoxSize: [{ inlineSize: 999, blockSize: 777 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox'),
+      'the stale callback cannot update adopted chart geometry',
+    ).to.equal(before);
+  } finally {
+    frameWindow.ResizeObserver = originalResizeObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
   }
 });
 
@@ -2536,5 +2593,54 @@ describe('exportData', () => {
     const svg = el.exportData('svg');
     expect(svg.startsWith('<svg')).to.be.true;
     expect(svg).to.include('viewBox');
+  });
+
+  it('serializes SVG with the current owner-document realm after adoption', async () => {
+    const el = await chart();
+    el.remove();
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameWindow = frame.contentWindow!;
+    const ambientDescriptor = Object.getOwnPropertyDescriptor(window, 'XMLSerializer');
+    const ownerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'XMLSerializer');
+    const OwnerXMLSerializer = frameWindow.XMLSerializer;
+    let ambientConstructions = 0;
+    let ownerConstructions = 0;
+
+    try {
+      Object.defineProperty(window, 'XMLSerializer', {
+        configurable: true,
+        value: class AmbientSerializerTrap {
+          constructor() {
+            ambientConstructions += 1;
+            throw new Error('ambient serializer must not handle an adopted chart');
+          }
+        },
+      });
+      Object.defineProperty(frameWindow, 'XMLSerializer', {
+        configurable: true,
+        value: class OwnerSerializer extends OwnerXMLSerializer {
+          constructor() {
+            super();
+            ownerConstructions += 1;
+          }
+        },
+      });
+      frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+      await el.updateComplete;
+
+      const exported = el.exportData('svg');
+      expect(exported.startsWith('<svg')).to.be.true;
+      expect(exported).to.include('viewBox');
+      expect(ownerConstructions).to.equal(1);
+      expect(ambientConstructions).to.equal(0);
+    } finally {
+      el.remove();
+      if (ambientDescriptor) Object.defineProperty(window, 'XMLSerializer', ambientDescriptor);
+      else delete (window as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+      if (ownerDescriptor) Object.defineProperty(frameWindow, 'XMLSerializer', ownerDescriptor);
+      else delete (frameWindow as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+      frame.remove();
+    }
   });
 });

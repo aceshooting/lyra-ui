@@ -41,6 +41,7 @@ const TOLERANCE_PX = 1;
 export class ScrollOverflowController implements ReactiveController {
   #observer?: ResizeObserver;
   #observed?: Element;
+  #ownerWindow?: Window;
 
   /**
    * @param host The component; registers itself so `hostUpdated`/`hostDisconnected` fire.
@@ -54,25 +55,49 @@ export class ScrollOverflowController implements ReactiveController {
     host.addController(this);
   }
 
+  hostConnected(): void {
+    this.sync();
+  }
+
   hostUpdated(): void {
+    this.sync();
+  }
+
+  private sync(): void {
     const element = this.resolve();
-    if (element !== this.#observed) {
-      this.#observer?.disconnect();
-      this.#observer = undefined;
+    const ownerWindow = element?.ownerDocument.defaultView ?? undefined;
+    if (element !== this.#observed || ownerWindow !== this.#ownerWindow) {
+      this.resetObservation();
       this.#observed = element ?? undefined;
-      if (element && typeof ResizeObserver !== 'undefined') {
-        // Bound method, so the observer callback measures through the same path hostUpdated does.
-        this.#observer = new ResizeObserver(() => this.measure());
-        this.#observer.observe(element);
+      this.#ownerWindow = ownerWindow;
+      const ResizeObserverConstructor = ownerWindow?.ResizeObserver;
+      if (element && ResizeObserverConstructor) {
+        const observer = new ResizeObserverConstructor(() => {
+          if (
+            this.#observer !== observer ||
+            this.#observed !== element ||
+            element.ownerDocument.defaultView !== ownerWindow
+          ) {
+            return;
+          }
+          this.measure();
+        });
+        this.#observer = observer;
+        observer.observe(element);
       }
     }
     this.measure();
   }
 
   hostDisconnected(): void {
+    this.resetObservation();
+  }
+
+  private resetObservation(): void {
     this.#observer?.disconnect();
     this.#observer = undefined;
     this.#observed = undefined;
+    this.#ownerWindow = undefined;
   }
 
   /** Re-measure now. Public so a component that changes its own track's content outside Lit's

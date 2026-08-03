@@ -28,6 +28,11 @@ import {
   withSyntheticCatalogValue,
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelectNoModels, LYRA_DEFAULT_modelSelectRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The canonical step a `size` resolves to — an alias of the shared {@linkcode LyraSizeStep}, so
  *  there is one definition of the ladder. The public `size` property accepts {@linkcode LyraSize},
@@ -178,6 +183,23 @@ export interface LyraModelSelectEventMap {
  * @since 4.0.0
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    model: LYRA_DEFAULT_model,
+    modelSelectNoModels: LYRA_DEFAULT_modelSelectNoModels,
+    modelSelectRequired: LYRA_DEFAULT_modelSelectRequired,
+    noMatches: LYRA_DEFAULT_noMatches,
+    notInCatalog: LYRA_DEFAULT_notInCatalog,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   // `sizes` before `styles`: the shared sheet declares the --lr-form-control-* knobs per tier, and
   // this component's own :host block points its --lr-model-select-* surface at them.
@@ -264,6 +286,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
   private popupPosition = new AnchoredPopoverController();
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
   private _value = '';
   private _fieldsetDisabled = false;
   private _name = '';
@@ -288,7 +312,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
@@ -359,6 +384,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+    if (this.hasUpdated && this.open) queueMicrotask(() => this.syncPopup());
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -389,13 +415,18 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.popupPosition.disconnect();
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.unbindDocumentPointer();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
     // fires again, leaving the listbox rendered open with no positioning and
     // no outside-click listener.
     this.open = false;
+  }
+
+  adoptedCallback(): void {
+    this.popupPosition.disconnect();
+    this.unbindDocumentPointer();
   }
 
   /** The current model id (empty string when nothing is selected). */
@@ -609,21 +640,54 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private syncPopup(): void {
+    this.popupPosition.disconnect();
+    if (!this.open || !this.isConnected) {
+      this.unbindDocumentPointer();
+      return;
+    }
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector(
+      this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
+    ) as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
+  }
+
   protected override updated(changed: PropertyValues): void {
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
-      this.popupPosition.disconnect();
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
-        const anchor = this.renderRoot.querySelector(
-          this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
-        ) as HTMLElement | null;
-        const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
-      } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-      }
+      this.syncPopup();
     }
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);

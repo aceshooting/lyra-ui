@@ -209,6 +209,78 @@ describe('lr-poll-status', () => {
     expect(fired, 'disarmTicker() should have run in disconnectedCallback').to.be.false;
   });
 
+  it('owns countdown intervals in the adopted window and rejects stale ticks', async () => {
+    const el = (await fixture(html`<lr-poll-status></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalMainSet = window.setInterval;
+    const originalMainClear = window.clearInterval;
+    const originalFrameSet = frameWindow.setInterval;
+    const originalFrameClear = frameWindow.clearInterval;
+    const mainCallbacks = new Map<number, VoidFunction>();
+    const frameCallbacks = new Map<number, VoidFunction>();
+    const frameCancellations: number[] = [];
+    let mainHandle = 6500;
+    let frameHandle = 7500;
+
+    window.setInterval = ((handler: TimerHandler) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+      const handle = ++mainHandle;
+      mainCallbacks.set(handle, handler as VoidFunction);
+      return handle;
+    }) as typeof window.setInterval;
+    window.clearInterval = ((handle?: number) => {
+      if (handle !== undefined) mainCallbacks.delete(handle);
+    }) as typeof window.clearInterval;
+    frameWindow.setInterval = ((handler: TimerHandler) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+      const handle = ++frameHandle;
+      frameCallbacks.set(handle, handler as VoidFunction);
+      return handle;
+    }) as typeof frameWindow.setInterval;
+    frameWindow.clearInterval = ((handle?: number) => {
+      if (handle !== undefined) {
+        frameCancellations.push(handle);
+        frameCallbacks.delete(handle);
+      }
+    }) as typeof frameWindow.clearInterval;
+
+    try {
+      let dueCount = 0;
+      el.addEventListener('lr-poll-due', () => dueCount++);
+      frameDocument.adoptNode(el);
+      expect(frameCallbacks.size, 'detached adoption must not arm a ticker').to.equal(0);
+
+      frameDocument.body.append(el);
+      el.nextInMs = 0;
+      await el.updateComplete;
+      expect(mainCallbacks.size, 'the parent window must not own an iframe ticker').to.equal(0);
+      expect(frameCallbacks.size).to.equal(1);
+      const [oldHandle, staleTick] = Array.from(frameCallbacks.entries())[0]!;
+
+      document.adoptNode(el);
+      expect(frameCancellations, 'adoption clears through the retained iframe owner').to.include(oldHandle);
+      expect(mainCallbacks.size, 'detached adoption must not arm the destination ticker').to.equal(0);
+      staleTick();
+      expect(dueCount, 'a stale source-realm tick cannot consume the deadline').to.equal(0);
+
+      document.body.append(el);
+      expect(mainCallbacks.size, 'reconnect re-arms in the destination window').to.equal(1);
+      Array.from(mainCallbacks.values())[0]!();
+      expect(dueCount).to.equal(1);
+    } finally {
+      el.remove();
+      window.setInterval = originalMainSet;
+      window.clearInterval = originalMainClear;
+      frameWindow.setInterval = originalFrameSet;
+      frameWindow.clearInterval = originalFrameClear;
+      iframe.remove();
+    }
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
     await expect(el).to.be.accessible();

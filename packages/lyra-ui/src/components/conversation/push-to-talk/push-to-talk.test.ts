@@ -123,21 +123,27 @@ function stubDeferredCapture(): { restore: () => void; resolve: () => void; stre
 
 function stubDeniedCapture(): () => void {
   const original = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
   navigator.mediaDevices.getUserMedia = (async () => {
     throw new DOMException('denied', 'NotAllowedError');
   }) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   return () => {
     navigator.mediaDevices.getUserMedia = original;
+    window.MediaRecorder = originalMediaRecorder;
   };
 }
 
 function stubErroringCapture(): () => void {
   const original = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
   navigator.mediaDevices.getUserMedia = (async () => {
     throw new Error('device busy');
   }) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   return () => {
     navigator.mediaDevices.getUserMedia = original;
+    window.MediaRecorder = originalMediaRecorder;
   };
 }
 
@@ -146,6 +152,16 @@ function trigger(el: LyraPushToTalk): HTMLButtonElement {
 }
 function status(el: LyraPushToTalk): string {
   return el.shadowRoot!.querySelector('[part="status"]')?.textContent?.trim() ?? '';
+}
+
+async function mountServerRenderedPushToTalk(): Promise<LyraPushToTalk> {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+    setHTMLUnsafe(value: string): void;
+  };
+  container.setHTMLUnsafe(
+    '<lr-push-to-talk><template shadowrootmode="open"></template></lr-push-to-talk>',
+  );
+  return container.firstElementChild as LyraPushToTalk;
 }
 
 // -- Defaults ----------------------------------------------------------
@@ -177,10 +193,26 @@ it('leaving show-timer unset keeps the documented true default', async () => {
 
 it('forwards focus/blur to the trigger and keeps state read-only under assignment', async () => {
   const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-  el.focus({ preventScroll: true });
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
-  el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  const button = trigger(el);
+  const originalFocus = button.focus;
+  const originalBlur = button.blur;
+  let focusOptions: FocusOptions | undefined;
+  let blurCalls = 0;
+  button.focus = (options?: FocusOptions) => {
+    focusOptions = options;
+  };
+  button.blur = () => {
+    blurCalls++;
+  };
+  try {
+    el.focus({ preventScroll: true });
+    el.blur();
+    expect(focusOptions?.preventScroll).to.be.true;
+    expect(blurCalls).to.equal(1);
+  } finally {
+    button.focus = originalFocus;
+    button.blur = originalBlur;
+  }
 
   (el as unknown as { state: string }).state = 'recording';
   expect(el.state).to.equal('idle');
@@ -227,6 +259,26 @@ describe('--lr-push-to-talk-recording-color', () => {
 
 // -- Unsupported environment ---------------------------------------------
 
+it('keeps the server unsupported branch for the first hydration update before enabling capture', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await mountServerRenderedPushToTalk();
+
+    await el.updateComplete;
+    expect(trigger(el).disabled).to.be.true;
+    expect(status(el)).to.equal('Recording is not supported in this browser');
+
+    // Firefox can resolve the first update promise before the deferred hydration seed queues its
+    // follow-up update. Give that promise reaction one task before awaiting the new update.
+    await aTimeout(0);
+    await el.updateComplete;
+    expect(trigger(el).disabled).to.be.false;
+    expect(status(el)).to.equal('');
+  } finally {
+    restore();
+  }
+});
+
 it('renders the trigger disabled and shows the unsupported status when MediaRecorder is unavailable', async () => {
   const original = window.MediaRecorder;
   // @ts-expect-error deliberately undefining a browser global for the test
@@ -239,6 +291,262 @@ it('renders the trigger disabled and shows the unsupported status when MediaReco
   } finally {
     window.MediaRecorder = original;
   }
+});
+
+describe('owner-window capture runtime', () => {
+  it('uses the adopted owner for capture, recorder, clock, timers, Blob, AudioContext, typed data, and animation frames', async () => {
+    const el = (await fixture(
+      html`<lr-push-to-talk level-events max-duration-ms="500"></lr-push-to-talk>`,
+    )) as LyraPushToTalk;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const runtime = frameWindow as unknown as Window & {
+      MediaRecorder: typeof MediaRecorder;
+      AudioContext: typeof AudioContext;
+      Blob: typeof Blob;
+    };
+
+    const originalGetUserMedia = frameWindow.navigator.mediaDevices.getUserMedia;
+    const originalMediaRecorder = runtime.MediaRecorder;
+    const originalAudioContext = runtime.AudioContext;
+    const originalSetTimeout = frameWindow.setTimeout;
+    const originalClearTimeout = frameWindow.clearTimeout;
+    const originalSetInterval = frameWindow.setInterval;
+    const originalClearInterval = frameWindow.clearInterval;
+    const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+    const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+    const ownNowDescriptor = Object.getOwnPropertyDescriptor(frameWindow.performance, 'now');
+
+    const stream = new FakeStream();
+    let getUserMediaCalls = 0;
+    let recorderCreations = 0;
+    let audioContextCreations = 0;
+    let audioContextCloses = 0;
+    let nowMs = 0;
+    let nextHandle = 10;
+    const timeoutHandles = new Set<number>();
+    const intervalHandles = new Set<number>();
+    const frameHandles = new Set<number>();
+    const clearedTimeouts: number[] = [];
+    const clearedIntervals: number[] = [];
+    const canceledFrames: number[] = [];
+
+    class OwnerMediaRecorder extends EventTarget {
+      static isTypeSupported(type: string): boolean {
+        return type === 'audio/webm;codecs=opus';
+      }
+      state: RecordingState = 'inactive';
+      mimeType: string;
+      ondataavailable: ((event: BlobEvent) => void) | null = null;
+      onstop: (() => void) | null = null;
+      constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
+        super();
+        recorderCreations++;
+        this.mimeType = options?.mimeType ?? 'audio/webm';
+      }
+      start(): void {
+        this.state = 'recording';
+      }
+      stop(): void {
+        this.state = 'inactive';
+        const data = new runtime.Blob(['owner'], { type: this.mimeType });
+        this.ondataavailable?.({ data } as BlobEvent);
+        this.onstop?.();
+      }
+    }
+
+    class OwnerAudioContext {
+      constructor() {
+        audioContextCreations++;
+      }
+      createMediaStreamSource(): { connect: () => void } {
+        return { connect: () => {} };
+      }
+      createAnalyser(): FakeAnalyserNode {
+        return new FakeAnalyserNode();
+      }
+      close(): Promise<void> {
+        audioContextCloses++;
+        return Promise.resolve();
+      }
+    }
+
+    try {
+      frameWindow.navigator.mediaDevices.getUserMedia = (async () => {
+        getUserMediaCalls++;
+        return stream as unknown as MediaStream;
+      }) as typeof frameWindow.navigator.mediaDevices.getUserMedia;
+      runtime.MediaRecorder = OwnerMediaRecorder as unknown as typeof MediaRecorder;
+      runtime.AudioContext = OwnerAudioContext as unknown as typeof AudioContext;
+      frameWindow.setTimeout = ((_handler: TimerHandler, _delay?: number) => {
+        const handle = nextHandle++;
+        timeoutHandles.add(handle);
+        return handle;
+      }) as typeof frameWindow.setTimeout;
+      frameWindow.clearTimeout = ((handle?: number) => {
+        if (handle !== undefined) {
+          clearedTimeouts.push(handle);
+          timeoutHandles.delete(handle);
+        }
+      }) as typeof frameWindow.clearTimeout;
+      frameWindow.setInterval = ((_handler: TimerHandler, _delay?: number) => {
+        const handle = nextHandle++;
+        intervalHandles.add(handle);
+        return handle;
+      }) as typeof frameWindow.setInterval;
+      frameWindow.clearInterval = ((handle?: number) => {
+        if (handle !== undefined) {
+          clearedIntervals.push(handle);
+          intervalHandles.delete(handle);
+        }
+      }) as typeof frameWindow.clearInterval;
+      frameWindow.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+        const handle = nextHandle++;
+        frameHandles.add(handle);
+        return handle;
+      }) as typeof frameWindow.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = ((handle: number) => {
+        canceledFrames.push(handle);
+        frameHandles.delete(handle);
+      }) as typeof frameWindow.cancelAnimationFrame;
+      Object.defineProperty(frameWindow.performance, 'now', {
+        configurable: true,
+        value: () => (nowMs += 125),
+      });
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      const levelEvent = oneEvent(el, 'lr-level');
+      expect(await el.start()).to.be.true;
+      expect((await levelEvent).detail.level).to.be.greaterThan(0);
+      expect(getUserMediaCalls).to.equal(1);
+      expect(recorderCreations).to.equal(1);
+      expect(audioContextCreations).to.equal(1);
+      const ownedWork = el as unknown as {
+        maxDurationTimer?: { owner: Window; handle: number };
+        tickTimer?: { owner: Window; handle: number };
+        levelFrame?: { owner: Window; handle: number };
+      };
+      const maxDurationTimer = ownedWork.maxDurationTimer!;
+      const tickTimer = ownedWork.tickTimer!;
+      const levelFrame = ownedWork.levelFrame!;
+      expect(maxDurationTimer.owner === frameWindow).to.equal(true);
+      expect(tickTimer.owner === frameWindow).to.equal(true);
+      expect(levelFrame.owner === frameWindow).to.equal(true);
+      expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.true;
+      expect(intervalHandles.has(tickTimer.handle)).to.be.true;
+      expect(frameHandles.has(levelFrame.handle)).to.be.true;
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      el.stop();
+      const stopEvent = await stopped;
+      expect(stopEvent.detail.blob instanceof runtime.Blob).to.be.true;
+      expect(stopEvent.detail.durationMs).to.equal(125);
+      expect(clearedTimeouts).to.include(maxDurationTimer.handle);
+      expect(clearedIntervals).to.include(tickTimer.handle);
+      expect(canceledFrames).to.include(levelFrame.handle);
+      expect(audioContextCloses).to.equal(1);
+      expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.false;
+      expect(intervalHandles.has(tickTimer.handle)).to.be.false;
+      expect(frameHandles.has(levelFrame.handle)).to.be.false;
+    } finally {
+      el.remove();
+      frameWindow.navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      runtime.MediaRecorder = originalMediaRecorder;
+      runtime.AudioContext = originalAudioContext;
+      frameWindow.setTimeout = originalSetTimeout;
+      frameWindow.clearTimeout = originalClearTimeout;
+      frameWindow.setInterval = originalSetInterval;
+      frameWindow.clearInterval = originalClearInterval;
+      frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+      if (ownNowDescriptor) Object.defineProperty(frameWindow.performance, 'now', ownNowDescriptor);
+      else delete (frameWindow.performance as unknown as { now?: unknown }).now;
+      iframe.remove();
+    }
+  });
+
+  it('discards a stale permission result when adoption changes owners before getUserMedia resolves', async () => {
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+    const originalMediaRecorder = window.MediaRecorder;
+    const stream = new FakeStream();
+    let resolvePermission!: (stream: MediaStream) => void;
+    navigator.mediaDevices.getUserMedia = (() =>
+      new Promise<MediaStream>((resolve) => {
+        resolvePermission = resolve;
+      })) as typeof navigator.mediaDevices.getUserMedia;
+    window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const frameRuntime = frameWindow as unknown as Window & { MediaRecorder: typeof MediaRecorder };
+    const originalFrameRecorder = frameRuntime.MediaRecorder;
+    let frameRecorderCreations = 0;
+    frameRuntime.MediaRecorder = class extends FakeMediaRecorder {
+      constructor(value: FakeStream, options?: { mimeType?: string }) {
+        super(value, options);
+        frameRecorderCreations++;
+      }
+    } as unknown as typeof MediaRecorder;
+
+    let el: LyraPushToTalk | undefined;
+    try {
+      el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const startPromise = el.start();
+      await el.updateComplete;
+      expect(el.state).to.equal('requesting');
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      const canceled = oneEvent(el, 'lr-record-cancel');
+      resolvePermission(stream as unknown as MediaStream);
+
+      expect(await startPromise).to.be.false;
+      await canceled;
+      expect(el.state).to.equal('idle');
+      expect(stream.getTracks()[0]?.stopped).to.be.true;
+      expect(frameRecorderCreations).to.equal(0);
+    } finally {
+      el?.remove();
+      navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      window.MediaRecorder = originalMediaRecorder;
+      frameRuntime.MediaRecorder = originalFrameRecorder;
+      iframe.remove();
+    }
+  });
+
+  it('recognizes a cross-realm NotAllowedError without relying on instanceof', async () => {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const runtime = frameWindow as unknown as Window & { MediaRecorder: typeof MediaRecorder };
+    const originalGetUserMedia = frameWindow.navigator.mediaDevices.getUserMedia;
+    const originalMediaRecorder = runtime.MediaRecorder;
+    runtime.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+    frameWindow.navigator.mediaDevices.getUserMedia = (async () => {
+      throw new frameWindow.DOMException('denied', 'NotAllowedError');
+    }) as typeof frameWindow.navigator.mediaDevices.getUserMedia;
+    try {
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(await el.start()).to.be.false;
+      expect(el.state).to.equal('denied');
+    } finally {
+      el.remove();
+      frameWindow.navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      runtime.MediaRecorder = originalMediaRecorder;
+      iframe.remove();
+    }
+  });
 });
 
 // -- Hold mode: full lifecycle --------------------------------------------
@@ -256,7 +564,7 @@ describe('hold mode', () => {
       expect(startEvent.detail.stream).to.exist;
       expect(el.state).to.equal('recording');
       expect(el.getAttribute('data-state')).to.equal('recording');
-      expect(el.stream).to.equal(startEvent.detail.stream);
+      expect(el.stream === startEvent.detail.stream).to.equal(true);
 
       const stopPromise = oneEvent(el, 'lr-record-stop');
       btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
@@ -429,11 +737,11 @@ describe('hold mode', () => {
   it('stubDeferredCapture.restore() fully restores window.MediaRecorder, not just getUserMedia (regression)', () => {
     const originalMediaRecorder = window.MediaRecorder;
     const { restore } = stubDeferredCapture();
-    expect(window.MediaRecorder).to.equal(FakeMediaRecorder as unknown as typeof MediaRecorder);
+    expect(window.MediaRecorder === (FakeMediaRecorder as unknown as typeof MediaRecorder)).to.equal(true);
     restore();
     // Pre-fix, restore() only reset navigator.mediaDevices.getUserMedia -- window.MediaRecorder
     // stayed pointed at FakeMediaRecorder for the rest of the file's run.
-    expect(window.MediaRecorder).to.equal(originalMediaRecorder);
+    expect(window.MediaRecorder === originalMediaRecorder).to.equal(true);
   });
 });
 
@@ -653,7 +961,7 @@ it('stops the granted stream when MediaRecorder construction fails', async () =>
     expect(await el.start()).to.be.false;
     expect(el.state).to.equal('error');
     expect(stream.getTracks()[0]?.stopped).to.be.true;
-    expect(el.stream).to.equal(null);
+    expect(el.stream === null).to.equal(true);
   } finally {
     navigator.mediaDevices.getUserMedia = originalGetUserMedia;
     window.MediaRecorder = originalMediaRecorder;

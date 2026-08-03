@@ -191,6 +191,11 @@ run_platform_matrix_leg() {
   run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser" || return
   WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
     run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform || return
+  if [[ "$node_version" == "20" && "$browser" == "firefox" ]]; then
+    step "packed consumer: Node 20"
+    run_with_toolchain "$node_bin" "$pnpm_bin" build || return
+    run_with_toolchain "$node_bin" "$pnpm_bin" check:packed-consumer || return
+  fi
 }
 
 require_primary_toolchain
@@ -205,11 +210,22 @@ fi
 step "pnpm lint"
 pnpm lint
 
+step "release-integrity helper tests"
+node scripts/release-integrity.test.mjs
+
+# This mirrors static-checks' networked upstream contract: direct public npm fetches are pinned by
+# package identity, exact version, tarball SHA-512 and manifest SHA-256, with no lifecycle process.
+step "pinned upstream public manifests"
+pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
+
 # Build before test: src/package-entrypoints.test.ts dynamically imports the
 # package's published entry points (./dist/lyra.js etc.), which only exist
 # after a build.
 step "pnpm build"
 pnpm build
+
+step "built component-quality evidence"
+pnpm --filter @aceshooting/lyra-ui check:component-quality:built
 
 step "SSR import/render matrix"
 pnpm --filter @aceshooting/lyra-ui test:ssr
@@ -237,6 +253,7 @@ pnpm registrations
 freshness_diff "registration artifacts (pnpm registrations)" \
   packages/lyra-ui/src/all.ts \
   packages/lyra-ui/src/ssr/all.ts \
+  packages/lyra-ui/src/components/lr-*.ts \
   packages/lyra-ui/src/internal/root-registration-allowlist.ts \
   packages/lyra-ui/package.json
 
@@ -262,7 +279,8 @@ step "plugin reference sync"
 ./package.sh
 freshness_diff "plugin skill package (./package.sh)" \
   plugins/lyra-ui/skills/lyra-ui/references/ \
-  skills/lyra-ui.skill
+  skills/lyra-ui.skill \
+  skills/compose-lyra-interfaces.skill
 
 step "skill:check"
 pnpm skill:check
@@ -303,8 +321,14 @@ if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
 
+step "lyra-ui check:package-size"
+pnpm --filter @aceshooting/lyra-ui check:package-size
+
 step "check:packed-consumer"
 pnpm check:packed-consumer
+
+step "public API semver gate"
+pnpm --filter @aceshooting/lyra-ui check:public-api
 
 if [[ "$RUN_PLATFORM" == "1" ]]; then
   for browser in firefox webkit; do

@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './gauge.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type GaugeType = 'radial' | 'ring' | 'linear';
 
@@ -69,6 +74,15 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @since 4.0.0
  */
 export class LyraGauge extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    gaugeLabel: LYRA_DEFAULT_gaugeLabel,
+    gaugeValueLabel: LYRA_DEFAULT_gaugeValueLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number }) value = 0;

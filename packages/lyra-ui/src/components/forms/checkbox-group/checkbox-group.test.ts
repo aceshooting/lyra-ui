@@ -5,6 +5,38 @@ import type { LyraCheckboxGroup } from './checkbox-group.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import { styles } from './checkbox-group.styles.js';
 
+it('applies required and disabled states when server rendering provides no light-DOM query API', () => {
+  const el = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
+  let requiredError = '';
+  let disabledError = '';
+  let wasMissing = false;
+  let wasBarred = false;
+
+  Object.defineProperty(el, 'querySelectorAll', { configurable: true, value: undefined });
+  try {
+    try {
+      el.required = true;
+    } catch (error) {
+      requiredError = error instanceof Error ? error.message : String(error);
+    }
+    wasMissing = el.validity.valueMissing;
+
+    try {
+      el.disabled = true;
+    } catch (error) {
+      disabledError = error instanceof Error ? error.message : String(error);
+    }
+    wasBarred = !el.validity.valueMissing;
+  } finally {
+    delete (el as unknown as { querySelectorAll?: ParentNode['querySelectorAll'] }).querySelectorAll;
+  }
+
+  expect(requiredError, 'the required setter must not require browser light-DOM traversal').to.equal('');
+  expect(disabledError, 'the disabled setter must not require browser light-DOM traversal').to.equal('');
+  expect(wasMissing, 'required still computes the empty-group violation').to.be.true;
+  expect(wasBarred, 'disabled still bars the required violation').to.be.true;
+});
+
 it('collects checked children and emits a group change', async () => {
   const el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   const boxes = el.querySelectorAll('lr-checkbox');
@@ -22,6 +54,94 @@ it('reports required validity when no box is checked', async () => {
 it('is accessible', async () => {
   const el = await fixture(html`<lr-checkbox-group label="Topics"><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`);
   await expect(el).to.be.accessible();
+});
+
+it('recreates its child observer in the adopted owner realm and ignores the stale callback', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  el.remove();
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let groupCallback: MutationCallback | undefined;
+  let groupObservations = 0;
+  let groupDisconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private readonly callback: MutationCallback;
+    private observesGroup = false;
+    constructor(callback: MutationCallback) { this.callback = callback; }
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target !== el || !options?.attributeFilter?.includes('checked')) return;
+      this.observesGroup = true;
+      groupObservations += 1;
+      groupCallback = this.callback;
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesGroup) groupDisconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.adoptNode(el);
+    expect(groupObservations, 'detached adoption must not arm an observer').to.equal(0);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    expect(groupObservations, 'the destination window observes the group').to.equal(1);
+    expect(groupCallback).to.be.a('function');
+    const staleCallback = groupCallback!;
+
+    document.adoptNode(el);
+    document.body.append(el);
+    await el.updateComplete;
+    expect(groupDisconnects, 'adoption disconnects the destination observer').to.equal(1);
+
+    let requestedUpdates = 0;
+    const requestUpdate = el.requestUpdate.bind(el);
+    (el as unknown as { requestUpdate(): void }).requestUpdate = () => {
+      requestedUpdates += 1;
+      requestUpdate();
+    };
+    staleCallback([{ type: 'childList' } as MutationRecord], {} as MutationObserver);
+    expect(requestedUpdates, 'a callback retained by the old realm is inert after reconnect').to.equal(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('accepts an owned checkbox-shaped event target from another realm without instanceof', async () => {
+  const el = (await fixture(html`<lr-checkbox-group></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const foreignCheckbox = frameDocument.createElement('lr-checkbox');
+  const internals = el as unknown as {
+    ownsCheckbox(target: Element): boolean;
+    isOwnedCheckbox(target: EventTarget | null): boolean;
+  };
+  const ownsCheckbox = internals.ownsCheckbox.bind(el);
+  internals.ownsCheckbox = (target) => target === foreignCheckbox;
+
+  try {
+    expect(internals.isOwnedCheckbox(foreignCheckbox)).to.be.true;
+  } finally {
+    internals.ownsCheckbox = ownsCheckbox;
+    frame.remove();
+  }
 });
 
 it('uses its native fieldset/legend as the sole named group landmark', async () => {

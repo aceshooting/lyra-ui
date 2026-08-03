@@ -114,9 +114,34 @@ describe('lr-video public contract', () => {
     expect(el.getVideoElement() === media).to.be.true;
   });
 
+  it('attaches an iframe-realm native video after adoption before its first render', async () => {
+    const iframe = document.createElement('iframe');
+    const loaded = new Promise<void>((resolve) =>
+      iframe.addEventListener('load', () => resolve(), { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const el = document.createElement('lr-video') as LyraVideo;
+
+    try {
+      frameDocument.adoptNode(el);
+      const media = frameDocument.createElement('video');
+      expect(media instanceof frameWindow.HTMLVideoElement).to.be.true;
+      expect(el.hasUpdated, 'the host has not rendered before the ref is attached').to.be.false;
+      (el as unknown as { mediaRef: (element?: Element) => void }).mediaRef(media);
+
+      expect(el.getVideoElement() === media).to.be.true;
+    } finally {
+      (el as unknown as { mediaRef: (element?: Element) => void }).mediaRef(undefined);
+      iframe.remove();
+    }
+  });
+
   it('matches the documented attribute mapping and reflection contract', async () => {
     const el = await fixture<LyraVideo>(html`
-      <lr-video current-time="3" duration="12" controls="full"></lr-video>
+      <lr-video currentTime="3" duration="12" controls="full"></lr-video>
     `);
     expect(el.currentTime).to.equal(3);
     expect(el.duration).to.equal(12);
@@ -128,7 +153,7 @@ describe('lr-video public contract', () => {
     el.currentTime = 7;
     await el.updateComplete;
     expect(el.getVideoElement().currentTime).to.equal(7);
-    expect(el.hasAttribute('currenttime')).to.be.false;
+    expect(el.getAttribute('currenttime'), 'the public attribute is not reflected from IDL writes').to.equal('3');
 
     el.muted = true;
     el.playing = true;
@@ -235,7 +260,7 @@ describe('lr-video public contract', () => {
     const returned = el.play();
     const caught = returned.catch((error: unknown) => error);
     expect(returned === nativePromise).to.be.true;
-    expect(await caught).to.equal(failure);
+    expect((await caught) === failure).to.equal(true);
   });
 
   it('maps autoplay-muted to native autoplay and muted state without changing the authored muted property', async () => {
@@ -467,6 +492,126 @@ describe('lr-video public contract', () => {
     }
   });
 
+  it('loads and cancels thumbnail requests through the adopted owner realm', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const base = frameDocument.createElement('base');
+    base.href = 'https://video-frame.example/media/nested/';
+    frameDocument.head.append(base);
+    const ParentAbortController = window.AbortController;
+    const OwnerAbortController = frameWindow.AbortController;
+    const ParentURL = window.URL;
+    const OwnerURL = frameWindow.URL;
+    const originalParentFetch = window.fetch;
+    const originalOwnerFetch = frameWindow.fetch;
+    const parentRequests: string[] = [];
+    const ownerRequests: string[] = [];
+    const parentSignals: AbortSignal[] = [];
+    const ownerSignals: AbortSignal[] = [];
+    let parentUrlCreations = 0;
+    let ownerUrlCreations = 0;
+
+    class ParentTrackedAbortController extends ParentAbortController {
+      constructor() {
+        super();
+        parentSignals.push(this.signal);
+      }
+    }
+    class OwnerTrackedAbortController extends OwnerAbortController {
+      constructor() {
+        super();
+        ownerSignals.push(this.signal);
+      }
+    }
+    class ParentTrackedURL extends ParentURL {
+      constructor(url: string | URL, base?: string | URL) {
+        super(url, base);
+        parentUrlCreations++;
+      }
+    }
+    class OwnerTrackedURL extends OwnerURL {
+      constructor(url: string | URL, base?: string | URL) {
+        super(url, base);
+        ownerUrlCreations++;
+      }
+    }
+    const waitForAbort = (signal?: AbortSignal): Promise<Response> =>
+      new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener(
+          'abort',
+          () => reject(new frameWindow.DOMException('cancelled', 'AbortError')),
+          { once: true },
+        );
+      });
+
+    window.AbortController = ParentTrackedAbortController;
+    frameWindow.AbortController = OwnerTrackedAbortController;
+    window.URL = ParentTrackedURL;
+    frameWindow.URL = OwnerTrackedURL;
+    window.fetch = ((input: RequestInfo | URL) => {
+      parentRequests.push(String(input));
+      return Promise.resolve(new Response('WEBVTT'));
+    }) as typeof fetch;
+    frameWindow.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      ownerRequests.push(url);
+      if (url.endsWith('/current.vtt')) {
+        return Promise.resolve(
+          new Response('WEBVTT\n\n00:00.000 --> 00:10.000\ncurrent.jpg\n'),
+        );
+      }
+      return waitForAbort(init?.signal ?? undefined);
+    }) as typeof fetch;
+
+    let el: LyraVideo | undefined;
+    try {
+      el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      el.thumbnails = 'thumbs/old.vtt';
+      await el.updateComplete;
+      await waitUntil(() => ownerRequests.length === 1, 'the first owner request did not start');
+
+      el.thumbnails = 'thumbs/current.vtt';
+      await el.updateComplete;
+      await waitUntil(
+        () => (el as unknown as { thumbnailCues: unknown[] }).thumbnailCues.length === 1,
+        'the replacement owner request did not load',
+      );
+      expect(ownerSignals[0]?.aborted, 'replacement must abort the retained owner signal').to.be.true;
+      expect(ownerSignals[1]?.aborted).to.be.false;
+      expect(parentSignals.length).to.equal(0);
+      expect(parentRequests).to.deep.equal([]);
+      expect(parentUrlCreations, 'thumbnail URLs must not use the ambient parser').to.equal(0);
+      expect(ownerUrlCreations).to.be.greaterThan(2);
+      expect(ownerRequests).to.deep.equal([
+        'https://video-frame.example/media/nested/thumbs/old.vtt',
+        'https://video-frame.example/media/nested/thumbs/current.vtt',
+      ]);
+      expect(
+        (el as unknown as { thumbnailCues: Array<{ src: string }> }).thumbnailCues[0]?.src,
+      ).to.equal('https://video-frame.example/media/nested/thumbs/current.jpg');
+
+      el.thumbnails = 'thumbs/pending.vtt';
+      await el.updateComplete;
+      await waitUntil(() => ownerSignals.length === 3, 'the pending owner request did not start');
+      el.remove();
+      expect(ownerSignals[2]?.aborted, 'disconnect must abort the retained owner signal').to.be.true;
+    } finally {
+      el?.remove();
+      window.AbortController = ParentAbortController;
+      frameWindow.AbortController = OwnerAbortController;
+      window.URL = ParentURL;
+      frameWindow.URL = OwnerURL;
+      window.fetch = originalParentFetch;
+      frameWindow.fetch = originalOwnerFetch;
+      iframe.remove();
+    }
+  });
+
   it('never fetches an unsafe thumbnail URL', async () => {
     const originalFetch = window.fetch;
     let calls = 0;
@@ -643,6 +788,90 @@ describe('lr-video public contract', () => {
       expect(relays).to.equal(1);
     } finally {
       (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = originalObserver;
+    }
+  });
+
+  it('reconstructs its visibility observer in the adopted iframe realm', async () => {
+    const iframe = document.createElement('iframe');
+    const loaded = new Promise<void>((resolve) =>
+      iframe.addEventListener('load', () => resolve(), { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const OriginalMainObserver = window.IntersectionObserver;
+    const OriginalFrameObserver = frameWindow.IntersectionObserver;
+    let mainConstructions = 0;
+    let frameConstructions = 0;
+    let mainDisconnects = 0;
+    let frameDisconnects = 0;
+    let mainCallback: IntersectionObserverCallback | undefined;
+    let frameCallback: IntersectionObserverCallback | undefined;
+    class MainObserver {
+      constructor(callback: IntersectionObserverCallback) {
+        mainConstructions += 1;
+        mainCallback = callback;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() { mainDisconnects += 1; }
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+      readonly root = null;
+      readonly rootMargin = '';
+      readonly thresholds = [0];
+    }
+    class FrameObserver {
+      constructor(callback: IntersectionObserverCallback) {
+        frameConstructions += 1;
+        frameCallback = callback;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() { frameDisconnects += 1; }
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+      readonly root = null;
+      readonly rootMargin = '';
+      readonly thresholds = [0];
+    }
+    window.IntersectionObserver = MainObserver as unknown as typeof IntersectionObserver;
+    frameWindow.IntersectionObserver = FrameObserver as unknown as typeof IntersectionObserver;
+    let el: LyraVideo | undefined;
+
+    try {
+      el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const playback = stubPlayback(nativeVideo(el), false);
+      expect(mainConstructions).to.equal(1);
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      await el.updateComplete;
+
+      expect(mainDisconnects, 'the source-realm observer is disconnected').to.be.greaterThan(0);
+      expect(frameConstructions, 'the observer is rebuilt from the owner window').to.equal(1);
+      const pauseCallsBeforeStaleDelivery = playback.pauseCalls;
+      mainCallback?.(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(playback.pauseCalls, 'a queued source-realm delivery is ignored after adoption').to.equal(
+        pauseCallsBeforeStaleDelivery,
+      );
+      playback.paused = false;
+      frameCallback?.(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(playback.pauseCalls, 'the current owner-realm delivery still controls playback').to.equal(
+        pauseCallsBeforeStaleDelivery + 1,
+      );
+      el.remove();
+      expect(frameDisconnects, 'disconnect tears down the current-realm observer').to.equal(1);
+    } finally {
+      el?.remove();
+      window.IntersectionObserver = OriginalMainObserver;
+      frameWindow.IntersectionObserver = OriginalFrameObserver;
+      iframe.remove();
     }
   });
 

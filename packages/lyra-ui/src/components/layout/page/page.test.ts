@@ -581,3 +581,39 @@ it('reclassifies its allocation when the window resizes', async () => {
   expect(el.getAttribute('data-allocation') ?? el.className).to.not.equal(undefined);
   expect(before).to.not.equal(undefined);
 });
+
+it('operates foreign-realm navigation-toggle and delegated data-toggle controls', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle></lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const foreignDocument = iframe.contentDocument!;
+    const customToggle = foreignDocument.createElement('button');
+    customToggle.slot = 'navigation-toggle';
+    customToggle.setAttribute('data-toggle-nav', '');
+    customToggle.textContent = 'Sections';
+    page.append(customToggle);
+    await page.updateComplete;
+
+    expect(customToggle instanceof HTMLElement, 'fixture really crosses constructor realms').to.equal(false);
+    customToggle.click();
+    await page.updateComplete;
+    expect(page.navOpen).to.equal(true);
+
+    const delegated = foreignDocument.createElement('button');
+    delegated.slot = 'header';
+    delegated.setAttribute('data-toggle-nav', '');
+    delegated.textContent = 'Close sections';
+    page.append(delegated);
+    await page.updateComplete;
+    delegated.click();
+    await page.updateComplete;
+    expect(page.navOpen).to.equal(false);
+  } finally {
+    iframe.remove();
+  }
+});

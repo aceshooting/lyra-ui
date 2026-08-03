@@ -35,6 +35,11 @@
       "rationale": "This implementation reinstates an earlier Lyra tag with the experimental Web Awesome 3.11 public surface and remains experimental while production usage is gathered.",
       "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser behavior, and virtualization edge cases demonstrate sustained reliability."
     },
+    "introduced-mapped-experimental": {
+      "status": "experimental",
+      "rationale": "This newly introduced Lyra tag mirrors an experimental Web Awesome 3.11 public surface and remains experimental while production compatibility evidence is gathered.",
+      "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser media behavior, and lifecycle edge cases demonstrate sustained reliability."
+    },
     "compatibility-stable": {
       "status": "stable",
       "rationale": "This tag preserves the previously shipped native time-control contract while the primary lr-time-input name provides the segmented control.",
@@ -321,6 +326,10 @@
     "mapped-experimental": [
       "lr-data-grid"
     ],
+    "introduced-mapped-experimental": [
+      "lr-video",
+      "lr-video-playlist"
+    ],
     "compatibility-stable": [
       "lr-native-time-input"
     ],
@@ -337,8 +346,6 @@
       "lr-tab-group",
       "lr-tab-panel",
       "lr-tree-item",
-      "lr-video",
-      "lr-video-playlist",
       "lr-visually-hidden"
     ]
   },
@@ -9008,7 +9015,7 @@
     "current": {
       "version": "8.0.0",
       "sourceCommit": null,
-      "manifestSha256": "5191b57af9a28f08c33721ced50eac9e4f49f21035e81699b2776399cbc7ff11",
+      "manifestSha256": "d1ced8a2acb6eceabe3c33ddab3a4ca162a90a77adca93ed0eb20b83f09a9838",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -9294,6 +9301,7 @@
         "lr-xml-viewer",
         "lr-zoomable-frame"
       ]
-    }
+    },
+    "taggedCurrent": null
   }
 }

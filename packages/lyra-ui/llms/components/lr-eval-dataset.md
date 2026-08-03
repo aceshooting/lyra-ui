@@ -2,7 +2,7 @@
 
 # `lr-eval-dataset`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/eval-dataset/eval-dataset.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-eval-dataset.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEvalDataset`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/eval-dataset/eval-dataset.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

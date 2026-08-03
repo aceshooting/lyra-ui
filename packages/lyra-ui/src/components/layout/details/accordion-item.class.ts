@@ -10,6 +10,11 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './accordion-item.styles.js';
 import { LyraDetails, type LyraDetailsEventMap } from './details.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraAccordionIconPlacement = 'start' | 'end';
 /** A heading level string. Values other than 1–6 and `none` render the documented h3 fallback. */
@@ -58,6 +63,17 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * @since 4.0.0
  */
 export class LyraAccordionItem extends LyraDetails {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
 
   @state() private hasLabelSlot = false;

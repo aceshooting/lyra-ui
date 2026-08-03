@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, nothing } from 'lit';
 import type { RetrievalStage } from './retrieval-trace.class.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const stages: RetrievalStage[] = [
   {

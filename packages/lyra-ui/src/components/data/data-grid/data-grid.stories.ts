@@ -30,6 +30,14 @@ const meta: Meta = {
   title: 'Data Grid',
   component: 'lr-data-grid',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Data grid with client and server processing. `selectedRows` is writable and maps current source-row objects onto `selectedKeys` for controlled selection.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

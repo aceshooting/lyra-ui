@@ -5,11 +5,21 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+} from '../../../internal/a11y.js';
+import {
   markOptionSelectedDirty,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
 import { styles } from './option.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const GLYPH_VIEW_BOX = '0 0 24 24';
 const GLYPH_STROKE_WIDTH = '1.75';
@@ -41,8 +51,9 @@ export interface LyraOptionEventMap {
  * built-in pickers, which render their interactive rows in their own shadow roots.
  *
  * The effective `label` is an explicit non-empty `label` property/attribute when supplied,
- * otherwise `defaultLabel`, the normalized plain text of the default slot. Named adornment slots
- * never leak into either `defaultLabel` or Shoelace's `getTextLabel()` compatibility method.
+ * otherwise `defaultLabel`, the normalized accessible text of the flattened default slot. Hidden
+ * subtrees are excluded, visible nested `aria-label` values replace their descendants, and named
+ * adornment slots never leak into either `defaultLabel` or Shoelace's `getTextLabel()` method.
  *
  * Selection follows the native live/default split. The `selected` attribute initializes
  * `defaultSelected`, which parent controls use as their `form.reset()` baseline; property writes
@@ -70,11 +81,23 @@ export interface LyraOptionEventMap {
  * @cssstate disabled - The option is disabled.
  * @cssstate hover - The pointer is over the option, including pointer-drag sessions.
  * @cssprop [--current-text-color=var(--lr-color-text)] - Text color while the option is `current`.
- * @method getTextLabel - Returns the normalized plain text of the default-slot content.
+ * @method getTextLabel - Returns the normalized accessibility-visible text of the default slot.
  * @status stable
  * @since 4.0.0
  */
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private readonly slotPresence = new SlotPresenceController(this);
@@ -90,7 +113,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   @property({ reflect: true }) value = '';
 
   /** Disable selecting this option. */
-  @property({ type: Boolean }) disabled = false;
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Whether this option is currently selected. Parent controls write this live, property-only
    * state without changing `defaultSelected` or the declarative reset attribute.
@@ -174,21 +197,22 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.requestUpdate('label', old);
   }
 
-  /** Plain-text label generated from default-slot content, excluding every named adornment slot. */
+  /** Accessible text generated from flattened default-slot content, excluding named adornments. */
   get defaultLabel(): string {
-    if (typeof Node === 'undefined' || !('childNodes' in this)) return '';
+    if (!('childNodes' in this)) return '';
     return Array.from(this.childNodes)
-      .filter((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) return true;
-        return !(node as Element).getAttribute('slot');
-      })
-      .map((node) => node.textContent ?? '')
+      .filter((node) => this.isDefaultLabelNode(node))
+      // Pickers deliberately project option hosts through a hidden data-source slot. Direct roots
+      // remain readable there; composed exposure begins only when a forwarding slot crosses into
+      // consumer-owned content.
+      .map((node) => this.accessibleLabelText(node, true, false))
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
   private labelObserver?: MutationObserver;
+  private observedDefaultLabel = '';
 
   private readonly handlePointerEnter = (): void => {
     this.hasHover = true;
@@ -211,10 +235,189 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   };
 
   private readonly handleLabelMutation = (): void => {
-    // `slotchange` does not fire when an already-assigned node mutates its own text. This update
-    // lets the slot-presence controller recompute empty adornment wrappers in that case too.
+    const next = this.defaultLabel;
     this.requestUpdate();
+    if (next === this.observedDefaultLabel) return;
+    this.observedDefaultLabel = next;
     this.emit('lr-option-change');
+  };
+
+  private isDefaultLabelNode(node: Node): boolean {
+    if (node.nodeType !== 1) return true;
+    const slotName = (node as Element).getAttribute('slot');
+    return slotName === null || slotName === '';
+  }
+
+  private labelForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return top.parentNode === this && this.isDefaultLabelNode(top);
+    });
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: [
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'hidden',
+        'inert',
+        'open',
+        'slot',
+        'style',
+      ],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private composedParentForLabelNode(node: Node): Element | null {
+    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
+    if (assignedSlot) return assignedSlot;
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode() as Document | ShadowRoot;
+    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
+  }
+
+  /** The consumer-owned ancestry where forwarded content was authored. Unlike the composed parent
+   * walk used to bind observers, this deliberately ignores `assignedSlot`: a picker projects its
+   * option through an internal `<slot hidden>` as a data source, and that implementation detail
+   * must not erase the option's label. */
+  private sourceParentForLabelNode(node: Node): Element | null {
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode() as Document | ShadowRoot;
+    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
+  }
+
+  private isClosedSourceDetailsBranch(details: Element, branch: Element | null): boolean {
+    if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) {
+      return false;
+    }
+    const summary = Array.from(details.children).find((child) => child.localName === 'summary');
+    return branch !== summary;
+  }
+
+  /** Whether a forwarded root is exposed in its authored/source tree. Computed visibility on the
+   * root already includes inherited `visibility` (and any descendant restoration); hard-hidden
+   * ancestors and closed-details branches are then walked without following picker-owned slots. */
+  private isSourceLabelVisible(node: Node): boolean {
+    const target = node.nodeType === 1 ? (node as Element) : this.sourceParentForLabelNode(node);
+    if (!target?.isConnected) return false;
+    if (
+      isAccessibilitySubtreeExcluded(target) ||
+      isAccessibilityVisibilityHidden(target)
+    ) {
+      return false;
+    }
+
+    let branch: Element | null = target;
+    let ancestor = this.sourceParentForLabelNode(target);
+    while (ancestor) {
+      if (
+        isAccessibilitySubtreeExcluded(ancestor) ||
+        this.isClosedSourceDetailsBranch(ancestor, branch)
+      ) {
+        return false;
+      }
+      branch = ancestor;
+      ancestor = this.sourceParentForLabelNode(ancestor);
+    }
+    return true;
+  }
+
+  private observeLabelAncestors(node: Node): void {
+    const observer = this.labelObserver;
+    if (!observer) return;
+    let ancestor = this.composedParentForLabelNode(node);
+    while (ancestor) {
+      // `this` and its light-DOM descendants already have one full-subtree registration. Calling
+      // observe() again with attribute-only options would replace that registration rather than
+      // augment it. Consumer-owned composed ancestors still need their own registration because
+      // a wrapper class/style can change an assigned root through `::slotted()` CSS.
+      if (ancestor !== this && !this.contains(ancestor)) {
+        observer.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'],
+        });
+      }
+      ancestor = composedParentElement(ancestor);
+    }
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    for (const slot of this.labelForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) {
+        this.observeLabelNode(assigned);
+        this.observeLabelAncestors(assigned);
+      }
+    }
+  }
+
+  private accessibleLabelText(
+    node: Node,
+    inheritedTextVisible?: boolean,
+    requireComposedVisibility = false,
+  ): string {
+    if (node.nodeType === 3) {
+      if (inheritedTextVisible === undefined) {
+        const parent = this.sourceParentForLabelNode(node);
+        inheritedTextVisible =
+          parent !== null &&
+          !isAccessibilitySubtreeExcluded(parent) &&
+          !isAccessibilityVisibilityHidden(parent) &&
+          (!requireComposedVisibility || this.isSourceLabelVisible(node));
+      }
+      return inheritedTextVisible ? node.textContent ?? '' : '';
+    }
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+    // `visibility:hidden` descendants may restore visibility. Hard-hidden composed ancestors and
+    // closed-details branches do prune an externally forwarded root.
+    if (requireComposedVisibility && ownTextVisible && !this.isSourceLabelVisible(element)) return '';
+    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
+    if (ariaLabel) return ariaLabel;
+    const forwardingSlot = element.localName === 'slot' ? (element as HTMLSlotElement) : null;
+    const hasAssignment = forwardingSlot !== null && forwardingSlot.assignedNodes().length > 0;
+    const children = hasAssignment
+      ? forwardingSlot.assignedNodes({ flatten: true })
+      : Array.from(element.childNodes);
+    return Array.from(children)
+      .map((child) => {
+        const externalAssignment = hasAssignment && !this.contains(child);
+        return this.accessibleLabelText(
+          child,
+          externalAssignment ? undefined : ownTextVisible,
+          requireComposedVisibility || externalAssignment,
+        );
+      })
+      .join(' ');
+  }
+
+  private handleLabelSlotChange = (event: Event): void => {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (
+      target.getRootNode() !== this.renderRoot &&
+      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+    ) return;
+    this.bindLabelObserverTargets();
+    this.handleLabelMutation();
   };
 
   override connectedCallback(): void {
@@ -226,25 +429,30 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.syncOptionState();
     // `defaultLabel` derives from light-DOM content, so direct text mutations need their own
     // observer to notify a parent combobox/select that its cached row data is stale.
-    this.labelObserver = new MutationObserver(this.handleLabelMutation);
-    this.labelObserver.observe(this, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.handleLabelMutation();
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.handleLabelSlotChange);
+    this.bindLabelObserverTargets();
+    this.observedDefaultLabel = this.defaultLabel;
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.removeEventListener('pointerenter', this.handlePointerEnter);
     this.removeEventListener('pointerleave', this.handlePointerLeave);
     this.removeEventListener('focusin', this.handleFocusIn);
     this.removeEventListener('focusout', this.handleFocusOut);
+    this.removeEventListener('slotchange', this.handleLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
     this.hasHover = false;
     this.hasCurrent = false;
     this.syncOptionState();
+    super.disconnectedCallback();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -281,7 +489,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     setCustomState(this.optionInternals, 'hover', this.hasHover && !this.disabled);
   }
 
-  /** Returns a plain-text label generated from the default-slot content. */
+  /** Returns an accessibility-visible label generated from flattened default-slot content. */
   getTextLabel(): string {
     return this.defaultLabel;
   }
@@ -297,7 +505,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
         <span part="start prefix" aria-hidden="true" ?hidden=${!hasStart}>
           <slot name="start"></slot><slot name="prefix"></slot>
         </span>
-        <span part="label"><slot></slot></span>
+        <span part="label"><slot @slotchange=${this.handleLabelSlotChange}></slot></span>
         <span part="end suffix" aria-hidden="true" ?hidden=${!hasEnd}>
           <slot name="end"></slot><slot name="suffix"></slot>
         </span>

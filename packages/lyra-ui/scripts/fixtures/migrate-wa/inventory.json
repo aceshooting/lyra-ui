@@ -9,8 +9,16 @@
       "surface": {
         "attributes": [],
         "properties": [],
-        "slots": [{ "name": "" }],
-        "events": [{ "name": "lr-resize" }],
+        "slots": [
+          {
+            "name": ""
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-resize"
+          }
+        ],
         "parts": [],
         "cssProperties": [],
         "methods": []
@@ -22,8 +30,13 @@
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
-        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-        "cssProperties": [], "methods": []
+        "attributes": [],
+        "properties": [],
+        "slots": [],
+        "events": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": []
       }
     },
     {
@@ -33,16 +46,46 @@
       "optionalPeers": [],
       "surface": {
         "attributes": [
-          { "name": "new-attribute" },
-          { "name": "mode" },
-          { "name": "placement" }
+          {
+            "name": "new-attribute"
+          },
+          {
+            "name": "mode"
+          },
+          {
+            "name": "placement"
+          }
         ],
-        "properties": [{ "name": "newProperty" }],
-        "slots": [{ "name": "new-slot" }],
-        "events": [{ "name": "lr-new-event" }],
-        "parts": [{ "name": "new-part" }],
-        "cssProperties": [{ "name": "--lr-new-color" }],
-        "methods": [{ "name": "newMethod" }]
+        "properties": [
+          {
+            "name": "newProperty"
+          }
+        ],
+        "slots": [
+          {
+            "name": "new-slot"
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-new-event"
+          }
+        ],
+        "parts": [
+          {
+            "name": "new-part"
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-new-color"
+          }
+        ],
+        "methods": [
+          {
+            "name": "newMethod"
+          }
+        ]
       }
     },
     {
@@ -51,8 +94,13 @@
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
-        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-        "cssProperties": [], "methods": []
+        "attributes": [],
+        "properties": [],
+        "slots": [],
+        "events": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": []
       }
     },
     {
@@ -61,8 +109,13 @@
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
-        "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-        "cssProperties": [], "methods": []
+        "attributes": [],
+        "properties": [],
+        "slots": [],
+        "events": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": []
       }
     }
   ],
@@ -70,7 +123,12 @@
   "upstreams": {
     "shoelace": {
       "packages": [
-        { "name": "@shoelace-style/shoelace", "tiers": ["free"] }
+        {
+          "name": "@shoelace-style/shoelace",
+          "tiers": [
+            "free"
+          ]
+        }
       ],
       "components": [
         {
@@ -79,8 +137,16 @@
           "surface": {
             "attributes": [],
             "properties": [],
-            "slots": [{ "name": "" }],
-            "events": [{ "name": "sl-resize" }],
+            "slots": [
+              {
+                "name": ""
+              }
+            ],
+            "events": [
+              {
+                "name": "sl-resize"
+              }
+            ],
             "parts": [],
             "cssProperties": [],
             "methods": []
@@ -90,53 +156,115 @@
           "tag": "sl-static",
           "tier": "free",
           "surface": {
-            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-            "cssProperties": [], "methods": []
+            "attributes": [],
+            "properties": [],
+            "slots": [],
+            "events": [],
+            "parts": [],
+            "cssProperties": [],
+            "methods": []
           }
         }
       ]
     },
     "webawesome": {
       "packages": [
-        { "name": "@awesome.me/webawesome", "tiers": ["free"] },
-        { "name": "@awesome.me/webawesome-pro", "tiers": ["free", "pro"] }
+        {
+          "name": "@awesome.me/webawesome",
+          "tiers": [
+            "free"
+          ]
+        },
+        {
+          "name": "@awesome.me/webawesome-pro",
+          "tiers": [
+            "free",
+            "pro"
+          ]
+        }
       ],
       "components": [
         {
           "tag": "wa-widget",
           "tier": "free",
           "surface": {
-            "attributes": [{ "name": "old-attribute" }, { "name": "mode" }],
-            "properties": [{ "name": "oldProperty" }],
-            "slots": [{ "name": "old-slot" }],
-            "events": [{ "name": "wa-old-event" }],
-            "parts": [{ "name": "old-part" }],
-            "cssProperties": [{ "name": "--wa-old-color" }],
-            "methods": [{ "name": "oldMethod" }]
+            "attributes": [
+              {
+                "name": "old-attribute"
+              },
+              {
+                "name": "mode"
+              }
+            ],
+            "properties": [
+              {
+                "name": "oldProperty"
+              }
+            ],
+            "slots": [
+              {
+                "name": "old-slot"
+              }
+            ],
+            "events": [
+              {
+                "name": "wa-old-event"
+              }
+            ],
+            "parts": [
+              {
+                "name": "old-part"
+              }
+            ],
+            "cssProperties": [
+              {
+                "name": "--wa-old-color"
+              }
+            ],
+            "methods": [
+              {
+                "name": "oldMethod"
+              }
+            ]
           }
         },
         {
           "tag": "wa-data-grid",
           "tier": "pro",
           "surface": {
-            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-            "cssProperties": [], "methods": []
+            "attributes": [],
+            "properties": [],
+            "slots": [],
+            "events": [],
+            "parts": [],
+            "cssProperties": [],
+            "methods": []
           }
         },
         {
           "tag": "wa-include",
           "tier": "free",
           "surface": {
-            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-            "cssProperties": [], "methods": []
+            "attributes": [],
+            "properties": [],
+            "slots": [],
+            "events": [],
+            "parts": [],
+            "cssProperties": [],
+            "methods": []
           }
         },
         {
           "tag": "wa-deferred",
           "tier": "pro",
           "surface": {
-            "attributes": [], "properties": [], "slots": [], "events": [], "parts": [],
-            "cssProperties": [], "methods": []
+            "attributes": [],
+            "properties": [],
+            "slots": [],
+            "events": [],
+            "parts": [],
+            "cssProperties": [],
+            "methods": []
           }
         }
       ]
@@ -152,13 +280,36 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
-        "runtime": { "registration": "all", "optionalPeers": [] },
-        "behaviorReviewFlags": []
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
         "attributes": [],
         "properties": [],
-        "events": [{ "from": "sl-resize", "to": "lr-resize" }],
+        "events": [
+          {
+            "from": "sl-resize",
+            "to": "lr-resize"
+          }
+        ],
         "slots": [],
         "parts": [],
         "cssProperties": [],
@@ -176,12 +327,36 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
-        "runtime": { "registration": "all", "optionalPeers": [] },
-        "behaviorReviewFlags": []
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
-        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
-        "cssProperties": [], "methods": [], "defaults": []
+        "attributes": [],
+        "properties": [],
+        "events": [],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
       },
       "drift": []
     },
@@ -194,17 +369,70 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
-        "runtime": { "registration": "all", "optionalPeers": [] },
-        "behaviorReviewFlags": []
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
-        "attributes": [{ "from": "old-attribute", "to": "new-attribute" }],
-        "properties": [{ "from": "oldProperty", "to": "newProperty" }],
-        "events": [{ "from": "wa-old-event", "to": "lr-new-event" }],
-        "slots": [{ "from": "old-slot", "to": "new-slot" }],
-        "parts": [{ "from": "old-part", "to": "new-part" }],
-        "cssProperties": [{ "from": "--wa-old-color", "to": "--lr-new-color" }],
-        "methods": [{ "from": "oldMethod", "to": "newMethod" }],
+        "attributes": [
+          {
+            "from": "old-attribute",
+            "to": "new-attribute"
+          }
+        ],
+        "properties": [
+          {
+            "from": "oldProperty",
+            "to": "newProperty"
+          }
+        ],
+        "events": [
+          {
+            "from": "wa-old-event",
+            "to": "lr-new-event"
+          }
+        ],
+        "slots": [
+          {
+            "from": "old-slot",
+            "to": "new-slot"
+          }
+        ],
+        "parts": [
+          {
+            "from": "old-part",
+            "to": "new-part"
+          }
+        ],
+        "cssProperties": [
+          {
+            "from": "--wa-old-color",
+            "to": "--lr-new-color"
+          }
+        ],
+        "methods": [
+          {
+            "from": "oldMethod",
+            "to": "newMethod"
+          }
+        ],
         "defaults": [
           {
             "memberKind": "attribute",
@@ -222,15 +450,51 @@
         ]
       },
       "drift": [
-        { "code": "missing-attribute", "section": "attributes", "member": "old-attribute" },
-        { "code": "missing-property", "section": "properties", "member": "oldProperty" },
-        { "code": "missing-event", "section": "events", "member": "wa-old-event" },
-        { "code": "missing-slot", "section": "slots", "member": "old-slot" },
-        { "code": "missing-part", "section": "parts", "member": "old-part" },
-        { "code": "missing-css-property", "section": "cssProperties", "member": "--wa-old-color" },
-        { "code": "missing-method", "section": "methods", "member": "oldMethod" },
-        { "code": "default-mismatch", "section": "attributes", "member": "mode" },
-        { "code": "default-mismatch", "section": "attributes", "member": "placement" }
+        {
+          "code": "missing-attribute",
+          "section": "attributes",
+          "member": "old-attribute"
+        },
+        {
+          "code": "missing-property",
+          "section": "properties",
+          "member": "oldProperty"
+        },
+        {
+          "code": "missing-event",
+          "section": "events",
+          "member": "wa-old-event"
+        },
+        {
+          "code": "missing-slot",
+          "section": "slots",
+          "member": "old-slot"
+        },
+        {
+          "code": "missing-part",
+          "section": "parts",
+          "member": "old-part"
+        },
+        {
+          "code": "missing-css-property",
+          "section": "cssProperties",
+          "member": "--wa-old-color"
+        },
+        {
+          "code": "missing-method",
+          "section": "methods",
+          "member": "oldMethod"
+        },
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "mode"
+        },
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "placement"
+        }
       ]
     },
     {
@@ -242,12 +506,38 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "warning-required",
-        "runtime": { "registration": "all", "optionalPeers": [] },
-        "behaviorReviewFlags": ["conceptual-contract"]
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "conceptual-contract"
+        ],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
-        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
-        "cssProperties": [], "methods": [], "defaults": []
+        "attributes": [],
+        "properties": [],
+        "events": [],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
       },
       "drift": []
     },
@@ -260,12 +550,38 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "warning-required",
-        "runtime": { "registration": "all", "optionalPeers": [] },
-        "behaviorReviewFlags": ["remote-content-security"]
+        "runtime": {
+          "registration": "all",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "remote-content-security"
+        ],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
-        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
-        "cssProperties": [], "methods": [], "defaults": []
+        "attributes": [],
+        "properties": [],
+        "events": [],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
       },
       "drift": []
     },
@@ -278,14 +594,54 @@
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "unreviewed",
-        "runtime": { "registration": "unavailable", "optionalPeers": [] },
-        "behaviorReviewFlags": ["missing-target"]
+        "runtime": {
+          "registration": "unavailable",
+          "optionalPeers": []
+        },
+        "behaviorReviewFlags": [
+          "missing-target"
+        ],
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "synthetic",
+          "targetProfile": "synthetic",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "equivalent",
+            "missing": [],
+            "additions": []
+          },
+          "rationale": "The synthetic source and target use the same accessibility behavior profile."
+        }
       },
       "rewrites": {
-        "attributes": [], "properties": [], "events": [], "slots": [], "parts": [],
-        "cssProperties": [], "methods": [], "defaults": []
+        "attributes": [],
+        "properties": [],
+        "events": [],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
       },
       "drift": []
     }
-  ]
+  ],
+  "accessibilityProfiles": {
+    "synthetic": {
+      "description": "Synthetic migration-contract behavior profile.",
+      "semantics": [
+        "transparent-content"
+      ],
+      "naming": [],
+      "keyboard": [],
+      "focus": [],
+      "states": [],
+      "announcements": [],
+      "motion": []
+    }
+  }
 }

@@ -23,6 +23,12 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './av-player.styles.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type AvKind = 'audio' | 'video';
 
@@ -145,7 +151,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart cue-time - A cue's timestamp label.
  * @csspart cue-speaker - A cue's speaker label.
  * @csspart cue-text - A cue's text.
- * @csspart error - The error region.
+ * @csspart error - Ordinary visible failure text. Fresh post-mount media/source failures append
+ *   the localized message to the shared light-DOM assertive announcement sink; an already-unsafe
+ *   initial `src` renders visibly without interrupting on mount.
  * @cssprop [--lr-av-player-transcript-height=var(--lr-size-16rem)] - Block size of the
  *   virtualized transcript list.
  * @cssprop [--lr-av-player-marker-active-color=var(--lr-color-brand)] - Outline color of the
@@ -173,6 +181,29 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @since 4.0.0
  */
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    avPlayerFailedToLoad: LYRA_DEFAULT_avPlayerFailedToLoad,
+    avPlayerLabel: LYRA_DEFAULT_avPlayerLabel,
+    avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
+    avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
+    avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
+    avPlayerTimeline: LYRA_DEFAULT_avPlayerTimeline,
+    avPlayerTranscript: LYRA_DEFAULT_avPlayerTranscript,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    pause: LYRA_DEFAULT_pause,
+    play: LYRA_DEFAULT_play,
+    viewerHighlightLabel: LYRA_DEFAULT_viewerHighlightLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   // `playbackRate` is declared here (rather than via a plain `@property()` decorator, like the rest
@@ -243,6 +274,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   });
   private lastTimeChangeAt = 0;
   private searchLocale = '';
+  private errorAnnouncementSink?: AnnouncementSink;
+  private resizeWindow?: Window;
 
   constructor() {
     super();
@@ -272,6 +305,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && changed.has('src') && this.src && !safeMediaSrc(this.src)) {
+      this.announceRenderError();
+    }
     if (
       this.hasUpdated &&
       (changed.has('src') || changed.has('kind') || changed.has('mimeType'))
@@ -304,13 +340,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncErrorAnnouncementSink();
     this.mediaController.reconnect();
-    // Added here (not in firstUpdated) so it pairs symmetrically with disconnectedCallback's
-    // removeEventListener: firstUpdated runs only once per element lifetime while
-    // disconnectedCallback runs on every disconnect, so a disconnect/reconnect cycle (e.g. a
-    // reparent) would otherwise leave the waveform permanently deaf to window resizes. Re-adding
-    // the same listener reference on the initial connect is a native no-op, so no guard is needed.
-    window.addEventListener('resize', this.onWindowResize);
+    // Added here (not in firstUpdated) so every reconnect, including cross-document adoption,
+    // binds the window that actually owns the component and pairs with disconnectedCallback.
+    this.bindResizeWindow();
   }
 
   override firstUpdated(): void {
@@ -319,8 +353,47 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   override disconnectedCallback(): void {
     this.mediaController.disconnect();
+    this.releaseErrorAnnouncementSink();
+    this.unbindResizeWindow();
     super.disconnectedCallback();
-    window.removeEventListener('resize', this.onWindowResize);
+  }
+
+  adoptedCallback(): void {
+    this.releaseErrorAnnouncementSink();
+    this.syncErrorAnnouncementSink();
+    this.bindResizeWindow();
+  }
+
+  private syncErrorAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseErrorAnnouncementSink();
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseErrorAnnouncementSink(): void {
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+  }
+
+  private announceRenderError(): void {
+    this.errorAnnouncementSink?.announce(this.localize('avPlayerFailedToLoad'));
+  }
+
+  private bindResizeWindow(): void {
+    const nextWindow = this.isConnected ? this.ownerDocument.defaultView : null;
+    if (this.resizeWindow === nextWindow) return;
+    this.unbindResizeWindow();
+    this.resizeWindow = nextWindow ?? undefined;
+    this.resizeWindow?.addEventListener('resize', this.onWindowResize);
+  }
+
+  private unbindResizeWindow(): void {
+    this.resizeWindow?.removeEventListener('resize', this.onWindowResize);
+    this.resizeWindow = undefined;
   }
 
   private onWindowResize = (): void => this.drawWaveform();
@@ -338,7 +411,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   };
 
   private mediaRef = (el?: Element): void => {
-    this.mediaController.attach(el instanceof HTMLMediaElement ? el : undefined);
+    const media = el?.localName === 'audio' || el?.localName === 'video'
+      ? (el as HTMLMediaElement)
+      : undefined;
+    this.mediaController.attach(media);
   };
 
   /** Proxies the native media element's `play()` and preserves its promise/rejection. Resolves
@@ -383,6 +459,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
   private onMediaError(): void {
     this.renderError = true;
+    this.announceRenderError();
     this.emit('lr-render-error', { error: new Error('The media failed to load.') });
   }
 
@@ -416,6 +493,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private onPlaybackFailure = (error: unknown): void => {
     this.renderError = true;
+    this.announceRenderError();
     this.emit('lr-render-error', { error });
   };
 
@@ -535,7 +613,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private drawWaveform(): void {
     const canvas = this.canvasEl;
     if (!canvas || !this.peaks.length) return;
-    const dpr = window.devicePixelRatio || 1;
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const dpr = ownerWindow.devicePixelRatio || 1;
     const width = canvas.clientWidth || 1;
     const height = canvas.clientHeight || 1;
     canvas.width = Math.floor(width * dpr);
@@ -544,9 +624,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const computed = getComputedStyle(this);
+    const computed = ownerWindow.getComputedStyle(this);
     const tokenColor = computed.getPropertyValue('--lr-color-brand').trim();
-    const color = CSS.supports('color', tokenColor) ? tokenColor : computed.color;
+    const color = ownerWindow.CSS.supports('color', tokenColor) ? tokenColor : computed.color;
     ctx.fillStyle = color;
     const barWidth = width / this.peaks.length;
     this.peaks.forEach((peak, i) => {
@@ -699,7 +779,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const kind = this.detectedKind();
     if (!safeSrc && this.src) {
       return html`<div part="base" aria-label=${label}>
-        <div part="error" role="alert">${this.localize('avPlayerFailedToLoad')}</div>
+        <div part="error">${this.localize('avPlayerFailedToLoad')}</div>
         ${this.renderAnchorLiveRegion()}
       </div>`;
     }
@@ -728,7 +808,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             ${ref(this.mediaRef)}
             >${this.renderTracks()}</video
           >`)}
-      ${this.renderError ? html`<div part="error" role="alert">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
+      ${this.renderError ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
       <div part="toolbar">
         <span class="rate-select-wrapper">
           <select

@@ -2,7 +2,7 @@
 
 # `lr-pan-zoom`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPanZoom`, also available unregistered from `@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

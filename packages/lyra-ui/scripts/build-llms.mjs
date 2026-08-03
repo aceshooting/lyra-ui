@@ -24,6 +24,7 @@ import {
   validateLocalMigrations,
   validateMappingNormalizations,
 } from './component-inventory.mjs';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const llmsDir = path.join(packageDir, 'llms');
@@ -71,8 +72,9 @@ function summarize(description) {
 }
 
 export function readTagFacts(manifest) {
+  const expandedManifest = expandManifestInheritance(manifest);
   const tags = new Map();
-  for (const mod of manifest.modules ?? []) {
+  for (const mod of expandedManifest.modules ?? []) {
     const m = mod.path.match(/^src\/components\/([^/]+)\/([^/]+)\//);
     if (!m) continue;
     for (const decl of mod.declarations ?? []) {
@@ -144,19 +146,43 @@ function firstSentence(section) {
 // ---------------------------------------------------------------------------------------------
 
 export function buildTokens() {
-  const src = read('src', 'internal', 'tokens.styles.ts');
-  const rows = [];
-  for (const line of src.split('\n')) {
-    const m = line.match(/^\s*(--lr-[a-z0-9-]+):\s*var\((--lr-theme-[a-z0-9-]+),\s*(.+?)\);\s*$/);
-    if (m) rows.push({ token: m[1], input: m[2], fallback: m[3].trim() });
+  const input = JSON.parse(read('scripts', 'fixtures', 'token-docs.generated.json'));
+  if (
+    input.schemaVersion !== 1 ||
+    input.authority !== 'tokens/canonical-tokens.json' ||
+    !Array.isArray(input.tokens)
+  ) {
+    throw new Error(
+      'Cannot build token reference: token-docs.generated.json must be a schema-version 1 canonical-token projection.',
+    );
   }
-  const plain = [];
-  for (const line of src.split('\n')) {
-    const m = line.match(/^\s*(--lr-[a-z0-9-]+):\s*(?!var\(--lr-theme)([^;]+);\s*$/);
-    if (m) plain.push({ token: m[1], value: m[2].trim() });
+  const shared = input.tokens.filter((token) => token.scope === 'shared');
+  if (
+    shared.some(
+      (token) =>
+        typeof token.name !== 'string' ||
+        !token.name.startsWith('--lr-') ||
+        typeof token.values?.light !== 'string',
+    )
+  ) {
+    throw new Error('Cannot build token reference: every shared token needs a name and light value.');
   }
+  const rows = shared.filter((token) => typeof token.themeInput === 'string');
+  const plain = shared.filter((token) => token.themeInput === undefined);
+  const fallback = (token) => {
+    const prefix = `var(${token.themeInput}, `;
+    if (!token.values.light.startsWith(prefix) || !token.values.light.endsWith(')')) {
+      throw new Error(`${token.name}: light value must read its declared themeInput with a fallback.`);
+    }
+    return token.values.light.slice(prefix.length, -1);
+  };
+  const modeOverrides = (token) =>
+    ['dark', 'forcedColors', 'reducedMotion']
+      .filter((mode) => token.values[mode] !== undefined)
+      .map((mode) => `${mode}: \`${token.values[mode]}\``)
+      .join('<br>') || '—';
   const body = [
-    GENERATED('src/internal/tokens.styles.ts'),
+    GENERATED('scripts/fixtures/token-docs.generated.json'),
     '',
     '# Design tokens',
     '',
@@ -177,9 +203,12 @@ export function buildTokens() {
     '',
     `## Direct theme-backed tokens (${rows.length})`,
     '',
-    '| Internal token | `--lr-theme-*` input | Fallback |',
-    '|---|---|---|',
-    ...rows.map((r) => `| \`${r.token}\` | \`${r.input}\` | \`${r.fallback}\` |`),
+    '| Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |',
+    '|---|---|---|---|',
+    ...rows.map(
+      (token) =>
+        `| \`${token.name}\` | \`${token.themeInput}\` | \`${fallback(token)}\` | ${modeOverrides(token)} |`,
+    ),
   ];
   if (plain.length) {
     body.push(
@@ -190,9 +219,11 @@ export function buildTokens() {
       'the tokens or environment values they reference; fixed contract constants are intentionally',
       'not theme inputs.',
       '',
-      '| Token | Value |',
-      '|---|---|',
-      ...plain.map((r) => `| \`${r.token}\` | \`${r.value}\` |`),
+      '| Token | Light/default value | Mode overrides |',
+      '|---|---|---|',
+      ...plain.map(
+        (token) => `| \`${token.name}\` | \`${token.values.light}\` | ${modeOverrides(token)} |`,
+      ),
     );
   }
   return body.join('\n') + '\n';
@@ -469,35 +500,36 @@ export function buildMigration() {
     'mappings; `warning-required`, `conceptual-only`, `unsupported`, and unknown tags stay unchanged',
     'and receive location-aware warnings.',
     '',
-    '```bash',
-    'pnpm migrate-wa -- --dry-run --report=lyra-migration.json src',
-    '```',
-    '',
-    'The same version-matched CLI ships with the package and can be run without a repository',
-    'checkout. Replace `<version>` with the installed Lyra major/minor/patch you are targeting:',
+    'The version-matched CLI ships with the package and runs without a repository checkout.',
+    'Replace `<version>` with the installed Lyra major/minor/patch you are targeting:',
     '',
     '```bash',
-    'npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check src',
+    'npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check --report=lyra-migration.json src',
     '```',
     '',
     '`--check` never writes source files and exits nonzero while rewrites or warnings remain, which',
     'makes it suitable for CI after an applied migration.',
     '',
-    'The tool scans HTML, JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites',
-    'inventory-declared tags, members, defaults, and supported side-effect registration imports.',
+    'The supported upstream identities are `@awesome.me/webawesome` and `@awesome.me/webawesome-pro`',
+    'for Web Awesome, plus `@shoelace-style/shoelace`. The tool scans HTML, standalone CSS,',
+    'JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites inventory-declared',
+    'tags, members, defaults, and supported side-effect registration imports.',
     'Imports with bindings remain manual because exported names cannot be inferred safely. An',
     'aliased component value that uses a rewritten member blocks that mapping across the scanned',
     'target set, preventing a registration import from changing while an old member remains. A root',
-    'Web Awesome or Shoelace registration import changes only when that package identity has a',
-    'proven-safe automatic component use and no manual component use anywhere in the scanned target',
+    'Web Awesome or Shoelace registration import changes only when that package identity and tier',
+    'prove the registration closure and no manual component use exists anywhere in the scanned target',
     'set. Root-included targets use `@aceshooting/lyra-ui/all.js`; root-excluded targets receive granular registration imports.',
+    'An automatic-looking tag with no matching side-effect registration in the scanned target set',
+    'stays unchanged with `REGISTRATION_CLOSURE_REQUIRED`; include the registration-owning entry file',
+    'in the scan instead of accepting an inert `lr-*` result.',
     'Targets with optional runtime peers also emit an `OPTIONAL_PEER_REQUIRED` report entry naming',
     'each package that must be installed.',
     'Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are',
     'left alone.',
     '',
     'The JSON migration report records every rewrite and warning with its file, line, column,',
-    'origin, tag/member, action, target, and warning code. Run without `--dry-run` only after inspecting',
+    'origin, tag/member, action, target, and warning code. Run without `--check` only after inspecting',
     'that report and the target component reference in `llms/components/<tag>.md`.',
     '',
     '`dir` and `lang` are platform-global HTML passthrough attributes, not component-member drift.',
@@ -512,7 +544,7 @@ export function buildMigration() {
     'inverse `without-arrow` spelling.',
     '',
     '```bash',
-    'pnpm migrate-wa -- --origin=lyra-v7 --dry-run --report=lyra-v7-migration.json src',
+    'npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check --report=lyra-v7-migration.json src',
     '```',
     '',
     'Opaque framework spreads and DOM aliases block that component profile across the scanned target',
@@ -561,10 +593,10 @@ function buildIndex(sectionsByFamily, tagFacts) {
     'path, optional peers, properties, events, slots, CSS parts, themeable custom properties, a usage',
     'snippet, and known gotchas — a few hundred tokens instead of the whole catalog.',
     '',
-    '**Importing.** Every entry below shows the path to append to `@aceshooting/lyra-ui/components/`:',
-    "`import '@aceshooting/lyra-ui/components/data/table/table.js';` registers `<lr-table>`. The path",
-    'is NOT `components/<tag>/` — it always carries the family segment. Swap `.js` for `.class.js` to',
-    'get the class without registering the tag.',
+    '**Importing.** Registration paths are stable aliases derived from the tag:',
+    "`import '@aceshooting/lyra-ui/components/lr-table.js';` registers `<lr-table>` and remains",
+    'valid if its internal family folder moves. Class-only `.class.js` entries intentionally keep',
+    'their owning family path and do not register the tag.',
     '',
     '**Everything else.** Library-wide behavior (base class, events, form association, `locale`/',
     '`strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.',
@@ -580,7 +612,7 @@ function buildIndex(sectionsByFamily, tagFacts) {
       for (const tag of section.tags) {
         const facts = tagFacts.get(tag);
         if (!facts) continue;
-        const shortPath = facts.importPath.replace('@aceshooting/lyra-ui/components/', '');
+        const shortPath = `${tag}.js`;
         out.push(
           `- \`${tag}\` · ${shortPath} · \`${facts.status}\` since \`${facts.since}\` — ` +
             `${facts.purpose || fallback}`,
@@ -612,7 +644,8 @@ function buildComponentFile(tag, section, tagFacts, peersByTag) {
     '',
     `# \`${tag}\``,
     '',
-    `- **Import** \`import '${facts.importPath}';\` (registers the tag; side-effect import)`,
+    `- **Import** \`import '@aceshooting/lyra-ui/components/${tag}.js';\` ` +
+      '(stable tag alias; registers the tag)',
     `- **Class** \`${facts.className}\`, also available unregistered from` +
       ` \`${facts.importPath.replace(/\.js$/, '.class.js')}\``,
     `- **Family** \`components/${facts.family}/\` — see \`llms/index.md\` for its siblings`,
@@ -655,7 +688,8 @@ export function build({ write = true } = {}) {
   const sectionByTag = new Map();
   const problems = [];
   for (const [tag, facts] of tagFacts) {
-    if (!['stable', 'experimental'].includes(facts.status) || !/^\d+\.\d+\.\d+/.test(facts.since ?? '')) {
+    if (!['stable', 'experimental'].includes(facts.status) ||
+        !/^(?:\d+\.\d+\.\d+|unreleased)$/.test(facts.since ?? '')) {
       problems.push(`\`${tag}\` has no valid CEM status/since metadata.`);
     }
   }

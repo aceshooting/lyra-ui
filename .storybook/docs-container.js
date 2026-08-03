@@ -1,9 +1,34 @@
 import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { createElement, useEffect, useLayoutEffect, useState } from 'react';
 import { GLOBALS_UPDATED } from 'storybook/internal/core-events';
+import { create } from 'storybook/theming';
 import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
 
-import { normalizeStoryThemeName, storyTheme } from './story-theme.js';
+import { normalizeStoryThemeName, storyColor, storyToken } from './theme-contract.js';
+
+function productionDocsTheme(themeName) {
+  return create({
+    base: normalizeStoryThemeName(themeName),
+    colorPrimary: storyColor('brand'),
+    colorSecondary: storyColor('brand'),
+    appBg: storyColor('surface'),
+    appContentBg: storyColor('surface'),
+    appPreviewBg: storyColor('surface'),
+    appBorderColor: storyColor('border'),
+    appHoverBg: storyColor('brandQuiet'),
+    textColor: storyColor('text'),
+    textMutedColor: storyColor('quiet'),
+    barBg: storyColor('surface'),
+    barTextColor: storyColor('quiet'),
+    barSelectedColor: storyColor('brand'),
+    barHoverColor: storyColor('text'),
+    inputBg: storyColor('surface'),
+    inputBorder: storyColor('border'),
+    inputTextColor: storyColor('text'),
+    fontBase: storyToken('--lr-theme-font-family-body'),
+    fontCode: storyToken('--lr-theme-font-family-mono'),
+  });
+}
 
 function themeFromUrl() {
   try {
@@ -30,9 +55,11 @@ function initialThemeName(context) {
 
 export function LyraDocsContainer({ context, children }) {
   const [themeName, setThemeName] = useState(() => initialThemeName(context));
+  const [docsTheme, setDocsTheme] = useState(() => productionDocsTheme(themeName));
 
   useLayoutEffect(() => {
     setLyraTheme({ mode: themeName, accent: null });
+    setDocsTheme(productionDocsTheme(themeName));
   }, [themeName]);
 
   useEffect(() => {
@@ -45,7 +72,7 @@ export function LyraDocsContainer({ context, children }) {
 
   return createElement(
     DocsContainer,
-    { context, theme: storyTheme(themeName) },
+    { context, theme: docsTheme },
     children,
   );
 }

@@ -1,6 +1,12 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, state } from 'lit/decorators.js';
+import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+  isAccessibilityVisible,
+} from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -8,6 +14,11 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import type { MenuFocusTarget, SubmenuPanel } from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type MenuItemType = 'normal' | 'checkbox';
 export type MenuItemVariant = LyraVariant | 'default';
@@ -103,9 +114,15 @@ export interface LyraMenuItemEventMap {
  *
  * The submenu's `role="menu"` is named from this item's own label text, and
  * so is the item, which otherwise computes its accessible name from its
- * contents — those contents include the whole open submenu. A host-level
- * `aria-label` (or a `label`/`aria-label` on the submenu itself) wins over
- * both computed names.
+ * contents — those contents include the whole open submenu. Direct and
+ * flattened, forwarded default-slot labels are observed live so in-place
+ * text edits, reassignments, and relevant visibility changes update
+ * type-ahead and both computed names. Accessibility-hidden branches are
+ * omitted; a real forwarding-slot assignment remains authoritative even
+ * when hidden, while fallback contributes once no assignment remains. A
+ * host-level `aria-label` (or a `label`/`aria-label` on the submenu itself)
+ * wins by attribute presence, including an explicitly empty value and a
+ * value supplied after the initial computed name.
  *
  * `type="checkbox"` (mirroring `wa-dropdown-item`'s identical `type` option)
  * renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with
@@ -166,6 +183,18 @@ export interface LyraMenuItemEventMap {
  * @since 4.0.0
  */
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    items: LYRA_DEFAULT_items,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
   // knobs are already declared by the time `[part='base']` reads them.
   static override styles = [LyraElement.styles, sizes, styles];
@@ -221,13 +250,18 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  observer is what makes the item — rather than every parent that has to care — the authority on
    *  its own navigability. */
   private nativeStateObserver?: MutationObserver;
+  /** Watches default-slot label text, including flattened nodes projected from an outer wrapper. */
+  private labelObserver?: MutationObserver;
+  private labelObservationGeneration = 0;
   private announcedNativeState = '';
   private offsetPopup: HTMLElement | null = null;
   private previousPopupTranslate = '';
   private previousPopupTranslatePriority = '';
   // A consumer-authored name always wins; these record that the computed one was ours to update.
   private ownsAriaLabel = false;
+  private ownedAriaLabelValue: string | null = null;
   private ownsPanelAriaLabel = false;
+  private ownedPanelAriaLabelValue: string | null = null;
 
   /** Whether a nested `<lr-menu>` or direct mapped items are assigned to this item's `submenu`
    * slot, making it a submenu parent. */
@@ -260,13 +294,26 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // this property -- see the class doc.
     if (this.tabIndex !== 0) this.tabIndex = -1;
     this.announcedNativeState = this.nativeStateSignature();
-    if (typeof MutationObserver !== 'undefined') {
-      this.nativeStateObserver = new MutationObserver(this.onNativeStateMutation);
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (MutationObserverCtor) {
+      this.nativeStateObserver = new MutationObserverCtor(this.onNativeStateMutation);
       this.nativeStateObserver.observe(this, {
         attributes: true,
         attributeFilter: ['hidden', 'inert', 'aria-hidden'],
       });
+      this.labelObserver = new MutationObserverCtor(() => {
+        this.observeLabelContent();
+        this.syncSlottedLabel();
+      });
+      this.observeLabelContent();
     }
+    this.addEventListener('slotchange', this.onForwardedLabelSlotChange);
+    const labelGeneration = ++this.labelObservationGeneration;
+    void this.updateComplete.then(() => {
+      if (!this.isConnected || labelGeneration !== this.labelObservationGeneration) return;
+      this.observeLabelContent();
+      this.syncSlottedLabel();
+    });
     // A reconnect follows disconnectedCallback()'s restoration of the nested
     // popup's authored inline style. The panel itself is retained, so reapply
     // our live custom-property bridge once the current microtask's upgrades and
@@ -283,6 +330,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.submenuExpanded = false;
     this.nativeStateObserver?.disconnect();
     this.nativeStateObserver = undefined;
+    this.labelObservationGeneration += 1;
+    this.removeEventListener('slotchange', this.onForwardedLabelSlotChange);
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
     this.releaseSubmenuOffset();
   }
 
@@ -335,6 +386,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       if (this.ownsAriaLabel) {
         this.removeAttribute('aria-label');
         this.ownsAriaLabel = false;
+        this.ownedAriaLabelValue = null;
       }
     }
     this.toggleAttribute('submenu-open', this.submenuExpanded);
@@ -350,7 +402,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       // target or retain focus.
       if (changed.has('disabled') || changed.has('loading')) {
         this.tabIndex = -1;
-        if (document.activeElement === this) this.blur();
+        if (this.ownerDocument?.activeElement === this) this.blur();
       }
     }
     if (changed.has('disabled') || changed.has('loading')) {
@@ -427,20 +479,148 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.hasSuffixSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private onLabelSlotChange = (e: Event): void => {
-    this.slottedLabel = (e.target as HTMLSlotElement)
-      .assignedNodes({ flatten: true })
-      .map((node) => node.textContent ?? '')
+  private defaultLabelSlot(): HTMLSlotElement | null {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    return renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null;
+  }
+
+  private isDefaultLabelBranch(node: Node): boolean {
+    let top = node;
+    while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+    if (top.parentNode !== this) return false;
+    return top.nodeType !== 1 || ((top as Element).getAttribute('slot') ?? '') === '';
+  }
+
+  private labelForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) =>
+      this.isDefaultLabelBranch(slot));
+  }
+
+  private composedParentForNode(node: Node): Element | null {
+    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
+    if (assignedSlot) return assignedSlot;
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode() as Document | ShadowRoot;
+    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
+  }
+
+  /** Plain text that can contribute to the row's accessible name. Flattened forwarding slots are
+   * traversed without allowing their fallback to leak through a real (even hidden) assignment. */
+  private accessibleLabelText(node: Node, inheritedTextVisible?: boolean): string {
+    if (node.nodeType === 3) {
+      if (inheritedTextVisible === undefined) {
+        const parent = this.composedParentForNode(node);
+        inheritedTextVisible = parent !== null &&
+          !isAccessibilitySubtreeExcluded(parent) &&
+          !isAccessibilityVisibilityHidden(parent) &&
+          isAccessibilityVisible(parent);
+      }
+      return inheritedTextVisible ? node.textContent ?? '' : '';
+    }
+    if (node.nodeType !== 1) return '';
+
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+    // `visibility:hidden` does not prune a subtree: a descendant can restore visibility. For an
+    // otherwise visible node, however, this also catches hidden composed ancestors, closed
+    // `<details>` branches, and skipped `content-visibility:auto` content.
+    if (ownTextVisible && !isAccessibilityVisible(element)) return '';
+    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
+    if (ariaLabel) return ariaLabel;
+    const children =
+      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : Array.from(element.childNodes);
+    return Array.from(children)
+      .map((child) => this.accessibleLabelText(child, ownTextVisible))
+      .join(' ');
+  }
+
+  private readSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): string {
+    const nodes = slot
+      ? slot.assignedNodes({ flatten: true })
+      : Array.from(this.childNodes).filter((node) => this.isDefaultLabelBranch(node));
+    return nodes
+      .map((node) => this.accessibleLabelText(node))
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  private observeLabelAncestors(node: Node, options: MutationObserverInit): void {
+    const observer = this.labelObserver;
+    if (!observer) return;
+    let current = this.composedParentForNode(node);
+    while (current) {
+      // The full subtree observation below already owns this target. Calling observe() again with
+      // attribute-only options would replace that registration instead of adding another one.
+      if (current !== this && !this.contains(current)) observer.observe(current, options);
+      current = composedParentElement(current);
+    }
+  }
+
+  private observeLabelContent(): void {
+    const observer = this.labelObserver;
+    if (!observer) return;
+    observer.disconnect();
+    const options: MutationObserverInit = {
+      attributes: true,
+      attributeFilter: [
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'hidden',
+        'inert',
+        'label',
+        'open',
+        'slot',
+        'style',
+      ],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    };
+    observer.observe(this, options);
+    const slot = this.defaultLabelSlot();
+    for (const assigned of slot?.assignedNodes({ flatten: true }) ?? []) {
+      if (!this.contains(assigned)) observer.observe(assigned, options);
+      this.observeLabelAncestors(assigned, {
+        attributes: true,
+        attributeFilter: options.attributeFilter,
+      });
+    }
+  }
+
+  private syncSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): void {
+    const next = this.readSlottedLabel(slot);
+    if (next !== this.slottedLabel) this.slottedLabel = next;
+    if (this.submenuAssigned) this.applyComputedName();
     this.applyPanelName();
+  }
+
+  private onLabelSlotChange = (event: Event): void => {
+    this.observeLabelContent();
+    this.syncSlottedLabel(event.target as HTMLSlotElement);
+  };
+
+  private onForwardedLabelSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    if (!this.labelForwardingSlots().includes(slot)) return;
+    this.observeLabelContent();
+    this.syncSlottedLabel();
   };
 
   private onSubmenuSlotChange = (e: Event): void => {
+    const submenuSlot = e.target as HTMLSlotElement;
+    // Switching from the initial bare slot to the panel/items wrapper removes the old slot.
+    // Chromium can deliver that retired slot's final empty `slotchange` after the replacement is
+    // already live; treating it as authored removal disconnects and reconnects the same panel and
+    // loses ownership of the computed panel name.
+    if (!submenuSlot.isConnected || submenuSlot.getRootNode() !== this.renderRoot) return;
     // Matched by tag name rather than `instanceof`: importing the class here would close an
     // import cycle with menu.class.ts (see menu-shared.ts).
-    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    const assigned = submenuSlot.assignedElements({ flatten: true });
     const authoredPanel = assigned.find((element) => element.localName === tag('menu')) as
       | SubmenuPanel
       | undefined;
@@ -463,6 +643,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.submenuPanel?.removeEventListener('lr-hide', this.onPanelHide);
     this.submenuPanel = next;
     this.ownsPanelAriaLabel = false;
+    this.ownedPanelAriaLabelValue = null;
     if (!this.submenuPanel) {
       this.submenuExpanded = false;
       return;
@@ -543,9 +724,16 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  the submenu the moment it opens (a visible subtree, so nothing excludes it) and announce
    *  "Share Email Copy link". */
   private applyComputedName(): void {
-    if (!this.slottedLabel) return;
+    if (
+      this.ownsAriaLabel &&
+      this.getAttribute('aria-label') !== this.ownedAriaLabelValue
+    ) {
+      this.ownsAriaLabel = false;
+      this.ownedAriaLabelValue = null;
+    }
     if (this.hasAttribute('aria-label') && !this.ownsAriaLabel) return;
     this.ownsAriaLabel = true;
+    this.ownedAriaLabelValue = this.slottedLabel;
     if (this.getAttribute('aria-label') === this.slottedLabel) return;
     this.setAttribute('aria-label', this.slottedLabel);
   }
@@ -554,16 +742,32 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  `aria-labelledby` cannot express here because an idref cannot cross a shadow boundary. */
   private applyPanelName(): void {
     const panel = this.submenuPanel;
-    if (!panel || !this.slottedLabel || panel.hasAttribute('label')) return;
+    if (!panel) return;
+    if (
+      this.ownsPanelAriaLabel &&
+      panel.getAttribute('aria-label') !== this.ownedPanelAriaLabelValue
+    ) {
+      this.ownsPanelAriaLabel = false;
+      this.ownedPanelAriaLabelValue = null;
+    }
+    if (panel.hasAttribute('label')) {
+      if (this.ownsPanelAriaLabel) {
+        panel.removeAttribute('aria-label');
+        this.ownsPanelAriaLabel = false;
+        this.ownedPanelAriaLabelValue = null;
+      }
+      return;
+    }
     if (panel.hasAttribute('aria-label') && !this.ownsPanelAriaLabel) return;
     this.ownsPanelAriaLabel = true;
+    this.ownedPanelAriaLabelValue = this.slottedLabel;
     if (panel.getAttribute('aria-label') === this.slottedLabel) return;
     panel.setAttribute('aria-label', this.slottedLabel);
   }
 
   /** Text label used by type-ahead and Shoelace-compatible integrations. */
   getTextLabel(): string {
-    return this.slottedLabel || (this.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return this.readSlottedLabel();
   }
 
   override render(): TemplateResult {

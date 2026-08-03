@@ -2,7 +2,7 @@
 
 # `lr-live-region`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/live-region/live-region.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-live-region.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLiveRegion`, also available unregistered from `@aceshooting/lyra-ui/components/utility/live-region/live-region.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -46,7 +46,10 @@ within `throttleMs` of the _first_ call in that burst down to a single trailing-
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
-  `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void }`.
+  `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void;
+  timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
+  `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
+  timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
   queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
@@ -54,6 +57,9 @@ latest text: superseded intermediate text is dropped outright, never queued or c
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
   never swallowed mid-burst.
 - `cancel()` — drops any pending (not yet flushed) text without invoking `onFlush`.
+- `setTimerHost(timerHost: AnnouncerTimerHost)` — rebinds scheduling and cancellation, for example
+  after a component is adopted into another document. A pending burst is canceled on the previous
+  host and rescheduled on the new one without losing its latest text.
 - `pendingText: string | undefined` — the latest text awaiting flush, if a burst is in progress.
 - `isPending: boolean` — whether a flush is currently scheduled.
 - `throttleMs` — a plain public field, safe to change between bursts; a flush already scheduled
@@ -67,7 +73,16 @@ this library makes goes into a visually hidden element in the *host document's* 
 
 - `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
   where `AnnouncementPoliteness = 'polite' | 'assertive'` and
-  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; messageTtlMs?: number /* = 5000 */ }`.
+  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; source?: Element;
+  messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
+  prevents a document-level region from speaking while that source or a composed ancestor is
+  `hidden`, `inert`, `aria-hidden`, CSS-hidden, or in a closed `<details>` content branch;
+  standalone consumers can do the same. A box-generating source also stays silent while skipped by
+  `content-visibility:auto`. Browsers report every `display:contents` source as false from
+  `checkVisibility()` whether its semantics are exposed or not, so the helper uses the explicit
+  authored/CSS/closed-details gates for that boxless case and cannot distinguish an auto-skipped
+  subtree; bind `source` to a semantic box when that exact distinction matters. A source adopted
+  away from the acquired `document` also fails closed until its owner reacquires a sink.
   Returns an `AnnouncementSink` handle: `element`, `politeness`, a writable `messageTtlMs`,
   `announce(text: string): void` and `release(): void`.
 - One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
@@ -78,7 +93,9 @@ this library makes goes into a visually hidden element in the *host document's* 
   than rewriting one text node. That is what makes an identical repeat announce a second time — no
   clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
   `messageTtlMs`, so returning focus to the page never finds stale text to re-read. Empty text is
-  ignored; `announce()` after `release()` is a no-op; `release()` is idempotent and removes that
+  ignored. Sweep and release cancellation use the selected document's `defaultView` timer realm,
+  so an iframe-owned sink does not leave parent-window timers retaining its messages. `announce()`
+  after `release()` is a no-op; `release()` is idempotent and removes that
   handle's own not-yet-swept nodes.
 - The region carries `data-lr-live-region="<politeness>"` (exported as
   `ANNOUNCEMENT_SINK_ATTRIBUTE`) so a consumer's DOM diffing, snapshot testing or `MutationObserver`

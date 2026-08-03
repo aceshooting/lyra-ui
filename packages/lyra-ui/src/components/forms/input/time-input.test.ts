@@ -422,7 +422,93 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(disabled.shadowRoot!.activeElement).to.equal(null);
   });
 
-  it('marks the control touched and announces the message from reportValidity()', async () => {
+  it('keeps focus transitions and relayed FocusEvents in an adopted owner realm', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" value="10:30"></lr-time-input>
+    `);
+
+    try {
+      el.remove();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      const input = el.shadowRoot!.querySelector<HTMLElement>('[part="input"]')!;
+      const hour = segment(el, 'hour');
+      const foreignInternal = frameDocument.createElement('button');
+      const foreignExternal = frameDocument.createElement('button');
+      input.append(foreignInternal);
+      frameDocument.body.append(foreignExternal);
+      expect(foreignInternal instanceof Element, 'the related target is genuinely foreign').to.be.false;
+
+      const publicFocus: FocusEvent[] = [];
+      const publicBlur: FocusEvent[] = [];
+      el.addEventListener('focus', (event) => publicFocus.push(event as FocusEvent));
+      el.addEventListener('blur', (event) => publicBlur.push(event as FocusEvent));
+
+      foreignExternal.focus();
+      hour.focus();
+      expect(publicFocus.length).to.equal(1);
+      expect(publicFocus[0] instanceof frameWindow.FocusEvent).to.be.true;
+      expect(publicFocus[0] instanceof FocusEvent, 'the owner-realm event is not ambient-branded').to.be.false;
+      publicFocus.length = 0;
+
+      foreignInternal.focus();
+      hour.focus();
+      expect(publicFocus.length, 'moving within the segmented surface does not re-emit focus').to.equal(0);
+      expect(publicBlur.length, 'moving within the segmented surface does not re-emit blur').to.equal(0);
+
+      foreignExternal.focus();
+      expect(publicBlur.length).to.equal(1);
+      expect(publicBlur[0] instanceof frameWindow.FocusEvent).to.be.true;
+
+      foreignInternal.focus();
+      expect(el.shadowRoot!.activeElement === foreignInternal).to.be.true;
+      el.blur();
+      expect(
+        el.shadowRoot!.activeElement === null,
+        'host blur reaches a foreign HTML descendant',
+      ).to.be.true;
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('does not light-dismiss an adopted popup for a foreign node inside the host', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" value="10:30"></lr-time-input>
+    `);
+
+    try {
+      el.remove();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await el.show();
+
+      const inside = frameDocument.createElement('button');
+      el.append(inside);
+      inside.dispatchEvent(new frameWindow.Event('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'a composed pointer path within the adopted host stays inside').to.be.true;
+
+      frameDocument.body.dispatchEvent(new frameWindow.Event('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'a genuine outside pointer still dismisses').to.be.false;
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('marks the control touched and describes it with one neutral validation message', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input required></lr-time-input>`);
     expect(el.checkValidity()).to.equal(false);
     expect(el.reportValidity()).to.equal(false);
@@ -430,6 +516,10 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
     expect(error.hasAttribute('hidden')).to.equal(false);
     expect(error.textContent?.trim().length).to.be.greaterThan(0);
+    expect(error.getAttribute('role')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+    const group = el.shadowRoot!.querySelector('[part="input"]')!;
+    expect(group.getAttribute('aria-describedby')?.split(' ')).to.include(error.id);
 
     el.value = '09:30';
     await el.updateComplete;

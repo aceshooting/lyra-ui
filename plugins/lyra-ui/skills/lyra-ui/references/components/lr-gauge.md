@@ -2,7 +2,7 @@
 
 # `lr-gauge`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/gauge/gauge.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-gauge.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGauge`, also available unregistered from `@aceshooting/lyra-ui/components/data/gauge/gauge.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

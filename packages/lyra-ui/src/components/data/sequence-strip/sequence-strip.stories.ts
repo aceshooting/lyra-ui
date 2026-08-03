@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './sequence-strip.js';
 import type { SequenceStripCategory, SequenceStripItem } from './sequence-strip.class.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Sequence Strip',
@@ -12,7 +12,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const categories: SequenceStripCategory[] = [
+const categories = (): SequenceStripCategory[] => [
   { key: 'text', color: storyColor('chart1'), label: 'Text' },
   { key: 'tool', color: storyColor('chart2'), label: 'Tool' },
   { key: 'mixed', color: storyColor('chart3'), label: 'Mixed' },
@@ -27,7 +27,7 @@ const items: SequenceStripItem[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lr-sequence-strip .items=${items} .categories=${categories}></lr-sequence-strip>`,
+  render: () => html`<lr-sequence-strip .items=${items} .categories=${categories()}></lr-sequence-strip>`,
 };
 
 export const Empty: Story = {
@@ -38,7 +38,7 @@ export const Empty: Story = {
  *  stays readable without hovering each cell. The legend is static: it lists every entry of
  *  `categories` (whether or not any item uses it) and toggles nothing. */
 export const WithLegend: Story = {
-  render: () => html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`,
+  render: () => html`<lr-sequence-strip show-legend .items=${items} .categories=${categories()}></lr-sequence-strip>`,
 };
 
 /** `marker-label` names what a cell's `marker` means. With the legend shown it adds one trailing
@@ -51,7 +51,7 @@ export const WithMarkerLegend: Story = {
       show-legend
       marker-label="Dispatched to a subagent"
       .items=${items}
-      .categories=${categories}
+      .categories=${categories()}
     ></lr-sequence-strip>`,
 };
 
@@ -64,7 +64,7 @@ export const LegendNarrowAllocation: Story = {
         show-legend
         .items=${items}
         .categories=${[
-          ...categories,
+          ...categories(),
           { key: 'sub', color: storyColor('chart4'), label: 'Dispatched to a subagent' },
           { key: 'err', color: storyColor('danger'), label: 'Errored tool invocation' },
         ] as SequenceStripCategory[]}
@@ -77,7 +77,7 @@ export const CustomAccessibleLabel: Story = {
   render: () =>
     html`<lr-sequence-strip
       .items=${items}
-      .categories=${categories}
+      .categories=${categories()}
       accessible-label="Conversation turn history: 2 text, 2 tool, 1 mixed"
     ></lr-sequence-strip>`,
 };

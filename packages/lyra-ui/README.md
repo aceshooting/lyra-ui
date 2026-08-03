@@ -84,25 +84,29 @@ setup.
 Import just what you use (tree-shakeable, granular entry points):
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+import '@aceshooting/lyra-ui/components/lr-combobox.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
 ```
+
+The tag-shaped path is stable even if Lyra later reorganizes its internal family folders. Existing
+family-shaped paths remain supported, but new application code should prefer
+`components/<tag>.js`.
 
 The new v8 application-shell and media surfaces have the same granular shape:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
-import '@aceshooting/lyra-ui/components/media/video/video.js';
-import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
+import '@aceshooting/lyra-ui/components/lr-video.js';
+import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
 ```
 
 Imports for behavior preserved under a new compatibility tag are explicit too:
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
-import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
+import '@aceshooting/lyra-ui/components/lr-split-panel.js';
+import '@aceshooting/lyra-ui/components/lr-alert.js';
 ```
 
 These component entry points register their tags. For a class-only import (for subclassing or
@@ -123,7 +127,7 @@ Each of the eleven families also has an entry point that registers every element
 
 ```js
 import '@aceshooting/lyra-ui/components/forms';                 // every form control
-import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-input>
+import '@aceshooting/lyra-ui/components/lr-input.js';           // just <lr-input>
 ```
 
 A family entry point is **side-effectful by design**: importing it registers every tag in that
@@ -160,9 +164,9 @@ optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plo
 even when pulling the rest of the library in bulk:
 
 ```js
-import '@aceshooting/lyra-ui/components/charts/chart/chart.js';
-import '@aceshooting/lyra-ui/components/media/map/map.js';
-import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+import '@aceshooting/lyra-ui/components/lr-chart.js';
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import '@aceshooting/lyra-ui/components/lr-graph.js';
 ```
 
 Granular per-component imports remain the recommendation. `all.js` exists so a 7.x application can
@@ -347,11 +351,11 @@ profile described below makes the former popup/popover/tooltip defaults explicit
 The exact registration imports for the new and moved surfaces are:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
-import '@aceshooting/lyra-ui/components/media/video/video.js';
-import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
-import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
+import '@aceshooting/lyra-ui/components/lr-video.js';
+import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
+import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
 ```
 
 ### Attribute and property renames
@@ -513,9 +517,9 @@ rewrites the declarative default.
 ```
 
 **Automating the safe subset.** The package ships the version-matched `lyra-ui-migrate` CLI. It
-reads the packaged component inventory, applies only contract-recorded
-tag/member/default/registration-import rewrites, and can write a stable JSON report for CI or human
-review. Replace `<version>` with the exact Lyra version you are migrating to:
+reads a compact packaged projection of the validated component inventory, applies only
+contract-recorded tag/member/default/registration-import rewrites, and can write a stable JSON
+report for CI or human review. Replace `<version>` with the exact Lyra version you are migrating to:
 
 ```bash
 npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check \
@@ -523,11 +527,18 @@ npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check \
 npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate path/to/your/src
 ```
 
+The supported package identities are `@awesome.me/webawesome` and `@awesome.me/webawesome-pro`
+for Web Awesome, plus `@shoelace-style/shoelace`. Directory targets include HTML, standalone CSS,
+JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown files.
+
 The report records file, line, column, migration origin, tag/member, action, target, and warning code.
 Supported side-effect component deep imports are routed through the target's inventory registration
-module. Proven root-included registration closures use `@aceshooting/lyra-ui/all.js`; root-excluded
-targets receive granular registration imports instead. A target with optional runtime dependencies
-adds an `OPTIONAL_PEER_REQUIRED` entry naming every package the consumer must install. Imports with
+module. Proven, tier-compatible root registration closures use `@aceshooting/lyra-ui/all.js`;
+root-excluded targets receive granular registration imports instead. An automatic-looking tag with
+no matching side-effect registration in the scanned target set stays unchanged with
+`REGISTRATION_CLOSURE_REQUIRED`; include the registration-owning entry file in the scan rather than
+accepting an inert `lr-*` result. A mapped target with optional runtime dependencies adds an
+`OPTIONAL_PEER_REQUIRED` entry naming every package the consumer must install. Imports with
 bindings, unknown subpaths, dynamic values, aliased component values that use a rewritten member,
 unsafe security/default changes, conceptual mappings, and unsupported components remain unchanged
 with an actionable warning. An aliased member blocks that mapping across the whole scanned target set
@@ -562,6 +573,14 @@ beside a value it cannot see. Review or expand the dynamic value, rerun, then ap
 The inventory does not treat `dir` or `lang` as component-member drift: both are platform-global
 HTML passthrough attributes. It likewise excludes Web Awesome's `did-ssr` hydration marker, which is
 upstream runtime bookkeeping rather than an authored member to copy onto a Lyra component.
+
+The same inventory reviews accessibility behavior separately from static API shape. Every one of
+the 145 pinned upstream mappings names an upstream and Lyra behavior profile covering semantics,
+naming, keyboard, focus, state, announcements, and motion. It stores the exact missing/additive
+comparison and a rationale; an automatic mapping is rejected if its target profile drops a reviewed
+behavior. These profiles summarize published public contracts and Lyra's authored contract plus
+automated tests. They are not evidence of manual screen-reader, assistive-technology, or human
+accessibility review; see [the accessibility evidence statement](../../docs/accessibility.md).
 
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
 familiar to many teams. The table below is a porting guide, not an automatic-rename allowlist; the
@@ -605,6 +624,11 @@ matching `data-lr-theme` attribute) on an ancestor:
 ```css
 @import '@aceshooting/lyra-ui/theme.css';
 ```
+
+Tooling can consume the canonical DTCG interchange document from
+`@aceshooting/lyra-ui/design-tokens.json`. The generated
+`@aceshooting/lyra-ui/design-tokens.css` entry supplies explicit light/dark fixture selectors for
+previews and design-tool validation; it is not a replacement for the production `theme.css`.
 
 ```html
 <body class="lr-dark">
@@ -684,7 +708,7 @@ setLyraLocale('fr'); // or just set <html lang="fr">/an ancestor `lang` — comp
 
 The dedicated `localization.js` entry is side-effect-free: it does not register the component
 graph. The package root continues to re-export the same runtime for compatibility, but importing
-it also registers the non-peer-gated components.
+the root remains registration-free in v8.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->
@@ -798,7 +822,7 @@ import type {} from '@aceshooting/lyra-ui/svelte';
 These entry points are generated from the same Custom Elements Manifest as the editor metadata.
 They contain types only: they add no runtime wrapper or framework dependency, and they do not
 register elements. Keep importing the granular registration modules your application uses, for
-example `import '@aceshooting/lyra-ui/components/forms/input/input.js'`.
+example `import '@aceshooting/lyra-ui/components/lr-input.js'`.
 
 - **Property vs. attribute binding.** A complex-typed property (an object, array, or function — e.g.
   `.strings`, `.selectedRows`, `.markers`) must be bound as a JS *property*, not a stringified

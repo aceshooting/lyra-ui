@@ -2,7 +2,7 @@
 
 # `lr-tag`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tag.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTag`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/badge/tag.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -135,7 +135,10 @@ the remove button's `:hover` fill).
   row's layout box.
 - Its accessible name is computed from the default slot's own text ("Remove {label}", localized;
   bare "Remove" for a label-less tag) and re-derived live when that text changes. Text inside the
-  decorative `start`/`end` slots never leaks into it, and a host `aria-label` wins outright.
+  decorative `start`/`end` slots never leaks into it. Visible accessible text, forwarding-slot
+  reassignment and external assigned-node mutations stay synchronized; hidden/inert/CSS-hidden/
+  `aria-hidden` branches are excluded. A host `aria-label` wins by presence, including an explicit
+  empty value.
 - `appearance` and `variant` are orthogonal: `appearance="plain"` on `variant="danger"` still reads
   as danger, because the palette is chosen before the surface routing.
 

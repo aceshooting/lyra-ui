@@ -2,7 +2,7 @@
 
 # `lr-code-block`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-code-block.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCodeBlock`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/code-block/code-block.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -137,8 +137,9 @@ highlighting).
 Set `line-numbers` when source context benefits from numbered lines. The option does not change the
 raw `code` value or the `lr-copy` event payload.
 
-A `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on the host) stands in only
-while shiki itself is loading for the very first time on the page and `language` is set — it is
+A decorative `<lr-skeleton variant="rect">` placeholder (with its own announcements disabled and
+`aria-busy="true"` on the host) stands in only while shiki itself is loading for the very first time
+on the page and `language` is set — it is
 deliberately *not* shown again for a later per-language grammar fetch (that's typically fast, and the
 plain-text fallback already reads fine as a placeholder for it). Internally, a shiki `transformer`
 (`partTransformer`) rewrites shiki's generated `<pre>`/`<code>` nodes in a single pass to carry this

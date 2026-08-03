@@ -453,6 +453,83 @@ describe('lr-video-playlist public contract', () => {
     expect(b!.hidden).to.be.false;
   });
 
+  it('reconstructs its child observer in the adopted iframe realm', async () => {
+    const iframe = document.createElement('iframe');
+    const loaded = new Promise<void>((resolve) =>
+      iframe.addEventListener('load', () => resolve(), { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const OriginalFrameObserver = frameWindow.MutationObserver;
+    let frameObserverConstructions = 0;
+    frameWindow.MutationObserver = function (callback: MutationCallback): MutationObserver {
+      frameObserverConstructions += 1;
+      return new OriginalFrameObserver(callback);
+    } as unknown as typeof MutationObserver;
+    let el: LyraVideoPlaylist | undefined;
+
+    try {
+      el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist><lr-video title="A"></lr-video></lr-video-playlist>
+      `);
+      await settle(el);
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await settle(el);
+
+      expect(
+        frameObserverConstructions,
+        'the reconnected playlist uses its current owner window constructor',
+      ).to.be.greaterThan(0);
+    } finally {
+      el?.remove();
+      frameWindow.MutationObserver = OriginalFrameObserver;
+      iframe.remove();
+    }
+  });
+
+  it('rehomes focus when an iframe-realm playlist row becomes unavailable', async () => {
+    const iframe = document.createElement('iframe');
+    const loaded = new Promise<void>((resolve) =>
+      iframe.addEventListener('load', () => resolve(), { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [first] = childVideos(el);
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await settle(el);
+      const iframeRow = frameDocument.createElement('button');
+      iframeRow.setAttribute('part', 'playlist-item');
+      el.shadowRoot!.append(iframeRow);
+      iframeRow.focus();
+      expect(iframeRow instanceof frameWindow.HTMLElement).to.be.true;
+      expect(el.shadowRoot!.activeElement === iframeRow).to.be.true;
+
+      first!.setAttribute('disabled', '');
+      await settle(el);
+
+      expect(
+        el.shadowRoot!.activeElement === items(el)[1],
+        'focus follows the new roving row even when the old focused node came from the iframe realm',
+      ).to.be.true;
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
+  });
+
   it('implements one roving tab stop, keyboard activation, and mirrored horizontal keys', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>

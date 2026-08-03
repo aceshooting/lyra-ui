@@ -29,7 +29,7 @@ only install the peers for surfaces you actually use. See the
 Every component is its own side-effect entry point that registers its own tag:
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/button/button.js';
+import '@aceshooting/lyra-ui/components/lr-button.js';
 ```
 
 ```html
@@ -39,11 +39,10 @@ import '@aceshooting/lyra-ui/components/forms/button/button.js';
 That's the whole setup. The import registers `<lr-button>` with `customElements`, and any
 `<lr-button>` in the document — including ones added later — upgrades itself.
 
-**The path always carries the source family segment**: `components/<family>/<dir>/<file>.js`, never
-`components/<tag>/`. The eleven families are `agent-tools`, `charts`, `conversation`, `data`,
-`forms`, `layout`, `media`, `overlays`, `retrieval`, `utility` and `viewers`. A wrong or missing
-family segment is a hard module-resolution failure, not a silent no-op, because the package's
-`exports` map points `./components/*` straight at `./dist/components/*`.
+**The stable registration path is derived from the tag**:
+`@aceshooting/lyra-ui/components/<lr-tag>.js`. It stays valid if the component's internal family
+folder moves. Family-shaped registration paths remain compatible, and `.class.js` imports still
+use the owning family path when you need the class without defining its tag.
 
 You never have to work the path out by hand: **every component page in this site prints its own
 import line directly under the title**, and the same line appears in that component's reference file
@@ -53,9 +52,9 @@ Some directories hold more than one tag, and each tag is registered by its own e
 the common example:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/tab-group/tab-group.js';
-import '@aceshooting/lyra-ui/components/layout/tab-group/tab.js';
-import '@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.js';
+import '@aceshooting/lyra-ui/components/lr-tab-group.js';
+import '@aceshooting/lyra-ui/components/lr-tab.js';
+import '@aceshooting/lyra-ui/components/lr-tab-panel.js';
 ```
 
 ```html
@@ -71,14 +70,14 @@ The v8 Page and media surfaces use the same granular convention, as do the compa
 preserve displaced Lyra behavior:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
-import '@aceshooting/lyra-ui/components/media/video/video.js';
-import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
+import '@aceshooting/lyra-ui/components/lr-video.js';
+import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
 
-import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
-import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
+import '@aceshooting/lyra-ui/components/lr-split-panel.js';
+import '@aceshooting/lyra-ui/components/lr-alert.js';
 ```
 
 ## The two import styles
@@ -86,37 +85,37 @@ import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
 ### Granular subpaths — the default
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/input/input.js';
-import '@aceshooting/lyra-ui/components/forms/select/select.js';
-import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+import '@aceshooting/lyra-ui/components/lr-input.js';
+import '@aceshooting/lyra-ui/components/lr-select.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
 ```
 
 One import per tag you use. Your bundler sees exactly those modules and their shared internals, and
 nothing else. This is what you want in application code, and it is what every example in these
 guides and in the component reference uses.
 
-### The root barrel — for exploring
+### The explicit all-components entry — for exploring
 
 ```js
-import '@aceshooting/lyra-ui'; // registers ~everything
+import '@aceshooting/lyra-ui/all.js'; // registers every root-included component
 ```
 
 Convenient in a scratch file, a REPL, or while you are still deciding which components you need.
+The package root itself is a pure named-export surface in v8 and registers no tags.
 
 Two things to know before you ship it:
 
 - **It defeats tree-shaking.** The barrel's entire purpose is the side effect of registering every
   tag, so a bundler cannot drop any of it. Importing the barrel to use three components pulls in all
   of them.
-- **It is not actually complete.** The barrel deliberately skips 15 inventory-designated
+- **It is not actually complete.** `all.js` deliberately skips 15 inventory-designated
   optional-peer-family tags — the whole chart family (`<lr-chart>` and its typed subclasses, `<lr-box-plot>`,
   `<lr-histogram>`), plus `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>` and
   `<lr-geojson-view>`. Their peers still load lazily, but those tags are intentionally outside the
   broad root registration surface and always need their own subpath import.
 
-The barrel also re-exports a broad compatibility surface of commonly used classes, helpers and
-types — but it is a convenience, not an exhaustive promise. The component's own entry point is the
-complete contract for that component.
+The package root re-exports a broad compatibility surface of commonly used classes, helpers and
+types without registering components. A component's own entry point remains its complete contract.
 
 ### Family entry points
 
@@ -135,9 +134,9 @@ entry registers *and* re-exports the complete family. (Only three of these were 
 map.)
 
 A family barrel is **side-effectful by design**: importing it registers every tag in that family,
-exactly as the root barrel registers all of them. Reach for one when you genuinely use most of a
+just as `all.js` registers its root-included set. Reach for one when you genuinely use most of a
 family and want a single import; reach for the granular
-`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path — which is what every example in
+`@aceshooting/lyra-ui/components/<lr-tag>.js` path — which is what every example in
 these guides uses — when you do not, **because a barrel cannot be tree-shaken down to the two
 elements you actually render**. Granular entries remain the recommendation for production.
 
@@ -208,13 +207,20 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | Subpath | What it is |
 | --- | --- |
 | `@aceshooting/lyra-ui/theme.css` | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs). |
+| `@aceshooting/lyra-ui/design-tokens.json` | Canonical DTCG token interchange for design and build tooling. |
+| `@aceshooting/lyra-ui/design-tokens.css` | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
 | `@aceshooting/lyra-ui/native.css` | Optional tokenized styles for native descendants of an explicit `.lr-native` scope. |
 | `@aceshooting/lyra-ui/utilities.css` | Optional low-specificity `lr-*` layout, sizing, prose, text, visibility, and Page helper classes. |
 | `@aceshooting/lyra-ui/theme.js` | Zero-dependency runtime for persisting and applying a theme mode/accent. |
+| `@aceshooting/lyra-ui/theme/presets.js` | Built-in and application-defined theme presets. |
 | `@aceshooting/lyra-ui/localization.js` | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs). |
+| `@aceshooting/lyra-ui/translations/pseudo/en-XA.js` / `ar-XB.js` | Side-effect-only pseudo-locales for expansion and bidi testing. |
 | `@aceshooting/lyra-ui/autoloader.js` | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags. |
 | `@aceshooting/lyra-ui/autoloader-cdn.js` | Side-effect entry that auto-starts the guarded autoloader for ESM-CDN use. |
+| `@aceshooting/lyra-ui/hydration.js` | Hydration-only browser hook without the server renderer. |
 | `@aceshooting/lyra-ui/ssr-loader.js` | Lit hydration hook, server renderer fallback, support matrix, and diagnostics. |
+| `@aceshooting/lyra-ui/ssr.js` | Registration-free server helpers and SSR capability metadata. |
+| `@aceshooting/lyra-ui/ssr/all.js` | Server entry that explicitly registers the complete SSR catalog. |
 | `@aceshooting/lyra-ui/custom-elements-jsx` | Type-only React 19 / JSX template declarations. |
 | `@aceshooting/lyra-ui/vue` | Type-only Vue custom-element declarations. |
 | `@aceshooting/lyra-ui/svelte` | Type-only Svelte custom-element declarations. |

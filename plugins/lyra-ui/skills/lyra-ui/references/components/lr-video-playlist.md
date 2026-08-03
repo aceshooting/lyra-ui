@@ -2,10 +2,10 @@
 
 # `lr-video-playlist`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-video-playlist.js';` (stable tag alias; registers the tag)
 - **Class** `LyraVideoPlaylist`, also available unregistered from `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility.
 - **Optional peers** none
 - **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -15,9 +15,9 @@
 
 ## `lr-video-playlist`
 
-A direct-child `<lr-video>` playlist with a visible current-video stage and keyboard-navigable item
-list. It mirrors the public Web Awesome Video Playlist API under the `lr-` prefix. Import the
-granular registration entry with
+Experimental direct-child `<lr-video>` playlist with a visible current-video stage and
+keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
+prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js'`.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every

@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { ComplexAttributeConverter } from 'lit';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -40,6 +40,11 @@ import type {
   LyraDataGridEventMap,
   SortingState,
 } from './data-grid-types.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export * from './data-grid-types.js';
 
@@ -98,16 +103,45 @@ function arrayHasKey(keys: readonly DataGridKey[], key: DataGridKey): boolean {
   return keys.some((candidate) => keysEqual(candidate, key));
 }
 
+function isElementValue(value: unknown): value is Element {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as Partial<Element>;
+  return candidate.nodeType === 1 && typeof candidate.closest === 'function';
+}
+
+function valueControl(value: EventTarget | null | undefined): { value: string } | null {
+  if (!isElementValue(value) || typeof (value as Partial<HTMLInputElement>).value !== 'string') return null;
+  return value as HTMLInputElement | HTMLSelectElement;
+}
+
+function checkableControl(value: EventTarget | null | undefined): HTMLInputElement | null {
+  if (!isElementValue(value) || typeof (value as Partial<HTMLInputElement>).checked !== 'boolean') return null;
+  return value as HTMLInputElement;
+}
+
+function dateText(value: object): string | undefined {
+  try {
+    const timestamp = Date.prototype.getTime.call(value);
+    return Number.isFinite(timestamp) ? Date.prototype.toISOString.call(value) : '';
+  } catch {
+    return undefined;
+  }
+}
+
 function humanizeIdentifier(value: string, locale: string): string {
+  const intlLocale = resolveIntlLocale(locale);
   return value
     .replaceAll(/[._-]+/gu, ' ')
     .replaceAll(/([a-z\d])([A-Z])/gu, '$1 $2')
-    .replace(/^./u, (first) => first.toLocaleUpperCase(locale));
+    .replace(/^./u, (first) => first.toLocaleUpperCase(intlLocale));
 }
 
 function safeText(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : '';
+  if (typeof value === 'object') {
+    const serializedDate = dateText(value);
+    if (serializedDate !== undefined) return serializedDate;
+  }
   if (Array.isArray(value)) return value.map(safeText).join(', ');
   if (typeof value === 'object') {
     try {
@@ -132,7 +166,9 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * Mirrors the public `<wa-data-grid>` surface under the `lr-` prefix.
  *
  * Arrays are shallow-reactive: reassign `data`, `columns`, and controlled state arrays after
- * changing them. Set `label` or a host `aria-label` to name the internal grid.
+ * changing them. Set `label` or a host `aria-label` to name the internal grid. Initial declarative
+ * loading stays silent; each later transition into loading appends the localized loading text to
+ * the document's shared light-DOM polite sink while the visible overlay remains non-live.
  *
  * @customElement lr-data-grid
  * @slot empty - Content rendered when the source has no rows.
@@ -181,7 +217,8 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * announcement. The announcement itself lands in the shared light-DOM polite region
  * (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
  * root is not reliably announced; this part is a styling/inspection surface only.
- * @csspart loading-overlay - Loading-state overlay.
+ * @csspart loading-overlay - Visible, non-live loading-state overlay. The grid carries
+ *   `aria-busy`; post-mount loading announcements use the shared light-DOM polite sink.
  * @csspart next-button - Next-page button.
  * @csspart no-results - No-filter-results state.
  * @csspart page - A numbered page button.
@@ -222,6 +259,36 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @since 4.0.0
  */
 export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<LyraDataGridEventMap<Row>> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    expand: LYRA_DEFAULT_expand,
+    loading: LYRA_DEFAULT_loading,
+    menuLabel: LYRA_DEFAULT_menuLabel,
+    next: LYRA_DEFAULT_next,
+    noColumns: LYRA_DEFAULT_noColumns,
+    noData: LYRA_DEFAULT_noData,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
+    paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
+    paginationLabel: LYRA_DEFAULT_paginationLabel,
+    paginationLastPage: LYRA_DEFAULT_paginationLastPage,
+    previous: LYRA_DEFAULT_previous,
+    resizeColumn: LYRA_DEFAULT_resizeColumn,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    showAllColumns: LYRA_DEFAULT_showAllColumns,
+    tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   /** Bordered or borderless container treatment. */
@@ -297,9 +364,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   @property({ attribute: false }) selectableRows: ((row: Row) => boolean) | null = null;
   /** Controlled selected row keys. */
   @property({ attribute: false }) selectedKeys: DataGridKey[] = [];
-  /** Selected rows, derived from `selectedKeys`. */
+  /** Selected rows, derived from `selectedKeys`. Assigning current source rows updates those keys. */
   get selectedRows(): Row[] {
     return this.allSourceRows.filter((row, index) => arrayHasKey(this.selectedKeys, this.keyForRow(row, index)));
+  }
+  set selectedRows(next: Row[]) {
+    const source = this.allSourceRows;
+    const candidates = Array.isArray(next) ? next : [];
+    const rows = candidates.filter((row, index) => source.includes(row) && candidates.indexOf(row) === index);
+    const limited = this.selectionMode === 'single' ? rows.slice(0, 1) : rows;
+    this.selectedKeys = limited.map((row) => this.keyForRow(row, source.indexOf(row)));
   }
   /** Uses server/event-driven loading and skips client processing. */
   @property({ type: Boolean, reflect: true }) server = false;
@@ -339,7 +413,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
 
   private requestGeneration = 0;
   private requestController?: AbortController;
-  private requestTimer?: ReturnType<typeof setTimeout>;
+  private requestTimer?: { owner: Window; handle: number };
   private ownsLoadingState = false;
   private resizeSession?: ResizeSession;
   private lastSelectedIndex = -1;
@@ -353,7 +427,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     super.connectedCallback();
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
     if (this.dataSource) this.scheduleServerRequest(false);
   }
 
@@ -363,8 +440,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     this.requestController = undefined;
     if (this.ownsLoadingState) this.loading = false;
     this.ownsLoadingState = false;
-    if (this.requestTimer !== undefined) clearTimeout(this.requestTimer);
-    this.requestTimer = undefined;
+    this.cancelRequestTimer();
     this.resizeSession = undefined;
     this.activeFilterColumn = null;
     this.activeColumnMenu = null;
@@ -377,14 +453,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && changed.has('loading') && this.loading) {
+      this.announce(this.localize('loading'));
+    }
     const sourceReplaced = changed.has('dataSource') && changed.get('dataSource') !== undefined;
     const serverDisabled = changed.has('server') && !this.usesServerData;
     if ((sourceReplaced || serverDisabled) && (this.requestController || this.requestTimer !== undefined)) {
       this.requestGeneration += 1;
       this.requestController?.abort();
       this.requestController = undefined;
-      if (this.requestTimer !== undefined) clearTimeout(this.requestTimer);
-      this.requestTimer = undefined;
+      this.cancelRequestTimer();
       if (this.ownsLoadingState) this.loading = false;
       this.ownsLoadingState = false;
     }
@@ -552,9 +630,43 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     return isKey(candidate) ? candidate : index;
   }
 
+  private renderedColumnElements(columnId: string, role?: 'columnheader'): HTMLElement[] {
+    const prefix = role ? `[role="${role}"]` : '';
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    const escape = ownerCss?.escape;
+    if (typeof escape === 'function') {
+      try {
+        const matches = [
+          ...this.renderRoot.querySelectorAll<HTMLElement>(
+            `${prefix}[data-column-id="${escape.call(ownerCss, columnId)}"]`,
+          ),
+        ];
+        if (matches.length > 0) return matches;
+      } catch {
+        // A partial DOM may omit CSS.escape or expose an unusable implementation. The exact scan
+        // below keeps public sizing methods usable there and cannot turn a caller-supplied id into
+        // selector syntax.
+      }
+    }
+    return [...this.renderRoot.querySelectorAll<HTMLElement>(`${prefix}[data-column-id]`)]
+      .filter((element) => element.getAttribute('data-column-id') === columnId);
+  }
+
+  private computedToken(name: string): string {
+    if (!this.isConnected) return '';
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || typeof owner.getComputedStyle !== 'function') return '';
+    try {
+      return owner.getComputedStyle(this).getPropertyValue(name).trim();
+    } catch {
+      // Detached/partial DOM implementations can expose the API without supporting this host.
+      return '';
+    }
+  }
+
   /** Sizes one column to its rendered header and cell contents. */
   autoSizeColumn(columnId: string): void {
-    const cells = this.renderRoot.querySelectorAll<HTMLElement>(`[data-column-id="${CSS.escape(columnId)}"]`);
+    const cells = this.renderedColumnElements(columnId);
     if (cells.length === 0) return;
     let width = 0;
     for (const cell of cells) width = Math.max(width, cell.scrollWidth);
@@ -622,19 +734,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     escapeFormulas?: boolean;
   } = {}): void {
     const text = this.getDataAsCsv(options);
-    if (typeof document === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined') return;
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    const ownerDocument = this.ownerDocument;
+    const owner = ownerDocument.defaultView;
+    if (!owner || typeof owner.URL.createObjectURL !== 'function') return;
+    const url = owner.URL.createObjectURL(new owner.Blob([text], { type: 'text/csv;charset=utf-8' }));
     try {
-      const anchor = document.createElement('a');
+      const anchor = ownerDocument.createElement('a');
       anchor.href = url;
       const legacyFileName = (options as typeof options & { filename?: string }).filename;
       anchor.download = options.fileName || legacyFileName || 'data.csv';
       anchor.hidden = true;
-      document.body.append(anchor);
+      ownerDocument.body?.append(anchor);
       anchor.click();
       anchor.remove();
     } finally {
-      URL.revokeObjectURL(url);
+      owner.URL.revokeObjectURL(url);
     }
   }
 
@@ -752,9 +866,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   private applyPageChange(value: number | Event): void {
     let requested: number;
     if (typeof value === 'number') requested = value;
-    else if (value?.currentTarget instanceof HTMLSelectElement || value?.currentTarget instanceof HTMLInputElement) {
-      requested = Number(value.currentTarget.value);
-    } else requested = this.safePage;
+    else requested = Number(valueControl(value?.currentTarget)?.value ?? this.safePage);
     const last = Math.max(0, this.pageCount - 1);
     const next = finiteInteger(requested, this.safePage, 0, last);
     this.page = next;
@@ -769,9 +881,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   private applySearchTermChange(value: string | Event): void {
     const next = typeof value === 'string'
       ? value
-      : value?.currentTarget instanceof HTMLInputElement
-        ? value.currentTarget.value
-        : this.searchTerm;
+      : valueControl(value?.currentTarget)?.value ?? this.searchTerm;
     this.searchTerm = next;
     if (this.page !== 0) this.page = 0;
   }
@@ -786,10 +896,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
 
   /** Forces the current server request. */
   async reload(): Promise<void> {
-    if (!this.usesServerData) return;
-    if (this.requestTimer !== undefined) clearTimeout(this.requestTimer);
-    this.requestTimer = undefined;
-    await this.loadServerData();
+    const owner = this.ownerDocument.defaultView;
+    if (!this.isConnected || !owner || !this.usesServerData) return;
+    this.cancelRequestTimer();
+    await this.loadServerData(owner);
   }
 
   /** Restores column declaration order, widths, visibility, and pinning. */
@@ -854,7 +964,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   sizeColumnsToFit(): void {
     const body = this.bodyElement;
     if (!body || this.visibleColumns.length === 0) return;
-    const selectionWidth = this.selectionEnabled ? resolveCssLength(getComputedStyle(this).getPropertyValue('--lr-icon-button-size'), this) ?? 0 : 0;
+    const selectionWidth = this.selectionEnabled
+      ? resolveCssLength(this.computedToken('--lr-icon-button-size'), this) ?? 0
+      : 0;
     const available = Math.max(0, body.clientWidth - selectionWidth);
     const flexible = this.visibleColumns.filter(({ column }) => column.flex !== 0);
     if (flexible.length === 0) return;
@@ -908,19 +1020,30 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   }
 
   private writeClipboard(text: string): void {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(text).catch(() => undefined);
-      return;
+    const ownerDocument = this.ownerDocument;
+    const owner = ownerDocument.defaultView;
+    if (!owner) return;
+    try {
+      const clipboard = owner.navigator.clipboard;
+      if (typeof clipboard?.writeText === 'function') {
+        void clipboard.writeText(text).catch(() => undefined);
+        return;
+      }
+    } catch {
+      // A permissions-policy shim can throw while reading the API; use the owner-document fallback.
     }
-    if (typeof document === 'undefined') return;
-    const textarea = document.createElement('textarea');
+    if (!ownerDocument.body) return;
+    const textarea = ownerDocument.createElement('textarea');
     textarea.value = text;
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
-    document.body.append(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    textarea.remove();
+    ownerDocument.body.append(textarea);
+    try {
+      textarea.select();
+      ownerDocument.execCommand?.('copy');
+    } finally {
+      textarea.remove();
+    }
   }
 
   private setColumnWidth(columnIdValue: string, width: number, emit: boolean, finished = true): void {
@@ -935,20 +1058,38 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     if (emit) this.emit('lr-column-resize', { columnId: columnIdValue, width: safeWidth, finished });
   }
 
-  private scheduleServerRequest(delayed: boolean): void {
-    if (!this.isConnected || !this.usesServerData) return;
-    if (this.requestTimer !== undefined) clearTimeout(this.requestTimer);
-    const delay = delayed ? finiteDuration(this.filterDebounce, 250) : 0;
-    this.requestTimer = setTimeout(() => {
-      this.requestTimer = undefined;
-      void this.loadServerData();
-    }, delay);
+  private cancelRequestTimer(): void {
+    const timer = this.requestTimer;
+    this.requestTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
-  private async loadServerData(): Promise<void> {
-    if (!this.usesServerData) return;
+  private scheduleServerRequest(delayed: boolean): void {
+    const owner = this.ownerDocument.defaultView;
+    if (!this.isConnected || !owner || !this.usesServerData) return;
+    this.cancelRequestTimer();
+    const delay = delayed ? finiteDuration(this.filterDebounce, 250) : 0;
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.requestTimer?.owner !== owner
+        || this.requestTimer.handle !== handle
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.requestTimer = undefined;
+      void this.loadServerData(owner);
+    }, delay);
+    this.requestTimer = { owner, handle };
+  }
+
+  private async loadServerData(owner: Window): Promise<void> {
+    if (!this.isConnected || this.ownerDocument.defaultView !== owner || !this.usesServerData) return;
     this.requestController?.abort();
-    this.requestController = typeof AbortController === 'undefined' ? undefined : new AbortController();
+    const AbortControllerCtor = (owner as Window & typeof globalThis).AbortController;
+    this.requestController = typeof AbortControllerCtor === 'function'
+      ? new AbortControllerCtor()
+      : undefined;
     const generation = ++this.requestGeneration;
     const request: DataGridRequest = {
       sort: this.sort.map((item) => ({ ...item })),
@@ -965,13 +1106,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     this.loading = true;
     try {
       const response = await this.dataSource(request);
-      if (generation !== this.requestGeneration || request.signal?.aborted) return;
+      if (
+        generation !== this.requestGeneration
+        || request.signal?.aborted
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
       this.data = Array.isArray(response.rows) ? response.rows : [];
       this.total = finiteCount(response.total);
       this.loading = false;
       this.ownsLoadingState = false;
     } catch (error) {
-      if (generation !== this.requestGeneration || request.signal?.aborted) return;
+      if (
+        generation !== this.requestGeneration
+        || request.signal?.aborted
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
       this.loading = false;
       this.ownsLoadingState = false;
       this.emit('lr-data-error', { error, request });
@@ -1133,8 +1284,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   }
 
   private get resolvedRowHeight(): number {
-    if (!this.isConnected || typeof getComputedStyle === 'undefined') return 56;
-    const raw = getComputedStyle(this).getPropertyValue('--row-height').trim();
+    const raw = this.computedToken('--row-height');
     return finiteRange(resolveCssLength(raw, this) ?? 56, 56, 1);
   }
 
@@ -1143,8 +1293,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     const disable =
       items.length < VIRTUALIZATION_THRESHOLD || Boolean(this.childRows) || Boolean(this.rowDetail) ||
       normalizedGroupBy(this.groupBy).length > 0 ||
-      (typeof getComputedStyle !== 'undefined' && this.isConnected &&
-        getComputedStyle(this).getPropertyValue('--max-height').trim() === 'none');
+      this.computedToken('--max-height') === 'none';
     if (disable) return { items, start: 0, end: items.length };
     const height = this.resolvedRowHeight;
     const visibleCount = Math.max(1, Math.ceil((this.viewportHeight || height * 10) / height));
@@ -1184,8 +1333,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   private estimatedColumnWidth(column: DataGridColumn<Row>, id: string): number {
     const explicit = this.columnWidths.get(id) ?? column.width;
     if (explicit !== undefined) return finiteRange(explicit, 112, 0);
-    if (!this.isConnected || typeof getComputedStyle === 'undefined') return 112;
-    const raw = getComputedStyle(this).getPropertyValue('--lr-size-7rem').trim();
+    const raw = this.computedToken('--lr-size-7rem');
     return finiteRange(resolveCssLength(raw, this) ?? 112, 112, 0);
   }
 
@@ -1233,14 +1381,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
 
   private onHeaderClick(event: MouseEvent, id: string): void {
     const target = event.target;
-    const interactive = target instanceof Element ? target.closest(INTERACTIVE_SELECTOR) : null;
+    const interactive = isElementValue(target) ? target.closest(INTERACTIVE_SELECTOR) : null;
     if (interactive && interactive !== event.currentTarget) return;
     this.activateSort(id, event.shiftKey);
   }
 
   private onFilterInput(event: Event, id: string): void {
-    if (!(event.currentTarget instanceof HTMLInputElement)) return;
-    const value = event.currentTarget.value;
+    const control = valueControl(event.currentTarget);
+    if (!control) return;
+    const value = control.value;
     const next = this.filters.filter((filter) => filter.id !== id);
     if (value) next.push({ id, value });
     this.filters = next;
@@ -1249,18 +1398,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   }
 
   private onBodyScroll(event: Event): void {
-    if (!(event.currentTarget instanceof HTMLElement)) return;
-    this.bodyScrollTop = event.currentTarget.scrollTop;
-    this.viewportHeight = event.currentTarget.clientHeight;
+    const target = event.currentTarget as (Element & { scrollTop?: unknown; clientHeight?: unknown }) | null;
+    if (!isElementValue(target) || typeof target.scrollTop !== 'number' || typeof target.clientHeight !== 'number') return;
+    this.bodyScrollTop = target.scrollTop;
+    this.viewportHeight = target.clientHeight;
   }
 
   private onCellClick(event: MouseEvent, item: DataDisplayRow<Row>, column: DataGridColumn<Row>, index: number): void {
     const target = event.target;
-    const interactive = target instanceof Element ? target.closest(INTERACTIVE_SELECTOR) : null;
+    const interactive = isElementValue(target) ? target.closest(INTERACTIVE_SELECTOR) : null;
     if (
       interactive &&
       interactive !== event.currentTarget &&
-      event.currentTarget instanceof Element &&
+      isElementValue(event.currentTarget) &&
       event.currentTarget.contains(interactive)
     ) return;
     this.emit('lr-cell-click', {
@@ -1416,7 +1566,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   private onResizeStart(event: PointerEvent, id: string): void {
     const entry = this.orderedColumns.find((item) => item.id === id);
     if (!entry || !(this.resizable || entry.column.resizable)) return;
-    const header = this.renderRoot.querySelector<HTMLElement>(`[role="columnheader"][data-column-id="${CSS.escape(id)}"]`);
+    const header = this.renderedColumnElements(id, 'columnheader')[0];
     this.resizeSession = {
       columnId: id,
       startClientX: event.clientX,
@@ -1462,8 +1612,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   }
 
   private onPageSizeChange(event: Event): void {
-    if (!(event.currentTarget instanceof HTMLSelectElement)) return;
-    this.pageSize = finiteCount(Number(event.currentTarget.value));
+    const control = valueControl(event.currentTarget);
+    if (!control) return;
+    this.pageSize = finiteCount(Number(control.value));
     this.page = 0;
     this.emit('lr-page-change', { page: 0, pageSize: this.safePageSize });
   }
@@ -1473,15 +1624,25 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     const columnLimit = Math.max(0, this.visibleColumns.length - 1);
     this.focusedRow = finiteInteger(row, this.focusedRow, -1, rowLimit);
     this.focusedColumn = finiteInteger(column, this.focusedColumn, 0, columnLimit);
+    let pendingScrollTop: number | undefined;
     if (this.focusedRow >= 0) {
       const selector = `[role="gridcell"][data-row-position="${this.focusedRow}"]`;
       if (!this.renderRoot.querySelector(selector)) {
         const top = this.focusedRow * this.resolvedRowHeight;
+        pendingScrollTop = top;
         this.bodyScrollTop = top;
         if (this.bodyElement) this.bodyElement.scrollTop = top;
       }
     }
-    this.updateComplete.then(() => this.focus());
+    void this.updateComplete.then(() => {
+      // WebKit clamps a pre-render write to zero when the virtual spacer has not established its
+      // final scroll range yet. Restore the requested offset once that render is committed, then
+      // focus the newly materialized cell.
+      if (pendingScrollTop !== undefined && this.bodyElement) {
+        this.bodyElement.scrollTop = pendingScrollTop;
+      }
+      this.focus();
+    });
   }
 
   private onGridKeyDown(
@@ -1494,7 +1655,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
   ): void {
     const target = event.target;
     if (
-      target instanceof Element &&
+      isElementValue(target) &&
       target !== event.currentTarget &&
       target.closest(INTERACTIVE_SELECTOR)
     ) {
@@ -1620,9 +1781,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
                         .checked=${visible}
                         ?disabled=${column.hideable === false}
                         @change=${(event: Event) => {
-                          if (event.currentTarget instanceof HTMLInputElement) {
-                            this.userToggleColumn(id, event.currentTarget.checked);
-                          }
+                          const control = checkableControl(event.currentTarget);
+                          if (control) this.userToggleColumn(id, control.checked);
                         }}
                       />
                       ${this.columnLabel(column, id)}
@@ -1652,9 +1812,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
             .indeterminate=${selected > 0 && selected < items.length}
             ?disabled=${items.length === 0}
             @change=${(event: Event) => {
-              if (event.currentTarget instanceof HTMLInputElement) {
-                this.selectCurrentPage(event.currentTarget.checked);
-              }
+              const control = checkableControl(event.currentTarget);
+              if (control) this.selectCurrentPage(control.checked);
             }}
           />
         ` : nothing}
@@ -1689,9 +1848,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
                   type="checkbox"
                   .checked=${visible}
                   @change=${(event: Event) => {
-                    if (event.currentTarget instanceof HTMLInputElement) {
-                      this.userToggleColumn(id, event.currentTarget.checked);
-                    }
+                    const control = checkableControl(event.currentTarget);
+                    if (control) this.userToggleColumn(id, control.checked);
                   }}
                 />
                 ${this.columnLabel(column, id)}
@@ -1837,9 +1995,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
               .indeterminate=${selection.indeterminate}
               ?disabled=${!this.rowIsSelectable(item.row)}
               @click=${(event: MouseEvent) => {
-                if (event.currentTarget instanceof HTMLInputElement) {
-                  this.setRowSelected(item, event.currentTarget.checked, event);
-                }
+                const control = checkableControl(event.currentTarget);
+                if (control) this.setRowSelected(item, control.checked, event);
               }}
             />
           </div>
@@ -1915,9 +2072,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
               .indeterminate=${selected > 0 && selected < eligible.length}
               ?disabled=${eligible.length === 0}
               @change=${(event: Event) => {
-                if (event.currentTarget instanceof HTMLInputElement) {
-                  this.setGroupSelected(item, event.currentTarget.checked);
-                }
+                const control = checkableControl(event.currentTarget);
+                if (control) this.setGroupSelected(item, control.checked);
               }}
             />
           ` : nothing}
@@ -2111,7 +2267,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
           ${this.renderFooter()}
         </div>
         ${this.loading ? html`
-          <div part="loading-overlay" role="status">
+          <div part="loading-overlay">
             <slot name="loading">${this.localize('loading')}</slot>
           </div>
         ` : nothing}

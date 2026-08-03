@@ -200,7 +200,7 @@ export const LoadingSkeleton: Story = {
     docs: {
       description: {
         story:
-          '`loading-appearance="skeleton"` keeps the real `<colgroup>`/`<thead>` (plus any filter and pagination chrome) and fills the body with placeholder rows, so the grid holds its shape on a cold load instead of flashing a spinner. Declare `columns[].width` or `layout="fixed"` to keep column widths pixel-identical once real rows land. Placeholder count comes from `skeleton-rows`, else the page size, else 3; exactly one `role="status"` region announces the load.',
+          '`loading-appearance="skeleton"` keeps the real `<colgroup>`/`<thead>` (plus any filter and pagination chrome) and fills the body with placeholder rows, so the grid holds its shape on a cold load instead of flashing a spinner. Declare `columns[].width` or `layout="fixed"` to keep column widths pixel-identical once real rows land. Placeholder count comes from `skeleton-rows`, else the page size, else 3; each post-mount transition into loading is announced once through the shared light-DOM polite sink.',
       },
     },
   },

@@ -8,7 +8,8 @@
 //
 // Regenerate the SHAPE (never the translations) with:
 //   node scripts/scaffold-translation.mjs es --force
-import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localization.js';
+import { registerLyraLocale } from '../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: 'Sin datos',
@@ -42,6 +43,8 @@ const strings: LyraLocaleStrings = {
   carouselLabel: 'Carrusel',
   carouselSlide: 'diapositiva',
   carouselSlidePosition: 'Diapositiva {index} de {total}',
+  carouselSlideAnnouncement: '{position}: {content}',
+  carouselSlideAnnouncementSeparator: '. ',
   carouselIndicators: 'Diapositivas del carrusel',
   carouselGoTo: 'Ir a la diapositiva {index}',
   imageComparerLabel: 'Comparación de imágenes',

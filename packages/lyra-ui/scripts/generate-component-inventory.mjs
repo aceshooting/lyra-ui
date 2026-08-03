@@ -3,12 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildMirrorMap } from './migrate-wa.mjs';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 import {
+  ACCESSIBILITY_PROFILE_SECTIONS,
   INVENTORY_SCHEMA_VERSION,
   LOCAL_MIGRATION_PROFILES,
   REWRITE_RULE_SECTIONS,
   SURFACE_SECTIONS,
   compareMappedSurfaces,
+  compareAccessibilityProfiles,
   emptyNormalizations,
   emptyRewrites,
   emptySurface,
@@ -18,6 +21,12 @@ import {
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultOutput = path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+
+/** Restores standard-resolvable inherited public surfaces before inventory normalization. The
+ * published CEM is compact, while the inventory intentionally records each tag's effective API. */
+export function expandLyraInventoryManifest(manifest) {
+  return expandManifestInheritance(manifest);
+}
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -96,6 +105,24 @@ function optionalPeersForComponent(component, packageJson) {
   return [...found].sort();
 }
 
+export function retainedComponentQualityMetadata(previous) {
+  return {
+    qualification: structuredClone(previous?.qualification ?? {
+      status: 'pending-generation',
+      humanReview: 'pending',
+      reviewer: null,
+      reviewedAt: null,
+      accessibility: 'not-recorded',
+      ledger: 'scripts/fixtures/component-qualification.json',
+    }),
+    dependencies: structuredClone(previous?.dependencies ?? {
+      direct: [],
+      transitive: [],
+      ledger: 'scripts/fixtures/component-integration.json',
+    }),
+  };
+}
+
 function lyraComponents(manifest, existing, packageJson) {
   const normalized = normalizeManifest(manifest, { ecosystem: 'lyra' });
   const existingByTag = new Map((existing?.components ?? []).map((component) => [component.tag, component]));
@@ -113,6 +140,7 @@ function lyraComponents(manifest, existing, packageJson) {
       rootExclusion: 'unreviewed',
       optionalPeers: [],
       maturity: previous?.maturity ?? entry.maturity,
+      ...retainedComponentQualityMetadata(previous),
       counterparts: [],
       surface: entry.surface,
     };
@@ -145,10 +173,6 @@ function reviewedPropertyWithoutDefault(name, attribute, type, { readonly = fals
     deprecated: null,
     hasDefault: false,
   };
-}
-
-function reviewedReadonlyProperty(name, attribute, type, defaultValue, reflects = false) {
-  return { ...reviewedProperty(name, attribute, type, defaultValue, reflects), readonly: true };
 }
 
 function reviewedAttributes(properties) {
@@ -232,13 +256,16 @@ function reviewedPublicDocumentation({
       sourceUrl: url,
       sourceVersion: '3.11.0',
       sourceSha256: sha256,
+      sourceHashNormalization: 'cloudflare-data-cfemail-v1',
       reviewedAt: '2026-08-02',
       unreviewedSections: [],
     },
   };
 }
 
-function reviewedMethod(name, parameters = [], returnType = 'void') {
+const UNSPECIFIED_PUBLIC_RETURN = 'unspecified-public-documentation';
+
+function reviewedMethod(name, parameters = [], returnType = UNSPECIFIED_PUBLIC_RETURN) {
   return { name, overloads: [{ parameters, returnType }] };
 }
 
@@ -272,15 +299,15 @@ const CHART_CSS_PROPERTIES = [
 ];
 
 const CHART_REVIEW_EVIDENCE = new Map([
-  ['wa-chart', ['chart', 'bar', 'c0748337345cc95607f19cfce5bc637b7936164ced4841d557c320f95c82ae87']],
-  ['wa-bar-chart', ['bar-chart', 'bar', '7470610eb8e7567c5f8a2bdf8bd15cf680de7bfd4300d71dc8830d2d2b42bd40']],
-  ['wa-bubble-chart', ['bubble-chart', 'bubble', '8371654815fca58ab82f757b386c358230b6f3c3ab4eb80c24cda77bccc0d108']],
-  ['wa-doughnut-chart', ['doughnut-chart', 'doughnut', 'a3a16f308914a53bd1a5b6d33808de05a660aff790848717521351a061e4dd75']],
-  ['wa-line-chart', ['line-chart', 'line', 'aa51b9a8db374d84624781511541c0655f6a2df6082b485934d754609d0cd147']],
-  ['wa-pie-chart', ['pie-chart', 'pie', 'ac6492a77c3708d8d3a8801bd8d2e27deabaad464d3711741190e9b35207e177']],
-  ['wa-polar-area-chart', ['polar-area-chart', 'polarArea', '21d67f13bef0e7163f60090111c906dd8d5727f0e1b078c05a2259b789203549']],
-  ['wa-radar-chart', ['radar-chart', 'radar', '921edb0198c393f6764e4227f7a5c5935880688d5de167c8f3fed0bf48003780']],
-  ['wa-scatter-chart', ['scatter-chart', 'scatter', '191b5b2d8dc12f9543bf8760c684ea556fea0483eb3498433c4c602f44aa8178']],
+  ['wa-chart', ['chart', 'bar', '5165e2b004b5b1214a29aea843670e5b963ef5424cb27379c2b58b1611b8ee0e']],
+  ['wa-bar-chart', ['bar-chart', 'bar', 'fe2969c238434c32679554cf9e36e66f32d2faf8aa2100b4efa491967e2f7d43']],
+  ['wa-bubble-chart', ['bubble-chart', 'bubble', 'c18a710316888476a09008ce4f7ba0fa864f6a7c5d96ab7e972a50e492e46dbd']],
+  ['wa-doughnut-chart', ['doughnut-chart', 'doughnut', 'f0537eda572288c36700e54917f6915d3970126bdfb7b9718d93e3a4d3bfec57']],
+  ['wa-line-chart', ['line-chart', 'line', 'f318b950f8a0c7cdae1d436bd1d2cd2b02b8b678ef0164f86907309a87da54a2']],
+  ['wa-pie-chart', ['pie-chart', 'pie', 'a5ebc5a5fb6cae11d7d602ca37f536db81267a6af54e1bc9d9bfaeaf442238ff']],
+  ['wa-polar-area-chart', ['polar-area-chart', 'polarArea', 'b00297da3a51e7b5a5ce922cfe1f5c158a95b34669c3a55a53c8b47665b08ea5']],
+  ['wa-radar-chart', ['radar-chart', 'radar', '5d54d45a9263bf16a2fde8a95e41e31c4fcfe428884d271cca537c1bc63bc53c']],
+  ['wa-scatter-chart', ['scatter-chart', 'scatter', '1f5a3191e2895f28efc75aa5e441deb7eb1293d7ab48787c807c04ea93414a2a']],
 ]);
 
 export function reviewedWebAwesomeChart(tag) {
@@ -336,7 +363,7 @@ export function reviewedWebAwesomeSparkline() {
     ],
     cssProperties: ['--fill-color', '--line-color', '--line-width'],
     url: 'https://webawesome.com/docs/components/sparkline/',
-    sha256: '1022114cbaef4bad2d8012702ee5038c210b188fe61542c51647fc8a970c53dd',
+    sha256: 'f1ad77432edfdb1f5f45a2caf5a707187478d851295a66a4968c02fe78770516',
   });
 }
 
@@ -345,15 +372,31 @@ export function reviewedWebAwesomeCombobox() {
     reviewedProperty('allowCreate', 'allow-create', 'boolean', false),
     reviewedProperty('allowCustomValue', 'allow-custom-value', 'boolean', false),
     reviewedProperty('appearance', 'appearance', "'filled' | 'outlined' | 'filled-outlined'", 'outlined', true),
-    reviewedPropertyWithoutDefault('autocapitalize', 'autocapitalize', 'string'),
+    reviewedPropertyWithoutDefault(
+      'autocapitalize',
+      'autocapitalize',
+      "'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'",
+    ),
     reviewedPropertyWithoutDefault('autocorrect', 'autocorrect', 'boolean'),
     reviewedProperty('disabled', 'disabled', 'boolean', false),
-    reviewedPropertyWithoutDefault('enterkeyhint', 'enterkeyhint', 'string'),
-    reviewedProperty('filter', null, '((option: HTMLElement, query: string) => boolean) | null', null),
-    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null', { readonly: true }),
-    reviewedPropertyWithoutDefault('getTag', null, '(option: HTMLElement) => unknown'),
+    reviewedPropertyWithoutDefault(
+      'enterkeyhint',
+      'enterkeyhint',
+      "'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'",
+    ),
+    reviewedProperty('filter', null, '((option: WaOption, query: string) => boolean) | null', null),
+    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null'),
+    reviewedPropertyWithoutDefault(
+      'getTag',
+      null,
+      '(option: WaOption, index: number) => TemplateResult | string | HTMLElement',
+    ),
     reviewedProperty('hint', 'hint', 'string', ''),
-    reviewedPropertyWithoutDefault('inputmode', 'inputmode', 'string'),
+    reviewedPropertyWithoutDefault(
+      'inputmode',
+      'inputmode',
+      "'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'",
+    ),
     reviewedProperty('inputValue', null, 'string', ''),
     reviewedProperty('label', 'label', 'string', ''),
     reviewedProperty('maxOptionsVisible', 'max-options-visible', 'number', 3),
@@ -366,9 +409,9 @@ export function reviewedWebAwesomeCombobox() {
     reviewedProperty('required', 'required', 'boolean', false, true),
     reviewedProperty('size', 'size', "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'", 'm', true),
     reviewedProperty('spellcheck', 'spellcheck', 'boolean', false),
-    reviewedPropertyWithoutDefault('validationTarget', null, 'HTMLElement | undefined'),
+    reviewedPropertyWithoutDefault('validationTarget', null, 'undefined | HTMLElement'),
     reviewedProperty('validators', null, 'Validator[]', '[]'),
-    reviewedPropertyWithoutDefault('value', null, 'string | string[]'),
+    reviewedPropertyWithoutDefault('value', 'value', 'string | string[]'),
     reviewedProperty('withClear', 'with-clear', 'boolean', false),
     reviewedProperty('withHint', 'with-hint', 'boolean', false),
     reviewedProperty('withLabel', 'with-label', 'boolean', false),
@@ -402,7 +445,7 @@ export function reviewedWebAwesomeCombobox() {
       'form-control-input',
       'form-control-label',
       'hint',
-      'label',
+      { name: 'label', deprecated: 'Use the form-control-label part instead.' },
       'listbox',
       'start',
       'tag',
@@ -416,11 +459,14 @@ export function reviewedWebAwesomeCombobox() {
     methods: [
       reviewedMethod('blur'),
       reviewedMethod('focus', [reviewedOptionalParameter('options', 'FocusOptions')]),
-      reviewedMethod('formStateRestoreCallback', [reviewedParameter('state', 'string | File | FormData | null')]),
-      reviewedMethod('hide', [], 'Promise<void>'),
+      reviewedMethod('formStateRestoreCallback', [
+        reviewedParameter('state', 'string | File | FormData | null'),
+        reviewedParameter('reason', "'autocomplete' | 'restore'"),
+      ]),
+      reviewedMethod('hide'),
       reviewedMethod('resetValidity'),
       reviewedMethod('setCustomValidity', [reviewedParameter('message', 'string')]),
-      reviewedMethod('show', [], 'Promise<void>'),
+      reviewedMethod('show'),
     ],
     form: {
       associated: true,
@@ -429,7 +475,7 @@ export function reviewedWebAwesomeCombobox() {
     },
     native: { forwardedEvents: nativeEvents, delegatedMethods: ['blur', 'focus'] },
     url: 'https://webawesome.com/docs/components/combobox/',
-    sha256: '63635cc46b63f03c24c956b2cf8e3c0b4293c367ed77c5c9c85afc3e74c8ea40',
+    sha256: '878fceb16d17a6ced71602f22d51339958c16138a470858f5dccf2d8d6419ec3',
   });
 }
 
@@ -438,17 +484,17 @@ export function reviewedWebAwesomeFileInput() {
     reviewedProperty('accept', 'accept', 'string', ''),
     reviewedPropertyWithoutDefault('capture', 'capture', "'user' | 'environment'"),
     reviewedProperty('disabled', 'disabled', 'boolean', false),
-    reviewedReadonlyProperty('dragging', 'dragging', 'boolean', false, true),
-    reviewedPropertyWithoutDefault('fileCount', null, 'number', { readonly: true }),
+    reviewedProperty('dragging', null, 'boolean', false),
+    reviewedPropertyWithoutDefault('fileCount', null, 'number'),
     reviewedProperty('files', null, 'File[]', '[]'),
-    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null', { readonly: true }),
+    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null'),
     reviewedProperty('hint', 'hint', 'string', ''),
     reviewedProperty('label', 'label', 'string', ''),
-    reviewedProperty('multiple', 'multiple', 'boolean', false),
-    reviewedProperty('name', 'name', 'string | null', null),
-    reviewedProperty('required', 'required', 'boolean', false),
-    reviewedProperty('size', 'size', "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'", 'm'),
-    reviewedPropertyWithoutDefault('validationTarget', null, 'HTMLElement | undefined'),
+    reviewedProperty('multiple', 'multiple', 'boolean', false, true),
+    reviewedProperty('name', 'name', 'string | null', null, true),
+    reviewedProperty('required', 'required', 'boolean', false, true),
+    reviewedProperty('size', 'size', "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'", 'm', true),
+    reviewedPropertyWithoutDefault('validationTarget', null, 'undefined | HTMLElement'),
     reviewedProperty('validators', null, 'Validator[]', '[]'),
     reviewedProperty('withHint', 'with-hint', 'boolean', false),
     reviewedProperty('withLabel', 'with-label', 'boolean', false),
@@ -458,7 +504,7 @@ export function reviewedWebAwesomeFileInput() {
     tag: 'wa-file-input',
     maturity: { status: 'stable', since: '3.2' },
     properties,
-    slots: ['', 'dropzone', 'hint', 'label'],
+    slots: ['dropzone', 'hint', 'label'],
     events: [
       reviewedNativeEvent('blur', 'FocusEvent'),
       reviewedNativeEvent('change'),
@@ -482,14 +528,17 @@ export function reviewedWebAwesomeFileInput() {
       'file-thumbnail',
       'form-control-label',
       'hint',
-      'label',
+      { name: 'label', deprecated: 'Use the form-control-label part instead.' },
       'remove-button',
     ],
     cssStates: ['blank', 'dragging'],
     methods: [
       reviewedMethod('blur'),
       reviewedMethod('focus', [reviewedOptionalParameter('options', 'FocusOptions')]),
-      reviewedMethod('formStateRestoreCallback', [reviewedParameter('state', 'string | File | FormData | null')]),
+      reviewedMethod('formStateRestoreCallback', [
+        reviewedParameter('state', 'string | File | FormData | null'),
+        reviewedParameter('reason', "'autocomplete' | 'restore'"),
+      ]),
       reviewedMethod('resetValidity'),
       reviewedMethod('setCustomValidity', [reviewedParameter('message', 'string')]),
     ],
@@ -500,7 +549,7 @@ export function reviewedWebAwesomeFileInput() {
     },
     native: { forwardedEvents: nativeEvents, delegatedMethods: ['blur', 'focus'] },
     url: 'https://webawesome.com/docs/components/file-input/',
-    sha256: '733c31b6c91ae12e1469d9713ef496142519a596a3efb529ea4645b6439ee695',
+    sha256: 'ce9311420d7f5e29ebfd736d8e99a61aeb412e36765729113fa23b84990a3b05',
   });
 }
 
@@ -518,9 +567,9 @@ export function reviewedWebAwesomeDateInput() {
     reviewedProperty('disablePast', 'disable-past', 'boolean', false, true),
     reviewedProperty('distance', 'distance', 'number', 0, true),
     reviewedProperty('firstDayOfWeek', 'first-day-of-week', 'WaDateInputFirstDayOfWeek', 'auto', true),
-    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null', { readonly: true }),
+    reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null'),
     reviewedProperty('hint', 'hint', 'string', ''),
-    reviewedPropertyWithoutDefault('isDateDisabled', null, '((date: Date) => boolean) | undefined'),
+    reviewedPropertyWithoutDefault('isDateDisabled', null, '(date: Date) => boolean | undefined'),
     reviewedProperty('label', 'label', 'string', ''),
     reviewedProperty('max', 'max', 'string', '', true),
     reviewedProperty('maxRange', 'max-range', 'number', 0, true),
@@ -619,7 +668,7 @@ export function reviewedWebAwesomeDateInput() {
     },
     native: { forwardedEvents: nativeEvents, delegatedMethods: ['blur', 'focus'] },
     url: 'https://webawesome.com/docs/components/date-input/',
-    sha256: '7597b7a3865419c954d0ac103f25a846190036bd3c067da21b4622e9f61169fe',
+    sha256: 'f02d777c5ea505c9eeafee76a0418647b83aeff513e2830915547937cda418b9',
   });
 }
 
@@ -633,7 +682,7 @@ export function reviewedWebAwesomeDatePicker() {
     reviewedProperty('disablePast', 'disable-past', 'boolean', false, true),
     reviewedProperty('firstDayOfWeek', 'first-day-of-week', 'WaDatePickerFirstDayOfWeek', 'auto', true),
     reviewedProperty('focusedDate', 'focused-date', 'string', '', true),
-    reviewedPropertyWithoutDefault('isDateDisabled', null, '((date: Date) => boolean) | undefined'),
+    reviewedPropertyWithoutDefault('isDateDisabled', null, '(date: Date) => boolean | undefined'),
     reviewedProperty('locale', 'locale', 'string', '', true),
     reviewedProperty('max', 'max', 'string', '', true),
     reviewedProperty('maxRange', 'max-range', 'number', 0, true),
@@ -646,8 +695,8 @@ export function reviewedWebAwesomeDatePicker() {
     reviewedProperty('size', 'size', "WaDatePickerSize | 'small' | 'medium' | 'large'", 'm', true),
     reviewedProperty('today', 'today', 'string', '', true),
     reviewedPropertyWithoutDefault('value', 'value', 'string', { reflects: true }),
-    reviewedPropertyWithoutDefault('valueAsDate', null, 'Date | null'),
-    reviewedPropertyWithoutDefault('valueAsRange', null, 'WaDatePickerRange'),
+    reviewedPropertyWithoutDefault('valueAsDate', null, 'Date | null', { readonly: true }),
+    reviewedPropertyWithoutDefault('valueAsRange', null, 'WaDatePickerRange', { readonly: true }),
     reviewedProperty('view', 'view', 'WaDatePickerView', 'days', true),
     reviewedProperty('weekdayFormat', 'weekday-format', 'WaDatePickerWeekdayFormat', 'short', true),
     reviewedProperty('withOutsideDays', 'with-outside-days', 'boolean', false, true),
@@ -712,14 +761,12 @@ export function reviewedWebAwesomeDatePicker() {
     ],
     native: { forwardedEvents: nativeEvents, delegatedMethods: ['focus'] },
     url: 'https://webawesome.com/docs/components/date-picker/',
-    sha256: 'f6121bc7c107a2a437f5cb10d46f84dec767f0e7a0704a47e8023ba7e4c98817',
+    sha256: '9dc70a6ef8da5c99193cb82cb30887972f25133691f74963daf90f316678d6ff',
   });
 }
 
 const DATA_GRID_OPTION_TYPE = "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }";
 const DATA_GRID_CSV_OPTION_TYPE = '{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }';
-const UNSPECIFIED_PUBLIC_RETURN = 'unspecified-public-documentation';
-
 export function reviewedWebAwesomeDataGrid() {
   const properties = [
     reviewedProperty('appearance', 'appearance', "'outlined' | 'plain'", 'outlined', true),
@@ -753,7 +800,7 @@ export function reviewedWebAwesomeDataGrid() {
     reviewedProperty('selectable', 'selectable', "'' | 'single' | 'multiple' | 'none'", 'none', true),
     reviewedProperty('selectableRows', null, '((row: Row) => boolean) | null', null),
     reviewedPropertyWithoutDefault('selectedKeys', null, '(string | number)[]'),
-    reviewedPropertyWithoutDefault('selectedRows', null, 'Row[]', { readonly: true }),
+    reviewedPropertyWithoutDefault('selectedRows', null, 'Row[]'),
     reviewedProperty('server', 'server', 'boolean', false, true),
     reviewedProperty('size', 'size', "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'", 'm', true),
     reviewedPropertyWithoutDefault('sort', null, 'SortingState'),
@@ -891,7 +938,7 @@ export function reviewedWebAwesomeDataGrid() {
     ],
     native: { forwardedEvents: [], delegatedMethods: ['focus'] },
     url: 'https://webawesome.com/docs/components/data-grid/',
-    sha256: '2ed6c9c0f4b1cc944d637fa8270c0b839f16aabb0f5f63eed35e6bb385f6f44f',
+    sha256: '4712e4032ddfb07bf32bacf18733c478b7b939e0af766609826d04d836d8239e',
   });
 }
 
@@ -901,7 +948,7 @@ export function reviewedWebAwesomeVideo() {
     reviewedProperty('autoplayMuted', 'autoplay-muted', 'boolean', false),
     reviewedProperty('autoplayOnVisible', 'autoplay-on-visible', 'boolean', false),
     reviewedProperty('controls', 'controls', "'none' | 'standard' | 'full'", 'standard', true),
-    reviewedProperty('currentTime', 'current-time', 'number', 0),
+    reviewedProperty('currentTime', 'currentTime', 'number', 0),
     reviewedProperty('duration', 'duration', 'number', 0),
     reviewedProperty('iconLibrary', 'icon-library', 'string', 'system'),
     reviewedProperty('loop', 'loop', 'boolean', false),
@@ -953,7 +1000,7 @@ export function reviewedWebAwesomeVideo() {
         reviewedNativeEvent(name, 'Event', { bubbles: false, composed: false }),
       ),
       parts: [
-        'base',
+        { name: 'base', deprecated: 'Use the video-wrapper part instead.' },
         'caption',
         'caption-overlay',
         'controls',
@@ -969,7 +1016,9 @@ export function reviewedWebAwesomeVideo() {
         'video',
         'video-title-overlay',
         'video-wrapper',
-      ].map((name) => ({ name, deprecated: null })),
+      ].map((part) =>
+        typeof part === 'string' ? { name: part, deprecated: null } : part,
+      ),
       cssProperties: [
         '--controls-background',
         '--controls-color',
@@ -977,12 +1026,12 @@ export function reviewedWebAwesomeVideo() {
       ].map((name) => ({ name, deprecated: null, hasDefault: false })),
       cssStates: [],
       methods: [
-        reviewedMethod('exitFullscreen', [], 'Promise<void>'),
-        reviewedMethod('getState', [], 'VideoState'),
-        reviewedMethod('getVideoElement', [], 'HTMLVideoElement | undefined'),
+        reviewedMethod('exitFullscreen'),
+        reviewedMethod('getState'),
+        reviewedMethod('getVideoElement'),
         reviewedMethod('pause'),
-        reviewedMethod('play', [], 'Promise<void>'),
-        reviewedMethod('requestFullscreen', [], 'Promise<void>'),
+        reviewedMethod('play'),
+        reviewedMethod('requestFullscreen'),
         reviewedMethod('seek', [reviewedParameter('time', 'number')]),
         reviewedMethod('setPlaybackRate', [reviewedParameter('rate', 'number')]),
         reviewedMethod('setVolume', [reviewedParameter('volume', 'number')]),
@@ -997,7 +1046,8 @@ export function reviewedWebAwesomeVideo() {
       source: 'official-public-documentation',
       sourceUrl: 'https://webawesome.com/docs/components/video/',
       sourceVersion: '3.11.0',
-      sourceSha256: 'e46664de348242af28213cb413b6ae824cbe05d7c976da017c53937f5fd75972',
+      sourceSha256: '3823f6e9dbf7330a333dde9612e987b851f3fa8762b6cd007d93ccd1d71f6362',
+      sourceHashNormalization: 'cloudflare-data-cfemail-v1',
       reviewedAt: '2026-08-02',
       unreviewedSections: [],
     },
@@ -1040,7 +1090,7 @@ export function reviewedWebAwesomeVideoPlaylist() {
       parts: [
         {
           name: 'base',
-          deprecated: 'Same-node compatibility alias for the video-playlist part.',
+          deprecated: 'Use the video-playlist part instead.',
         },
         'video-playlist',
         'playlist',
@@ -1066,7 +1116,8 @@ export function reviewedWebAwesomeVideoPlaylist() {
       source: 'official-public-documentation',
       sourceUrl: 'https://webawesome.com/docs/components/video-playlist/',
       sourceVersion: '3.11.0',
-      sourceSha256: 'af8cf002c696f5ee3a63e69f64309add477b5f9bac71668efd13289ca28d4896',
+      sourceSha256: 'bcb3e7ea61f1a5f5e3ced4b3be538e790c3ba8e1b22832576dbc44da0e1ef75a',
+      sourceHashNormalization: 'cloudflare-data-cfemail-v1',
       reviewedAt: '2026-08-02',
       unreviewedSections: [],
     },
@@ -1161,7 +1212,55 @@ const INCLUDE_SECURITY_DRIFT = [
   { code: 'missing-property', section: 'properties', member: 'allowScripts' },
 ];
 
+const CAROUSEL_EVENT_DETAIL_DRIFT = (member) => [{
+  code: 'event-type-mismatch',
+  section: 'events',
+  member,
+  expected: '{ index: number, slide: LyraCarouselItem }',
+  actual: 'CustomEvent<{ index: number; slide: HTMLElement }>',
+}];
+
+const ACCORDION_EVENT_DETAIL_DRIFT = [
+  'wa-after-collapse',
+  'wa-after-expand',
+  'wa-collapse',
+  'wa-expand',
+].map((member) => ({
+  code: 'event-type-mismatch',
+  section: 'events',
+  member,
+  expected: '{ item: LyraAccordionItem }',
+  actual: 'CustomEvent<LyraAccordionEventDetail>',
+}));
+
 const DECISION_OVERRIDES = new Map([
+  [
+    'sl-carousel',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review.',
+      expectedDrift: CAROUSEL_EVENT_DETAIL_DRIFT('sl-slide-change'),
+    },
+  ],
+  [
+    'wa-carousel',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review.',
+      expectedDrift: CAROUSEL_EVENT_DETAIL_DRIFT('wa-slide-change'),
+    },
+  ],
+  [
+    'wa-accordion',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra preserves legacy direct <lr-details> panels, so the event detail item is a union rather than only LyraAccordionItem; migrated handlers that rely on item-specific members require review.',
+      expectedDrift: ACCORDION_EVENT_DETAIL_DRIFT,
+    },
+  ],
   [
     'wa-markdown',
     {
@@ -1176,7 +1275,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Light-DOM candidate eligibility and selection behavior require an explicit compatibility review; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members.',
+        'Light-DOM candidate eligibility and selection behavior require an explicit compatibility review. Lyra also applies reduced-motion autoplay suppression and renders a visible pause/resume control; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members.',
       expectedDrift: [],
     },
   ],
@@ -1239,7 +1338,30 @@ const DECISION_OVERRIDES = new Map([
   ],
 ]);
 
+export function reviewedMigrationDecision(upstreamTag) {
+  const decision = DECISION_OVERRIDES.get(upstreamTag);
+  return decision ? structuredClone(decision) : null;
+}
+
 const BEHAVIOR_PARITY_OVERRIDES = new Map([
+  [
+    'sl-carousel',
+    {
+      behaviorReviewFlags: ['event-detail-slide-type-widening'],
+    },
+  ],
+  [
+    'wa-carousel',
+    {
+      behaviorReviewFlags: ['event-detail-slide-type-widening'],
+    },
+  ],
+  [
+    'wa-accordion',
+    {
+      behaviorReviewFlags: ['event-detail-item-type-widening', 'legacy-details-panels'],
+    },
+  ],
   [
     'wa-markdown',
     {
@@ -1251,10 +1373,675 @@ const BEHAVIOR_PARITY_OVERRIDES = new Map([
     'wa-random-content',
     {
       lightDom: 'warning-required',
-      behaviorReviewFlags: ['light-dom-candidate-model', 'selection-semantics'],
+      behaviorReviewFlags: [
+        'light-dom-candidate-model',
+        'selection-semantics',
+        'reduced-motion-autoplay',
+        'visible-pause-control',
+      ],
     },
   ],
 ]);
+
+function accessibilityProfile(description, behaviors = {}) {
+  return Object.freeze({
+    description,
+    ...Object.fromEntries(
+      ACCESSIBILITY_PROFILE_SECTIONS.map((section) => [section, [...(behaviors[section] ?? [])].sort()]),
+    ),
+  });
+}
+
+const REVIEWED_ACCESSIBILITY_PROFILES = Object.freeze({
+  'no-tag-owned-behavior': accessibilityProfile(
+    'No tag-owned semantic, naming, keyboard, focus, state, announcement, or motion behavior.',
+  ),
+  'transparent-content': accessibilityProfile(
+    'A transparent wrapper that preserves the semantics and focus behavior of authored descendants.',
+    { semantics: ['transparent-content'] },
+  ),
+  'document-content': accessibilityProfile(
+    'Rendered document content preserves authored headings, landmarks, links, and reading order.',
+    { semantics: ['document', 'transparent-content'] },
+  ),
+  'text-content': accessibilityProfile('The rendered value remains ordinary readable text.', {
+    semantics: ['text-content'],
+  }),
+  'animation-content': accessibilityProfile(
+    'Animation leaves authored content semantics intact and suppresses nonessential motion when requested.',
+    { semantics: ['transparent-content'], motion: ['respects-reduced-motion', 'suppresses-animation'] },
+  ),
+  alert: accessibilityProfile('An assertive status message is named from its content.', {
+    semantics: ['alert'],
+    naming: ['content-derived'],
+    announcements: ['live-alert'],
+  }),
+  callout: accessibilityProfile('A callout preserves the semantics and reading order of its authored content.', {
+    semantics: ['transparent-content'],
+  }),
+  'reactive-callout': accessibilityProfile(
+    'Callout content remains readable, gains an optional authored group name, and announces only post-mount content changes.',
+    {
+      semantics: ['group', 'transparent-content'],
+      naming: ['content-or-author-label'],
+      announcements: ['content-change', 'live-alert', 'live-status'],
+    },
+  ),
+  'animated-image': accessibilityProfile(
+    'A named image exposes an operable playback control and reduced-motion behavior.',
+    {
+      semantics: ['button', 'img'],
+      naming: ['alternative-text', 'control-labels-localized'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['paused'],
+      motion: ['respects-reduced-motion', 'stops-autoplay', 'user-pause-control'],
+    },
+  ),
+  'named-image': accessibilityProfile('Meaningful image content requires an authored accessible alternative.', {
+    semantics: ['img'],
+    naming: ['alternative-text', 'author-label-required'],
+  }),
+  navigation: accessibilityProfile('A named navigation landmark exposes the current destination.', {
+    semantics: ['navigation'],
+    naming: ['content-or-author-label', 'current-page'],
+    states: ['current'],
+  }),
+  link: accessibilityProfile('A named link uses native keyboard activation and focus behavior.', {
+    semantics: ['link'],
+    naming: ['content-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled'],
+  }),
+  button: accessibilityProfile('A named button uses native activation and exposes disabled and pressed state.', {
+    semantics: ['button'],
+    naming: ['content-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled', 'pressed'],
+  }),
+  'button-group': accessibilityProfile('Related buttons share an author-provided group name.', {
+    semantics: ['group'],
+    naming: ['author-label-required'],
+  }),
+  carousel: accessibilityProfile(
+    'A named carousel provides one keyboard navigation stop, slide state, and change announcements.',
+    {
+      semantics: ['group'],
+      naming: ['author-label-required', 'control-labels-localized'],
+      keyboard: ['arrow-navigation', 'home-end-navigation'],
+      focus: ['focus-preserved', 'roving-focus'],
+      states: ['current', 'disabled', 'selected'],
+      announcements: ['selection-change'],
+      motion: ['respects-reduced-motion', 'stops-autoplay'],
+    },
+  ),
+  'carousel-item': accessibilityProfile('A carousel item exposes its selected position within the authored slide set.', {
+    semantics: ['group'],
+    naming: ['content-derived'],
+    states: ['selected'],
+  }),
+  checkbox: accessibilityProfile('A labelled checkbox exposes checked, required, invalid, and disabled state.', {
+    semantics: ['checkbox'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['checked', 'disabled', 'invalid', 'required'],
+    announcements: ['validation-message'],
+  }),
+  'checkbox-group': accessibilityProfile('Independent checkboxes share a labelled and described grouping.', {
+    semantics: ['group'],
+    naming: ['visible-or-author-label'],
+    states: ['disabled', 'invalid', 'required'],
+    announcements: ['validation-message'],
+  }),
+  'color-picker': accessibilityProfile(
+    'A labelled color field and palette expose editable value, swatch names, selection, and dismissal behavior.',
+    {
+      semantics: ['button', 'listbox', 'textbox'],
+      naming: ['control-labels-localized', 'value-text', 'visible-or-author-label'],
+      keyboard: ['arrow-navigation', 'escape-dismiss', 'native-editing'],
+      focus: ['focus-return', 'native-focus', 'roving-focus'],
+      states: ['disabled', 'expanded', 'invalid', 'required', 'selected'],
+      announcements: ['validation-message'],
+    },
+  ),
+  'copy-button': accessibilityProfile('A named copy action announces success or failure after activation.', {
+    semantics: ['button'],
+    naming: ['author-label-required', 'control-labels-localized'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled'],
+    announcements: ['copy-result'],
+  }),
+  disclosure: accessibilityProfile('A heading-aligned disclosure button exposes expanded and disabled state.', {
+    semantics: ['button'],
+    naming: ['content-derived', 'heading-level'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled', 'expanded'],
+  }),
+  accordion: accessibilityProfile('An accordion coordinates disclosure headings with roving arrow-key navigation.', {
+    semantics: ['group'],
+    naming: ['heading-level'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'native-activation'],
+    focus: ['roving-focus'],
+    states: ['disabled', 'expanded'],
+  }),
+  modal: accessibilityProfile('A named modal overlay traps initial focus, dismisses with Escape, and returns focus.', {
+    semantics: ['dialog'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['escape-dismiss', 'tab-cycle'],
+    focus: ['focus-return', 'focus-trap', 'initial-focus'],
+    states: ['modal'],
+  }),
+  separator: accessibilityProfile('A separator exposes its orientation without adding a keyboard stop.', {
+    semantics: ['separator'],
+    states: ['orientation'],
+  }),
+  'menu-button': accessibilityProfile('A named trigger exposes menu expansion and returns focus after dismissal.', {
+    semantics: ['button', 'menu'],
+    naming: ['content-or-author-label'],
+    keyboard: ['arrow-navigation', 'escape-dismiss', 'native-activation'],
+    focus: ['focus-return', 'native-focus'],
+    states: ['disabled', 'expanded'],
+  }),
+  icon: accessibilityProfile('Unlabelled icons are presentational; meaningful icons use an authored alternative.', {
+    semantics: ['img', 'presentation'],
+    naming: ['alternative-text'],
+    motion: ['respects-reduced-motion', 'suppresses-animation'],
+  }),
+  'image-comparison': accessibilityProfile('A named adjustable divider exposes its numeric position.', {
+    semantics: ['slider'],
+    naming: ['author-label-required', 'value-text'],
+    keyboard: ['range-adjustment'],
+    focus: ['native-focus'],
+    states: ['disabled', 'orientation', 'value-range'],
+  }),
+  'text-input': accessibilityProfile('A labelled native-like text field exposes editing and form validity.', {
+    semantics: ['textbox'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['native-editing'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'readonly', 'required'],
+    announcements: ['validation-message'],
+  }),
+  textarea: accessibilityProfile('A labelled multiline field exposes native editing, validity, and optional count updates.', {
+    semantics: ['textbox'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['native-editing'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'readonly', 'required'],
+    announcements: ['character-count', 'validation-message'],
+  }),
+  menu: accessibilityProfile('A menu uses one roving tab stop with arrow, Home/End, and typeahead navigation.', {
+    semantics: ['menu'],
+    keyboard: ['arrow-navigation', 'escape-dismiss', 'home-end-navigation', 'typeahead'],
+    focus: ['roving-focus'],
+    states: ['orientation'],
+  }),
+  menuitem: accessibilityProfile('A named menu item exposes disabled, checked, selected, and submenu state.', {
+    semantics: ['menuitem'],
+    naming: ['content-derived'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['checked', 'disabled', 'expanded', 'selected'],
+  }),
+  'group-label': accessibilityProfile('Text labels an adjacent authored group without becoming a control.', {
+    semantics: ['presentation', 'text-content'],
+    naming: ['content-derived'],
+  }),
+  option: accessibilityProfile('A content-named option exposes disabled and selected state.', {
+    semantics: ['option'],
+    naming: ['content-derived'],
+    states: ['disabled', 'selected'],
+  }),
+  'positioning-primitive': accessibilityProfile(
+    'A positioning primitive deliberately supplies no standalone widget semantics or interaction.',
+    { semantics: ['composition-primitive'] },
+  ),
+  progress: accessibilityProfile('A named progress indicator exposes determinate value or indeterminate busy state.', {
+    semantics: ['progressbar'],
+    naming: ['author-label-required', 'value-text'],
+    states: ['busy', 'value-range'],
+    announcements: ['progress-value'],
+  }),
+  'qr-image': accessibilityProfile('QR output is exposed as a named image rather than raw visual pixels alone.', {
+    semantics: ['img'],
+    naming: ['alternative-text', 'author-label-required'],
+  }),
+  radio: accessibilityProfile('A labelled radio exposes checked, disabled, required, and invalid state.', {
+    semantics: ['radio'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['checked', 'disabled', 'invalid', 'required'],
+  }),
+  'radio-group': accessibilityProfile('A labelled radio group owns one roving tab stop and arrow-key selection.', {
+    semantics: ['radiogroup'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['arrow-navigation', 'home-end-navigation'],
+    focus: ['roving-focus'],
+    states: ['disabled', 'invalid', 'orientation', 'required'],
+    announcements: ['validation-message'],
+  }),
+  slider: accessibilityProfile('A labelled slider supports range keys and exposes value, orientation, and disabled state.', {
+    semantics: ['slider'],
+    naming: ['value-text', 'visible-or-author-label'],
+    keyboard: ['range-adjustment'],
+    focus: ['native-focus'],
+    states: ['disabled', 'orientation', 'value-range'],
+  }),
+  select: accessibilityProfile('A labelled select coordinates a combobox, listbox, and selected options.', {
+    semantics: ['combobox', 'listbox'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['arrow-navigation', 'escape-dismiss', 'home-end-navigation', 'typeahead'],
+    focus: ['focus-return', 'native-focus'],
+    states: ['disabled', 'expanded', 'invalid', 'required', 'selected'],
+    announcements: ['validation-message'],
+  }),
+  'decorative-placeholder': accessibilityProfile('A loading placeholder remains presentational and suppresses ambient motion.', {
+    semantics: ['presentation'],
+    motion: ['respects-reduced-motion', 'suppresses-animation'],
+  }),
+  'loading-status': accessibilityProfile('A loading placeholder can expose localized busy status and suppress ambient motion.', {
+    semantics: ['presentation', 'status'],
+    naming: ['control-labels-localized'],
+    states: ['busy'],
+    announcements: ['live-status'],
+    motion: ['respects-reduced-motion', 'suppresses-animation'],
+  }),
+  'indeterminate-progress': accessibilityProfile(
+    'An indeterminate operation is exposed as progress without creating a live status announcement.',
+    {
+      semantics: ['progressbar'],
+      states: ['busy'],
+    },
+  ),
+  'localized-indeterminate-progress': accessibilityProfile(
+    'A non-live indeterminate progressbar has a localized or authored name and suppresses ambient motion.',
+    {
+      semantics: ['progressbar'],
+      naming: ['content-or-author-label', 'control-labels-localized'],
+      states: ['busy'],
+      motion: ['respects-reduced-motion', 'suppresses-animation'],
+    },
+  ),
+  'split-panel': accessibilityProfile('An adjustable separator supports range keys and exposes value and orientation.', {
+    semantics: ['separator'],
+    naming: ['author-label-required', 'value-text'],
+    keyboard: ['range-adjustment'],
+    focus: ['native-focus'],
+    states: ['disabled', 'orientation', 'value-range'],
+  }),
+  switch: accessibilityProfile('A labelled switch supports native activation and exposes checked and disabled state.', {
+    semantics: ['switch'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['checked', 'disabled', 'invalid', 'required'],
+  }),
+  tab: accessibilityProfile('A content-named tab exposes selected and disabled state.', {
+    semantics: ['tab'],
+    naming: ['content-derived'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled', 'selected'],
+  }),
+  'tab-group': accessibilityProfile('A tablist links tabs to panels with roving navigation and configurable activation.', {
+    semantics: ['tablist', 'tabpanel'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'native-activation'],
+    focus: ['focus-follows-selection', 'roving-focus'],
+    states: ['orientation', 'selected'],
+  }),
+  'tab-panel': accessibilityProfile('A tab panel is labelled by its owning tab and exposes hidden versus active state.', {
+    semantics: ['tabpanel'],
+    naming: ['content-derived'],
+    states: ['selected'],
+  }),
+  tag: accessibilityProfile('A content-named tag exposes a localized optional remove action.', {
+    semantics: ['button', 'group'],
+    naming: ['content-derived', 'control-labels-localized'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled'],
+  }),
+  tooltip: accessibilityProfile('Non-interactive descriptive content appears on pointer hover or keyboard focus.', {
+    semantics: ['tooltip'],
+    naming: ['content-derived'],
+    keyboard: ['escape-dismiss'],
+    focus: ['focus-return'],
+  }),
+  tree: accessibilityProfile('A tree uses roving hierarchical navigation and exposes selection and expansion.', {
+    semantics: ['tree'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'typeahead'],
+    focus: ['roving-focus'],
+    states: ['disabled', 'expanded', 'multiselectable', 'selected'],
+  }),
+  treeitem: accessibilityProfile('A content-named tree item exposes level, expansion, selection, and disabled state.', {
+    semantics: ['treeitem'],
+    naming: ['content-derived'],
+    states: ['disabled', 'expanded', 'selected'],
+  }),
+  'visually-hidden': accessibilityProfile('Visually hidden content remains in reading order and reveals focused descendants.', {
+    semantics: ['transparent-content'],
+    focus: ['focus-visible-on-reveal'],
+  }),
+  chart: accessibilityProfile('A named chart exposes a textual data representation alongside the visual rendering.', {
+    semantics: ['img', 'table'],
+    naming: ['author-label-required', 'value-text'],
+    keyboard: ['data-point-navigation'],
+    focus: ['roving-focus'],
+    announcements: ['selection-change'],
+    motion: ['respects-reduced-motion', 'suppresses-animation'],
+  }),
+  combobox: accessibilityProfile('A labelled editable combobox coordinates textbox, listbox, and selected options.', {
+    semantics: ['combobox', 'listbox', 'textbox'],
+    naming: ['visible-or-author-label'],
+    keyboard: ['arrow-navigation', 'escape-dismiss', 'home-end-navigation', 'native-editing', 'typeahead'],
+    focus: ['focus-return', 'native-focus'],
+    states: ['disabled', 'expanded', 'invalid', 'multiselectable', 'required', 'selected'],
+    announcements: ['selection-change', 'validation-message'],
+  }),
+  'data-grid': accessibilityProfile('A labelled data grid uses roving cell navigation and exposes selection and sorting.', {
+    semantics: ['grid'],
+    naming: ['author-label-required'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'page-navigation'],
+    focus: ['focus-preserved', 'roving-focus'],
+    states: ['disabled', 'multiselectable', 'selected', 'sort'],
+    announcements: ['selection-change'],
+  }),
+  'segmented-field': accessibilityProfile('A labelled segmented field exposes editable date or time groups and validation.', {
+    semantics: ['group', 'spinbutton'],
+    naming: ['control-labels-localized', 'visible-or-author-label'],
+    keyboard: ['arrow-navigation', 'native-editing'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'readonly', 'required', 'value-range'],
+    announcements: ['validation-message'],
+  }),
+  'date-picker': accessibilityProfile('A labelled calendar grid uses roving date navigation and exposes selected/current dates.', {
+    semantics: ['grid'],
+    naming: ['control-labels-localized', 'visible-or-author-label'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'page-navigation'],
+    focus: ['focus-preserved', 'roving-focus'],
+    states: ['current', 'disabled', 'selected'],
+    announcements: ['selection-change'],
+  }),
+  'file-input': accessibilityProfile('A labelled native file control exposes selection, removal, and validation state.', {
+    semantics: ['button', 'list'],
+    naming: ['control-labels-localized', 'visible-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'required'],
+    announcements: ['selection-change', 'validation-message'],
+  }),
+  'number-input': accessibilityProfile('A labelled spinbutton supports native editing, stepping, and range validity.', {
+    semantics: ['spinbutton'],
+    naming: ['control-labels-localized', 'visible-or-author-label'],
+    keyboard: ['native-editing', 'range-adjustment'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'readonly', 'required', 'value-range'],
+    announcements: ['validation-message'],
+  }),
+  'otp-input': accessibilityProfile('A labelled one-time-code field presents one editing and form target.', {
+    semantics: ['textbox'],
+    naming: ['author-label-required', 'visible-or-author-label'],
+    keyboard: ['native-editing'],
+    focus: ['native-focus'],
+    states: ['disabled', 'invalid', 'required'],
+    announcements: ['validation-message'],
+  }),
+  'page-landmarks': accessibilityProfile('An application page composes named header, navigation, main, and complementary regions.', {
+    semantics: ['article', 'navigation', 'region'],
+    naming: ['content-or-author-label'],
+    focus: ['focus-preserved'],
+  }),
+  pagination: accessibilityProfile('A named pagination landmark marks the current page, preserves focus, and announces changes.', {
+    semantics: ['navigation'],
+    naming: ['author-label-required', 'control-labels-localized', 'current-page'],
+    keyboard: ['native-activation'],
+    focus: ['focus-preserved', 'native-focus'],
+    states: ['current', 'disabled'],
+    announcements: ['page-change'],
+  }),
+  popover: accessibilityProfile('A named non-modal popover dismisses with Escape and returns focus to its trigger.', {
+    semantics: ['dialog'],
+    naming: ['content-or-author-label'],
+    keyboard: ['escape-dismiss'],
+    focus: ['focus-return', 'initial-focus'],
+    states: ['expanded'],
+  }),
+  'random-content-upstream': accessibilityProfile(
+    'Rotating content pauses around pointer/focus interaction, suppresses motion, and announces every selection.',
+    {
+      semantics: ['region'],
+      naming: ['content-derived'],
+      focus: ['focus-preserved'],
+      announcements: ['autoplay-content-change', 'content-change'],
+      motion: ['respects-reduced-motion', 'suppresses-animation'],
+    },
+  ),
+  'random-content-target': accessibilityProfile(
+    'Rotating content preserves focused descendants, announces manual changes, and provides a visible pause control.',
+    {
+      semantics: ['button', 'region'],
+      naming: ['content-derived', 'control-labels-localized'],
+      keyboard: ['native-activation'],
+      focus: ['focus-preserved', 'native-focus'],
+      states: ['paused'],
+      announcements: ['content-change'],
+      motion: ['respects-reduced-motion', 'stops-autoplay', 'suppresses-animation', 'user-pause-control'],
+    },
+  ),
+  scroller: accessibilityProfile('A labelled overflow region exposes localized keyboard-operable scroll controls.', {
+    semantics: ['button', 'region'],
+    naming: ['control-labels-localized', 'content-or-author-label'],
+    keyboard: ['native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled'],
+  }),
+  sparkline: accessibilityProfile('A compact chart exposes a textual value and accessible image name.', {
+    semantics: ['img', 'text-content'],
+    naming: ['author-label-required', 'value-text'],
+  }),
+  'toast-region': accessibilityProfile('A toast region queues status or alert items without moving focus.', {
+    semantics: ['region', 'status'],
+    announcements: ['live-alert', 'live-status'],
+  }),
+  video: accessibilityProfile('A named video exposes captions and keyboard-operable playback controls.', {
+    semantics: ['video'],
+    naming: ['author-label-required', 'control-labels-localized'],
+    keyboard: ['media-controls', 'native-activation'],
+    focus: ['native-focus'],
+    states: ['disabled', 'paused'],
+    announcements: ['playback-state'],
+    motion: ['respects-reduced-motion', 'stops-autoplay'],
+  }),
+  'video-playlist': accessibilityProfile('A named video playlist exposes the active item and keyboard selection.', {
+    semantics: ['listbox', 'option'],
+    naming: ['content-or-author-label'],
+    keyboard: ['arrow-navigation', 'home-end-navigation', 'native-activation'],
+    focus: ['focus-preserved', 'roving-focus'],
+    states: ['current', 'disabled', 'selected'],
+    announcements: ['selection-change'],
+  }),
+  frame: accessibilityProfile('An embedded frame requires a title and can deliberately gate keyboard entry.', {
+    semantics: ['iframe'],
+    naming: ['frame-title'],
+    focus: ['frame-focus-gated', 'native-focus'],
+  }),
+});
+
+export function accessibilityProfileCatalog() {
+  return structuredClone(REVIEWED_ACCESSIBILITY_PROFILES);
+}
+
+const ACCESSIBILITY_ASSIGNMENTS = new Map();
+
+export function assertAccessibilityProfilesReferenced(profiles, assignments) {
+  const referenced = new Set();
+  for (const [tag, assignment] of assignments) {
+    for (const field of ['upstreamProfile', 'targetProfile']) {
+      const profile = assignment?.[field];
+      if (typeof profile !== 'string' || !Object.hasOwn(profiles, profile)) {
+        throw new Error(`${tag}: accessibility assignment references unknown ${field} ${String(profile)}`);
+      }
+      referenced.add(profile);
+    }
+  }
+
+  const unreferenced = Object.keys(profiles)
+    .filter((profile) => !referenced.has(profile))
+    .sort();
+  if (unreferenced.length > 0) {
+    const noun = unreferenced.length === 1 ? 'profile' : 'profiles';
+    throw new Error(`unreferenced accessibility ${noun} ${unreferenced.join(', ')}`);
+  }
+}
+
+function assignAccessibility(upstreamProfile, tags, targetProfile = upstreamProfile) {
+  for (const tag of tags) {
+    if (ACCESSIBILITY_ASSIGNMENTS.has(tag)) throw new Error(`${tag}: duplicate accessibility review assignment`);
+    ACCESSIBILITY_ASSIGNMENTS.set(tag, { upstreamProfile, targetProfile });
+  }
+}
+
+assignAccessibility('alert', ['sl-alert', 'wa-toast-item']);
+assignAccessibility('callout', ['wa-callout'], 'reactive-callout');
+assignAccessibility('animated-image', ['sl-animated-image', 'wa-animated-image']);
+assignAccessibility('animation-content', ['sl-animation', 'wa-animation']);
+assignAccessibility('named-image', ['sl-avatar', 'wa-avatar']);
+assignAccessibility('text-content', [
+  'sl-badge',
+  'sl-format-bytes',
+  'sl-format-date',
+  'sl-format-number',
+  'sl-relative-time',
+  'wa-badge',
+  'wa-format-bytes',
+  'wa-format-date',
+  'wa-format-number',
+  'wa-relative-time',
+]);
+assignAccessibility('navigation', ['sl-breadcrumb', 'wa-breadcrumb']);
+assignAccessibility('link', ['sl-breadcrumb-item', 'wa-breadcrumb-item']);
+assignAccessibility('button', ['sl-button', 'sl-icon-button', 'wa-button']);
+assignAccessibility('button-group', ['sl-button-group', 'wa-button-group']);
+assignAccessibility('no-tag-owned-behavior', ['sl-card', 'wa-card']);
+assignAccessibility('carousel', ['sl-carousel', 'wa-carousel']);
+assignAccessibility('carousel-item', ['sl-carousel-item', 'wa-carousel-item']);
+assignAccessibility('checkbox', ['sl-checkbox', 'wa-checkbox']);
+assignAccessibility('checkbox-group', ['wa-checkbox-group']);
+assignAccessibility('color-picker', ['sl-color-picker', 'wa-color-picker']);
+assignAccessibility('copy-button', ['sl-copy-button', 'wa-copy-button']);
+assignAccessibility('disclosure', ['sl-details', 'wa-accordion-item', 'wa-details']);
+assignAccessibility('accordion', ['wa-accordion']);
+assignAccessibility('modal', ['sl-dialog', 'sl-drawer', 'wa-dialog', 'wa-drawer']);
+assignAccessibility('separator', ['sl-divider', 'wa-divider']);
+assignAccessibility('menu-button', ['sl-dropdown', 'wa-dropdown']);
+assignAccessibility('icon', ['sl-icon', 'wa-icon']);
+assignAccessibility('image-comparison', ['sl-image-comparer', 'wa-comparison']);
+assignAccessibility('document-content', ['sl-include', 'wa-include', 'wa-markdown']);
+assignAccessibility('text-input', ['sl-input', 'wa-input']);
+assignAccessibility('textarea', ['sl-textarea', 'wa-textarea']);
+assignAccessibility('menu', ['sl-menu']);
+assignAccessibility('menuitem', ['sl-menu-item', 'wa-dropdown-item']);
+assignAccessibility('group-label', ['sl-menu-label']);
+assignAccessibility('transparent-content', [
+  'sl-mutation-observer',
+  'sl-resize-observer',
+  'wa-intersection-observer',
+  'wa-mutation-observer',
+  'wa-resize-observer',
+]);
+assignAccessibility('option', ['sl-option', 'wa-option']);
+assignAccessibility('positioning-primitive', ['sl-popup', 'wa-popup']);
+assignAccessibility('progress', ['sl-progress-bar', 'sl-progress-ring', 'wa-progress-bar', 'wa-progress-ring']);
+assignAccessibility('qr-image', ['sl-qr-code', 'wa-qr-code']);
+assignAccessibility('radio', ['sl-radio', 'sl-radio-button', 'wa-radio']);
+assignAccessibility('radio-group', ['sl-radio-group', 'wa-radio-group']);
+assignAccessibility('slider', ['sl-range', 'sl-rating', 'wa-rating', 'wa-slider']);
+assignAccessibility('select', ['sl-select', 'wa-select']);
+assignAccessibility('decorative-placeholder', ['sl-skeleton', 'wa-skeleton'], 'loading-status');
+assignAccessibility(
+  'indeterminate-progress',
+  ['sl-spinner', 'wa-spinner'],
+  'localized-indeterminate-progress',
+);
+assignAccessibility('split-panel', ['sl-split-panel', 'wa-split-panel']);
+assignAccessibility('switch', ['sl-switch', 'wa-switch']);
+assignAccessibility('tab', ['sl-tab', 'wa-tab']);
+assignAccessibility('tab-group', ['sl-tab-group', 'wa-tab-group']);
+assignAccessibility('tab-panel', ['sl-tab-panel', 'wa-tab-panel']);
+assignAccessibility('tag', ['sl-tag', 'wa-tag']);
+assignAccessibility('tooltip', ['sl-tooltip', 'wa-tooltip']);
+assignAccessibility('tree', ['sl-tree', 'wa-tree']);
+assignAccessibility('treeitem', ['sl-tree-item', 'wa-tree-item']);
+assignAccessibility('visually-hidden', ['sl-visually-hidden']);
+assignAccessibility('chart', [
+  'wa-bar-chart',
+  'wa-bubble-chart',
+  'wa-chart',
+  'wa-doughnut-chart',
+  'wa-line-chart',
+  'wa-pie-chart',
+  'wa-polar-area-chart',
+  'wa-radar-chart',
+  'wa-scatter-chart',
+]);
+assignAccessibility('combobox', ['wa-combobox']);
+assignAccessibility('data-grid', ['wa-data-grid']);
+assignAccessibility('segmented-field', ['wa-date-input', 'wa-known-date', 'wa-time-input']);
+assignAccessibility('date-picker', ['wa-date-picker']);
+assignAccessibility('file-input', ['wa-file-input']);
+assignAccessibility('number-input', ['wa-number-input']);
+assignAccessibility('otp-input', ['wa-otp-input']);
+assignAccessibility('page-landmarks', ['wa-page']);
+assignAccessibility('pagination', ['wa-pagination']);
+assignAccessibility('popover', ['wa-popover']);
+assignAccessibility('random-content-upstream', ['wa-random-content'], 'random-content-target');
+assignAccessibility('scroller', ['wa-scroller']);
+assignAccessibility('sparkline', ['wa-sparkline']);
+assignAccessibility('toast-region', ['wa-toast']);
+assignAccessibility('video', ['wa-video']);
+assignAccessibility('video-playlist', ['wa-video-playlist']);
+assignAccessibility('frame', ['wa-zoomable-frame']);
+
+assertAccessibilityProfilesReferenced(REVIEWED_ACCESSIBILITY_PROFILES, ACCESSIBILITY_ASSIGNMENTS);
+
+export function reviewedAccessibilityMetadata(upstreamTag, targetTag) {
+  const assignment = ACCESSIBILITY_ASSIGNMENTS.get(upstreamTag);
+  if (!assignment) throw new Error(`${upstreamTag}: missing reviewed accessibility profile assignment`);
+  const profiles = REVIEWED_ACCESSIBILITY_PROFILES;
+  const comparison = compareAccessibilityProfiles(
+    profiles,
+    assignment.upstreamProfile,
+    assignment.targetProfile,
+  );
+  const sourceDescription = profiles[assignment.upstreamProfile].description;
+  let rationale;
+  if (comparison.status === 'not-applicable') {
+    rationale = `${upstreamTag} and ${targetTag} assign no tag-owned accessibility behavior; authored descendants keep their own semantics.`;
+  } else if (comparison.status === 'equivalent') {
+    rationale = `${upstreamTag} and ${targetTag} share the reviewed behavior profile: ${sourceDescription}`;
+  } else if (comparison.status === 'target-additive') {
+    rationale = `${targetTag} retains the reviewed ${upstreamTag} behavior and adds ${comparison.additions.join(', ')}.`;
+  } else {
+    rationale = `${targetTag} does not claim ${comparison.missing.join(', ')} from ${upstreamTag}; the mapping requires manual accessibility review.`;
+  }
+  return {
+    reviewStatus: 'complete',
+    upstreamProfile: assignment.upstreamProfile,
+    targetProfile: assignment.targetProfile,
+    evidence: {
+      upstream: 'pinned-public-contract',
+      target: 'lyra-authored-contract-and-automated-tests',
+    },
+    comparison,
+    rationale,
+  };
+}
 
 export function migrationParityMetadata({ upstream, target, classification }) {
   const behaviorOverride = BEHAVIOR_PARITY_OVERRIDES.get(upstream.tag);
@@ -1266,6 +2053,7 @@ export function migrationParityMetadata({ upstream, target, classification }) {
       registration: !target ? 'unavailable' : target.rootIncluded === false ? 'granular' : 'all',
       optionalPeers: [...(target?.optionalPeers ?? [])].sort(),
     },
+    accessibility: reviewedAccessibilityMetadata(upstream.tag, target?.tag ?? 'no Lyra target'),
     behaviorReviewFlags:
       behaviorOverride?.behaviorReviewFlags ??
       (classification === 'exact' || classification === 'rewritten' ? [] : [`${classification}-mapping`]),
@@ -1482,11 +2270,11 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       [
         'attribute',
-        ['form-enctype'],
+        ['formenctype'],
         "'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'",
-        'ButtonFormEnctype',
+        'ButtonFormEnctype | undefined',
       ],
-      ['attribute', ['form-method'], "'post' | 'get'", 'ButtonFormMethod'],
+      ['attribute', ['formmethod'], "'post' | 'get'", 'ButtonFormMethod | undefined'],
       ['attribute', ['size'], "'small' | 'medium' | 'large'", 'LyraSize'],
       ['attribute', ['type'], "'button' | 'submit' | 'reset'", 'ButtonType'],
       [
@@ -1636,7 +2424,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -1648,7 +2436,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -1682,7 +2470,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   ['wa-checkbox', [['attribute', ['size'], "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'", 'LyraSize']]],
@@ -1744,7 +2532,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   ['wa-drawer', [['attribute', ['placement'], "'top' | 'end' | 'bottom' | 'start'", 'LyraDrawerPlacement']]],
@@ -1825,10 +2613,10 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
-  ['wa-markdown', [['property', ['marked'], 'Marked', 'OptionalPeerApi | undefined']]],
+  ['wa-markdown', [['property', ['marked'], 'Marked', 'LyraMarkedParser | undefined']]],
   [
     'wa-number-input',
     [
@@ -1863,7 +2651,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -1871,7 +2659,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -1890,7 +2678,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -1926,7 +2714,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       ['attribute', ['grid'], "'x' | 'y' | 'both' | 'none'", 'LyraChartGrid'],
       ['attribute', ['index-axis'], "'x' | 'y'", 'LyraChartIndexAxis'],
-      ['property', ['config'], "ChartJS['config']", 'OptionalPeerApi | undefined'],
+      ['property', ['config'], "ChartJS['config']", 'LyraChartConfiguration | undefined'],
     ],
   ],
   [
@@ -2097,8 +2885,13 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
     'wa-combobox',
     [
       ['attribute', ['appearance'], "'filled' | 'outlined' | 'filled-outlined'", 'LyraComboboxAppearance'],
-      ['property', ['filter'], '((option: HTMLElement, query: string) => boolean) | null', 'OptionFilter | null'],
-      ['property', ['getTag'], '(option: HTMLElement) => unknown', 'LyraComboboxTagRenderer | undefined'],
+      ['property', ['filter'], '((option: WaOption, query: string) => boolean) | null', 'OptionFilter | null'],
+      [
+        'property',
+        ['getTag'],
+        '(option: WaOption, index: number) => TemplateResult | string | HTMLElement',
+        'LyraComboboxTagRenderer | undefined',
+      ],
       ['property', ['validators'], 'Validator[]', 'unknown[]'],
     ],
   ],
@@ -2129,7 +2922,6 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
       ['attribute', ['appearance'], "'filled' | 'outlined' | 'filled-outlined'", 'LyraDateInputAppearance'],
       ['attribute', ['mode'], 'WaDateInputMode', "'single' | 'range'"],
       ['property', ['dayContent'], 'WaDateInputDayContent | undefined', 'LyraDatePickerDayContent | undefined'],
-      ['property', ['isDateDisabled'], '((date: Date) => boolean) | undefined', '(date: Date) => boolean | undefined'],
       ['property', ['validators'], 'Validator[]', 'LyraDateInputValidator[]'],
       ['property', ['valueAsRange'], '{ from: Date | null; to: Date | null }', 'DateRange'],
     ],
@@ -2140,7 +2932,6 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
       ['attribute', ['first-day-of-week'], 'WaDatePickerFirstDayOfWeek', 'string'],
       ['attribute', ['mode'], 'WaDatePickerMode', 'CalendarMode'],
       ['attribute', ['weekday-format'], 'WaDatePickerWeekdayFormat', 'WeekdayFormat'],
-      ['property', ['isDateDisabled'], '((date: Date) => boolean) | undefined', '(date: Date) => boolean | undefined'],
       ['property', ['valueAsRange'], 'WaDatePickerRange', 'DateRange'],
     ],
   ],
@@ -2242,6 +3033,205 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   ],
 ]);
 
+// EventMap projection intentionally publishes Lyra's concrete runtime event classes and detail
+// aliases. Some pinned upstream manifests expose only a detail object, an unparameterized
+// `Event`/`CustomEvent`, or a narrower public alias. These exact per-tag/member pairs are the
+// review boundary: event types are otherwise compared literally after prefix normalization, so a
+// changed alias, newly broad `unknown`, or unrelated event cannot inherit an exception.
+const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
+  [
+    'sl-dialog',
+    [[
+      'event',
+      ['sl-request-close'],
+      "{ source: 'close-button' | 'keyboard' | 'overlay' }",
+      'CustomEvent<LyraDialogRequestCloseDetail>',
+    ]],
+  ],
+  [
+    'sl-drawer',
+    [[
+      'event',
+      ['sl-request-close'],
+      "{ source: 'close-button' | 'keyboard' | 'overlay' }",
+      'CustomEvent<LyraDialogRequestCloseDetail>',
+    ]],
+  ],
+  [
+    'sl-include',
+    [['event', ['sl-error'], '{ status: number }', 'CustomEvent<LyraIncludeErrorDetail>']],
+  ],
+  [
+    'sl-menu',
+    [['event', ['sl-select'], '{ item: SlMenuItem }', 'CustomEvent<MenuItemSelectDetail>']],
+  ],
+  [
+    'sl-mutation-observer',
+    [[
+      'event',
+      ['sl-mutation'],
+      '{ mutationList: MutationRecord[] }',
+      'CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>',
+    ]],
+  ],
+  [
+    'sl-rating',
+    [[
+      'event',
+      ['sl-hover'],
+      "{ phase: 'start' | 'move' | 'end', value: number }",
+      'CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>',
+    ]],
+  ],
+  [
+    'sl-tab-group',
+    [[
+      'event',
+      ['sl-tab-hide', 'sl-tab-show'],
+      '{ name: String }',
+      'CustomEvent<{ tabId: string; name: string }>',
+    ]],
+  ],
+  [
+    'wa-color-picker',
+    [[
+      'event',
+      ['wa-after-hide', 'wa-after-show', 'wa-hide', 'wa-show'],
+      'CustomEvent',
+      'CustomEvent<undefined>',
+    ]],
+  ],
+  [
+    'wa-combobox',
+    [[
+      'event',
+      ['wa-after-hide', 'wa-after-show', 'wa-clear', 'wa-hide', 'wa-invalid', 'wa-show'],
+      'Event',
+      'CustomEvent<undefined>',
+    ]],
+  ],
+  [
+    'wa-data-grid',
+    [
+      ['event', ['request', 'wa-data-request'], 'Event', 'CustomEvent<DataGridRequest>'],
+      ['event', ['wa-cell-click'], 'Event', 'CustomEvent<DataGridCellDetail<Row>>'],
+      [
+        'event',
+        ['wa-cell-contextmenu'],
+        'CustomEvent',
+        'CustomEvent<DataGridCellContextMenuDetail<Row>>',
+      ],
+      ['event', ['wa-column-move'], 'Event', 'CustomEvent<DataGridColumnMoveDetail>'],
+      ['event', ['wa-column-pin'], 'Event', 'CustomEvent<DataGridColumnPinDetail>'],
+      ['event', ['wa-column-resize'], 'Event', 'CustomEvent<DataGridColumnResizeDetail>'],
+      [
+        'event',
+        ['wa-column-visibility-change'],
+        'Event',
+        'CustomEvent<DataGridColumnVisibilityDetail>',
+      ],
+      ['event', ['wa-data-error'], 'Event', 'CustomEvent<DataGridDataErrorDetail>'],
+      ['event', ['wa-filter-change'], 'Event', 'CustomEvent<{ filters: DataGridFilter[] }>'],
+      ['event', ['wa-page-change'], 'Event', 'CustomEvent<DataGridPageDetail>'],
+      [
+        'event',
+        ['wa-row-collapse', 'wa-row-expand'],
+        'Event',
+        'CustomEvent<DataGridRowDetail<Row>>',
+      ],
+      ['event', ['wa-row-select'], 'Event', 'CustomEvent<DataGridSelectionDetail<Row>>'],
+      ['event', ['wa-sort-change'], 'Event', 'CustomEvent<{ sort: DataGridSortingState }>'],
+    ],
+  ],
+  [
+    'wa-date-input',
+    [[
+      'event',
+      ['wa-after-hide', 'wa-after-show', 'wa-clear', 'wa-invalid'],
+      'Event',
+      'CustomEvent<undefined>',
+    ]],
+  ],
+  [
+    'wa-dialog',
+    [['event', ['wa-hide'], '{ source: Element }', 'CustomEvent<LyraDialogHideDetail>']],
+  ],
+  [
+    'wa-drawer',
+    [['event', ['wa-hide'], '{ source: Element }', 'CustomEvent<LyraDialogHideDetail>']],
+  ],
+  [
+    'wa-file-input',
+    [['event', ['wa-invalid'], 'Event', 'CustomEvent<undefined>']],
+  ],
+  [
+    'wa-include',
+    [[
+      'event',
+      ['wa-include-error'],
+      '{ status: number }',
+      'CustomEvent<LyraIncludeErrorDetail>',
+    ]],
+  ],
+  [
+    'wa-known-date',
+    [
+      ['event', ['change'], 'Event', 'Event & { readonly detail: LyraKnownDateEventDetail }'],
+      [
+        'event',
+        ['input'],
+        'InputEvent',
+        'InputEvent & { readonly detail: LyraKnownDateEventDetail }',
+      ],
+    ],
+  ],
+  [
+    'wa-mutation-observer',
+    [[
+      'event',
+      ['wa-mutation'],
+      '{ mutationList: MutationRecord[] }',
+      'CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>',
+    ]],
+  ],
+  [
+    'wa-random-content',
+    [[
+      'event',
+      ['wa-content-change'],
+      '{ items: Element[] }',
+      'CustomEvent<{ items: HTMLElement[] }>',
+    ]],
+  ],
+  [
+    'wa-rating',
+    [[
+      'event',
+      ['wa-hover'],
+      "{ phase: 'start' | 'move' | 'end', value: number }",
+      'CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>',
+    ]],
+  ],
+  [
+    'wa-tab-group',
+    [[
+      'event',
+      ['wa-tab-hide', 'wa-tab-show'],
+      '{ name: String }',
+      'CustomEvent<{ tabId: string; name: string }>',
+    ]],
+  ],
+  [
+    'wa-video-playlist',
+    [[
+      'event',
+      ['wa-video-change'],
+      'CustomEvent<{ previousIndex: number; currentIndex: number; video: { title: string; poster: string; sources: unknown[]; tracks: unknown[] } }>',
+      'CustomEvent<LyraVideoPlaylistChangeDetail>',
+    ]],
+  ],
+]);
+
 const FORM_OWNER_ATTRIBUTE_TYPE_EQUIVALENCE_TAGS = [
   'sl-button',
   'sl-checkbox',
@@ -2298,6 +3288,7 @@ function reviewedTypeEquivalences(upstreamTag) {
   const groups = [
     ...(REVIEWED_TYPE_EQUIVALENCE_GROUPS.get(upstreamTag) ?? []),
     ...(REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS.get(upstreamTag) ?? []),
+    ...(REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS.get(upstreamTag) ?? []),
   ];
   if (FORM_OWNER_ATTRIBUTE_TYPE_EQUIVALENCE_TAGS.includes(upstreamTag)) {
     groups.push(['attribute', ['form'], 'string', 'HTMLFormElement | null']);
@@ -2361,14 +3352,6 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     },
   ],
   [
-    'sl-dropdown',
-    {
-      inferredAttributeSuppressions: [
-        { attribute: 'containing-element', property: 'containingElement' },
-      ],
-    },
-  ],
-  [
     'sl-dialog',
     {
       defaultEquivalences: [
@@ -2408,10 +3391,9 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     'sl-popup',
     {
       inferredAttributeSuppressions: [
-        { attribute: 'auto-size-boundary', property: 'autoSizeBoundary' },
-        { attribute: 'flip-boundary', property: 'flipBoundary' },
-        { attribute: 'popup', property: 'popup' },
-        { attribute: 'shift-boundary', property: 'shiftBoundary' },
+        { attribute: 'autoSizeBoundary', property: 'autoSizeBoundary', explicit: true },
+        { attribute: 'flipBoundary', property: 'flipBoundary', explicit: true },
+        { attribute: 'shiftBoundary', property: 'shiftBoundary', explicit: true },
       ],
     },
   ],
@@ -2422,15 +3404,12 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
         reviewedDefaultEquivalence('form', '', null),
         reviewedDefaultEquivalence('name', '', null),
       ],
-      inferredAttributeSuppressions: [
-        { attribute: 'tooltip-formatter', property: 'tooltipFormatter' },
-      ],
     },
   ],
   [
     'sl-rating',
     {
-      inferredAttributeSuppressions: [{ attribute: 'get-symbol', property: 'getSymbol' }],
+      inferredAttributeSuppressions: [{ attribute: 'getSymbol', property: 'getSymbol', explicit: true }],
     },
   ],
   [
@@ -2440,7 +3419,7 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
         reviewedDefaultEquivalence('form', '', null),
         reviewedDefaultEquivalence('size', 'medium', 'm'),
       ],
-      inferredAttributeSuppressions: [{ attribute: 'get-tag', property: 'getTag' }],
+      inferredAttributeSuppressions: [{ attribute: 'getTag', property: 'getTag', explicit: true }],
     },
   ],
   [
@@ -2470,12 +3449,12 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     {
       // `wa-invalid` is `preventDefault()`-able on `<lr-combobox>` because vetoing it also cancels
       // the native `invalid` event behind it, which is what suppresses the browser's own validation
-      // bubble. `lr-show`/`lr-hide` are cancelable except on the one path where the veto could not
-      // mean anything: an already-removed element closing on disconnect.
+      // bubble. `lr-show` is cancelable on every path. `lr-hide` is cancelable while connected, but
+      // the disconnection cleanup path is not because the already-removed popup cannot stay open.
       cancelabilityEquivalences: [
-        reviewedCancelabilityEquivalence('wa-hide', 'never', 'always'),
+        reviewedCancelabilityEquivalence('wa-hide', 'never', 'conditional'),
         reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always'),
-        reviewedCancelabilityEquivalence('wa-show', 'never', 'conditional'),
+        reviewedCancelabilityEquivalence('wa-show', 'never', 'always'),
       ],
     },
   ],
@@ -2665,7 +3644,7 @@ export function generateInventory({
   output = defaultOutput,
 }) {
   const fixture = readJson(path.join(packageDir, 'scripts', 'fixtures', 'upstream-tags.json'));
-  const lyraManifestJson = readJson(lyraManifest);
+  const lyraManifestJson = expandLyraInventoryManifest(readJson(lyraManifest));
   const packageJson = readJson(path.join(packageDir, 'package.json'));
   const readme = fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8');
   const existing = fs.existsSync(output) ? readJson(output) : null;
@@ -2699,6 +3678,7 @@ export function generateInventory({
       webawesome: { version: fixture.webawesome.version, commit: fixture.webawesome.commit },
       shoelace: { version: fixture.shoelace.version, commit: fixture.shoelace.commit },
     },
+    accessibilityProfiles: accessibilityProfileCatalog(),
     components,
     localMigrations: structuredClone(LOCAL_MIGRATION_PROFILES),
     upstreams,

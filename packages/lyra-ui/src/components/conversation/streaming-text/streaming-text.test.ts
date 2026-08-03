@@ -10,7 +10,10 @@ import { styles } from './streaming-text.styles.js';
 // thresholds are used instead, the same way lr-stream-status's own
 // timer-driven tests do.
 
-type Internals = { displayedContent: string; coalescer: { throttleMs: number } };
+type Internals = {
+  displayedContent: string;
+  coalescer: { throttleMs: number; announce(text: string): void };
+};
 
 function plainText(el: LyraStreamingText): string {
   const span = el.shadowRoot!.querySelector('.plain');
@@ -90,6 +93,43 @@ it('honors coalesceMs reassigned after mount for a subsequent burst, not just th
     plainText(el),
     'the burst should flush using the newly-assigned coalesceMs, not the original 5000ms window',
   ).to.equal('abc');
+});
+
+it('schedules and cancels coalescing with the adopted document window', async () => {
+  const el = (await fixture(html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`)) as LyraStreamingText;
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  const clears: number[] = [];
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    if (typeof handler === 'function') callbacks.set(81, handler);
+    return 81;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) {
+      clears.push(handle);
+      callbacks.delete(handle);
+    }
+  }) as typeof ownerWindow.clearTimeout;
+
+  try {
+    el.remove();
+    iframe.contentDocument!.adoptNode(el);
+    (el as unknown as Internals).coalescer.announce('coalesced in the frame');
+    expect(callbacks.has(81), 'the adopted window must schedule the coalescer').to.be.true;
+
+    iframe.contentDocument!.body.append(el);
+    el.remove();
+    expect(clears).to.include(81);
+    expect(callbacks.size).to.equal(0);
+  } finally {
+    el.remove();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
+    iframe.remove();
+  }
 });
 
 describe('markdown tri-state attribute parsing', () => {

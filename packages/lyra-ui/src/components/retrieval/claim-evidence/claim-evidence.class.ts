@@ -14,6 +14,11 @@ import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import '../citation-badge/citation-badge.class.js';
 import { styles } from './claim-evidence.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraClaimEvidenceEventMap {
   'lr-claim-select': CustomEvent<{ claim: GroundedClaim }>;
@@ -50,6 +55,23 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    claimEvidenceConfidence: LYRA_DEFAULT_claimEvidenceConfidence,
+    claimEvidenceContradicted: LYRA_DEFAULT_claimEvidenceContradicted,
+    claimEvidenceEmpty: LYRA_DEFAULT_claimEvidenceEmpty,
+    claimEvidenceLabel: LYRA_DEFAULT_claimEvidenceLabel,
+    claimEvidencePartiallySupported: LYRA_DEFAULT_claimEvidencePartiallySupported,
+    claimEvidenceSupported: LYRA_DEFAULT_claimEvidenceSupported,
+    claimEvidenceUnsupported: LYRA_DEFAULT_claimEvidenceUnsupported,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) claims: GroundedClaim[] = [];

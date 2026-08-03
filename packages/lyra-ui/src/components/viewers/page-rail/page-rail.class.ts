@@ -9,6 +9,11 @@ import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchor
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DIGIT_BUFFER_MS = 500;
 const MAX_PAGE_COUNT = 100_000;
@@ -27,6 +32,12 @@ export interface LyraPageRailEventMap {
 }
 
 type ThumbnailState = 'pending' | 'ready' | 'unavailable';
+
+interface OwnedAnimationFrameWait {
+  owner: Window;
+  handle?: number;
+  resolve(value: boolean): void;
+}
 
 /**
  * `<lr-page-rail>` — a virtualized vertical thumbnail rail for page-addressed documents, with
@@ -60,6 +71,16 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  * @since 4.0.0
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    pageRailLabel: LYRA_DEFAULT_pageRailLabel,
+    pageRailPage: LYRA_DEFAULT_pageRailPage,
+    pageRailPageHighlighted: LYRA_DEFAULT_pageRailPageHighlighted,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) viewer: PageThumbnailSource | null = null;
@@ -84,10 +105,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private readonly canvases = new Map<number, HTMLCanvasElement>();
   private boundViewer: PageThumbnailSource | null = null;
   private digitBuffer = '';
-  private digitTimer?: ReturnType<typeof setTimeout>;
+  private digitTimer?: number;
+  private digitTimerWindow?: Window;
   private thumbnailGeneration = 0;
   private resizeObserver?: ResizeObserver;
   private targetObserver?: MutationObserver;
+  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
   private pendingFocusPage: number | null = null;
   private focusRepairPending = false;
   private focusRepairGeneration = 0;
@@ -112,9 +135,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
       const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
       const focused = activeElementIn(list?.shadowRoot);
-      const focusedIndex = focused instanceof HTMLElement
-        ? finiteInteger(Number(focused.closest<HTMLElement>('[data-row-index]')?.dataset['rowIndex']), -1, -1)
-        : -1;
+      const focusedRowIndex = focused?.closest('[data-row-index]')?.getAttribute('data-row-index');
+      const focusedIndex = focusedRowIndex == null
+        ? -1
+        : finiteInteger(Number(focusedRowIndex), -1, -1);
       const nextCount = this.effectivePageCount();
       if (nextCount <= 0) {
         if (this.focusRepairPending) {
@@ -136,8 +160,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver((entries) => {
+    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (ResizeObserverCtor) {
+      this.resizeObserver = new ResizeObserverCtor((entries) => {
         const width = finiteRange(
           entries.at(-1)?.contentRect.width ?? DEFAULT_ALLOCATION_WIDTH,
           DEFAULT_ALLOCATION_WIDTH,
@@ -164,12 +189,24 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.targetObserver = undefined;
     this.unbindViewer();
     this.thumbnailGeneration++;
-    clearTimeout(this.digitTimer);
-    this.digitBuffer = '';
+    this.cancelPendingAnimationFrames();
+    this.resetDigitBuffer();
     this.pendingFocusPage = null;
     this.focusRepairPending = false;
     this.focusRepairGeneration++;
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.targetObserver?.disconnect();
+    this.targetObserver = undefined;
+    this.cancelPendingAnimationFrames();
+    this.resetDigitBuffer();
+    this.pendingFocusPage = null;
+    this.focusRepairPending = false;
+    this.focusRepairGeneration++;
   }
 
   private resolveViewer(): void {
@@ -188,8 +225,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private observeForTarget(): void {
     this.targetObserver?.disconnect();
     this.targetObserver = undefined;
-    if (!this.isConnected || !this.for || typeof MutationObserver === 'undefined') return;
-    this.targetObserver = new MutationObserver(() => this.resolveViewer());
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!this.isConnected || !this.for || !MutationObserverCtor) return;
+    this.targetObserver = new MutationObserverCtor(() => this.resolveViewer());
     this.targetObserver.observe(this.getRootNode(), {
       attributes: true,
       attributeFilter: ['id'],
@@ -290,6 +328,28 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (generation === this.focusRepairGeneration) this.focusRepairPending = false;
   }
 
+  private waitForOwnerAnimationFrame(): Promise<boolean> {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const pending = { owner, resolve } as OwnedAnimationFrameWait;
+      this.pendingAnimationFrames.add(pending);
+      pending.handle = owner.requestAnimationFrame(() => {
+        if (!this.pendingAnimationFrames.delete(pending)) return;
+        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
+      });
+    });
+  }
+
+  private cancelPendingAnimationFrames(): void {
+    const pendingFrames = [...this.pendingAnimationFrames];
+    this.pendingAnimationFrames.clear();
+    for (const pending of pendingFrames) {
+      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
+      pending.resolve(false);
+    }
+  }
+
   private async focusVirtualPage(pageNumber: number, generation: number): Promise<void> {
     const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
     if (!list) {
@@ -313,7 +373,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
     list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
     for (let attempt = 0; attempt < 4; attempt++) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (!(await this.waitForOwnerAnimationFrame())) return;
       await list.updateComplete;
       if (!this.isCurrentFocusRepair(list, generation)) return;
       index = this.focusRepairIndex(pageNumber);
@@ -381,14 +441,35 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.emit('lr-page-select', { page: pageNumber });
   }
 
+  private cancelDigitTimer(): void {
+    if (this.digitTimer !== undefined) this.digitTimerWindow?.clearTimeout(this.digitTimer);
+    this.digitTimer = undefined;
+    this.digitTimerWindow = undefined;
+  }
+
+  private resetDigitBuffer(): void {
+    this.cancelDigitTimer();
+    this.digitBuffer = '';
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     if (!/^[0-9]$/.test(e.key)) return;
     this.digitBuffer += e.key;
-    clearTimeout(this.digitTimer);
-    this.digitTimer = setTimeout(() => {
-      this.digitBuffer = '';
-    }, DIGIT_BUFFER_MS);
     const target = Number(this.digitBuffer);
+    this.cancelDigitTimer();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) {
+      const handle = ownerWindow.setTimeout(() => {
+        if (this.digitTimerWindow !== ownerWindow || this.digitTimer !== handle) return;
+        this.digitTimer = undefined;
+        this.digitTimerWindow = undefined;
+        this.digitBuffer = '';
+      }, DIGIT_BUFFER_MS);
+      this.digitTimerWindow = ownerWindow;
+      this.digitTimer = handle;
+    } else {
+      this.digitBuffer = '';
+    }
     const count = this.effectivePageCount();
     if (target >= 1 && target <= count) {
       if (this.boundViewer) this.onPageActivate(target);
@@ -427,7 +508,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
               : html`${keyed(
                   this.thumbnailGeneration,
                   html`<canvas aria-hidden="true" ${ref(this.canvasRef(number))}></canvas>`,
-                )}${thumbState !== 'ready' ? html`<lr-skeleton variant="rect" aria-hidden="true"></lr-skeleton>` : nothing}`
+                )}${thumbState !== 'ready' ? html`<lr-skeleton variant="rect" .announce=${false} aria-hidden="true"></lr-skeleton>` : nothing}`
             : html`<lr-file-icon decorative></lr-file-icon>`}
         </span>
         <span part="page-number" aria-hidden="true">${numberFormat.format(number)}</span>

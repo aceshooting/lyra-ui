@@ -1,5 +1,6 @@
-// Regenerates `<lr-terminal>`'s ANSI/SGR palette in `src/theme.css` AND the mirrored fallbacks in
-// `src/internal/tokens.styles.ts`, for BOTH modes, between the `terminal ramp` markers.
+// Regenerates `<lr-terminal>`'s ANSI/SGR palette in `src/theme.css` AND the mirrored opt-in
+// fallbacks in `src/internal/specialist-tokens.styles.ts`, for BOTH modes, between the
+// `terminal ramp` markers.
 //
 // Two token sets are generated, because SGR gives the sixteen names two different jobs:
 //
@@ -45,7 +46,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const themePath = join(packageDir, 'src', 'theme.css');
-const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5;
 const CONTRAST_TARGET = 4.75; // headroom over the gate
@@ -170,8 +171,8 @@ function solve(name, hue, chroma, rank, reference) {
 /**
  * Replaces a marker-delimited generated block. Throws rather than no-op replacing: the previous
  * implementation silently did nothing when the target region did not contain the token it was asked
- * to rewrite, which is exactly how the dark ANSI fallbacks went missing from `tokens.styles.ts`
- * while this script reported success for both modes.
+ * to rewrite, which is exactly how a token-sheet split could otherwise leave the specialist
+ * fallbacks stale while this script reported success for both modes.
  */
 function replaceBlock(text, label, mode, block, file) {
   const pattern = new RegExp(
@@ -197,7 +198,7 @@ if (!raised.light || !raised.dark) throw new Error('could not read --lr-theme-co
 if (!text.light || !text.dark) throw new Error('could not read --lr-theme-color-text-normal for both modes');
 
 let themeOut = themeText;
-let tokensOut = readFileSync(tokensPath, 'utf8');
+let specialistTokensOut = readFileSync(specialistTokensPath, 'utf8');
 
 for (const mode of ['light', 'dark']) {
   const panel = raised[mode];
@@ -224,15 +225,15 @@ for (const mode of ['light', 'dark']) {
     'theme.css',
   );
 
-  tokensOut = replaceBlock(
-    tokensOut,
+  specialistTokensOut = replaceBlock(
+    specialistTokensOut,
     'terminal ramp',
     mode,
     [
       ...fg.map(([name, hex]) => `    --lr-terminal-color-${name}: var(--lr-theme-terminal-color-${name}, ${hex});`),
       ...bg.map(([name, hex]) => `    --lr-terminal-bg-${name}: var(--lr-theme-terminal-bg-${name}, ${hex});`),
     ].join('\n'),
-    'tokens.styles.ts',
+    'specialist-tokens.styles.ts',
   );
 
   const worstFg = Math.min(...fg.map(([, hex]) => contrast(hex, panel)));
@@ -257,4 +258,4 @@ for (const mode of ['light', 'dark']) {
 }
 
 writeFileSync(themePath, themeOut, 'utf8');
-writeFileSync(tokensPath, tokensOut, 'utf8');
+writeFileSync(specialistTokensPath, specialistTokensOut, 'utf8');

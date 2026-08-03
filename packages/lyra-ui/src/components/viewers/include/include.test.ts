@@ -86,6 +86,100 @@ describe('lr-include', () => {
     } finally { window.fetch = original; }
   });
 
+  it('isolates retained remote work by owner realm and uses owner URL, fetch, and cancellation', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const base = frameDocument.createElement('base');
+    base.href = 'https://realm-cache.example/base/';
+    frameDocument.head.append(base);
+    const ParentAbortController = window.AbortController;
+    const OwnerAbortController = frameWindow.AbortController;
+    const ParentURL = window.URL;
+    const OwnerURL = frameWindow.URL;
+    const originalParentFetch = window.fetch;
+    const originalOwnerFetch = frameWindow.fetch;
+    let parentControllers = 0;
+    let ownerControllers = 0;
+    let parentUrlCreations = 0;
+    let ownerUrlCreations = 0;
+    let parentFetches = 0;
+    let ownerFetches = 0;
+
+    class ParentTrackedAbortController extends ParentAbortController {
+      constructor() {
+        super();
+        parentControllers++;
+      }
+    }
+    class OwnerTrackedAbortController extends OwnerAbortController {
+      constructor() {
+        super();
+        ownerControllers++;
+      }
+    }
+    class ParentTrackedURL extends ParentURL {
+      constructor(url: string | URL, baseUrl?: string | URL) {
+        super(url, baseUrl);
+        parentUrlCreations++;
+      }
+    }
+    class OwnerTrackedURL extends OwnerURL {
+      constructor(url: string | URL, baseUrl?: string | URL) {
+        super(url, baseUrl);
+        ownerUrlCreations++;
+      }
+    }
+
+    window.AbortController = ParentTrackedAbortController;
+    frameWindow.AbortController = OwnerTrackedAbortController;
+    window.URL = ParentTrackedURL;
+    frameWindow.URL = OwnerTrackedURL;
+    window.fetch = (() => {
+      parentFetches++;
+      return Promise.resolve(response('<p>Parent realm</p>'));
+    }) as typeof fetch;
+    frameWindow.fetch = (() => {
+      ownerFetches++;
+      return Promise.resolve(response('<p>Owner realm</p>'));
+    }) as typeof fetch;
+
+    let ownerElement: LyraInclude | undefined;
+    try {
+      const parentElement = await fixture<LyraInclude>(html`
+        <lr-include src="https://realm-cache.example/base/shared.html"></lr-include>
+      `);
+      await waitUntil(() => parentElement.textContent === 'Parent realm');
+      const parentUrlsAfterParentLoad = parentUrlCreations;
+
+      ownerElement = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      frameDocument.body.append(frameDocument.adoptNode(ownerElement));
+      const loaded = oneEvent(ownerElement, 'lr-load');
+      ownerElement.src = 'shared.html';
+      await loaded;
+
+      expect(ownerElement.textContent).to.equal('Owner realm');
+      expect(parentFetches).to.equal(1);
+      expect(ownerFetches).to.equal(1);
+      expect(parentControllers).to.equal(1);
+      expect(ownerControllers).to.equal(1);
+      expect(parentUrlCreations, 'owner resolution must not fall back to ambient URL').to.equal(
+        parentUrlsAfterParentLoad,
+      );
+      expect(ownerUrlCreations).to.be.greaterThan(0);
+    } finally {
+      ownerElement?.remove();
+      window.AbortController = ParentAbortController;
+      frameWindow.AbortController = OwnerAbortController;
+      window.URL = ParentURL;
+      frameWindow.URL = OwnerURL;
+      window.fetch = originalParentFetch;
+      frameWindow.fetch = originalOwnerFetch;
+      iframe.remove();
+    }
+  });
+
   it('invalidates an active search after fetched light-DOM content is replaced', async () => {
     const original = window.fetch;
     let body = '<p>needle</p>';
@@ -172,7 +266,10 @@ describe('lr-include', () => {
       const aliasPromise = oneEvent(el, 'lr-error');
       el.src = 'https://example.test/unavailable.html';
       const [canonical, alias] = await Promise.all([canonicalPromise, aliasPromise]);
-      expect(alias.detail, 'both names carry the very same detail object').to.equal(canonical.detail);
+      expect(
+        alias.detail === canonical.detail,
+        'both names carry the very same detail object',
+      ).to.equal(true);
       expect(alias.detail.status).to.equal(503);
       expect(alias.detail.reason).to.equal('http');
       expect(alias.bubbles).to.equal(canonical.bubbles);
@@ -674,4 +771,25 @@ describe('lr-include', () => {
       await expect(el).to.be.accessible();
     } finally { window.fetch = original; }
   });
+});
+
+it('selects nested template content after adoption into another document', () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const foreignDocument = iframe.contentDocument!;
+    const el = foreignDocument.adoptNode(document.createElement('lr-include')) as LyraInclude;
+    const access = el as unknown as {
+      fragmentFromSanitized(markup: string, fragmentId: string): DocumentFragment | null;
+    };
+    const fragment = access.fragmentFromSanitized(
+      '<main><template id="chosen"><p id="inside">Chosen content</p></template></main>',
+      'chosen',
+    );
+
+    expect(fragment?.ownerDocument === foreignDocument).to.equal(true);
+    expect(fragment?.querySelector('p')?.textContent).to.equal('Chosen content');
+  } finally {
+    iframe.remove();
+  }
 });

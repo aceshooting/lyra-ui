@@ -4,6 +4,7 @@ import type { LyraGeojsonView } from './geojson-view.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const GEOJSON_URL = 'https://example.test/zones.geojson';
 
@@ -22,6 +23,8 @@ const testObservers = new WeakMap<Element, TestIntersectionObserver>();
 class DeferredStyleMap {
   readonly canvas: HTMLCanvasElement;
   readonly listeners = new Map<string, Array<(event?: unknown) => void>>();
+  readonly sources = new Map<string, { setData: (_data: unknown) => void }>();
+  readonly layers = new Set<string>();
 
   constructor(options: {
     container: HTMLElement;
@@ -40,12 +43,53 @@ class DeferredStyleMap {
     return this;
   }
 
+  once(type: string, listener: (event?: unknown) => void): this {
+    const onceListener = (event?: unknown): void => {
+      const listeners = this.listeners.get(type);
+      if (listeners) this.listeners.set(type, listeners.filter((candidate) => candidate !== onceListener));
+      listener(event);
+    };
+    return this.on(type, onceListener);
+  }
+
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
   }
 
-  getLayer(): undefined {
-    return undefined;
+  getLayer(id: string): object | undefined {
+    return this.layers.has(id) ? {} : undefined;
+  }
+
+  getSource(id: string): { setData: (_data: unknown) => void } | undefined {
+    return this.sources.get(id);
+  }
+
+  addSource(id: string): void {
+    this.sources.set(id, { setData: () => {} });
+  }
+
+  addLayer(layer: { id: string }): void {
+    this.layers.add(layer.id);
+  }
+
+  removeLayer(id: string): void {
+    this.layers.delete(id);
+  }
+
+  removeSource(id: string): void {
+    this.sources.delete(id);
+  }
+
+  setStyle(): void {
+    this.emit('style.load');
+  }
+
+  setPaintProperty(): void {}
+  setCenter(): void {}
+  setZoom(): void {}
+
+  emit(type: string, event?: unknown): void {
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
   }
 
   remove(): void {
@@ -81,12 +125,25 @@ afterEach(() => {
 async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
   const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
     mapStyle: unknown;
-    map?: unknown;
+    _connectGeneration: number;
+    _maplibreModule?: unknown;
+    loading: boolean;
+    visible: boolean;
+    map?: DeferredStyleMap;
+    tryConstructMap(): void;
   } | null;
   if (!map) return;
+  // Keep this integration test independent of headless-browser WebGL support. Firefox's
+  // MapLibre feature probe can pass even though constructing a real map then fails because its
+  // headless context lacks WebGL2; the test needs the lr-map lifecycle/semantics, not GPU output.
+  map._connectGeneration++;
+  map._maplibreModule = { Map: DeferredStyleMap };
+  map.loading = false;
+  map.visible = true;
   map.mapStyle = EMPTY_MAP_STYLE;
   await (map as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-  testObservers.get(map)?.reveal(map);
+  map.tryConstructMap();
+  map.map?.emit('load');
   await waitUntil(() => map.map != null, 'map never initialized with the deterministic test style', { timeout: 2000 });
 }
 
@@ -120,14 +177,23 @@ function stubFetch(body: unknown, ok = true): void {
 }
 
 describe('fetching and parsing', () => {
-  it('lets the skeleton own loading status without nesting it in another status', async () => {
+  it('keeps the nested loading skeleton decorative while the shared sink owns announcements', async () => {
     const el = await fixture<LyraGeojsonView>(html`<lr-geojson-view></lr-geojson-view>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
     (el as unknown as { loadState: unknown }).loadState = { kind: 'loading' };
     el.requestUpdate();
     await el.updateComplete;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]')!;
     expect(spinner.getAttribute('role')).to.equal(null);
+    expect(spinner.querySelector('.sr-only')?.textContent).to.equal('Loading document…');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
     expect(spinner.querySelectorAll('lr-skeleton').length).to.equal(1);
+    const skeleton = spinner.querySelector('lr-skeleton') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await skeleton.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length)
+      .to.equal(0);
   });
 
   it('fetches, parses, and computes a feature count for a FeatureCollection', async () => {
@@ -143,9 +209,15 @@ describe('fetching and parsing', () => {
       { timeout: 2000 },
     );
     await useDeterministicMapStyle(el);
-    const status = el.shadowRoot!.querySelector('[role="status"]');
+    const status = el.shadowRoot!.querySelector('[part="status"]');
     expect(status).to.exist;
     expect(status!.textContent).to.include('2');
+    const politeMessages = Array.from(
+      document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.children ?? [],
+      (message) => message.textContent,
+    );
+    expect(politeMessages).to.include(status!.textContent);
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length).to.equal(0);
   });
 
   it('formats the feature count with the effective locale', async () => {
@@ -161,7 +233,9 @@ describe('fetching and parsing', () => {
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be.true;
+    const assertive = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    expect(assertive?.lastElementChild?.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('resolves the invalid-GeoJSON error message through a .strings override for geojsonViewInvalid', async () => {
@@ -177,7 +251,7 @@ describe('fetching and parsing', () => {
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Fichier GeoJSON invalide.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Fichier GeoJSON invalide.');
   });
 });
 
@@ -403,7 +477,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This file is not valid GeoJSON.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('rejects top-level JSON null as invalid GeoJSON', async () => {
@@ -412,7 +486,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This file is not valid GeoJSON.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('treats a bare Feature (not wrapped in a FeatureCollection) as a single feature and fits the view to its geometry', async () => {
@@ -423,7 +497,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       'geojson-view never reached the loaded state',
       { timeout: 2000 },
     );
-    expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal('1 feature');
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('1 feature');
     const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & { center: [number, number]; zoom: number };
     expect(map.center).to.deep.equal([10, 20]);
     expect(map.zoom).to.equal(18);
@@ -437,7 +511,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       'geojson-view never reached the loaded state',
       { timeout: 2000 },
     );
-    expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal('1 feature');
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('1 feature');
     const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & { center: [number, number]; zoom: number };
     expect(map.center).to.deep.equal([5, 6]);
     expect(map.zoom).to.equal(18);
@@ -466,26 +540,26 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects a Feature with no geometry member', async () => {
     stubFetch({ type: 'Feature', properties: { name: 'Empty' } });
     const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
-    await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This file is not valid GeoJSON.');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('rejects a FeatureCollection with no features array', async () => {
     stubFetch({ type: 'FeatureCollection' });
     const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
-    await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This file is not valid GeoJSON.');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('rejects malformed coordinate shapes and enforces a coordinate ceiling', async () => {
     stubFetch({ type: 'Point', coordinates: [10] });
     const malformed = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
-    await waitUntil(() => malformed.shadowRoot!.querySelector('[role="alert"]') !== null);
+    await waitUntil(() => malformed.shadowRoot!.querySelector('[part="error"]') !== null);
 
     stubFetch({ type: 'MultiPoint', coordinates: Array.from({ length: 10001 }, (_unused, index) => [index % 180, 0]) });
     const oversized = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
-    await waitUntil(() => oversized.shadowRoot!.querySelector('[role="alert"]') !== null);
-    expect(oversized.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This document is too large to preview.');
+    await waitUntil(() => oversized.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(oversized.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
   });
 
   it('accepts a MultiPoint containing a single valid position', async () => {
@@ -615,11 +689,11 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
         html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`,
       )) as LyraGeojsonView;
       await waitUntil(
-        () => el.shadowRoot!.querySelector('[role="alert"]') !== null,
+        () => el.shadowRoot!.querySelector('[part="error"]') !== null,
         description,
       );
       expect(
-        el.shadowRoot!.querySelector('[role="alert"]')?.textContent,
+        el.shadowRoot!.querySelector('[part="error"]')?.textContent,
         description,
       ).to.equal('This file is not valid GeoJSON.');
     }
@@ -653,11 +727,11 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
         html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`,
       )) as LyraGeojsonView;
       await waitUntil(
-        () => el.shadowRoot!.querySelector('[role="alert"]') !== null,
+        () => el.shadowRoot!.querySelector('[part="error"]') !== null,
         description,
       );
       expect(
-        el.shadowRoot!.querySelector('[role="alert"]')?.textContent,
+        el.shadowRoot!.querySelector('[part="error"]')?.textContent,
         description,
       ).to.equal('This document is too large to preview.');
     }
@@ -689,10 +763,10 @@ describe('fetch lifecycle edge cases', () => {
       el.src = 'javascript:alert(1)';
       await event;
       await waitUntil(
-        () => el.shadowRoot!.querySelector('[role="alert"]') != null,
+        () => el.shadowRoot!.querySelector('[part="error"]') != null,
         'the disallowed URL never produced an error state',
       );
-      expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
       expect(fetchCalled, 'fetch must never be invoked for a rejected URL').to.equal(false);
       expect(renderErrorCount).to.equal(1);
     } finally {
@@ -729,7 +803,7 @@ describe('fetch lifecycle edge cases', () => {
     expect(event.detail.error).to.be.instanceOf(Error);
     expect((event.detail.error as Error).message).to.include('500');
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This file is not valid GeoJSON.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This file is not valid GeoJSON.');
   });
 
   it('reports a resource-too-large error for an oversized response instead of the generic invalid-GeoJSON error', async () => {
@@ -750,7 +824,7 @@ describe('fetch lifecycle edge cases', () => {
       el.src = GEOJSON_URL;
       await eventPromise;
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This document is too large to preview.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
     }
@@ -778,7 +852,10 @@ describe('fetch lifecycle edge cases', () => {
       await waitUntil(() => signals[0]?.aborted === true, 'the first request should have been aborted');
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(renderErrorFired, 'an aborted load must not surface as a render error').to.equal(false);
-      expect(el.shadowRoot!.querySelector('[role="alert"]'), 'an aborted load must not render an error region').to.not.exist;
+      expect(
+        el.shadowRoot!.querySelector('[part="error"]') === null,
+        'an aborted load must not render an error region',
+      ).to.be.true;
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
     }
@@ -801,13 +878,16 @@ describe('fetch lifecycle edge cases', () => {
         'the newer request never reached the loaded state',
         { timeout: 2000 },
       );
-      const statusBefore = el.shadowRoot!.querySelector('[role="status"]')!.textContent;
+      const statusBefore = el.shadowRoot!.querySelector('[part="status"]')!.textContent;
       // Now resolve the stale (first, superseded) request; its captured generation no longer
       // matches, so it must be dropped instead of overwriting the newer loaded state.
       resolvers[0](new Response(JSON.stringify({ not: 'geojson' }), { status: 200 }));
       await new Promise((resolve) => setTimeout(resolve, 20));
-      expect(el.shadowRoot!.querySelector('[role="alert"]'), 'the stale response must not overwrite the newer loaded state with an error').to.not.exist;
-      expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal(statusBefore);
+      expect(
+        el.shadowRoot!.querySelector('[part="error"]') === null,
+        'the stale response must not overwrite the newer loaded state with an error',
+      ).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal(statusBefore);
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
     }

@@ -1,5 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { registerLyraLocale } from './localization.js';
+import {
+  registerLyraLocale,
+  resolveLyraDirection,
+  resolveLyraLocale,
+} from './localization.js';
 import '../components/data/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 
@@ -71,4 +75,27 @@ it('re-renders a regional locale when its base catalog is registered after mount
   await el.updateComplete;
 
   expect(renderedLabel(el)).to.equal('Base locale loaded');
+});
+
+it('resolves locale and direction through a shadow root in the host owner document', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignDocument = frame.contentDocument!;
+  foreignDocument.documentElement.lang = 'lt';
+  const context = foreignDocument.createElement('div');
+  context.lang = 'tr';
+  context.dir = 'rtl';
+  const shadow = context.attachShadow({ mode: 'open' });
+  const target = foreignDocument.createElement('span');
+  shadow.append(target);
+  foreignDocument.body.append(context);
+  try {
+    expect(resolveLyraLocale(target)).to.equal('tr');
+    expect(resolveLyraDirection(target)).to.equal('rtl');
+
+    context.removeAttribute('lang');
+    expect(resolveLyraLocale(target)).to.equal('lt');
+  } finally {
+    frame.remove();
+  }
 });

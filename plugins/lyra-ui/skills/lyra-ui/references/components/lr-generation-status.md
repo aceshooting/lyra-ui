@@ -2,7 +2,7 @@
 
 # `lr-generation-status`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/generation-status/generation-status.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-generation-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGenerationStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/generation-status/generation-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

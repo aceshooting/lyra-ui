@@ -2,6 +2,18 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tag.js';
 import type { LyraTag } from './tag.js';
 
+class TagLabelForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const tag = this.ownerDocument.createElement('lr-tag');
+    tag.setAttribute('with-remove', '');
+    tag.append(this.ownerDocument.createElement('slot'));
+    root.append(tag);
+  }
+}
+customElements.define('tag-label-forward-wrapper', TagLabelForwardWrapper);
+
 // `<lr-tag>` shares `<lr-badge>`'s surface (see tag.class.ts) and adds the removable-chip surface
 // on top of it, but it is still its own registered custom element (`lr-tag` in the manifest) --
 // badge.test.ts mounts one in passing but only ever runs an axe accessibility check against
@@ -86,6 +98,116 @@ describe('withRemove', () => {
     expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove the beta filter');
   });
 
+  it('tracks a forwarded label and preserves an explicitly empty host aria-label', async () => {
+    const wrapper = (await fixture(html`
+      <tag-label-forward-wrapper><span data-label>Alpha</span></tag-label-forward-wrapper>
+    `)) as TagLabelForwardWrapper;
+    const el = wrapper.shadowRoot!.querySelector('lr-tag') as LyraTag;
+    await el.updateComplete;
+    const label = wrapper.querySelector<HTMLElement>('[data-label]')!;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Alpha');
+
+    label.textContent = 'Beta';
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Beta');
+
+    label.setAttribute('aria-label', 'Gamma');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Gamma');
+
+    el.setAttribute('aria-label', '');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    const replacement = wrapper.ownerDocument.createElement('span');
+    replacement.textContent = 'Delta';
+    const reassigned = oneEvent(el.querySelector('slot')!, 'slotchange');
+    label.replaceWith(replacement);
+    await reassigned;
+    await el.updateComplete;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Delta');
+  });
+
+  it('constructs its live-label observer in the adopted owner realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const descriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+    const NativeMutationObserver = frameWindow.MutationObserver;
+    let constructions = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructions += 1;
+      }
+    }
+    Object.defineProperty(frameWindow, 'MutationObserver', {
+      configurable: true,
+      value: TrackingMutationObserver,
+    });
+    const el = (await fixture(html`<lr-tag with-remove>Alpha</lr-tag>`)) as LyraTag;
+    el.remove();
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(constructions, 'base and label observers use the adopted window').to.be.greaterThan(1);
+    } finally {
+      el.remove();
+      if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
+      else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      frame.remove();
+    }
+  });
+
+  it('skips its optional label observer when SSR provides no owner document', async () => {
+    const el = (await fixture(html`<lr-tag with-remove>Alpha</lr-tag>`)) as LyraTag;
+    el.remove();
+    Object.defineProperty(el, 'ownerDocument', {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      expect(() =>
+        (el as unknown as { syncLabelObserver(): void }).syncLabelObserver(),
+      ).not.to.throw();
+    } finally {
+      delete (el as unknown as { ownerDocument?: Document }).ownerDocument;
+    }
+  });
+
+  it('matches the SSR remove label on first hydration, then preserves the action while adding context', async () => {
+    const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement('lr-tag') as LyraTag;
+    el.setAttribute('with-remove', '');
+    // A pre-existing shadow root is LyraElement's hydration signal. The repository-wide hydration
+    // gate covers real declarative-shadow-DOM node claiming; this focused fixture proves the
+    // component's first/second-update state contract without globally installing hydration hooks.
+    el.attachShadow({ mode: 'open' });
+    el.innerHTML = '<strong>Alpha</strong>';
+    container.append(el);
+
+    await el.updateComplete;
+    const hydrationAction = removeButton(el);
+    expect(hydrationAction?.getAttribute('aria-label')).to.equal('Remove');
+
+    await el.updateComplete;
+    expect(removeButton(el) === hydrationAction).to.be.true;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Alpha');
+
+    el.remove();
+    el.innerHTML = '<strong>Beta</strong>';
+    container.append(el);
+    await el.updateComplete;
+    expect(removeButton(el) === hydrationAction).to.be.true;
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Beta');
+  });
+
   it('meets the shared minimum hit-area floor on the remove button', async () => {
     const el = (await fixture(html`<lr-tag with-remove size="2xs">x</lr-tag>`)) as LyraTag;
     // Resolve --lr-icon-button-size to real pixels through a probe rather than assuming a 16px
@@ -127,6 +249,19 @@ describe('withRemove', () => {
       () => removeButton(tag)?.getAttribute('aria-label') === 'Remove gamma',
       'reconnecting must re-arm the label observer',
     );
+  });
+
+  it('refreshes the contextual remove label after light DOM changes while disconnected', async () => {
+    const host = (await fixture(html`<div><lr-tag with-remove>beta</lr-tag></div>`)) as HTMLElement;
+    const tag = host.querySelector('lr-tag') as LyraTag;
+    expect(removeButton(tag)?.getAttribute('aria-label')).to.equal('Remove beta');
+
+    tag.remove();
+    tag.textContent = 'gamma';
+    host.append(tag);
+    await tag.updateComplete;
+
+    expect(removeButton(tag)?.getAttribute('aria-label')).to.equal('Remove gamma');
   });
 
   it('places the remove button at the inline end under both directions', async () => {

@@ -2,7 +2,7 @@
 
 # `lr-relative-time`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/format/relative-time.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-relative-time.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRelativeTime`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/relative-time.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

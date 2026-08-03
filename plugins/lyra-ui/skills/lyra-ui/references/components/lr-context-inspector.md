@@ -2,7 +2,7 @@
 
 # `lr-context-inspector`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-context-inspector.js';` (stable tag alias; registers the tag)
 - **Class** `LyraContextInspector`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

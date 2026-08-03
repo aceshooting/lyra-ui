@@ -2,7 +2,7 @@
 
 # `lr-tree`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/tree/tree.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tree.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTree`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -188,8 +188,9 @@ when assigned):
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
   declarative one
 - `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements:
-  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then the `label`
-  attribute, then the slotted label text (nested items excluded) in the declarative one
+  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then flattened
+  accessibility-visible slotted label text (nested items excluded), then the `label` fallback in
+  the declarative one. Direct and forwarding-slot text/ARIA/visibility mutations update the name
 - `hasChildren: boolean` — whether this node has at least one child in whichever model is in use.
   Leaf nodes never expose `aria-expanded` and cannot expand or collapse. It also reports `false`
   past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
@@ -216,6 +217,10 @@ pending state starts or ends. Disabling or disconnecting an item invalidates the
 the default slot and never set `slot="children"` yourself. `expand-icon` and `collapse-icon`
 override the owning tree's corresponding icon for one item. The label/children slots are unused in
 the data model.
+
+Visual slot selection is separate from `nodeLabel` extraction: flattened element-only and visible
+`aria-hidden` content still chooses the authored slot instead of the `label` fallback, while hidden
+content is omitted from the spoken name. Host `aria-label` remains authoritative by presence.
 
 **CSS parts:** `base` and `tree-item` are aliases on the same outer wrapper around the row and child
 group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`, `item`,

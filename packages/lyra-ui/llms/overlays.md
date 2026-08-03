@@ -203,7 +203,10 @@ at another, since `placement` is a per-call option rather than a single global r
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
   switch-access user needs to tell their close buttons apart without activating one first. Rich
   non-interactive message markup contributes its text, named-slot/icon and actionable content do
-  not, and live message text mutations update the name.
+  not, and live message text mutations or reassignment update the name through nested forwarding
+  slots. Hidden, inert, CSS-hidden and `aria-hidden` message branches are excluded. Observation,
+  animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the item's owner
+  window after iframe adoption and cancel through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
@@ -259,8 +262,18 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 ```
 
 **Known gotchas:**
-- `[part="base"]` is `role="status" aria-live="polite"`, so a list/table transitioning to empty
-  does announce to screen readers — no extra wiring needed on the host's part.
+- Initial content and reconnect state—including property changes made while detached—stay silent.
+  Later meaningful heading and description changes are appended to Lyra's shared light-DOM polite
+  announcement sink. Default-slot illustrations, action-slot controls, nested hidden/inert/
+  `aria-hidden="true"` content, updates under a hidden/CSS-hidden composed ancestor, and mutations
+  that leave the accessible text unchanged are excluded;
+  a `visibility:hidden|collapse` wrapper suppresses its own text but not a descendant that restores
+  `visibility:visible`;
+  nested forwarding slots contribute their flattened assigned heading/description text instead of
+  fallback content, and later assignment plus assigned-node text/style/visibility changes are
+  observed without turning initial distribution into a live update;
+  a host `aria-label` names the host but does not replace that visible update text;
+  the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
   `lr-table` reuses this component for its own empty-rows state, and `lr-stat` (below) now uses
@@ -745,6 +758,11 @@ Calling `preventDefault()` keeps the current `selected` state unchanged)
 toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
 gap — when left empty)
 
+Toggle/remove action names follow the default slot's live visible accessible text through nested
+forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
+Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host `aria-label` wins by
+presence, so an explicitly empty value remains empty.
+
 **CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
 entirely while empty), `label` (non-interactive wrapper around the default slot), `toggle-button`
 (the real native toggle control, rendered over the label in toggle mode), `remove-button` (the
@@ -1200,7 +1218,9 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
   same arrow trio `<lr-popover>` documents above, new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
-- `accessibleLabel: string = ''` (attribute **`aria-label`**)
+- `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
+  attribute presence, including an explicitly empty value. When the attribute is absent, an
+  actionable popup with no property label uses the localized `popover` string.
 
 To preserve the previous Lyra-shaped visual defaults explicitly, use `distance="6" without-arrow`;
 origin-aware migration emits those tokens.
@@ -1271,11 +1291,18 @@ Plain content keeps `role="tooltip"`. If actionable content appears anywhere in 
 default-slot subtree — including inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
 from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+The content scan follows the live composed assignment through forwarding slots. Reassignment,
+external descendant text/actionability changes, and relevant composed-ancestor visibility changes
+update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
+unassigned, its own fallback content is restored. This classification also runs while the popup is
+closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
-work for a legitimate custom element that intentionally has no shadow root. Use `lr-popover` when
-click-to-open ownership is desired.
+work for a legitimate custom element that intentionally has no shadow root. Content and trigger
+observers plus delayed show/hide timers are bound to the tooltip's current owner window; disconnect
+or cross-document adoption cancels the old realm, and reconnect creates fresh observers. Use
+`lr-popover` when click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
@@ -1381,20 +1408,28 @@ the same node); `menu` (the contained controller); `content body`; and the retai
 
 ## `lr-spinner`
 
-An indeterminate busy indicator with a localized `role="status"` name.
+An indeterminate busy indicator with a localized, deliberately non-live `role="progressbar"`
+name. Mounting ordinary loading UI therefore does not create a false status announcement.
 
 **Properties:** `labelPlacement: 'none' | 'after' = 'none'` (attribute `label-placement`, reflected)
 and `accessibleLabel: string | null = null` (attribute **`aria-label`**, not `accessible-label`) —
-names `[part="base"]`'s `role="status"`; unset falls back to the localized "Loading…".
+names `[part="base"]`'s `role="progressbar"`; unset falls back to the localized "Loading…".
 
 **Events:** none.
 
 **Slots:** default — optional label text. `label-placement="after"` renders it inline next to the
-indicator and its text becomes the status name unless `aria-label` overrides it. `'none'` (the
-default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
-the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
+indicator and its visible accessible text becomes the progressbar name unless `aria-label`
+overrides it. Hidden, inert, `display:none`, `content-visibility:hidden`, and `aria-hidden`
+descendants are excluded from that name. A `visibility:hidden|collapse` wrapper suppresses its own
+text while a descendant that restores `visibility:visible` remains part of the name.
+These rules and live mutation tracking cross nested forwarding slots, including assigned-node
+replacement; no wrapper re-render is required.
+`'none'` (the default) applies the native `hidden` state to the label wrapper, removing it from both
+rendering and the accessibility tree; the progressbar then uses `aria-label` or the localized
+"Loading…" fallback.
 
-**CSS parts:** `base` and `spinner` are aliases on the same `role="status"` outer wrapper;
+**CSS parts:** `base` and `spinner` are aliases on the same indeterminate `role="progressbar"`
+outer wrapper (no `aria-valuenow` and no live-region semantics);
 `spinner-indicator` is the animated `aria-hidden` ring, and `label` is the default-slot wrapper.
 
 **Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both
@@ -1415,7 +1450,10 @@ formatted percentage.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
-Live label mutations stay synchronized.
+Live label mutations and reassignment stay synchronized through nested forwarding slots. Hidden,
+inert, CSS-hidden and `aria-hidden` branches do not name the role; a visible descendant can restore
+text suppressed only by an ancestor's `visibility:hidden|collapse`. Host `aria-label` precedence is
+presence-based, so an explicitly empty value remains empty rather than invoking a fallback.
 
 **Slots:** default — label content; `label` — compatibility alias for the default slot.
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
@@ -1444,6 +1482,8 @@ visible default-slot text when supplied, then the localized "Progress". Non-fini
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
+Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
+tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
@@ -1580,7 +1620,10 @@ the remove button's `:hover` fill).
   row's layout box.
 - Its accessible name is computed from the default slot's own text ("Remove {label}", localized;
   bare "Remove" for a label-less tag) and re-derived live when that text changes. Text inside the
-  decorative `start`/`end` slots never leaks into it, and a host `aria-label` wins outright.
+  decorative `start`/`end` slots never leaks into it. Visible accessible text, forwarding-slot
+  reassignment and external assigned-node mutations stay synchronized; hidden/inert/CSS-hidden/
+  `aria-hidden` branches are excluded. A host `aria-label` wins by presence, including an explicit
+  empty value.
 - `appearance` and `variant` are orthogonal: `appearance="plain"` on `variant="danger"` still reads
   as danger, because the palette is chosen before the surface routing.
 
@@ -1611,7 +1654,8 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 **Properties:**
 
 - `open: boolean = false` (reflected) — controls visibility. Initial `open` markup establishes
-  state silently; later property or attribute changes run the full lifecycle below.
+  state without a transition event; later property or attribute changes run the full lifecycle
+  below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` resolves through Lyra's shared brand semantic tokens.
@@ -1624,11 +1668,15 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
 top-end toast region, shows it, and resolves after it hides and is removed. Keep the reference to
-reuse the same identity with another `toast()` call.
+reuse the same identity with another `toast()` call. An alert adopted into another same-origin
+document uses that document's toast region, timers, motion preference, and focus realm. If external
+DOM reconciliation removes a toast without hiding it, the pending promise settles after that
+disconnect proves lasting (a synchronous move into the toast region does not count), stale
+listeners are released, and a later `toast()` starts a fresh lifecycle.
 
 **Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
-detail, and are noncancelable. A transition interrupted by the opposite state does not emit the
-stale after-event.
+detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
+noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
 
 **Slots:** default message content; `icon` for the optional leading icon.
 
@@ -1636,9 +1684,12 @@ stale after-event.
 native close button. The pinned surface exposes no component CSS custom properties, custom states,
 form association, native-event relays, or delegated native methods.
 
-The rendered message surface has `role="alert"`. The close action's accessible name uses Lyra's
-localized `close` string. Layout uses logical properties, wraps unbroken content at 320px, and the
-toast path reuses the existing Lyra toast layer instead of creating a second placement system.
+The light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and alerts shown
+later expose one assertive, content-derived semantic surface without duplicating it in a shadow or
+shared live region. The optional icon wrapper is decorative (`aria-hidden="true"`); the close action
+remains independently accessible through Lyra's localized `close` string. Layout uses logical
+properties, wraps unbroken content at 320px, and the toast path reuses the existing Lyra toast layer
+instead of creating a second placement system.
 
 ```html
 <lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">
@@ -1664,8 +1715,7 @@ errors without panel chrome.
 explicit — an unset nested callout inherits its ancestor's semantic colour context without
 materializing a `variant` attribute. Explicitly writing even the same-default `brand` materializes
 the attribute and pins the local brand palette; removing the attribute restores contextual
-inheritance. The property value still picks `[part="base"]`'s role: `alert` for `danger`, `status`
-otherwise),
+inheritance),
 `appearance: 'accent'|'filled'|'outlined'|'plain'|'filled-outlined'` (reflected, with no explicit
 default — when set, controls how much of the active variant palette is spent on fill, border, and
 text; leaving it unset preserves the established quiet-fill/loud-edge treatment),
@@ -1677,14 +1727,15 @@ medium mapping, and removing the attribute restores contextual inheritance), `he
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
-(`accessible-label`; falls back to a plain host `aria-label` attribute when unset).
+(`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
+has highest precedence by presence, including an explicitly empty value.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
 unless a listener calls `preventDefault()`.
 
 **Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
 
-**CSS parts:** `base` (the transparent semantic grid wrapper inside the host-owned surface), `icon`
+**CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
 `message` (wrapper around the default slot), `close-button` (the close control's hit target, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
@@ -1718,9 +1769,23 @@ content and the close action. It deliberately does *not* vary by `size`: it sepa
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
 them).
 
-Initial content and initially distributed slots render while `aria-live="off"`. After that first
-render/slot distribution settles, the region arms as `polite` (`assertive` for `danger`) before
-later heading or message updates. Reconnection repeats the same initial-content staging.
+Initial content and initially distributed slots are silent. After that first render/slot
+distribution settles, heading-property changes and direct or nested default/heading-slot additions,
+removals, and text changes are appended to Lyra's shared light-DOM polite sink (`assertive` for
+`danger`). Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
+excludes the icon/close chrome plus content hidden by `hidden`, `inert`, or `aria-hidden="true"` at
+any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
+`visibility:hidden|collapse` wrapper suppresses its own text while a descendant that restores
+`visibility:visible` remains exposed. Updates while the host or a composed ancestor is hidden also
+stay silent. Nested forwarding slots expose their flattened assigned text instead of fallback
+content, and later assignment plus assigned-node text/style/visibility mutations are observed.
+Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
+`aria-label` (or `accessible-label` fallback) prefixes visible update text as context, with an
+equality check preventing duplicate copy; an explicitly empty host label still leaves visible
+heading/message text live.
+`[part="base"]` is an ordinary wrapper, upgraded to a non-live `role="group"` only when it has an
+accessible label. Initial connection, reconnection, adoption, and detached changes that settle
+during staging stay silent; each connection acquires its owning document's shared sink.
 
 ## `lr-rating`
 

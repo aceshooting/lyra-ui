@@ -20,6 +20,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
@@ -173,6 +178,24 @@ const stringArrayConverter = {
  * @since 4.0.0
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
+    tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -345,7 +368,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
   }
   override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   override disconnectedCallback(): void {

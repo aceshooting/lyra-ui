@@ -2,7 +2,7 @@
 
 # `lr-tooltip`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/overlay/tooltip.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tooltip.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTooltip`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/tooltip.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -54,7 +54,9 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
   same arrow trio `<lr-popover>` documents above, new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
-- `accessibleLabel: string = ''` (attribute **`aria-label`**)
+- `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
+  attribute presence, including an explicitly empty value. When the attribute is absent, an
+  actionable popup with no property label uses the localized `popover` string.
 
 To preserve the previous Lyra-shaped visual defaults explicitly, use `distance="6" without-arrow`;
 origin-aware migration emits those tokens.
@@ -125,11 +127,18 @@ Plain content keeps `role="tooltip"`. If actionable content appears anywhere in 
 default-slot subtree — including inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
 from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+The content scan follows the live composed assignment through forwarding slots. Reassignment,
+external descendant text/actionability changes, and relevant composed-ancestor visibility changes
+update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
+unassigned, its own fallback content is restored. This classification also runs while the popup is
+closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
-work for a legitimate custom element that intentionally has no shadow root. Use `lr-popover` when
-click-to-open ownership is desired.
+work for a legitimate custom element that intentionally has no shadow root. Content and trigger
+observers plus delayed show/hide timers are bound to the tooltip's current owner window; disconnect
+or cross-document adoption cancels the old realm, and reconnect creates fresh observers. Use
+`lr-popover` when click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own

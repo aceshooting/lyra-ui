@@ -2,7 +2,7 @@
 
 # `lr-contact-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-contact-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraContactViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -32,7 +32,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-contact search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
 `contact-email`, `contact-adr`, `spinner`, and `error`.

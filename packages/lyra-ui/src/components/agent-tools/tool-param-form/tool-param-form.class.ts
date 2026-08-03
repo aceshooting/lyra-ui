@@ -22,6 +22,12 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The four leaf property types this flat-schema renderer understands. */
 export type ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean';
@@ -140,6 +146,9 @@ export interface LyraToolParamFormEventMap {
  * context — a second, redundant outer label here would just repeat it. A
  * form-wide validation summary is still available via the `error` part
  * (`class="form-error"`), driven by `reportValidity()`.
+ * The `base` wrapper is nevertheless one accessible `role="group"`: a host `aria-label` or native
+ * external `<label for>` names the aggregate without adding duplicate visible chrome, while every
+ * generated field retains its own more specific name.
  *
  * This component owns no Submit/Cancel/Approve chrome — a consumer composes
  * it inside their own dialog (e.g. a tool-approval dialog) and reads
@@ -213,6 +222,30 @@ export interface LyraToolParamFormEventMap {
  * @since 4.0.0
  */
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldMustBeBoolean: LYRA_DEFAULT_fieldMustBeBoolean,
+    fieldMustBeInteger: LYRA_DEFAULT_fieldMustBeInteger,
+    fieldMustBeNumber: LYRA_DEFAULT_fieldMustBeNumber,
+    fieldMustBeOneOf: LYRA_DEFAULT_fieldMustBeOneOf,
+    fieldMustBeString: LYRA_DEFAULT_fieldMustBeString,
+    fieldMustEqual: LYRA_DEFAULT_fieldMustEqual,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    schemaMustBeObject: LYRA_DEFAULT_schemaMustBeObject,
+    schemaPropertiesMustBeFlat: LYRA_DEFAULT_schemaPropertiesMustBeFlat,
+    toolParamMissingProperty: LYRA_DEFAULT_toolParamMissingProperty,
+    unsupportedFieldType: LYRA_DEFAULT_unsupportedFieldType,
+    valueMustBeSerializable: LYRA_DEFAULT_valueMustBeSerializable,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -262,6 +295,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   // could never reach `user-valid`. This flag answers the different
   // question "has the user done anything at all here yet".
   private hasInteracted = false;
+  private errorAnnouncementSink?: AnnouncementSink;
+  private visibleErrorSnapshot = new Map<string, string>();
+  private suppressNextErrorAnnouncement = true;
 
   constructor() {
     super();
@@ -340,12 +376,30 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
+      this.errorAnnouncementSink?.release();
+      this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+        document: this.ownerDocument,
+        source: this,
+      });
+    }
+    if (this.hasUpdated) {
+      this.suppressNextErrorAnnouncement = true;
+      this.requestUpdate();
+    }
     // Seed `errors`/`internals` validity synchronously at connect time —
     // `checkValidity()`/a wrapping `<form>`'s own `reportValidity()` must
     // see the correct answer even if called before Lit's first (async)
     // update has run, mirroring lr-select's/lr-checkbox's identical
     // connectedCallback -> updateValidity() call.
     this.syncFormState();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    this.suppressNextErrorAnnouncement = true;
   }
 
   /** `value`, with any property missing from it filled in from `schema`'s own `default` — see the class doc. */
@@ -755,6 +809,27 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         void Promise.all(nestedUpdates).then(() => this.validityController.refreshAnchor());
       }
     }
+
+    const currentErrors = new Map<string, string>();
+    for (const node of this.renderRoot.querySelectorAll<HTMLElement>('[part="error"]')) {
+      const fieldKey = node.closest<HTMLElement>('[part~="field"]')?.dataset['key'];
+      const key = node.dataset['key'] ?? fieldKey ?? 'form';
+      const text = node.textContent?.trim() ?? '';
+      if (text) currentErrors.set(key, text);
+    }
+    if (!this.suppressNextErrorAnnouncement) {
+      const freshMessages: string[] = [];
+      for (const [key, text] of currentErrors) {
+        if (this.visibleErrorSnapshot.get(key) !== text && !freshMessages.includes(text)) {
+          freshMessages.push(text);
+        }
+      }
+      // A submit attempt can reveal several fields in one render. Speak that as one concise
+      // addition instead of firing a burst of competing assertive announcements.
+      if (freshMessages.length > 0) this.errorAnnouncementSink?.announce(freshMessages.join(' '));
+    }
+    this.visibleErrorSnapshot = currentErrors;
+    this.suppressNextErrorAnnouncement = false;
   }
 
   private setFieldValue(key: string, val: unknown): void {
@@ -933,7 +1008,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
           ? html`<p part="description" id=${descId}>${prop.description}</p>`
           : nothing}
         ${hasError && !isComposedSelect
-          ? html`<p part="error" id=${errId} role="alert">${this._errors[key]}</p>`
+          ? html`<p part="error" id=${errId}>${this._errors[key]}</p>`
           : nothing}
       </div>
     `;
@@ -943,7 +1018,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const props = this.schemaProperties;
     const entries = Object.entries(props);
     const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
-    return html`<div part="base">
+    return html`<div
+      part="base"
+      role="group"
+      aria-label=${this.getAttribute('aria-label') || nothing}
+    >
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`
         : entries.map(([key, prop], i) => this.renderField(key, prop, i))}
@@ -953,12 +1032,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
           class="form-error missing-property-error"
           data-missing-property
           data-key=${key}
-          role="alert"
           tabindex="-1"
         >${this.localize('toolParamMissingProperty', undefined, { key })}</p>`,
       )}
       ${this.showFormError && this._formError
-        ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`
+        ? html`<p part="error" class="form-error">${this._formError}</p>`
         : nothing}
     </div>`;
   }

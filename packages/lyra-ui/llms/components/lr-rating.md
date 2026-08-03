@@ -2,7 +2,7 @@
 
 # `lr-rating`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-rating.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRating`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/rating/rating.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

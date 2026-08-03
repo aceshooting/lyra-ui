@@ -23,6 +23,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_radioRequired, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraRadioGroupEventMap {
   input: InputEvent;
@@ -87,6 +92,19 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @since 4.0.0
  */
 export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    radioRequired: LYRA_DEFAULT_radioRequired,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, groupStyles];
   static override properties = {
@@ -136,6 +154,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private authorNames = new Map<LyraRadio, string>();
   private syncingRadios = false;
   private membershipObserver?: MutationObserver;
+  private membershipObserverDocument?: Document;
+  private membershipObserverGeneration = 0;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   private _name = '';
@@ -255,7 +275,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   private onInvalid = (event: Event): void => {
     const target = event.target;
-    if (target !== this && !(target instanceof Element && this.ownsRadio(target))) return;
+    if (
+      target !== this &&
+      !((target as Partial<Node> | null)?.nodeType === 1 && this.ownsRadio(target as Element))
+    ) {
+      return;
+    }
     // A real veto point, exactly as in `installInvalidEventAlias()`: cancelling the alias cancels
     // the native `invalid` behind it, so an app presenting the failure its own way can suppress
     // the browser's validation bubble.
@@ -267,12 +292,44 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     super.connectedCallback();
     this.syncSupportSlots();
     this.syncRadios();
-    this.membershipObserver = new MutationObserver(() => {
-      queueMicrotask(() => {
-        if (this.isConnected) this.syncRadios();
+    this.armMembershipObserver();
+  }
+
+  private armMembershipObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.membershipObserver && this.membershipObserverDocument === ownerDocument) return;
+    this.resetMembershipObserver();
+    const ownerWindow = ownerDocument.defaultView;
+    const MutationObserverCtor = ownerWindow?.MutationObserver;
+    if (!ownerWindow || !MutationObserverCtor) return;
+    const generation = this.membershipObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.membershipObserver !== observer ||
+        this.membershipObserverDocument !== ownerDocument ||
+        this.membershipObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      ownerWindow.queueMicrotask(() => {
+        if (
+          this.membershipObserver !== observer ||
+          this.membershipObserverDocument !== ownerDocument ||
+          this.membershipObserverGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.syncRadios();
       });
     });
-    this.membershipObserver.observe(this, {
+    this.membershipObserver = observer;
+    this.membershipObserverDocument = ownerDocument;
+    observer.observe(this, {
       attributes: true,
       childList: true,
       subtree: true,
@@ -280,11 +337,21 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     });
   }
   override disconnectedCallback(): void {
-    this.membershipObserver?.disconnect();
-    this.membershipObserver = undefined;
+    this.resetMembershipObserver();
     this.releaseRadios(this.managedRadios);
     this.managedRadios.clear();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetMembershipObserver();
+  }
+
+  private resetMembershipObserver(): void {
+    this.membershipObserverGeneration += 1;
+    this.membershipObserver?.disconnect();
+    this.membershipObserver = undefined;
+    this.membershipObserverDocument = undefined;
   }
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -328,7 +395,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 
   private radios(): LyraRadio[] {
-    return [...this.querySelectorAll(RADIO_TAGS().join(','))].filter(
+    // The document-less Lit server host has no light-DOM query API. Non-default attributes still
+    // run these synchronous setter paths during SSR, where an empty option collection is the only
+    // state available; connection and slot reconciliation restore normal browser propagation.
+    const querySelectorAll = (this as unknown as {
+      querySelectorAll?: (selectors: string) => NodeListOf<Element>;
+    }).querySelectorAll;
+    if (typeof querySelectorAll !== 'function') return [];
+    return [...querySelectorAll.call(this, RADIO_TAGS().join(','))].filter(
       (radio) => this.ownsRadio(radio) && typeof (radio as Partial<LyraRadio>).setGroupOwner === 'function',
     ) as LyraRadio[];
   }
@@ -490,8 +564,18 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   };
   private onRadioSlotChange = (): void => {
     this.syncRadios();
-    queueMicrotask(() => {
-      if (this.isConnected) this.syncRadios();
+    const ownerDocument = this.ownerDocument;
+    const generation = this.membershipObserverGeneration;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        this.membershipObserverGeneration === generation &&
+        this.isConnected &&
+        this.ownerDocument === ownerDocument
+      ) {
+        this.syncRadios();
+      }
     });
   };
 

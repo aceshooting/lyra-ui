@@ -1,10 +1,11 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError } from '../../../internal/resource-loader.js';
+import { isAbortError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
 import {
@@ -12,6 +13,11 @@ import {
   IconResourceError,
 } from './icon-resource.js';
 import { styles } from './icon.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const PATHS: Record<string, string> = {
   add: 'M12 5v14M5 12h14',
@@ -83,7 +89,9 @@ export interface LyraIconEventMap {
  *   `detail: { src, error }`.
  * @csspart svg - The rendered SVG, whether built-in or fetched.
  * @csspart use - Every `<use>` element in the rendered SVG.
- * @csspart error - The visually hidden `role="alert"` shown when a remote icon fails.
+ * @csspart error - The visually hidden, `aria-hidden` mirror shown when a remote icon fails. The
+ *   spoken error is appended to Lyra's shared assertive light-DOM announcement sink while the
+ *   icon and its composed ancestors are exposed to the accessibility tree.
  * @csspart empty - Marker rendered when a remote icon resolved to an empty but valid document.
  * @cssprop [--lr-icon-size] - Optional inline and block size override for every canvas.
  * @cssprop [--lr-icon-fixed-width=var(--lr-size-1-5em)] - Inline size of the box while
@@ -136,6 +144,20 @@ export interface LyraIconEventMap {
  * @since 4.0.0
  */
 export class LyraIcon extends LyraElement<LyraIconEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    iconLoadError: LYRA_DEFAULT_iconLoadError,
+    iconSanitizerMissing: LYRA_DEFAULT_iconSanitizerMissing,
+    iconTooLarge: LYRA_DEFAULT_iconTooLarge,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   private _name = '';
   /** A built-in glyph name, or the name handed to the resolver of a registered `library`.
@@ -196,12 +218,19 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   private customContentObserver?: MutationObserver;
   private stopLibrarySubscription?: () => void;
   private resourceLease?: ResourceCacheLease<SVGSVGElement | null>;
+  private errorAnnouncementSink?: AnnouncementSink;
   /** Bumped by every load start and by disconnect, and re-checked after every `await`, so a
    *  superseded response can never paint over a newer one. */
   private generation = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Mount before a resolver/fetch can fail; creating the live region alongside its first message
+    // is not reliably announced, and an adopted icon must target its current owner document.
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
     this.stopLibrarySubscription ??= subscribeIconLibrary((name) => {
       if (name === this.library) void this.load();
     });
@@ -220,6 +249,8 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     this.stopLibrarySubscription = undefined;
     this.customContentObserver?.disconnect();
     this.customContentObserver = undefined;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
     // A detached icon holds no half-finished remote state; reconnecting re-resolves from scratch.
     // Assigning an equal-but-new state object would schedule an update while detached, and that
     // update re-clones slotted geometry the observer has deliberately stopped tracking.
@@ -278,11 +309,13 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   private observeCustomContent(slot: HTMLSlotElement): void {
     this.customContentObserver?.disconnect();
     if (!this.isConnected) return;
-    this.customContentObserver ??= new MutationObserver(() => {
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.customContentObserver ??= new MutationObserverCtor(() => {
       if (this.isConnected) this.syncCustomNodes();
     });
     for (const node of slot.assignedNodes({ flatten: true })) {
-      if (node instanceof Element) {
+      if (node.nodeType === 1) {
         this.customContentObserver.observe(node, {
           attributes: true,
           childList: true,
@@ -293,19 +326,25 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   }
 
   private cloneSvgNode(node: Node): SVGElement | null {
-    if (!(node instanceof Element)) return null;
+    if (node.nodeType !== 1) return null;
+    const element = node as Element;
     // A hyphenated light-DOM child is a custom element, not an SVG primitive.
     // Creating it with the SVG namespace produces an inert node that can never
     // upgrade; skip it rather than silently changing its semantics.
-    if (node.localName.includes('-')) return null;
-    const copy = document.createElementNS('http://www.w3.org/2000/svg', node.localName);
-    for (const attribute of node.attributes) {
+    if (element.localName.includes('-')) return null;
+    const copy = this.ownerDocument.createElementNS(
+      'http://www.w3.org/2000/svg',
+      element.localName,
+    );
+    for (const attribute of element.attributes) {
       copy.setAttribute(attribute.name, attribute.value);
     }
-    for (const child of node.childNodes) {
+    for (const child of element.childNodes) {
       const childCopy = this.cloneSvgNode(child);
       if (childCopy) copy.append(childCopy);
-      else if (child.nodeType === Node.TEXT_NODE) copy.append(child.cloneNode(true));
+      else if (child.nodeType === 3) {
+        copy.append(this.ownerDocument.createTextNode(child.textContent ?? ''));
+      }
     }
     return copy;
   }
@@ -354,15 +393,20 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       return;
     }
 
-    const url = safeFetchUrl(source);
-    if (!url) {
+    const safeSource = safeFetchUrl(source);
+    if (!safeSource) {
       await this.fail('load', generation, source, new Error('icon URL is not allowed'));
+      return;
+    }
+    const fetchTarget = resolveOwnerFetchTarget(this, safeSource);
+    if (!fetchTarget) {
+      await this.fail('load', generation, safeSource, new Error('icon URL is not available'));
       return;
     }
 
     let lease: ResourceCacheLease<SVGSVGElement | null> | undefined;
     try {
-      lease = acquireSanitizedIconResource(url);
+      lease = acquireSanitizedIconResource(fetchTarget);
       this.resourceLease = lease;
       const canonical = await lease.promise;
       if (!this.isConnected || generation !== this.generation) return;
@@ -371,24 +415,24 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
         this.fetchState = { kind: 'empty' };
         await this.updateComplete;
         if (!this.isConnected || generation !== this.generation) return;
-        this.emit('lr-load', { src: url });
+        this.emit('lr-load', { src: safeSource });
         return;
       }
 
       // The shared cache owns an immutable canonical sanitized node. Every instance gets a deep
       // clone before trusted library code may adjust it, so one mutator cannot poison another
       // library, a direct `src`, or a later cache hit.
-      const node = canonical.cloneNode(true) as SVGSVGElement;
+      const node = this.ownerDocument.importNode(canonical, true) as SVGSVGElement;
       library?.mutator?.(node);
 
       this.fetchState = { kind: 'loaded', node };
       await this.updateComplete;
       if (!this.isConnected || generation !== this.generation) return;
-      this.emit('lr-load', { src: url });
+      this.emit('lr-load', { src: safeSource });
     } catch (error) {
       if (isAbortError(error)) return;
       const reason = error instanceof IconResourceError ? error.reason : 'load';
-      await this.fail(reason, generation, url, error);
+      await this.fail(reason, generation, safeSource, error);
     } finally {
       if (this.resourceLease === lease) this.resourceLease = undefined;
       lease?.release();
@@ -405,6 +449,9 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     this.fetchState = { kind: 'error', reason };
     await this.updateComplete;
     if (!this.isConnected || generation !== this.generation) return;
+    if (isAccessibilityVisible(this)) {
+      this.errorAnnouncementSink?.announce(this.errorMessage(reason));
+    }
     this.emit('lr-error', { src, error });
   }
 
@@ -453,7 +500,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       case 'loaded':
         return html`${state.node}`;
       case 'error':
-        return html`<span part="error" class="sr-only" role="alert">${this.errorMessage(state.reason)}</span>`;
+        return html`<span part="error" class="sr-only" aria-hidden="true">${this.errorMessage(state.reason)}</span>`;
       case 'empty':
         return html`<span part="empty" aria-hidden="true"></span>`;
       case 'loading':

@@ -348,6 +348,31 @@ assert.deepEqual(
   'the actual imported defineElement binding is recognized through aliases and transparent wrappers',
 );
 
+const invocationOnlyRegistrationModules = new Map([
+  [
+    '/src/root.ts',
+    "export { install } from './imperative-helper.js';\n",
+  ],
+  [
+    '/src/imperative-helper.ts',
+    `
+      import { defineElement } from './internal/prefix.js';
+      export function install() {
+        defineElement('registered-on-invocation', class {});
+      }
+    `,
+  ],
+]);
+assert.deepEqual(
+  findTransitiveRegistrationPaths(
+    ['/src/root.ts'],
+    invocationOnlyRegistrationModules,
+    { importEvaluationOnly: true },
+  ),
+  [],
+  'an imperative helper registration is not a bare-import registration side effect',
+);
+
 const shadowedRegistrationModules = new Map([
   [
     '/src/components/example/example.class.ts',

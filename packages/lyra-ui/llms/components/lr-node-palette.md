@@ -2,7 +2,7 @@
 
 # `lr-node-palette`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/node-palette/node-palette.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-node-palette.js';` (stable tag alias; registers the tag)
 - **Class** `LyraNodePalette`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/node-palette/node-palette.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

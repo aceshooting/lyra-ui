@@ -7,8 +7,29 @@ import { styles } from './pptx-viewer.styles.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
+function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
+  const localSize = 31;
+  const directorySize = 46;
+  const source = new ArrayBuffer(localSize + directorySize + 22);
+  const view = new DataView(source);
+  view.setUint32(0, 0x04034b50, true);
+  view.setUint32(18, 1, true);
+  view.setUint32(22, uncompressedBytes, true);
+  view.setUint32(localSize, 0x02014b50, true);
+  view.setUint32(localSize + 20, 1, true);
+  view.setUint32(localSize + 24, uncompressedBytes, true);
+  view.setUint32(localSize + 42, 0, true);
+  const endOffset = localSize + directorySize;
+  view.setUint32(endOffset, 0x06054b50, true);
+  view.setUint16(endOffset + 8, 1, true);
+  view.setUint16(endOffset + 10, 1, true);
+  view.setUint32(endOffset + 12, directorySize, true);
+  view.setUint32(endOffset + 16, localSize, true);
+  return source;
+}
+
 function response(ok = true): Response {
-  return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
+  return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(zipWithDeclaredSize()) } as unknown as Response;
 }
 
 /** A promise plus its externally-callable resolve/reject, for precisely timing a stale in-flight
@@ -21,13 +42,19 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
 }
 
 function fakeModule(slideCount = 2) {
-  const calls = { goToSlide: 0, destroy: 0 };
+  const calls = { open: 0, goToSlide: 0, destroy: 0 };
   const viewer = new EventTarget() as EventTarget & { slideCount: number; currentSlideIndex: number; goToSlide(index: number): Promise<void>; destroy(): void };
   viewer.slideCount = slideCount;
   viewer.currentSlideIndex = 0;
   viewer.goToSlide = async (index: number) => { calls.goToSlide++; viewer.currentSlideIndex = index; viewer.dispatchEvent(new CustomEvent('slidechange', { detail: { index } })); };
   viewer.destroy = () => { calls.destroy++; };
-  return { calls, module: { PptxViewer: { open: async () => viewer }, RECOMMENDED_ZIP_LIMITS: {} } as never };
+  return {
+    calls,
+    module: {
+      PptxViewer: { open: async () => { calls.open++; return viewer; } },
+      RECOMMENDED_ZIP_LIMITS: {},
+    } as never,
+  };
 }
 
 function stubFetch(ok = true): () => void {
@@ -60,6 +87,23 @@ describe('lr-pptx-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="notice"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="container"]')).to.not.exist;
     await expect(el).to.be.accessible();
+  });
+
+  it('keeps the nested loading skeleton out of the viewer live-region contract', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
+    (el as unknown as { phase: string }).phase = 'loading';
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-skeleton + .sr-only')?.textContent).to.equal('Loading…');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(1);
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await skeleton.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length)
+      .to.equal(0);
   });
 
   it('mounts the renderer, navigates, and cleans up', async () => {
@@ -331,6 +375,31 @@ describe('lr-pptx-viewer', () => {
     }
   });
 
+  it('rejects declared archive expansion before the renderer can open the presentation', async () => {
+    const fake = fakeModule();
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      arrayBuffer: () => Promise.resolve(zipWithDeclaredSize((256 * 1024 * 1024) + 1)),
+    } as unknown as Response)) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      let errors = 0;
+      el.addEventListener('lr-render-error', () => { errors++; });
+      el.src = 'https://example.test/expansion-bomb.pptx';
+      await aTimeout(50);
+      expect(fake.calls.open).to.equal(0);
+      expect(errors).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('This document is too large to preview.');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('fails closed with a localized render error when opening the presentation throws', async () => {
     const restore = stubFetch();
     try {
@@ -389,7 +458,7 @@ describe('lr-pptx-viewer', () => {
       const loadPromise = oneEvent(el, 'lr-load');
       el.src = 'https://example.test/second.pptx'; // bumps generation, superseding the first mount
       await aTimeout(20); // let the second mount also reach and suspend on the same gated read
-      bufferGate.resolve(new ArrayBuffer(8)); // release both suspended reads together
+      bufferGate.resolve(zipWithDeclaredSize()); // release both suspended reads together
       expect((await loadPromise).detail).to.deep.equal({ slideCount: 4 });
       let extraLoadFired = false;
       el.addEventListener('lr-load', () => { extraLoadFired = true; });

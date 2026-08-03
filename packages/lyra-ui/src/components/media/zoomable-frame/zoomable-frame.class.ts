@@ -6,6 +6,11 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ZoomableFrameLoading = 'eager' | 'lazy';
 
@@ -128,6 +133,18 @@ export interface LyraZoomableFrameEventMap {
  * @since 4.0.0
  */
 export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    loading: LYRA_DEFAULT_loading,
+    zoomControls: LYRA_DEFAULT_zoomControls,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
+    zoomableFrameLabel: LYRA_DEFAULT_zoomableFrameLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The URL of the content to display. Active/non-embeddable schemes are rejected. */

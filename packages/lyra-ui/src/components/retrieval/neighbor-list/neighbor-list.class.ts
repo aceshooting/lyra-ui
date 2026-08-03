@@ -10,6 +10,11 @@ import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.cl
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './neighbor-list.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraNeighborRow {
   /** Edge label, e.g. `'works_for'`. */
@@ -50,6 +55,24 @@ export interface LyraNeighborListEventMap {
  * @since 4.0.0
  */
 export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    neighborDirectionBoth: LYRA_DEFAULT_neighborDirectionBoth,
+    neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
+    neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
+    neighborExpand: LYRA_DEFAULT_neighborExpand,
+    neighborGroupHeader: LYRA_DEFAULT_neighborGroupHeader,
+    neighborListEmpty: LYRA_DEFAULT_neighborListEmpty,
+    neighborListLabel: LYRA_DEFAULT_neighborListLabel,
+    neighborRowLabel: LYRA_DEFAULT_neighborRowLabel,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) rows: LyraNeighborRow[] = [];

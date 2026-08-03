@@ -58,21 +58,27 @@ the PR checks list tells you which of these to reproduce locally:
 
 1. **`lint`** — `pnpm install --frozen-lockfile`; `pnpm lint`. No Playwright and no build:
    `contract-policy` + `tsc --noEmit` + `test:types` are pure static analysis.
-2. **`static-checks`** — everything whose inputs are already-committed files, needing neither a
-   library build nor a docs build. After `pnpm install --frozen-lockfile`, its exact command order
-   is: `pnpm --filter '!@aceshooting/lyra-ui' -r test`; `pnpm run check:dead-code`; `pnpm run
-   check:secrets`; `pnpm registrations` then a targeted diff of `src/lyra.ts`, the
-   root-registration allowlist, and `package.json`; `pnpm manifest` then a targeted diff of
-   `custom-elements.json`; `pnpm --filter @aceshooting/lyra-ui run generate-editor-data` then a
-   targeted diff of the two VS Code data files and `web-types.json`; `pnpm readme:check`;
-   `./package.sh` then a targeted diff of both the generated plugin references and the tracked
-   `skills/lyra-ui.skill` archive; `pnpm skill:check` (plugin/marketplace manifest consistency,
-   not archive freshness); `pnpm storybook:check-theme`.
-3. **`build-and-coverage`** — the longest job (`test:coverage` alone runs ~4.5min), kept as one
-   job because everything in it is sequentially dist-dependent. After install and Playwright
-   Chromium setup, its exact command order is: `pnpm build`; `pnpm --filter
-   @aceshooting/lyra-ui test:ssr`; `pnpm --filter @aceshooting/lyra-ui test:hydration`; `pnpm
-   --filter @aceshooting/lyra-ui check:bundle-size`; non-fatal `pnpm --filter
+2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
+   already-committed files except for one read-only, content-addressed npm fetch. After `pnpm install
+   --frozen-lockfile`, its exact command order is: the pure release-integrity, public-API and pinned-
+   upstream helper tests; the networked `check:pinned-upstream-manifests`, which downloads the exact
+   package versions without lifecycle scripts, validates both tarball and manifest digests, and runs
+   the strict inventory comparison; `pnpm --filter
+   '!@aceshooting/lyra-ui' -r test`; `pnpm run check:dead-code`; `pnpm run check:secrets`; `pnpm
+   registrations` then a targeted diff of the generated `src/all.ts`, `src/ssr/all.ts`, root
+   `src/components/lr-*.ts` aliases, root-registration allowlist, and `package.json`; `pnpm
+   manifest` then a targeted diff of `custom-elements.json`; `pnpm --filter
+   @aceshooting/lyra-ui run generate-editor-data` then a targeted diff of the two VS Code data
+   files and `web-types.json`; `pnpm readme:check`; `./package.sh` then a targeted diff of the
+   generated plugin references and both tracked skill archives; `pnpm skill:check`
+   (plugin/marketplace manifest consistency, not archive freshness); `pnpm
+   storybook:check-theme`.
+3. **`build-and-coverage`** — the longest job; coverage instrumentation runs one browser file at a
+   time to stay deterministic on high-core hosts. It remains one job because everything in it is
+   sequentially dist-dependent. After install and Playwright
+   Chromium setup, its exact command order is: `pnpm build`; the built component-quality evidence
+   check; `pnpm --filter @aceshooting/lyra-ui test:ssr`; `pnpm --filter @aceshooting/lyra-ui
+   test:hydration`; `pnpm --filter @aceshooting/lyra-ui check:bundle-size`; non-fatal `pnpm --filter
    @aceshooting/lyra-ui codecov:bundle`; `pnpm --filter @aceshooting/lyra-ui test:coverage`;
    `pnpm --filter @aceshooting/lyra-ui check:coverage-floors`; non-fatal Codecov coverage and
    test-result upload actions. This is the one time lyra-ui's own Chromium suite runs; a separate
@@ -83,7 +89,7 @@ the PR checks list tells you which of these to reproduce locally:
    job. It then runs `pnpm --filter @aceshooting/lyra-ui pack --dry-run`, verifies
    `dist/ssr-loader.js`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required
    `llms/` index/shared/tokens/peers/migration/component files, then runs `pnpm
-   check:packed-consumer`.
+   check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
 5. **`docs-and-storybook`** — `docs:build` only needs the already-committed
    `custom-elements.json` (via its internal `manifest:check`), not `dist/`, so this is independent
    of the two build jobs above; `storybook:check` drives Chromium against the built
@@ -91,10 +97,24 @@ the PR checks list tells you which of these to reproduce locally:
    its exact order is: `pnpm docs:build` (with `CODECOV_TOKEN`); targeted sitemap diff; `pnpm
    docs:check`; `pnpm storybook:check`; `pnpm docs:check-show-code`.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`), and split into its own job so its ~3.5min
-   `test:visual` run doesn't sit in the critical path of the faster `docs-and-storybook` checks:
-   install; Playwright Chromium setup; `pnpm docs:build` **without** `CODECOV_TOKEN`; `pnpm
-   --filter @aceshooting/lyra-ui test:visual`; unconditional diff-artifact upload.
+   `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
+   and round-robin partitioned across a three-leg matrix (85/84/84 captures), so the historical
+   ~3.5min sweep no longer sits on one runner's critical path. Each leg installs Chromium, builds
+   docs **without** `CODECOV_TOKEN`, runs `test:visual` with its one-based shard coordinates, and
+   unconditionally uploads a uniquely named diff artifact. A lightweight `visual-regression`
+   aggregate preserves the stable branch-protection/release-check name and fails unless all three
+   legs succeed.
+
+To reproduce one visual shard after building docs and installing Chromium:
+
+```bash
+VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
+  pnpm --filter @aceshooting/lyra-ui test:visual
+```
+
+Sharding happens after an optional `--filter` and at capture-axis granularity, not story
+granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
+at most one; an ordinary unsharded local run still exercises all 253 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`)
 against Firefox and WebKit on Node 20 and Node 22. Every leg sets
@@ -114,9 +134,11 @@ Node 22. The runner discovers and lexically sorts the live test inventory, so ev
 exactly once across the four shards without maintaining a second allowlist.
 
 Every shard builds first because `package-entrypoints.test.ts` imports the package's built `dist/`
-targets. It then runs with strict browser-console handling. The smaller `test:platform` matrix in
-`ci.yml` remains the blocking Node 20/22 pull-request contract and does not substitute for this
-complete scheduled sweep.
+targets. The package's `pretest` lifecycle provides the same build-first guarantee for a clean
+`pnpm test`. Each shard then runs with strict browser-console handling. The smaller `test:platform`
+matrix in `ci.yml` remains the blocking Node 20/22 pull-request contract and does not substitute
+for this complete sweep; releases require a manual-dispatch run from `main` with all eight shards
+successful for the exact release commit before any tag is created.
 
 To reproduce one shard locally after installing the requested Playwright browser:
 
@@ -137,7 +159,9 @@ run under a newer local Node from being mistaken for the CI environment. It inte
 one install, one library build, and one Storybook build where independent CI jobs repeat them.
 It also omits external Codecov/upload-artifact reporting actions; the blocking local equivalents
 (`check:bundle-size`, coverage, and visual regression) still run. `codecov:bundle` is reporting
-only and does not replace the blocking bundle-size gate.
+only and does not replace the blocking bundle-size gate. The aggregate includes the static job's
+networked, content-addressed pinned-upstream-manifest check; an unavailable registry or changed
+artifact fails the run instead of silently falling back to a clone-generated manifest.
 
 - `./scripts/ci.sh --platform` adds Firefox and WebKit `test:platform` runs under the active Node
   22/pnpm 11 toolchain. It is useful for browser-engine coverage but is not the two-Node CI matrix.
@@ -150,6 +174,77 @@ only and does not replace the blocking bundle-size gate.
   platform modes still install their own dependencies and requested Playwright engines.
 - `--keep-going` aggregates only generated-artifact freshness failures. Real lint, build, test,
   docs, visual, packed-consumer, and platform failures remain fail-fast.
+
+## Release integrity
+
+`scripts/publish.sh` is self-contained in this repository. It does not read or run a sibling
+website checkout; website synchronization is a separate, opt-in post-release operation. It refuses
+to start from a dirty tree, requires one canonical fetch URL and one canonical push URL, and keeps
+the maintainer GitHub token out of dependency and package lifecycle processes. Changesets may
+auto-expand the release to publishable dependents; every actual package-version delta is therefore
+generated, tested, reviewed, packed, tagged, and released. Only stable core `major.minor.patch`
+versions are accepted.
+
+After regenerating package metadata → manifest → component metadata → manifest, it runs lint →
+build → test and every prepack generator. It updates the narrowly anchored README source-version
+line (which deliberately makes no pre-publish registry claim), then shows the complete clean-start
+worktree and diff stat before confirmation. Packing reruns the same deterministic lifecycle. The
+script stages the full version-derived CEM, inventory, editor, framework, token, and LLM set; any
+other unstaged tracked output aborts for review.
+
+The release commit is pushed alone to `origin/main`, which starts CI. The script dispatches
+`full-engine.yml` from `main`, requires an exact-SHA `push`/`main` CI run and an exact-SHA
+`workflow_dispatch`/`main` full-engine run, and creates no tag if either fails. Only after both
+qualify does it create annotated tags, push the multi-package tag set atomically, and create the
+GitHub Releases that trigger `publish.yml`. Recovery output is phase-aware and never suggests a
+release after failed qualification.
+
+The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's
+peeled commit is both the exact checkout and the workflow invocation ref/SHA, then waits for one
+successful `push`/`main` `ci.yml` run and one successful `workflow_dispatch`/`main`
+`full-engine.yml` run whose `head_sha` is that commit. A manual invocation must therefore be
+dispatched on the tag itself (for example, `gh workflow run publish.yml --ref <tag> -f tag=<tag>`),
+not on the default branch. The CI run must contain
+successful results for the six primary jobs and all four Firefox/WebKit × Node 20/22 platform legs,
+and every job present in that
+CI run must succeed so a future gate cannot be added without becoming release-blocking. The
+full-engine run must contain all four Firefox and all four WebKit shards, with every job successful.
+The helper deliberately reads the named workflow runs and their jobs, not every check on the commit:
+the latter set includes the currently-running publish job and would deadlock on itself. Its pure
+state-machine, tag, and
+tarball checks live in `scripts/release-integrity.test.mjs`.
+
+The `npm-publish` GitHub environment is an external repository setting, not something workflow
+YAML can create. It must retain required reviewers; verify it before a release with
+`gh api repos/aceshooting/lyra-ui/environments/npm-publish`. Credentials are minted only after
+that deployment gate. Before the gate, a read-only job requires exactly one `.tgz`, validates its
+embedded identity, rebuilds the exact tagged source, byte-compares both tarballs, and uploads the
+verified bytes plus digest as a 14-day workflow artifact. The protected job has no checkout,
+dependency install, package lifecycle, or repository-script execution. It downloads that artifact,
+rechecks the digest and peeled remote tag, clobbers and round-trips the GitHub Release tarball to
+close the approval-window mutation gap, then attests and passes those same bytes to `npm publish`.
+A manual dry run validates and passes that same existing release asset to
+`npm publish --dry-run` without attesting or publishing it. The attached provenance file keeps the
+action's native Sigstore-bundle JSON representation and `.sigstore.json` suffix; it is not copied
+under an in-toto JSONL suffix, which is a different serialization.
+
+The manual `sign-release.yml` recovery path uses the same read-only rebuild/byte-verification job,
+14-day artifact handoff, protected minimal signer, post-approval tag check, and release-asset
+round-trip. Dispatch it on the requested tag, never on `main`.
+
+Component release history checks require a non-shallow clone with tags; the CI lint checkout uses
+`fetch-depth: 0`. `history.taggedCurrent` preserves the immutable current-version tag record while
+mutable worktree `history.current` evolves. APIs added after that tag are marked `unreleased`, then
+receive the bumped version when the exact tag snapshot rolls into `history.releases`.
+
+The packed-consumer CI job runs the networked `check:public-api` after building. It downloads the
+latest published package, validates and safely unpacks its tarball in a temporary directory, then
+normalizes CEM, concrete wildcard exports, framework declarations, named-export declaration
+graphs, reachable event-detail types, and documented event cancelability. Removals, narrowing,
+default/reflection/event changes require a major bump; additive or widening changes require at
+least a minor bump. Pending Changesets must meet that minimum unless an exact, reviewed exception
+in `scripts/public-api-semver-exceptions.json` matches the before/after values. Parser and semver
+logic remain network-free under `test:public-api`.
 
 ## Coverage floors (`scripts/coverage-floors.json`)
 
@@ -195,9 +290,11 @@ which leaves consumers' devtools chasing a 404).
 
 ## `prepack` and editor data
 
-**`prepack`** (`manifest` → `framework-types` → `build` → `generate-editor-data` → `llms`;
-`packages/lyra-ui/package.json`) determines tarball contents on `npm pack`/`npm publish`, run by
-npm itself rather than as one monolithic CI command. `generate-editor-data` regenerates
+**`prepack`** (`package-metadata` → `default-string-slices` → `manifest` → `framework-types` →
+`design-tokens` → `build` → `generate-editor-data` → `llms`; `packages/lyra-ui/package.json`)
+determines tarball contents on `npm pack`/`npm publish`, run by npm itself rather than as one
+monolithic CI command. Starting with `package-metadata` prevents a version bump from packing stale
+runtime version constants. `generate-editor-data` regenerates
 `vscode-html-data.json`, `vscode-css-data.json`, and `web-types.json` from
 `custom-elements.json`.
 
@@ -223,7 +320,8 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
 - `node scripts/check-bundle-size.mjs` bundles the published entry points after a build, fails on
   gzip-size regressions against `scripts/bundle-budgets.json`, and re-measures every
   per-component entry so the sizes in `scripts/bundle-stats.json` (read by the README size badges
-  and the lyra-ui.com hero) cannot go stale — regenerate both files with `--write-budgets`.
+  and the lyra-ui.com hero) cannot go stale — refresh measured statistics with `--write-stats`.
+  Budgets are reviewed release policy and are never loosened by a generator.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
 `check:hit-area` (WCAG 2.5.8 tappable-size floor) and `check:numeric-guards` (finite-number guards

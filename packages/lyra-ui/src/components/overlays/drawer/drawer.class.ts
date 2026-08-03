@@ -3,6 +3,11 @@ import type { PropertyValues } from 'lit';
 import { LyraDialog } from '../dialog/dialog.class.js';
 import type { RegisteredAnimationSpec } from '../../../internal/registered-animation.js';
 import { styles } from './drawer.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
 
@@ -30,7 +35,9 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @event lr-after-hide - The drawer is closed and has finished sliding out.
  * @event lr-initial-focus - Inherited cancelable event before automatic modal focus movement.
  * @event lr-request-close - Inherited cancelable built-in dismissal request with a source detail.
- * @event lr-dialog-close - Inherited cancelable close event; detail is the dismissal reason.
+ * @event lr-dialog-close - Inherited conditionally cancelable close event; detail is the dismissal
+ *   reason. Ordinary dismissal can be vetoed; an `'unmount'` notification after external removal
+ *   cannot be.
  * It inherits every `<lr-dialog>` CSS part unchanged.
  * @cssprop --size - Mapped drawer size for the active axis.
  * @cssprop --backdrop-filter - Mapped backdrop-filter alias.
@@ -52,6 +59,16 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @since 4.0.0
  */
 export class LyraDrawer extends LyraDialog {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraDialog.styles, styles];
 
   /** Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be
@@ -64,6 +81,11 @@ export class LyraDrawer extends LyraDialog {
 
   protected override get modalSurface(): boolean {
     return !this.contained;
+  }
+
+  /** A mapped drawer's hide request is cancelable on every path, including external removal. */
+  protected override get disconnectHideCancelable(): boolean {
+    return true;
   }
 
   protected override panelAnimationName(showing: boolean): string {

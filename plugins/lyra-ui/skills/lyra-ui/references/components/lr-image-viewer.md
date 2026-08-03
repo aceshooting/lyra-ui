@@ -2,7 +2,7 @@
 
 # `lr-image-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-image-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -41,6 +41,11 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+`error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
+failure or transition to an unsafe source appends the localized message to the document's
+pre-mounted `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains
+visible but does not interrupt on mount; identical later failures append distinct children.
 
 While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
 Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and

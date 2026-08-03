@@ -1,6 +1,18 @@
 import { expect } from '@open-wc/testing';
 import { loadMarkdownDeps, loadMarkdownAndSanitizer, getMarkdownDepsIfLoaded } from './markdown-loader.js';
 
+class UsableMarked {
+  readonly defaults: Record<string, unknown> = {};
+
+  use(): this {
+    return this;
+  }
+
+  parse(): string {
+    return '';
+  }
+}
+
 it('resolves both the marked and dompurify modules', async () => {
   const deps = await loadMarkdownDeps();
   expect(deps.marked).to.not.equal(undefined);
@@ -22,6 +34,136 @@ it('getMarkdownDepsIfLoaded() returns the same resolved deps synchronously once 
 });
 
 describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', () => {
+  it('resolves a Marked constructor from a default-wrapped module namespace', async () => {
+    class WrappedMarked extends UsableMarked {}
+    const wrappedModule = { default: { Marked: WrappedMarked } };
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve(wrappedModule),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked).to.equal(wrappedModule.default);
+  });
+
+  it('prefers a usable Marked capability on the module namespace over its default export', async () => {
+    class NamespaceMarked extends UsableMarked {}
+    class DefaultMarked extends UsableMarked {}
+    const module = {
+      Marked: NamespaceMarked,
+      default: { Marked: DefaultMarked },
+    };
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve(module),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked).to.equal(module);
+  });
+
+  it('falls back to a usable default export when the namespace constructor lacks the parser capability', async () => {
+    class MissingParse {
+      readonly defaults: Record<string, unknown> = {};
+      use(): this {
+        return this;
+      }
+    }
+    class DefaultMarked extends UsableMarked {}
+    const module = {
+      Marked: MissingParse,
+      default: { Marked: DefaultMarked },
+    };
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve(module),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked === module.default).to.be.true;
+  });
+
+  it('fails closed when the Marked instance lacks defaults', async () => {
+    class MissingDefaults {
+      use(): this {
+        return this;
+      }
+      parse(): string {
+        return '';
+      }
+    }
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve({ Marked: MissingDefaults }),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked === undefined).to.be.true;
+  });
+
+  it('fails closed when the Marked instance use member is not callable', async () => {
+    class NonCallableUse {
+      readonly defaults: Record<string, unknown> = {};
+      readonly use = 'not callable';
+      parse(): string {
+        return '';
+      }
+    }
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve({ Marked: NonCallableUse }),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked === undefined).to.be.true;
+  });
+
+  it('fails closed when the Marked instance parse member is not callable', async () => {
+    class NonCallableParse {
+      readonly defaults: Record<string, unknown> = {};
+      readonly parse = 'not callable';
+      use(): this {
+        return this;
+      }
+    }
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve({ Marked: NonCallableParse }),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked === undefined).to.be.true;
+  });
+
+  it('rejects a Marked constructor that throws and still resolves a usable default export', async () => {
+    class ThrowingMarked {
+      constructor() {
+        throw new Error('constructor boom');
+      }
+    }
+    class DefaultMarked extends UsableMarked {}
+    const module = {
+      Marked: ThrowingMarked,
+      default: { Marked: DefaultMarked },
+    };
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve(module),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked === module.default).to.be.true;
+  });
+
+  it('fails closed when a default-wrapped marked peer lacks a usable constructor', async () => {
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve({ default: { Marked: 'not callable' } }),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked).to.equal(undefined);
+  });
+
   it('still resolves dompurify when marked fails to load — content still renders sanitized-but-empty rather than every markdown surface breaking', async () => {
     const markedError = new Error('marked boom');
     const originalWarn = console.warn;

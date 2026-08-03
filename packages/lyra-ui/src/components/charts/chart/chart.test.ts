@@ -4,11 +4,45 @@ import './doughnut-chart.js';
 import { seriesPalette, type LyraChart, type Series } from './chart.js';
 import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-loader.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
+
+function announcementSink(
+  doc: Document = document,
+  politeness: 'polite' | 'assertive' = 'polite',
+): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function announcementTexts(
+  doc: Document = document,
+  politeness: 'polite' | 'assertive' = 'polite',
+): string[] {
+  const sink = announcementSink(doc, politeness);
+  return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
-  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`
+    <lr-chart .strings=${{ loading: 'Diagramm wird geladen' }}></lr-chart>
+  `)) as LyraChart;
+  const skeleton = el.shadowRoot!.querySelector('lr-skeleton') as LyraSkeleton;
+  await skeleton.updateComplete;
+
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
+  expect(skeleton.announce).to.be.false;
+  expect(skeleton.hasAttribute('role')).to.be.false;
+  expect(skeleton.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll(
+      '[role="status"], [role="alert"], [aria-live]:not([aria-live="off"])',
+    ).length,
+  ).to.equal(0);
+  const loadingLabel = el.shadowRoot!.querySelector('.sr-only') as HTMLElement | null;
+  expect(loadingLabel !== null, 'the parent must retain a non-live loading label').to.be.true;
+  expect(loadingLabel!.textContent).to.equal('Diagramm wird geladen');
+  expect(loadingLabel!.hasAttribute('role')).to.be.false;
+  expect(loadingLabel!.hasAttribute('aria-live')).to.be.false;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
@@ -16,6 +50,208 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+});
+
+it('announces keyboard datum changes through one light-DOM sink and keeps the shadow copy inert', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.labels = ['North', 'South'];
+  el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+
+  const sink = announcementSink();
+  expect(sink !== null, 'a connected chart must acquire its sink before announcing').to.be.true;
+  expect(sink!.getRootNode() === document, 'the live region must be in document light DOM').to.be
+    .true;
+  expect(announcementTexts(), 'mounting a chart must not announce its initial datum').to.deep.equal(
+    [],
+  );
+
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  canvas.focus();
+  await el.updateComplete;
+  expect(announcementTexts()).to.have.length(1);
+  expect(announcementTexts()[0]).to.contain('Revenue');
+  expect(announcementTexts()[0]).to.contain('North');
+
+  const mirror = el.shadowRoot!.querySelector('.sr-only[aria-hidden="true"]') as HTMLElement;
+  expect(mirror !== null, 'the inspectable shadow copy must remain rendered').to.be.true;
+  expect(mirror.hasAttribute('aria-live'), 'the mirror must not be a second live region').to.be
+    .false;
+  expect(mirror.hasAttribute('role')).to.be.false;
+  expect(mirror.textContent).to.contain('Revenue');
+});
+
+it('releases and reacquires its announcement sink when adopted into another document', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.labels = ['North'];
+  el.datasets = [{ label: 'Revenue', data: [10] }];
+  document.body.appendChild(el);
+
+  try {
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+    const originalSink = announcementSink();
+    const originalAssertiveSink = announcementSink(document, 'assertive');
+    expect(originalSink !== null, 'the original document must own the connected chart sink').to.be
+      .true;
+    expect(originalAssertiveSink !== null).to.be.true;
+
+    foreignDocument.adoptNode(el);
+    expect(originalSink!.isConnected, 'adoption must release the old document sink').to.be.false;
+    expect(originalAssertiveSink!.isConnected).to.be.false;
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    const adoptedSink = announcementSink(foreignDocument);
+    const adoptedAssertiveSink = announcementSink(foreignDocument, 'assertive');
+    expect(adoptedSink !== null, 'reconnect must acquire a sink in the adopted document').to.be.true;
+    expect(adoptedAssertiveSink !== null).to.be.true;
+    expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
+    expect(announcementTexts(foreignDocument), 'reconnect must not re-announce stale state').to.deep
+      .equal([]);
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new frame.contentWindow!.FocusEvent('focus'));
+    await el.updateComplete;
+    expect(announcementTexts(foreignDocument)).to.have.length(1);
+    expect(announcementTexts(), 'nothing may be announced into the old document').to.deep.equal([]);
+
+    el.remove();
+    expect(adoptedSink!.isConnected, 'disconnect must release the adopted document sink').to.be
+      .false;
+    expect(adoptedAssertiveSink!.isConnected).to.be.false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('rebinds observers, animation frames, media state, styles, and DOM factories to its adopted document', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const foreignWindow = frame.contentWindow!;
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.labels = ['North'];
+  el.datasets = [{ label: 'Revenue', data: [10] }];
+  document.body.appendChild(el);
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+
+  const OriginalResizeObserver = foreignWindow.ResizeObserver;
+  const OriginalIntersectionObserver = foreignWindow.IntersectionObserver;
+  const originalRequestAnimationFrame = foreignWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = foreignWindow.cancelAnimationFrame;
+  const originalMatchMedia = foreignWindow.matchMedia;
+  const originalGetComputedStyle = foreignWindow.getComputedStyle;
+  const originalCreateElement = foreignDocument.createElement;
+  let resizeCallback: ResizeObserverCallback | undefined;
+  let resizeObservers = 0;
+  let intersectionObservers = 0;
+  let nextFrame = 40;
+  const requestedFrames: number[] = [];
+  const canceledFrames: number[] = [];
+  const mediaQueries: string[] = [];
+  let styleReads = 0;
+  const createdNames: string[] = [];
+
+  class RealmResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      resizeObservers += 1;
+      resizeCallback = callback;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  class RealmIntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '0px';
+    readonly thresholds = [0];
+    constructor(_callback: IntersectionObserverCallback) {
+      intersectionObservers += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+
+  (foreignWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    RealmResizeObserver as unknown as typeof ResizeObserver;
+  (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    RealmIntersectionObserver as unknown as typeof IntersectionObserver;
+  foreignWindow.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+    const id = nextFrame++;
+    requestedFrames.push(id);
+    return id;
+  }) as typeof requestAnimationFrame;
+  foreignWindow.cancelAnimationFrame = ((id: number) => {
+    canceledFrames.push(id);
+  }) as typeof cancelAnimationFrame;
+  foreignWindow.matchMedia = ((query: string) => {
+    mediaQueries.push(query);
+    return {
+      matches: query === '(forced-colors: active)',
+      media: query,
+      onchange: null,
+      addListener(): void {},
+      removeListener(): void {},
+      addEventListener(): void {},
+      removeEventListener(): void {},
+      dispatchEvent(): boolean { return true; },
+    };
+  }) as typeof matchMedia;
+  foreignWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    styleReads += 1;
+    return originalGetComputedStyle.call(foreignWindow, element, pseudo);
+  }) as typeof getComputedStyle;
+  foreignDocument.createElement = ((name: string, options?: ElementCreationOptions) => {
+    createdNames.push(name);
+    return originalCreateElement.call(foreignDocument, name, options);
+  }) as typeof foreignDocument.createElement;
+
+  try {
+    foreignDocument.adoptNode(el);
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    expect(resizeObservers).to.equal(1);
+    expect(intersectionObservers).to.equal(1);
+    expect(resizeCallback !== undefined).to.be.true;
+
+    const internals = el as unknown as {
+      chartStyleOptions(palette: string[]): unknown;
+      forcedColorPattern(index: number, background: string): unknown;
+    };
+    internals.chartStyleOptions(['CanvasText']);
+    internals.forcedColorPattern(1, 'Canvas');
+    expect(styleReads).to.be.greaterThan(0);
+    expect(mediaQueries).to.include('(forced-colors: active)');
+    expect(mediaQueries).to.include('(prefers-reduced-motion: reduce)');
+    expect(createdNames).to.include('canvas');
+
+    resizeCallback!([
+      { contentRect: { width: 321 } } as unknown as ResizeObserverEntry,
+    ], {} as ResizeObserver);
+    expect(requestedFrames).to.have.length(1);
+    const pendingFrame = requestedFrames[0]!;
+    el.remove();
+    expect(canceledFrames).to.include(pendingFrame);
+  } finally {
+    el.remove();
+    (foreignWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      OriginalResizeObserver;
+    (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+      OriginalIntersectionObserver;
+    foreignWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    foreignWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    foreignWindow.matchMedia = originalMatchMedia;
+    foreignWindow.getComputedStyle = originalGetComputedStyle;
+    foreignDocument.createElement = originalCreateElement;
+    frame.remove();
+  }
 });
 
 it('renders a canvas and builds a Chart.js instance once chart.js loads', async () => {
@@ -1639,8 +1875,8 @@ it('disables the light Chart.js tick backdrop on dark-theme radial charts', asyn
 
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
 // when the optional `chart.js` peer fails to load, <lr-chart> must fail closed into a visible,
-// accessible role="alert" error state instead of leaving a permanently blank canvas with no
-// on-page indication anything is wrong. Mirrors lr-map's identical treatment.
+// accessible visible error state plus a light-DOM assertive announcement instead of leaving a
+// permanently blank canvas with no on-page indication anything is wrong.
 it('renders a visible, accessible error state instead of a blank canvas when the chart.js peer fails to load', async () => {
   // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
   // connects, since connectedCallback() calls it unconditionally on connect.
@@ -1652,8 +1888,13 @@ it('renders a visible, accessible error state instead of a blank canvas when the
       timeout: 2000,
     });
     const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-    expect(errorEl.getAttribute('role')).to.equal('alert');
+    expect(errorEl.hasAttribute('aria-hidden'), 'the visible error must remain discoverable').to.be
+      .false;
+    expect(errorEl.hasAttribute('role'), 'the shadow mirror must not be a second alert').to.be.false;
     expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+    expect(announcementTexts(document, 'assertive')).to.deep.equal([
+      errorEl.textContent!.trim(),
+    ]);
     expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelectorAll('canvas').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
@@ -1676,6 +1917,9 @@ it('routes the chart.js peer-missing error through a .strings override', async (
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
       'Bibliothèque de graphiques absente',
     );
+    expect(announcementTexts(document, 'assertive')).to.deep.equal([
+      'Bibliothèque de graphiques absente',
+    ]);
   } finally {
     el.remove();
   }
@@ -2687,10 +2931,12 @@ describe('remediated effective chart contract', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.focus();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('North cluster');
-    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('10');
-    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('20');
-    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('7');
+    const datumMirror = el.shadowRoot!.querySelector('.sr-only[aria-hidden="true"]')!;
+    expect(datumMirror.textContent).to.contain('North cluster');
+    expect(datumMirror.textContent).to.contain('10');
+    expect(datumMirror.textContent).to.contain('20');
+    expect(datumMirror.textContent).to.contain('7');
+    expect(announcementTexts().at(-1)).to.contain('North cluster');
 
     let keyboardDetail: unknown;
     el.addEventListener('lr-point-click', (event) => {

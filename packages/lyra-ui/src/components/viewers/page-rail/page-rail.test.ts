@@ -278,6 +278,85 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(2);
   });
 
+  it('constructs observers and schedules and clears digit timing in the adopted owner realm', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
+    el.remove();
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      frame.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const originalResizeObserver = frameWindow.ResizeObserver;
+    const originalMutationObserver = frameWindow.MutationObserver;
+    const originalSetTimeout = frameWindow.setTimeout;
+    const originalClearTimeout = frameWindow.clearTimeout;
+    const mutationTargets: Node[] = [];
+    const scheduled: number[] = [];
+    const cleared: number[] = [];
+    const resizeRecords: Array<{ targets: Element[]; disconnects: number }> = [];
+    let mutationDisconnects = 0;
+
+    class RealmResizeObserver {
+      private readonly record = { targets: [] as Element[], disconnects: 0 };
+      constructor(_callback: ResizeObserverCallback) { resizeRecords.push(this.record); }
+      observe(target: Element): void { this.record.targets.push(target); }
+      unobserve(): void {}
+      disconnect(): void { this.record.disconnects += 1; }
+    }
+    class RealmMutationObserver {
+      constructor(_callback: MutationCallback) {}
+      observe(target: Node): void { mutationTargets.push(target); }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void { mutationDisconnects += 1; }
+    }
+    frameWindow.ResizeObserver = RealmResizeObserver as unknown as typeof ResizeObserver;
+    frameWindow.MutationObserver = RealmMutationObserver as unknown as typeof MutationObserver;
+
+    try {
+      frameDocument.adoptNode(el);
+      el.for = 'missing-viewer';
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      const pageRailResizeRecords = resizeRecords.filter((record) => record.targets.includes(el));
+      expect(pageRailResizeRecords.length).to.equal(1);
+      const pageRailResizeRecord = pageRailResizeRecords[0]!;
+      expect(mutationTargets.includes(frameDocument)).to.be.true;
+
+      // Install the timer spies only after the component tree is mounted. Descendants may own
+      // unrelated timers; this assertion is specifically about the synchronous digit-buffer path.
+      frameWindow.setTimeout = ((_handler: TimerHandler) => {
+        scheduled.push(81);
+        return 81;
+      }) as typeof frameWindow.setTimeout;
+      frameWindow.clearTimeout = ((handle?: number) => {
+        if (handle !== undefined) cleared.push(handle);
+      }) as typeof frameWindow.clearTimeout;
+      el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+        new frameWindow.KeyboardEvent('keydown', {
+          key: '1',
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      expect(scheduled).to.deep.equal([81]);
+
+      document.adoptNode(el);
+      expect(cleared).to.deep.equal([81]);
+      expect(pageRailResizeRecord.disconnects).to.be.greaterThan(0);
+      expect(mutationDisconnects).to.be.greaterThan(0);
+    } finally {
+      el.remove();
+      frameWindow.ResizeObserver = originalResizeObserver;
+      frameWindow.MutationObserver = originalMutationObserver;
+      frameWindow.setTimeout = originalSetTimeout;
+      frameWindow.clearTimeout = originalClearTimeout;
+      frame.remove();
+    }
+  });
+
   it('typing a digit in wired mode updates the viewer and emits the normal selection event', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
@@ -312,6 +391,93 @@ describe('lr-page-rail', () => {
     await waitUntil(() => list.shadowRoot!.querySelectorAll('[part~="page"]').length === 3);
     const focused = list.shadowRoot!.activeElement as HTMLButtonElement | null;
     expect(focused?.getAttribute('aria-label')).to.equal('Page 3');
+  });
+
+  it('recognizes an iframe-realm focused row when deciding whether to repair focus', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      frame.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    const foreignButton = frameDocument.createElement('button');
+    const foreignRow = frameDocument.createElement('div');
+    foreignRow.dataset['rowIndex'] = '99';
+    foreignRow.append(foreignButton);
+    expect(foreignButton instanceof window.HTMLElement).to.be.false;
+    const activeElementDescriptor = Object.getOwnPropertyDescriptor(list.shadowRoot!, 'activeElement');
+    Object.defineProperty(list.shadowRoot!, 'activeElement', {
+      configurable: true,
+      get: () => foreignButton,
+    });
+
+    try {
+      // Avoid materializing child custom elements in a second document: constructed stylesheets
+      // cannot be shared across documents. Invoke the lifecycle decision with the same property
+      // state Lit would present, then inspect its scalar pending-page result.
+      Object.defineProperty(el, 'pageCount', { configurable: true, writable: true, value: 50 });
+      const internals = el as unknown as {
+        willUpdate(changed: PropertyValues): void;
+        pendingFocusPage: number | null;
+      };
+      internals.willUpdate(new Map([['pageCount', 0]]) as PropertyValues);
+      expect(internals.pendingFocusPage).to.equal(50);
+    } finally {
+      if (activeElementDescriptor) {
+        Object.defineProperty(list.shadowRoot!, 'activeElement', activeElementDescriptor);
+      } else {
+        delete (list.shadowRoot! as unknown as { activeElement?: Element | null }).activeElement;
+      }
+      el.remove();
+      frame.remove();
+    }
+  });
+
+  it('schedules and cancels a pending focus-repair frame through the adopted owner window', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
+    el.remove();
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      frame.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+    const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+    const callbacks = new Map<number, FrameRequestCallback>();
+    const cancelled: number[] = [];
+    let nextHandle = 90;
+    frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++nextHandle;
+      callbacks.set(handle, callback);
+      return handle;
+    }) as typeof frameWindow.requestAnimationFrame;
+    frameWindow.cancelAnimationFrame = ((handle: number) => {
+      cancelled.push(handle);
+      callbacks.delete(handle);
+    }) as typeof frameWindow.cancelAnimationFrame;
+
+    const internals = el as unknown as { waitForOwnerAnimationFrame(): Promise<boolean> };
+    try {
+      const frameWait = internals.waitForOwnerAnimationFrame();
+      await waitUntil(() => callbacks.size > 0, 'focus repair never reached the owner frame queue');
+      document.adoptNode(el);
+      expect(await frameWait).to.be.false;
+      expect(cancelled.length).to.be.greaterThan(0);
+      expect(callbacks.size).to.equal(0);
+    } finally {
+      el.remove();
+      frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+      frame.remove();
+    }
   });
 
   it('repairs focus by absolute page after a virtualized tail is removed', async () => {
@@ -393,6 +559,24 @@ describe('lr-page-rail', () => {
     expect(customElements.get('lr-virtual-list')).to.exist;
     expect(customElements.get('lr-skeleton')).to.exist;
     expect(customElements.get('lr-file-icon')).to.exist;
+  });
+
+  it('keeps loading thumbnail skeletons decorative inside the nested virtual list', async () => {
+    const thumbnail = deferred<boolean>();
+    const viewer = new StubViewer();
+    viewer.renderPageThumbnail = () => thumbnail.promise;
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.emitLoad(1);
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('lr-skeleton') != null,
+    );
+    const listRoot = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+    const skeleton = listRoot.querySelector('lr-skeleton') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await skeleton.updateComplete;
+    expect(listRoot.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length).to.equal(0);
+    thumbnail.resolve(true);
   });
 
   it('falls back to the built-in English label and honors a strings override', async () => {

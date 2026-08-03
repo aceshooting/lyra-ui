@@ -28,7 +28,8 @@ import { fileURLToPath } from 'node:url';
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const palettePath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
 const themePath = join(packageDir, 'src', 'theme.css');
-const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
+const baseTokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5; // WCAG 2.2 SC 1.4.3, normal-size text
 const NON_TEXT_CONTRAST = 3; // WCAG 2.2 SC 1.4.11, UI component boundaries
@@ -192,9 +193,9 @@ function perceptualDistance(a, b) {
  * fallbacks could be (and were) entirely absent while every gate stayed green. A component dropped
  * unstyled onto a dark page is the DEFAULT integration, not an edge case.
  */
-function readTokenFallbacks(text, prefix) {
+function readTokenFallbacks(text, prefix, sourceLabel) {
   const darkAnchor = text.indexOf('@media (prefers-color-scheme: dark)');
-  if (darkAnchor < 0) throw new Error('could not find the prefers-color-scheme block in tokens.styles.ts');
+  if (darkAnchor < 0) throw new Error(`could not find the prefers-color-scheme block in ${sourceLabel}`);
   const grab = (region) => {
     const map = new Map();
     const pattern = new RegExp(`(--lr-${prefix}[a-z0-9-]*):\\s*var\\(--lr-theme-[a-z0-9-]+,\\s*(#[0-9a-f]{6})\\)`, 'gi');
@@ -206,6 +207,27 @@ function readTokenFallbacks(text, prefix) {
   const dark = new Map(light);
   for (const [key, value] of grab(text.slice(darkAnchor))) dark.set(key, value);
   return { light, dark };
+}
+
+/**
+ * Specialist fallbacks live in named Lit CSS fragments so components can opt into the sheet
+ * without burdening primitive controls. Parse those authored fragments directly: scanning the
+ * composed export would encounter both fragment declarations before their `${...}` interpolation
+ * sites and incorrectly let the dark declarations overwrite the light map.
+ */
+function readSpecialistTokenFallbacks(text, prefix) {
+  const readFragment = (name) => {
+    const match = text.match(new RegExp('const ' + name + ' = css`([\\s\\S]*?)`;'));
+    if (!match) throw new Error(`could not read ${name} from specialist-tokens.styles.ts`);
+    const map = new Map();
+    const pattern = new RegExp(`(--lr-${prefix}[a-z0-9-]*):\\s*var\\(--lr-theme-[a-z0-9-]+,\\s*(#[0-9a-f]{6})\\)`, 'gi');
+    for (const token of match[1].matchAll(pattern)) map.set(token[1], token[2]);
+    return map;
+  };
+  return {
+    light: readFragment('lightSpecialistTokens'),
+    dark: readFragment('darkSpecialistTokens'),
+  };
 }
 
 const { light, dark } = readGrids(readFileSync(palettePath, 'utf8'));
@@ -315,21 +337,22 @@ for (const [mode, ramp] of [['light', chart.light], ['dark', chart.dark]]) {
 //   background (`--lr-terminal-bg-*`, SGR 40-47/100-107) against the DEFAULT TEXT colour, which is
 //     the foreground actually in effect whenever a program sets a background and no explicit colour
 //
-// Checked from BOTH sources: `theme.css` (what a themed page gets) and `tokens.styles.ts`'s
-// hardcoded fallbacks (what an unstyled component on a dark page gets). Only the first was ever
-// read, which is how the dark ANSI fallbacks came to be missing from `tokens.styles.ts` entirely
-// while this gate reported a clean run.
-const tokensText = readFileSync(tokensPath, 'utf8');
-const fallbackTerminalFg = readTokenFallbacks(tokensText, 'terminal-color-');
-const fallbackTerminalBg = readTokenFallbacks(tokensText, 'terminal-bg-');
+// Checked from BOTH sources: `theme.css` (what a themed page gets) and the opt-in
+// `specialist-tokens.styles.ts` fallbacks (what an unstyled terminal gets). Surface/text references
+// remain in the base token sheet. Keeping those sources explicit prevents a future token split from
+// turning this into a vacuous zero-entry check.
+const baseTokensText = readFileSync(baseTokensPath, 'utf8');
+const specialistTokensText = readFileSync(specialistTokensPath, 'utf8');
+const fallbackTerminalFg = readSpecialistTokenFallbacks(specialistTokensText, 'terminal-color-');
+const fallbackTerminalBg = readSpecialistTokenFallbacks(specialistTokensText, 'terminal-bg-');
 const themeTerminalBg = readThemeRamps(themeText, 'terminal-bg-');
-const fallbackRaised = readTokenFallbacks(tokensText, 'color-surface-raised');
-const fallbackText = readTokenFallbacks(tokensText, 'color-text');
+const fallbackRaised = readTokenFallbacks(baseTokensText, 'color-surface-raised', 'tokens.styles.ts');
+const fallbackText = readTokenFallbacks(baseTokensText, 'color-text', 'tokens.styles.ts');
 
 const terminalCases = [
   ['theme.css foreground', terminal, raisedSurfaces, TEXT_CONTRAST, 'raised surface'],
   [
-    'tokens.styles.ts foreground',
+    'specialist-tokens.styles.ts foreground',
     fallbackTerminalFg,
     {
       light: fallbackRaised.light.get('--lr-color-surface-raised'),
@@ -349,7 +372,7 @@ const terminalCases = [
     'default text',
   ],
   [
-    'tokens.styles.ts background',
+    'specialist-tokens.styles.ts background',
     fallbackTerminalBg,
     { light: fallbackText.light.get('--lr-color-text'), dark: fallbackText.dark.get('--lr-color-text') },
     TEXT_CONTRAST,
@@ -381,8 +404,8 @@ for (const [label, ramps, references, floor, referenceName] of terminalCases) {
   }
 }
 
-// `theme.css` and the `tokens.styles.ts` fallbacks must stay byte-identical: the theme is optional,
-// so importing it would otherwise silently change colours that are supposed to be the same.
+// `theme.css` and the specialist fallbacks must stay byte-identical: the theme is optional, so
+// importing it would otherwise silently change colours that are supposed to be the same.
 for (const [label, themeRamp, fallbackRamp, stripPrefix] of [
   ['foreground', terminal, fallbackTerminalFg, '--lr-theme-'],
   ['background', themeTerminalBg, fallbackTerminalBg, '--lr-theme-'],
@@ -394,7 +417,7 @@ for (const [label, themeRamp, fallbackRamp, stripPrefix] of [
       if (mirrored !== value) {
         findings.push(
           `${mode}: ANSI ${label} ${token} is ${value} in theme.css but ${mirrored ?? 'absent'} in ` +
-            `tokens.styles.ts — run \`node scripts/generate-terminal-palette.mjs\``,
+            `specialist-tokens.styles.ts — run \`node scripts/generate-terminal-palette.mjs\``,
         );
       }
     }

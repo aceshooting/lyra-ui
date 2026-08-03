@@ -946,6 +946,24 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     expect(el.validationTarget).to.equal(el.shadowRoot!.querySelector('[part="base"]'));
   });
 
+  it('keeps the published dragging and fileCount properties writable', async () => {
+    const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+
+    el.fileCount = 4;
+    el.dragging = true;
+    await el.updateComplete;
+    expect(el.fileCount).to.equal(4);
+    expect(el.dragging).to.equal(true);
+    expect(el.hasAttribute('dragging')).to.equal(true);
+
+    el.files = [makeFile('one.txt', 'text/plain')];
+    el.dragging = false;
+    await el.updateComplete;
+    expect(el.fileCount, 'a real file update resumes ownership of the derived count').to.equal(1);
+    expect(el.dragging).to.equal(false);
+    expect(el.hasAttribute('dragging')).to.equal(false);
+  });
+
   it('uses a writable validationTarget override and restores the default anchor with undefined', async () => {
     const el = (await fixture(html`<lr-file-input required></lr-file-input>`)) as LyraFileInput;
     const defaultTarget = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -1200,6 +1218,237 @@ it('restores single, multiple, and empty submitted state', async () => {
   el.formStateRestoreCallback(null, 'restore');
   await el.updateComplete;
   expect(el.files).to.deep.equal([]);
+});
+
+it('defers multiple form state without an SSR owner document and resynchronizes on connect', async () => {
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const NativeFormData = globals.FormData;
+  let ambientConstructions = 0;
+  const TrackingFormData = new Proxy(NativeFormData, {
+    construct(target, args, newTarget) {
+      ambientConstructions++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof FormData;
+  const form = document.createElement('form');
+  const el = document.createElement('lr-file-input') as LyraFileInput;
+  el.multiple = true;
+  el.name = 'attachment';
+  Object.defineProperty(el, 'ownerDocument', { configurable: true, value: undefined });
+
+  try {
+    globals.FormData = TrackingFormData;
+    expect(() => {
+      (el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void }).willUpdate(
+        new Map<PropertyKey, unknown>([['multiple', false]]),
+      );
+    }).not.to.throw();
+    expect(ambientConstructions).to.equal(0);
+  } finally {
+    globals.FormData = NativeFormData;
+    delete (el as unknown as { ownerDocument?: Document }).ownerDocument;
+  }
+
+  form.append(el);
+  document.body.append(form);
+  try {
+    await el.updateComplete;
+    const first = makeFile('first.txt', 'text/plain');
+    const second = makeFile('second.txt', 'text/plain');
+    el.files = [first, second];
+
+    expect(new FormData(form).getAll('attachment')).to.deep.equal([first, second]);
+  } finally {
+    form.remove();
+  }
+});
+
+it('accepts files and restored form state created in its adopted iframe realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<LyraFileInput>(html`<lr-file-input name="attachment" multiple></lr-file-input>`);
+  const originalCreateObjectUrl = frameWindow.URL.createObjectURL;
+  const originalRevokeObjectUrl = frameWindow.URL.revokeObjectURL;
+  const createdThumbnails: File[] = [];
+  const revokedThumbnails: string[] = [];
+
+  try {
+    frameWindow.URL.createObjectURL = ((file: File) => {
+      createdThumbnails.push(file);
+      return 'blob:adopted-file-input';
+    }) as typeof URL.createObjectURL;
+    frameWindow.URL.revokeObjectURL = ((url: string) => {
+      revokedThumbnails.push(url);
+    }) as typeof URL.revokeObjectURL;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const direct = new frameWindow.File(['direct'], 'direct.png', { type: 'image/png' });
+    el.files = [direct];
+    await el.updateComplete;
+    expect(el.files.length).to.equal(1);
+    expect(el.files[0] === direct).to.be.true;
+    expect(createdThumbnails.length).to.equal(1);
+    expect(createdThumbnails[0] === direct).to.be.true;
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')!.getAttribute('src')).to.equal(
+      'blob:adopted-file-input',
+    );
+
+    const first = new frameWindow.File(['first'], 'first.txt', { type: 'text/plain' });
+    const second = new frameWindow.File(['second'], 'second.txt', { type: 'text/plain' });
+    const restored = new frameWindow.FormData();
+    restored.append('file', first);
+    restored.append('file', second);
+    restored.append('note', 'not a file');
+    el.formStateRestoreCallback(restored, 'restore');
+    await el.updateComplete;
+    expect(el.files.length).to.equal(2);
+    expect(el.files[0] === first).to.be.true;
+    expect(el.files[1] === second).to.be.true;
+    expect(revokedThumbnails).to.deep.equal(['blob:adopted-file-input']);
+  } finally {
+    el.remove();
+    frameWindow.URL.createObjectURL = originalCreateObjectUrl;
+    frameWindow.URL.revokeObjectURL = originalRevokeObjectUrl;
+    frame.remove();
+  }
+});
+
+it('creates folder-rejection placeholder files in its adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const result = oneEvent(el, 'lr-files');
+    const dataTransfer = {
+      files: [] as unknown as FileList,
+      items: [{ kind: 'file', webkitGetAsEntry: () => ({ isDirectory: true, name: 'photos' }) }],
+    };
+    const drop = new frameWindow.DragEvent('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', { value: dataTransfer });
+    base.dispatchEvent(drop);
+    const event = await result;
+
+    expect(event.detail.rejected.length).to.equal(1);
+    expect(event.detail.rejected[0].file instanceof frameWindow.File).to.be.true;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('rerenders a recreated thumbnail URL after disconnect and reconnect', async () => {
+  const originalCreateObjectUrl = window.URL.createObjectURL;
+  const originalRevokeObjectUrl = window.URL.revokeObjectURL;
+  const revoked: string[] = [];
+  let created = 0;
+  let el: LyraFileInput | undefined;
+
+  try {
+    window.URL.createObjectURL = (() => `blob:reconnected-${++created}`) as typeof URL.createObjectURL;
+    window.URL.revokeObjectURL = ((url: string) => revoked.push(url)) as typeof URL.revokeObjectURL;
+    el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+    el.files = [makeFile('preview.png', 'image/png')];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')!.getAttribute('src')).to.equal(
+      'blob:reconnected-1',
+    );
+
+    el.remove();
+    expect(revoked).to.deep.equal(['blob:reconnected-1']);
+    document.body.append(el);
+    await el.updateComplete;
+
+    expect(created).to.equal(2);
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')!.getAttribute('src')).to.equal(
+      'blob:reconnected-2',
+    );
+    el.remove();
+    expect(revoked).to.deep.equal(['blob:reconnected-1', 'blob:reconnected-2']);
+  } finally {
+    el?.remove();
+    window.URL.createObjectURL = originalCreateObjectUrl;
+    window.URL.revokeObjectURL = originalRevokeObjectUrl;
+  }
+});
+
+it('replaces a never-connected old-iframe thumbnail when adopted before first connect', async () => {
+  const oldFrame = document.createElement('iframe');
+  document.body.append(oldFrame);
+  const oldDocument = oldFrame.contentDocument!;
+  const oldWindow = oldFrame.contentWindow!;
+  const originalOldCreate = oldWindow.URL.createObjectURL;
+  const originalOldRevoke = oldWindow.URL.revokeObjectURL;
+  const originalNewCreate = window.URL.createObjectURL;
+  const originalNewRevoke = window.URL.revokeObjectURL;
+  const oldRevoked: string[] = [];
+  const newRevoked: string[] = [];
+  let el: LyraFileInput | undefined;
+
+  try {
+    oldWindow.URL.createObjectURL = (() => 'blob:retired-iframe') as typeof URL.createObjectURL;
+    oldWindow.URL.revokeObjectURL = ((url: string) => oldRevoked.push(url)) as typeof URL.revokeObjectURL;
+    window.URL.createObjectURL = (() => 'blob:new-owner') as typeof URL.createObjectURL;
+    window.URL.revokeObjectURL = ((url: string) => newRevoked.push(url)) as typeof URL.revokeObjectURL;
+
+    el = document.createElement('lr-file-input') as LyraFileInput;
+    oldDocument.adoptNode(el);
+    const image = new oldWindow.File(['preview'], 'preview.png', { type: 'image/png' });
+    el.files = [image];
+    expect(oldRevoked).to.deep.equal([]);
+
+    document.body.append(document.adoptNode(el));
+    oldFrame.remove();
+    await el.updateComplete;
+
+    expect(oldRevoked).to.deep.equal(['blob:retired-iframe']);
+    expect(el.shadowRoot!.querySelector('img[part="file-image"]')!.getAttribute('src')).to.equal(
+      'blob:new-owner',
+    );
+    el.remove();
+    expect(newRevoked).to.deep.equal(['blob:new-owner']);
+  } finally {
+    el?.remove();
+    oldWindow.URL.createObjectURL = originalOldCreate;
+    oldWindow.URL.revokeObjectURL = originalOldRevoke;
+    window.URL.createObjectURL = originalNewCreate;
+    window.URL.revokeObjectURL = originalNewRevoke;
+    oldFrame.remove();
+  }
+});
+
+it('does not open the picker for iframe-realm interactive slotted content after adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+    let pickerOpens = 0;
+    input.click = () => pickerOpens++;
+
+    const slottedButton = frameDocument.createElement('button');
+    slottedButton.textContent = 'Help';
+    el.append(slottedButton);
+    await el.updateComplete;
+    slottedButton.click();
+
+    expect(pickerOpens).to.equal(0);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
 });
 
 it('paints the shared required marker on the label, and lets a consumer retune or suppress it', async () => {

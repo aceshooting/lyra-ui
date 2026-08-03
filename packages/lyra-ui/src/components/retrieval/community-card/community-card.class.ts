@@ -9,6 +9,11 @@ import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraCommunity {
   id: string;
@@ -53,6 +58,23 @@ export interface LyraCommunityCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    communityDrillIn: LYRA_DEFAULT_communityDrillIn,
+    communityMemberCount: LYRA_DEFAULT_communityMemberCount,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    showMoreCount: LYRA_DEFAULT_showMoreCount,
+    untitledCommunity: LYRA_DEFAULT_untitledCommunity,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the `noData` empty state. */

@@ -7,6 +7,11 @@ import '../../overlays/badge/badge.class.js';
 import '../../layout/details/details.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './policy-summary.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Outcome of one guardrail/permission/privacy/tool-policy decision. */
 export type PolicyDecisionState = 'allow' | 'deny' | 'needs-review';
@@ -105,6 +110,32 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @since 4.1.0
  */
 export class LyraPolicySummary extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    deny: LYRA_DEFAULT_deny,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    policySummaryAllowCount: LYRA_DEFAULT_policySummaryAllowCount,
+    policySummaryCategoryGuardrail: LYRA_DEFAULT_policySummaryCategoryGuardrail,
+    policySummaryCategoryPermission: LYRA_DEFAULT_policySummaryCategoryPermission,
+    policySummaryCategoryPrivacy: LYRA_DEFAULT_policySummaryCategoryPrivacy,
+    policySummaryCategoryTool: LYRA_DEFAULT_policySummaryCategoryTool,
+    policySummaryDenyCount: LYRA_DEFAULT_policySummaryDenyCount,
+    policySummaryDetailLabel: LYRA_DEFAULT_policySummaryDetailLabel,
+    policySummaryLabel: LYRA_DEFAULT_policySummaryLabel,
+    policySummaryNeedsReviewCount: LYRA_DEFAULT_policySummaryNeedsReviewCount,
+    policySummaryStateAllow: LYRA_DEFAULT_policySummaryStateAllow,
+    policySummaryStateDeny: LYRA_DEFAULT_policySummaryStateDeny,
+    policySummaryStateNeedsReview: LYRA_DEFAULT_policySummaryStateNeedsReview,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The decisions to render, in the given order. Controlled and never mutated by this component

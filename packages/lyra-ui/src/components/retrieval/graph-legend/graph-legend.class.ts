@@ -1,11 +1,18 @@
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_graphLegendLabel, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The exact `lr-graph.nodeTypes` entry shape, declared locally (not imported from
  *  `lr-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer
@@ -58,7 +65,20 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
  * @since 4.0.0
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    graphLegendLabel: LYRA_DEFAULT_graphLegendLabel,
+    legendTypeHidden: LYRA_DEFAULT_legendTypeHidden,
+    legendTypeShown: LYRA_DEFAULT_legendTypeShown,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   /** The `lr-graph.nodeTypes` array, passed through verbatim. */
   @property({ attribute: false }) types: LyraGraphLegendType[] = [];
@@ -73,6 +93,23 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   @property() label = '';
 
   @state() private liveText = '';
+  /** The documented part remains a shadow-DOM text mirror only; announcements use this shared
+   * light-DOM sink because shadow live regions are not reliable across AT/browser pairs. */
+  private announcementSink?: AnnouncementSink;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    super.disconnectedCallback();
+  }
 
   private paletteColor(index: number): string {
     const cs = getComputedStyle(this);
@@ -96,6 +133,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     this.liveText = this.localize(wasVisible ? 'legendTypeHidden' : 'legendTypeShown', undefined, {
       label: type.label,
     });
+    this.announcementSink?.announce(this.liveText);
     this.emit('lr-visibility-change', { hiddenTypes: next });
   }
 
@@ -138,7 +176,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
             : html`<div part="item" ?data-hidden=${!visible}>${content}</div>`;
         })}
       </div>
-      <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+      <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
     `;
   }
 }

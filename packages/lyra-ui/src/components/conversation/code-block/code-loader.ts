@@ -1,23 +1,14 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { GREYCAT_LANGUAGE } from './greycat-language.js';
+import type {
+  ShikiHighlighter,
+  ShikiHighlighterCore,
+  ShikiLanguageInput,
+} from './shiki-types.js';
 
-/** Re-exported under a component-scoped name so importers don't need their
- *  own `import type { Highlighter } from 'shiki'`. */
-export type ShikiHighlighter = OptionalPeerApi;
-
-/** Re-exported under a component-scoped name — see `loadShikiHighlighterCore()`
- *  below. Structurally similar to `ShikiHighlighter` (both are
- *  `HighlighterGeneric<...>` instances providing `codeToHtml()` etc.) but
- *  typed with no bundled-language/theme keys of its own (`never`, since
- *  `createHighlighterCore()` has no built-in bundle to know about), which is
- *  why it's a distinct exported type rather than reusing `ShikiHighlighter`. */
-export type ShikiHighlighterCore = OptionalPeerApi;
-
-/** Re-exported under a component-scoped name — the shape of one pre-imported
- *  shiki grammar module's default export (e.g. `import bash from
- *  'shiki/langs/bash.mjs'`), and what `<lr-code-block>`'s `languages`
- *  property maps language ids to. See `loadShikiHighlighterCore()` below. */
-export type ShikiLanguageInput = OptionalPeerApi;
+// Preserve the established loader-module type surface while keeping the owned capability types in
+// a dependency leaf. GreyCat's built-in grammar imports that leaf directly, avoiding a loader ↔
+// grammar cycle in the shipped module graph.
+export type { ShikiHighlighter, ShikiHighlighterCore, ShikiLanguageInput } from './shiki-types.js';
 
 /**
  * The two bundled themes every highlighter instance is seeded with, so a
@@ -75,7 +66,10 @@ export function normalizeShikiLanguage(lang: string): string {
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
   if (!highlighter) {
     highlighter = import('shiki')
-      .then((mod) => mod.createHighlighter({ themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME], langs: [] }))
+      .then((mod) => mod.createHighlighter({
+        themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
+        langs: [],
+      }) as unknown as ShikiHighlighter)
       .catch((err) => {
         console.warn(
           '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
@@ -170,9 +164,9 @@ export function loadShikiHighlighterCore(
       .then(([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) =>
         createHighlighterCore({
           themes: [light.default, dark.default],
-          langs: Object.values(languages),
+          langs: Object.values(languages) as never,
           engine: createOnigurumaEngine(import('shiki/wasm')),
-        }),
+        }) as unknown as ShikiHighlighterCore,
       )
       .catch((err) => {
         console.warn(

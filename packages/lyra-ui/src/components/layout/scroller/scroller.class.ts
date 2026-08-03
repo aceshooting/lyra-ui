@@ -3,6 +3,11 @@ import { property, query, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { finiteRange } from "../../../internal/numbers.js";
 import { styles } from "./scroller.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ScrollerOrientation = "horizontal" | "vertical";
 
@@ -41,6 +46,16 @@ export interface LyraScrollerEventMap {
  * @since 4.0.0
  */
 export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    scrollNext: LYRA_DEFAULT_scrollNext,
+    scrollPrevious: LYRA_DEFAULT_scrollPrevious,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) orientation: ScrollerOrientation = "horizontal";
@@ -60,36 +75,91 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @state() private canScrollEnd = false;
   @query('[part="viewport"]') private viewport?: HTMLElement;
   private resizeObserver?: ResizeObserver;
+  private resizeObserverDocument?: Document;
+  private ownerRealmGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? undefined
-        : new ResizeObserver(this.updateEdges);
-    this.resizeObserver?.observe(this);
+    this.armResizeObserver();
     // A reconnect (move in the DOM) re-creates the observer above but the shadow-root content
     // survives across disconnect/reconnect (Lit doesn't tear it down) -- re-observe the viewport
     // here too when it already exists. `firstUpdated()` only ever runs once, on the very first
     // render, so it can't be relied on for a reconnect; on the very first connect `this.viewport`
     // (a `@query`) isn't resolved yet, so `firstUpdated()` below still does that initial observe.
-    if (this.viewport) this.resizeObserver?.observe(this.viewport);
   }
 
   override firstUpdated(): void {
-    this.resizeObserver?.observe(this.viewport!);
-    queueMicrotask(this.updateEdges);
+    this.armResizeObserver();
+    this.scheduleEdgeUpdate();
   }
 
   override disconnectedCallback(): void {
+    this.resetOwnerRealmWork();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmWork();
+  }
+
+  private armResizeObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.resizeObserver && this.resizeObserverDocument === ownerDocument) {
+      if (this.viewport) this.resizeObserver.observe(this.viewport);
+      return;
+    }
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
-    super.disconnectedCallback();
+    this.resizeObserverDocument = undefined;
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const generation = this.ownerRealmGeneration;
+    const observer = new ResizeObserverCtor(() => {
+      if (
+        this.resizeObserver !== observer ||
+        this.resizeObserverDocument !== ownerDocument ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.updateEdges();
+    });
+    this.resizeObserver = observer;
+    this.resizeObserverDocument = ownerDocument;
+    observer.observe(this);
+    if (this.viewport) observer.observe(this.viewport);
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeObserverDocument = undefined;
+  }
+
+  private scheduleEdgeUpdate(): void {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.ownerRealmGeneration;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.updateEdges();
+    });
   }
 
   protected override updated(changed: PropertyValues): void {
     if (changed.has("orientation") || changed.has("controls"))
-      queueMicrotask(this.updateEdges);
+      this.scheduleEdgeUpdate();
   }
 
   private edgeDetail() {

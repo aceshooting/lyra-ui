@@ -1,6 +1,12 @@
 import { render } from 'lit';
 import { expect } from '@open-wc/testing';
-import { parseHighlightLines, codeBlockLineTransformer, renderCodeBlockPlainCode } from './code-block-shared.js';
+import {
+  codeBlockEventLine,
+  codeBlockLineTransformer,
+  parseHighlightLines,
+  renderCodeBlockPlainCode,
+  scrollCodeBlockToAnchor,
+} from './code-block-shared.js';
 
 describe('parseHighlightLines', () => {
   it('parses a single range', () => {
@@ -180,5 +186,89 @@ describe('renderCodeBlockPlainCode', () => {
     buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(activated).to.deep.equal([2]);
     expect(keyed).to.deep.equal([{ key: 'ArrowDown', line: 1 }]);
+  });
+});
+
+describe('owner-realm line interactions', () => {
+  const matchMedia = (matches: boolean): typeof window.matchMedia =>
+    ((query: string) =>
+      ({
+        matches,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }) as MediaQueryList) as typeof window.matchMedia;
+
+  function anchorHost(ownerDocument: Document): {
+    host: Parameters<typeof scrollCodeBlockToAnchor>[0];
+    readBehavior: () => ScrollBehavior | undefined;
+  } {
+    const root = ownerDocument.createElement('div');
+    const body = ownerDocument.createElement('div');
+    const line = ownerDocument.createElement('span');
+    body.setAttribute('part', 'body');
+    line.dataset['line'] = '1';
+    body.append(line);
+    root.append(body);
+    let behavior: ScrollBehavior | undefined;
+    body.scrollTo = ((options: ScrollToOptions) => {
+      behavior = options.behavior;
+    }) as typeof body.scrollTo;
+    return {
+      host: {
+        code: 'line one',
+        highlights: [],
+        renderRoot: root,
+        updateComplete: Promise.resolve(true),
+      },
+      readBehavior: () => behavior,
+    };
+  }
+
+  it('uses an iframe-owned body\'s reduced-motion preference when scrolling to an anchor', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const { host, readBehavior } = anchorHost(frame.contentDocument!);
+    try {
+      window.matchMedia = matchMedia(false);
+      ownerWindow.matchMedia = matchMedia(true);
+      expect(await scrollCodeBlockToAnchor(host, { kind: 'line-range', start: 1 })).to.be.true;
+      expect(readBehavior()).to.equal('auto');
+    } finally {
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      frame.remove();
+    }
+  });
+
+  it('fails closed to non-animated scrolling when the body belongs to an ownerless document', async () => {
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    const originalMatchMedia = window.matchMedia;
+    const { host, readBehavior } = anchorHost(ownerlessDocument);
+    try {
+      window.matchMedia = matchMedia(false);
+      expect(ownerlessDocument.defaultView === null).to.be.true;
+      expect(await scrollCodeBlockToAnchor(host, { kind: 'line-range', start: 1 })).to.be.true;
+      expect(readBehavior()).to.equal('auto');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('recognizes an interactive line from a foreign-realm composed path', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const line = frame.contentDocument!.createElement('button');
+      line.dataset['line'] = '4';
+      line.setAttribute('part', 'line-button');
+      const event = { composedPath: () => [line] } as unknown as Event;
+      expect(codeBlockEventLine(event)).to.equal(4);
+    } finally {
+      frame.remove();
+    }
   });
 });

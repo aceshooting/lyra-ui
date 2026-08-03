@@ -5,10 +5,16 @@ import type { AgentStatusKind } from '../../../ai/types.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SubagentRun {
   id: string;
@@ -80,6 +86,31 @@ interface OrderedRuns {
  * @since 7.0.0
  */
 export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentRunStatusCancelled: LYRA_DEFAULT_agentRunStatusCancelled,
+    agentRunStatusCollecting: LYRA_DEFAULT_agentRunStatusCollecting,
+    agentRunStatusDone: LYRA_DEFAULT_agentRunStatusDone,
+    agentRunStatusIdle: LYRA_DEFAULT_agentRunStatusIdle,
+    agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
+    agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
+    agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    statusError: LYRA_DEFAULT_statusError,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    subagentPanelCancelRun: LYRA_DEFAULT_subagentPanelCancelRun,
+    subagentPanelEmpty: LYRA_DEFAULT_subagentPanelEmpty,
+    subagentPanelLabel: LYRA_DEFAULT_subagentPanelLabel,
+    subagentPanelLimit: LYRA_DEFAULT_subagentPanelLimit,
+    subagentPanelRetry: LYRA_DEFAULT_subagentPanelRetry,
+    subagentPanelRetryRun: LYRA_DEFAULT_subagentPanelRetryRun,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) runs: SubagentRun[] = [];
@@ -88,6 +119,35 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
   @state() private focusedId: string | null = null;
+  private announcementSink?: AnnouncementSink;
+  private previousLimitText = '';
+  private suppressNextLimitAnnouncement = true;
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.announcementSink?.release();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+    if (this.hasUpdated) {
+      this.suppressNextLimitAnnouncement = true;
+      this.requestUpdate();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    this.suppressNextLimitAnnouncement = true;
+  }
 
   private statusLabel(status: AgentStatusKind): string {
     switch (status) {
@@ -181,11 +241,39 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     }
   }
 
+  protected override updated(_changed: PropertyValues<this>): void {
+    const limitText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
+    if (!this.suppressNextLimitAnnouncement && limitText && limitText !== this.previousLimitText) {
+      this.announcementSink?.announce(limitText);
+    }
+    this.previousLimitText = limitText;
+    this.suppressNextLimitAnnouncement = false;
+  }
+
+  private runElement(runId: string): HTMLElement | null {
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    if (typeof ownerCss?.escape === 'function') {
+      try {
+        const candidate = this.renderRoot.querySelector<HTMLElement>(
+          `[data-run-id="${ownerCss.escape(runId)}"]`,
+        );
+        if (candidate?.getAttribute('data-run-id') === runId) return candidate;
+      } catch {
+        // A partial DOM can expose CSS.escape while rejecting selector construction.
+      }
+    }
+    return (
+      Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[data-run-id]')).find(
+        (candidate) => candidate.getAttribute('data-run-id') === runId,
+      ) ?? null
+    );
+  }
+
   private focusRow(row: SubagentRow | undefined): void {
     if (!row) return;
     this.focusedId = row.run.id;
     void this.updateComplete.then(() => {
-      (this.renderRoot.querySelector(`[data-run-id="${CSS.escape(row.run.id)}"]`) as HTMLElement | null)?.focus();
+      this.runElement(row.run.id)?.focus();
     });
   }
 
@@ -301,7 +389,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               (row) => this.renderRun(row, firstId),
             )}</ul>
               ${ordered.truncated
-                ? html`<p part="limit" role="status">${this.localize('subagentPanelLimit', undefined, {
+                ? html`<p part="limit">${this.localize('subagentPanelLimit', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),
                     })}</p>`
                 : nothing}`

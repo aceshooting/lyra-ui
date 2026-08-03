@@ -2,7 +2,7 @@
 
 # `lr-sparkline`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/sparkline/sparkline.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-sparkline.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSparkline`, also available unregistered from `@aceshooting/lyra-ui/components/data/sparkline/sparkline.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

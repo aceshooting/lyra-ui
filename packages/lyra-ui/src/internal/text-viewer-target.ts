@@ -17,7 +17,11 @@ import type {
   LyraHighlight,
 } from '../components/viewers/document-viewer/anchors.js';
 
-type Constructor<T> = new (...args: any[]) => T;
+type PublicConstructor<T> = new (...args: never[]) => T;
+type InternalMixinConstructor<T> = new (...args: any[]) => T;
+type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
+  new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
+);
 
 export interface LyraTextViewerTargetEventMap extends LyraAnchorTargetEventMap {
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
@@ -42,9 +46,23 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
  *  only bounds *painting*: `matchCount` and next/previous still cover every match. */
 const SEARCH_PAINT_WINDOW = 200;
 
-export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
+/** @internal Source-only overload preserving subclass statics and protected members. */
+export function TextViewerTarget<
+  T extends InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
+>(
   Base: T,
-): T & Constructor<LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }> {
+): T & InternalMixinConstructor<LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }>;
+/** Public, declaration-safe mixin signature. */
+export function TextViewerTarget<
+  T extends PublicConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
+>(
+  Base: T,
+): MixedConstructor<T, LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }>;
+export function TextViewerTarget(
+  Base: InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
+): InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap> & LyraTextViewerTarget & {
+  renderAnchorLiveRegion(): unknown;
+}> {
   class TextViewerTargetElement extends DocumentAnchorTarget(Base) implements LyraTextViewerTarget {
     override readonly anchorKinds: readonly LyraAnchorKind[] = ['text-quote', 'fragment'];
 
@@ -327,5 +345,9 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       );
     }
   }
-  return TextViewerTargetElement;
+  return TextViewerTargetElement as InternalMixinConstructor<
+    LyraElement<LyraTextViewerTargetEventMap> & LyraTextViewerTarget & {
+      renderAnchorLiveRegion(): unknown;
+    }
+  >;
 }

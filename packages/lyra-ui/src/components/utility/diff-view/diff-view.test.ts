@@ -140,6 +140,117 @@ describe('lr-diff-view', () => {
     }
   });
 
+  it('uses and cancels the exact adopted owner clipboard and confirmation timer', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const nativeSetTimeout = frameWindow.setTimeout.bind(frameWindow);
+    const nativeClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
+    let mainWrites = 0;
+    const frameWrites: string[] = [];
+    let confirmationHandle: number | undefined;
+    let confirmationCallback: (() => void) | undefined;
+    const cancelled: number[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+    });
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      const handle = nativeSetTimeout(handler, timeout, ...args);
+      if (timeout === 1500) {
+        confirmationHandle = handle;
+        if (typeof handler === 'function') confirmationCallback = handler;
+      }
+      return handle;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) cancelled.push(handle);
+      nativeClearTimeout(handle);
+    }) as typeof frameWindow.clearTimeout;
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.deep.equal(['- a\n+ b']);
+      expect(confirmationHandle).to.be.a('number');
+
+      document.body.append(document.adoptNode(el));
+      expect(cancelled).to.include(confirmationHandle!);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      confirmationCallback?.();
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim(),
+        'the retired iframe callback cannot clear the new owner state',
+      ).to.equal('Copied!');
+    } finally {
+      if (confirmationHandle !== undefined) nativeClearTimeout(confirmationHandle);
+      el.remove();
+      frameWindow.setTimeout = nativeSetTimeout;
+      frameWindow.clearTimeout = nativeClearTimeout;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
+    }
+  });
+
+  it('does not reach ambient clipboard or timers from an ownerless disconnected document', async () => {
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const nativeSetTimeout = window.setTimeout;
+    let writes = 0;
+    let timers = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { writes++; return Promise.resolve(); } },
+    });
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      timers++;
+      return nativeSetTimeout(handler, timeout, ...args);
+    }) as typeof window.setTimeout;
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+    try {
+      el.remove();
+      ownerlessDocument.adoptNode(el);
+      button.click();
+      await Promise.resolve();
+      expect(writes).to.equal(0);
+      expect(timers).to.equal(0);
+
+      document.body.append(document.adoptNode(el));
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+    } finally {
+      el.remove();
+      window.setTimeout = nativeSetTimeout;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('clears copy confirmation state across disconnect and reconnect', async () => {
     const el = (await fixture(
       html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
@@ -287,6 +398,48 @@ describe('syntax highlighting', () => {
     // No direct way to assert "no dynamic import happened" without a bundler-level check; this
     // test instead asserts the plain-text rendering path is used (no shiki-generated span classes).
     expect(el.shadowRoot!.querySelector('.shiki')).to.not.exist;
+  });
+
+  it('parses highlighted markup with the adopted owner DOMParser', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const NativeMainParser = window.DOMParser;
+    const NativeFrameParser = frameWindow.DOMParser;
+    let mainParsers = 0;
+    let frameParsers = 0;
+    window.DOMParser = new Proxy(NativeMainParser, {
+      construct(target, args, newTarget) {
+        mainParsers++;
+        return Reflect.construct(target, args, newTarget);
+      },
+    }) as typeof DOMParser;
+    frameWindow.DOMParser = new Proxy(NativeFrameParser, {
+      construct(target, args, newTarget) {
+        frameParsers++;
+        return Reflect.construct(target, args, newTarget);
+      },
+    }) as typeof DOMParser;
+    const el = (await fixture(html`<lr-diff-view></lr-diff-view>`)) as LyraDiffView;
+    const tokenize = (el as unknown as {
+      tokenizeLines(highlighter: { codeToHtml(text: string): string }, text: string, lang: string): string[] | null;
+    }).tokenizeLines.bind(el);
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      const lines = tokenize({
+        codeToHtml: (text: string) => `<pre><code><span class="line">${text}</span></code></pre>`,
+      }, 'owner', 'text');
+      expect(lines).to.deep.equal(['owner']);
+      expect(mainParsers).to.equal(0);
+      expect(frameParsers).to.equal(1);
+    } finally {
+      el.remove();
+      window.DOMParser = NativeMainParser;
+      frameWindow.DOMParser = NativeFrameParser;
+      frame.remove();
+    }
   });
 
   it('tokenized line count equals the plain split("\\n") line count, including a trailing newline', async () => {

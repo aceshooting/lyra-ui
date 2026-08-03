@@ -33,6 +33,8 @@ import {
   readTypeAliases,
   webTypesValue,
 } from './editor-type-values.mjs';
+import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifestPath = join(packageDir, 'custom-elements.json');
@@ -40,8 +42,11 @@ const htmlDataPath = join(packageDir, 'vscode-html-data.json');
 const cssDataPath = join(packageDir, 'vscode-css-data.json');
 const webTypesPath = join(packageDir, 'web-types.json');
 
-const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+const manifest = expandManifestInheritance(JSON.parse(readFileSync(manifestPath, 'utf8')));
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
+const designTokenInput = JSON.parse(
+  readFileSync(join(packageDir, 'scripts', 'fixtures', 'token-editor.generated.json'), 'utf8'),
+);
 
 function markdown(value) {
   return { kind: 'markdown', value };
@@ -172,7 +177,7 @@ function collectCustomElements() {
     for (const declaration of module.declarations ?? []) {
       if (declaration.kind === 'class' && declaration.customElement === true && declaration.tagName) {
         if (!['stable', 'experimental'].includes(declaration.status) ||
-            !/^\d+\.\d+\.\d+/.test(declaration.since ?? '')) {
+            !/^(?:\d+\.\d+\.\d+|unreleased)$/.test(declaration.since ?? '')) {
           throw new Error(`${declaration.tagName} is missing valid CEM status/since metadata`);
         }
         declarations.push(declaration);
@@ -221,19 +226,24 @@ for (const declaration of customElements) {
     });
   }
 }
+mergeDesignTokenEditorProperties(propertiesByName, designTokenInput);
 
 function cssPropertyDescription(entries) {
   const byText = new Map();
   for (const entry of entries) {
     const key = entry.description ?? '';
-    if (!byText.has(key)) byText.set(key, { tags: [], default: entry.default });
-    byText.get(key).tags.push(entry.tag);
+    if (!byText.has(key)) byText.set(key, { contexts: [], tags: [], default: entry.default });
+    if (entry.context) byText.get(key).contexts.push(entry.context);
+    if (entry.tag) byText.get(key).tags.push(entry.tag);
   }
   return [...byText.entries()]
-    .map(([description, { tags, default: def }]) => {
-      const tagList = tags.map((tag) => `\`<${tag}>\``).join(', ');
+    .map(([description, { contexts, tags, default: def }]) => {
+      const subjects = [
+        ...new Set(contexts),
+        ...tags.map((tag) => `\`<${tag}>\``),
+      ].join(', ');
       const defaultSuffix = def !== undefined ? ` (default: \`${def}\`)` : '';
-      return `**${tagList}**${defaultSuffix} — ${description}`;
+      return `**${subjects}**${defaultSuffix} — ${description}`;
     })
     .join('\n\n');
 }

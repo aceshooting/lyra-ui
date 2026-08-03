@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
   findToolRenderer,
   getDefaultToolRendererRegistry,
@@ -14,6 +15,11 @@ import { styles } from './tool-result-view.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/copy-button/copy-button.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** What's currently in `[part="base"]` -- see `resolve()`. */
 type RenderState =
@@ -59,7 +65,8 @@ export interface LyraToolResultViewEventMap {
  * before falling back to `<lr-json-viewer>`, whether because no renderer
  * matched, a candidate renderer's `matches()` predicate threw during dispatch,
  * a renderer's `load()` rejected, or its `render()` threw.
- * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
+ * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback
+ * view). Exposes `aria-busy="true"` while a lazy renderer loads and `"false"` otherwise.
  * @csspart fallback-text - The `<pre>` element for the `fallback="text"` kind's preformatted result text (only present in that mode).
  * @csspart fallback-copy - The `<lr-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
  * @cssprop [--lr-tool-result-view-font=var(--lr-font-mono)] - Font family for the `fallback="text"` preformatted output.
@@ -67,7 +74,20 @@ export interface LyraToolResultViewEventMap {
  * @since 4.0.0
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Custom registry to dispatch against instead of the module-level default one (see `registry.ts`). */
   @property({ attribute: false }) registry?: ToolRendererRegistry;
@@ -198,9 +218,12 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   override render(): TemplateResult {
     const state = this.renderState;
     return html`
-      <div part="base">
+      <div part="base" aria-busy=${state.kind === 'loading' ? 'true' : 'false'}>
         ${state.kind === 'loading'
-          ? html`<lr-skeleton variant="rect" height="4rem"></lr-skeleton>`
+          ? html`
+              <span class="sr-only">${this.localize('loading')}</span>
+              <lr-skeleton variant="rect" height="4rem" .announce=${false}></lr-skeleton>
+            `
           : state.kind === 'rendered'
             ? state.template
             : this.renderFallback()}

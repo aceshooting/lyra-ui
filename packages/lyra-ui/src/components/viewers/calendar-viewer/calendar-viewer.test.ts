@@ -56,10 +56,10 @@ describe('lr-calendar-viewer', () => {
     } finally { restore(); }
   });
   it('renders multiple events in source order', async () => { const { el, restore } = await loaded(TWO_EVENTS); try { expect(Array.from(el.shadowRoot!.querySelectorAll('[part="event-summary"]')).map((node) => node.textContent)).to.deep.equal(['Quarterly planning', 'Design review']); } finally { restore(); } });
-  it('renders a non-error empty-note for a well-formed calendar with zero events, not the role="alert" error chrome', async () => {
+  it('renders a non-error empty-note for a well-formed calendar with zero events, not assertively-announced error chrome', async () => {
     // Regression test: a well-formed .ics with no VEVENTs used to throw the same
     // LyraUserFacingError funneled through the generic catch block into `case 'error'` --
-    // role="alert" and error-styled chrome for a state that isn't actually a failure.
+    // an assertive announcement and error-styled chrome for a state that isn't actually a failure.
     const restore = stubFetch(EMPTY_ICS);
     try {
       const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);

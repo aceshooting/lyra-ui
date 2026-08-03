@@ -2,7 +2,7 @@
 
 # `lr-trace-tree`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-trace-tree.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTraceTree`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

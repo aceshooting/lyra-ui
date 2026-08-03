@@ -8,6 +8,11 @@ import type { ShikiLanguageInput } from '../../conversation/code-block/code-load
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
 import { styles } from './document-compare.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Which pane a comparison side identifies -- `'old'` is the "before" version, `'new'` is the
  *  "after" version. */
@@ -94,6 +99,17 @@ export interface DocumentCompareVersion extends DocumentRef {
  * @since 4.1.0
  */
 export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    documentCompareLabel: LYRA_DEFAULT_documentCompareLabel,
+    documentCompareNewVersion: LYRA_DEFAULT_documentCompareNewVersion,
+    documentCompareNoVersion: LYRA_DEFAULT_documentCompareNoVersion,
+    documentCompareOldVersion: LYRA_DEFAULT_documentCompareOldVersion,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
@@ -138,6 +154,45 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   // listener on the pane it just wrote to -- same guard `<lr-compare-panel>`'s own
   // onPaneScroll() uses.
   private suppressSync = false;
+  private syncReleaseFrame?: number;
+  private syncReleaseView?: Window;
+
+  override disconnectedCallback(): void {
+    this.cancelSyncRelease();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    // A pending callback belongs to the browsing context that scheduled it. Adoption can happen
+    // between the mirrored scroll write and that callback, so cancel through the retained owner
+    // instead of leaving the suppression guard stranded in the old document.
+    this.cancelSyncRelease();
+  }
+
+  private cancelSyncRelease(): void {
+    if (this.syncReleaseFrame !== undefined) {
+      this.syncReleaseView?.cancelAnimationFrame(this.syncReleaseFrame);
+    }
+    this.syncReleaseFrame = undefined;
+    this.syncReleaseView = undefined;
+    this.suppressSync = false;
+  }
+
+  private scheduleSyncRelease(): void {
+    const view = this.ownerDocument.defaultView;
+    if (!view) {
+      this.suppressSync = false;
+      return;
+    }
+    const frame = view.requestAnimationFrame(() => {
+      if (this.syncReleaseView !== view || this.syncReleaseFrame !== frame) return;
+      this.syncReleaseFrame = undefined;
+      this.syncReleaseView = undefined;
+      this.suppressSync = false;
+    });
+    this.syncReleaseView = view;
+    this.syncReleaseFrame = frame;
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -164,9 +219,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
       const fraction = from.scrollTop / fromMax;
       this.suppressSync = true;
       to.scrollTop = fraction * toMax;
-      requestAnimationFrame(() => {
-        this.suppressSync = false;
-      });
+      this.scheduleSyncRelease();
     };
   };
 

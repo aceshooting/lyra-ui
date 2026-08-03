@@ -16,6 +16,33 @@ it('forwards its accessible label and click event', async () => {
   expect((await event).bubbles).to.be.true;
 });
 
+it('clones nested bare geometry with the adopted owner document SVG constructors', async () => {
+  const el = (await fixture(
+    html`<lr-icon-button aria-label="Nested geometry"></lr-icon-button>`,
+  )) as LyraIconButton;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const foreignWindow = iframe.contentWindow!;
+    const foreignDocument = iframe.contentDocument!;
+    foreignDocument.body.append(foreignDocument.adoptNode(el));
+    const group = foreignDocument.createElement('g');
+    const path = foreignDocument.createElement('path');
+    path.setAttribute('d', 'M1 1h2');
+    group.append(path);
+    el.append(group);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    const clone = el.shadowRoot!.querySelector('[part="fallback"] g');
+    expect(clone?.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+    expect(clone instanceof foreignWindow.SVGElement).to.equal(true);
+    expect(clone?.querySelector('path')?.getAttribute('d')).to.equal('M1 1h2');
+  } finally {
+    iframe.remove();
+  }
+});
+
 it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button></div>

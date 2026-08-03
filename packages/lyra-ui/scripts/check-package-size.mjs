@@ -16,29 +16,45 @@ function formatBytes(bytes) {
 }
 
 export function validatePackageBudgets(budgets) {
+  assert.equal(
+    budgets?.minimumByteReductionPercent,
+    25,
+    'package budget minimumByteReductionPercent must remain the approved 25%',
+  );
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     assert.ok(Number.isInteger(budgets?.baseline?.[metric]) && budgets.baseline[metric] > 0,
       `package budget baseline.${metric} must be a positive integer`);
     assert.ok(Number.isInteger(budgets?.maximum?.[metric]) && budgets.maximum[metric] > 0,
       `package budget maximum.${metric} must be a positive integer`);
   }
-  // The ceiling must stay below the pre-8.0.0 baseline -- the tarball may never grow back past
-  // where it started. It deliberately does NOT encode a target reduction: an earlier revision
-  // required 25%, which was a goal nobody had achieved, so the gate was red from the day it landed
-  // and therefore taught every reader to ignore it. A budget is only useful if meeting it is the
-  // normal state and failing it is news. Ratchet it downward as real reductions land.
-  //
-  // Next measured win, when someone takes it: custom-elements.json is pretty-printed at 11.42 MiB
-  // and minifies to 6.66 MiB -- 4.77 MiB (41.7%) off every install for no semantic change. It is
-  // 37% of the unpacked tarball on its own. Doing it means teaching `pnpm manifest` to minify and
-  // confirming check-manifest.mjs plus the editor-data generators still round-trip, so it belongs
-  // in its own change rather than bundled into a budget edit.
+  const reductionFactor = 1 - budgets.minimumByteReductionPercent / 100;
   for (const metric of ['packedBytes', 'unpackedBytes']) {
     assert.ok(
-      budgets.maximum[metric] < budgets.baseline[metric],
-      `package budget maximum.${metric} must stay below its baseline`,
+      budgets.maximum[metric] <= Math.floor(budgets.baseline[metric] * reductionFactor),
+      `package budget maximum.${metric} must enforce at least a 25% reduction from its baseline`,
     );
   }
+  const fileBudget = budgets.fileCountBudget;
+  for (const field of [
+    'baseArtifactCeiling',
+    'stableTagAliasCount',
+    'emittedFilesPerAlias',
+    'entrypointHeadroom',
+  ]) {
+    assert.ok(Number.isInteger(fileBudget?.[field]) && fileBudget[field] >= 0,
+      `package budget fileCountBudget.${field} must be a non-negative integer`);
+  }
+  assert.equal(
+    budgets.maximum.fileCount,
+    fileBudget.baseArtifactCeiling +
+      fileBudget.stableTagAliasCount * fileBudget.emittedFilesPerAlias +
+      fileBudget.entrypointHeadroom,
+    'package budget maximum.fileCount must match the reviewed stable-alias derivation',
+  );
+  assert.ok(
+    budgets.maximum.fileCount < budgets.baseline.fileCount,
+    'package budget maximum.fileCount must remain below the pre-8 baseline',
+  );
   return budgets;
 }
 
@@ -56,6 +72,10 @@ export function packageBudgetFindings(metrics, budgets) {
   const maps = metrics.files.filter((file) => /(?:\.js|\.d\.ts)\.map$/.test(file.path));
   if (maps.length > 0) {
     findings.push(`published tarball contains ${maps.length} dangling JavaScript/declaration map(s)`);
+  }
+  const sources = metrics.files.filter((file) => /^src\/.*\.(?:[cm]?ts|tsx)$/.test(file.path));
+  if (sources.length > 0) {
+    findings.push(`published tarball contains ${sources.length} unnecessary TypeScript source file(s)`);
   }
   return findings;
 }

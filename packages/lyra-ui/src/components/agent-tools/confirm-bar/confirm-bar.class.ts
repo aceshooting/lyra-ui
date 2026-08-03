@@ -3,13 +3,18 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
-import { resolveLocalizedParts } from '../../../internal/localization.js';
+import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/live-region/live-region.class.js';
 import '../../forms/button/button.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './confirm-bar.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ConfirmBarDecision = 'approved' | 'denied' | null;
 
@@ -145,6 +150,27 @@ function deniedIcon(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    approve: LYRA_DEFAULT_approve,
+    collapse: LYRA_DEFAULT_collapse,
+    confirmApproved: LYRA_DEFAULT_confirmApproved,
+    confirmApprovedAnnounce: LYRA_DEFAULT_confirmApprovedAnnounce,
+    confirmDenied: LYRA_DEFAULT_confirmDenied,
+    confirmDeniedAnnounce: LYRA_DEFAULT_confirmDeniedAnnounce,
+    deny: LYRA_DEFAULT_deny,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
+    toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
+    toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Drives the default heading through the existing dialog keys. */

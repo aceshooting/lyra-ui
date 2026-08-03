@@ -9,6 +9,11 @@ import {
   type HistogramBucket,
 } from './histogram-bin.js';
 import { styles } from './histogram.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * `<lr-histogram>` — bins `values` into `bins` equal-width buckets and
@@ -20,6 +25,17 @@ import { styles } from './histogram.styles.js';
  * @since 4.0.0
  */
 export class LyraHistogram extends LyraChart {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    histogramFrequency: LYRA_DEFAULT_histogramFrequency,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
   // `histogram.styles.ts` re-exports the same `chart.styles.ts` sheet, so
   // this is behaviorally identical, but it keeps the per-component styles

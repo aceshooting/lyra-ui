@@ -2,7 +2,7 @@
 
 # `lr-flow-canvas`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flow-canvas.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -76,6 +76,10 @@ with a console warning), `top-start`, `top-end` (floating corner overlays), `bot
 **CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `arrowhead`, `stub`
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
 `live-region`, `edge-list` (a visually hidden list of every edge).
+
+`live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
+actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
+identical repeated messages are appended as separate announcements.
 
 **Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
 spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over

@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-param-form.js';
 import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
 import { styles } from './tool-param-form.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 it('provides hover feedback for native text and number controls', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -23,6 +24,13 @@ const basicSchema: ToolParamFormSchema = {
 
 function field(el: LyraToolParamForm, key: string): HTMLElement {
   return el.shadowRoot!.querySelector(`[part="field"][data-key="${key}"]`) as HTMLElement;
+}
+
+function assertiveSinkTexts(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > div`),
+    (node) => node.textContent ?? '',
+  );
 }
 
 describe('ElementInternals availability', () => {
@@ -244,6 +252,38 @@ it('does not render an inline error until the field has been visited (focusout)'
   field(el, 'city').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(field(el, 'city').querySelector('[part="error"]')!.textContent).to.equal('This field is required.');
+});
+
+it('announces newly visible validation errors once through the shared assertive light-DOM sink', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { city: { type: 'string', title: 'City' } },
+    required: ['city'],
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(assertiveSinkTexts(), 'an untouched invalid field stays silent on mount').to.deep.equal([]);
+
+  const cityField = field(el, 'city');
+  cityField.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const error = cityField.querySelector('[part="error"]')!;
+  expect(error.getAttribute('role')).to.equal(null);
+  expect(assertiveSinkTexts()).to.deep.equal(['This field is required.']);
+
+  const input = cityField.querySelector('input') as HTMLInputElement;
+  input.value = 'Paris';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  // An empty string is deliberately a present string value for this JSON-schema subset. Remove the
+  // key entirely to create a second required-value transition after the valid spell.
+  el.value = {};
+  await el.updateComplete;
+  expect(assertiveSinkTexts()).to.deep.equal(['This field is required.', 'This field is required.']);
+
+  el.remove();
+  expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`).length).to.equal(0);
 });
 
 it('reportValidity() reveals inline errors immediately and returns overall validity', async () => {

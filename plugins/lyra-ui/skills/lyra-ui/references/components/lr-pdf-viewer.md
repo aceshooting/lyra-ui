@@ -2,7 +2,7 @@
 
 # `lr-pdf-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-pdf-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPdfViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -69,7 +69,8 @@ peer output is capped at 10,000 unique items and 100 levels, with cycles ignored
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `zoom-out-button`,
+**CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
+`previous-button`, `next-button`, `zoom-out-button`,
 `zoom-in-button` (the four toolbar controls — previously reachable only through `::part(toolbar)
 button`, which is invalid: a descendant combinator after `::part()` never matches, so each button now
 carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
@@ -80,7 +81,9 @@ text layer around one search match), `search-match-active` (the currently active
 `search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
 virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
 text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
-via `searchNext()`).
+via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
+localized label; later loading and error transitions use the shared document-level polite and
+assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
 `page`, `page-canvas`, `text-layer`, `text-span`, `search-match` and `search-match-active` are
 rendered inside the virtualizing `lr-virtual-list`'s own shadow root and forwarded out through

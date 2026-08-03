@@ -2,7 +2,7 @@
 
 # `lr-markdown`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-markdown.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMarkdown`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -38,10 +38,13 @@ while content is still arriving.
   indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
   invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
   how tabs already inside rendered code are displayed.
-- `marked: Marked-compatible parser | undefined` (readonly, no attribute) — the configurable
+- `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the peer-neutral configurable
   `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
   while the optional peer is still resolving or unavailable; configuration installed with
-  `marked.use()` is copied into each parse.
+  variadic `marked.use(...extensions)` is copied into each parse. The peer-neutral type deliberately
+  models Lyra's stable `defaults`/`use()`/`parse()` configuration surface; consumers using
+  version-specific Marked tokenizers, constructors, or helpers should type that local reference
+  with their installed `marked` version.
 - `sanitize: boolean = true` — sanitize `marked`'s HTML output with DOMPurify before rendering
 - `escapeHtml: boolean = false` (attribute `escape-html`) — when `true`, overrides `marked`'s `html`
   renderer hook to emit the HTML-escaped source text instead of passing raw/sanitized markup through

@@ -9,12 +9,12 @@ const POSTER =
 const meta: Meta = {
   title: 'Media/Video',
   component: 'lr-video',
-  tags: ['autodocs'],
+  tags: ['autodocs', 'experimental'],
   parameters: {
     docs: {
       description: {
         component:
-          'Inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and capability-gated picture in picture.',
+          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and capability-gated picture in picture.',
       },
     },
   },

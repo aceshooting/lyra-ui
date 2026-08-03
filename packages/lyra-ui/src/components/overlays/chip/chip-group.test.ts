@@ -97,6 +97,56 @@ it('reapplies collapsed visibility after disconnect and reconnect', async () => 
   expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, true]);
 });
 
+it('recreates its hidden-state observer in the adopted owner realm', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1"><lr-chip>one</lr-chip><lr-chip>two</lr-chip></lr-chip-group>
+  `)) as LyraChipGroup;
+  await el.updateComplete;
+  const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let observations = 0;
+  let disconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private observesChip = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (
+        chips.includes(target as HTMLElement) &&
+        options?.attributeFilter?.includes('hidden') &&
+        options.attributeOldValue
+      ) {
+        this.observesChip = true;
+        observations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesChip) disconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(observations, 'the destination window observes assigned chips').to.equal(2);
+    document.adoptNode(el);
+    expect(disconnects, 'adoption disconnects the previous owner observer').to.be.greaterThan(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('tracks live author hidden edits instead of restoring the initial snapshot', async () => {
   const el = (await fixture(html`
     <lr-chip-group max-visible="1">

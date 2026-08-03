@@ -35,11 +35,12 @@ class FakeTextLayer {
   }
   render(): Promise<void> {
     const text = PAGE_TEXTS[this.options.textContentSource?.pageNumber ?? 0] ?? '';
+    const doc = this.options.container.ownerDocument;
     for (const word of text.split(' ')) {
-      const span = document.createElement('span');
+      const span = doc.createElement('span');
       span.textContent = word;
       this.options.container.appendChild(span);
-      this.options.container.appendChild(document.createTextNode(' '));
+      this.options.container.appendChild(doc.createTextNode(' '));
     }
     return Promise.resolve();
   }
@@ -117,6 +118,24 @@ describe('lr-pdf-viewer', () => {
     expect(el.page).to.equal(1);
     expect(el.zoom).to.equal(1);
     expect(el.shadowRoot!.querySelector('.empty-note')).to.exist;
+  });
+
+  it('keeps the nested loading skeleton out of the viewer live-region contract', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
+    (el as unknown as { loadState: unknown }).loadState = { kind: 'loading' };
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="spinner"] .sr-only')?.textContent)
+      .to.equal('Loading document…');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(1);
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await skeleton.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length)
+      .to.equal(0);
   });
 
   it('loads PDF bytes and renders toolbar and virtual list', async () => {
@@ -492,21 +511,19 @@ describe('lr-pdf-viewer', () => {
       const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
       const pageDiv = list.shadowRoot!.querySelector('[part="page"]') as HTMLElement;
-      const span = list.shadowRoot!.querySelector('[part="text-layer"] span');
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      if (span) {
-        const range = document.createRange();
-        range.selectNodeContents(span);
-        selection.addRange(range);
-      }
+      const ownerView = canvas.ownerDocument.defaultView!;
+      const originalGetSelection = ownerView.getSelection;
+      ownerView.getSelection = (() => ({ isCollapsed: false })) as typeof ownerView.getSelection;
       let activated = false;
       el.addEventListener('lr-highlight-activate', () => { activated = true; });
-      const rect = canvas.getBoundingClientRect();
-      pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
-      await aTimeout(10);
-      expect(activated).to.be.false;
-      selection.removeAllRanges();
+      try {
+        const rect = canvas.getBoundingClientRect();
+        pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
+        await aTimeout(10);
+        expect(activated).to.be.false;
+      } finally {
+        ownerView.getSelection = originalGetSelection;
+      }
     } finally { restore(); }
   });
 
@@ -1080,7 +1097,7 @@ describe('anchor-target adoption', () => {
       } catch (error) {
         caught = error;
       }
-      expect(caught).to.equal(boom);
+      expect(caught === boom).to.equal(true);
     } finally {
       restore();
     }
@@ -1178,6 +1195,7 @@ describe('anchor-target adoption', () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
     const restore = stubFetch();
+    const originalGetSelection = window.getSelection;
     try {
       el.src = 'https://example.test/report.pdf';
       // `[part="text-layer"]` renders inside `<lr-virtual-list>`'s own nested shadow root (it's part
@@ -1189,17 +1207,25 @@ describe('anchor-target adoption', () => {
       const span = list.shadowRoot!.querySelector('[part="text-layer"] span') as HTMLElement;
       const range = document.createRange();
       range.selectNodeContents(span);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof window.getSelection;
       const eventPromise = oneEvent(el, 'lr-text-select');
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
       const detail = (await eventPromise).detail;
       expect(detail.anchor).to.exist;
       expect(detail.anchor!.kind).to.equal('text-quote');
       if (detail.anchor!.kind === 'text-quote') expect(detail.anchor!.page).to.equal(1);
-      selection.removeAllRanges();
     } finally {
+      window.getSelection = originalGetSelection;
       restore();
     }
   });
@@ -1208,22 +1234,31 @@ describe('anchor-target adoption', () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
     const restore = stubFetch();
+    const originalGetSelection = window.getSelection;
     try {
       el.src = 'https://example.test/report.pdf';
       await waitFor(el, '[part="page-indicator"]');
       const label = el.shadowRoot!.querySelector('[part="page-indicator"]') as HTMLElement;
       const range = document.createRange();
       range.selectNodeContents(label);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof window.getSelection;
       const eventPromise = oneEvent(el, 'lr-text-select');
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
       const detail = (await eventPromise).detail;
       expect(detail.anchor).to.be.null;
       expect(detail.text).to.equal('Page 1 of 1');
-      selection.removeAllRanges();
     } finally {
+      window.getSelection = originalGetSelection;
       restore();
     }
   });
@@ -1293,6 +1328,163 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('uses its adopted document for selection, search DOM, animation frames, and raster scale', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalTopRequestFrame = window.requestAnimationFrame;
+    const originalTopCancelFrame = window.cancelAnimationFrame;
+    const originalDprDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
+    let frameHandle = 700;
+    const scheduledFrames: number[] = [];
+    const cancelledFrames: number[] = [];
+    const originalFrameGetSelection = frameWindow.getSelection;
+    const contentRoot = frameDocument.createElement('div');
+    try {
+      window.requestAnimationFrame = (() => {
+        const handle = ++frameHandle;
+        scheduledFrames.push(handle);
+        return handle;
+      }) as typeof window.requestAnimationFrame;
+      window.cancelAnimationFrame = ((handle: number) => {
+        cancelledFrames.push(handle);
+      }) as typeof window.cancelAnimationFrame;
+      try {
+        // Rebind after installing the spies so the pending selectionchange frame is known to belong
+        // to this viewer, then adopt before that old-window callback can fire.
+        const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+        (el as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(base);
+        document.dispatchEvent(new Event('selectionchange'));
+        const oldOwnerFrame = scheduledFrames.at(-1);
+        expect(oldOwnerFrame).to.be.a('number');
+
+        Object.defineProperty(frameWindow, 'devicePixelRatio', { configurable: true, value: 2 });
+        frameDocument.adoptNode(el);
+        expect(cancelledFrames).to.include(oldOwnerFrame);
+      } finally {
+        window.requestAnimationFrame = originalTopRequestFrame;
+        window.cancelAnimationFrame = originalTopCancelFrame;
+      }
+
+      await el.updateComplete;
+      expect(el.ownerDocument === frameDocument).to.equal(true);
+      const doc = fakeDocument(1);
+      const internals = el as unknown as {
+        loadState: unknown;
+        pageCanvases: Map<number, HTMLCanvasElement>;
+        textLayerContainers: Map<number, HTMLElement>;
+        searchMatches: unknown;
+        searchActiveIndex: number;
+        bindTextSelection(root: Element): void;
+        renderPage(page: number, canvas: HTMLCanvasElement): Promise<void>;
+        paintSearchMatches(page: number): void;
+      };
+      // Bypass the reactive setters while detached: this regression exercises the realm-sensitive
+      // imperative paths directly, without asking Lit to instantiate nested custom elements in a
+      // second registry (constructed stylesheets are registry/document scoped).
+      Object.defineProperty(internals, 'loadState', {
+        configurable: true,
+        writable: true,
+        value: { kind: 'ready', doc, pageCount: 1 },
+      });
+      const internalCanvas = frameDocument.createElement('canvas');
+      internals.pageCanvases.set(1, internalCanvas);
+      await internals.renderPage(1, internalCanvas);
+      expect(internalCanvas.width).to.equal(400);
+
+      const textContainer = frameDocument.createElement('div');
+      const span = frameDocument.createElement('span');
+      span.textContent = 'revenue';
+      textContainer.append(span);
+      contentRoot.append(textContainer);
+      frameDocument.body.append(contentRoot);
+      internals.textLayerContainers.set(1, textContainer);
+      internals.bindTextSelection(contentRoot);
+      const selectedRange = frameDocument.createRange();
+      selectedRange.selectNodeContents(span);
+      frameWindow.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: selectedRange.startContainer,
+          startOffset: selectedRange.startOffset,
+          endContainer: selectedRange.endContainer,
+          endOffset: selectedRange.endOffset,
+        }],
+        getRangeAt: () => selectedRange,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof frameWindow.getSelection;
+      const selectionEvent = oneEvent(el, 'lr-text-select');
+      contentRoot.dispatchEvent(new frameWindow.MouseEvent('pointerup', {
+        bubbles: true,
+        composed: true,
+      }));
+      expect((await selectionEvent).detail.text).to.equal(span.textContent);
+
+      const thumbnail = frameDocument.createElement('canvas');
+      expect(await el.renderPageThumbnail(1, thumbnail, { width: 50 })).to.equal(true);
+      expect(thumbnail.width).to.equal(100);
+
+      const originalCreateTreeWalker = frameDocument.createTreeWalker;
+      const originalCreateRange = frameDocument.createRange;
+      const originalCreateElement = frameDocument.createElement;
+      let walkerCalls = 0;
+      let rangeCalls = 0;
+      let elementCalls = 0;
+      frameDocument.createTreeWalker = ((
+        root: Node,
+        whatToShow?: number,
+        filter?: NodeFilter | null,
+      ) => {
+        walkerCalls++;
+        return originalCreateTreeWalker.call(frameDocument, root, whatToShow, filter);
+      }) as typeof frameDocument.createTreeWalker;
+      frameDocument.createRange = (() => {
+        rangeCalls++;
+        return originalCreateRange.call(frameDocument);
+      }) as typeof frameDocument.createRange;
+      frameDocument.createElement = ((name: string, options?: ElementCreationOptions) => {
+        elementCalls++;
+        return originalCreateElement.call(frameDocument, name, options);
+      }) as typeof frameDocument.createElement;
+      try {
+        Object.defineProperty(internals, 'searchMatches', {
+          configurable: true,
+          writable: true,
+          value: [{ page: 1, start: 0, length: 7 }],
+        });
+        Object.defineProperty(internals, 'searchActiveIndex', {
+          configurable: true,
+          writable: true,
+          value: 0,
+        });
+        internals.paintSearchMatches(1);
+        expect(walkerCalls).to.be.greaterThan(0);
+        expect(rangeCalls).to.be.greaterThan(0);
+        expect(elementCalls).to.be.greaterThan(0);
+        const mark = textContainer.querySelector<HTMLElement>('mark[part~="search-match"]');
+        expect(mark !== null).to.equal(true);
+        expect(mark!.ownerDocument === frameDocument).to.equal(true);
+      } finally {
+        frameDocument.createTreeWalker = originalCreateTreeWalker;
+        frameDocument.createRange = originalCreateRange;
+        frameDocument.createElement = originalCreateElement;
+      }
+    } finally {
+      window.requestAnimationFrame = originalTopRequestFrame;
+      window.cancelAnimationFrame = originalTopCancelFrame;
+      frameWindow.getSelection = originalFrameGetSelection;
+      contentRoot.remove();
+      if (originalDprDescriptor) {
+        Object.defineProperty(frameWindow, 'devicePixelRatio', originalDprDescriptor);
+      } else {
+        delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+      }
+      iframe.remove();
+    }
+  });
+
   it('a selection outside the viewer entirely (crossing no shadow boundary back into it) does not emit lr-text-select', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -1336,6 +1528,37 @@ describe('anchor-target adoption', () => {
 });
 
 describe('goToPage', () => {
+  it('cancels a pending mount timeout through its scheduling window when adopted', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(1));
+    const restoreFetch = stubFetch();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const originalSetTimeout = window.setTimeout;
+    const originalClearTimeout = window.clearTimeout;
+    const timeoutHandle = 8123;
+    const cleared: number[] = [];
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      window.setTimeout = (() => timeoutHandle) as typeof window.setTimeout;
+      window.clearTimeout = ((handle?: number) => {
+        if (handle !== undefined) cleared.push(handle);
+      }) as typeof window.clearTimeout;
+      const pending = (el as unknown as { waitForPageMount(page: number): Promise<boolean> })
+        .waitForPageMount(999);
+      iframe.contentDocument!.adoptNode(el);
+      expect(await pending).to.equal(false);
+      expect(cleared).to.include(timeoutHandle);
+    } finally {
+      window.setTimeout = originalSetTimeout;
+      window.clearTimeout = originalClearTimeout;
+      el.remove();
+      iframe.remove();
+      restoreFetch();
+    }
+  });
+
   it('resolves false for an out-of-range page', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(3));
@@ -2038,7 +2261,9 @@ describe('virtualized page part styling', () => {
       expect(getComputedStyle(span).position).to.equal('absolute');
       expect(getComputedStyle(span).color).to.equal('rgba(0, 0, 0, 0)');
       expect(getComputedStyle(span).whiteSpace).to.equal('pre');
-      expect(getComputedStyle(span).userSelect).to.equal('text');
+      const computed = getComputedStyle(span);
+      expect(computed.getPropertyValue('user-select') || computed.getPropertyValue('-webkit-user-select'))
+        .to.equal('text');
     } finally {
       restore();
     }

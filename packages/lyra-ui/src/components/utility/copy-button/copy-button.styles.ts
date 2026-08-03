@@ -27,9 +27,7 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--lr-transition-fast),
-      color var(--lr-transition-fast);
+    transition: background-color var(--lr-transition-fast);
   }
   /* :where() keeps this rule's specificity low ((0,1,0)) so a consumer's own
      ::part(base):hover override ((0,1,1)) wins without needing !important --

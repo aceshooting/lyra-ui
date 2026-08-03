@@ -2,7 +2,7 @@
 
 # `lr-xml-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-xml-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraXmlViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -41,7 +41,8 @@ every element's tag name, attribute names/values, and own text (empty/whitespace
 
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
-parse error or exceeding the node cap.
+parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
+boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's

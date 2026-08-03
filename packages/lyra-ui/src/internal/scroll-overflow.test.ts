@@ -5,7 +5,7 @@ import { ScrollOverflowController, SCROLL_OVERFLOW_ATTRIBUTE } from './scroll-ov
 /** A minimal `ReactiveControllerHost` that records the controller so a test can drive
  *  `hostUpdated()`/`hostDisconnected()` by hand — the controller measures real layout, so it needs
  *  real elements but not a real LitElement. Mirrors orientation-breakpoint.test.ts's stub host. */
-function makeHost(): ReactiveControllerHost & { update(): void; disconnect(): void } {
+function makeHost(): ReactiveControllerHost & { update(): void; connect(): void; disconnect(): void } {
   const controllers: ReactiveController[] = [];
   return {
     addController(c: ReactiveController) {
@@ -17,8 +17,48 @@ function makeHost(): ReactiveControllerHost & { update(): void; disconnect(): vo
     update() {
       for (const c of controllers) c.hostUpdated?.();
     },
+    connect() {
+      for (const c of controllers) c.hostConnected?.();
+    },
     disconnect() {
       for (const c of controllers) c.hostDisconnected?.();
+    },
+  };
+}
+
+interface ResizeRecord {
+  callback: ResizeObserverCallback;
+  observed: Element[];
+  disconnectCalls: number;
+  observer: ResizeObserver;
+}
+
+function installResizeObserverStub(owner: Window): { records: ResizeRecord[]; restore(): void } {
+  const original = owner.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class StubResizeObserver implements ResizeObserver {
+    private readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = { callback, observed: [], disconnectCalls: 0, observer: this };
+      records.push(this.record);
+    }
+
+    observe(target: Element): void {
+      this.record.observed.push(target);
+    }
+
+    unobserve(): void {}
+
+    disconnect(): void {
+      this.record.disconnectCalls += 1;
+    }
+  }
+  (owner as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = StubResizeObserver;
+  return {
+    records,
+    restore(): void {
+      (owner as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = original;
     },
   };
 }
@@ -101,5 +141,58 @@ describe('ScrollOverflowController', () => {
     track.removeAttribute(SCROLL_OVERFLOW_ATTRIBUTE);
     controller.measure();
     expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.false;
+  });
+
+  it('uses the observed element owner constructor and replaces it across adoption with stale callbacks inert', async () => {
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+    const ambient = installResizeObserverStub(window);
+    const destination = installResizeObserverStub(frameWindow);
+    const track = frameDocument.createElement('div');
+    let scrollWidth = 400;
+    let clientWidth = 100;
+    Object.defineProperties(track, {
+      scrollWidth: { configurable: true, get: () => scrollWidth },
+      clientWidth: { configurable: true, get: () => clientWidth },
+    });
+    frameDocument.body.append(track);
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+
+    try {
+      host.update();
+      expect(destination.records.length).to.equal(1);
+      expect(destination.records[0]!.observed[0] === track).to.equal(true);
+      expect(ambient.records.length, 'the ambient constructor must stay inert').to.equal(0);
+      expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.true;
+
+      const stale = destination.records[0]!;
+      host.disconnect();
+      expect(stale.disconnectCalls).to.equal(1);
+      document.adoptNode(track);
+      document.body.append(track);
+      scrollWidth = 50;
+      clientWidth = 100;
+      host.connect();
+      expect(ambient.records.length).to.equal(1);
+      expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.false;
+
+      scrollWidth = 400;
+      stale.callback([], stale.observer);
+      expect(
+        track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE),
+        'a callback retained by the old owner must not measure the new binding',
+      ).to.be.false;
+      ambient.records[0]!.callback([], ambient.records[0]!.observer);
+      expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.true;
+    } finally {
+      host.disconnect();
+      track.remove();
+      destination.restore();
+      ambient.restore();
+      frame.remove();
+    }
   });
 });

@@ -2,6 +2,14 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { styles } from './browser-frame.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkTexts(doc: Document = document): string[] {
+  return Array.from(
+    doc.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
 
 describe('lr-browser-frame', () => {
   it('defaults to status=idle, controller=agent, controls=true', async () => {
@@ -28,8 +36,105 @@ describe('lr-browser-frame', () => {
     )) as LyraBrowserFrame;
     await el.updateComplete;
     const status = el.shadowRoot!.querySelector('[part="status"]')!;
-    expect(status.getAttribute('role')).to.equal('status');
+    expect(status.getAttribute('role')).to.equal(null);
     expect(status.textContent).to.be.a('string').and.not.equal('');
+  });
+
+  it('announces only post-mount status transitions through the shared light-DOM sink', async () => {
+    const el = (await fixture(
+      html`<lr-browser-frame status="stalled"></lr-browser-frame>`,
+    )) as LyraBrowserFrame;
+    expect(sinkTexts(), 'mounting with a status is not a live change').to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.hasAttribute('role')).to.be.false;
+
+    el.status = 'streaming';
+    await el.updateComplete;
+    el.status = 'stalled';
+    await el.updateComplete;
+    expect(sinkTexts()).to.deep.equal(['Live', 'Stalled']);
+
+    el.remove();
+    expect(
+      document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length,
+      'the last holder releases the shared sink',
+    ).to.equal(0);
+  });
+
+  it('re-targets status announcements when adopted into another document', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+
+    try {
+      frameDocument.body.append(el);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      el.status = 'connecting';
+      await el.updateComplete;
+
+      expect(sinkTexts(), 'the old document no longer owns the adopted component sink').to.deep.equal([]);
+      expect(sinkTexts(frameDocument)).to.deep.equal(['Connecting…']);
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('recreates its viewport observer in the adopted owner realm and disconnects the old one', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
+    await el.updateComplete;
+    el.remove();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    const frameWindow = iframe.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      iframe.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const originalResizeObserver = frameWindow.ResizeObserver;
+    let constructions = 0;
+    let disconnects = 0;
+    class OwnerResizeObserver implements ResizeObserver {
+      constructor(_callback: ResizeObserverCallback) {
+        constructions += 1;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        disconnects += 1;
+      }
+    }
+    frameWindow.ResizeObserver = OwnerResizeObserver;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(constructions, 'the adopted window constructs the viewport observer').to.equal(1);
+
+      document.adoptNode(el);
+      expect(disconnects, 'adoption tears down the previous realm observer').to.equal(1);
+    } finally {
+      frameWindow.ResizeObserver = originalResizeObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('treats a status write queued while detached as a silent reconnect baseline', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
+    const parent = el.parentNode!;
+
+    el.remove();
+    el.status = 'stalled';
+    parent.appendChild(el);
+    await el.updateComplete;
+    expect(sinkTexts(), 'the detached status is resting content when reconnected').to.deep.equal([]);
+
+    el.status = 'streaming';
+    await el.updateComplete;
+    expect(sinkTexts(), 'the next connected transition still announces').to.deep.equal(['Live']);
   });
 
   it('rejects an unsafe frameSrc scheme via the shared safe-URL gate', async () => {

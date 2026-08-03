@@ -14,9 +14,12 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
+const manifest = expandManifestInheritance(
+  JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8')),
+);
 const listOnly = process.argv.includes('--list');
 
 /** Tokens/parts a component legitimately reads but does not own. */

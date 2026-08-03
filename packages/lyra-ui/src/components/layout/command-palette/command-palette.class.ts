@@ -8,6 +8,11 @@ import {
 } from "../../../internal/overlay-manager.js";
 import { styles } from "./command-palette.styles.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
  *  `-group-height`, which default to `3rem`/`2rem` -- equal to these numbers at a 16px root font
@@ -95,6 +100,20 @@ export interface LyraCommandPaletteEventMap {
  * @since 4.0.0
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
+    commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
+    commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
+    commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ attribute: false }) commands: LyraCommand[] = [];
@@ -112,6 +131,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private listResizeObserver?: ResizeObserver;
   private observedList?: HTMLElement;
   private listScrollFrame?: number;
+  /** Window that owns listeners, observers, and animation frames for the current connection. */
+  private runtimeWindow?: Window;
   /** The `commands` array `haystacks` was built from -- reference-keyed memo, since `commands`
    *  only ever changes by reassignment (it's `attribute: false`; in-place mutation wouldn't
    *  trigger a re-render either). */
@@ -191,10 +212,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.scrollActiveIntoView();
     }
     const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
+    this.observeList(list ?? undefined);
+  }
+
+  private observeList(list: HTMLElement | undefined): void {
     if (list !== this.observedList) {
       if (this.observedList)
         this.listResizeObserver?.unobserve(this.observedList);
-      this.observedList = list ?? undefined;
+      this.observedList = list;
       if (list) {
         this.listResizeObserver?.observe(list);
         // Measure up front as a fast path for browsers that delay the first ResizeObserver
@@ -215,7 +240,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
    *  at a browser "large text" setting the rows grew but the pitch did not, overlapping every row
    *  and putting keyboard scrolling in the wrong coordinate space. */
   private measureRowPitch(): void {
-    const style = getComputedStyle(this);
+    const style = this.ownerDocument.defaultView?.getComputedStyle(this);
+    if (!style) return;
     const row = resolveCssLength(style.getPropertyValue("--lr-command-palette-row-height").trim(), this);
     const group = resolveCssLength(style.getPropertyValue("--lr-command-palette-group-height").trim(), this);
     if (row !== undefined && row > 0 && row !== this.rowPitch) this.rowPitch = row;
@@ -224,16 +250,31 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   override connectedCallback(): void {
     super.connectedCallback();
-    window.addEventListener("keydown", this.onGlobalKeyDown);
-    this.listResizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      this.measureRowPitch();
-      const height =
-        entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-      if (height > 0 && this.listViewportHeight !== height)
-        this.listViewportHeight = height;
-    });
+    const view = this.ownerDocument.defaultView;
+    this.runtimeWindow = view ?? undefined;
+    view?.addEventListener("keydown", this.onGlobalKeyDown);
+    const ResizeObserverCtor = view?.ResizeObserver;
+    if (ResizeObserverCtor && view) {
+      let observer: ResizeObserver;
+      observer = new ResizeObserverCtor((entries) => {
+        if (this.listResizeObserver !== observer || this.runtimeWindow !== view) return;
+        const entry = entries[0];
+        if (!entry) return;
+        this.measureRowPitch();
+        const height =
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        if (height > 0 && this.listViewportHeight !== height)
+          this.listViewportHeight = height;
+      });
+      this.listResizeObserver = observer;
+    } else {
+      this.listResizeObserver = undefined;
+    }
+    if (this.hasUpdated) {
+      this.observeList(
+        this.renderRoot.querySelector<HTMLElement>('[part="list"]') ?? undefined
+      );
+    }
     if (this.hasUpdated && this.open) {
       this.activateOverlay();
       queueMicrotask(() => this.overlay?.focusInitial());
@@ -242,15 +283,17 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    window.removeEventListener("keydown", this.onGlobalKeyDown);
+    const view = this.runtimeWindow;
+    view?.removeEventListener("keydown", this.onGlobalKeyDown);
     this.overlay?.suspend();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
     this.observedList = undefined;
     if (this.listScrollFrame !== undefined) {
-      cancelAnimationFrame(this.listScrollFrame);
+      view?.cancelAnimationFrame(this.listScrollFrame);
       this.listScrollFrame = undefined;
     }
+    this.runtimeWindow = undefined;
   }
 
   private activateOverlay(): void {
@@ -300,7 +343,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     )
       return false;
     if (parts.includes("mod"))
-      return navigator.platform.includes("Mac") ? event.metaKey : event.ctrlKey;
+      return (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator.platform.includes("Mac")
+        ? event.metaKey
+        : event.ctrlKey;
     return event.ctrlKey === parts.includes("ctrl");
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
@@ -467,7 +512,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private onListScroll = (event: Event): void => {
     const list = event.currentTarget as HTMLElement;
     if (this.listScrollFrame !== undefined) return;
-    this.listScrollFrame = requestAnimationFrame(() => {
+    const view = this.runtimeWindow ?? this.ownerDocument.defaultView;
+    if (!view) {
+      this.listScrollTop = list.scrollTop;
+      return;
+    }
+    this.listScrollFrame = view.requestAnimationFrame(() => {
       this.listScrollFrame = undefined;
       this.listScrollTop = list.scrollTop;
     });

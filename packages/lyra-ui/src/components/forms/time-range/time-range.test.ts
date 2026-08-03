@@ -381,6 +381,107 @@ it('drags the start handle with pointer events and emits lr-input then lr-change
   expect(changeDetail!.start).to.equal(50);
 });
 
+it('keeps an adopted iframe drag on its owner window and releases that window on readoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    startHandle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 83,
+      clientX: 40,
+    }));
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 83,
+      clientX: 100,
+    }));
+    expect(el.start).to.equal(50);
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    const adoptedStart = el.start;
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 83,
+      clientX: 140,
+    }));
+    expect(el.start, 'the retired iframe listener must be gone').to.equal(adoptedStart);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('does not arm a drag while disconnected in an ownerless document', async () => {
+  const inertDocument = document.implementation.createHTMLDocument('ownerless');
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  try {
+    el.remove();
+    inertDocument.adoptNode(el);
+    startHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 90,
+      clientX: 40,
+    }));
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    startHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 91,
+      clientX: 40,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 91, clientX: 100 }));
+    expect(el.start).to.equal(50);
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 91 }));
+  } finally {
+    el.remove();
+  }
+});
+
 it('pointer-maps the midpoint of the full finite number range without overflowing', async () => {
   const el = (await fixture(html`
     <lr-time-range

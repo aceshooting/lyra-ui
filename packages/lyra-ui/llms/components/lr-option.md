@@ -2,7 +2,7 @@
 
 # `lr-option`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/combobox/option.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-option.js';` (stable tag alias; registers the tag)
 - **Class** `LyraOption`, also available unregistered from `@aceshooting/lyra-ui/components/forms/combobox/option.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -90,7 +90,10 @@ shared `FormAssociated` mixin — see gotchas).
   via a monotonic token. The exported type requires the `options` parameter; an existing
   one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
   parameter compatibility, but consumers that need cancellation should accept and forward
-  `options.signal`.)
+  `options.signal`. A current rejection clears stale rows and renders a localized disabled
+  listbox row; that visible row is not a shadow live region. The same localized message is appended
+  to `[data-lr-live-region="assertive"]` in the document for each fresh post-mount rejection,
+  including an identical retry, while raw caught error text stays out of the UI.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
@@ -152,10 +155,12 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-`lr-show` and `lr-hide` report the start of listbox visibility transitions; `lr-after-show` and
+`lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
+cancelable veto point; `lr-hide` is cancelable while connected, but the disconnect-driven close is
+non-cancelable because an already-removed control cannot honour a veto. `lr-after-show` and
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
-`detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
-append/select action so the host can normalize and commit its own option.
+`detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
+action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
@@ -279,8 +284,10 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
 - `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
   otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
-- `defaultLabel: string` (read-only) — normalized plain text generated from default-slot content;
-  `start`/`end`/`prefix`/`suffix` adornments are excluded
+- `defaultLabel: string` (read-only) — normalized accessibility-visible text generated from the
+  flattened default slot. Hidden subtrees are excluded, visible nested `aria-label` values replace
+  their descendants, and `start`/`end`/`prefix`/`suffix` adornments are excluded. Direct and
+  forwarding-slot mutations update the value and notify the owning picker
 
 **Method:** `getTextLabel(): string` returns `defaultLabel`, preserving Shoelace's content-derived
 plain-text contract even when a separate WA `label` override is present.

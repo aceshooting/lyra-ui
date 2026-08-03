@@ -17,6 +17,147 @@ export const SURFACE_SECTIONS = [
 
 export const MAPPING_CLASSIFICATIONS = ['exact', 'rewritten', 'warning-required', 'conceptual-only', 'unsupported'];
 
+export const ACCESSIBILITY_PROFILE_SECTIONS = [
+  'semantics',
+  'naming',
+  'keyboard',
+  'focus',
+  'states',
+  'announcements',
+  'motion',
+];
+
+export const ACCESSIBILITY_BEHAVIOR_VOCABULARY = Object.freeze({
+  semantics: Object.freeze([
+    'alert',
+    'article',
+    'button',
+    'checkbox',
+    'combobox',
+    'composition-primitive',
+    'dialog',
+    'document',
+    'grid',
+    'group',
+    'iframe',
+    'img',
+    'link',
+    'list',
+    'listbox',
+    'menu',
+    'menuitem',
+    'navigation',
+    'option',
+    'presentation',
+    'progressbar',
+    'radio',
+    'radiogroup',
+    'region',
+    'separator',
+    'slider',
+    'spinbutton',
+    'status',
+    'switch',
+    'tab',
+    'table',
+    'tablist',
+    'tabpanel',
+    'text-content',
+    'textbox',
+    'tooltip',
+    'transparent-content',
+    'tree',
+    'treeitem',
+    'video',
+  ]),
+  naming: Object.freeze([
+    'alternative-text',
+    'author-label-required',
+    'content-derived',
+    'content-or-author-label',
+    'control-labels-localized',
+    'current-page',
+    'frame-title',
+    'heading-level',
+    'value-text',
+    'visible-or-author-label',
+  ]),
+  keyboard: Object.freeze([
+    'arrow-navigation',
+    'data-point-navigation',
+    'escape-dismiss',
+    'home-end-navigation',
+    'media-controls',
+    'native-activation',
+    'native-editing',
+    'page-navigation',
+    'range-adjustment',
+    'spatial-adjustment',
+    'tab-cycle',
+    'typeahead',
+  ]),
+  focus: Object.freeze([
+    'focus-follows-selection',
+    'focus-preserved',
+    'focus-return',
+    'focus-trap',
+    'focus-visible-on-reveal',
+    'frame-focus-gated',
+    'initial-focus',
+    'native-focus',
+    'roving-focus',
+  ]),
+  states: Object.freeze([
+    'busy',
+    'checked',
+    'current',
+    'disabled',
+    'expanded',
+    'invalid',
+    'modal',
+    'multiselectable',
+    'orientation',
+    'paused',
+    'pressed',
+    'readonly',
+    'required',
+    'selected',
+    'sort',
+    'value-range',
+  ]),
+  announcements: Object.freeze([
+    'autoplay-content-change',
+    'character-count',
+    'content-change',
+    'copy-result',
+    'live-alert',
+    'live-status',
+    'page-change',
+    'playback-state',
+    'progress-value',
+    'selection-change',
+    'validation-message',
+  ]),
+  motion: Object.freeze([
+    'respects-reduced-motion',
+    'stops-autoplay',
+    'suppresses-animation',
+    'user-pause-control',
+  ]),
+});
+
+export const ACCESSIBILITY_COMPARISON_STATUSES = [
+  'equivalent',
+  'target-additive',
+  'not-applicable',
+  'warning-required',
+];
+
+const ACCESSIBILITY_EVIDENCE = Object.freeze({
+  upstream: 'pinned-public-contract',
+  target: 'lyra-authored-contract-and-automated-tests',
+});
+
 export const REWRITE_RULE_SECTIONS = ['attributes', 'properties', 'events', 'slots', 'parts', 'cssProperties', 'methods', 'defaults'];
 
 // Normalizations describe reviewed analyzer/public-surface equivalences. Unlike rewrites, these
@@ -144,6 +285,141 @@ export function emptyRewrites() {
 
 export function emptyNormalizations() {
   return Object.fromEntries(NORMALIZATION_SECTIONS.map((section) => [section, []]));
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function accessibilityBehaviorSet(profile) {
+  return new Set(
+    ACCESSIBILITY_PROFILE_SECTIONS.flatMap((section) =>
+      (profile?.[section] ?? []).map((behavior) => `${section}:${behavior}`),
+    ),
+  );
+}
+
+export function compareAccessibilityProfiles(profiles, upstreamProfile, targetProfile) {
+  const upstream = profiles?.[upstreamProfile];
+  const target = profiles?.[targetProfile];
+  if (!upstream) throw new Error(`unknown upstream accessibility profile ${String(upstreamProfile)}`);
+  if (!target) throw new Error(`unknown target accessibility profile ${String(targetProfile)}`);
+  const upstreamBehaviors = accessibilityBehaviorSet(upstream);
+  const targetBehaviors = accessibilityBehaviorSet(target);
+  const missing = [...upstreamBehaviors].filter((behavior) => !targetBehaviors.has(behavior)).sort();
+  const additions = [...targetBehaviors].filter((behavior) => !upstreamBehaviors.has(behavior)).sort();
+  const status =
+    upstreamBehaviors.size === 0 && targetBehaviors.size === 0
+      ? 'not-applicable'
+      : missing.length > 0
+        ? 'warning-required'
+        : additions.length > 0
+          ? 'target-additive'
+          : 'equivalent';
+  return { status, missing, additions };
+}
+
+function validateAccessibilityProfiles(profiles, findings) {
+  if (!isPlainObject(profiles) || Object.keys(profiles).length === 0) {
+    findings.push('accessibilityProfiles must be a non-empty object');
+    return;
+  }
+  for (const [profileName, profile] of Object.entries(profiles)) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(profileName)) {
+      findings.push(`accessibility profile ${profileName}: invalid profile name`);
+    }
+    if (!isPlainObject(profile)) {
+      findings.push(`accessibility profile ${profileName}: profile must be an object`);
+      continue;
+    }
+    const allowedKeys = new Set(['description', ...ACCESSIBILITY_PROFILE_SECTIONS]);
+    const unknownKeys = Object.keys(profile).filter((key) => !allowedKeys.has(key));
+    if (unknownKeys.length > 0) {
+      findings.push(`accessibility profile ${profileName}: unknown key(s) ${unknownKeys.join(', ')}`);
+    }
+    if (typeof profile.description !== 'string' || !profile.description.trim()) {
+      findings.push(`accessibility profile ${profileName}: description must be non-empty`);
+    }
+    for (const section of ACCESSIBILITY_PROFILE_SECTIONS) {
+      const behaviors = profile[section];
+      if (!Array.isArray(behaviors)) {
+        findings.push(`accessibility profile ${profileName}: ${section} must be an array`);
+        continue;
+      }
+      if (new Set(behaviors).size !== behaviors.length) {
+        findings.push(`accessibility profile ${profileName}: duplicate ${section} behavior`);
+      }
+      if (JSON.stringify(behaviors) !== JSON.stringify([...behaviors].sort())) {
+        findings.push(`accessibility profile ${profileName}: ${section} behaviors must be sorted`);
+      }
+      const allowed = new Set(ACCESSIBILITY_BEHAVIOR_VOCABULARY[section]);
+      for (const behavior of behaviors) {
+        if (!allowed.has(behavior)) {
+          findings.push(`accessibility profile ${profileName}: unknown ${section} behavior ${String(behavior)}`);
+        }
+      }
+    }
+  }
+}
+
+function validateAccessibilityParity(mapping, profiles, findings) {
+  const accessibility = mapping.parity?.accessibility;
+  if (!isPlainObject(accessibility)) {
+    findings.push(`${mapping.upstreamTag}: missing accessibility parity review`);
+    return;
+  }
+  const allowedKeys = new Set([
+    'reviewStatus',
+    'upstreamProfile',
+    'targetProfile',
+    'evidence',
+    'comparison',
+    'rationale',
+  ]);
+  const unknownKeys = Object.keys(accessibility).filter((key) => !allowedKeys.has(key));
+  if (unknownKeys.length > 0) {
+    findings.push(`${mapping.upstreamTag}: accessibility parity has unknown key(s) ${unknownKeys.join(', ')}`);
+  }
+  if (accessibility.reviewStatus !== 'complete') {
+    findings.push(`${mapping.upstreamTag}: accessibility parity review is incomplete`);
+  }
+  if (!isPlainObject(accessibility.evidence) ||
+      accessibility.evidence.upstream !== ACCESSIBILITY_EVIDENCE.upstream ||
+      accessibility.evidence.target !== ACCESSIBILITY_EVIDENCE.target ||
+      Object.keys(accessibility.evidence ?? {}).some((key) => key !== 'upstream' && key !== 'target')) {
+    findings.push(`${mapping.upstreamTag}: accessibility parity evidence is invalid`);
+  }
+  if (typeof accessibility.rationale !== 'string' || !accessibility.rationale.trim()) {
+    findings.push(`${mapping.upstreamTag}: accessibility parity rationale must be non-empty`);
+  }
+  let expected;
+  try {
+    expected = compareAccessibilityProfiles(
+      profiles,
+      accessibility.upstreamProfile,
+      accessibility.targetProfile,
+    );
+  } catch (error) {
+    findings.push(`${mapping.upstreamTag}: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  if (!isPlainObject(accessibility.comparison) || !sameJson(accessibility.comparison, expected)) {
+    findings.push(`${mapping.upstreamTag}: stored accessibility comparison is stale`);
+  }
+  if ((mapping.classification === 'exact' || mapping.classification === 'rewritten') && expected.status === 'warning-required') {
+    findings.push(`${mapping.upstreamTag}: automatic mapping has missing accessibility behavior`);
+  }
+}
+
+export function validateAccessibilityContract(profiles, mappings) {
+  const findings = [];
+  validateAccessibilityProfiles(profiles, findings);
+  if (!Array.isArray(mappings)) {
+    findings.push('accessibility mappings must be an array');
+  } else {
+    for (const mapping of mappings) validateAccessibilityParity(mapping, profiles, findings);
+  }
+  return findings.sort();
 }
 
 const INTERNAL_METHOD_NAMES = new Set([
@@ -351,21 +627,34 @@ function normalizeParameter(parameter, ecosystem) {
   return normalized;
 }
 
-function cancelabilityOf(description = '', ecosystem = 'lyra') {
-  const text = description.toLowerCase();
-  const negativePattern = /\b(?:non[- ]?|not\s+)cancell?able\b/g;
-  let negative = false;
-  const withoutNegativePhrases = text.replace(negativePattern, () => {
-    negative = true;
-    return '';
-  });
-  const explicitPositive = /\bcancell?able\b/.test(withoutNegativePhrases);
-  const preventDefaultPositive = !negative && /preventdefault\(\)|\bcancel(?:ing|ling) this event\b/.test(text);
-  const positive = explicitPositive || preventDefaultPositive;
-  if (explicitPositive && negative) return 'conditional';
-  if (positive) return 'always';
-  if (negative) return 'never';
-  return ecosystem === 'lyra' ? 'never' : UNSPECIFIED_PUBLIC_DOCUMENTATION;
+export function eventCancelabilityFromDescription(description = '', ecosystem = 'lyra', eventName) {
+  const text = description.toLowerCase().replace(
+    /\b(?:conditionally\s+|non[- ]?|not\s+|never\s+)?cancell?able\s+`(lr-[a-z0-9-]+)`/gu,
+    (phrase, referencedEvent) => referencedEvent === eventName ? phrase : '',
+  );
+  const conditionalPattern = /\bconditionally\s+cancell?able\b/gu;
+  const negativePattern = /\b(?:non[- ]?|not\s+|never\s+)cancell?able\b/gu;
+  const conditional = conditionalPattern.exec(text);
+  const negative = negativePattern.exec(text);
+  const withoutQualifiedMarkers = text
+    .replace(conditionalPattern, (phrase) => ' '.repeat(phrase.length))
+    .replace(negativePattern, (phrase) => ' '.repeat(phrase.length));
+  const markers = [
+    { kind: 'conditional', match: conditional },
+    { kind: 'never', match: negative },
+    { kind: 'always', match: /\bcancell?able\b/u.exec(withoutQualifiedMarkers) },
+    { kind: 'implicit-always', match: /preventdefault\(\)|\bcancel(?:ing|ling) this event\b/u.exec(text) },
+  ].filter(({ match }) => match);
+  markers.sort((left, right) => left.match.index - right.match.index);
+  const first = markers[0];
+  if (!first) return ecosystem === 'lyra' ? 'never' : UNSPECIFIED_PUBLIC_DOCUMENTATION;
+  if (first.kind === 'conditional') return 'conditional';
+  const kinds = new Set(markers.map(({ kind }) => kind));
+  if (kinds.has('always') && kinds.has('never')) return 'conditional';
+  if (first.kind === 'always' && /\b(?:except|unless|single\s+exception)\b/u.test(text)) {
+    return 'conditional';
+  }
+  return first.kind === 'implicit-always' ? 'always' : first.kind;
 }
 
 function normalizeAttributes(declaration, publicFields, ecosystem) {
@@ -513,11 +802,17 @@ const EVENT_UNION_TYPE = new RegExp(
   `^(?:${EVENT_CONSTRUCTOR_PATTERN})(?:<.*>)?(?:\\s*\\|\\s*(?:${EVENT_CONSTRUCTOR_PATTERN})(?:<.*>)?)+$`,
   'u',
 );
+const EVENT_WITH_COMPATIBILITY_DETAIL = new RegExp(
+  `^(${EVENT_CONSTRUCTOR_PATTERN})(?:<.*>)?\\s*&\\s*\\{[^]*\\bdetail\\s*:`,
+  'u',
+);
 
 function eventConstructor(type) {
   const text = textOf(type);
   const single = SINGLE_EVENT_TYPE.exec(text);
   if (single) return single[1];
+  const withCompatibilityDetail = EVENT_WITH_COMPATIBILITY_DETAIL.exec(text);
+  if (withCompatibilityDetail) return withCompatibilityDetail[1];
   return EVENT_UNION_TYPE.test(text) ? text : undefined;
 }
 
@@ -527,7 +822,7 @@ function normalizeEvents(entries, ecosystem) {
       const normalized = {
         name: entry.name,
         type: textOf(entry.type),
-        cancelable: cancelabilityOf(entry.description, ecosystem),
+        cancelable: eventCancelabilityFromDescription(entry.description, ecosystem, entry.name),
       };
       const constructor = eventConstructor(entry.type);
       const bubbles = eventFlag(
@@ -548,7 +843,88 @@ function normalizeEvents(entries, ecosystem) {
   );
 }
 
-export function normalizeDeclaration(declaration, { ecosystem }) {
+function declaredFormAssociation(declaration) {
+  if (typeof declaration.formAssociated === 'boolean') return declaration.formAssociated;
+  const ownStatic = (declaration.members ?? []).find(
+    (member) =>
+      member.kind === 'field' &&
+      member.name === 'formAssociated' &&
+      member.static === true &&
+      !member.inheritedFrom,
+  );
+  if (ownStatic) {
+    return ownStatic.default === true || String(ownStatic.default).trim() === 'true';
+  }
+  if ((declaration.mixins ?? []).some((mixin) => mixin.name === 'FormAssociated')) return true;
+  return undefined;
+}
+
+function canonicalModulePath(modulePath) {
+  return typeof modulePath === 'string'
+    ? modulePath.replace(/^\/+/, '').replace(/\.js$/u, '.ts')
+    : null;
+}
+
+/**
+ * Resolves the runtime `static formAssociated` value for every declaration in a manifest.
+ *
+ * Public members such as `form`, `value`, and `setCustomValidity()` are deliberately irrelevant:
+ * charts and filter controls can expose those words for unrelated APIs. FACE status comes only from
+ * an own static declaration, the shared `FormAssociated` mixin, or JavaScript static inheritance.
+ */
+function manifestFormAssociations(manifest) {
+  const declarations = [];
+  const byModuleAndName = new Map();
+  const byName = new Map();
+  for (const module of manifest.modules ?? []) {
+    for (const declaration of module.declarations ?? []) {
+      if (!declaration?.name) continue;
+      declarations.push(declaration);
+      const modulePath = canonicalModulePath(module.path);
+      if (modulePath) byModuleAndName.set(`${modulePath}\0${declaration.name}`, declaration);
+      const named = byName.get(declaration.name) ?? [];
+      named.push(declaration);
+      byName.set(declaration.name, named);
+    }
+  }
+
+  const resolved = new Map();
+  const resolving = new Set();
+  const resolve = (declaration) => {
+    if (resolved.has(declaration)) return resolved.get(declaration);
+    if (resolving.has(declaration)) return false;
+    resolving.add(declaration);
+    const declared = declaredFormAssociation(declaration);
+    let associated = declared;
+    if (associated === undefined && declaration.superclass?.name) {
+      const modulePath = canonicalModulePath(declaration.superclass.module);
+      const exact = modulePath
+        ? byModuleAndName.get(`${modulePath}\0${declaration.superclass.name}`)
+        : undefined;
+      const named = byName.get(declaration.superclass.name) ?? [];
+      const superclass = exact ?? (named.length === 1 ? named[0] : undefined);
+      if (superclass) associated = resolve(superclass);
+    }
+    if (associated === undefined) {
+      // Some analyzers materialize an inherited static field but omit the intermediate base class.
+      associated = (declaration.members ?? []).some(
+        (member) =>
+          member.kind === 'field' &&
+          member.name === 'formAssociated' &&
+          member.static === true &&
+          Boolean(member.inheritedFrom) &&
+          (member.default === true || String(member.default).trim() === 'true'),
+      );
+    }
+    resolving.delete(declaration);
+    resolved.set(declaration, associated === true);
+    return associated === true;
+  };
+  for (const declaration of declarations) resolve(declaration);
+  return resolved;
+}
+
+export function normalizeDeclaration(declaration, { ecosystem, formAssociated }) {
   const attributeFieldNames = new Set(
     (declaration.attributes ?? []).flatMap((attribute) => [attribute.fieldName, attribute.name]).filter(Boolean),
   );
@@ -560,9 +936,7 @@ export function normalizeDeclaration(declaration, { ecosystem }) {
   const formMethods = methods.filter((entry) => FORM_METHODS.has(entry.name)).map((entry) => entry.name);
   const delegatedMethods = methods.filter((entry) => NATIVE_METHODS.has(entry.name)).map((entry) => entry.name);
   const forwardedEvents = events.filter((entry) => NATIVE_EVENTS.has(entry.name)).map((entry) => entry.name);
-  const formAssociated =
-    formProperties.some((name) => ['form', 'validity', 'validationMessage', 'willValidate', 'labels'].includes(name)) ||
-    formMethods.some((name) => name !== 'getForm');
+  const associated = formAssociated ?? declaredFormAssociation(declaration) === true;
 
   return {
     attributes: normalizeAttributes(declaration, publicFields, ecosystem),
@@ -574,7 +948,7 @@ export function normalizeDeclaration(declaration, { ecosystem }) {
     cssStates: normalizeNamed(declaration.cssStates),
     methods,
     form: {
-      associated: formAssociated,
+      associated,
       properties: unique(formProperties),
       methods: unique(formMethods),
     },
@@ -592,10 +966,14 @@ export function normalizeDeclaration(declaration, { ecosystem }) {
 
 export function normalizeManifest(manifest, { ecosystem, tierByTag = new Map() }) {
   const components = [];
+  const formAssociations = manifestFormAssociations(manifest);
   for (const module of manifest.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
       if (!declaration.customElement || !declaration.tagName) continue;
-      const normalized = normalizeDeclaration(declaration, { ecosystem });
+      const normalized = normalizeDeclaration(declaration, {
+        ecosystem,
+        formAssociated: formAssociations.get(declaration),
+      });
       components.push({
         tag: declaration.tagName,
         module: module.path || declaration.modulePath || declaration.definitionPath || null,
@@ -652,7 +1030,63 @@ function reviewedDerivedDefault(normalizations, memberKind, member, upstreamDefa
   );
 }
 
+function containsAnyTypeKeyword(type) {
+  if (typeof type !== 'string') return false;
+  let quote = null;
+  for (let index = 0; index < type.length;) {
+    const character = type[index];
+    if (quote) {
+      if (character === '\\') {
+        index += 2;
+        continue;
+      }
+      if (character === quote) quote = null;
+      index++;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      index++;
+      continue;
+    }
+    if (/[A-Za-z_$]/u.test(character)) {
+      let end = index + 1;
+      while (end < type.length && /[A-Za-z0-9_$]/u.test(type[end])) end++;
+      if (type.slice(index, end) === 'any') {
+        let next = end;
+        while (next < type.length && /\s/u.test(type[next])) next++;
+        if (type[next] === '?') {
+          next++;
+          while (next < type.length && /\s/u.test(type[next])) next++;
+        }
+        // `any` is an ordinary identifier when it names a property/method in a type literal. It is
+        // unsafe only in a type position (`value: any`, `Array<any>`, `any[]`, unions, and so on).
+        if (type[next] !== ':' && type[next] !== '(') return true;
+      }
+      index = end;
+      continue;
+    }
+    index++;
+  }
+  return false;
+}
+
 function reviewedTypeEquivalent(normalizations, memberKind, member, upstreamType, targetType) {
+  // `any` is absence of a public contract, never an opaque-but-reviewed equivalent. Quoted
+  // literal values such as `'any'` remain ordinary string-literal members.
+  if (containsAnyTypeKeyword(upstreamType) || containsAnyTypeKeyword(targetType)) return false;
+  if (memberKind === 'event') {
+    // Published upstream manifests sometimes expose an unparameterized CustomEvent. That
+    // incomplete source-side label may be related to Lyra's concrete EventMap projection by an
+    // exact review, but a target-side bare CustomEvent is implicit `any` and cannot be blessed.
+    if (
+      isUnknownEventType(upstreamType) ||
+      isUnknownEventType(targetType) ||
+      isBareCustomEventType(targetType)
+    ) {
+      return false;
+    }
+  }
   return (normalizations.typeEquivalences ?? []).some(
     (entry) =>
       entry.memberKind === memberKind &&
@@ -747,6 +1181,7 @@ function literalPrimitive(token) {
 }
 
 function publicTypeCompatible(expected, actual) {
+  if (containsAnyTypeKeyword(expected) || containsAnyTypeKeyword(actual)) return false;
   const expectedTokens = normalizedTypeTokens(expected);
   const actualTokens = normalizedTypeTokens(actual);
   if (expectedTokens.length === actualTokens.length) {
@@ -756,12 +1191,161 @@ function publicTypeCompatible(expected, actual) {
 
   const actualSet = new Set(actualTokens);
   return expectedTokens.every((token) => {
-    if (actualSet.has(token) || actualSet.has('any')) return true;
+    if (actualSet.has(token)) return true;
     const primitive = literalPrimitive(token);
     if (primitive && actualSet.has(primitive)) return true;
     if (token === 'array' && actualTokens.some((candidate) => /(?:\[\]|Array<.+>)$/u.test(candidate))) return true;
     return false;
   });
+}
+
+function canonicalEventType(type) {
+  if (typeof type !== 'string') return undefined;
+  const trimmed = type.trim();
+  const customEvent = /^CustomEvent\s*</u.test(trimmed) && trimmed.endsWith('>');
+  const detail = customEvent
+    ? trimmed.slice(trimmed.indexOf('<') + 1, -1).trim()
+    : trimmed;
+  let canonical = '';
+  let quote = null;
+  let escaped = false;
+  let curlyDepth = 0;
+  let angleDepth = 0;
+  let squareDepth = 0;
+  let parenDepth = 0;
+  for (const character of detail) {
+    if (quote) {
+      canonical += character;
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      canonical += character;
+      continue;
+    }
+    if (/\s/u.test(character)) continue;
+    if (character === '{') curlyDepth += 1;
+    else if (character === '}') curlyDepth = Math.max(0, curlyDepth - 1);
+    else if (character === '<') angleDepth += 1;
+    else if (character === '>') angleDepth = Math.max(0, angleDepth - 1);
+    else if (character === '[') squareDepth += 1;
+    else if (character === ']') squareDepth = Math.max(0, squareDepth - 1);
+    else if (character === '(') parenDepth += 1;
+    else if (character === ')') parenDepth = Math.max(0, parenDepth - 1);
+    if (
+      character === ',' &&
+      curlyDepth > 0 &&
+      angleDepth === 0 &&
+      squareDepth === 0 &&
+      parenDepth === 0
+    ) {
+      canonical += ';';
+    } else {
+      canonical += character;
+    }
+  }
+  return canonical.replace(/\bvoid\b/gu, 'undefined').replace(/;\}/gu, '}');
+}
+
+function stripBalancedOuterParentheses(type) {
+  let text = type.trim();
+  while (text.startsWith('(') && text.endsWith(')')) {
+    let depth = 0;
+    let quote = null;
+    let closesAtEnd = false;
+    for (let index = 0; index < text.length; index += 1) {
+      const character = text[index];
+      if (quote) {
+        if (character === quote && text[index - 1] !== '\\') quote = null;
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') {
+        quote = character;
+        continue;
+      }
+      if (character === '(') depth += 1;
+      else if (character === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          closesAtEnd = index === text.length - 1;
+          break;
+        }
+      }
+    }
+    if (!closesAtEnd) break;
+    text = text.slice(1, -1).trim();
+  }
+  return text;
+}
+
+function customEventDetailType(type) {
+  const text = type.trim();
+  const opening = /^CustomEvent\s*</u.exec(text);
+  if (!opening) return undefined;
+  const start = opening[0].lastIndexOf('<');
+  let depth = 0;
+  let quote = null;
+  for (let index = start; index < text.length; index += 1) {
+    const character = text[index];
+    if (quote) {
+      if (character === quote && text[index - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '<') depth += 1;
+    else if (character === '>') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(index + 1).trim() === ''
+          ? text.slice(start + 1, index).trim()
+          : undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
+function hasTopLevelUnknown(type) {
+  return splitTopLevelUnion(stripBalancedOuterParentheses(type)).includes('unknown');
+}
+
+function isUnknownEventType(type) {
+  if (typeof type !== 'string') return false;
+  const trimmed = stripBalancedOuterParentheses(type);
+  if (hasTopLevelUnknown(trimmed)) return true;
+  const detail = customEventDetailType(trimmed);
+  return detail !== undefined && hasTopLevelUnknown(detail);
+}
+
+function isBareCustomEventType(type) {
+  return typeof type === 'string' && /^CustomEvent\s*$/u.test(type.trim());
+}
+
+function eventTypeCompatible(expected, actual) {
+  if (
+    !hasPublishedType(expected) ||
+    !hasPublishedType(actual) ||
+    containsAnyTypeKeyword(expected) ||
+    containsAnyTypeKeyword(actual) ||
+    isUnknownEventType(expected) ||
+    isUnknownEventType(actual) ||
+    isBareCustomEventType(actual)
+  ) {
+    return false;
+  }
+  const expectedCustom = /^CustomEvent\s*</u.test(expected.trim());
+  const actualCustom = /^CustomEvent\s*</u.test(actual.trim());
+  if (expectedCustom !== actualCustom) {
+    const unwrappedSide = expectedCustom ? actual : expected;
+    if (eventConstructor(unwrappedSide) !== undefined) return false;
+  }
+  return canonicalEventType(expected) === canonicalEventType(actual);
 }
 
 function parametersMatch(expected, actual, upstreamPrefix) {
@@ -1021,6 +1605,26 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     if (!candidate) {
       pushMissing(drift, 'missing-event', 'events', event.name);
     } else {
+      const expectedType = mappedPublicType(event.type, upstreamPrefix);
+      if (
+        hasPublishedType(event.type) &&
+        !eventTypeCompatible(expectedType, candidate.type) &&
+        !reviewedTypeEquivalent(
+          normalizations,
+          'event',
+          event.name,
+          event.type,
+          candidate.type,
+        )
+      ) {
+        drift.push({
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: event.name,
+          expected: expectedType,
+          actual: candidate.type,
+        });
+      }
       if (
         event.cancelable !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
         candidate.cancelable !== event.cancelable &&
@@ -1216,7 +1820,9 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
   for (const rule of normalizations.typeEquivalences ?? []) {
     const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
     const valid =
-      (rule?.memberKind === 'attribute' || rule?.memberKind === 'property') &&
+      (rule?.memberKind === 'attribute' ||
+        rule?.memberKind === 'property' ||
+        rule?.memberKind === 'event') &&
       typeof rule.member === 'string' &&
       Boolean(rule.member) &&
       typeof rule.upstream === 'string' &&
@@ -1231,14 +1837,37 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
       continue;
     }
     const key = normalizationKey(rule.memberKind, rule.member);
+    if (
+      containsAnyTypeKeyword(rule.upstream) ||
+      containsAnyTypeKeyword(rule.target) ||
+      (rule.memberKind === 'event' && isBareCustomEventType(rule.target))
+    ) {
+      findings.push(`${mapping.upstreamTag}: unsafe any type normalization ${key}`);
+    }
+    if (
+      rule.memberKind === 'event' &&
+      (isUnknownEventType(rule.upstream) || isUnknownEventType(rule.target))
+    ) {
+      findings.push(`${mapping.upstreamTag}: unsafe unknown event type normalization ${key}`);
+    }
     if (seenTypes.has(key)) {
       findings.push(`${mapping.upstreamTag}: duplicate normalizations.typeEquivalences rule ${key}`);
     }
     seenTypes.add(key);
 
-    const section = rule.memberKind === 'attribute' ? 'attributes' : 'properties';
+    const section =
+      rule.memberKind === 'attribute'
+        ? 'attributes'
+        : rule.memberKind === 'property'
+          ? 'properties'
+          : 'events';
     const rewrites = new Map((mapping.rewrites?.[section] ?? []).map((entry) => [entry.from, entry.to]));
-    const targetName = rewrites.get(rule.member) || rule.member;
+    const upstreamPrefix = mapping.upstreamTag?.startsWith('wa-') ? 'wa-' : 'sl-';
+    const targetName =
+      rewrites.get(rule.member) ||
+      (rule.memberKind === 'event'
+        ? mappedEventName(rule.member, upstreamPrefix)
+        : rule.member);
     const upstreamMember = (upstream?.[section] ?? []).find((entry) => entry.name === rule.member);
     const targetMember = (target?.[section] ?? []).find((entry) => entry.name === targetName);
     if (
@@ -1259,10 +1888,15 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
     } else if (
       upstreamMember &&
       hasPublishedType(upstreamMember.type) &&
-      publicTypeCompatible(
-        mappedPublicType(upstreamMember.type, mapping.upstreamTag?.startsWith('wa-') ? 'wa-' : 'sl-'),
-        targetMember.type,
-      )
+      (rule.memberKind === 'event'
+        ? eventTypeCompatible(
+            mappedPublicType(upstreamMember.type, upstreamPrefix),
+            targetMember.type,
+          )
+        : publicTypeCompatible(
+            mappedPublicType(upstreamMember.type, upstreamPrefix),
+            targetMember.type,
+          ))
     ) {
       findings.push(`${mapping.upstreamTag}: stale compatible type normalization ${key}`);
     }
@@ -1599,9 +2233,11 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
   if (findings.length) return findings;
 
   const lyraByTag = new Map(inventory.components.map((component) => [component.tag, component]));
+  validateAccessibilityProfiles(inventory.accessibilityProfiles, findings);
   findings.push(...validateLocalMigrations(inventory));
   if (lyraByTag.size !== inventory.components.length) findings.push('components contain duplicate Lyra tags');
   const expectedLyra = manifestDeclarations(lyraManifest);
+  const lyraFormAssociations = manifestFormAssociations(lyraManifest);
   const expectedLyraTags = expectedLyra.map(({ declaration }) => declaration.tagName);
   const actualLyraTags = [...lyraByTag.keys()].sort();
   if (!sameJson(actualLyraTags, expectedLyraTags)) findings.push('Lyra tag inventory drifted from custom-elements.json');
@@ -1610,7 +2246,10 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
     const component = lyraByTag.get(declaration.tagName);
     if (!component) continue;
     validateSurface(component.surface, component.tag, findings);
-    const normalized = normalizeDeclaration(declaration, { ecosystem: 'lyra' });
+    const normalized = normalizeDeclaration(declaration, {
+      ecosystem: 'lyra',
+      formAssociated: lyraFormAssociations.get(declaration),
+    });
     const expectedSurface = Object.fromEntries(SURFACE_SECTIONS.map((section) => [section, normalized[section]]));
     if (!sameJson(component.surface, expectedSurface)) findings.push(`${component.tag}: normalized public surface drifted`);
     if (!component.family || !component.classModule || !component.registrationModule) {
@@ -1659,6 +2298,7 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
     if (!MAPPING_CLASSIFICATIONS.includes(mapping.classification)) {
       findings.push(`${mapping.upstreamTag}: invalid mapping classification`);
     }
+    validateAccessibilityParity(mapping, inventory.accessibilityProfiles, findings);
     validateRewrites(mapping, findings);
     if (mapping.classification === 'exact' && mapping.rationale !== null) {
       findings.push(`${mapping.upstreamTag}: exact mappings must not carry a rationale`);

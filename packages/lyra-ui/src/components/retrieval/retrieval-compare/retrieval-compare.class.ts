@@ -6,6 +6,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 let retrievalCompareInstance = 0;
 
@@ -43,6 +48,24 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    retrievalCompareDenseScore: LYRA_DEFAULT_retrievalCompareDenseScore,
+    retrievalCompareEmpty: LYRA_DEFAULT_retrievalCompareEmpty,
+    retrievalCompareFinalScore: LYRA_DEFAULT_retrievalCompareFinalScore,
+    retrievalCompareLabel: LYRA_DEFAULT_retrievalCompareLabel,
+    retrievalCompareOverlap: LYRA_DEFAULT_retrievalCompareOverlap,
+    retrievalCompareRank: LYRA_DEFAULT_retrievalCompareRank,
+    retrievalCompareRerankScore: LYRA_DEFAULT_retrievalCompareRerankScore,
+    retrievalCompareSparseScore: LYRA_DEFAULT_retrievalCompareSparseScore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) sets: RetrievalComparisonSet[] = [];

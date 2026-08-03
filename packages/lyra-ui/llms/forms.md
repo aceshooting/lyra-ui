@@ -152,7 +152,10 @@ shared `FormAssociated` mixin — see gotchas).
   via a monotonic token. The exported type requires the `options` parameter; an existing
   one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
   parameter compatibility, but consumers that need cancellation should accept and forward
-  `options.signal`.)
+  `options.signal`. A current rejection clears stale rows and renders a localized disabled
+  listbox row; that visible row is not a shadow live region. The same localized message is appended
+  to `[data-lr-live-region="assertive"]` in the document for each fresh post-mount rejection,
+  including an identical retry, while raw caught error text stays out of the UI.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
@@ -214,10 +217,12 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-`lr-show` and `lr-hide` report the start of listbox visibility transitions; `lr-after-show` and
+`lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
+cancelable veto point; `lr-hide` is cancelable while connected, but the disconnect-driven close is
+non-cancelable because an already-removed control cannot honour a veto. `lr-after-show` and
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
-`detail: { inputValue }` and is the one cancelable event: preventing it suppresses the default
-append/select action so the host can normalize and commit its own option.
+`detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
+action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
@@ -341,8 +346,10 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
 - `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
   otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
-- `defaultLabel: string` (read-only) — normalized plain text generated from default-slot content;
-  `start`/`end`/`prefix`/`suffix` adornments are excluded
+- `defaultLabel: string` (read-only) — normalized accessibility-visible text generated from the
+  flattened default slot. Hidden subtrees are excluded, visible nested `aria-label` values replace
+  their descendants, and `start`/`end`/`prefix`/`suffix` adornments are excluded. Direct and
+  forwarding-slot mutations update the value and notify the owning picker
 
 **Method:** `getTextLabel(): string` returns `defaultLabel`, preserving Shoelace's content-derived
 plain-text contract even when a separate WA `label` override is present.
@@ -572,8 +579,10 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
-listbox transition has settled; an interrupted transition drops its stale after-event.
+its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
+non-cancelable only for the disconnect-driven close, where a veto cannot be honoured.
+`lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
+interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
@@ -1032,7 +1041,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean` | `false` | SSR slot-presence hints; neither is required for hydrated client-side slot detection. |
 | `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
 | `customError` | `custom-error` | `string \| null` | `null` | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it. |
-| `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; wins over `label`, `placeholder`, and the localized default. |
+| `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default. |
 | `spellcheck` | `spellcheck` | `boolean` | `true` | Forwarded to the native `<textarea>`. |
 | `autofocus` | `autofocus` | `boolean` | `false` | Forwarded to the native `<textarea>`. |
 | `title` | `title` | `string` | `''` | Forwarded to the native `<textarea>`. |
@@ -1149,10 +1158,14 @@ original declarative `value`, matching native `defaultValue` behavior.
 | `hint` / `form-control-help-text` | Compatibility names on the hint message. |
 | `error` | The error message. |
 
-The visible `[part="count"]` is `aria-hidden`; a separate polite live region beside it republishes
-the same text about a second after the user stops typing, so a screen reader is not told the count
-on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), matching the native
-`maxlength` the count reports against, and the remaining count floors at zero — only a
+The visible `[part="count"]` is `aria-hidden`; the internal shadow `.count-announcement` node is
+also an `aria-hidden` mirror (it is not a public CSS part), while the debounced spoken update is
+appended to the shared light-DOM
+`[data-lr-live-region="polite"]` sink about a second after the user stops typing. A screen reader is
+therefore not told the count on every keystroke, and the announcement remains reliable across the
+shadow boundary. The sink stays silent while the textarea or a composed ancestor is hidden, inert,
+`aria-hidden`, or hidden by rendered CSS. Lengths count UTF-16 code units (one emoji counts as two),
+matching the native `maxlength` the count reports against, and the remaining count floors at zero — only a
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
 state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
 dropped rather than rendered as `NaN`, and the count counts up from zero instead.
@@ -1261,7 +1274,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
   internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
   `loading`, so the spinner has the button to itself
-- `caret: boolean = false` — Shoelace alias for `withCaret`; either spelling renders the same part
+- `caret: boolean = false` (attribute `caret`, reflected) — Shoelace alias for `withCaret`; either spelling renders the same part
 - `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
   Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
   assignment is observable
@@ -1294,7 +1307,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
-Shoelace's hyphenated spellings — `form-action`, `form-enctype`, `form-method`,
+The compatibility spellings — `form-action`, `form-enctype`, `form-method`,
 `form-no-validate`, and `form-target` — delegate to the same five properties. When both spellings
 are used, the most recent attribute change wins.
 
@@ -2085,6 +2098,10 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 `clear-button`, `expand-button`, `expand-icon`, `popup`, `columns`, `column`, `column-item`,
 `column-item-selected`, `now-button`, `hint`, and `error`.
 
+`error` is ordinary visible validation text referenced by the segmented input through
+`aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
+has one description path instead of being duplicated by a second live-region announcement.
+
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
@@ -2274,6 +2291,10 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
+`error` is ordinary visible validation text referenced by the native telephone input through
+`aria-describedby`, not a shadow `role="alert"`. Native invalid/focus feedback therefore has one
+description path instead of being duplicated by a second live-region announcement.
+
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
 `--lr-form-control-required-content`, `--lr-form-control-required-color` and
@@ -2360,6 +2381,9 @@ onto `[min, max]`). Form-associated (`static formAssociated = true`, via `Elemen
 ancestor `<fieldset disabled>` disables both handles and every preset button through an internal
 `effectiveDisabled` getter, the same way it would a native `<input>`, without ever mutating the
 consumer-facing `disabled` property/attribute itself.
+The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
+names the two-handle aggregate, while `startLabel` and `endLabel` continue to name the individual
+sliders.
 
 **Properties:**
 - `min: number = 0`
@@ -2438,7 +2462,8 @@ autofill or back/forward restore.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
+**CSS parts:** `base` (the aggregate `role="group"`), `track`, `range`, `handle-start`, `handle-end`,
+`presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
 `--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`
@@ -2691,6 +2716,11 @@ same as clicking a native checkbox's associated `<label>`. If left empty, set `a
 host so the control still has an accessible name. `hint` is the WA supporting-text slot;
 `help-text` is the Shoelace spelling for the same described-by surface.
 
+The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
+visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
+independently of whether that node contributes to the accessible name. A host `aria-label` wins by
+presence and is forwarded verbatim, including `aria-label=""`.
+
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
 valid across the shadow boundary. In supporting browsers the explicit element list intentionally
@@ -2847,7 +2877,9 @@ restores the current default before making the control pristine again.
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
-  control still has an accessible name.
+  control still has an accessible name. Flattened forwarding-slot assignment and later mutations
+  keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
+  it. A host `aria-label` wins by presence, including an explicitly empty value.
 - `hint` — custom hint content.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
@@ -3183,7 +3215,9 @@ internal control's native `focus` and `blur` are re-dispatched as bubbling, comp
 each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
-**Slots:** default label content.
+**Slots:** default label content. Flattened forwarding-slot assignment and later mutations keep the
+visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain it. A host
+`aria-label` wins on the internal radio by presence, including `aria-label=""`.
 
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
@@ -4022,7 +4056,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 **Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
 `lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
 `value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. `lr-invalid` (no detail) is emitted once when native validity fails. Programmatic
+host events. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
+fails; preventing it also prevents the native `invalid` event that produced it. Programmatic
 `value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
@@ -4109,7 +4144,8 @@ A configurable annotation rubric (LangSmith annotation-queue style): score, cate
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
 `<lr-slider>`; `category` renders `<lr-select>` or `<lr-checkbox-group>` (`multiple`); `comment`
-renders `<lr-textarea>`.
+renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: a host `aria-label` or
+native external `<label for>` names the whole rubric while each key retains its field-level name.
 
 **Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
 required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
@@ -4136,11 +4172,16 @@ required keys, and any key with an unsupported `type`, still hold it invalid. It
 the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
 here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
 
-**CSS parts:** `base` (the outer wrapper), `field` (one key's wrapper), `label`, `description`,
+**CSS parts:** `base` (the outer `role="group"` wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
 message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
 no entries), and `unsupported` (the fallback note for a key whose `type` is outside the three
 supported ones).
+
+Field-level `error` content is ordinary visible validation text, not a shadow live region. Score
+controls compose the current message into the semantic control's accessible name; category/comment
+controls use their own same-shadow label/error plumbing. `reportValidity()` therefore reveals and
+focuses the error once without an additional `role="alert"` announcement.
 
 **Themeable custom properties:** shared tokens only. The footer's disabled `submit`/`skip` buttons
 dim through `--lr-opacity-disabled`, the same library-wide token every other disabled control

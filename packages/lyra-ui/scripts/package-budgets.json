@@ -1,13 +1,20 @@
 {
-  "$comment": "Hard npm-tarball budgets, set from measurement rather than from a target. The 8.0.0 baseline was measured before map pruning at 7,829,794 packed bytes, 38,510,084 unpacked bytes, and 4,441 files. Dropping source and declaration maps from the publish build (tsconfig.build.json) removed 2,070 files and produced the current 7,131,037 packed / 34,059,527 unpacked / 2,383 files -- an 8.9% packed and 11.6% unpacked reduction. The byte ceilings below carry ~5% headroom over that measurement. An earlier revision of this file instead encoded a 25%-reduction GOAL (5,872,345 / 28,882,563) that was never achieved, which left the gate permanently red and therefore ignorable; a budget nobody meets does not constrain anything. The fileCount ceiling is the one that is genuinely load-bearing -- it is what stops the maps returning -- and it is met with room to spare. To reach 25% the target is custom-elements.json, which is 12 MiB (37% of the unpacked tarball) because every LyraElement base-class member is inherited into all 283 declarations; deduplicating inherited members there is the single largest remaining win, but it changes an artifact that editor tooling (vscode-*-data.json, web-types.json) is generated from, so it needs its own change with consumer verification rather than a budget tightening.",
+  "$comment": "Hard npm-tarball budgets against the measured pre-8.0.0 baseline. Packed and unpacked ceilings encode the approved minimum 25% reduction. The file ceiling is the prior 2,500-artifact limit plus two emitted files for each of 283 stable lr-* alias entries and 34 files of entrypoint headroom; explicit source/map rejection remains independent.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
     "fileCount": 4441
   },
+  "minimumByteReductionPercent": 25,
+  "fileCountBudget": {
+    "baseArtifactCeiling": 2500,
+    "stableTagAliasCount": 283,
+    "emittedFilesPerAlias": 2,
+    "entrypointHeadroom": 34
+  },
   "maximum": {
-    "packedBytes": 7487589,
-    "unpackedBytes": 35762503,
-    "fileCount": 2500
+    "packedBytes": 5872345,
+    "unpackedBytes": 28882563,
+    "fileCount": 3100
   }
 }

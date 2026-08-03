@@ -2,7 +2,7 @@
 
 # `lr-subagent-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-subagent-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSubagentPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -31,9 +31,12 @@ Record<string, unknown> }`.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. The roving treeitem accepts Enter/Space as well as pointer activation for
-`lr-run-select`; cancel/retry action names include the run label so repeated row actions remain
-distinguishable to assistive technology. Progress is finite and clamped. **Slots:** none.
+the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
+run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
+announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
+Enter/Space as well as pointer activation for `lr-run-select`; cancel/retry action names include the
+run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
+and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts

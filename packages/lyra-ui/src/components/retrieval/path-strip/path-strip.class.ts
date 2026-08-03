@@ -9,6 +9,12 @@ import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../layout/scroller/scroller.class.js';
 import { styles } from './path-strip.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraPathElement =
   | { kind: 'node'; node: LyraEntity }
@@ -38,6 +44,20 @@ export interface LyraPathStripEventMap {
  * @since 4.0.0
  */
 export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    pathNodeStatus: LYRA_DEFAULT_pathNodeStatus,
+    pathRelationStatus: LYRA_DEFAULT_pathRelationStatus,
+    pathStripLabel: LYRA_DEFAULT_pathStripLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Rendered in array order; alternation is the intended shape but not enforced. */
@@ -49,6 +69,21 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   @state() private activeIndex = 0;
   @state() private liveText = '';
   private restoreFocusAfterPathChange = false;
+  private announcementSink?: AnnouncementSink;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    super.disconnectedCallback();
+  }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
@@ -103,6 +138,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         : el
           ? this.localize('pathRelationStatus', undefined, { relation: el.relation })
           : '';
+    this.announcementSink?.announce(this.liveText);
   }
 
   private focusIndex(index: number): void {
@@ -111,7 +147,11 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       const controls = this.renderRoot.querySelectorAll('[part="node"], [part="relation"]');
       const el = controls[index] as HTMLElement | undefined;
       el?.focus();
-      el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', inline: 'nearest', block: 'nearest' });
+      if (el) {
+        const ownerWindow = el.ownerDocument.defaultView;
+        const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+        el.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', inline: 'nearest', block: 'nearest' });
+      }
     });
   }
 
@@ -182,7 +222,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         <lr-scroller orientation="horizontal" controls label=${label}>
           ${this.path.map((el, i) => (el.kind === 'node' ? this.renderNode(el.node, i) : this.renderEdge(el, i)))}
         </lr-scroller>
-        <div class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+        <div class="sr-only" aria-hidden="true">${this.liveText}</div>
       </div>
     `;
   }

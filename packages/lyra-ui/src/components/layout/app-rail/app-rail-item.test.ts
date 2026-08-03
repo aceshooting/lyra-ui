@@ -225,6 +225,38 @@ describe("tooltip", () => {
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
   });
 
+  it("reads a destination-realm element label after adoption", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item tooltip icon-only></lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    el.remove();
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow)
+      throw new Error("The iframe realm was unavailable.");
+
+    try {
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      const label = frameDocument.createElement("span");
+      label.textContent = "Destination dashboard";
+      el.append(label);
+      await el.updateComplete;
+
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      base.dispatchEvent(new frameWindow.FocusEvent("focus", { bubbles: true }));
+      await el.updateComplete;
+
+      expect(
+        el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()
+      ).to.equal("Destination dashboard");
+    } finally {
+      el.remove();
+      frame.remove();
+    }
+  });
+
   it("clears transient tooltip state across disconnect and reconnect", async () => {
     const el = (await fixture(html`
       <lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>

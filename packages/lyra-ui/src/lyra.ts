@@ -346,7 +346,14 @@ export type {
 } from './components/charts/chart/chart.class.js';
 export type { BoxPlotSeries, BoxPlotPoint } from './components/charts/chart/box-plot.class.js';
 export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.class.js';
-export type { LegendEntry, ChoroplethLayer, MapMarker, GeoJsonDataLayer } from './components/media/map/map.class.js';
+export type {
+  LegendEntry,
+  ChoroplethLayer,
+  MapMarker,
+  GeoJsonDataLayer,
+  LyraMapStyleSpecification,
+  LyraMapInstance,
+} from './components/media/map/map.class.js';
 export { LyraFileInput } from './components/media/file-input/file-input.class.js';
 export type { RejectedFile } from './components/media/file-input/file-input.class.js';
 export { LyraPhoneInput, loadLibphonenumberAdapter } from './components/forms/phone-input/phone-input.class.js';
@@ -393,6 +400,7 @@ export type {
   AnnouncementSink,
   AnnouncementSinkOptions,
   AnnouncerOptions,
+  AnnouncerTimerHost,
 } from './internal/announcer.js';
 export type { LyraEmitOptions } from './internal/lyra-element.js';
 export type { LyraEventMap } from './internal/lyra-element.js';

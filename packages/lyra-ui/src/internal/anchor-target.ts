@@ -1,5 +1,7 @@
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from './announcer.js';
+import { isAccessibilityVisible } from './accessibility-visibility.js';
 import { LyraElement } from './lyra-element.js';
 import { normalizeQuoteText, scopeFromElement, buildQuoteAnchor } from './text-quote.js';
 import type {
@@ -11,7 +13,11 @@ import type {
   AnchorResultDetail,
 } from '../components/viewers/document-viewer/anchors.js';
 
-type Constructor<T> = new (...args: any[]) => T;
+type PublicConstructor<T> = new (...args: never[]) => T;
+type InternalMixinConstructor<T> = new (...args: any[]) => T;
+type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
+  new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
+);
 
 export const ANCHOR_RETRY_INTERVAL_MS = 250;
 export const ANCHOR_TIMEOUT_MS = 5000;
@@ -64,8 +70,10 @@ function selectionRange(root: LyraElement): Range | null {
  * Mixin that turns a `LyraElement` subclass into an anchor-target viewer: adds
  * `highlights`/`activeHighlightId`/`anchor`/`anchorKinds`, `scrollToAnchor()` with a generation-
  * guarded retry-until-loaded loop, `lr-highlight-activate`/`lr-text-select`/`lr-anchor-result`
- * event plumbing, and `bindTextSelection()` for selection->anchor emission. Same `Constructor<T>`
- * mixin shape as `internal/strip-host-title.ts`; bound to `LyraElement` (not plain `LitElement`)
+ * event plumbing, and `bindTextSelection()` for selection->anchor emission. The constructor uses
+ * `never[]` because callers never construct through this helper's structural return type; unlike
+ * `any[]`, that keeps the implementation detail out of every adopting viewer's public declaration.
+ * It is bound to `LyraElement` (not plain `LitElement`)
  * because this mixin needs `this.emit()`/`this.localize()`/`this.scheduleAfterUpdate()`.
  *
  * Per-viewer hooks a subclass overrides: `applyAnchor(anchor)` (default declines everything) and
@@ -84,9 +92,23 @@ function selectionRange(root: LyraElement): Range | null {
  * replaces that inference -- narrowed to just the public `LyraAnchorTarget` contract plus this one
  * called-not-overridden method.
  */
-export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
+/** @internal Source-only overload preserving subclass statics and protected members. */
+export function DocumentAnchorTarget<
+  T extends InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap>>,
+>(
   Base: T,
-): T & Constructor<LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }> {
+): T & InternalMixinConstructor<LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }>;
+/** Public, declaration-safe mixin signature. */
+export function DocumentAnchorTarget<
+  T extends PublicConstructor<LyraElement<LyraAnchorTargetEventMap>>,
+>(
+  Base: T,
+): MixedConstructor<T, LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }>;
+export function DocumentAnchorTarget(
+  Base: InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap>>,
+): InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap> & LyraAnchorTarget & {
+  renderAnchorLiveRegion(): unknown;
+}> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
     @property({ attribute: false }) highlights: LyraHighlight[] = [];
     @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
@@ -108,9 +130,21 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     @state() private anchorAnnouncementText = '';
 
     private anchorGeneration = 0;
-    private anchorRetryHandle?: ReturnType<typeof setTimeout>;
+    private anchorRetryHandle?: number;
+    private anchorRetryOwner?: Window;
     private anchorRetryResolve?: () => void;
     private selectionCleanup?: () => void;
+    private anchorAnnouncementSink?: AnnouncementSink;
+
+    override connectedCallback(): void {
+      super.connectedCallback();
+      // The live region must already exist before the first anchor result arrives; acquire against
+      // the current owner document so adoption into an iframe retargets the announcement too.
+      this.anchorAnnouncementSink ??= acquireAnnouncementSink('polite', {
+        document: this.ownerDocument,
+        source: this,
+      });
+    }
 
     protected override willUpdate(changed: PropertyValues): void {
       super.willUpdate(changed);
@@ -132,6 +166,8 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       this.anchorGeneration++;
       this.cancelAnchorRetry();
       this.unbindTextSelection();
+      this.anchorAnnouncementSink?.release();
+      this.anchorAnnouncementSink = undefined;
       super.disconnectedCallback();
     }
 
@@ -155,9 +191,10 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
      *  generation guard and unwinding. */
     private cancelAnchorRetry(): void {
       if (this.anchorRetryHandle !== undefined) {
-        clearTimeout(this.anchorRetryHandle);
+        this.anchorRetryOwner?.clearTimeout(this.anchorRetryHandle);
         this.anchorRetryHandle = undefined;
       }
+      this.anchorRetryOwner = undefined;
       const resolveWait = this.anchorRetryResolve;
       if (resolveWait) {
         this.anchorRetryResolve = undefined;
@@ -203,13 +240,21 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         if (generation !== this.anchorGeneration) return false;
         if (ok) return true;
         if (Date.now() >= deadline) return false;
+        const view = this.ownerDocument.defaultView;
+        if (!view) return false;
         await new Promise<void>((resolve) => {
           this.anchorRetryResolve = resolve;
-          this.anchorRetryHandle = setTimeout(() => {
-            this.anchorRetryHandle = undefined;
-            this.anchorRetryResolve = undefined;
+          this.anchorRetryOwner = view;
+          let handle: number;
+          handle = view.setTimeout(() => {
+            if (this.anchorRetryHandle === handle && this.anchorRetryOwner === view) {
+              this.anchorRetryHandle = undefined;
+              this.anchorRetryOwner = undefined;
+            }
+            if (this.anchorRetryResolve === resolve) this.anchorRetryResolve = undefined;
             resolve();
           }, this.anchorRetryIntervalMs);
+          this.anchorRetryHandle = handle;
         });
       }
     }
@@ -226,13 +271,18 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     }
 
     private announce(text: string): void {
-      // Force a DOM text change even for an identical back-to-back announcement (e.g. re-activating
-      // the same citation) -- a live region only announces on text *change*.
-      this.anchorAnnouncementText = this.anchorAnnouncementText === text ? `${text}​` : text;
+      // Each sink write appends a fresh light-DOM child, so an identical back-to-back result is a
+      // distinct accessible-tree addition without mutating the user-visible/localized text. The
+      // document-level sink does not inherit this component's visibility, so block the write when
+      // the host or one of its composed ancestors is excluded from the accessibility tree.
+      if (isAccessibilityVisible(this)) this.anchorAnnouncementSink?.announce(text);
+      this.anchorAnnouncementText = text;
     }
 
-    /** Renders the visually-hidden live region carrying anchor-jump announcements. Adopting viewers
-     *  include this once in their own `render()` output -- the mixin doesn't own `render()` itself,
+    /** Renders the visually-hidden, aria-hidden mirror of the latest anchor-jump announcement.
+     *  The spoken copy is appended to the shared light-DOM sink acquired on connection while this
+     *  host and its composed ancestors remain exposed to the accessibility tree. Adopting
+     *  viewers include this once in their own `render()` output -- the mixin doesn't own `render()` itself,
      *  matching how `components/graph/graph.class.ts` hand-rolls its own equivalent
      *  `[part="live-region"]` without a mixin. Deliberately not `protected`: unlike the other mixin
      *  hooks, a real adopting viewer's own `render()` *calls* this directly rather than overriding it,
@@ -242,9 +292,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       return html`<div
         part="anchor-live-region"
         class="sr-only"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
+        aria-hidden="true"
       >${this.anchorAnnouncementText}</div>`;
     }
 
@@ -299,5 +347,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       this.selectionCleanup = undefined;
     }
   }
-  return DocumentAnchorTargetElement;
+  return DocumentAnchorTargetElement as InternalMixinConstructor<
+    LyraElement<LyraAnchorTargetEventMap> & LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }
+  >;
 }

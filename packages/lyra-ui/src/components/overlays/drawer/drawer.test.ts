@@ -41,6 +41,26 @@ it('closes through the inherited cancelable close contract', async () => {
   expect(el.open).to.be.false;
 });
 
+it('keeps lr-hide cancelable when an open drawer is externally removed', async () => {
+  const el = (await fixture(html`<lr-drawer open heading="Details"></lr-drawer>`)) as LyraDrawer;
+  let hideCancelable: boolean | undefined;
+  let closeCount = 0;
+  el.addEventListener('lr-hide', (event) => {
+    hideCancelable = event.cancelable;
+    event.preventDefault();
+  });
+  el.addEventListener('lr-dialog-close', () => closeCount++);
+
+  el.remove();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(hideCancelable).to.equal(true);
+  expect(closeCount).to.equal(0);
+  expect(el.open, 'a veto preserves state for a later reconnect').to.equal(true);
+  expect(el.hasAttribute('open')).to.equal(true);
+});
+
 it('does not activate inherited modal infrastructure when opened while detached', async () => {
   const el = (await fixture(html`<lr-drawer heading="Details"></lr-drawer>`)) as LyraDrawer;
   const parent = el.parentElement!;

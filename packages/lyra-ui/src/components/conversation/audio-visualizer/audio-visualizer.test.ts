@@ -3,6 +3,38 @@ import { LitElement, type PropertyValues } from 'lit';
 import './audio-visualizer.js';
 import type { LyraAudioVisualizer } from './audio-visualizer.js';
 
+interface TestOwnedAnimationFrame {
+  owner: Window;
+  handle: number;
+}
+
+function frameRequest(el: LyraAudioVisualizer): TestOwnedAnimationFrame | undefined {
+  return (el as unknown as { drawFrameRequest?: TestOwnedAnimationFrame }).drawFrameRequest;
+}
+
+function frameHandle(el: LyraAudioVisualizer): number | undefined {
+  return frameRequest(el)?.handle;
+}
+
+function cancelCurrentFrame(el: LyraAudioVisualizer): void {
+  const priv = el as unknown as { drawFrameRequest?: TestOwnedAnimationFrame };
+  const request = priv.drawFrameRequest;
+  if (request) request.owner.cancelAnimationFrame(request.handle);
+  priv.drawFrameRequest = undefined;
+}
+
+function invokeDrawFrame(el: LyraAudioVisualizer, nowMs: number): void {
+  const owner = el.ownerDocument.defaultView;
+  if (!owner) throw new Error('Expected an owner window for the test fixture');
+  const priv = el as unknown as {
+    drawFrameRequest?: TestOwnedAnimationFrame;
+    drawFrame: (request: TestOwnedAnimationFrame, nowMs: number) => void;
+  };
+  const request = { owner, handle: 0 };
+  priv.drawFrameRequest = request;
+  priv.drawFrame(request, nowMs);
+}
+
 function ambientAmplitudes(el: LyraAudioVisualizer, nowMs: number, reduced: boolean): number[] {
   return (
     el as unknown as { ambientAmplitudes: (nowMs: number, reduced: boolean) => number[] }
@@ -16,12 +48,11 @@ function waitFrame(): Promise<void> {
 /** Waits until no frame has been scheduled for two consecutive frames (mirrors the `settle` helper
  *  used by the draw-loop-scheduling tests below), or gives up after `frames` frames. */
 async function settleRaf(el: LyraAudioVisualizer, frames = 20): Promise<void> {
-  const priv = el as unknown as { rafId?: number };
   for (let i = 0; i < frames; i++) {
     await waitFrame();
-    if (priv.rafId === undefined) {
+    if (frameHandle(el) === undefined) {
       await waitFrame();
-      if (priv.rafId === undefined) return;
+      if (frameHandle(el) === undefined) return;
     }
   }
 }
@@ -204,7 +235,7 @@ describe('reduced motion behaves at 320px', () => {
 
 describe('draw-loop scheduling', () => {
   const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  const rafId = (el: LyraAudioVisualizer) => (el as unknown as { rafId?: number }).rafId;
+  const rafId = frameHandle;
   // Waits until no frame has been scheduled for two consecutive frames (the initial
   // ResizeObserver delivery legitimately schedules one extra draw after the first frame), or
   // gives up after `frames` frames so an always-running loop still fails the assertion below.
@@ -264,19 +295,18 @@ describe('draw-loop scheduling', () => {
   it('cancels an in-flight time-driven loop as soon as drawFrame observes visible=false, instead of re-arming itself', async () => {
     const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
-    const priv = el as unknown as { visible: boolean; rafId?: number; drawFrame: (nowMs: number) => void };
+    const priv = el as unknown as { visible: boolean };
     // Force the time-driven branch deterministically -- state='thinking' alone depends on the test
     // environment's prefers-reduced-motion, which this test isn't about.
     Object.defineProperty(el, 'isTimeDriven', { configurable: true, get: () => true });
     try {
-      priv.drawFrame(0);
-      expect(priv.rafId).to.not.be.undefined; // still looping while visible and time-driven
+      invokeDrawFrame(el, 0);
+      expect(frameHandle(el)).to.not.be.undefined; // still looping while visible and time-driven
 
-      cancelAnimationFrame(priv.rafId!);
-      priv.rafId = undefined;
+      cancelCurrentFrame(el);
       priv.visible = false;
-      priv.drawFrame(16);
-      expect(priv.rafId).to.be.undefined; // stops re-arming once off-screen, despite isTimeDriven
+      invokeDrawFrame(el, 16);
+      expect(frameHandle(el)).to.be.undefined; // stops re-arming once off-screen, despite isTimeDriven
     } finally {
       delete (el as unknown as { isTimeDriven?: unknown }).isTimeDriven;
     }
@@ -285,14 +315,14 @@ describe('draw-loop scheduling', () => {
   it('resumes the loop once scheduleDraw() is called again after visible flips back to true', async () => {
     const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settle(el);
-    const priv = el as unknown as { visible: boolean; rafId?: number; scheduleDraw: () => void };
+    const priv = el as unknown as { visible: boolean; scheduleDraw: () => void };
     priv.visible = false;
     priv.scheduleDraw();
-    expect(priv.rafId).to.be.undefined;
+    expect(frameHandle(el)).to.be.undefined;
 
     priv.visible = true;
     priv.scheduleDraw();
-    expect(priv.rafId).to.not.be.undefined;
+    expect(frameHandle(el)).to.not.be.undefined;
   });
 });
 
@@ -335,7 +365,7 @@ describe('AudioContext resume on stream attach', () => {
       el.stream = {} as unknown as MediaStream;
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: FakeAudioContext }).audioCtx;
-      expect(ctx).to.exist;
+      expect(ctx !== undefined).to.equal(true);
       expect(ctx!.resumeCalls).to.be.greaterThan(0);
       expect(ctx!.state).to.equal('running');
       expect((el as unknown as { hasLiveSignal: boolean }).hasLiveSignal).to.be.true;
@@ -364,24 +394,24 @@ describe('media-query change handlers', () => {
   it('onDprChange rebuilds the DPR MediaQueryList and reschedules a draw', async () => {
     const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as { dprQuery?: MediaQueryList; rafId?: number };
-    expect(priv.rafId).to.be.undefined;
+    const priv = el as unknown as { dprQuery?: MediaQueryList };
+    expect(frameHandle(el)).to.be.undefined;
     const before = priv.dprQuery;
     expect(before).to.exist;
     before!.dispatchEvent(new Event('change'));
     expect(priv.dprQuery).to.exist;
     expect(priv.dprQuery).to.not.equal(before); // watchDpr() rebuilt the MediaQueryList
-    expect(priv.rafId).to.not.be.undefined; // scheduleDraw() re-entered the loop
+    expect(frameHandle(el)).to.not.be.undefined; // scheduleDraw() re-entered the loop
   });
 
   it('onMotionPreferenceChange reschedules a draw when the reduced-motion preference flips', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as { motionQuery?: MediaQueryList; rafId?: number };
-    expect(priv.rafId).to.be.undefined;
+    const priv = el as unknown as { motionQuery?: MediaQueryList };
+    expect(frameHandle(el)).to.be.undefined;
     expect(priv.motionQuery).to.exist;
     priv.motionQuery!.dispatchEvent(new Event('change'));
-    expect(priv.rafId).to.not.be.undefined;
+    expect(frameHandle(el)).to.not.be.undefined;
   });
 
   it('refreshes the theme (clears cached colors) when an ancestor theme attribute mutates', async () => {
@@ -399,12 +429,12 @@ describe('refreshTheme() public API', () => {
   it('resets cached colors and reschedules a draw', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as { resolvedColors?: unknown; rafId?: number };
+    const priv = el as unknown as { resolvedColors?: unknown };
     priv.resolvedColors = { active: 'stale', quiet: 'stale' };
-    expect(priv.rafId).to.be.undefined;
+    expect(frameHandle(el)).to.be.undefined;
     el.refreshTheme();
     expect(priv.resolvedColors).to.be.undefined;
-    expect(priv.rafId).to.not.be.undefined;
+    expect(frameHandle(el)).to.not.be.undefined;
   });
 });
 
@@ -524,7 +554,7 @@ describe('stream lifecycle: reattach and clear', () => {
       el.stream = {} as unknown as MediaStream;
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: TrackingFakeAudioContext }).audioCtx;
-      expect(ctx).to.exist;
+      expect(ctx !== undefined).to.equal(true);
       expect(ctx!.disconnectCalls).to.equal(0); // first attach: nothing to disconnect yet
 
       // Reattach a new stream while one is already connected: disconnects the previous source.
@@ -589,9 +619,9 @@ describe('live analyser draw loop', () => {
       await el.updateComplete;
       await waitFrame();
       await waitFrame();
-      const priv = el as unknown as { rafId?: number; isTimeDriven: boolean };
+      const priv = el as unknown as { isTimeDriven: boolean };
       expect(priv.isTimeDriven).to.be.true; // a live, running analyser is always time-driven
-      expect(priv.rafId).to.not.be.undefined; // still animating
+      expect(frameHandle(el)).to.not.be.undefined; // still animating
       const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
       expect(amps).to.have.length(5); // default bar-count
       expect(amps.some((a) => a > 0)).to.be.true;
@@ -625,36 +655,30 @@ describe('reduced-motion ambient throttling in drawFrame', () => {
     await withForcedReducedMotion(async () => {
       const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       const priv = el as unknown as {
-        drawFrame: (nowMs: number) => void;
         lastAmbientDrawMs: number;
-        rafId?: number;
       };
       // Drive drawFrame by hand with controlled timestamps so the 500ms throttle window is deterministic.
-      if (priv.rafId !== undefined) cancelAnimationFrame(priv.rafId);
-      priv.rafId = undefined;
+      cancelCurrentFrame(el);
       priv.lastAmbientDrawMs = 1000;
 
-      priv.drawFrame(1200); // 200ms later: still inside the throttle window
+      invokeDrawFrame(el, 1200); // 200ms later: still inside the throttle window
       expect(priv.lastAmbientDrawMs).to.equal(1000); // no real draw happened
-      expect(priv.rafId).to.not.be.undefined; // but another frame was requested
+      expect(frameHandle(el)).to.not.be.undefined; // but another frame was requested
 
-      cancelAnimationFrame(priv.rafId!);
-      priv.rafId = undefined;
-      priv.drawFrame(1600); // 600ms after the last real draw: interval elapsed, draws for real
+      cancelCurrentFrame(el);
+      invokeDrawFrame(el, 1600); // 600ms after the last real draw: interval elapsed, draws for real
       expect(priv.lastAmbientDrawMs).to.equal(1600);
     });
   });
 });
 
 describe('drawFrame guards', () => {
-  it('is a no-op (and clears rafId) if the element is no longer connected when a stale frame fires', async () => {
+  it('is a no-op (and clears the retained request) if the element is no longer connected when a stale frame fires', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-    const priv = el as unknown as { drawFrame: (nowMs: number) => void; rafId?: number };
     el.remove();
     expect(el.isConnected).to.be.false;
-    priv.rafId = 12345;
-    priv.drawFrame(0);
-    expect(priv.rafId).to.be.undefined;
+    invokeDrawFrame(el, 0);
+    expect(frameRequest(el) === undefined).to.be.true;
   });
 });
 
@@ -699,6 +723,237 @@ describe('level-driven amplitude: waveform variant', () => {
     const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
     expect(amps).to.have.length(64);
     expect(amps.every((a) => a === 0.3)).to.be.true;
+  });
+});
+
+describe('owner-window runtime after adoption', () => {
+  it('rebinds observers, media queries, animation frames, drawing state, and AudioContext to the current owner', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+
+    interface ResizeRecord {
+      callback: ResizeObserverCallback;
+      disconnected: boolean;
+    }
+    interface IntersectionRecord {
+      callback: IntersectionObserverCallback;
+      disconnected: boolean;
+    }
+    interface QueryRecord {
+      media: string;
+      listeners: Set<EventListenerOrEventListenerObject>;
+      removals: number;
+    }
+
+    const resizeRecords: ResizeRecord[] = [];
+    const intersectionRecords: IntersectionRecord[] = [];
+    const queryRecords: QueryRecord[] = [];
+    const frameCallbacks = new Map<number, FrameRequestCallback>();
+    const canceledFrames: number[] = [];
+    let nextFrameHandle = 1;
+    let computedStyleCalls = 0;
+    let audioContextCreations = 0;
+    let audioContextCloses = 0;
+
+    class FrameResizeObserver {
+      readonly record: ResizeRecord;
+      constructor(callback: ResizeObserverCallback) {
+        this.record = { callback, disconnected: false };
+        resizeRecords.push(this.record);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnected = true;
+      }
+    }
+
+    class FrameIntersectionObserver {
+      readonly record: IntersectionRecord;
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, disconnected: false };
+        intersectionRecords.push(this.record);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnected = true;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+
+    class FrameAudioContext extends EventTarget {
+      state: AudioContextState = 'suspended';
+      constructor() {
+        super();
+        audioContextCreations++;
+      }
+      createMediaStreamSource(): { connect: () => void; disconnect: () => void } {
+        return { connect: () => {}, disconnect: () => {} };
+      }
+      createAnalyser(): {
+        fftSize: number;
+        frequencyBinCount: number;
+        getByteTimeDomainData: (data: Uint8Array) => void;
+      } {
+        return {
+          fftSize: 256,
+          frequencyBinCount: 8,
+          getByteTimeDomainData: (data) => data.fill(128),
+        };
+      }
+      resume(): Promise<void> {
+        this.state = 'running';
+        this.dispatchEvent(new Event('statechange'));
+        return Promise.resolve();
+      }
+      suspend(): Promise<void> {
+        this.state = 'suspended';
+        return Promise.resolve();
+      }
+      close(): Promise<void> {
+        this.state = 'closed';
+        audioContextCloses++;
+        return Promise.resolve();
+      }
+    }
+
+    const originals = {
+      resizeObserver: frameWindow.ResizeObserver,
+      intersectionObserver: frameWindow.IntersectionObserver,
+      matchMedia: frameWindow.matchMedia,
+      requestAnimationFrame: frameWindow.requestAnimationFrame,
+      cancelAnimationFrame: frameWindow.cancelAnimationFrame,
+      getComputedStyle: frameWindow.getComputedStyle,
+      audioContext: frameWindow.AudioContext,
+      devicePixelRatio: Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio'),
+    };
+    const realGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+
+    try {
+      (frameWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        FrameResizeObserver as unknown as typeof ResizeObserver;
+      (frameWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+        FrameIntersectionObserver as unknown as typeof IntersectionObserver;
+      frameWindow.matchMedia = ((media: string) => {
+        const record: QueryRecord = { media, listeners: new Set(), removals: 0 };
+        queryRecords.push(record);
+        return {
+          media,
+          matches: media === '(prefers-reduced-motion: reduce)',
+          onchange: null,
+          addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+            record.listeners.add(listener);
+          },
+          removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+            if (record.listeners.delete(listener)) record.removals++;
+          },
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => true,
+        } as MediaQueryList;
+      }) as typeof frameWindow.matchMedia;
+      frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+        const handle = nextFrameHandle++;
+        frameCallbacks.set(handle, callback);
+        return handle;
+      }) as typeof frameWindow.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = ((handle: number) => {
+        canceledFrames.push(handle);
+        frameCallbacks.delete(handle);
+      }) as typeof frameWindow.cancelAnimationFrame;
+      frameWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+        computedStyleCalls++;
+        return realGetComputedStyle(element, pseudo);
+      }) as typeof frameWindow.getComputedStyle;
+      (frameWindow as unknown as { AudioContext: typeof AudioContext }).AudioContext =
+        FrameAudioContext as unknown as typeof AudioContext;
+      Object.defineProperty(frameWindow, 'devicePixelRatio', { configurable: true, value: 2 });
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      expect(resizeRecords.length).to.equal(1);
+      expect(intersectionRecords.length).to.equal(1);
+      expect(queryRecords.some((record) => record.media.includes('prefers-reduced-motion'))).to.be.true;
+      expect(queryRecords.some((record) => record.media.includes('resolution: 2dppx'))).to.be.true;
+      expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
+
+      const staleResize = resizeRecords[0]!;
+      const staleIntersection = intersectionRecords[0]!;
+      const staleQueries = [...queryRecords];
+      el.remove();
+      expect(staleResize.disconnected).to.be.true;
+      expect(staleIntersection.disconnected).to.be.true;
+      expect(staleQueries.every((record) => record.removals === 1)).to.be.true;
+      expect(canceledFrames).to.not.be.empty;
+
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(resizeRecords.length).to.equal(2);
+      expect(intersectionRecords.length).to.equal(2);
+      cancelCurrentFrame(el);
+      const priv = el as unknown as {
+        hostSize?: { width: number; height: number };
+        visible: boolean;
+        resolvedColors?: { active: string; quiet: string };
+        draw: (nowMs: number) => void;
+      };
+      priv.hostSize = undefined;
+      priv.visible = true;
+      staleResize.callback(
+        [{ contentRect: { width: 999, height: 999 } } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      staleIntersection.callback(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(priv.hostSize).to.be.undefined;
+      expect(priv.visible).to.be.true;
+      expect(frameRequest(el) === undefined).to.be.true;
+
+      priv.hostSize = { width: 20, height: 10 };
+      priv.resolvedColors = undefined;
+      priv.draw(0);
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(canvas.width).to.equal(40);
+      expect(canvas.height).to.equal(20);
+      expect(computedStyleCalls).to.be.greaterThan(0);
+
+      el.stream = {} as MediaStream;
+      await el.updateComplete;
+      expect(audioContextCreations).to.equal(1);
+      expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
+
+      el.remove();
+      expect(frameCallbacks).to.be.empty;
+      expect(audioContextCloses).to.equal(1);
+    } finally {
+      el.remove();
+      (frameWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        originals.resizeObserver;
+      (frameWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+        originals.intersectionObserver;
+      frameWindow.matchMedia = originals.matchMedia;
+      frameWindow.requestAnimationFrame = originals.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originals.cancelAnimationFrame;
+      frameWindow.getComputedStyle = originals.getComputedStyle;
+      (frameWindow as unknown as { AudioContext: typeof AudioContext }).AudioContext = originals.audioContext;
+      if (originals.devicePixelRatio) {
+        Object.defineProperty(frameWindow, 'devicePixelRatio', originals.devicePixelRatio);
+      }
+      iframe.remove();
+    }
   });
 });
 

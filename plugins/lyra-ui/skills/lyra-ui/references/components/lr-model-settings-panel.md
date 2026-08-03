@@ -2,7 +2,7 @@
 
 # `lr-model-settings-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/model-settings-panel/model-settings-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-model-settings-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraModelSettingsPanel`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/model-settings-panel/model-settings-panel.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

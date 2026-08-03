@@ -2,7 +2,7 @@
 
 # `lr-document-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-document-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDocumentViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -51,7 +51,9 @@ type. First-party invention.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
-it renders explicit `aria-busy="true"|"false"`, and the loading text itself owns `role="status"`;
+it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live
+shadow content; later loading and error transitions use the pre-mounted shared document-level
+polite and assertive sinks, respectively;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -90,5 +92,6 @@ registerDocumentRenderer('application/x-example', {
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
 
-If a consumer matcher/renderer throws while an anchor is pending, the viewer renders a localized
-`role="alert"` and emits exactly one `lr-anchor-result` with `{ found: false }`.
+If a consumer matcher/renderer throws while an anchor is pending, the viewer renders localized
+ordinary error text, appends the transition to the shared document-level assertive sink, and emits
+exactly one `lr-anchor-result` with `{ found: false }`.

@@ -82,7 +82,8 @@ describe('lr-html-viewer', () => {
     el.src = 'javascript:alert(1)';
     expect((await unsafeEvent).detail.error).to.exist;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('', false))) as typeof window.fetch;
     try {

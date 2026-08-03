@@ -75,11 +75,11 @@ if (!catalogMatch) {
   }
 }
 
-const versionMatch = readme.match(/`@aceshooting\/lyra-ui` is published at `([^`]+)`/);
+const versionMatch = readme.match(/`@aceshooting\/lyra-ui` source is versioned at `([^`]+)`/);
 if (!versionMatch) {
-  errors.push('README.md: could not find the "`@aceshooting/lyra-ui` is published at `X.Y.Z`" line to check');
+  errors.push('README.md: could not find the "`@aceshooting/lyra-ui` source is versioned at `X.Y.Z`" line to check');
 } else if (versionMatch[1] !== pkg.version) {
-  errors.push(`README.md claims lyra-ui is published at ${versionMatch[1]}, but package.json says ${pkg.version} — update the "## Status" section`);
+  errors.push(`README.md records lyra-ui source at ${versionMatch[1]}, but package.json says ${pkg.version} — update the "## Status" section`);
 }
 
 // Per-tag catalog coverage: packages/lyra-ui/README.md is the one README with an actual per-tag

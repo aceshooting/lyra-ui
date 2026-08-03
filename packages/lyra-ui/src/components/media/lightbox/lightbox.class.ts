@@ -1,14 +1,20 @@
 import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** One image in the set `<lr-lightbox>` browses. `alt`/`caption` are caller-supplied data
  *  (like a filename), not routed through `localize()` -- only the component's own chrome
@@ -70,8 +76,9 @@ export interface LyraLightboxEventMap {
 
 function ownsNavigationKey(event: KeyboardEvent): boolean {
   for (const target of event.composedPath()) {
-    if (!(target instanceof Element)) continue;
-    if (target.matches(
+    const element = target as Element;
+    if (typeof element.matches !== 'function') continue;
+    if (element.matches(
       'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
       '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
       '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], ' +
@@ -79,6 +86,15 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
     )) return true;
   }
   return false;
+}
+
+function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction): void {
+  const ownerWindow = ownerDocument.defaultView;
+  if (ownerWindow) {
+    ownerWindow.queueMicrotask(callback);
+    return;
+  }
+  void Promise.resolve().then(callback);
 }
 
 /**
@@ -137,10 +153,12 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
  * @csspart toolbar - Top row: `counter` (start), the `actions` slot wrapper, `close-button` (end).
  * @csspart counter - Visible, localized "Image N of Total" text. Omitted entirely when
  *   `showCounter` is `false`.
- * @csspart live-region - Visually-hidden, `role="status" aria-live="polite" aria-atomic="true"` --
- *   announces the current position on every `index` change while open, regardless of trigger
- *   (button, keyboard, or a consumer setting `index`/`images` directly), decoupled from the
- *   visible `counter` so an unrelated re-render never causes a spurious re-announcement.
+ * @csspart live-region - Visually-hidden, `aria-hidden` mirror of the current position. On every
+ *   `index` change while open, the spoken copy is appended to the shared light-DOM polite sink,
+ *   regardless of trigger (button, keyboard, or a consumer setting `index`/`images` directly),
+ *   unless the lightbox or a composed ancestor is excluded from the accessibility tree. The
+ *   mirror is decoupled from the visible `counter` so an unrelated re-render never causes a
+ *   spurious re-announcement.
  * @csspart actions - Wrapper around the `actions` slot; `hidden` when nothing is slotted.
  * @csspart close-button - The close button. Always rendered -- unlike `<lr-dialog>`'s opt-in
  *   `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional.
@@ -163,6 +181,21 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
  * @since 4.0.0
  */
 export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    lightboxImagePosition: LYRA_DEFAULT_lightboxImagePosition,
+    lightboxLabel: LYRA_DEFAULT_lightboxLabel,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Whether the lightbox is open. Set this (or call `close()`) -- there is no separate
@@ -217,6 +250,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
 
   private overlay?: OverlayHandle;
+  private announcementSink?: AnnouncementSink;
+  private announcementBaseline?: {
+    index: number;
+    images: LyraLightboxImage[];
+  };
+  private connectionGeneration = 0;
   private readonly captionId = nextId('lightbox-caption');
 
   /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative,
@@ -276,6 +315,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         });
   }
 
+  private captureAnnouncementBaseline(): void {
+    this.announcementBaseline = {
+      index: this.currentIndex(),
+      images: this.images,
+    };
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
@@ -306,6 +352,22 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // so [part="panel"]/the embedded frame have already landed in the DOM.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // The first render (including initially-open markup) is state, not a navigation. Each
+    // connection captures the current image/index as a baseline, so an update requested while
+    // detached stays silent even when its Lit update flushes only after reattachment.
+    const isConnectionBaseline =
+      this.announcementBaseline?.index === this.currentIndex() &&
+      this.announcementBaseline.images === this.images;
+    if (
+      !isConnectionBaseline &&
+      this.open &&
+      this.liveText !== '' &&
+      isAccessibilityVisible(this) &&
+      (changed.has('index') || changed.has('images'))
+    ) {
+      this.announcementSink?.announce(this.liveText);
+    }
+    if (this.isConnected) this.captureAnnouncementBaseline();
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
@@ -331,6 +393,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const generation = ++this.connectionGeneration;
+    const connectionDocument = this.ownerDocument;
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.captureAnnouncementBaseline();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
     // willUpdate never reruns to notice `open` is still true -- restore what it dropped.
@@ -340,19 +409,38 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       } else {
         this.activateOverlay();
       }
-      queueMicrotask(() => this.overlay?.focusInitial());
+      queueDocumentMicrotask(connectionDocument, () => {
+        if (
+          this.connectionGeneration === generation &&
+          this.ownerDocument === connectionDocument &&
+          this.isConnected &&
+          this.open
+        ) {
+          this.overlay?.focusInitial();
+        }
+      });
     }
   }
 
   override disconnectedCallback(): void {
+    const generation = ++this.connectionGeneration;
+    const connectionDocument = this.ownerDocument;
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    this.announcementBaseline = undefined;
     super.disconnectedCallback();
     this.overlay?.suspend();
     if (this.open) {
       // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
       // reconnect) isn't mistaken for a real removal -- mirrors <lr-dialog>'s identical
       // disconnectedCallback rationale.
-      queueMicrotask(() => {
-        if (!this.isConnected && this.open) {
+      queueDocumentMicrotask(connectionDocument, () => {
+        if (
+          this.connectionGeneration === generation &&
+          this.ownerDocument === connectionDocument &&
+          !this.isConnected &&
+          this.open
+        ) {
           this.open = false;
           this.emit('lr-lightbox-close', 'unmount');
         }
@@ -495,7 +583,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             : nothing}
         </div>
         ${hasCaption ? html`<p part="caption" id=${this.captionId}>${image!.caption}</p>` : nothing}
-        <span part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+        <span part="live-region" class="sr-only" aria-hidden="true"
           >${this.liveText}</span
         >
       </div>

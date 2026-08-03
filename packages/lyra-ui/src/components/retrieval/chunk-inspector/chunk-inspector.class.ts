@@ -7,6 +7,11 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A local, non-exported structural copy of the `lr-document-viewer` `LyraAnchor` discriminated
  *  union, declared here (rather than imported) so this component has no build-time coupling to the
@@ -95,6 +100,26 @@ type Tier = 'high' | 'medium' | 'low';
  * @since 4.0.0
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
+    chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
+    chunkScore: LYRA_DEFAULT_chunkScore,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    scoreTierHigh: LYRA_DEFAULT_scoreTierHigh,
+    scoreTierLow: LYRA_DEFAULT_scoreTierLow,
+    scoreTierMedium: LYRA_DEFAULT_scoreTierMedium,
+    showLess: LYRA_DEFAULT_showLess,
+    showMore: LYRA_DEFAULT_showMore,
+    sourcePageSuffix: LYRA_DEFAULT_sourcePageSuffix,
+    untitledSource: LYRA_DEFAULT_untitledSource,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) chunks: LyraChunk[] = [];

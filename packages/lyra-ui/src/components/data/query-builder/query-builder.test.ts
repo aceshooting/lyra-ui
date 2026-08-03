@@ -6,6 +6,40 @@ import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js';
 
+type CssEscapeHost = { escape?: (identifier: string) => string };
+
+function createRealmFrame(): {
+  iframe: HTMLIFrameElement;
+  frameDocument: Document;
+  frameWindow: Window & typeof globalThis;
+} {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('Could not create an iframe realm for the query-builder test.');
+  }
+  return { iframe, frameDocument, frameWindow };
+}
+
+function replaceCssEscape(
+  target: CssEscapeHost,
+  replacement: CssEscapeHost['escape'],
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, 'escape');
+  Object.defineProperty(target, 'escape', {
+    configurable: true,
+    writable: true,
+    value: replacement,
+  });
+  return () => {
+    if (previous) Object.defineProperty(target, 'escape', previous);
+    else Reflect.deleteProperty(target, 'escape');
+  };
+}
+
 const FIELDS: QueryBuilderField[] = [
   { name: 'name', label: 'Name', type: 'string', placeholder: 'e.g. Acme' },
   { name: 'age', label: 'Age', type: 'number' },
@@ -290,6 +324,100 @@ describe('lr-query-builder', () => {
     await el.updateComplete;
     expect(el.value.conditions.length).to.equal(0);
     expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="add-button"]'));
+  });
+
+  it('uses the adopted owner realm CSS escape for public removal of a focused special-id row', async () => {
+    const specialId = 'target\"] [data-id=\"decoy';
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: specialId, field: 'name', operator: 'contains', value: 'special' },
+        { id: 'decoy', field: 'name', operator: 'contains', value: 'decoy' },
+      ],
+    };
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`,
+    )) as LyraQueryBuilder;
+    el.remove();
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+
+    const specialRow = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="condition"]')).find(
+      (row) => row.dataset['id'] === specialId,
+    )!;
+    (specialRow.querySelector('[part="remove-button"]') as HTMLElement).focus();
+    const ownerEscape = frameWindow.CSS.escape.bind(frameWindow.CSS);
+    let ownerCalls = 0;
+    const restoreOwner = replaceCssEscape(frameWindow.CSS, (identifier) => {
+      ownerCalls += 1;
+      return ownerEscape(identifier);
+    });
+    const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+    try {
+      el.removeCondition(specialId);
+      await el.updateComplete;
+
+      expect(ownerCalls).to.equal(1);
+      expect(el.value.conditions.map((condition) => condition.id)).to.deep.equal(['decoy']);
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('add-button');
+    } finally {
+      restoreAmbient();
+      restoreOwner();
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('uses an exact condition-id scan when adopted owner CSS escape is missing or throws', async () => {
+    const specialId = 'target\"] [data-id=\"decoy';
+    for (const mode of ['missing', 'throwing'] as const) {
+      const value: QueryBuilderValue = {
+        combinator: 'and',
+        conditions: [
+          { id: specialId, field: 'name', operator: 'contains', value: 'special' },
+          { id: 'decoy', field: 'name', operator: 'contains', value: 'decoy' },
+        ],
+      };
+      const { iframe, frameDocument, frameWindow } = createRealmFrame();
+      const el = (await fixture(
+        html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`,
+      )) as LyraQueryBuilder;
+      el.remove();
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      const specialRow = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="condition"]')).find(
+        (row) => row.dataset['id'] === specialId,
+      )!;
+      (specialRow.querySelector('[part="remove-button"]') as HTMLElement).focus();
+      let ownerCalls = 0;
+      const restoreOwner = replaceCssEscape(
+        frameWindow.CSS,
+        mode === 'missing'
+          ? undefined
+          : () => {
+              ownerCalls += 1;
+              throw new Error('owner CSS escape unavailable');
+            },
+      );
+      const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+      try {
+        el.removeCondition(specialId);
+        await el.updateComplete;
+
+        expect(el.value.conditions.map((condition) => condition.id)).to.deep.equal(['decoy']);
+        expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('add-button');
+        expect(ownerCalls).to.equal(mode === 'throwing' ? 1 : 0);
+      } finally {
+        restoreAmbient();
+        restoreOwner();
+        el.remove();
+        iframe.remove();
+      }
+    }
   });
 
   it('renders no combinator control with 0 or 1 conditions, and one with 2+', async () => {

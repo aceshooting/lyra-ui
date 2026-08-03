@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MASK = '•'.repeat(8);
 
@@ -50,6 +55,23 @@ export interface LyraEnvListEventMap {
  * @since 4.0.0
  */
 export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    envListCopy: LYRA_DEFAULT_envListCopy,
+    envListHide: LYRA_DEFAULT_envListHide,
+    envListLabel: LYRA_DEFAULT_envListLabel,
+    envListReveal: LYRA_DEFAULT_envListReveal,
+    envListValueHidden: LYRA_DEFAULT_envListValueHidden,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The name/value entries to render, in order. */
@@ -95,14 +117,16 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   }
 
   private copy(entry: EnvEntry): void {
+    const text = entry.value;
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     try {
-      void navigator.clipboard?.writeText(entry.value)?.catch(() => {});
+      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // Clipboard access can throw synchronously (e.g. insecure context or a
       // permissions-policy block); the `lr-copy` event still fires below so
       // a host can implement its own fallback.
     }
-    this.emit('lr-copy', { text: entry.value });
+    this.emit('lr-copy', { text });
   }
 
   private get accessibleLabel(): string {

@@ -17,6 +17,11 @@ import type {
 } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraVoiceCatalog } from '../voice-picker/voice-picker.class.js';
 import { styles } from './prompt-input.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface PromptSuggestion extends MentionItem {
   /** Inserted after the trigger. Defaults to `label`. */
@@ -94,6 +99,17 @@ export interface LyraPromptInputEventMap {
  * @since 7.0.0
  */
 export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
+    promptInputControls: LYRA_DEFAULT_promptInputControls,
+    promptInputLabel: LYRA_DEFAULT_promptInputLabel,
+    promptInputSources: LYRA_DEFAULT_promptInputSources,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property() value = '';

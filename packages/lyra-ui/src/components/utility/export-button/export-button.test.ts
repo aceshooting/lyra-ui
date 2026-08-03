@@ -195,6 +195,144 @@ it('closes the menu on an outside pointerdown', async () => {
   expect(el.open).to.be.false;
 });
 
+it('binds outside-pointer dismissal to the adopted owner document', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.formats = ['csv', 'json'];
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    frameDocument.body.dispatchEvent(
+      new frameWindow.PointerEvent('pointerdown', { bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('rescues focus from an iframe-realm menu row when disabled after adoption before first render', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  // Attach Lit's defining-realm stylesheet before adoption without performing a render. The first
+  // actual update then creates native controls in the iframe realm.
+  const lifecycle = el as unknown as {
+    renderRoot: HTMLElement | DocumentFragment;
+    createRenderRoot(): ShadowRoot;
+  };
+  lifecycle.renderRoot = lifecycle.createRenderRoot();
+  expect(el.hasUpdated).to.be.false;
+
+  try {
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+    row.focus();
+    expect(el.shadowRoot!.activeElement === row).to.equal(true);
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(frameDocument.activeElement === el).to.equal(true);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('creates built-in export resources and schedules revocation in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const url = frameWindow.URL;
+  const createDescriptor = Object.getOwnPropertyDescriptor(url, 'createObjectURL');
+  const revokeDescriptor = Object.getOwnPropertyDescriptor(url, 'revokeObjectURL');
+  const clickDescriptor = Object.getOwnPropertyDescriptor(
+    frameWindow.HTMLAnchorElement.prototype,
+    'click',
+  );
+  const timerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'setTimeout');
+  let ownerBlob = false;
+  let clickedAnchor: HTMLAnchorElement | undefined;
+  let timerDelay: number | undefined;
+  let scheduled: TimerHandler | undefined;
+  let revoked = '';
+  Object.defineProperty(url, 'createObjectURL', {
+    configurable: true,
+    value: (blob: Blob) => {
+      ownerBlob = blob instanceof frameWindow.Blob;
+      return 'blob:owner-realm-export';
+    },
+  });
+  Object.defineProperty(url, 'revokeObjectURL', {
+    configurable: true,
+    value: (value: string) => {
+      revoked = value;
+    },
+  });
+  Object.defineProperty(frameWindow.HTMLAnchorElement.prototype, 'click', {
+    configurable: true,
+    value(this: HTMLAnchorElement) {
+      clickedAnchor = this;
+    },
+  });
+  Object.defineProperty(frameWindow, 'setTimeout', {
+    configurable: true,
+    value: (handler: TimerHandler, timeout?: number) => {
+      scheduled = handler;
+      timerDelay = timeout;
+      return 1;
+    },
+  });
+
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  const lifecycle = el as unknown as {
+    renderRoot: HTMLElement | DocumentFragment;
+    createRenderRoot(): ShadowRoot;
+  };
+  lifecycle.renderRoot = lifecycle.createRenderRoot();
+  try {
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+
+    expect(ownerBlob).to.be.true;
+    expect(clickedAnchor?.ownerDocument === frameDocument).to.equal(true);
+    expect(clickedAnchor?.download).to.equal('export.csv');
+    expect(timerDelay).to.equal(5000);
+    if (typeof scheduled === 'function') scheduled();
+    expect(revoked).to.equal('blob:owner-realm-export');
+  } finally {
+    el.remove();
+    if (createDescriptor) Object.defineProperty(url, 'createObjectURL', createDescriptor);
+    if (revokeDescriptor) Object.defineProperty(url, 'revokeObjectURL', revokeDescriptor);
+    if (clickDescriptor) {
+      Object.defineProperty(frameWindow.HTMLAnchorElement.prototype, 'click', clickDescriptor);
+    }
+    if (timerDescriptor) Object.defineProperty(frameWindow, 'setTimeout', timerDescriptor);
+    frame.remove();
+  }
+});
+
 it('closes on an outside pointerdown even when opened via the `open` property directly', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
@@ -851,10 +989,15 @@ it('never lets a veto hold the menu open once the component disables itself', as
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  let hides = 0;
+  el.addEventListener('lr-hide', (event) => {
+    hides += 1;
+    event.preventDefault();
+  });
   el.disabled = true;
   await el.updateComplete;
   expect(el.open, 'a self-imposed close is not vetoable').to.be.false;
+  expect(hides, 'a self-imposed close does not advertise a lifecycle veto point').to.equal(0);
 });
 
 it('makes the menu lifecycle events cancelable', async () => {

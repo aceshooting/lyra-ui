@@ -16,6 +16,11 @@ import { nextId } from "../../../internal/a11y.js";
 import { chevronIcon, closeIcon, expandIcon } from "../../../internal/icons.js";
 import { styles } from "./widget.styles.js";
 import { sanitizeCssInset } from "../../../internal/safe-css.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface WidgetView {
   id: string;
@@ -103,6 +108,22 @@ export interface LyraWidgetEventMap {
  * @since 4.0.0
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    widgetCollapse: LYRA_DEFAULT_widgetCollapse,
+    widgetExitFullscreen: LYRA_DEFAULT_widgetExitFullscreen,
+    widgetExpand: LYRA_DEFAULT_widgetExpand,
+    widgetExpandToFullscreen: LYRA_DEFAULT_widgetExpandToFullscreen,
+    widgetFullscreenPanel: LYRA_DEFAULT_widgetFullscreenPanel,
+    widgetViewGroup: LYRA_DEFAULT_widgetViewGroup,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property() label = "";
@@ -152,6 +173,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
   private labelSlotObserver?: MutationObserver;
+  private labelSlotObserverDocument?: Document;
+  private labelSlotObserverGeneration = 0;
+  private ownerRealmGeneration = 0;
   private readonly bodyId = nextId("widget-body");
 
   private get storageFullKey(): string | undefined {
@@ -274,11 +298,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       } else {
         this.activateFullscreenOverlay();
       }
-      queueMicrotask(() => this.overlayHandle?.focusInitial());
+      this.queueOwnerMicrotask(() => this.overlayHandle?.focusInitial());
     }
     if (this.hasUpdated) {
-      queueMicrotask(() => {
-        if (!this.isConnected) return;
+      this.queueOwnerMicrotask(() => {
         const slot =
           this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]');
         if (slot) this.syncLabelSlot(slot.assignedElements({ flatten: true }));
@@ -289,8 +312,33 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.overlayHandle?.suspend();
-    this.labelSlotObserver?.disconnect();
-    this.labelSlotObserver = undefined;
+    this.resetOwnerRealmWork();
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmWork();
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
+    this.resetLabelSlotObserver();
+  }
+
+  private queueOwnerMicrotask(callback: VoidFunction): void {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.ownerRealmGeneration;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      callback();
+    });
   }
 
   private activateFullscreenOverlay(): void {
@@ -338,23 +386,44 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         .map((el) => el.textContent?.trim())
         .filter(Boolean)
         .join(" ") || undefined;
-    this.labelSlotObserver?.disconnect();
-    this.labelSlotObserver = undefined;
+    this.resetLabelSlotObserver();
     if (assigned.length === 0 || !this.isConnected) return;
-    this.labelSlotObserver = new MutationObserver(() => {
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.labelSlotObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.labelSlotObserver !== observer ||
+        this.labelSlotObserverDocument !== ownerDocument ||
+        this.labelSlotObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.labelSlotText =
         assigned
           .map((el) => el.textContent?.trim())
           .filter(Boolean)
           .join(" ") || undefined;
     });
+    this.labelSlotObserver = observer;
+    this.labelSlotObserverDocument = ownerDocument;
     for (const element of assigned) {
-      this.labelSlotObserver.observe(element, {
+      observer.observe(element, {
         childList: true,
         characterData: true,
         subtree: true,
       });
     }
+  }
+
+  private resetLabelSlotObserver(): void {
+    this.labelSlotObserverGeneration += 1;
+    this.labelSlotObserver?.disconnect();
+    this.labelSlotObserver = undefined;
+    this.labelSlotObserverDocument = undefined;
   }
 
   private onSublabelSlotChange = (e: Event): void => {

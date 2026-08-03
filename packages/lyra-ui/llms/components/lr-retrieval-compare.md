@@ -2,7 +2,7 @@
 
 # `lr-retrieval-compare`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-retrieval-compare.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRetrievalCompare`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -139,7 +139,8 @@ renderer's `matches()` predicate threw during dispatch, a renderer's `load()` re
 **Slots:** none.
 
 **CSS parts:** `base` — the root wrapper around the resolved renderer's output (or the loading/
-fallback view). `fallback-text` — the `<pre>` element for the `fallback="text"` kind's preformatted
+fallback view); it keeps `aria-busy="true"` while a lazy renderer is loading and explicitly returns
+to `aria-busy="false"` afterward. `fallback-text` — the `<pre>` element for the `fallback="text"` kind's preformatted
 result text (only present in that mode). `fallback-copy` — the `<lr-copy-button>` shown when
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
@@ -240,7 +241,10 @@ it:
    fires `lr-render-error`.
 
 Once a definition is found, if it carries `load`, `<lr-tool-result-view>` shows a
-`<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it. The resolved
+decorative `<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it.
+The nested skeleton has announcements disabled; the stable `base` busy state and an ordinary,
+visually hidden localized Loading label expose the in-progress state without creating a shadow-root
+live region. The resolved
 `load()` promise is cached keyed by *definition object identity* (a `WeakMap`, not by tool-name
 string) — two different registries that happen to reuse the same tool-name string get independently
 cached loads, and any given lazy definition's `load()` runs at most once no matter how many times
@@ -790,6 +794,11 @@ step independent of Approve itself. Both `editing` and any in-progress draft res
 read-only view every time the dialog transitions from closed to open, so a reused instance never
 leaks one proposal's half-finished edit into the next.
 
+The visible JSON error remains ordinary descriptive text. A transition from a valid draft into
+invalid JSON is additionally appended once to the shared assertive light-DOM announcement sink;
+further invalid keystrokes do not repeat it. An invalid draft already present at initial mount or
+reconnect establishes a silent baseline rather than replaying stale context.
+
 Initial focus deliberately does *not* land on Approve: approving a tool call is a consequential,
 potentially irreversible action, so a user who opens the dialog and reflexively presses Enter/Space
 before reading anything should deny, not approve. Deny gets the initial focus instead — the same
@@ -833,6 +842,8 @@ shared composed-tree focus traversal used by the other modal families.
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
 user tweak the arguments before running it"). First-party invention (no Web Awesome equivalent).
+The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
+names the whole parameter form without replacing the individual generated fields' names.
 
 **Supported schema subset:** a *flat* object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
@@ -928,7 +939,8 @@ cannot follow `::part()`), so it is not a selector hook you can use from outside
 renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
 label.
 
-**CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
+**CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
+`error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
 shared part name across both the text and number inputs, and deliberately *not* present on the
 `'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
@@ -977,6 +989,11 @@ an own property is present, so `''`, `0`, and `false` are valid present values. 
 boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
 `{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
 combination does set the nested checkbox's matching native/ARIA required state.
+
+Visible field and root validation errors remain ordinary descriptive text. When user interaction or
+`reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
+one addition to the shared assertive light-DOM announcement sink. Initial and reconnect renders
+establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
@@ -1692,10 +1709,14 @@ the `frame-src` image. `actions` — extra toolbar controls.
 "Take over" is pressed, `'agent'` when "Hand back" is). `lr-stop` — stop the agent's browser
 session, no detail.
 
-**CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (`role="status"`),
+**CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
 `controller-badge`, `actions`, `take-over-button`, `stop-button`, `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
+
+After mount, each `status` transition is appended to the shared polite light-DOM announcement sink.
+The status already shown on initial mount or reconnect establishes a silent baseline, including a
+status write queued while detached.
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.
@@ -2234,6 +2255,11 @@ Changing only `height`/`maxHeight` updates frame geometry without returning an a
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
 
+Loading and unavailable messages remain ordinary visible text. After the initial baseline, adding
+or replacing a valid resource announces the localized loading state through the shared polite
+light-DOM sink; changing from an available resource to no resource announces unavailability through
+the shared assertive sink. Initial and reconnect renders stay silent.
+
 **CSS parts:** `base`, `frame`, `loading`, `error`.
 
 **Slots:** none. **Optional peer deps:** none.
@@ -2328,9 +2354,11 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 above); otherwise shared tokens only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
-`issue-limit` report their respective truncation. Issues are indexed by path once before recursive
-rendering instead of rescanning the full input for every node. Cycles stop at the repeated node
-rather than recursing. **Slots:** none. **Optional peer deps:** none.
+`issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
+changing either ceiling after the initial baseline appends the localized message to the shared
+polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are indexed by
+path once before recursive rendering instead of rescanning the full input for every node. Cycles stop
+at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
@@ -2364,9 +2392,12 @@ Record<string, unknown> }`.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. The roving treeitem accepts Enter/Space as well as pointer activation for
-`lr-run-select`; cancel/retry action names include the run label so repeated row actions remain
-distinguishable to assistive technology. Progress is finite and clamped. **Slots:** none.
+the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
+run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
+announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
+Enter/Space as well as pointer activation for `lr-run-select`; cancel/retry action names include the
+run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
+and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts

@@ -3,13 +3,23 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { getPptxRenderer, type PptxRendererModule } from './pptx-loader.js';
+import {
+  getPptxRenderer,
+  type PptxRendererModule,
+  type PptxViewerApi,
+} from './pptx-loader.js';
+import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
 import { styles } from './pptx-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_open, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type PptxPhase = 'idle' | 'loading' | 'mounted' | 'error';
 
@@ -17,6 +27,9 @@ export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ slideCount: number }>;
   'lr-slide-change': CustomEvent<{ index: number; count: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
 }
 
 class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
@@ -26,16 +39,29 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * The fidelity notice is intentionally always visible because animations,
  * equations, embedded OLE objects, notes, and several advanced effects are
  * not represented by the renderer.
+ * Remote bytes and measured ZIP expansion are bounded before renderer-owned parsing begins; a
+ * peer that does not expose a complete, safely bounded ZIP-limits capability fails closed.
  *
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
  * @event lr-slide-change - Fired when the active slide changes.
  * @event lr-render-error - Fired when fetching or rendering fails.
- * @csspart base - The named viewer region.
+ * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
+ *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
+ *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
+ *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
+ *   non-cancelable.
+ * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
+ *   rendered presentation. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
+ *   Bubbling, composed, and non-cancelable.
+ * @csspart base - The named viewer region with explicit `aria-busy`; its ordinary visually-hidden
+ *   loading label is announced on later transitions through the shared document-level polite sink.
  * @csspart header - The optional presentation-name row.
  * @csspart name - The presentation name.
  * @csspart notice - The persistent fidelity notice.
- * @csspart error - The error region.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
  * @csspart nav - Slide navigation controls.
  * @csspart previous-button - Previous-slide button.
  * @csspart previous-icon - Previous-slide icon.
@@ -47,10 +73,31 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
-  // `srOnly` is not optional chrome here: the shared anchor-target mixin's
-  // `renderAnchorLiveRegion()` emits its `role="status"` node with
-  // `class="sr-only"`, so without this stylesheet the localized anchor-jump
-  // announcement paints as a visible row under the fidelity notice.
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+    pptxViewerFidelityNotice: LYRA_DEFAULT_pptxViewerFidelityNotice,
+    pptxViewerLabel: LYRA_DEFAULT_pptxViewerLabel,
+    pptxViewerNextSlide: LYRA_DEFAULT_pptxViewerNextSlide,
+    pptxViewerPreviousSlide: LYRA_DEFAULT_pptxViewerPreviousSlide,
+    pptxViewerRenderError: LYRA_DEFAULT_pptxViewerRenderError,
+    pptxViewerSlideOf: LYRA_DEFAULT_pptxViewerSlideOf,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  // `srOnly` keeps the anchor-target mixin's aria-hidden diagnostic mirror from painting as a
+  // visible row under the fidelity notice. The spoken copy lives in the document-level sink.
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL of the PPTX file. */
@@ -73,25 +120,33 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   /** @internal Test seam for replacing the optional renderer. */
   loadRenderer: () => Promise<PptxRendererModule | null> = getPptxRenderer;
-  private viewer?: OptionalPeerApi;
+  private viewer?: PptxViewerApi;
   private generation = 0;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   protected textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="container"]') ?? this.renderRoot.querySelector('[part="base"]');
   }
 
-  private onSlideChange = (event: OptionalPeerApi): void => {
-    this.currentSlideIndex = event.detail.index;
-    this.emit('lr-slide-change', { index: event.detail.index, count: this.slideCount });
+  private onSlideChange = (event: Event): void => {
+    const index = (event as CustomEvent<{ index: number }>).detail.index;
+    this.currentSlideIndex = index;
+    this.emit('lr-slide-change', { index, count: this.slideCount });
   };
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.phase,
+      this.phase === 'error' ? this.errorMessage : this.localize('loading'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no
@@ -116,7 +171,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.phase = 'idle';
     this.slideCount = 0;
     this.currentSlideIndex = 0;
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   async goToSlide(index: number): Promise<void> { await this.viewer?.goToSlide(index); }
@@ -133,8 +193,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     const signal = this.beginAbortableLoad();
     const generation = this.generation;
     if (!this.src) { this.phase = 'idle'; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new Error(this.localize('documentPreviewUrlNotAllowed'));
       this.phase = 'error';
       this.errorMessage = error.message;
@@ -145,7 +205,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     let module: PptxRendererModule | null;
     let response: Response;
     try {
-      [module, response] = await Promise.all([this.loadRenderer(), fetch(url, signal ? { signal } : undefined)]);
+      [module, response] = await Promise.all([
+        this.loadRenderer(),
+        fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined),
+      ]);
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
@@ -164,8 +227,11 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       return;
     }
     let buffer: ArrayBuffer;
-    try { buffer = await readResponseArrayBuffer(response); }
-    catch (error) {
+    try {
+      buffer = await readResponseArrayBuffer(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      await assertPptxArchiveWithinLimits(buffer, { signal });
+    } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
@@ -196,8 +262,11 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   private renderBody(): TemplateResult | typeof nothing {
-    if (this.phase === 'loading') return html`<lr-skeleton variant="rect"></lr-skeleton>`;
-    if (this.phase === 'error') return html`<div part="error" role="alert">${this.errorMessage}</div>`;
+    if (this.phase === 'loading') return html`
+      <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+      <span class="sr-only">${this.localize('loading')}</span>
+    `;
+    if (this.phase === 'error') return html`<div part="error">${this.errorMessage}</div>`;
     if (this.phase !== 'mounted') return nothing;
     return html`
       <div part="nav" ?hidden=${this.slideCount <= 1}>
@@ -219,7 +288,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   override render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label') || this.label || this.name || this.localize('pptxViewerLabel');
     return html`
-      <div part="base" role="region" aria-label=${ariaLabel}>
+      <div
+        part="base"
+        role="region"
+        aria-label=${ariaLabel}
+        aria-busy=${this.phase === 'loading' ? 'true' : 'false'}
+      >
         <div part="header" ?hidden=${!this.name}><span part="name">${this.name}</span></div>
         <p part="notice" role="note">${this.localize('pptxViewerFidelityNotice')}</p>
         ${this.renderBody()}${this.renderAnchorLiveRegion()}

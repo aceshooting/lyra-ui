@@ -1,8 +1,19 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 /** Re-exported under a component-scoped name -- what `<lr-markdown>`'s `math` option needs from
  *  the optional `katex` peer (`renderToString(tex, options)`). */
-export type KatexApi = OptionalPeerApi;
+export interface KatexApi {
+  renderToString(tex: string, options?: Record<string, unknown>): string;
+}
+
+function isKatexApi(value: unknown): value is KatexApi {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'renderToString' in value &&
+    typeof value.renderToString === 'function'
+  );
+}
 
 let cached: Promise<KatexApi | null> | undefined;
 
@@ -14,12 +25,10 @@ let cached: Promise<KatexApi | null> | undefined;
  * optional-peer shape.
  */
 export async function loadKatex(
-  importKatex: () => Promise<{ default: KatexApi } | KatexApi> = () =>
-    import('katex') as Promise<{ default: KatexApi }>,
+  importKatex: () => Promise<unknown> = () => import('katex'),
 ): Promise<KatexApi | null> {
   try {
-    const mod = await importKatex();
-    return ('default' in mod ? mod.default : mod) as KatexApi;
+    return resolveOptionalPeerCapability(await importKatex(), isKatexApi);
   } catch (error) {
     console.warn(
       '<lr-markdown> needs the optional peer dependency `katex` to render math (the `math` property is set) — install it with `pnpm add katex`:',
@@ -34,7 +43,7 @@ export async function loadKatex(
  * `<lr-markdown>` instance -- mirrors `markdown-loader.ts`'s `loadMarkdownDeps()`/
  * `getMarkdownDepsIfLoaded()` cached-promise shape for a single optional peer.
  */
-export function getKatex(importKatex?: () => Promise<{ default: KatexApi } | KatexApi>): Promise<KatexApi | null> {
+export function getKatex(importKatex?: () => Promise<unknown>): Promise<KatexApi | null> {
   if (!cached) cached = loadKatex(importKatex);
   return cached;
 }

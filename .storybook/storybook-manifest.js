@@ -1,3 +1,5 @@
+import { expandManifestInheritance } from '../packages/lyra-ui/scripts/manifest-compact.mjs';
+
 const isPublicMember = (member) =>
   member?.privacy !== 'private' && member?.privacy !== 'protected';
 
@@ -6,9 +8,10 @@ const isPublicMember = (member) =>
  * autodocs tables. Filter a presentation-only clone while leaving the published manifest intact.
  */
 export function publicStorybookManifest(manifest) {
+  const expanded = expandManifestInheritance(manifest);
   return {
-    ...manifest,
-    modules: (manifest.modules ?? []).map((module) => ({
+    ...expanded,
+    modules: (expanded.modules ?? []).map((module) => ({
       ...module,
       declarations: (module.declarations ?? []).map((declaration) => ({
         ...declaration,

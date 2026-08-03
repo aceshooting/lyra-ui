@@ -55,6 +55,24 @@ function installResizeObserverStub(): {
   };
 }
 
+it('reflects string snap points and removes the attribute for function/empty writes', async () => {
+  const element = await fixture<LyraSplitPanel>(html`<lr-split-panel snap="25% 200px"></lr-split-panel>`);
+  expect(element.snap).to.equal('25% 200px');
+  expect(element.getAttribute('snap')).to.equal('25% 200px');
+
+  element.snap = () => 100;
+  await element.updateComplete;
+  expect(element.hasAttribute('snap')).to.equal(false);
+
+  element.snap = '50%';
+  await element.updateComplete;
+  expect(element.getAttribute('snap')).to.equal('50%');
+  element.snap = undefined;
+  await element.updateComplete;
+  expect(element.snap).to.equal('');
+  expect(element.hasAttribute('snap')).to.equal(false);
+});
+
 it('renders the exact two-pane slots, shared panel part, divider slot, and wrapper aliases', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 200px">

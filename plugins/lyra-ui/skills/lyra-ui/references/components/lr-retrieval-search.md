@@ -2,7 +2,7 @@
 
 # `lr-retrieval-search`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-retrieval-search.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRetrievalSearch`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -32,7 +32,8 @@ submit. Fully controlled; performs no retrieval itself. Composes `lr-input type=
 - `loading: boolean = false` (reflected) — host-driven busy flag; this component cannot know when a
   request resolves
 - `errorText: string = ''` (attribute `error-text`) — last failed search's message, shown verbatim
-  (caller-owned text, not localized) in a `role="alert"` region
+  (caller-owned text, not localized) in a neutral visible region. A new non-empty value is announced
+  through a shared assertive light-DOM region; initial and reconnect content is not replayed
 - `empty: boolean = false` (reflected) — host-driven "the last completed search returned zero
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`)
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
@@ -58,8 +59,9 @@ submit. Fully controlled; performs no retrieval itself. Composes `lr-input type=
 
 **CSS parts:** `base` (the `role="search"` landmark), `row`, `query`, `mode`, `submit` (reads
 "Search" while idle, "Cancel" while `loading`), `filters` (omitted entirely when both `filters` and
-`scope` are empty), `spinner` (only while `loading`), `error` (`role="alert"`, only when `errorText`
-is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor `errorText`).
+`scope` are empty), `spinner` (only while `loading`), `error` (neutral visible message, only when
+`errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
+`errorText`).
 
 **Themeable custom properties:** shared tokens only.
 

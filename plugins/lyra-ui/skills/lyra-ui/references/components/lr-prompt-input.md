@@ -2,7 +2,7 @@
 
 # `lr-prompt-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-prompt-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPromptInput`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

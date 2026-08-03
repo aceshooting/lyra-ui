@@ -2,7 +2,7 @@
 
 # `lr-reorder-item`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-item.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-reorder-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraReorderItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`

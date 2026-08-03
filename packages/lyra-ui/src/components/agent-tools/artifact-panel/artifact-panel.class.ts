@@ -5,6 +5,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { styles } from './artifact-panel.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition, LYRA_DEFAULT_copy, LYRA_DEFAULT_download } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ArtifactVersion {
   id: string;
@@ -70,6 +75,23 @@ export interface LyraArtifactPanelEventMap {
  * @since 4.0.0
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    artifactPanelCode: LYRA_DEFAULT_artifactPanelCode,
+    artifactPanelGenerating: LYRA_DEFAULT_artifactPanelGenerating,
+    artifactPanelLabel: LYRA_DEFAULT_artifactPanelLabel,
+    artifactPanelNextVersion: LYRA_DEFAULT_artifactPanelNextVersion,
+    artifactPanelPreview: LYRA_DEFAULT_artifactPanelPreview,
+    artifactPanelPreviousVersion: LYRA_DEFAULT_artifactPanelPreviousVersion,
+    artifactPanelRestore: LYRA_DEFAULT_artifactPanelRestore,
+    artifactPanelVersionPosition: LYRA_DEFAULT_artifactPanelVersionPosition,
+    copy: LYRA_DEFAULT_copy,
+    download: LYRA_DEFAULT_download,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The artifact's title, shown in the header. */
@@ -144,15 +166,17 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   }
 
   private onCopy = (): void => {
+    const text = this.copyText;
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
       // throw synchronously rather than rejecting -- either way this is best-effort; lr-copy
       // fires regardless of whether the OS clipboard was actually reached.
-      void navigator.clipboard?.writeText(this.copyText)?.catch(() => {});
+      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
     }
-    this.emit('lr-copy', { text: this.copyText });
+    this.emit('lr-copy', { text });
   };
 
   private onDownload = (): void => {

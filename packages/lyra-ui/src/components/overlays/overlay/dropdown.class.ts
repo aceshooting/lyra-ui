@@ -9,6 +9,11 @@ import type { MenuFocusTarget } from '../../layout/menu/menu-shared.js';
 import type { LyraMenu, MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import { LyraPopover, type LyraPopoverEventMap } from './popover.class.js';
 import { styles } from './dropdown.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const menuTag = unsafeStatic(tag('menu'));
 
@@ -55,6 +60,16 @@ export interface LyraDropdownEventMap extends LyraPopoverEventMap {
  * @since 4.0.0
  */
 export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraPopover.styles, styles];
 
   /** Dropdowns sit flush against their trigger by default; generic popovers retain eight pixels. */

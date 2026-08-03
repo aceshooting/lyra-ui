@@ -3,6 +3,11 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { styles } from './reorder-item.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraReorderItemEventMap {
   'lr-move-request': CustomEvent<{ direction: 'up' | 'down' }>;
@@ -29,6 +34,15 @@ export interface LyraReorderItemEventMap {
  * @since 6.0.0
  */
 export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    moveDown: LYRA_DEFAULT_moveDown,
+    moveUp: LYRA_DEFAULT_moveUp,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Stable identifier included in the parent list's emitted `lr-reorder` order array. Falls back

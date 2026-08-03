@@ -62,6 +62,20 @@ describe('lr-file-tree', () => {
     expect(tree.label).to.equal('Files');
   });
 
+  it('renders a per-instance .strings override in the internal tree accessible name', async () => {
+    const el = (await fixture(
+      html`<lr-file-tree .strings=${{ fileTreeLabel: 'Localized file tree' }}></lr-file-tree>`,
+    )) as LyraFileTree;
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+    await tree.updateComplete;
+
+    expect(
+      tree.shadowRoot!.querySelectorAll(
+        '[part~="base"][role="tree"][aria-label="Localized file tree"]',
+      ).length,
+    ).to.equal(1);
+  });
+
   it('marks the selected path in the derived tree data', async () => {
     const el = (await fixture(html`<lr-file-tree selected-path="README.md"></lr-file-tree>`)) as LyraFileTree;
     el.nodes = nodes;

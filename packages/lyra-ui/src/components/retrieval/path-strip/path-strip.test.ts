@@ -2,6 +2,24 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './path-strip.js';
 import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
 import { styles } from './path-strip.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
+function sinkElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(): string[] {
+  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+}
 
 const path: LyraPathElement[] = [
   { kind: 'node', node: { id: 'e1', label: 'Marie Curie' } },
@@ -78,6 +96,47 @@ it('has one roving tab stop across every element, moving forward with ArrowRight
   expect(controls().map((c) => c.tabIndex)).to.deep.equal([-1, 0, -1]);
 });
 
+it('uses the adopted owner window reduced-motion preference when revealing a roving item', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const ownerDocument = frame.contentDocument!;
+  const ownerWindow = frame.contentWindow!;
+  const originalTopMatchMedia = window.matchMedia;
+  const originalOwnerMatchMedia = ownerWindow.matchMedia;
+  const el = document.createElement('lr-path-strip') as LyraPathStrip;
+  try {
+    window.matchMedia = motionMatchMedia(false);
+    ownerWindow.matchMedia = motionMatchMedia(true);
+    el.path = path;
+    document.body.append(el);
+    await el.updateComplete;
+    ownerDocument.body.append(ownerDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const controls = [...el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]')] as HTMLElement[];
+    let behavior: ScrollBehavior | undefined;
+    controls[1]!.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
+      behavior = options?.behavior;
+    }) as HTMLElement['scrollIntoView'];
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+      new ownerWindow.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(behavior).to.equal('auto');
+  } finally {
+    el.remove();
+    window.matchMedia = originalTopMatchMedia;
+    ownerWindow.matchMedia = originalOwnerMatchMedia;
+    frame.remove();
+  }
+});
+
 it('draws directed-edge arrows as aria-hidden, logical (inline-end unless reverse)', async () => {
   const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;
@@ -123,7 +182,12 @@ it('announces node focus through a .strings override for pathNodeStatus, interpo
   (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as HTMLButtonElement).focus();
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.equal('Marie Curie, nœud 1 sur 3');
+  const mirror = el.shadowRoot!.querySelector('.sr-only')!;
+  expect(mirror.textContent).to.equal('Marie Curie, nœud 1 sur 3');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(sinkTexts().at(-1)).to.equal('Marie Curie, nœud 1 sur 3');
 });
 
 it('gives both node and relation pills the shared minimum hit area', async () => {
@@ -158,8 +222,19 @@ it('formats announced positions with the effective locale', async () => {
   )) as LyraPathStrip;
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLButtonElement).focus();
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.contain('١');
-  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.contain('٣');
+  expect(sinkTexts().at(-1)).to.contain('١');
+  expect(sinkTexts().at(-1)).to.contain('٣');
+});
+
+it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+  document.body.append(el);
+  expect(sinkElement() !== null).to.be.true;
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
 });
 
 it('moves focus to a surviving path control when the focused item is removed', async () => {

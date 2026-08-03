@@ -2,7 +2,7 @@
 
 # `lr-file-icon`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/file-icon/file-icon.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-file-icon.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFileIcon`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-icon/file-icon.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

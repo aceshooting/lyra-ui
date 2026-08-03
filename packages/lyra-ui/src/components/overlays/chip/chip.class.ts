@@ -1,10 +1,20 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+} from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The library's one semantic-tone vocabulary. */
 export type ChipVariant = LyraVariant;
@@ -56,7 +66,8 @@ export interface LyraChipEventMap {
  * list and decides whether/how the click actually removes anything.
  *
  * @customElement lr-chip
- * @slot - The chip's label content.
+ * @slot - The chip's label content. Visible accessible text and forwarding-slot reassignment stay
+ * synchronized with toggle/remove action names.
  * @slot icon - Optional leading icon or status dot. Nothing is reserved for
  * it (no extra gap) when left empty.
  * @event lr-remove - The remove (×) button was activated (click, or
@@ -110,6 +121,18 @@ export interface LyraChipEventMap {
  * @since 4.0.0
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, variants, styles];
 
   /** Visual density. `m` preserves the original chip dimensions. */
@@ -172,23 +195,81 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
   // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
+  // The server cannot inspect assigned nodes. Keep its first render on the empty-label fallback,
+  // then seed from light DOM before a browser-only first paint (or immediately after hydration).
+  private cachedLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly onLabelSlotChange = (event: Event): void => {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    this.bindLabelObserverTargets();
+    this.recomputeLabelText();
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
-    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
+      ?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.recomputeLabelText();
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.bindLabelObserverTargets();
+    const sampleBrowserState = (): void => {
+      this.recomputeHasIconSlot();
+      this.recomputeLabelText();
+    };
+    if (this.hasUpdated) sampleBrowserState();
+    else this.seedFirstRenderState(sampleBrowserState);
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    let ancestor = composedParentElement(this);
+    while (ancestor) {
+      this.labelObserver.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+      });
+      ancestor = composedParentElement(ancestor);
+    }
+    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
   }
 
   override disconnectedCallback(): void {
+    this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
     super.disconnectedCallback();
   }
 
-  protected override willUpdate(): void {
-    if (!this.hasUpdated) {
-      this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
-    }
+  private recomputeHasIconSlot(): void {
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    if (!children) return;
+    this.hasIconSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'icon');
   }
 
   private onIconSlotChange = (e: Event): void => {
@@ -204,22 +285,50 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // string, lit-html inserts a marker Comment node alongside the Text node in
   // the light DOM. That comment's own (non-empty) data is internal
   // bookkeeping, not label content, so it must never reach `textContent`.
-  private get labelText(): string {
-    return Array.from(this.childNodes)
-      .filter(
-        (n): n is Text | Element =>
-          (n.nodeType === Node.TEXT_NODE || n instanceof Element) &&
-          !(n instanceof Element && n.getAttribute('slot') === 'icon'),
-      )
-      .map((n) => n.textContent ?? '')
-      .join('')
+  private accessibleLabelText(node: Node): string {
+    if (node.nodeType === 3) return node.textContent ?? '';
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const visibilityHidden = isAccessibilityVisibilityHidden(element);
+    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
+    if (accessibleLabel?.trim()) return accessibleLabel;
+    const childNodes =
+      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : element.childNodes;
+    return Array.from(childNodes, (child) =>
+      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleLabelText(child),
+    ).join(' ');
+  }
+
+  private computeLabelText(): string {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+    const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    const nodes = slot
+      ? slot.assignedNodes({ flatten: true })
+      : Array.from(lightDomNodes ?? []).filter(
+          (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
+        );
+    return nodes
+      .map((node) => this.accessibleLabelText(node))
+      .join(' ')
+      .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  private recomputeLabelText(): void {
+    const next = this.computeLabelText();
+    if (next === this.cachedLabelText) return;
+    this.cachedLabelText = next;
+    this.requestUpdate();
   }
 
   private get accessibleRemoveLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel) return hostLabel;
-    const text = this.labelText;
+    if (hostLabel !== null) return hostLabel;
+    const text = this.cachedLabelText;
     return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }
 
@@ -263,6 +372,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     // *current* value, for `aria-pressed`.
     const toggleMode = this.toggleable && !this.removable;
     const pressed = this.selected && !this.removable;
+    const hostLabel = this.getAttribute('aria-label');
     return html`
       <span
         part="base"
@@ -270,12 +380,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
-        <span part="label" ?inert=${toggleMode}><slot></slot></span>
+        <span part="label" ?inert=${toggleMode}><slot @slotchange=${this.onLabelSlotChange}></slot></span>
         ${toggleMode
           ? html`<button
               part="toggle-button"
               type="button"
-              aria-label=${this.getAttribute('aria-label') || this.labelText || nothing}
+              aria-label=${hostLabel !== null ? hostLabel : this.cachedLabelText || nothing}
               aria-pressed=${pressed ? 'true' : 'false'}
               @click=${this.onToggleClick}
             ></button>`

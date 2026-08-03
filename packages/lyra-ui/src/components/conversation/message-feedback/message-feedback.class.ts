@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './message-feedback.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface MessageFeedbackReason {
   id: string;
@@ -101,6 +106,23 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * @since 4.0.0
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    feedbackCommentLabel: LYRA_DEFAULT_feedbackCommentLabel,
+    feedbackCommentPlaceholder: LYRA_DEFAULT_feedbackCommentPlaceholder,
+    feedbackNegative: LYRA_DEFAULT_feedbackNegative,
+    feedbackPositive: LYRA_DEFAULT_feedbackPositive,
+    feedbackReasonsLabel: LYRA_DEFAULT_feedbackReasonsLabel,
+    feedbackSubmit: LYRA_DEFAULT_feedbackSubmit,
+    feedbackSubmitted: LYRA_DEFAULT_feedbackSubmitted,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Current rating. Host-writable (e.g. to reflect a previously-recorded rating back). */

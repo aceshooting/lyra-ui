@@ -12,13 +12,17 @@ import { fileURLToPath } from 'node:url';
 import {
   LOCAL_MIGRATION_ORIGINS,
   compareMappedSurfaces,
+  validateAccessibilityContract,
   validateLocalMigrations,
   validateMappingNormalizations,
 } from './component-inventory.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(scriptDir, '..');
-const inventoryPath = path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+const packagedInventoryPath = path.join(scriptDir, 'migration-contract.json');
+const inventoryPath = fs.existsSync(packagedInventoryPath)
+  ? packagedInventoryPath
+  : path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
 
 export const MIGRATION_REPORT_SCHEMA_VERSION = 1;
 
@@ -31,6 +35,7 @@ const DEFAULT_EXTENSIONS = new Set([
   'jsx',
   'mjs',
   'cjs',
+  'css',
   'vue',
   'svelte',
   'mdx',
@@ -163,11 +168,43 @@ function driftCovered(mapping, finding) {
   return Boolean(section && mapping.rewrites[section].some((rule) => rule.from === finding.member));
 }
 
+function runtimeMemberSurfaces(mapping, section) {
+  const rules = Array.isArray(mapping.rewrites?.[section]) ? mapping.rewrites[section] : [];
+  return {
+    source: { surface: { [section]: rules.map((rule) => ({ name: rule?.from })) } },
+    target: { surface: { [section]: rules.map((rule) => ({ name: rule?.to })) } },
+  };
+}
+
+function runtimeDefaultSurfaces(mapping) {
+  const source = { surface: { attributes: [], properties: [] } };
+  const target = { surface: { attributes: [], properties: [] } };
+  const rules = Array.isArray(mapping.rewrites?.defaults) ? mapping.rewrites.defaults : [];
+  for (const rule of rules) {
+    const section = rule?.memberKind === 'attribute' ? 'attributes' : 'properties';
+    target.surface[section].push({ name: rule?.member });
+    if (rule?.action === 'replace-value') source.surface[section].push({ name: rule?.member });
+  }
+  return { source, target };
+}
+
 export function buildMigrationContract(inventory) {
   invariant(inventory?.schemaVersion === 1, 'schemaVersion must be 1');
+  const runtimeInventory = Object.hasOwn(inventory, 'migrationRuntimeSchemaVersion');
+  if (runtimeInventory) {
+    invariant(
+      inventory.migrationRuntimeSchemaVersion === 1,
+      'migrationRuntimeSchemaVersion must be 1',
+    );
+  }
   invariant(Array.isArray(inventory.components), 'components must be an array');
   invariant(Array.isArray(inventory.mappings), 'mappings must be an array');
   invariant(inventory.upstreams && typeof inventory.upstreams === 'object', 'upstreams must be an object');
+  const accessibilityFindings = validateAccessibilityContract(
+    inventory.accessibilityProfiles,
+    inventory.mappings,
+  );
+  invariant(accessibilityFindings.length === 0, accessibilityFindings.join('; '));
 
   const components = new Map();
   for (const component of inventory.components) {
@@ -268,20 +305,34 @@ export function buildMigrationContract(inventory) {
       `${mapping.upstreamTag}: unknown rewrite section(s) ${unknownRewriteKeys.join(', ')}`,
     );
     for (const section of MEMBER_RULE_SECTIONS) {
-      validateMemberRules(mapping, upstreamEntry.component, target, section);
+      if (runtimeInventory) {
+        const surfaces = runtimeMemberSurfaces(mapping, section);
+        validateMemberRules(mapping, surfaces.source, surfaces.target, section);
+      } else {
+        validateMemberRules(mapping, upstreamEntry.component, target, section);
+      }
     }
-    validateDefaultRules(mapping, upstreamEntry.component, target);
-    const normalizationFindings = validateMappingNormalizations(mapping, {
-      upstream: upstreamEntry.component.surface,
-      target: target?.surface,
-    });
-    invariant(normalizationFindings.length === 0, normalizationFindings.join('; '));
-    invariant(Array.isArray(mapping.drift), `${mapping.upstreamTag}: drift must be an array`);
+    if (runtimeInventory) {
+      const surfaces = runtimeDefaultSurfaces(mapping);
+      validateDefaultRules(mapping, surfaces.source, surfaces.target);
+      invariant(
+        !Object.hasOwn(mapping, 'normalizations') && !Object.hasOwn(mapping, 'drift'),
+        `${mapping.upstreamTag}: packaged runtime mappings cannot carry analyzer-only data`,
+      );
+    } else {
+      validateDefaultRules(mapping, upstreamEntry.component, target);
+      const normalizationFindings = validateMappingNormalizations(mapping, {
+        upstream: upstreamEntry.component.surface,
+        target: target?.surface,
+      });
+      invariant(normalizationFindings.length === 0, normalizationFindings.join('; '));
+      invariant(Array.isArray(mapping.drift), `${mapping.upstreamTag}: drift must be an array`);
+    }
     if (extendedPackageSchema) {
       const parity = mapping.parity;
       invariant(parity && typeof parity === 'object' && !Array.isArray(parity), `${mapping.upstreamTag}: parity missing`);
       const parityKeys = Object.keys(parity).filter(
-        (key) => !['staticApi', 'lightDom', 'runtime', 'behaviorReviewFlags'].includes(key),
+        (key) => !['staticApi', 'lightDom', 'runtime', 'behaviorReviewFlags', 'accessibility'].includes(key),
       );
       invariant(parityKeys.length === 0, `${mapping.upstreamTag}: parity has unknown key(s) ${parityKeys.join(', ')}`);
       invariant(STATIC_API_STATUSES.has(parity.staticApi), `${mapping.upstreamTag}: invalid parity.staticApi`);
@@ -326,7 +377,7 @@ export function buildMigrationContract(inventory) {
         );
       }
     }
-    if (target && upstreamEntry.component.review?.status === 'complete') {
+    if (!runtimeInventory && target && upstreamEntry.component.review?.status === 'complete') {
       const expectedDrift = compareMappedSurfaces(upstreamEntry.component.surface, target.surface, {
         upstreamPrefix: mapping.upstream === 'webawesome' ? 'wa-' : 'sl-',
         rewrites: mapping.rewrites,
@@ -338,7 +389,9 @@ export function buildMigrationContract(inventory) {
       );
     }
     if (mapping.classification === 'exact') {
-      invariant(mapping.drift.length === 0, `${mapping.upstreamTag}: exact mapping has surface drift`);
+      if (!runtimeInventory) {
+        invariant(mapping.drift.length === 0, `${mapping.upstreamTag}: exact mapping has surface drift`);
+      }
       invariant(
         REWRITE_RULE_SECTIONS.every((section) => mapping.rewrites[section].length === 0),
         `${mapping.upstreamTag}: exact mapping cannot declare rewrite rules`,
@@ -349,14 +402,17 @@ export function buildMigrationContract(inventory) {
         REWRITE_RULE_SECTIONS.some((section) => mapping.rewrites[section].length > 0),
         `${mapping.upstreamTag}: rewritten mapping needs at least one deterministic rule`,
       );
-      invariant(
-        mapping.drift.every((finding) => driftCovered(mapping, finding)),
-        `${mapping.upstreamTag}: rewritten mapping contains drift without a deterministic rule`,
-      );
+      if (!runtimeInventory) {
+        invariant(
+          mapping.drift.every((finding) => driftCovered(mapping, finding)),
+          `${mapping.upstreamTag}: rewritten mapping contains drift without a deterministic rule`,
+        );
+      }
     }
 
     mappings.set(mapping.upstreamTag, {
       ...mapping,
+      drift: mapping.drift ?? [],
       source: upstreamEntry.component,
       target,
     });
@@ -372,6 +428,64 @@ export function buildMigrationContract(inventory) {
     localMigrations,
     packageIdentities,
     packagesByEcosystem,
+  };
+}
+
+/**
+ * Produces the validated, migration-only data shipped beside the public CLI. Static analyzer
+ * surfaces stay in the repository inventory; the package contains only registration metadata,
+ * deterministic rewrite rules, parity/runtime requirements, and the opt-in local defaults.
+ */
+export function createMigrationRuntimeInventory(inventory) {
+  invariant(
+    !Object.hasOwn(inventory ?? {}, 'migrationRuntimeSchemaVersion'),
+    'cannot project an already-packaged migration runtime inventory',
+  );
+  buildMigrationContract(inventory);
+
+  const targetTags = new Set(inventory.mappings.map((mapping) => mapping.targetTag).filter(Boolean));
+  for (const profile of inventory.localMigrations) targetTags.add(profile.tag);
+
+  return {
+    schemaVersion: 1,
+    migrationRuntimeSchemaVersion: 1,
+    accessibilityProfiles: structuredClone(inventory.accessibilityProfiles),
+    components: inventory.components
+      .filter((component) => targetTags.has(component.tag))
+      .map((component) => ({
+        tag: component.tag,
+        registrationModule: component.registrationModule,
+        rootIncluded: component.rootIncluded,
+        optionalPeers: structuredClone(component.optionalPeers ?? []),
+        surface: {
+          attributes: structuredClone(component.surface?.attributes ?? []),
+        },
+      })),
+    localMigrations: structuredClone(inventory.localMigrations),
+    upstreams: Object.fromEntries(
+      ECOSYSTEMS.map((ecosystem) => {
+        const upstream = inventory.upstreams[ecosystem];
+        return [
+          ecosystem,
+          {
+            packages: structuredClone(upstream.packages),
+            components: upstream.components.map((component) => ({
+              tag: component.tag,
+              tier: component.tier,
+            })),
+          },
+        ];
+      }),
+    ),
+    mappings: inventory.mappings.map((mapping) => ({
+      upstream: mapping.upstream,
+      upstreamTag: mapping.upstreamTag,
+      targetTag: mapping.targetTag,
+      classification: mapping.classification,
+      rationale: mapping.rationale,
+      parity: structuredClone(mapping.parity),
+      rewrites: structuredClone(mapping.rewrites),
+    })),
   };
 }
 
@@ -916,6 +1030,13 @@ function deepImportTag(specifier, ecosystem) {
   return match ? `${ecosystem === 'webawesome' ? 'wa' : 'sl'}-${match[1]}` : null;
 }
 
+function packageProvidesMapping(imported, mapping) {
+  return Boolean(
+    mapping &&
+    (!mapping.source?.tier || imported.tiers.has(mapping.source.tier)),
+  );
+}
+
 function stripTrailingModuleTrivia(text) {
   let value = text;
   while (true) {
@@ -1178,6 +1299,7 @@ export function migrateText(original, contract, options = {}) {
     ...aliasReviews.keys(),
     ...dynamicDefaultReviews.keys(),
   ]);
+  const registrationBlockedMappings = new Set(options.registrationBlockedMappings ?? []);
   const blockedEcosystems = new Set(options.blockedEcosystems ?? []);
   for (const imported of imports) {
     if (imported.sideEffect) continue;
@@ -1199,6 +1321,7 @@ export function migrateText(original, contract, options = {}) {
     shoelace: { automatic: 0, manual: 0 },
   };
   const automaticMappings = new Set();
+  const deepRegistrationMappings = new Set();
   const reportedOptionalPeers = new Set();
 
   const reportOrigin = (upstreamTag, origin) =>
@@ -1232,8 +1355,7 @@ export function migrateText(original, contract, options = {}) {
       }),
     );
   };
-  const noteAutomatic = (mapping, offset) => {
-    automaticMappings.add(mapping.upstreamTag);
+  const noteRuntimeRequirements = (mapping, offset) => {
     for (const peer of mapping.target?.optionalPeers ?? []) {
       const key = `${mapping.targetTag}:${peer}`;
       if (reportedOptionalPeers.has(key)) continue;
@@ -1247,6 +1369,10 @@ export function migrateText(original, contract, options = {}) {
         `${mapping.targetTag} requires the optional peer package ${peer}; install a compatible version before relying on the migrated component.`,
       );
     }
+  };
+  const noteAutomatic = (mapping, offset) => {
+    automaticMappings.add(mapping.upstreamTag);
+    noteRuntimeRequirements(mapping, offset);
   };
   const addEdit = (start, end, replacement, details) => {
     edits.push({ start, end, replacement });
@@ -1262,13 +1388,27 @@ export function migrateText(original, contract, options = {}) {
   };
   const isBlocked = (mapping) =>
     Boolean(mapping) &&
-    (blockedMappings.has(mapping.upstreamTag) || blockedEcosystems.has(mapping.upstream));
+    (blockedMappings.has(mapping.upstreamTag) ||
+      registrationBlockedMappings.has(mapping.upstreamTag) ||
+      blockedEcosystems.has(mapping.upstream));
   const isBlockedAutomatic = (mapping) =>
     AUTO_CLASSIFICATIONS.has(mapping?.classification) && isBlocked(mapping);
   const isAutomatic = (mapping) =>
     AUTO_CLASSIFICATIONS.has(mapping?.classification) && !isBlocked(mapping);
-  const blockedMessage = (mapping) =>
-    `${mapping.upstreamTag} remains unchanged because the scanned target set contains a use that requires manual member, default, or import review.`;
+  const blockedMessage = (mapping) => {
+    if (registrationBlockedMappings.has(mapping.upstreamTag)) {
+      return (
+        `${mapping.upstreamTag} remains unchanged because the scanned target set does not prove ` +
+        `registration for ${mapping.targetTag}. Include ${targetImport(mapping.target)} in the scan ` +
+        'or migrate the file that owns its supported root registration import.'
+      );
+    }
+    return `${mapping.upstreamTag} remains unchanged because the scanned target set contains a use that requires manual member, default, or import review.`;
+  };
+  const blockedWarningCode = (mapping) =>
+    registrationBlockedMappings.has(mapping.upstreamTag)
+      ? 'REGISTRATION_CLOSURE_REQUIRED'
+      : 'MAPPING_REVIEW_BLOCKED';
 
   for (const { mapping, uses } of aliasReviews.values()) {
     for (const use of uses) {
@@ -1296,16 +1436,20 @@ export function migrateText(original, contract, options = {}) {
   }
 
   const openingTokens = [];
+  const manualOpeningTags = new Set();
   for (const token of markupTokens) {
     const mapping = contract.mappings.get(token.tag);
     const ecosystem = ecosystemForTag(token.tag);
     if (!isAutomatic(mapping)) {
+      if (mapping) noteRuntimeRequirements(mapping, token.nameStart);
+      if (token.closing && manualOpeningTags.has(token.tag)) continue;
+      if (!token.closing) manualOpeningTags.add(token.tag);
       usage[ecosystem].manual += 1;
       warn(
         token.nameStart,
         token.tag,
         null,
-        isBlockedAutomatic(mapping) ? 'MAPPING_REVIEW_BLOCKED' : warningCode(mapping),
+        isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
         mapping?.targetTag ?? null,
         isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
       );
@@ -1327,12 +1471,13 @@ export function migrateText(original, contract, options = {}) {
     const mapping = contract.mappings.get(reference.tag);
     const ecosystem = ecosystemForTag(reference.tag);
     if (!isAutomatic(mapping)) {
+      if (mapping) noteRuntimeRequirements(mapping, reference.start);
       usage[ecosystem].manual += 1;
       warn(
         reference.start,
         reference.tag,
         null,
-        isBlockedAutomatic(mapping) ? 'MAPPING_REVIEW_BLOCKED' : warningCode(mapping),
+        isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
         mapping?.targetTag ?? null,
         isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
       );
@@ -1634,14 +1779,29 @@ export function migrateText(original, contract, options = {}) {
 
     const upstreamTag = deepImportTag(imported.specifier, ecosystem);
     const mapping = upstreamTag ? contract.mappings.get(upstreamTag) : null;
+    if (mapping && !packageProvidesMapping(imported, mapping)) {
+      usage[ecosystem].manual += 1;
+      noteRuntimeRequirements(mapping, imported.start);
+      warn(
+        imported.start,
+        upstreamTag,
+        'module',
+        'PACKAGE_TIER_MISMATCH',
+        mapping.targetTag,
+        `${imported.packageName} does not provide the ${mapping.source.tier} ${upstreamTag} registration entry; use a package identity that provides that tier before migrating it.`,
+        ecosystem,
+      );
+      continue;
+    }
     if (!upstreamTag || !isAutomatic(mapping)) {
       usage[ecosystem].manual += 1;
+      if (mapping) noteRuntimeRequirements(mapping, imported.start);
       warn(
         imported.start,
         upstreamTag,
         'module',
         isBlockedAutomatic(mapping)
-          ? 'MAPPING_REVIEW_BLOCKED'
+          ? blockedWarningCode(mapping)
           : mapping
             ? warningCode(mapping)
             : 'UNRESOLVED_DEEP_IMPORT',
@@ -1657,6 +1817,7 @@ export function migrateText(original, contract, options = {}) {
     }
     usage[ecosystem].automatic += 1;
     noteAutomatic(mapping, imported.start);
+    deepRegistrationMappings.add(mapping.upstreamTag);
     const target = targetImport(mapping.target);
     addEdit(imported.start, imported.end, target, {
       upstreamTag,
@@ -1679,6 +1840,7 @@ export function migrateText(original, contract, options = {}) {
     blockedEcosystems,
     bareImportPackages,
     automaticMappings,
+    deepRegistrationMappings,
   };
 }
 
@@ -1745,6 +1907,7 @@ export function migrateFiles({
   const blockedEcosystems = new Set();
   const bareImportPackages = new Set();
   const automaticMappings = new Set();
+  const deepRegistrationMappings = new Set();
   const usage = {
     webawesome: { automatic: 0, manual: 0 },
     shoelace: { automatic: 0, manual: 0 },
@@ -1762,6 +1925,7 @@ export function migrateFiles({
     for (const ecosystem of analysis.blockedEcosystems) blockedEcosystems.add(ecosystem);
     for (const packageName of analysis.bareImportPackages) bareImportPackages.add(packageName);
     for (const upstreamTag of analysis.automaticMappings) automaticMappings.add(upstreamTag);
+    for (const upstreamTag of analysis.deepRegistrationMappings) deepRegistrationMappings.add(upstreamTag);
   }
   for (const packageName of bareImportPackages) {
     const identity = contract.packageIdentities.get(packageName);
@@ -1791,6 +1955,15 @@ export function migrateFiles({
       return [packageName, relevant];
     }),
   );
+  const provenRegistrationMappings = new Set(deepRegistrationMappings);
+  for (const packageName of rewriteBarePackages) {
+    for (const upstreamTag of rootRegistrationMappings.get(packageName) ?? []) {
+      provenRegistrationMappings.add(upstreamTag);
+    }
+  }
+  const registrationBlockedMappings = new Set(
+    [...automaticMappings].filter((upstreamTag) => !provenRegistrationMappings.has(upstreamTag)),
+  );
 
   const changes = [];
   const warnings = [];
@@ -1802,6 +1975,7 @@ export function migrateFiles({
       rootRegistrationMappings,
       blockedMappings,
       blockedEcosystems,
+      registrationBlockedMappings,
     });
     changes.push(...result.changes);
     warnings.push(...result.warnings);

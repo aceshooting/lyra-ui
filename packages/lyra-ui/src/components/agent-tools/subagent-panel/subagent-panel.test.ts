@@ -1,6 +1,48 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './subagent-panel.js';
 import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+type CssEscapeHost = { escape?: (identifier: string) => string };
+
+function createRealmFrame(): {
+  iframe: HTMLIFrameElement;
+  frameDocument: Document;
+  frameWindow: Window & typeof globalThis;
+} {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('Could not create an iframe realm for the subagent-panel test.');
+  }
+  return { iframe, frameDocument, frameWindow };
+}
+
+function replaceCssEscape(
+  target: CssEscapeHost,
+  replacement: CssEscapeHost['escape'],
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, 'escape');
+  Object.defineProperty(target, 'escape', {
+    configurable: true,
+    writable: true,
+    value: replacement,
+  });
+  return () => {
+    if (previous) Object.defineProperty(target, 'escape', previous);
+    else Reflect.deleteProperty(target, 'escape');
+  };
+}
+
+function sinkTexts(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
 
 const runs: SubagentRun[] = [
   { id: 'research', label: 'Researcher', status: 'running', task: 'Find sources', progress: 0.5 },
@@ -88,6 +130,23 @@ it('iteratively bounds a deeply nested hierarchy without overflowing the stack',
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
     'Only the first 500 subagent runs are shown.',
   );
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
+  expect(sinkTexts(), 'a hierarchy that mounts already truncated is not a live change').to.deep.equal([]);
+});
+
+it('announces a newly reached run ceiling through the shared light-DOM sink', async () => {
+  const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  el.runs = Array.from({ length: 501 }, (_, index) => ({
+    id: `run-${index}`,
+    label: `Run ${index}`,
+    status: 'done' as const,
+  }));
+  await el.updateComplete;
+
+  expect(sinkTexts()).to.deep.equal(['Only the first 500 subagent runs are shown.']);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
+  el.remove();
+  expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
 });
 
 it('moves roving tabindex through a nested hierarchy with ArrowDown/ArrowUp/Home/End', async () => {
@@ -148,6 +207,101 @@ it('moves roving tabindex through a nested hierarchy with ArrowDown/ArrowUp/Home
   expect(root.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement).to.equal(root);
   expect(tabbableCount()).to.equal(1);
+});
+
+it('uses the adopted owner realm CSS escape when keyboard focus targets a special run id', async () => {
+  const specialId = 'target\"] [data-run-id=\"decoy';
+  const adoptedRuns: SubagentRun[] = [
+    { id: 'start', label: 'Start', status: 'running' },
+    { id: specialId, label: 'Special', status: 'done' },
+    { id: 'decoy', label: 'Decoy', status: 'done' },
+  ];
+  const { iframe, frameDocument, frameWindow } = createRealmFrame();
+  const el = (await fixture(
+    html`<lr-subagent-panel .runs=${adoptedRuns}></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  el.remove();
+  frameDocument.adoptNode(el);
+  frameDocument.body.append(el);
+  await el.updateComplete;
+
+  const ownerEscape = frameWindow.CSS.escape.bind(frameWindow.CSS);
+  let ownerCalls = 0;
+  const restoreOwner = replaceCssEscape(frameWindow.CSS, (identifier) => {
+    ownerCalls += 1;
+    return ownerEscape(identifier);
+  });
+  const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+  try {
+    el.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!.dispatchEvent(
+      new frameWindow.KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(ownerCalls).to.equal(1);
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-run-id')).to.equal(specialId);
+  } finally {
+    restoreAmbient();
+    restoreOwner();
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('falls back to an exact run-id scan when adopted owner CSS escape is missing or throws', async () => {
+  const specialId = 'target\"] [data-run-id=\"decoy';
+  for (const mode of ['missing', 'throwing'] as const) {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-subagent-panel
+        .runs=${[
+          { id: 'start', label: 'Start', status: 'running' as const },
+          { id: specialId, label: 'Special', status: 'done' as const },
+          { id: 'decoy', label: 'Decoy', status: 'done' as const },
+        ]}
+      ></lr-subagent-panel>`,
+    )) as LyraSubagentPanel;
+    el.remove();
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+
+    let ownerCalls = 0;
+    const restoreOwner = replaceCssEscape(
+      frameWindow.CSS,
+      mode === 'missing'
+        ? undefined
+        : () => {
+            ownerCalls += 1;
+            throw new Error('owner CSS escape unavailable');
+          },
+    );
+    const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+    try {
+      el.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!.dispatchEvent(
+        new frameWindow.KeyboardEvent('keydown', {
+          key: 'ArrowDown',
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      await el.updateComplete;
+      await Promise.resolve();
+
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-run-id')).to.equal(specialId);
+      expect(ownerCalls).to.equal(mode === 'throwing' ? 1 : 0);
+    } finally {
+      restoreAmbient();
+      restoreOwner();
+      el.remove();
+      iframe.remove();
+    }
+  }
 });
 
 it('re-points roving tabindex to a surviving row when the focused row disappears from a runs update (regression)', async () => {

@@ -1,7 +1,35 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
+import { loadBoxPlotAndRegister } from './box-plot.class.js';
+import type { ChartJsModule } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
+
+function assertiveSink(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+}
+
+function assertiveTexts(doc: Document = document): string[] {
+  const sink = assertiveSink(doc);
+  return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
+
+function fakeChartModule(register: (...items: unknown[]) => void): ChartJsModule {
+  class FakeChart {
+    static register(...items: unknown[]): void { register(...items); }
+    constructor(_item: HTMLCanvasElement, _configuration: unknown) {}
+  }
+  return { Chart: FakeChart } as unknown as ChartJsModule;
+}
+
+function fakeBoxPlotModule() {
+  return {
+    BoxPlotController: class {},
+    BoxAndWiskers: class {},
+  };
+}
 
 // Deliberately the first test in the file: `loadBoxPlotPlugin()`/`loadChartJs()`
 // memoize their resolved promise at module scope, so once any other test in
@@ -9,9 +37,26 @@ import { styles } from './box-plot.styles.js';
 // `connectedCallback()`s resolve near-instantly and the initial "still
 // loading" render can no longer be observed.
 it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loads, then swaps to the canvas', async () => {
-  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`
+    <lr-box-plot .strings=${{ loading: 'Boxplot wird geladen' }}></lr-box-plot>
+  `)) as LyraBoxPlot;
+  const skeleton = el.shadowRoot!.querySelector('lr-skeleton') as LyraSkeleton;
+  await skeleton.updateComplete;
+
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
+  expect(skeleton.announce).to.be.false;
+  expect(skeleton.hasAttribute('role')).to.be.false;
+  expect(skeleton.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll(
+      '[role="status"], [role="alert"], [aria-live]:not([aria-live="off"])',
+    ).length,
+  ).to.equal(0);
+  const loadingLabel = el.shadowRoot!.querySelector('.sr-only') as HTMLElement | null;
+  expect(loadingLabel !== null, 'the parent must retain a non-live loading label').to.be.true;
+  expect(loadingLabel!.textContent).to.equal('Boxplot wird geladen');
+  expect(loadingLabel!.hasAttribute('role')).to.be.false;
+  expect(loadingLabel!.hasAttribute('aria-live')).to.be.false;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
   // `waitUntil`'s own default timeout (1000ms) is tighter than this codebase's
@@ -23,6 +68,66 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  const sink = assertiveSink();
+  expect(sink !== null, 'a connected box plot must acquire its sink before a peer failure').to.be
+    .true;
+  expect(sink!.getRootNode() === document, 'the alert sink must live in document light DOM').to.be
+    .true;
+  expect(assertiveTexts(), 'a successful initial mount must not announce an error').to.deep.equal([]);
+});
+
+it('normalizes and validates box-plot constructors before registering them', async () => {
+  const registrations: unknown[] = [];
+  const chart = fakeChartModule((...items) => registrations.push(...items));
+  const fallback = fakeBoxPlotModule();
+  expect(
+    (await loadBoxPlotAndRegister(
+      () => Promise.resolve(chart),
+      () => Promise.resolve({ default: fallback }),
+    )) === fallback,
+  ).to.be.true;
+
+  const named = fakeBoxPlotModule();
+  const mixed = Object.assign(named, { default: fallback });
+  expect(
+    (await loadBoxPlotAndRegister(
+      () => Promise.resolve(chart),
+      () => Promise.resolve(mixed),
+    )) === named,
+  ).to.be.true;
+  expect(registrations.length).to.equal(4);
+  expect(registrations[0] === fallback.BoxPlotController).to.be.true;
+  expect(registrations[1] === fallback.BoxAndWiskers).to.be.true;
+  expect(registrations[2] === named.BoxPlotController).to.be.true;
+  expect(registrations[3] === named.BoxAndWiskers).to.be.true;
+});
+
+it('fails closed with a clear Error for malformed named/default box-plot modules', async () => {
+  const chart = fakeChartModule(() => {
+    throw new Error('malformed capabilities must never be registered');
+  });
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    for (const [capability, malformed] of [
+      ['BoxPlotController', { BoxPlotController: () => ({}), BoxAndWiskers: class {} }],
+      ['BoxAndWiskers', { default: { BoxPlotController: class {}, BoxAndWiskers: null } }],
+    ] as const) {
+      warnings.length = 0;
+      const result = await loadBoxPlotAndRegister(
+        () => Promise.resolve(chart),
+        () => Promise.resolve(malformed),
+      );
+      expect(result === null, capability).to.be.true;
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error, capability).to.be.true;
+      expect(error!.message, capability).to.contain('@sgratzl/chartjs-chart-boxplot');
+      expect(error!.message, capability).to.contain(capability);
+    }
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin load', async () => {
@@ -251,7 +356,7 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
   expect((el as any).chart).to.equal(undefined);
 });
 
-it('fails closed with an accessible error when the boxplot peer fails after connect', async () => {
+it('fails closed with static visible error text and one light-DOM alert when the boxplot peer fails', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   // Let the real connectedCallback settle first. Calling the synthetic
   // failure after that avoids racing the module-scoped successful peer
@@ -262,8 +367,122 @@ it('fails closed with an accessible error when the boxplot peer fails after conn
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(error).to.exist;
-  expect(error.getAttribute('role')).to.equal('alert');
+  expect(error.hasAttribute('role'), 'the shadow error must not be a second alert').to.be.false;
+  expect(error.hasAttribute('aria-hidden'), 'the visible error must remain discoverable').to.be.false;
   expect(error.textContent!.trim()).to.not.equal('');
+  expect(assertiveTexts()).to.deep.equal([error.textContent!.trim()]);
+
+  await (el as any).onBoxPlotPluginLoaded(null);
+  await el.updateComplete;
+  expect(assertiveTexts(), 'the same settled failure state must not announce twice').to.have.length(1);
+});
+
+it('releases and reacquires its alert sink when adopted into another document', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+  document.body.appendChild(el);
+
+  try {
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    const originalSink = assertiveSink();
+    expect(originalSink !== null).to.be.true;
+
+    foreignDocument.adoptNode(el);
+    expect(originalSink!.isConnected, 'adoption must release the old document sink').to.be.false;
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    const adoptedSink = assertiveSink(foreignDocument);
+    expect(adoptedSink !== null, 'reconnect must acquire a sink in the adopted document').to.be.true;
+    expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
+    expect(assertiveTexts(foreignDocument), 'reconnect must not announce stale state').to.deep.equal(
+      [],
+    );
+
+    await (el as any).onBoxPlotPluginLoaded(null);
+    await el.updateComplete;
+    expect(assertiveTexts(foreignDocument)).to.have.length(1);
+    expect(assertiveTexts(), 'nothing may be announced into the old document').to.deep.equal([]);
+
+    el.remove();
+    expect(adoptedSink!.isConnected, 'disconnect must release the adopted document sink').to.be
+      .false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('rebinds its visibility observer, motion query, and style reads to its adopted document', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const foreignWindow = frame.contentWindow!;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [
+    { label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+  ];
+  document.body.appendChild(el);
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const OriginalIntersectionObserver = foreignWindow.IntersectionObserver;
+  const originalMatchMedia = foreignWindow.matchMedia;
+  const originalGetComputedStyle = foreignWindow.getComputedStyle;
+  let intersectionObservers = 0;
+  const mediaQueries: string[] = [];
+  let styleReads = 0;
+
+  class RealmIntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '0px';
+    readonly thresholds = [0];
+    constructor(_callback: IntersectionObserverCallback) {
+      intersectionObservers += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+
+  (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    RealmIntersectionObserver as unknown as typeof IntersectionObserver;
+  foreignWindow.matchMedia = ((query: string) => {
+    mediaQueries.push(query);
+    return {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener(): void {},
+      removeListener(): void {},
+      addEventListener(): void {},
+      removeEventListener(): void {},
+      dispatchEvent(): boolean { return true; },
+    };
+  }) as typeof matchMedia;
+  foreignWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    styleReads += 1;
+    return originalGetComputedStyle.call(foreignWindow, element, pseudo);
+  }) as typeof getComputedStyle;
+
+  try {
+    foreignDocument.adoptNode(el);
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    expect(intersectionObservers).to.equal(1);
+    (el as unknown as { buildConfig(): unknown }).buildConfig();
+    expect(mediaQueries).to.include('(prefers-reduced-motion: reduce)');
+    expect(styleReads).to.be.greaterThan(0);
+  } finally {
+    el.remove();
+    (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+      OriginalIntersectionObserver;
+    foreignWindow.matchMedia = originalMatchMedia;
+    foreignWindow.getComputedStyle = originalGetComputedStyle;
+    frame.remove();
+  }
 });
 
 it('does not bundle lr-chart\'s unused reset-zoom-button styles', () => {

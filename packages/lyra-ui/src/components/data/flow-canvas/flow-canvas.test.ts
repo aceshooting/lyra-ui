@@ -4,6 +4,30 @@ import '../../overlays/empty/empty.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { styles } from './flow-canvas.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
+function transformCoordinates(value: string): [number, number] {
+  const match = value.match(/^translate\(([-\d.]+)px(?:,\s*([-\d.]+)px)?\)$/);
+  return match ? [Number(match[1]), Number(match[2] ?? 0)] : [Number.NaN, Number.NaN];
+}
 
 it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid bounds', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -51,6 +75,308 @@ it('is accessible in the empty state', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('announces through a pre-mounted light-DOM sink and retains only an aria-hidden shadow mirror', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.nodes = nodes;
+  await el.updateComplete;
+  const mirror = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+  expect(sinkTexts(), 'mounting data must not announce an initial state').to.deep.equal([]);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+
+  const announcer = (el as unknown as {
+    announcer: { announce(text: string, options: { force: true }): void };
+  }).announcer;
+  announcer.announce('Repeated flow update', { force: true });
+  announcer.announce('Repeated flow update', { force: true });
+  expect(sinkTexts()).to.deep.equal(['Repeated flow update', 'Repeated flow update']);
+  await el.updateComplete;
+  expect(mirror.textContent?.trim()).to.equal('Repeated flow update');
+
+  el.remove();
+  expect(sinkElement() === null).to.be.true;
+});
+
+it('re-targets announcements to the adopted owner document', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  try {
+    frameDocument.body.append(el);
+    (el as unknown as {
+      announcer: { announce(text: string, options: { force: true }): void };
+    }).announcer.announce('Frame flow update', { force: true });
+    expect(sinkElement() === null, 'the original document must release its sink').to.be.true;
+    expect(sinkTexts(frameDocument)).to.deep.equal(['Frame flow update']);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('schedules and cancels coalesced announcements with the adopted document window', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  const clears: number[] = [];
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    if (typeof handler === 'function') callbacks.set(91, handler);
+    return 91;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) {
+      clears.push(handle);
+      callbacks.delete(handle);
+    }
+  }) as typeof ownerWindow.clearTimeout;
+
+  try {
+    iframe.contentDocument!.body.append(el);
+    (el as unknown as { announcer: { announce(text: string): void } }).announcer.announce('frame flow update');
+    expect(callbacks.has(91), 'the adopted window must schedule the announcement').to.be.true;
+
+    el.remove();
+    expect(clears).to.include(91);
+    expect(callbacks.size).to.equal(0);
+  } finally {
+    el.remove();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
+    iframe.remove();
+  }
+});
+
+it('uses the adopted realm for observers, frames, node creation, and pointer listeners', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalResizeObserver = ownerWindow.ResizeObserver;
+  const originalRequestAnimationFrame = ownerWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = ownerWindow.cancelAnimationFrame;
+  const originalAddEventListener = ownerWindow.addEventListener;
+  const originalRemoveEventListener = ownerWindow.removeEventListener;
+  const originalCreateElement = ownerDocument.createElement;
+  const frameCallbacks = new Map<number, FrameRequestCallback>();
+  const canceledFrames: number[] = [];
+  const addedPointerListeners: string[] = [];
+  const removedPointerListeners: string[] = [];
+  let nextFrame = 200;
+  let observerConstructions = 0;
+  let observerDisconnects = 0;
+  let frameNodeCreations = 0;
+
+  class FrameResizeObserver {
+    constructor(_callback: ResizeObserverCallback) { observerConstructions++; }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void { observerDisconnects++; }
+  }
+  ownerWindow.ResizeObserver = FrameResizeObserver as unknown as typeof ResizeObserver;
+  ownerWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    const handle = ++nextFrame;
+    frameCallbacks.set(handle, callback);
+    return handle;
+  }) as typeof ownerWindow.requestAnimationFrame;
+  ownerWindow.cancelAnimationFrame = ((handle: number) => {
+    canceledFrames.push(handle);
+    frameCallbacks.delete(handle);
+  }) as typeof ownerWindow.cancelAnimationFrame;
+  ownerWindow.addEventListener = function (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+    if (type.startsWith('pointer') || type === 'lostpointercapture') addedPointerListeners.push(type);
+    originalAddEventListener.call(ownerWindow, type, listener, options);
+  } as typeof ownerWindow.addEventListener;
+  ownerWindow.removeEventListener = function (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) {
+    if (type.startsWith('pointer') || type === 'lostpointercapture') removedPointerListeners.push(type);
+    originalRemoveEventListener.call(ownerWindow, type, listener, options);
+  } as typeof ownerWindow.removeEventListener;
+  ownerDocument.createElement = function <K extends keyof HTMLElementTagNameMap>(
+    name: K,
+    options?: ElementCreationOptions,
+  ): HTMLElementTagNameMap[K] {
+    if (name === 'lr-flow-node') {
+      frameNodeCreations++;
+      // A plain stand-in keeps this realm-ownership test focused on which document constructs the
+      // default card. Lit's shared constructed stylesheet cannot itself be adopted across documents.
+      return originalCreateElement.call(ownerDocument, 'div') as HTMLElementTagNameMap[K];
+    }
+    return originalCreateElement.call(ownerDocument, name, options);
+  } as typeof ownerDocument.createElement;
+
+  try {
+    ownerDocument.adoptNode(el);
+    el.connectable = true;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    ownerDocument.body.append(el);
+    await el.updateComplete;
+
+    expect(observerConstructions).to.equal(1);
+    expect(frameNodeCreations).to.be.greaterThan(0);
+    el.zoomIn();
+    expect(frameCallbacks.size).to.be.greaterThan(0);
+
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = ownerDocument.createElement('div');
+    outputHandle.dataset.handleKind = 'output';
+    outputHandle.dataset.handleId = 'out';
+    wrapper.append(outputHandle);
+    outputHandle.dispatchEvent(
+      new ownerWindow.PointerEvent('pointerdown', {
+        pointerId: 41,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(addedPointerListeners).to.include('pointermove');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
+
+    el.remove();
+    expect(observerDisconnects).to.equal(1);
+    expect(canceledFrames.length).to.be.greaterThan(0);
+    expect(frameCallbacks.size).to.equal(0);
+    expect(removedPointerListeners).to.include('pointermove');
+  } finally {
+    el.remove();
+    ownerWindow.ResizeObserver = originalResizeObserver;
+    ownerWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    ownerWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    ownerWindow.addEventListener = originalAddEventListener;
+    ownerWindow.removeEventListener = originalRemoveEventListener;
+    ownerDocument.createElement = originalCreateElement;
+    iframe.remove();
+  }
+});
+
+it('uses owner CSS escaping and an exact-id fallback for adopted keyboard, drag, and connect paths', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalAmbientEscape = window.CSS.escape;
+  const originalOwnerEscape = ownerWindow.CSS.escape;
+  const sourceId = 'source\" ] owner';
+  const targetId = 'target\" ] owner';
+  const edgeId = 'edge\" ] owner';
+  let ownerEscapeCalls = 0;
+
+  try {
+    window.CSS.escape = () => {
+      throw new Error('ambient CSS.escape must not be used');
+    };
+    ownerWindow.CSS.escape = (value: string): string => {
+      ownerEscapeCalls += 1;
+      return originalOwnerEscape(value);
+    };
+
+    for (const id of [sourceId, targetId]) {
+      const card = document.createElement('div');
+      card.setAttribute('node-id', id);
+      el.append(card);
+    }
+    el.nodesDraggable = true;
+    el.connectable = true;
+    el.nodes = [
+      { id: sourceId, position: { x: 0, y: 0 } },
+      { id: targetId, position: { x: 200, y: 0 } },
+    ];
+    el.edges = [{ id: edgeId, source: sourceId, target: targetId }];
+    ownerDocument.body.append(ownerDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const wrappers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-node-id]')];
+    const sourceWrapper = wrappers.find((candidate) => candidate.dataset['nodeId'] === sourceId)!;
+    const targetWrapper = wrappers.find((candidate) => candidate.dataset['nodeId'] === targetId)!;
+    const sourceControl = sourceWrapper.querySelector('[part="node-control"]') as HTMLElement;
+    const targetControl = targetWrapper.querySelector('[part="node-control"]') as HTMLElement;
+    const edgeGroup = [...el.shadowRoot!.querySelectorAll<SVGElement>('[data-edge-id]')]
+      .find((candidate) => candidate.getAttribute('data-edge-id') === edgeId)!;
+    const edgePath = edgeGroup.querySelector('[part="edge"]') as SVGPathElement;
+
+    sourceControl.dispatchEvent(new ownerWindow.KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === targetControl).to.be.true;
+    expect(ownerEscapeCalls).to.be.greaterThan(0);
+
+    ownerWindow.CSS.escape = () => {
+      throw new Error('unusable owner CSS.escape must fall back to an exact scan');
+    };
+    targetControl.dispatchEvent(new ownerWindow.KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === edgePath).to.be.true;
+
+    (ownerWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
+    sourceWrapper.setPointerCapture = () => {};
+    const originalPath = edgePath.getAttribute('d');
+    sourceWrapper.dispatchEvent(new ownerWindow.PointerEvent('pointerdown', {
+      pointerId: 71,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+    }));
+    ownerWindow.dispatchEvent(new ownerWindow.PointerEvent('pointermove', {
+      pointerId: 71,
+      clientX: 40,
+      clientY: 0,
+    }));
+    expect(edgePath.getAttribute('d')).to.not.equal(originalPath);
+    ownerWindow.dispatchEvent(new ownerWindow.PointerEvent('pointerup', {
+      pointerId: 71,
+      clientX: 40,
+      clientY: 0,
+    }));
+
+    el.nodesDraggable = false;
+    const outputHandle = ownerDocument.createElement('div');
+    outputHandle.dataset['handleKind'] = 'output';
+    outputHandle.dataset['handleId'] = 'out';
+    sourceWrapper.append(outputHandle);
+    outputHandle.dispatchEvent(new ownerWindow.PointerEvent('pointerdown', {
+      pointerId: 72,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+      composed: true,
+    }));
+    await el.updateComplete;
+    outputHandle.dispatchEvent(new ownerWindow.PointerEvent('pointermove', {
+      pointerId: 72,
+      clientX: 2,
+      clientY: 0,
+      bubbles: true,
+      composed: true,
+    }));
+    expect(sourceWrapper.hasAttribute('data-connect-invalid')).to.be.true;
+    ownerWindow.dispatchEvent(new ownerWindow.PointerEvent('pointercancel', { pointerId: 72 }));
+    expect(sourceWrapper.hasAttribute('data-connect-invalid')).to.be.false;
+  } finally {
+    el.remove();
+    window.CSS.escape = originalAmbientEscape;
+    ownerWindow.CSS.escape = originalOwnerEscape;
+    iframe.remove();
+  }
+});
+
 // Compile-time only: proves the shared shapes this task exports match what later tasks in this
 // plan rely on. Never executed.
 function _typeCheck(edge: FlowEdge): void {
@@ -67,10 +393,12 @@ const nodes: FlowNode[] = [
 const edges: FlowEdge[] = [{ id: 'a-b', source: 'a', target: 'b', label: 'then' }];
 
 function nodeControl(el: LyraFlowCanvas, id?: string): HTMLButtonElement {
-  const selector = id
-    ? `[part="node"][data-node-id="${CSS.escape(id)}"] [part="node-control"]`
-    : '[part="node-control"]';
-  return el.shadowRoot!.querySelector(selector) as HTMLButtonElement;
+  if (id !== undefined) {
+    const wrapper = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"][data-node-id]')]
+      .find((candidate) => candidate.dataset['nodeId'] === id);
+    return wrapper?.querySelector('[part="node-control"]') as HTMLButtonElement;
+  }
+  return el.shadowRoot!.querySelector('[part="node-control"]') as HTMLButtonElement;
 }
 
 describe('static rendering', () => {
@@ -240,8 +568,8 @@ describe('auto-layout', () => {
     // Chromium's CSSOM canonicalizes a `translate()` transform's serialized form with a space after
     // each comma regardless of how it was set (Lit's literal `translate(${x}px,${y}px)` attribute
     // string included) -- corrected from the plan brief's literal no-space expectation to match the
-    // real browser's `style.transform` getter output (verified by actually running this test).
-    expect(wrapper.style.transform).to.equal('translate(40px, 40px)');
+    // Compare coordinates rather than engine-specific CSSOM serialization.
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([40, 40]);
   });
 
   it('assigns a position to every unpositioned node and fires lr-layout-change with exactly those ids', async () => {
@@ -273,11 +601,8 @@ describe('auto-layout', () => {
     // orientation the same downstream relationship must advance along y instead.
     const hB = horizontalEl.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
     const vB = verticalEl.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
-    // Same Chromium serialization-with-a-space caveat as above -- the regex tolerates optional
-    // whitespace after the comma instead of assuming none.
-    const parse = (t: string) => t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)!.slice(1).map(Number);
-    const [hx] = parse(hB.style.transform);
-    const [, vy] = parse(vB.style.transform);
+    const [hx] = transformCoordinates(hB.style.transform);
+    const [, vy] = transformCoordinates(vB.style.transform);
     expect(hx).to.be.greaterThan(0);
     expect(vy).to.be.greaterThan(0);
   });
@@ -292,7 +617,7 @@ describe('auto-layout', () => {
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
-    expect(wrapperA.style.transform).to.equal('translate(40px, 40px)');
+    expect(transformCoordinates(wrapperA.style.transform)).to.deep.equal([40, 40]);
   });
 
   it('keeps stable node wrapper DOM identity across a nodes reorder (repeat() keying)', async () => {
@@ -738,11 +1063,10 @@ describe('node drag', () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
-    // Space-after-comma per Chromium's `style.transform` serialization -- see the earlier note.
-    expect(wrapper.style.transform).to.equal('translate(40px, 0px)');
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([40, 0]);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40, clientY: 0 }));
     await el.updateComplete;
-    expect(wrapper.style.transform).to.equal('translate(0px, 0px)');
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
   });
 
   it('rolls back node and edge previews without emitting a move when the drag is canceled', async () => {
@@ -766,17 +1090,17 @@ describe('node drag', () => {
         new PointerEvent('pointerdown', { pointerId, clientX: 0, clientY: 0, bubbles: true }),
       );
       window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 40, clientY: 0 }));
-      expect(wrapper.style.transform, endType).to.equal('translate(40px, 0px)');
+      expect(transformCoordinates(wrapper.style.transform), endType).to.deep.equal([40, 0]);
       expect(path.getAttribute('d'), endType).to.not.equal(originalPath);
 
       window.dispatchEvent(new PointerEvent(endType, { pointerId }));
       await el.updateComplete;
 
       expect(moves, endType).to.equal(0);
-      expect(wrapper.style.transform, endType).to.equal('translate(0px, 0px)');
+      expect(transformCoordinates(wrapper.style.transform), endType).to.deep.equal([0, 0]);
       expect(path.getAttribute('d'), endType).to.equal(originalPath);
       window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 80, clientY: 0 }));
-      expect(wrapper.style.transform, endType).to.equal('translate(0px, 0px)');
+      expect(transformCoordinates(wrapper.style.transform), endType).to.deep.equal([0, 0]);
     }
   });
 
@@ -788,7 +1112,7 @@ describe('node drag', () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
-    expect(wrapper.style.transform).to.equal('translate(0px, 0px)');
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40, clientY: 0 }));
   });
 
@@ -800,7 +1124,7 @@ describe('node drag', () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
-    expect(wrapper.style.transform).to.equal('translate(0px, 0px)');
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
   });
 
   it('Ctrl/Cmd+Arrow nudges the focused node by grid and emits lr-node-move', async () => {
@@ -1378,6 +1702,45 @@ describe('registerCompanion & decorations', () => {
       window.matchMedia = originalMatchMedia;
     }
   });
+
+  it('uses the adopted owner window for both decoration pushes and later edge renders', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+    const path = () => el.shadowRoot!.querySelector('[part="edge"]')!;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      el.nodes = nodes;
+      el.edges = edges;
+      el.decorations = { 'a-b': { status: 'running' } };
+      document.body.append(el);
+      await el.updateComplete;
+      expect(path().hasAttribute('data-running')).to.be.true;
+
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      el.decorations = { 'a-b': { status: 'success' } };
+      await el.updateComplete;
+      el.decorations = { 'a-b': { status: 'running' } };
+      await el.updateComplete;
+      expect(path().hasAttribute('data-running-static')).to.be.true;
+      expect(path().hasAttribute('data-running')).to.be.false;
+
+      el.edges = [{ ...edges[0]!, label: 'rerendered' }];
+      await el.updateComplete;
+      expect(path().hasAttribute('data-running-static')).to.be.true;
+      expect(path().hasAttribute('data-running')).to.be.false;
+    } finally {
+      el.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      frame.remove();
+    }
+  });
 });
 
 describe('locked (consolidated)', () => {
@@ -1403,7 +1766,7 @@ describe('locked (consolidated)', () => {
     wrapperA.setPointerCapture = () => {};
     wrapperA.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
-    expect(wrapperA.style.transform).to.equal('translate(0px, 0px)');
+    expect(transformCoordinates(wrapperA.style.transform)).to.deep.equal([0, 0]);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40, clientY: 0 }));
 
     // Connect: 'c' does not enter connect mode.

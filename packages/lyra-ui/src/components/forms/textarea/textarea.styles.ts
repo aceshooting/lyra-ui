@@ -136,8 +136,8 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  /* Polite announcements only -- the visible [part='count'] beside it carries the same text for
-     sighted users, so this copy is removed from the visual layout without leaving the a11y tree. */
+  /* Inspection mirror only -- the visible [part='count'] carries the same text for sighted users,
+     while the spoken copy is appended to the shared light-DOM polite sink. */
   .count-announcement {
     position: absolute;
     inline-size: var(--lr-size-1px);

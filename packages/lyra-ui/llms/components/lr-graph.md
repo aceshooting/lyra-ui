@@ -2,7 +2,7 @@
 
 # `lr-graph`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-graph.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGraph`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -115,9 +115,10 @@ Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), 
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `error` (`role="alert"` message shown instead of the graph when
-the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load —
-distinct from the empty state, which means the peers loaded fine but `nodes` is empty),
+`live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
+the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load; that transition is
+announced through a shared assertive light-DOM region — distinct from the empty state, which means
+the peers loaded fine but `nodes` is empty),
 `canvas`/`tooltip`/`cursor-items`/`cursor-item`
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
@@ -189,10 +190,12 @@ localized `part="error"` alert. Install with
 - zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive); pan/
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
-- while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows a
-  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
-  example, because they are not installed), the graph fails closed with a localized
-  `part="error"` / `role="alert"` message instead of leaving an empty SVG.
+- while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows an
+  unannounced decorative `<lr-skeleton>` sized to `width`/`height` plus an ordinary visually hidden,
+  localized loading label; the graph host itself carries `aria-busy="true"`. If the peers fail to
+  load (for example, because they are not installed), the graph fails closed with a localized
+  neutral `part="error"` message and announces the transition through a shared assertive light-DOM
+  region instead of leaving an empty SVG.
 - `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
   ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every

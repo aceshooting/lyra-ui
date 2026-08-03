@@ -145,7 +145,7 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   // Compares a part name/tag, not the live DOM nodes directly -- a direct `.to.equal()` between
   // two DOM nodes serializes both sides via structuredClone if the assertion ever fails, which
   // throws on a DOM node and silently drops the failure message, hanging the whole test session
-  // until the 180s watchdog kills it (see AGENTS.md's testing-conventions digest).
+  // until the per-file watchdog kills it (see AGENTS.md's testing-conventions digest).
   const active = el.shadowRoot!.activeElement;
   expect(active?.tagName).to.equal('DIV');
   expect(active?.getAttribute('part')?.split(/\s+/)).to.include('panel');
@@ -424,6 +424,48 @@ it('keeps the dialog name synchronized when an already-slotted heading text node
   expect(panel.getAttribute('aria-label')).to.equal('Updated heading');
 });
 
+it('recreates its heading observer in the adopted owner realm', async () => {
+  const el = (await fixture(html`<lr-dialog><h2>Owner heading</h2></lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let observations = 0;
+  let disconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private observesHeading = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === el && options?.childList && options.characterData && options.subtree) {
+        this.observesHeading = true;
+        observations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesHeading) disconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(observations, 'the destination window observes dialog headings').to.equal(1);
+    document.adoptNode(el);
+    expect(disconnects, 'adoption disconnects the old owner observer').to.equal(1);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('renders a visible header with the heading text and uses it for aria-labelledby when no heading is slotted', async () => {
   const el = (await fixture(html`<lr-dialog heading="Title">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
@@ -523,6 +565,18 @@ it('renders the mapped visible label and close affordance by default', async () 
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part~="heading"]')?.textContent).to.equal('Untitled');
   expect(el.shadowRoot!.querySelector('[part~="close-button"]')).to.exist;
+});
+
+it('renders a per-instance .strings override in the close button accessible name', async () => {
+  const el = (await fixture(html`
+    <lr-dialog .strings=${{ close: 'Fermer' }}>Body</lr-dialog>
+  `)) as LyraDialog;
+  const buttons = el.shadowRoot!.querySelectorAll<HTMLElement>(
+    '[part~="close-button"]',
+  );
+
+  expect(buttons.length).to.equal(1);
+  expect(buttons[0]!.getAttribute('aria-label')).to.equal('Fermer');
 });
 
 it('renders a close button when closable is set, which closes the dialog via the same close() path as Escape/backdrop', async () => {

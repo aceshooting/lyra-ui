@@ -2,7 +2,7 @@
 
 # `lr-ebook-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-ebook-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEbookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -48,10 +48,12 @@ clears the query, matches, and painted search annotation.
 applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 
-**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; loading text owns `role="status"`),
+**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
+non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
-announce through).
+`mount`, `error` (ordinary visible text; later error transitions use the shared document-level
+assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
+compatibility; search results are appended to the shared document-level polite sink).
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain

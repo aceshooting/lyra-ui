@@ -6,6 +6,11 @@ import { styles } from './model-settings-panel.styles.js';
 import type { LyraModelCatalog } from '../model-select/model-select.class.js';
 import '../model-select/model-select.class.js';
 import '../../forms/slider/slider.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ModelSettingsPanelLayout = 'vertical' | 'compact';
 
@@ -59,6 +64,20 @@ const DEFAULT_TEMPERATURE = 1;
  * @since 4.0.0
  */
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    selectModel: LYRA_DEFAULT_selectModel,
+    temperature: LYRA_DEFAULT_temperature,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Informational provider badge, passed straight through to the internal `lr-model-select`. */

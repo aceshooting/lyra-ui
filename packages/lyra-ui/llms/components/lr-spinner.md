@@ -2,7 +2,7 @@
 
 # `lr-spinner`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/spinner/spinner.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-spinner.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSpinner`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/spinner/spinner.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -15,20 +15,28 @@
 
 ## `lr-spinner`
 
-An indeterminate busy indicator with a localized `role="status"` name.
+An indeterminate busy indicator with a localized, deliberately non-live `role="progressbar"`
+name. Mounting ordinary loading UI therefore does not create a false status announcement.
 
 **Properties:** `labelPlacement: 'none' | 'after' = 'none'` (attribute `label-placement`, reflected)
 and `accessibleLabel: string | null = null` (attribute **`aria-label`**, not `accessible-label`) —
-names `[part="base"]`'s `role="status"`; unset falls back to the localized "Loading…".
+names `[part="base"]`'s `role="progressbar"`; unset falls back to the localized "Loading…".
 
 **Events:** none.
 
 **Slots:** default — optional label text. `label-placement="after"` renders it inline next to the
-indicator and its text becomes the status name unless `aria-label` overrides it. `'none'` (the
-default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
-the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
+indicator and its visible accessible text becomes the progressbar name unless `aria-label`
+overrides it. Hidden, inert, `display:none`, `content-visibility:hidden`, and `aria-hidden`
+descendants are excluded from that name. A `visibility:hidden|collapse` wrapper suppresses its own
+text while a descendant that restores `visibility:visible` remains part of the name.
+These rules and live mutation tracking cross nested forwarding slots, including assigned-node
+replacement; no wrapper re-render is required.
+`'none'` (the default) applies the native `hidden` state to the label wrapper, removing it from both
+rendering and the accessibility tree; the progressbar then uses `aria-label` or the localized
+"Loading…" fallback.
 
-**CSS parts:** `base` and `spinner` are aliases on the same `role="status"` outer wrapper;
+**CSS parts:** `base` and `spinner` are aliases on the same indeterminate `role="progressbar"`
+outer wrapper (no `aria-valuenow` and no live-region semantics);
 `spinner-indicator` is the animated `aria-hidden` ring, and `label` is the default-slot wrapper.
 
 **Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both

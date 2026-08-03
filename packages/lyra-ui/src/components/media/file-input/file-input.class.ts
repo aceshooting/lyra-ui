@@ -4,7 +4,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import {
@@ -25,6 +25,11 @@ import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type DragState = 'default' | 'accept' | 'reject';
 export type LyraFileInputCapture = '' | 'user' | 'environment';
@@ -35,6 +40,38 @@ const INTERACTIVE_CONTENT_SELECTOR =
   'a[href], area[href], button, input, select, textarea, summary, ' +
   '[contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], ' +
   '[tabindex]:not([tabindex="-1"])';
+
+function isElementTarget(value: EventTarget): value is Element {
+  const candidate = value as Partial<Element> & { nodeType?: number };
+  return candidate.nodeType === 1 && typeof candidate.matches === 'function';
+}
+
+function isFileValue(value: unknown): value is File {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    const candidate = value as Partial<File>;
+    return Object.prototype.toString.call(value) === '[object File]'
+      && typeof candidate.name === 'string'
+      && typeof candidate.lastModified === 'number'
+      && typeof candidate.size === 'number'
+      && typeof candidate.type === 'string'
+      && typeof candidate.slice === 'function';
+  } catch {
+    return false;
+  }
+}
+
+function isFormDataValue(value: unknown): value is FormData {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    const candidate = value as Partial<FormData>;
+    return Object.prototype.toString.call(value) === '[object FormData]'
+      && typeof candidate.append === 'function'
+      && typeof candidate.values === 'function';
+  } catch {
+    return false;
+  }
+}
 
 export interface RejectedFile {
   file: File;
@@ -128,6 +165,35 @@ export interface LyraFileInputEventMap {
  * @since 4.0.0
  */
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    dropzoneRejectedType: LYRA_DEFAULT_dropzoneRejectedType,
+    dropzoneReleaseToAdd: LYRA_DEFAULT_dropzoneReleaseToAdd,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    fileInputAcceptedMany: LYRA_DEFAULT_fileInputAcceptedMany,
+    fileInputAcceptedOne: LYRA_DEFAULT_fileInputAcceptedOne,
+    fileInputDefaultLabel: LYRA_DEFAULT_fileInputDefaultLabel,
+    fileInputFolderRejected: LYRA_DEFAULT_fileInputFolderRejected,
+    fileInputRejectedCount: LYRA_DEFAULT_fileInputRejectedCount,
+    fileInputRejectedMany: LYRA_DEFAULT_fileInputRejectedMany,
+    fileInputRejectedOne: LYRA_DEFAULT_fileInputRejectedOne,
+    fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
+    fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    open: LYRA_DEFAULT_open,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles, srOnly];
 
@@ -207,18 +273,20 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private announcementsArmed = false;
   private _name: string | null = null;
   private _files: File[] = [];
+  private _fileCount = 0;
   private _disabled = false;
   private _required = false;
   private validationTargetOverride?: HTMLElement;
   private _fieldsetDisabled = false;
-  private thumbnailUrls = new Map<File, string>();
+  private thumbnailUrls = new Map<File, { url: string; owner: typeof URL; revoke: () => void }>();
 
   constructor() {
     super();
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue(null);
   }
 
@@ -265,22 +333,37 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
   set files(next: File[]) {
     const old = this._files;
-    const valid = Array.isArray(next) ? next.filter((file): file is File => file instanceof File) : [];
+    const valid = Array.isArray(next) ? next.filter(isFileValue) : [];
     this._files = this.multiple ? [...valid] : valid.slice(0, 1);
+    this.fileCount = this._files.length;
     this.syncThumbnailUrls();
     this.syncFormValue();
     this.updateValidity();
     this.requestUpdate('files', old);
   }
 
+  /** Public file-count state. Real file writes resynchronize it to `files.length`.
+   * @default 0 */
   get fileCount(): number {
-    return this._files.length;
+    return this._fileCount;
+  }
+  set fileCount(next: number) {
+    const old = this._fileCount;
+    this._fileCount = finiteCount(next, this._files.length);
+    this.requestUpdate('fileCount', old);
   }
 
-  /** Whether a file drag session is active. Reflected read-only state.
+  /** Whether a file drag session is active. A consumer write uses the accepting visual state;
+   * the next real drag event resumes ownership of the accept/reject distinction.
    * @default false */
   get dragging(): boolean {
     return this.dragState !== 'default';
+  }
+  set dragging(next: boolean) {
+    const active = Boolean(next);
+    if (active === this.dragging) return;
+    this.dragState = active ? 'accept' : 'default';
+    this.publishCustomStates();
   }
 
   /** Disables every interactive sub-control.
@@ -350,14 +433,20 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all, and a
     // drag can start in the same task this element is appended in.
-    this.politeSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
+    this.politeSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override disconnectedCallback(): void {
     this.dropToken++;
     this.resetDragSession();
-    for (const url of this.thumbnailUrls.values()) URL.revokeObjectURL(url);
+    for (const thumbnail of this.thumbnailUrls.values()) thumbnail.revoke();
     this.thumbnailUrls.clear();
     this.politeSink?.release();
     this.politeSink = undefined;
@@ -388,13 +477,17 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private syncFormValue(): void {
     if (!this.name || this._files.length === 0) {
-      const state = this.multiple ? new FormData() : (this._files[0] ?? null);
+      const state = this.multiple ? this.createFormData() : (this._files[0] ?? null);
       this.internals.setFormValue(null, state);
       return;
     }
     if (this.multiple) {
-      const submitted = new FormData();
-      const state = new FormData();
+      const submitted = this.createFormData();
+      const state = this.createFormData();
+      if (!submitted || !state) {
+        this.internals.setFormValue(null);
+        return;
+      }
       for (const file of this._files) {
         submitted.append(this.name, file);
         state.append('file', file);
@@ -404,6 +497,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     }
     const file = this._files[0] ?? null;
     this.internals.setFormValue(file, file);
+  }
+
+  private createFormData(): FormData | null {
+    const FormDataCtor = this.ownerDocument?.defaultView?.FormData;
+    return FormDataCtor ? new FormDataCtor() : null;
   }
 
   /**
@@ -466,13 +564,17 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.resultStatus = '';
   }
 
-  formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
-    if (state instanceof File) {
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
+    if (isFileValue(state)) {
       this.files = [state];
       return;
     }
-    if (state instanceof FormData) {
-      this.files = [...state.values()].filter((value): value is File => value instanceof File);
+    if (isFormDataValue(state)) {
+      this.files = [...state.values()].filter(isFileValue);
       return;
     }
     this.files = [];
@@ -490,19 +592,32 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private syncThumbnailUrls(): void {
-    const canCreate = typeof URL.createObjectURL === 'function';
-    const canRevoke = typeof URL.revokeObjectURL === 'function';
-    for (const [file, url] of this.thumbnailUrls) {
-      if (!this._files.includes(file)) {
-        if (canRevoke) URL.revokeObjectURL(url);
+    const urlApi = this.ownerDocument.defaultView?.URL ?? globalThis.URL;
+    const canCreate = typeof urlApi.createObjectURL === 'function';
+    const canRevoke = typeof urlApi.revokeObjectURL === 'function';
+    let changed = false;
+    for (const [file, thumbnail] of this.thumbnailUrls) {
+      if (!this._files.includes(file) || thumbnail.owner !== urlApi) {
+        thumbnail.revoke();
         this.thumbnailUrls.delete(file);
+        changed = true;
       }
     }
-    if (!canCreate) return;
-    for (const file of this._files) {
-      if (!file.type.startsWith('image/') || this.thumbnailUrls.has(file)) continue;
-      this.thumbnailUrls.set(file, URL.createObjectURL(file));
+    if (canCreate) {
+      for (const file of this._files) {
+        if (!file.type.startsWith('image/') || this.thumbnailUrls.has(file)) continue;
+        const url = urlApi.createObjectURL(file);
+        this.thumbnailUrls.set(file, {
+          url,
+          owner: urlApi,
+          revoke: canRevoke ? () => urlApi.revokeObjectURL(url) : () => undefined,
+        });
+        changed = true;
+      }
     }
+    // The map is not a reactive field. Reconnection and never-connected cross-document adoption
+    // can replace a URL without changing `files`, so explicitly repaint the rendered `<img src>`.
+    if (changed) this.requestUpdate();
   }
 
   /** `maxFileSize` normalized: `0` (explicitly set, or left at the default) or `Infinity`
@@ -714,7 +829,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       });
       return;
     }
-    const rejectedFolders = folders.map((folder) => ({ file: new File([], folder.name), reason: 'directory' as const }));
+    const FileCtor = this.ownerDocument.defaultView?.File ?? globalThis.File;
+    const rejectedFolders = folders.map((folder) => ({
+      file: new FileCtor([], folder.name),
+      reason: 'directory' as const,
+    }));
     if (files.length || rejectedFolders.length) this.emitFiles(files, rejectedFolders);
   };
 
@@ -760,7 +879,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // in arbitrary slotted content keeps its own click instead of also opening the file picker.
     if (
       path.includes(this.baseEl as EventTarget) ||
-      path.some((node) => node instanceof Element && node.matches(INTERACTIVE_CONTENT_SELECTOR))
+      path.some((node) => isElementTarget(node) && node.matches(INTERACTIVE_CONTENT_SELECTOR))
     ) {
       return;
     }
@@ -801,7 +920,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private renderFile(file: File, index: number): TemplateResult {
-    const thumbnail = this.thumbnailUrls.get(file);
+    const thumbnail = this.thumbnailUrls.get(file)?.url;
     return html`<div part="file">
       <span part="file-thumbnail" aria-hidden="true">
         ${thumbnail

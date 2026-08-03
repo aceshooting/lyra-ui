@@ -2,7 +2,7 @@
 
 # `lr-attachment-trigger`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-attachment-trigger.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAttachmentTrigger`, also available unregistered from `@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -47,12 +47,12 @@ async function dataGrid(
 const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
-  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+function sinkElement(politeness: 'polite' | 'assertive', doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
 }
 
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = sinkElement(politeness);
+function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
+  const element = sinkElement(politeness, doc);
   return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
@@ -87,6 +87,50 @@ it('announces a second identical copy again instead of silently rewriting one te
     sinkTexts('polite'),
     'an identical repeat must be a second addition so assistive tech reads it again',
   ).to.deep.equal(['Copied!', 'Copied!']);
+});
+
+it('keeps declarative loading silent and makes the visible shadow overlay non-live', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid loading label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const overlay = element.shadowRoot!.querySelector('[part="loading-overlay"]') as HTMLElement;
+  expect(sinkTexts('polite'), 'initial loading must not announce during mount').to.deep.equal([]);
+  expect(overlay.getAttribute('role')).to.equal(null);
+  expect(overlay.getAttribute('aria-live')).to.equal(null);
+  expect(element.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-busy')).to.equal('true');
+});
+
+it('announces every post-mount transition into loading as a new light-DOM addition', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  for (let cycle = 0; cycle < 2; cycle++) {
+    element.loading = true;
+    await element.updateComplete;
+    element.loading = false;
+    await element.updateComplete;
+  }
+  expect(sinkTexts('polite')).to.deep.equal(['Loading…', 'Loading…']);
+  expect(element.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('Loading…');
+});
+
+it('re-targets loading announcements after cross-document adoption', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  try {
+    frameDocument.body.append(element);
+    element.loading = true;
+    await element.updateComplete;
+    expect(sinkElement('polite') === null, 'the old document releases the adopted grid').to.be.true;
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(['Loading…']);
+  } finally {
+    element.remove();
+    iframe.remove();
+  }
 });
 
 it('ref-counts the shared sink away once the last grid disconnects', async () => {
@@ -154,6 +198,25 @@ it('exposes the exact public defaults', async () => {
   expect(element.withColumnsMenu).to.equal(false);
   expect(element.withoutSortRemoval).to.equal(false);
   expect(element.withSearch).to.equal(false);
+});
+
+it('maps writable selectedRows onto current source-row keys', async () => {
+  const rows = [
+    { id: 1, name: 'Ada', team: 'Compiler', score: 7 },
+    { id: 2, name: 'Grace', team: 'Compiler', score: 9 },
+  ];
+  const element = await dataGrid(html`<lr-data-grid row-key="id" .data=${rows}></lr-data-grid>`);
+
+  element.selectedRows = [rows[1]!, { id: 99, name: 'Detached', team: 'None', score: 0 }];
+  await element.updateComplete;
+  expect(element.selectedKeys).to.deep.equal([2]);
+  expect(element.selectedRows).to.deep.equal([rows[1]]);
+
+  element.selectable = 'single';
+  element.selectedRows = [rows[0]!, rows[1]!];
+  await element.updateComplete;
+  expect(element.selectedKeys).to.deep.equal([1]);
+  expect(element.selectedRows).to.deep.equal([rows[0]]);
 });
 
 it('reflects the documented attribute surface and treats a bare selectable as multiple', async () => {
@@ -896,6 +959,189 @@ it('auto-sizes bounded columns and distributes body width by flex', async () => 
   expect(Object.keys(element.getState().widths!)).to.have.members(['name', 'team']);
 });
 
+it('resolves sizing and virtualization styles through the adopted owner window', async () => {
+  const manyRows: Person[] = Array.from({ length: 100 }, (_value, index) => ({
+    id: index,
+    name: `Owner ${index}`,
+    team: 'Realm',
+    score: index,
+  }));
+  const sizingColumns: DataGridColumn<Person>[] = [
+    { id: 'name', field: 'name', label: 'Name', flex: 1 },
+    { id: 'team', field: 'team', label: 'Team', flex: 1 },
+  ];
+  const element = await dataGrid();
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+
+  element.remove();
+  frameDocument.adoptNode(element);
+  element.columns = sizingColumns;
+  element.data = manyRows;
+  element.rowKey = 'id';
+  element.selectable = 'multiple';
+  element.setState({ pinning: { name: 'left', team: 'left' } });
+  frameDocument.documentElement.style.fontSize = '10px';
+
+  const ambientGetComputedStyle = window.getComputedStyle;
+  const ownerGetComputedStyle = frameWindow.getComputedStyle;
+  let ambientStyleReads = 0;
+  let ownerStyleReads = 0;
+  let maxHeight = '200px';
+  window.getComputedStyle = (() => {
+    ambientStyleReads += 1;
+    throw new Error('ambient getComputedStyle must not inspect an adopted data grid');
+  }) as typeof window.getComputedStyle;
+  frameWindow.getComputedStyle = ((target: Element, pseudoElement?: string | null) => {
+    ownerStyleReads += 1;
+    const style = ownerGetComputedStyle.call(frameWindow, target, pseudoElement);
+    if (target !== element) return style;
+    return new Proxy(style, {
+      get(cssStyle, property) {
+        if (property === 'getPropertyValue') {
+          return (name: string): string => {
+            if (name === '--lr-icon-button-size') return '2rem';
+            if (name === '--row-height') return '2rem';
+            if (name === '--max-height') return maxHeight;
+            if (name === '--lr-size-7rem') return '7rem';
+            return cssStyle.getPropertyValue(name);
+          };
+        }
+        const value = Reflect.get(cssStyle, property, cssStyle) as unknown;
+        return typeof value === 'function' ? value.bind(cssStyle) : value;
+      },
+    });
+  }) as typeof frameWindow.getComputedStyle;
+
+  try {
+    frameDocument.body.append(element);
+    await element.updateComplete;
+
+    const pinnedTeam = header(element, 'team');
+    expect(pinnedTeam.style.getPropertyValue('--pin-offset')).to.equal('70px');
+    expect(element.shadowRoot!.querySelectorAll('[part~="row"][data-visible-index]').length)
+      .to.be.lessThan(80);
+
+    const body = element.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    Object.defineProperty(body, 'clientWidth', { configurable: true, value: 600 });
+    Object.defineProperty(body, 'clientHeight', { configurable: true, value: 100 });
+    let scrollTop = -1;
+    Object.defineProperty(body, 'scrollTo', {
+      configurable: true,
+      value: (options: ScrollToOptions) => {
+        scrollTop = Number(options.top ?? 0);
+      },
+    });
+
+    element.sizeColumnsToFit();
+    expect(element.getState().widths).to.deep.equal({ name: 290, team: 290 });
+    element.scrollToIndex(90, { align: 'start' });
+    expect(scrollTop).to.equal(1800);
+
+    maxHeight = 'none';
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelectorAll('[part~="row"][data-visible-index]').length).to.equal(100);
+    expect(ownerStyleReads).to.be.greaterThan(0);
+    expect(ambientStyleReads).to.equal(0);
+
+    element.remove();
+    const ownerlessDocument = frameDocument.implementation.createHTMLDocument('ownerless grid');
+    ownerlessDocument.adoptNode(element);
+    element.resetColumns();
+    expect(() => element.sizeColumnsToFit()).to.not.throw();
+    expect(element.getState().widths).to.deep.equal({ name: 300, team: 300 });
+    element.resetColumns();
+    const internals = element as unknown as {
+      readonly resolvedRowHeight: number;
+      readonly virtualWindow: { items: unknown[] };
+      estimatedColumnWidth(column: DataGridColumn<Person>, id: string): number;
+    };
+    expect(internals.resolvedRowHeight).to.equal(56);
+    expect(internals.estimatedColumnWidth(sizingColumns[0]!, 'name')).to.equal(112);
+    expect(() => internals.virtualWindow.items.length).to.not.throw();
+    expect(ambientStyleReads, 'an ownerless grid must not borrow the ambient style realm').to.equal(0);
+  } finally {
+    element.remove();
+    window.getComputedStyle = ambientGetComputedStyle;
+    frameWindow.getComputedStyle = ownerGetComputedStyle;
+    frame.remove();
+  }
+});
+
+it('uses owner CSS escaping and an exact-id fallback for adopted column sizing and resize', async () => {
+  const columnId = 'name\"] [data-column-id="other';
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Adopted sizing"
+      resizable
+      .columns=${[{ id: columnId, field: 'name', label: 'Name' }]}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+  const ambientEscape = window.CSS.escape;
+  const ownerEscape = frameWindow.CSS.escape;
+  let ownerEscapeCalls = 0;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(element));
+    await element.updateComplete;
+    window.CSS.escape = () => {
+      throw new Error('ambient CSS.escape must not be used');
+    };
+    frameWindow.CSS.escape = (value: string): string => {
+      ownerEscapeCalls += 1;
+      return ownerEscape.call(frameWindow.CSS, value);
+    };
+
+    const matching = [...element.shadowRoot!.querySelectorAll<HTMLElement>('[data-column-id]')]
+      .filter((candidate) => candidate.dataset.columnId === columnId);
+    for (const cell of matching) {
+      Object.defineProperty(cell, 'scrollWidth', { configurable: true, value: 173 });
+    }
+    element.autoSizeColumn(columnId);
+    expect(ownerEscapeCalls).to.be.greaterThan(0);
+    expect(element.getState().widths?.[columnId]).to.equal(173);
+
+    (frameWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
+    element.resetColumns();
+    element.autoSizeColumn(columnId);
+    expect(element.getState().widths?.[columnId]).to.equal(173);
+
+    const ownerHeader = [...element.shadowRoot!.querySelectorAll<HTMLElement>('[role="columnheader"]')]
+      .find((candidate) => candidate.dataset.columnId === columnId);
+    if (!ownerHeader) throw new Error('The adopted column header was unavailable.');
+    ownerHeader.getBoundingClientRect = () => new frameWindow.DOMRect(0, 0, 125, 20);
+    const handle = ownerHeader.querySelector('[part="resize-handle"]') as HTMLElement;
+    handle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      pointerId: 71,
+      clientX: 10,
+      bubbles: true,
+      composed: true,
+    }));
+    handle.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 71,
+      clientX: 20,
+      bubbles: true,
+      composed: true,
+    }));
+    expect(element.getState().widths?.[columnId]).to.equal(135);
+  } finally {
+    frameWindow.CSS.escape = ownerEscape;
+    window.CSS.escape = ambientEscape;
+    element.remove();
+    frame.remove();
+  }
+});
+
 it('serializes, validates, applies, and resets view state without losing page or selection', async () => {
   const element = await dataGrid(html`
     <lr-data-grid label="Stateful people" row-key="id" .columns=${columns} .data=${rows}></lr-data-grid>
@@ -1049,6 +1295,277 @@ it('honors exact CSV/copy/export options, compatibility aliases, and formula esc
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
     HTMLAnchorElement.prototype.click = originalAnchorClick;
+  }
+});
+
+it('uses the adopted owner realm for clipboard, fallback DOM, Blob, URL, and download anchor', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const element = await dataGrid(html`
+    <lr-data-grid label="Owner export" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+  const originalMainCreate = URL.createObjectURL;
+  const originalMainRevoke = URL.revokeObjectURL;
+  const originalFrameCreate = frameWindow.URL.createObjectURL;
+  const originalFrameRevoke = frameWindow.URL.revokeObjectURL;
+  const originalFrameBlob = frameWindow.Blob;
+  const originalFrameClick = frameWindow.HTMLAnchorElement.prototype.click;
+  const originalMainExec = document.execCommand;
+  const originalFrameExec = frameDocument.execCommand;
+  let mainWrites = 0;
+  const frameWrites: string[] = [];
+  let frameBlobConstructions = 0;
+  let mainObjectUrls = 0;
+  let frameObjectUrls = 0;
+  let revoked = '';
+  let downloaded = '';
+  let fallbackText = '';
+
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+  });
+  Object.defineProperty(frameWindow.navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+  });
+  URL.createObjectURL = () => { mainObjectUrls++; return 'blob:wrong-realm'; };
+  URL.revokeObjectURL = () => undefined;
+  frameWindow.Blob = new Proxy(originalFrameBlob, {
+    construct(target, args, newTarget) {
+      frameBlobConstructions++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof Blob;
+  frameWindow.URL.createObjectURL = () => { frameObjectUrls++; return 'blob:owner-data-grid'; };
+  frameWindow.URL.revokeObjectURL = (url: string) => { revoked = url; };
+  frameWindow.HTMLAnchorElement.prototype.click = function click(): void {
+    downloaded = `${this.ownerDocument === frameDocument ? 'owner' : 'wrong'}:${this.download}`;
+  };
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(element));
+    await element.updateComplete;
+    element.copySelectedRows({ includeHeaders: false });
+    await Promise.resolve();
+    expect(mainWrites).to.equal(0);
+    expect(frameWrites).to.have.length(1);
+
+    element.exportDataAsCsv({ fileName: 'owner.csv' });
+    expect(mainObjectUrls).to.equal(0);
+    expect(frameObjectUrls).to.equal(1);
+    expect(frameBlobConstructions).to.equal(1);
+    expect(downloaded).to.equal('owner:owner.csv');
+    expect(revoked).to.equal('blob:owner-data-grid');
+
+    Object.defineProperty(frameWindow.navigator, 'clipboard', { configurable: true, value: undefined });
+    document.execCommand = (() => { throw new Error('ambient document used'); }) as typeof document.execCommand;
+    frameDocument.execCommand = ((command: string): boolean => {
+      if (command === 'copy') {
+        fallbackText = frameDocument.body.querySelector<HTMLTextAreaElement>(':scope > textarea')?.value ?? '';
+      }
+      return true;
+    }) as typeof frameDocument.execCommand;
+    element.copySelectedRows({ includeHeaders: false });
+    expect(fallbackText).to.include('Ada\tCompiler\t7');
+    expect(frameDocument.body.querySelector(':scope > textarea') === null).to.equal(true);
+  } finally {
+    element.remove();
+    if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+    if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+    else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+    URL.createObjectURL = originalMainCreate;
+    URL.revokeObjectURL = originalMainRevoke;
+    frameWindow.URL.createObjectURL = originalFrameCreate;
+    frameWindow.URL.revokeObjectURL = originalFrameRevoke;
+    frameWindow.Blob = originalFrameBlob;
+    frameWindow.HTMLAnchorElement.prototype.click = originalFrameClick;
+    document.execCommand = originalMainExec;
+    frameDocument.execCommand = originalFrameExec;
+    frame.remove();
+  }
+});
+
+it('does not use ambient clipboard or object URLs from an ownerless document', () => {
+  const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const originalCreateObjectUrl = URL.createObjectURL;
+  let writes = 0;
+  let objectUrls = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => { writes++; return Promise.resolve(); } },
+  });
+  URL.createObjectURL = () => { objectUrls++; return 'blob:ambient'; };
+  try {
+    const element = document.createElement('lr-data-grid') as LyraDataGrid<Person>;
+    ownerlessDocument.adoptNode(element);
+    element.columns = columns;
+    element.data = rows;
+    element.copySelectedRows({ includeHeaders: false });
+    element.exportDataAsCsv();
+    expect(writes).to.equal(0);
+    expect(objectUrls).to.equal(0);
+  } finally {
+    if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+    URL.createObjectURL = originalCreateObjectUrl;
+  }
+});
+
+it('uses exact owner timers and AbortController for server work and retires them on adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const element = await dataGrid(html`
+    <lr-data-grid label="Owner server" .columns=${columns}></lr-data-grid>
+  `);
+  const nativeMainSet = window.setTimeout;
+  const nativeMainClear = window.clearTimeout;
+  const nativeFrameSet = frameWindow.setTimeout;
+  const nativeFrameClear = frameWindow.clearTimeout;
+  const NativeMainAbort = window.AbortController;
+  const NativeFrameAbort = frameWindow.AbortController;
+  let mainTimers = 0;
+  let frameTimers = 0;
+  let mainControllers = 0;
+  let frameControllers = 0;
+  const frameCancelled: number[] = [];
+  let oldTimerCallback: (() => void) | undefined;
+  const timerHandle = 9137;
+  let requests = 0;
+  let requestSignal: AbortSignal | undefined;
+
+  window.setTimeout = (() => { mainTimers++; return 7137; }) as typeof window.setTimeout;
+  window.clearTimeout = (() => undefined) as typeof window.clearTimeout;
+  frameWindow.setTimeout = ((handler: TimerHandler) => {
+    frameTimers++;
+    if (typeof handler === 'function') oldTimerCallback = handler;
+    return timerHandle;
+  }) as typeof frameWindow.setTimeout;
+  frameWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) frameCancelled.push(handle);
+  }) as typeof frameWindow.clearTimeout;
+  window.AbortController = new Proxy(NativeMainAbort, {
+    construct(target, args, newTarget) {
+      mainControllers++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof AbortController;
+  frameWindow.AbortController = new Proxy(NativeFrameAbort, {
+    construct(target, args, newTarget) {
+      frameControllers++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof AbortController;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(element));
+    await element.updateComplete;
+    element.dataSource = (request) => {
+      requests++;
+      requestSignal = request.signal;
+      return new Promise(() => undefined);
+    };
+    await element.updateComplete;
+    expect(mainTimers).to.equal(0);
+    expect(frameTimers).to.equal(1);
+
+    void element.reload();
+    expect(frameCancelled).to.include(timerHandle);
+    expect(mainControllers).to.equal(0);
+    expect(frameControllers).to.equal(1);
+    expect(requestSignal instanceof frameWindow.AbortSignal).to.be.true;
+    expect(requests).to.equal(1);
+
+    document.body.append(document.adoptNode(element));
+    expect(requestSignal!.aborted).to.be.true;
+    oldTimerCallback?.();
+    await Promise.resolve();
+    expect(requests, 'the retired owner callback must not start another request').to.equal(1);
+  } finally {
+    element.remove();
+    window.setTimeout = nativeMainSet;
+    window.clearTimeout = nativeMainClear;
+    frameWindow.setTimeout = nativeFrameSet;
+    frameWindow.clearTimeout = nativeFrameClear;
+    window.AbortController = NativeMainAbort;
+    frameWindow.AbortController = NativeFrameAbort;
+    frame.remove();
+  }
+});
+
+it('accepts foreign-realm event targets and ignores nested interactive activations', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const interactiveColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', sortable: true, filterable: true },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="Foreign events" .columns=${interactiveColumns} .data=${rows}></lr-data-grid>
+  `);
+  const internals = element as unknown as {
+    applySearchTermChange(value: string | Event): void;
+    onPageSizeChange(event: Event): void;
+    onBodyScroll(event: Event): void;
+    onHeaderClick(event: MouseEvent, id: string): void;
+    onCellClick(event: MouseEvent, item: unknown, column: DataGridColumn<Person>, index: number): void;
+    processedClientRows: Array<{ kind: 'row'; row: Person }>;
+    bodyScrollTop: number;
+  };
+
+  try {
+    const search = frameDocument.createElement('input');
+    search.value = 'foreign search';
+    search.addEventListener('input', (event) => internals.applySearchTermChange(event));
+    search.dispatchEvent(new frameWindow.Event('input'));
+    expect(element.searchTerm).to.equal('foreign search');
+
+    const pageSize = frameDocument.createElement('select');
+    pageSize.append(new frameWindow.Option('1', '1'));
+    pageSize.value = '1';
+    pageSize.addEventListener('change', (event) => internals.onPageSizeChange(event));
+    pageSize.dispatchEvent(new frameWindow.Event('change'));
+    expect(element.pageSize).to.equal(1);
+
+    const body = frameDocument.createElement('div');
+    Object.defineProperties(body, {
+      scrollTop: { configurable: true, value: 37 },
+      clientHeight: { configurable: true, value: 90 },
+    });
+    body.addEventListener('scroll', (event) => internals.onBodyScroll(event));
+    body.dispatchEvent(new frameWindow.Event('scroll'));
+    expect(internals.bodyScrollTop).to.equal(37);
+
+    const header = frameDocument.createElement('div');
+    const filterButton = frameDocument.createElement('button');
+    header.append(filterButton);
+    header.addEventListener('click', (event) => internals.onHeaderClick(event, 'name'));
+    filterButton.click();
+    expect(element.sort).to.deep.equal([]);
+
+    const cell = frameDocument.createElement('div');
+    const nestedButton = frameDocument.createElement('button');
+    cell.append(nestedButton);
+    let cellEvents = 0;
+    element.addEventListener('lr-cell-click', () => cellEvents++);
+    const rowItem = internals.processedClientRows[0]!;
+    cell.addEventListener('click', (event) => {
+      internals.onCellClick(event, rowItem, interactiveColumns[0]!, 0);
+    });
+    nestedButton.click();
+    expect(cellEvents).to.equal(0);
+  } finally {
+    element.remove();
+    frame.remove();
   }
 });
 

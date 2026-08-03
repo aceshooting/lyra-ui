@@ -9,6 +9,11 @@ import { styles } from './avatar-group.styles.js';
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
 // component must not do: consumers register `lr-avatar` themselves.
 import type { AvatarSize, AvatarShape, AvatarVariant, LyraAvatar } from '../avatar/avatar.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface AvatarGroupOverflowClickDetail {
   hiddenCount: number;
@@ -87,6 +92,15 @@ export interface LyraAvatarGroupEventMap {
  * @since 4.0.0
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
+    showMoreCount: LYRA_DEFAULT_showMoreCount,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _max?: number;

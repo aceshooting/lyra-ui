@@ -7,6 +7,11 @@ import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; 'lr-invalid': CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
@@ -63,6 +68,16 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @since 4.0.0
  */
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    codeEditorLabel: LYRA_DEFAULT_codeEditorLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property() language = '';
   @property({ converter: trueDefaultBooleanConverter, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;

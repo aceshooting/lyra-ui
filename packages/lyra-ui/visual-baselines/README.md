@@ -1,9 +1,13 @@
 # Visual-regression baselines
 
-PNG screenshots that `scripts/visual-regression.mjs` diffs new Storybook captures against. Each
-reviewed story id has a subdirectory containing `light.png`, `dark.png`, and `rtl.png` — see the
-harness's own header comment for exactly what each of those three axes holds. A newly enrolled
-story intentionally fails as `new` until its three captures are reviewed and promoted.
+PNG screenshots that `scripts/visual-regression.mjs` diffs new Storybook captures against.
+`manifest.json` is the authority for story enrollment, light/dark/RTL plus targeted real
+forced-colors and 320px narrow axes, and reasoned per-profile exemptions. Each story id has a
+subdirectory containing its historical light/dark/RTL baselines. Forced-colors and narrow pixels
+are ephemeral evidence (`artifactPolicy: "evidence-only"`), so CI executes their semantic probes
+without requiring an unreviewed PNG to be committed. A story whose current pixels await review can
+likewise declare `comparisonPolicy: "evidence-only"` with a reason while retaining its historical
+baseline. Capture generation never marks pixels as human-reviewed.
 
 ## Reproducibility vs. correctness
 
@@ -20,12 +24,16 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. The configured v8 matrix is 83 stories x 3 axes (249 captures); the story
-list in the harness remains the authority when that count changes. The CI step
-(`.github/workflows/ci.yml`) is wired as a blocking merge gate rather than `continue-on-error`: a
-missing or newly enrolled baseline is also a failure until someone reviews and promotes it. If a
-reviewed baseline starts flaking with no corresponding source change, chase down the new
-determinism gap rather than reverting to non-blocking.
+spiral-search layout. The configured v8 matrix is 83 stories and 253 live captures: all 83 exercise
+light, dark, and RTL; two chart fixtures and one intrinsic-color fixture add forced-colors, and one
+responsive fixture adds the narrow axis. While human review is pending, 207 captures compare with
+the retained tracked baselines and 46 are semantic, nonblank, or painted-pixel evidence only (42
+current light/dark/RTL changes plus four forced-colors/narrow captures). `manifest.json` computes
+that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
+semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
+pending-review exemption all fail. Evidence-only pixels are written to the ignored output directory
+and never silently promoted. If a reviewed baseline starts flaking with no corresponding source
+change, chase down the determinism gap rather than weakening the comparison.
 
 ## Reviewing and promoting baselines
 
@@ -42,25 +50,60 @@ determinism gap rather than reverting to non-blocking.
    # a human-readable summary lands in:
    #   packages/lyra-ui/.visual-diff-output/summary.md
    ```
-3. Once a set of baselines has been visually confirmed correct, regenerate them (or accept new
-   ones for a story this harness didn't have a baseline for yet) with:
+3. A human reviews the exact files under `.visual-diff-output/current`. For the reviewed scope,
+   update `baselineReview` to `complete` with the real reviewer/date and set
+   `provenance.humanVisualReview` to `true`. Remove that story's `comparisonPolicy` exemption; to
+   begin tracking a reviewed forced-colors/narrow axis, deliberately change its `artifactPolicy`
+   to `tracked-baseline`. Then promote the already-reviewed candidate files with the same filter:
    ```bash
    pnpm --filter @aceshooting/lyra-ui test:visual -- --update-snapshots
    ```
-   This overwrites (or creates) `<story-id>/<axis>.png` for every story currently sampled by the
-   harness with a fresh capture. Review the resulting `git diff` (these are binary PNGs, so review
-   by opening the images / using a PR's image-diff view, not `git diff` text output) before
-   committing — the flag does not itself imply the new capture is correct, only that it should
-   replace whatever was there before.
+   Promotion does not launch the browser or recapture. It verifies each candidate's SHA-256 against
+   the preceding run's `report.json`, then copies those exact reviewed bytes. It refuses to run while
+   review is pending, when a candidate is missing, or when a candidate changed after the report.
+   Review the resulting binary diff once more before committing and return the manifest to
+   `pending-human-review` when later source changes create another unreviewed visual delta.
 4. To limit a run to one component while iterating, use
    `pnpm --filter @aceshooting/lyra-ui test:visual -- --filter <substring>` (matches against the
    Storybook story id, e.g. `--filter checkbox`).
+5. CI partitions the expanded story/axis inventory into three deterministic, balanced shards. To
+   reproduce one shard locally, use:
+   ```bash
+   VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
+     pnpm --filter @aceshooting/lyra-ui test:visual
+   ```
+   Sharding is applied after `--filter`, uses one-based coordinates, and writes under
+   `.visual-diff-output/shard-<index>-of-<total>/` so local shard evidence does not overwrite an
+   unsharded report. Snapshot promotion deliberately rejects shard coordinates because review and
+   promotion require one complete, hash-bound candidate report.
 
 ## Coverage
 
-The harness intentionally does not screenshot every component in this repo — see the story-id list
-and its header comment in `../scripts/visual-regression.mjs` for the risk-weighted sample (form
-controls, overlays/dialogs, data-viz, viewers, layout primitives, and the newly stable visible v8
-surfaces) and why. To extend coverage, add more `<title>--<name>` story ids from
-`storybook-static/index.json` to that list; each new id automatically produces a blocking `new`
-result until someone runs `--update-snapshots` and reviews the three images.
+The harness intentionally does not screenshot every component in this repo. See `manifest.json`
+for the risk-weighted sample (form controls, overlays/dialogs, data-viz, viewers, layout
+primitives, and the newly stable visible v8 surfaces), its coverage profiles, and every axis
+exemption. To extend coverage, add another `<title>--<name>` story id from
+`storybook-static/index.json` to the manifest and select a profile. A new tracked capture produces a
+blocking `new` result; an evidence-only capture runs its assertions and stays under
+`.visual-diff-output/evidence/` until a human explicitly promotes that axis.
+
+The runner expands the 83 stories into 253 capture axes before partitioning. Its three CI shards
+contain 85, 84, and 84 captures; the blocking unit/config tests prove the shards are deterministic,
+disjoint, exhaustive, and balanced without changing the 207 retained-baseline plus 46
+evidence-only policy.
+
+Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow
+trees and document portals, proves that each manifest-enrolled `lr-*` tag is present and registered,
+waits for updates, and rejects a screenshot with no meaningful painted pixels. Every forced-colors
+capture confirms that the browser's media feature is active; targeted probes also sample the
+color-picker grid's chromatic pixels and compare eight chart legend patterns as rendered PNGs. The
+narrow probe proves a real 320px-or-smaller viewport and rejects horizontal overflow. These guards
+prevent an inert, blank, flattened, or overflowed fixture from becoming self-consistent evidence.
+They still do not establish visual correctness.
+
+`baselineReview` deliberately remains `pending-human-review`, with a null reviewer and timestamp,
+until an actual human reviews the images. Automated inspection, including inspection by an AI
+coding agent, must not change that status or be described as human/design approval.
+The adjacent `provenance` object is explicitly scoped to ephemeral automated evidence and records
+its generator, browser version, platform, and source-tree state. A dirty source tree is recorded as
+dirty rather than being represented by a commit that never contained the rendered work.

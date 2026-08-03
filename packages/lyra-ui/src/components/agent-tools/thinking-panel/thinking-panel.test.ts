@@ -346,6 +346,79 @@ describe('body keyboard accessibility', () => {
   });
 });
 
+it('rebinds content observation and animation frames to its owner realm across adoption', async () => {
+  const el = (await fixture(
+    html`<lr-thinking-panel expanded>reasoning</lr-thinking-panel>`,
+  )) as LyraThinkingPanel;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+  let contentMutationCallback: MutationCallback | undefined;
+  let observerDisconnects = 0;
+  const frames = new Map<number, FrameRequestCallback>();
+  const cancelledFrames: number[] = [];
+  class OwnerMutationObserver implements MutationObserver {
+    private readonly callback: MutationCallback;
+    private observesContent = false;
+    constructor(callback: MutationCallback) {
+      this.callback = callback;
+    }
+    observe(target: Node): void {
+      if (target === el) {
+        this.observesContent = true;
+        contentMutationCallback = this.callback;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void {
+      if (this.observesContent) observerDisconnects += 1;
+    }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    frames.set(71, callback);
+    return 71;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((handle: number): void => {
+    cancelledFrames.push(handle);
+    frames.delete(handle);
+  }) as typeof frameWindow.cancelAnimationFrame;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(contentMutationCallback, 'the adopted window constructs the content observer').to.be.a('function');
+    contentMutationCallback!([], {} as MutationObserver);
+    const staleFrame = frames.get(71);
+    expect(staleFrame, 'the observer schedules through the adopted window').to.be.a('function');
+
+    document.adoptNode(el);
+    expect(observerDisconnects, 'adoption disconnects the old observer').to.equal(1);
+    expect(cancelledFrames, 'adoption cancels the old owner frame').to.deep.equal([71]);
+    let scrollCalls = 0;
+    el.scrollToBottom = () => { scrollCalls += 1; };
+    staleFrame!(0);
+    expect(scrollCalls, 'a stale old-realm callback cannot mutate the adopted element').to.equal(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 describe('body scroll containment', () => {
   it('sets overscroll-behavior: contain on the scrollable body', async () => {
     const el = (await fixture(html`<lr-thinking-panel expanded></lr-thinking-panel>`)) as LyraThinkingPanel;

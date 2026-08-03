@@ -5,6 +5,11 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_checkpointConfirmPrompt, LYRA_DEFAULT_checkpointLabel, LYRA_DEFAULT_checkpointRestore, LYRA_DEFAULT_checkpointRestoreWithContext, LYRA_DEFAULT_checkpointRestoring, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface CheckpointRestoreDetail {
   checkpointId: string;
@@ -75,6 +80,20 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @since 4.0.0
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    cancel: LYRA_DEFAULT_cancel,
+    checkpointConfirmPrompt: LYRA_DEFAULT_checkpointConfirmPrompt,
+    checkpointLabel: LYRA_DEFAULT_checkpointLabel,
+    checkpointRestore: LYRA_DEFAULT_checkpointRestore,
+    checkpointRestoreWithContext: LYRA_DEFAULT_checkpointRestoreWithContext,
+    checkpointRestoring: LYRA_DEFAULT_checkpointRestoring,
+    confirm: LYRA_DEFAULT_confirm,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Opaque id echoed in the `lr-restore` event detail. */

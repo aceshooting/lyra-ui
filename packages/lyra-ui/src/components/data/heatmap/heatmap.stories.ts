@@ -85,7 +85,7 @@ export const CustomTheme: Story = {
 
 /**
  * Hover a cell for its tooltip, tab to the grid and use the arrow keys to
- * move the focus ring (a visually-hidden live region announces each move),
+ * move the focus ring (the shared light-DOM polite sink announces each move),
  * and click or press Enter/Space on a cell to see its `lr-cell-click`
  * detail logged below.
  */
@@ -181,7 +181,7 @@ export const Selection: Story = {
 };
 
 /**
- * `cellText` overrides the built-in English tooltip/live-region template —
+ * `cellText` overrides the built-in English tooltip/keyboard-announcement template —
  * here with a French translation — for both matrix and calendar modes.
  */
 export const CustomCellText: Story = {

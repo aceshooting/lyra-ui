@@ -4,10 +4,10 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
-import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
+import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -15,6 +15,12 @@ import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_CELLS = 2000;
 const MAX_OUTPUTS = 20_000;
@@ -163,6 +169,7 @@ export interface LyraNotebookViewerEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 // Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
@@ -202,6 +209,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   matchCount, activeIndex }`.
  * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ *   call is applied. Non-cancelable. `detail: { found }`.
  * @csspart base - The root scroll container.
  * @csspart cell - One cell row (`data-cell-type`, `data-active`).
  * @csspart cell-active - Added alongside `cell` on the cell currently targeted by an anchor or the
@@ -225,7 +234,41 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerBase) {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    notebookViewerCodeCell: LYRA_DEFAULT_notebookViewerCodeCell,
+    notebookViewerCollapseOutput: LYRA_DEFAULT_notebookViewerCollapseOutput,
+    notebookViewerErrorOutput: LYRA_DEFAULT_notebookViewerErrorOutput,
+    notebookViewerInPrompt: LYRA_DEFAULT_notebookViewerInPrompt,
+    notebookViewerInPromptEmpty: LYRA_DEFAULT_notebookViewerInPromptEmpty,
+    notebookViewerInvalid: LYRA_DEFAULT_notebookViewerInvalid,
+    notebookViewerLabel: LYRA_DEFAULT_notebookViewerLabel,
+    notebookViewerMarkdownCell: LYRA_DEFAULT_notebookViewerMarkdownCell,
+    notebookViewerRawCell: LYRA_DEFAULT_notebookViewerRawCell,
+    notebookViewerShowAllOutput: LYRA_DEFAULT_notebookViewerShowAllOutput,
+    notebookViewerTooManyCells: LYRA_DEFAULT_notebookViewerTooManyCells,
+    notebookViewerUnrenderedOutput: LYRA_DEFAULT_notebookViewerUnrenderedOutput,
+    notebookViewerUnsupportedVersion: LYRA_DEFAULT_notebookViewerUnsupportedVersion,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   /** URL to fetch and parse as a notebook. Ignored once `notebook` is set. */
   @property() src = '';
@@ -276,6 +319,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   private generation = 0;
   private sanitizerGeneration = 0;
   private sanitizerFailureReported = false;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   /** `outputCollapseLines`, normalized to a finite non-negative integer (falling back to the
    *  property's own default of `40`) -- a raw `NaN` (e.g. an invalid `output-collapse-lines`
@@ -287,11 +331,17 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.loadState.kind,
+      this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src') && !this._notebook) this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && this._notebook === undefined) {
       this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
     }
@@ -311,7 +361,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
     if (this._notebook === undefined) this.loadState = { kind: 'idle' };
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   private parseInline(): void {
@@ -338,8 +393,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       this.loadState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.loadState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -347,7 +402,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     }
     this.loadState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
@@ -610,8 +665,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         if (!sanitizer && !this.sanitizerFailureReported) {
           this.sanitizerFailureReported = true;
+          const message = this.localize('documentViewerMissingSanitizer');
+          this.announcements.announceAssertive(message);
           this.emit('lr-render-error', {
-            error: new LyraUserFacingError(this.localize('documentViewerMissingSanitizer')),
+            error: new LyraUserFacingError(message),
           });
         }
         this.sanitizedOutputCache.set(cacheKey, clean);
@@ -619,6 +676,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       } catch (error) {
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         this.sanitizedOutputCache.set(cacheKey, null);
+        if (!this.sanitizerFailureReported) {
+          this.sanitizerFailureReported = true;
+          this.announcements.announceAssertive(this.localize('documentViewerMissingSanitizer'));
+        }
         this.emit('lr-render-error', { error });
         this.requestUpdate();
       } finally {
@@ -642,13 +703,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       return html`<span class="sr-only">${this.localize('loadingDocument')}</span>`;
     }
     if (cached === null) {
-      // A failed optional peer must fail closed *visibly*: docs/agents/peers-and-remote-content.md
-      // requires a localized role="alert". No `part` here on purpose -- these per-output notices
+      // A failed optional peer must fail closed visibly with localized ordinary text while the
+      // transition is announced through the document-level assertive sink. No `part` here on purpose -- these per-output notices
       // render inside <lr-virtual-list>'s shadow root, so the document-level `error` part name
       // would both collide and be unreachable from this component's own stylesheet.
       return textFallback
         ? this.renderTextOutput(outputKey, textFallback)
-        : html`<p role="alert">${this.localize('documentViewerMissingSanitizer')}</p>`;
+        : html`<p>${this.localize('documentViewerMissingSanitizer')}</p>`;
     }
     return profile === 'svg' ? html`${unsafeSVG(cached)}` : html`${unsafeHTML(cached)}`;
   }
@@ -712,9 +773,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             @lr-visible-range-changed=${this.stopVirtualListEvent}
           ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
-          ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
+          ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
           : this.loadState.kind === 'error'
-            ? html`<div part="error" role="alert">${this.loadState.message}</div>`
+            ? html`<div part="error">${this.loadState.message}</div>`
             : html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
       ${this.renderAnchorLiveRegion()}
     </div>`;

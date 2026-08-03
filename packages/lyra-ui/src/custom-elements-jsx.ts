@@ -1383,7 +1383,10 @@ export type LyraCalendarViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraCalendarViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-calendar-viewer-max-height',
   {
     'max-height'?: LyraCalendarViewer['maxHeight'];
@@ -2328,7 +2331,10 @@ export type LyraContactViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraContactViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-contact-viewer-max-height',
   {
     'max-height'?: LyraContactViewer['maxHeight'];
@@ -2528,6 +2534,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | 'selectable'
   | 'selectableRows'
   | 'selectedKeys'
+  | 'selectedRows'
   | 'server'
   | 'size'
   | 'sort'
@@ -3310,8 +3317,11 @@ export type LyraEmailViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraEmailViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-attachment-open'
-  | 'lr-render-error',
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-email-viewer-max-height',
   {
     'fold-quotes'?: LyraEmailViewer['foldQuotes'];
@@ -3601,6 +3611,8 @@ export type LyraFileInputReactProps = LyraReactElementProps<
   | 'customError'
   | 'directory'
   | 'disabled'
+  | 'dragging'
+  | 'fileCount'
   | 'files'
   | 'forbiddenMimeTypes'
   | 'form'
@@ -3641,7 +3653,6 @@ export type LyraFileInputReactProps = LyraReactElementProps<
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
     'custom-error'?: LyraFileInput['customError'];
-    'dragging'?: LyraFileInput['dragging'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
     'with-hint'?: LyraFileInput['withHint'];
@@ -3969,7 +3980,10 @@ export type LyraGeojsonViewReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraGeojsonViewEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -4285,7 +4299,10 @@ export type LyraHtmlViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraHtmlViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-html-viewer-max-height',
   {
     'max-height'?: LyraHtmlViewer['maxHeight'];
@@ -4419,6 +4436,7 @@ export type LyraImageComparerReactProps = LyraReactElementProps<
   | 'blur'
   | 'change'
   | 'focus'
+  | 'lr-change'
   | 'lr-position-change',
   | '--divider-width'
   | '--handle-size',
@@ -4484,9 +4502,12 @@ export type LyraIncludeReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraIncludeEventMap,
+  | 'lr-anchor-result'
   | 'lr-error'
   | 'lr-include-error'
-  | 'lr-load',
+  | 'lr-load'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -5624,6 +5645,7 @@ export type LyraNotebookViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraNotebookViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
   | 'lr-search-change',
@@ -6366,9 +6388,12 @@ export type LyraPptxViewerReactProps = LyraReactElementProps<
   | 'src'
   | 'strings',
   LyraPptxViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
-  | 'lr-slide-change',
+  | 'lr-search-change'
+  | 'lr-slide-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -9175,7 +9200,6 @@ export type LyraVideoReactProps = LyraReactElementProps<
   {
     'autoplay-muted'?: LyraVideo['autoplayMuted'];
     'autoplay-on-visible'?: LyraVideo['autoplayOnVisible'];
-    'current-time'?: LyraVideo['currentTime'];
     'icon-library'?: LyraVideo['iconLibrary'];
   }
 >;
@@ -9388,6 +9412,7 @@ export type LyraXmlViewerReactProps = LyraReactElementProps<
   | 'strings'
   | 'xml',
   LyraXmlViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-copy'
   | 'lr-render-error'
   | 'lr-search-change',

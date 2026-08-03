@@ -11,6 +11,11 @@ import type { Citation, CitationSelectEventDetail, GroundedClaim, GroundingAsses
 import { styles } from './grounding-summary.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import '../claim-evidence/claim-evidence.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraGroundingSummaryEventMap {
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
@@ -66,6 +71,25 @@ export interface GroundingSummaryThresholds {
  * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
+    groundingSummaryCoverageLabel: LYRA_DEFAULT_groundingSummaryCoverageLabel,
+    groundingSummaryEmpty: LYRA_DEFAULT_groundingSummaryEmpty,
+    groundingSummaryEvidenceHeading: LYRA_DEFAULT_groundingSummaryEvidenceHeading,
+    groundingSummaryEvidenceSpan: LYRA_DEFAULT_groundingSummaryEvidenceSpan,
+    groundingSummaryLabel: LYRA_DEFAULT_groundingSummaryLabel,
+    groundingSummarySupportedLabel: LYRA_DEFAULT_groundingSummarySupportedLabel,
+    groundingSummaryUnsupportedLabel: LYRA_DEFAULT_groundingSummaryUnsupportedLabel,
+    groundingSummaryWarningsHeading: LYRA_DEFAULT_groundingSummaryWarningsHeading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The assessment to summarize. `null` (the default) renders the empty state. */

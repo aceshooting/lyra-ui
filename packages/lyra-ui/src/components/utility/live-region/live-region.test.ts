@@ -308,3 +308,38 @@ it('announces into its own document once adopted into an iframe', async () => {
     iframe.remove();
   }
 });
+
+it('rebinds throttling timers to the adopted document window', async () => {
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  const clears: number[] = [];
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    if (typeof handler === 'function') callbacks.set(61, handler);
+    return 61;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) {
+      clears.push(handle);
+      callbacks.delete(handle);
+    }
+  }) as typeof ownerWindow.clearTimeout;
+
+  try {
+    iframe.contentDocument!.body.append(el);
+    el.announce('deferred in frame');
+    expect(callbacks.has(61), 'the adopted window schedules the throttle').to.be.true;
+
+    el.remove();
+    expect(clears).to.include(61);
+    expect(callbacks.size).to.equal(0);
+  } finally {
+    el.remove();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
+    iframe.remove();
+  }
+});

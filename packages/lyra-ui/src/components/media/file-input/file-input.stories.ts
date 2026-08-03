@@ -5,6 +5,14 @@ const meta: Meta = {
   title: 'FileInput',
   component: 'lr-file-input',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Form-associated file selection with writable `files`, `fileCount`, and `dragging` state. Real file and drag interactions resynchronize the published count and drag state.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

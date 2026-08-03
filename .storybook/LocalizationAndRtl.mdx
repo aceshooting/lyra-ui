@@ -41,7 +41,7 @@ an unrecognized key is simply never looked up.
 
 ## The shipped catalogs
 
-Eight complete catalogs ship with the package, as side-effect-only modules — each one calls
+Ten complete catalogs ship with the package as side-effect-only modules — each one calls
 `registerLyraLocale()` for you, so a bare import is the whole setup and there is nothing to read
 back from it:
 
@@ -54,7 +54,9 @@ import '@aceshooting/lyra-ui/translations/fr.js';
 | Arabic | `@aceshooting/lyra-ui/translations/ar.js` |
 | German | `@aceshooting/lyra-ui/translations/de.js` |
 | Spanish | `@aceshooting/lyra-ui/translations/es.js` |
+| Persian | `@aceshooting/lyra-ui/translations/fa.js` |
 | French | `@aceshooting/lyra-ui/translations/fr.js` |
+| Hebrew | `@aceshooting/lyra-ui/translations/he.js` |
 | Japanese | `@aceshooting/lyra-ui/translations/ja.js` |
 | Portuguese (Brazil) | `@aceshooting/lyra-ui/translations/pt-BR.js` |
 | Russian | `@aceshooting/lyra-ui/translations/ru.js` |
@@ -65,6 +67,29 @@ way to load a catalog when the user picks that language.
 
 **A catalog registers strings, not direction.** Importing `ar.js` does not flip your layout — see
 [RTL and direction](#rtl-and-direction) below.
+
+## Synthetic pseudo locales
+
+Two explicit developer-only catalogs make localization defects reproducible without presenting
+machine-altered English as a real translation:
+
+```js
+// Expanded accented LTR text exposes clipping, truncation, and unlocalized literals.
+import '@aceshooting/lyra-ui/translations/pseudo/en-XA.js';
+
+// Mirrored text plus RTL metadata exercises bidirectional layout.
+import '@aceshooting/lyra-ui/translations/pseudo/ar-XB.js';
+```
+
+Both are generated deterministically from `LYRA_DEFAULT_STRINGS`. They preserve every placeholder
+and plural category, so interpolation and `Intl.PluralRules` continue to exercise the production
+paths. `en-XA` expands and accents literal text; `ar-XB` mirrors literal runs and registers
+`dir: 'rtl'`. The latter still does not force a component's direction: set `dir="rtl"` on the page
+or test wrapper, exactly as production code must.
+
+These are synthetic diagnostics, not languages, native translations, or evidence of human
+translation review. Import them only in development/test bundles; each granular subpath is
+side-effectful because importing it registers that catalog.
 
 ## Which locale a component uses
 

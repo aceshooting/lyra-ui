@@ -19,6 +19,11 @@ import type { RetrievalResultsSelectDetail } from '../../retrieval/retrieval-res
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import { styles } from './agent-workspace.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder, LYRA_DEFAULT_details } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_RENDERED_MESSAGES = 500;
 
@@ -83,6 +88,24 @@ export interface LyraAgentWorkspaceEventMap {
  * @since 4.2.0
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentWorkspaceContext: LYRA_DEFAULT_agentWorkspaceContext,
+    agentWorkspaceConversation: LYRA_DEFAULT_agentWorkspaceConversation,
+    agentWorkspaceDetails: LYRA_DEFAULT_agentWorkspaceDetails,
+    agentWorkspaceEmpty: LYRA_DEFAULT_agentWorkspaceEmpty,
+    agentWorkspaceGrounding: LYRA_DEFAULT_agentWorkspaceGrounding,
+    agentWorkspaceLabel: LYRA_DEFAULT_agentWorkspaceLabel,
+    agentWorkspaceRetrieval: LYRA_DEFAULT_agentWorkspaceRetrieval,
+    agentWorkspaceRun: LYRA_DEFAULT_agentWorkspaceRun,
+    agentWorkspaceTools: LYRA_DEFAULT_agentWorkspaceTools,
+    composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
+    details: LYRA_DEFAULT_details,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Accessible name and visible heading for the workspace. */

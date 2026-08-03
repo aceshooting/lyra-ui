@@ -62,10 +62,10 @@ describe('lr-contact-viewer', () => {
       );
     } finally { window.fetch = original; }
   });
-  it('shows a neutral empty-note, not the role="alert" error chrome, for a vCard with zero contacts', async () => {
+  it('shows a neutral empty-note, not the assertively-announced error chrome, for a vCard with zero contacts', async () => {
     // Regression test: a syntactically valid (or merely content-free) vCard document with zero
     // VCARD records used to throw the same LyraUserFacingError funneled through the generic catch
-    // block into `case 'error'` -- role="alert" and error-styled chrome for a state that isn't
+    // block into `case 'error'` -- assertive announcement and error-styled chrome for a state that isn't
     // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
     const original = window.fetch; window.fetch = (() => Promise.resolve(response('not vcard'))) as typeof window.fetch;
     try {

@@ -38,6 +38,11 @@ import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -187,10 +192,10 @@ export interface LyraSelectEventMap {
  * @event lr-clear - The `with-clear` button emptied the selection, fired after the
  *   `input`/`lr-input`/`change`/`lr-change` sequence. Never fired when there was nothing to clear.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
- *   `preventDefault()` leaves it closed and the reflected attribute untouched. Not cancelable on
- *   the one path where a veto is meaningless: an already-removed element closing on disconnect.
- * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable on the
- *   same terms as `lr-show`.
+ *   `preventDefault()` leaves it closed and the reflected attribute untouched.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
+ *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
+ *   already-removed element closing on disconnect cannot honour a veto.
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-invalid - The select failed a validity check. Cancelable: calling
@@ -294,6 +299,23 @@ export interface LyraSelectEventMap {
  * @since 4.0.0
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+    select: LYRA_DEFAULT_select,
+    selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
+    selectValueMissing: LYRA_DEFAULT_selectValueMissing,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own
   // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
@@ -392,6 +414,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private listId = nextId('select-list');
   private triggerId = nextId('select-trigger');
   private cleanup?: () => void;
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
   private _isFirstUpdate = true;
   private openVetoed = false;
   private transitionToken = 0;
@@ -423,7 +447,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // buffer and reset ~500ms after the last one, so "b" then "a" narrows to
   // "ba" instead of restarting the search on every keystroke.
   private typeAheadBuffer = '';
-  private typeAheadTimer?: ReturnType<typeof setTimeout>;
+  private typeAheadTimer?: number;
+  private typeAheadTimerWindow?: Window;
+  private typeAheadTimerGeneration = 0;
 
   /** Focus the internal select trigger. */
   override focus(options?: FocusOptions): void {
@@ -460,7 +486,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -502,6 +529,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+    if (this.hasUpdated && this.open) queueMicrotask(() => this.reconnectOpenPopup());
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -532,7 +560,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
     // is announced without offering a veto nobody could honour.
     if (!this.isConnected) {
-      this.emit(name);
+      this.emit('lr-hide');
       return;
     }
     if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
@@ -894,8 +922,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    clearTimeout(this.typeAheadTimer);
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.clearTypeAheadTimer();
+    this.typeAheadBuffer = '';
+    this.unbindDocumentPointer();
     this.resolveTransitionWaiters('lr-after-show');
     this.resolveTransitionWaiters('lr-after-hide');
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
@@ -904,6 +933,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // fires again, leaving the listbox rendered open with no positioning and
     // no outside-click listener.
     this.open = false;
+  }
+
+  adoptedCallback(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.unbindDocumentPointer();
+    this.clearTypeAheadTimer();
   }
 
   private collectOptions = (e: Event): void => {
@@ -1088,6 +1124,49 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!e.composedPath().includes(this)) void this.hide();
   };
 
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private reconnectOpenPopup(): void {
+    if (!this.isConnected || !this.open) return;
+    this.cleanup?.();
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) {
+      this.cleanup = place(anchor, listbox, {
+        placement: rtlAwarePlacement(this.placement, this),
+        strategy: this.hoist ? 'fixed' : 'absolute',
+      });
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
@@ -1102,8 +1181,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
       // itself runs one step earlier, in willUpdate().
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
+      if (this.open && this.isConnected) {
+        this.bindDocumentPointer();
         // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-select open>`) --
         // only for an actual closed-to-open transition.
@@ -1120,11 +1199,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             strategy: this.hoist ? 'fixed' : 'absolute',
           });
         }
-      } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+      } else if (!this.open) {
+        this.unbindDocumentPointer();
         if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-hide');
         }
+      } else {
+        this.unbindDocumentPointer();
       }
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
@@ -1273,11 +1354,25 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    * `<select>`'s closed-state type-ahead.
    */
   private typeAhead(char: string): void {
-    clearTimeout(this.typeAheadTimer);
+    this.clearTypeAheadTimer();
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    this.typeAheadTimer = setTimeout(() => {
-      this.typeAheadBuffer = '';
-    }, 500);
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (this.isConnected && ownerWindow) {
+      const generation = this.typeAheadTimerGeneration;
+      this.typeAheadTimerWindow = ownerWindow;
+      this.typeAheadTimer = ownerWindow.setTimeout(() => {
+        if (
+          this.typeAheadTimerGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== ownerWindow
+        ) {
+          return;
+        }
+        this.typeAheadTimer = undefined;
+        this.typeAheadTimerWindow = undefined;
+        this.typeAheadBuffer = '';
+      }, 500);
+    }
 
     const navigable = this.navigableOptions();
     if (!navigable.length) return;
@@ -1301,6 +1396,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         return;
       }
     }
+  }
+
+  private clearTypeAheadTimer(): void {
+    this.typeAheadTimerGeneration += 1;
+    if (this.typeAheadTimer !== undefined) {
+      this.typeAheadTimerWindow?.clearTimeout(this.typeAheadTimer);
+    }
+    this.typeAheadTimer = undefined;
+    this.typeAheadTimerWindow = undefined;
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

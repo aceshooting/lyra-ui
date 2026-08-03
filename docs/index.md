@@ -21,6 +21,10 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[llms.txt](../packages/lyra-ui/llms.txt)** — the entry index for AI coding assistants, pointing
   into `packages/lyra-ui/llms/`: one reference file per component (`llms/components/<tag>.md`), plus
   the library-wide contracts, design tokens, optional peers, and `wa-*`/`sl-*` migration tables.
+- **[Component quality dashboard](component-quality.md)** — per-tag qualification evidence,
+  exemptions, known limitations, and honest pending human review.
+- **[Component integration cards](component-integration.md)** — per-tag imports, optional peers,
+  direct/transitive component dependencies, and bundle measurements when available.
 
 ## Contributing & policies
 
@@ -30,9 +34,18 @@ This file is a short index. The primary documentation lives on the sites linked 
   exact patterns) lives in [`docs/agents/`](agents/).
 - **[SECURITY.md](../SECURITY.md)** — supported versions and how to report a vulnerability
   privately.
+- **[SUPPORT.md](../SUPPORT.md)** — public support routes and the information needed to triage an
+  issue.
+- **[GOVERNANCE.md](../GOVERNANCE.md)** — project roles, decision authority, release responsibility,
+  and the boundary for proposals that need an RFC.
+- **[RFC process](rfcs/process.md)** — lifecycle and review criteria for consequential public or
+  cross-component changes; start from the [proposal template](rfcs/template.md).
+- **[Executable framework recipes](../examples/frameworks/)** — React 19, Vue, and Svelte Vite
+  applications checked against the packed package.
 
 ## This directory
 
-`docs/` holds this index plus `docs/agents/` — the detailed contributor reference behind
-[AGENTS.md](../AGENTS.md); it does not duplicate the Storybook site or the package README.
+`docs/` holds this index, public policy/RFC material, and `docs/agents/` — the detailed contributor
+reference behind [AGENTS.md](../AGENTS.md); it does not duplicate the Storybook site or the package
+README.
 `docs/superpowers/` (gitignored) is internal planning scratch space, not published documentation.

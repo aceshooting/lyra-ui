@@ -2,7 +2,7 @@
 
 # `lr-heatmap`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/heatmap/heatmap.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-heatmap.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHeatmap`, also available unregistered from `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -20,9 +20,11 @@ A Canvas-rendered heatmap with a DPR-aware, resize-aware redraw loop, in one of 
 GitHub-style Sunday–Saturday × week grid built from `days`, colored by quartile bucket rather than
 the matrix mode's continuous ramp). Every cell is independently addressable despite being
 canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
-with that cell's label + value; the canvas is `tabindex="0"` with arrow-key roving focus (a stroked
-ring redrawn over the focused cell on every draw, plus `[part="live-region"]` announcing it); and a
-  click, or Enter/Space on the focused cell, fires `lr-cell-click`.
+with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
+with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
+cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
+on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
+movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 
 Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
 interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
@@ -73,7 +75,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
   row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
-  description to the host's own `aria-label`, and appends a "(selected)" suffix to the live-region
+  description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lr-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
@@ -83,7 +85,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
   its low DOM footprint.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
-  formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
+  formats the per-cell hover tooltip and keyboard announcement text; receives the cell
   position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
   calendar mode) and its value. `CalendarCellPos.date` is a **required** ISO `yyyy-mm-dd` string,
   present for every grid position — including a sparse gap position with no matching entry in `days`
@@ -167,8 +169,8 @@ force a redraw manually.
 
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
-`live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
-keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+`live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
+announcement uses the shared light-DOM polite sink), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
 bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
@@ -250,16 +252,16 @@ same color as `--lr-heatmap-focus-ring-color`).
   than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
   end-aligned.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
-  (calendar mode: a day-count + range summary instead) — `[part="canvas"]` inside it is a real
-  focusable, keyboard-operable, per-cell-interactive control (roving arrow-key focus,
-  `[part="live-region"]` announcements, `lr-cell-click`), and `role="img"` is documented (ARIA) to
-  flatten its subtree to a single image for some assistive tech, which conflicted with that
-  focusable descendant — fixed, matching `lr-lite-chart`/`lr-word-cloud`'s existing `role="group"`
-  pattern.
+  (calendar mode: a day-count + range summary instead). In default canvas mode,
+  `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,
+  per-cell-interactive control (roving arrow-key focus, shared light-DOM announcements,
+  `lr-cell-click`). `role="img"` would flatten that interactive subtree for some assistive tech.
+  With `accessibleCells`, the canvas becomes `aria-hidden` and the native cell-button overlay owns
+  the interactive semantics instead.
 - `NaN`/non-finite cell values in matrix mode are correctly treated as no-data now (alongside `-1`),
   and repeated DPR crossings (moving the window across displays with different pixel ratios) no
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
-- calendar mode's date labels (used by the default `cellText` template and the tooltip/live-region
+- calendar mode's date labels (used by the default `cellText` template and the tooltip/announcement
   text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
   `'en'` — fixed. The canvas-drawn axis chrome is now locale-aware too: month labels use
   `toLocaleString(undefined, ...)` (previously hardcoded `'en'`) and weekday labels are derived via

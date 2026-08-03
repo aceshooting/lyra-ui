@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
@@ -12,6 +12,12 @@ import '../../overlays/empty/empty.class.js';
 import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import { styles } from './retrieval-search.styles.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The three retrieval modes `RetrievalQuery.mode` supports, reused verbatim rather than
  *  redefining the union -- see `src/ai/types.ts`'s own header for why. */
@@ -73,14 +79,39 @@ export interface LyraRetrievalSearchEventMap {
  * @csspart filters - The active-filter/scope `<lr-chip-group>`. Omitted entirely when both
  *   `filters` and `scope` are empty.
  * @csspart spinner - The busy `<lr-spinner>`, shown only while `loading`.
- * @csspart error - The `role="alert"` error message, shown only when `errorText` is non-empty and
- *   not `loading`.
+ * @csspart error - The neutral, visible error message, shown only when `errorText` is non-empty and
+ *   not `loading`. New non-empty errors are announced through a shared assertive light-DOM region;
+ *   initial and reconnect content is not replayed.
  * @csspart empty - The compact `<lr-empty>`, shown only when `empty` is `true` and neither
  *   `loading` nor `errorText` is set.
  * @status stable
  * @since 4.1.0
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    cancel: LYRA_DEFAULT_cancel,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    retrievalFilterChipLabel: LYRA_DEFAULT_retrievalFilterChipLabel,
+    retrievalFiltersLabel: LYRA_DEFAULT_retrievalFiltersLabel,
+    retrievalModeHybrid: LYRA_DEFAULT_retrievalModeHybrid,
+    retrievalModeKeyword: LYRA_DEFAULT_retrievalModeKeyword,
+    retrievalModeLabel: LYRA_DEFAULT_retrievalModeLabel,
+    retrievalModeVector: LYRA_DEFAULT_retrievalModeVector,
+    retrievalSearchEmptyDescription: LYRA_DEFAULT_retrievalSearchEmptyDescription,
+    retrievalSearchLabel: LYRA_DEFAULT_retrievalSearchLabel,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The current query text. Controlled -- the internal `lr-input` updates this optimistically as
@@ -106,7 +137,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** Host-supplied error message from the last failed search, shown verbatim (caller-owned text,
-   *  not localized) in a `role="alert"` region. Empty string (the default) shows nothing. */
+   *  not localized) in a neutral visible region. New non-empty values are announced through a
+   *  shared assertive light-DOM region; initial and reconnect content is not replayed. Empty
+   *  string (the default) shows nothing. */
   @property({ attribute: 'error-text' }) errorText = '';
 
   /** Host-driven flag: the last completed search returned zero results. Renders a compact
@@ -126,6 +159,33 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   /** Overrides the computed accessible name for the `role="search"` landmark. Wins over `label`
    *  and the localized default. Attribute-reflects from a host-level `aria-label`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  private isMounting = true;
+  private errorAnnouncementSink?: AnnouncementSink;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.isMounting = true;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (!wasMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
+      this.errorAnnouncementSink?.announce(this.errorText);
+    }
+  }
 
   private modeItems(): SegmentedItem[] {
     return [
@@ -273,7 +333,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
         ${this.loading
           ? html`<lr-spinner part="spinner" aria-label=${label}></lr-spinner>`
           : this.errorText
-            ? html`<div part="error" role="alert">${this.errorText}</div>`
+            ? html`<div part="error">${this.errorText}</div>`
             : this.empty
               ? html`<lr-empty
                   part="empty"

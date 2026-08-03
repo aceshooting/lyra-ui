@@ -2,7 +2,7 @@
 
 # `lr-neighbor-list`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-neighbor-list.js';` (stable tag alias; registers the tag)
 - **Class** `LyraNeighborList`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

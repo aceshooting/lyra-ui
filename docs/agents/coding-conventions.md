@@ -149,11 +149,13 @@
   automatically; anything else genuinely exceptional takes a
   `policy-allow(cross-root-part): reason` comment, the same marker `check-source-policy.mjs`
   uses.
-- **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free class
-  export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the barrel —
-  an inventory-generated side-effect import block registers every root-included tag, followed by
-  curated named re-exports of classes/types/helpers. Never put a named export inside the generated
-  block or generate the named-export region: that surface is reviewed and semver-covered by hand.
+- **Granular, tree-shakeable exports.** Each component's `.class.ts` file is a side-effect-free class
+  export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the pure package
+  root, containing only curated named re-exports of classes/types/helpers. `src/all.ts` is the
+  explicit compatibility registration entry; its inventory-generated import block registers every
+  root-included tag. Never put a hand-authored export inside that generated block or generate the
+  `lyra.ts` export surface: the latter is reviewed and semver-covered by hand. Stable generated
+  `src/components/lr-*.ts` aliases provide family-independent per-tag registration paths.
   `package.json#exports` maps `.`, `./components/*`, `./utilities/*` — NOT
   `./internal/*`, which 8.0.0 removed on purpose: only the curated `src/utilities/` re-exports are
   semver-covered, and an `internal/` specifier now fails to resolve outright
@@ -162,11 +164,12 @@
   not just its `src/internal/` home.
   `sideEffects` is an explicit enumerated array, not globs — every registration module is listed
   individually in both compiled (`./dist/components/<family>/<name>/<name>.js`) and source
-  (`./src/components/<family>/<name>/<name>.ts`) forms, alongside the barrel (`./dist/lyra.js` +
-  `./src/lyra.ts`) and CSS/locale/companion registration side effects. Do not edit that array or
-  the root-registration allowlist by hand. After adding, moving, or removing a component, refresh
-  the inventory and run `pnpm registrations`; this regenerates the root import block, allowlist,
-  and both side-effect forms together. `check:registrations`, `check-side-effects`, their
+  (`./src/components/<family>/<name>/<name>.ts`) forms, alongside the tag aliases, `all.js`, and
+  CSS/locale/companion registration side effects. The pure `lyra.js` root is not a side effect.
+  Do not edit that array or the root-registration allowlist by hand. After adding, moving, or
+  removing a component, refresh the inventory and run `pnpm registrations`; this regenerates the
+  `all.ts` import block, aliases, allowlist, and side-effect forms together. `check:registrations`,
+  `check-side-effects`, their
   deterministic self-tests, and CI's regenerate-and-diff step fail on stale, duplicate, or missing
   entries. The `.ts` entries matter because Storybook's production build
   (`pnpm docs:build`, i.e. the live docs site) imports `src/*.ts` directly rather than `dist/`;

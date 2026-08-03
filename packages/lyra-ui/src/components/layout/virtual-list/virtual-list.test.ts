@@ -616,6 +616,155 @@ it("cancels a pending scroll frame when disconnected before it runs", async () =
   await nextFrame();
 });
 
+it("binds observers and frames to the adopted owner and rejects retired callbacks", async () => {
+  interface ResizeRecord {
+    callback: ResizeObserverCallback;
+    disconnects: number;
+  }
+  interface MutationRecordState {
+    callback: MutationCallback;
+    disconnects: number;
+    instance: MutationObserver;
+  }
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      .items=${Array.from({ length: 30 }, (_, i) => i)}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  el.remove();
+
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  const originalMutationObserver = frameWindow.MutationObserver;
+  const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+  const resizeRecords: ResizeRecord[] = [];
+  const mutationRecords: MutationRecordState[] = [];
+  const frameCallbacks = new Map<number, FrameRequestCallback>();
+  const retiredFrameCallbacks: FrameRequestCallback[] = [];
+  const cancelledFrames: number[] = [];
+  let nextHandle = 70;
+  class OwnerResizeObserver implements ResizeObserver {
+    private readonly record: ResizeRecord;
+    constructor(callback: ResizeObserverCallback) {
+      this.record = { callback, disconnects: 0 };
+      resizeRecords.push(this.record);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void { this.record.disconnects += 1; }
+  }
+  class OwnerMutationObserver implements MutationObserver {
+    private readonly record: MutationRecordState;
+    constructor(callback: MutationCallback) {
+      this.record = { callback, disconnects: 0, instance: this };
+      mutationRecords.push(this.record);
+    }
+    observe(): void {}
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { this.record.disconnects += 1; }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+  frameWindow.MutationObserver = OwnerMutationObserver;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    const handle = nextHandle++;
+    frameCallbacks.set(handle, callback);
+    retiredFrameCallbacks.push(callback);
+    return handle;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((handle: number): void => {
+    cancelledFrames.push(handle);
+    frameCallbacks.delete(handle);
+  }) as typeof frameWindow.cancelAnimationFrame;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(resizeRecords.length, "row, sticky, and container observers use the owner window").to.equal(3);
+    const focusObserver = (el as unknown as { stickyFocusObserver?: MutationObserver }).stickyFocusObserver;
+    const focusRecord = mutationRecords.find((record) => record.instance === focusObserver);
+    expect(focusRecord !== undefined, "sticky focus observation uses the owner window").to.equal(true);
+
+    resizeRecords[0]!.callback([], {} as ResizeObserver);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.scrollTop = 120;
+    base.dispatchEvent(new frameWindow.Event("scroll"));
+    expect(frameCallbacks.size, "resize and scroll work schedule through the owner window").to.equal(2);
+
+    let scrollEvents = 0;
+    el.addEventListener("lr-scroll", () => { scrollEvents += 1; });
+    document.adoptNode(el);
+    expect(cancelledFrames.length, "adoption cancels both owner-window frames").to.equal(2);
+    expect(resizeRecords.every((record) => record.disconnects > 0)).to.equal(true);
+    expect(focusRecord!.disconnects).to.be.greaterThan(0);
+
+    resizeRecords.forEach((record) => record.callback([], {} as ResizeObserver));
+    focusRecord!.callback([], {} as MutationObserver);
+    retiredFrameCallbacks.forEach((callback) => callback(0));
+    expect(scrollEvents, "retired observer/frame work cannot emit after adoption").to.equal(0);
+    expect(frameCallbacks.size, "retired callbacks cannot schedule new owner work").to.equal(0);
+  } finally {
+    frameWindow.ResizeObserver = originalResizeObserver;
+    frameWindow.MutationObserver = originalMutationObserver;
+    frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
+
+it("fails closed when an adopted owner lacks observer capabilities", async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${[1, 2, 3]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  el.remove();
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  const originalMutationObserver = frameWindow.MutationObserver;
+  Object.defineProperty(frameWindow, "ResizeObserver", { configurable: true, value: undefined });
+  Object.defineProperty(frameWindow, "MutationObserver", { configurable: true, value: undefined });
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect((el as unknown as { rowResizeObserver?: ResizeObserver }).rowResizeObserver === undefined).to.be.true;
+    expect(
+      (el as unknown as { stickyFocusObserver?: MutationObserver }).stickyFocusObserver === undefined,
+    ).to.be.true;
+  } finally {
+    el.remove();
+    Object.defineProperty(frameWindow, "ResizeObserver", {
+      configurable: true,
+      writable: true,
+      value: originalResizeObserver,
+    });
+    Object.defineProperty(frameWindow, "MutationObserver", {
+      configurable: true,
+      writable: true,
+      value: originalMutationObserver,
+    });
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    frame.remove();
+  }
+});
+
 it("keeps the scroll position anchored when a measured row above the viewport grows", async () => {
   const el = (await fixture(
     html`<lr-virtual-list

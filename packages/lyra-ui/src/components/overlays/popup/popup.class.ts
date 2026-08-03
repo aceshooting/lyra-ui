@@ -340,8 +340,6 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
         const root = this.getRootNode() as Document | ShadowRoot;
         const target = root.getElementById?.(this.anchor) ?? null;
         if (target) return target;
-      } else if (this.anchor instanceof Element) {
-        return this.anchor;
       } else if (typeof this.anchor.getBoundingClientRect === 'function') {
         return this.anchor;
       }

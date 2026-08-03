@@ -1,3 +1,5 @@
+import { safeFetchUrl } from './safe-url.js';
+
 /** Default cap for remote resources before a viewer hands them to a parser. */
 export const DEFAULT_MAX_RESOURCE_BYTES = 25 * 1024 * 1024;
 export const DEFAULT_MAX_TABLE_ROWS = 10_000;
@@ -18,8 +20,49 @@ export class LyraUserFacingError extends Error {
   }
 }
 
+/** A validated, absolute request URL paired with the browsing context that owns the requesting
+ * element. Keeping the owner alongside the URL prevents an adopted element from accidentally
+ * using the parent realm's `fetch()` after resolving against a different document's base URL. */
+export interface OwnerFetchTarget {
+  readonly url: string;
+  readonly view: Window & typeof globalThis;
+}
+
+/** Resolves a consumer-supplied fetch source against an element's current owner document.
+ *
+ * The source is checked both before and after URL resolution: the first check rejects executable
+ * or navigation-only schemes before they reach any URL sink, while the second preserves that
+ * allowlist for the absolute result. A disconnected element or detached document has no active
+ * resource lifecycle (and the latter has no meaningful fetch realm), so both deliberately fail
+ * closed. */
+export function resolveOwnerFetchTarget(
+  element: Element,
+  source: unknown,
+): OwnerFetchTarget | null {
+  if (!element.isConnected) return null;
+  const view = element.ownerDocument.defaultView;
+  if (!view || typeof view.fetch !== 'function') return null;
+  const safeSource = safeFetchUrl(source, view.URL);
+  if (safeSource === null) return null;
+
+  try {
+    const url = safeFetchUrl(
+      new view.URL(safeSource, element.ownerDocument.baseURI).href,
+      view.URL,
+    );
+    return url === null ? null : { url, view };
+  } catch {
+    return null;
+  }
+}
+
 export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError';
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'AbortError'
+  );
 }
 
 export function isResourceLimitError(error: unknown): boolean {

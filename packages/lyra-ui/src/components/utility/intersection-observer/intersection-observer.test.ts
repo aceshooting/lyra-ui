@@ -135,6 +135,139 @@ describe('<lr-intersection-observer>', () => {
     expect((el as unknown as { observer?: IntersectionObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
   });
 
+  it('uses the adopted owner constructor, accepts a foreign root, and rejects stale callbacks', async () => {
+    interface ObserverRecord {
+      callback: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      observed: Element[];
+      unobserved: Element[];
+      disconnects: number;
+    }
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalObserver = frameWindow.IntersectionObserver;
+    const records: ObserverRecord[] = [];
+    class OwnerIntersectionObserver implements IntersectionObserver {
+      private readonly record: ObserverRecord;
+      readonly root: Element | Document | null;
+      readonly rootMargin: string;
+      readonly thresholds: readonly number[];
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        this.record = { callback, options, observed: [], unobserved: [], disconnects: 0 };
+        records.push(this.record);
+        this.root = options?.root ?? null;
+        this.rootMargin = options?.rootMargin ?? '0px';
+        const threshold = options?.threshold ?? 0;
+        this.thresholds = Array.isArray(threshold) ? threshold : [threshold];
+      }
+      observe(target: Element): void { this.record.observed.push(target); }
+      unobserve(target: Element): void { this.record.unobserved.push(target); }
+      disconnect(): void { this.record.disconnects += 1; }
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    }
+    frameWindow.IntersectionObserver = OwnerIntersectionObserver;
+    const root = frameDocument.createElement('div');
+    frameDocument.body.append(root);
+    const el = await fixture<LyraIntersectionObserver>(
+      html`<lr-intersection-observer><div></div></lr-intersection-observer>`,
+    );
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    el.remove();
+    el.root = root;
+    el.intersectClass = 'visible';
+    el.once = true;
+    let events = 0;
+    el.addEventListener('lr-intersection', () => { events += 1; });
+
+    try {
+      expect(root instanceof Element, 'the regression root must come from another realm').to.equal(false);
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(records.length, 'adoption constructs through the destination window').to.be.greaterThan(0);
+      const adoptedCount = records.length;
+      const adoptedObserver = records.at(-1)!;
+      expect(adoptedObserver.options?.root === root, 'the foreign-realm Element root is retained').to.equal(true);
+      expect(adoptedObserver.observed.length).to.equal(1);
+      expect(adoptedObserver.observed[0] === target).to.equal(true);
+
+      const staleEntry = { target, isIntersecting: true } as IntersectionObserverEntry;
+      el.remove();
+      expect(adoptedObserver.disconnects, 'disconnect tears down the exact owner observer').to.equal(1);
+      adoptedObserver.callback([staleEntry], {} as IntersectionObserver);
+      expect(events, 'a retired callback cannot emit while detached').to.equal(0);
+      expect(target.classList.contains('visible'), 'a retired callback cannot mutate its target').to.equal(false);
+      expect(adoptedObserver.unobserved.length, 'a retired once callback cannot unobserve').to.equal(0);
+
+      frameDocument.body.append(el);
+      await aTimeout(0);
+      expect(records.length, 'reconnect constructs a fresh destination observer').to.be.greaterThan(adoptedCount);
+      const reconnectedObserver = records.at(-1)!;
+      adoptedObserver.callback([staleEntry], {} as IntersectionObserver);
+      expect(events, 'the first lifecycle remains stale after reconnect').to.equal(0);
+      reconnectedObserver.callback([staleEntry], {} as IntersectionObserver);
+      expect(events, 'the current lifecycle still forwards entries').to.equal(1);
+      expect(target.classList.contains('visible')).to.equal(true);
+      expect(reconnectedObserver.unobserved.length).to.equal(1);
+      expect(reconnectedObserver.unobserved[0] === target).to.equal(true);
+
+      el.remove();
+      target.classList.remove('visible');
+      frameDocument.body.append(el);
+      await aTimeout(0);
+      const reentrantObserver = records.at(-1)!;
+      const eventsBeforeReentrantDisconnect = events;
+      el.addEventListener('lr-intersect', () => el.remove(), { once: true });
+      reentrantObserver.callback([staleEntry], {} as IntersectionObserver);
+      expect(
+        events,
+        'a per-entry listener disconnect prevents the retired callback from emitting its batch',
+      ).to.equal(eventsBeforeReentrantDisconnect);
+      expect(
+        reentrantObserver.unobserved.length,
+        'a per-entry listener disconnect prevents unobserve through the retired observer',
+      ).to.equal(0);
+    } finally {
+      el.remove();
+      root.remove();
+      frameWindow.IntersectionObserver = originalObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      iframe.remove();
+    }
+  });
+
+  it('fails closed when the owner window has no IntersectionObserver capability', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalObserver = frameWindow.IntersectionObserver;
+    const el = await fixture<LyraIntersectionObserver>(
+      html`<lr-intersection-observer><div></div></lr-intersection-observer>`,
+    );
+    await aTimeout(0);
+    el.remove();
+    Object.defineProperty(frameWindow, 'IntersectionObserver', { configurable: true, value: undefined });
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      expect((el as unknown as { observer?: IntersectionObserver }).observer === undefined).to.be.true;
+    } finally {
+      el.remove();
+      Object.defineProperty(frameWindow, 'IntersectionObserver', {
+        configurable: true,
+        writable: true,
+        value: originalObserver,
+      });
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      iframe.remove();
+    }
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><button>Observed</button></lr-intersection-observer>`);
     await expect(el).to.be.accessible();

@@ -2,7 +2,7 @@
 
 # `lr-schema-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-schema-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -48,9 +48,11 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 above); otherwise shared tokens only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
-`issue-limit` report their respective truncation. Issues are indexed by path once before recursive
-rendering instead of rescanning the full input for every node. Cycles stop at the repeated node
-rather than recursing. **Slots:** none. **Optional peer deps:** none.
+`issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
+changing either ceiling after the initial baseline appends the localized message to the shared
+polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are indexed by
+path once before recursive rendering instead of rescanning the full input for every node. Cycles stop
+at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';

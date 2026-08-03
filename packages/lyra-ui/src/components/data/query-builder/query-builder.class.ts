@@ -15,6 +15,11 @@ import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js';
 import { styles } from './query-builder.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The kind of value a `QueryBuilderField` holds — drives which existing sibling control
  *  (`lr-input`/`lr-select`/`lr-date-input`/`lr-combobox`) renders for a condition row's value
@@ -188,6 +193,53 @@ function isMultiOperator(op: QueryBuilderOperator | ''): boolean {
  * @since 4.1.0
  */
 export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    queryBuilderAddCondition: LYRA_DEFAULT_queryBuilderAddCondition,
+    queryBuilderBooleanFalse: LYRA_DEFAULT_queryBuilderBooleanFalse,
+    queryBuilderBooleanTrue: LYRA_DEFAULT_queryBuilderBooleanTrue,
+    queryBuilderCombinatorAnd: LYRA_DEFAULT_queryBuilderCombinatorAnd,
+    queryBuilderCombinatorLabel: LYRA_DEFAULT_queryBuilderCombinatorLabel,
+    queryBuilderCombinatorOr: LYRA_DEFAULT_queryBuilderCombinatorOr,
+    queryBuilderEmpty: LYRA_DEFAULT_queryBuilderEmpty,
+    queryBuilderFieldLabel: LYRA_DEFAULT_queryBuilderFieldLabel,
+    queryBuilderFieldPlaceholder: LYRA_DEFAULT_queryBuilderFieldPlaceholder,
+    queryBuilderLabel: LYRA_DEFAULT_queryBuilderLabel,
+    queryBuilderNoFields: LYRA_DEFAULT_queryBuilderNoFields,
+    queryBuilderOperatorAfter: LYRA_DEFAULT_queryBuilderOperatorAfter,
+    queryBuilderOperatorBefore: LYRA_DEFAULT_queryBuilderOperatorBefore,
+    queryBuilderOperatorContains: LYRA_DEFAULT_queryBuilderOperatorContains,
+    queryBuilderOperatorEndsWith: LYRA_DEFAULT_queryBuilderOperatorEndsWith,
+    queryBuilderOperatorEquals: LYRA_DEFAULT_queryBuilderOperatorEquals,
+    queryBuilderOperatorGreaterThan: LYRA_DEFAULT_queryBuilderOperatorGreaterThan,
+    queryBuilderOperatorGreaterThanOrEqual: LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual,
+    queryBuilderOperatorIn: LYRA_DEFAULT_queryBuilderOperatorIn,
+    queryBuilderOperatorIsEmpty: LYRA_DEFAULT_queryBuilderOperatorIsEmpty,
+    queryBuilderOperatorIsNotEmpty: LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty,
+    queryBuilderOperatorLabel: LYRA_DEFAULT_queryBuilderOperatorLabel,
+    queryBuilderOperatorLessThan: LYRA_DEFAULT_queryBuilderOperatorLessThan,
+    queryBuilderOperatorLessThanOrEqual: LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual,
+    queryBuilderOperatorNotEquals: LYRA_DEFAULT_queryBuilderOperatorNotEquals,
+    queryBuilderOperatorNotIn: LYRA_DEFAULT_queryBuilderOperatorNotIn,
+    queryBuilderOperatorOnOrAfter: LYRA_DEFAULT_queryBuilderOperatorOnOrAfter,
+    queryBuilderOperatorOnOrBefore: LYRA_DEFAULT_queryBuilderOperatorOnOrBefore,
+    queryBuilderOperatorPlaceholder: LYRA_DEFAULT_queryBuilderOperatorPlaceholder,
+    queryBuilderOperatorStartsWith: LYRA_DEFAULT_queryBuilderOperatorStartsWith,
+    queryBuilderRemoveCondition: LYRA_DEFAULT_queryBuilderRemoveCondition,
+    queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
+    queryBuilderValuePlaceholder: LYRA_DEFAULT_queryBuilderValuePlaceholder,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
@@ -296,11 +348,32 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     this.emit('lr-add-condition', { condition });
   }
 
+  private conditionElement(id: string): HTMLElement | null {
+    const root = this.shadowRoot;
+    if (!root) return null;
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    if (typeof ownerCss?.escape === 'function') {
+      try {
+        const candidate = root.querySelector<HTMLElement>(
+          `[part="condition"][data-id="${ownerCss.escape(id)}"]`,
+        );
+        if (candidate?.getAttribute('data-id') === id) return candidate;
+      } catch {
+        // A partial DOM can expose CSS.escape while rejecting selector construction.
+      }
+    }
+    return (
+      Array.from(root.querySelectorAll<HTMLElement>('[part="condition"][data-id]')).find(
+        (candidate) => candidate.getAttribute('data-id') === id,
+      ) ?? null
+    );
+  }
+
   /** Removes the condition row with the given `id`, if present. */
   removeCondition(id: string): void {
     if (this.disabled) return;
     if (!this._value.conditions.some((c) => c.id === id)) return;
-    const row = this.shadowRoot?.querySelector(`[part="condition"][data-id="${CSS.escape(id)}"]`);
+    const row = this.conditionElement(id);
     const active = activeElementIn(this.shadowRoot);
     if (row && active && row.contains(active)) this.pendingFocusAdd = true;
     const conditions = this._value.conditions.filter((c) => c.id !== id);

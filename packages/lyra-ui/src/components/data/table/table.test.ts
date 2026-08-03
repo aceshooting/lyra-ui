@@ -4,6 +4,16 @@ import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { styles } from './table.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 interface Row {
   id: string;
@@ -86,6 +96,175 @@ it('resizes a resizable column through its native pointer handle and emits live 
   expect(detail?.key).to.equal('name');
   expect(detail?.width).to.be.greaterThan(80);
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal(`${detail!.width}px`);
+});
+
+it('keeps an adopted iframe resize drag in its owner window and releases that window on teardown', async () => {
+  const iframe = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    iframe.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(iframe);
+  await loaded;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const OriginalMainResizeObserver = window.ResizeObserver;
+  const OriginalFrameResizeObserver = frameWindow.ResizeObserver;
+  const originalFrameRequestAnimationFrame = frameWindow.requestAnimationFrame;
+  const originalFrameCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+  let frameResizeObserverCallback: ResizeObserverCallback | undefined;
+  let frameResizeObserverConstructions = 0;
+  let frameResizeObserverDisconnects = 0;
+  const frameObservedTargets: Element[] = [];
+  const frameCallbacks = new Map<number, FrameRequestCallback>();
+  const canceledFrameIds: number[] = [];
+  let nextFrameId = 500;
+  class MainInertResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  class FrameResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      frameResizeObserverConstructions += 1;
+      frameResizeObserverCallback = callback;
+    }
+    observe(target: Element) { frameObservedTargets.push(target); }
+    unobserve() {}
+    disconnect() { frameResizeObserverDisconnects += 1; }
+  }
+  window.ResizeObserver = MainInertResizeObserver as unknown as typeof ResizeObserver;
+  frameWindow.ResizeObserver = FrameResizeObserver as unknown as typeof ResizeObserver;
+  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    const id = ++nextFrameId;
+    frameCallbacks.set(id, callback);
+    return id;
+  }) as typeof frameWindow.requestAnimationFrame;
+  frameWindow.cancelAnimationFrame = ((id: number) => {
+    canceledFrameIds.push(id);
+    frameCallbacks.delete(id);
+  }) as typeof frameWindow.cancelAnimationFrame;
+  frameDocument.documentElement.style.fontSize = '10px';
+  let el: LyraTable<Row> | undefined;
+
+  try {
+    el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.style.setProperty('--lr-table-resize-min-width', '3rem');
+    el.columns = [
+      { key: 'name', label: 'Name', width: '120px', resizable: true, cell: (row) => row.name },
+      columns[1]!,
+    ];
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(frameResizeObserverConstructions, 'the observer is constructed in the iframe realm').to.equal(1);
+    expect(frameObservedTargets.every((target) => target.ownerDocument === frameDocument)).to.be.true;
+    const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    let liveEvents = 0;
+    el.addEventListener('lr-column-resize', (event) => {
+      if (!event.cancelable) liveEvents += 1;
+    });
+
+    handle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 71,
+      clientX: 100,
+    }));
+    expect(
+      (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === frameWindow,
+      'the drag retains the iframe window that owns the handle',
+    ).to.be.true;
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 71,
+      clientX: -10000,
+    }));
+    expect(liveEvents, 'pointer movement from the iframe window reaches the drag').to.equal(1);
+    expect(
+      (el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name'),
+      'rem minimum width resolves from the iframe document root',
+    ).to.equal(30);
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointerup', {
+      pointerId: 71,
+      clientX: -10000,
+    }));
+    expect((el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined).to.be.true;
+
+    frameResizeObserverCallback!([], {} as ResizeObserver);
+    expect(frameCallbacks.size, 'layout sync uses the iframe animation clock').to.equal(1);
+    const pendingFrameIds = [...frameCallbacks.keys()];
+
+    handle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 72,
+      clientX: 100,
+    }));
+    el.remove();
+    expect(
+      (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined,
+      'disconnect releases the exact retained window',
+    ).to.be.true;
+    expect(frameResizeObserverDisconnects, 'disconnect tears down the iframe observer').to.equal(1);
+    expect(canceledFrameIds).to.include.members(pendingFrameIds);
+    expect(frameCallbacks.size).to.equal(0);
+  } finally {
+    el?.remove();
+    window.ResizeObserver = OriginalMainResizeObserver;
+    frameWindow.ResizeObserver = OriginalFrameResizeObserver;
+    frameWindow.requestAnimationFrame = originalFrameRequestAnimationFrame;
+    frameWindow.cancelAnimationFrame = originalFrameCancelAnimationFrame;
+    iframe.remove();
+  }
+});
+
+it('rolls back an uncommitted resize preview when another drag replaces it or the table disconnects', async () => {
+  const wrapper = (await fixture(html`<div><lr-table></lr-table></div>`)) as HTMLElement;
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+  ];
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  const widths = (): Map<string, number> => (
+    el as unknown as { resizedColumnWidths: Map<string, number> }
+  ).resizedColumnWidths;
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 75,
+    clientX: 100,
+  }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 75, clientX: 150 }));
+  expect(widths().get('name')).to.be.greaterThan(120);
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 76,
+    clientX: 100,
+  }));
+  expect(widths().has('name'), 'replacing a drag rolls back its live-only width').to.be.false;
+  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 76 }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal('120px');
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 77,
+    clientX: 100,
+  }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 77, clientX: 160 }));
+  expect(widths().get('name')).to.be.greaterThan(120);
+  el.remove();
+  expect(widths().has('name'), 'disconnect rolls back the live-only width').to.be.false;
+  wrapper.append(el);
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal('120px');
 });
 
 it('fires exactly one cancelable lr-column-resize, at drag-end, for the committed width -- not per pixel', async () => {
@@ -740,7 +919,50 @@ it('renders a localized busy state before rows while loading', async () => {
 
   expect(el.shadowRoot!.querySelector('[part="loading"] lr-spinner')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+  expect(sinkTexts(), 'declarative loading state must stay silent on first mount').to.deep.equal([]);
   await expect(el).to.be.accessible();
+});
+
+it('announces each post-mount loading transition as a separate light-DOM addition', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  for (let i = 0; i < 2; i++) {
+    el.loading = true;
+    await el.updateComplete;
+    const loading = el.shadowRoot!.querySelector('[part="loading"]') as HTMLElement;
+    expect(loading.getAttribute('aria-hidden')).to.equal('true');
+    expect(loading.getAttribute('role')).to.equal(null);
+    expect(loading.getAttribute('aria-live')).to.equal(null);
+    el.loading = false;
+    await el.updateComplete;
+  }
+  expect(sinkTexts()).to.deep.equal(['Loading rows', 'Loading rows']);
+});
+
+it('re-targets loading announcements after adoption into another document', async () => {
+  // Render the spinner before adoption. Constructed stylesheets cannot be shared into a second
+  // document when a nested Lit element creates its shadow root there, so this fixture deliberately
+  // tests the table's sink lifecycle without manufacturing a new nested spinner inside the frame.
+  const el = (await fixture(html`<lr-table loading></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  try {
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    expect(sinkElement() === null, 'the original document must release the adopted table').to.be.true;
+    expect(sinkElement(frameDocument)?.getAttribute('aria-live')).to.equal('polite');
+    expect(sinkTexts(frameDocument), 'adoption must not announce an already-active loading state').to.deep.equal([]);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
 });
 
 it('supports opt-in multiple row selection without changing the default presentational mode', async () => {
@@ -3167,7 +3389,7 @@ describe('loadingAppearance="skeleton"', () => {
     ).to.equal(resized);
   });
 
-  it('exposes exactly one polite status region, not one per placeholder cell', async () => {
+  it('exposes one aria-hidden loading mirror, not one live region per placeholder cell', async () => {
     const el = (await fixture(
       html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
     )) as LyraTable<Row>;
@@ -3176,9 +3398,9 @@ describe('loadingAppearance="skeleton"', () => {
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(6);
-    expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(1);
-    const status = el.shadowRoot!.querySelector('[role="status"]') as HTMLElement;
-    expect(status.getAttribute('aria-live')).to.equal('polite');
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [aria-live]').length).to.equal(0);
+    const status = el.shadowRoot!.querySelector('[part="loading"]') as HTMLElement;
+    expect(status.getAttribute('aria-hidden')).to.equal('true');
     expect(status.textContent!.trim()).to.equal('Loading rows');
     expect(
       [...el.shadowRoot!.querySelectorAll('lr-skeleton')].filter((s) => s.hasAttribute('role')).length,
@@ -3196,7 +3418,7 @@ describe('loadingAppearance="skeleton"', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="loading"] lr-spinner').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
-    expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[role="status"], [aria-live]').length).to.equal(0);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
   });
 
@@ -3248,7 +3470,7 @@ describe('loadingAppearance="skeleton"', () => {
     await el.updateComplete;
     // Guards against passing against the spinner branch's own status node instead.
     expect(skeletonRowsOf(el).length).to.equal(3);
-    expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent!.trim()).to.equal(
+    expect(el.shadowRoot!.querySelector('[part="loading"]')!.textContent!.trim()).to.equal(
       'Chargement des lignes',
     );
   });

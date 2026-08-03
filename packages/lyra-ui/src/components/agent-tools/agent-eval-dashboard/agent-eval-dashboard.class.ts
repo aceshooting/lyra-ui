@@ -6,6 +6,11 @@ import type { AgentStatusKind } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import { styles } from './agent-eval-dashboard.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { id: string; label: string; value: number; format?: EvaluationMetricFormat; }
@@ -37,6 +42,26 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @since 6.2.0
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentRunStatusCancelled: LYRA_DEFAULT_agentRunStatusCancelled,
+    agentRunStatusCollecting: LYRA_DEFAULT_agentRunStatusCollecting,
+    agentRunStatusDone: LYRA_DEFAULT_agentRunStatusDone,
+    agentRunStatusIdle: LYRA_DEFAULT_agentRunStatusIdle,
+    agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
+    agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
+    agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
+    chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    evaluationDashboardLabel: LYRA_DEFAULT_evaluationDashboardLabel,
+    evaluationDashboardNoRuns: LYRA_DEFAULT_evaluationDashboardNoRuns,
+    evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
+    statusError: LYRA_DEFAULT_statusError,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) metrics: AgentEvaluationMetric[] = [];
   @property({ attribute: false }) runs: AgentEvaluationDashboardRun[] = [];

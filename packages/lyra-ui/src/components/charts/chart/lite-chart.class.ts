@@ -2,6 +2,7 @@ import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'li
 import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
@@ -12,6 +13,11 @@ import { styles } from './lite-chart.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LiteSeries {
   label: string;
@@ -256,7 +262,25 @@ export interface LyraLiteChartEventMap {
  * @since 4.0.0
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chart: LYRA_DEFAULT_chart,
+    chartCategory: LYRA_DEFAULT_chartCategory,
+    chartData: LYRA_DEFAULT_chartData,
+    chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
+    chartTotal: LYRA_DEFAULT_chartTotal,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    liteChartBarLabel: LYRA_DEFAULT_liteChartBarLabel,
+    liteChartCustomMarkSummary: LYRA_DEFAULT_liteChartCustomMarkSummary,
+    liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   @property() type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: string[] = [];
@@ -362,6 +386,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @query('svg') private svgEl?: SVGSVGElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
+  private resizeObserverDocument?: Document;
+  private resizeObserverTarget?: SVGSVGElement;
+  private resizeObserverGeneration = 0;
   private refocusMarkAfterUpdate = false;
   private refocusChartAfterUpdate = false;
 
@@ -385,8 +412,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Returns a spreadsheet-safe CSV snapshot of the visible labels and series values. */
   exportData(format: LyraLiteChartExportFormat): string {
     if (format === 'svg') {
-      if (!this.svgEl || typeof XMLSerializer === 'undefined') return '';
-      return new XMLSerializer().serializeToString(this.svgEl);
+      const XMLSerializerCtor = this.ownerDocument.defaultView?.XMLSerializer;
+      if (!this.svgEl || typeof XMLSerializerCtor !== 'function') return '';
+      return new XMLSerializerCtor().serializeToString(this.svgEl);
     }
     const header = ['label', ...this.datasets.map((series) => series.label)].map(escapeCsvField).join(',');
     const rows = this.labels.map((label, index) =>
@@ -397,7 +425,34 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver((entries) => {
+    this.armResizeObserver();
+  }
+
+  private armResizeObserver(): void {
+    const target = this.svgEl;
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected || !target) return;
+    if (
+      this.resizeObserver &&
+      this.resizeObserverDocument === ownerDocument &&
+      this.resizeObserverTarget === target
+    ) {
+      return;
+    }
+    this.resetResizeObserver();
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const generation = this.resizeObserverGeneration;
+    const observer = new ResizeObserverCtor((entries) => {
+      if (
+        this.resizeObserver !== observer ||
+        this.resizeObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.resizeObserverTarget !== target
+      ) {
+        return;
+      }
       const box = entries[0]?.contentBoxSize?.[0];
       if (box) {
         this.plotWidth = box.inlineSize;
@@ -410,16 +465,31 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
       }
     });
+    this.resizeObserver = observer;
+    this.resizeObserverDocument = ownerDocument;
+    this.resizeObserverTarget = target;
     // A reconnect re-creates the observer above but the `<svg>` render root
     // content survives across disconnect/reconnect (Lit doesn't tear down the
     // shadow root) — re-observe it here (firstUpdated() only ever runs once,
     // on the very first render, so it can't be relied on for a reconnect).
-    if (this.svgEl) this.resizeObserver.observe(this.svgEl);
+    if (target) observer.observe(target);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetResizeObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetResizeObserver();
+  }
+
+  private resetResizeObserver(): void {
+    this.resizeObserverGeneration += 1;
     this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeObserverDocument = undefined;
+    this.resizeObserverTarget = undefined;
   }
 
   // The first draw is queued because connectedCallback() fires *before* Lit's
@@ -435,7 +505,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   // cover first-mount and reconnect without ever double-observing the same
   // element from the same callback path.
   protected override firstUpdated(): void {
-    if (this.svgEl) this.resizeObserver?.observe(this.svgEl);
+    this.armResizeObserver();
   }
 
   protected override willUpdate(changed: PropertyValues): void {

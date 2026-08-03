@@ -1,5 +1,7 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { tag } from "../../../internal/prefix.js";
 import "./dashboard-grid.js";
 import type { LyraDashboardGrid } from "./dashboard-grid.js";
 import type { DashboardCell } from "./layout.js";
@@ -10,6 +12,40 @@ function twoCells(): DashboardCell[] {
     { id: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
     { id: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
   ];
+}
+
+function createRealmFrame(): {
+  iframe: HTMLIFrameElement;
+  frameDocument: Document;
+  frameWindow: Window & typeof globalThis;
+} {
+  const iframe = document.createElement("iframe");
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error("Could not create an iframe realm for the dashboard-grid test.");
+  }
+  return { iframe, frameDocument, frameWindow };
+}
+
+type CssEscapeHost = { escape?: (identifier: string) => string };
+
+function replaceCssEscape(
+  target: CssEscapeHost,
+  replacement: CssEscapeHost['escape'],
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, 'escape');
+  Object.defineProperty(target, 'escape', {
+    configurable: true,
+    writable: true,
+    value: replacement,
+  });
+  return () => {
+    if (previous) Object.defineProperty(target, 'escape', previous);
+    else Reflect.deleteProperty(target, 'escape');
+  };
 }
 
 it('defaults to an empty layout, 12 columns, 80px rows, 8px gap, and collision="reject"', async () => {
@@ -31,9 +67,117 @@ it("renders lr-empty with the noData message when layout is empty", async () => 
     html`<lr-dashboard-grid></lr-dashboard-grid>`
   )) as LyraDashboardGrid;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect(empty !== null).to.be.true;
   expect(empty!.tagName.toLowerCase()).to.equal("lr-empty");
   expect(empty!.getAttribute("heading")).to.equal("No data");
+});
+
+it("routes repeated announcements through a pre-mounted light-DOM sink and releases it", async () => {
+  const el = (await fixture(
+    html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`,
+  )) as LyraDashboardGrid;
+  const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+  const sink = document.querySelector<HTMLElement>(selector)!;
+  const mirror = el.shadowRoot!.querySelector<HTMLElement>('[part="live-region"]')!;
+
+  expect(sink !== null, "the live region is mounted before interaction").to.be
+    .true;
+  expect(sink.childElementCount).to.equal(0);
+  expect(mirror.getAttribute("aria-hidden")).to.equal("true");
+  expect(mirror.hasAttribute("role")).to.be.false;
+  expect(mirror.hasAttribute("aria-live")).to.be.false;
+
+  const announcer = (el as unknown as {
+    announcer: { announce(text: string, options: { force: boolean }): void };
+  }).announcer;
+  announcer.announce("Alpha moved.", { force: true });
+  announcer.announce("Alpha moved.", { force: true });
+  await el.updateComplete;
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    "Alpha moved.",
+    "Alpha moved.",
+  ]);
+  expect(mirror.textContent?.trim()).to.equal("Alpha moved.");
+
+  el.remove();
+  expect(document.querySelector(selector) === null).to.be.true;
+  try {
+    document.body.append(el);
+    expect(
+      document.querySelector<HTMLElement>(selector)?.childElementCount
+    ).to.equal(0);
+  } finally {
+    el.remove();
+  }
+});
+
+it("keeps keyboard-navigation feedback silent when the host or a composed ancestor is accessibility-excluded", async () => {
+  const scenarios: Array<{
+    label: string;
+    exclude(host: LyraDashboardGrid, ancestor: HTMLElement): void;
+  }> = [
+    {
+      label: "hidden host",
+      exclude: (host) => {
+        host.hidden = true;
+      },
+    },
+    {
+      label: "inert composed ancestor",
+      exclude: (_host, ancestor) => {
+        ancestor.setAttribute("inert", "");
+      },
+    },
+    {
+      label: "case-insensitive aria-hidden composed ancestor",
+      exclude: (_host, ancestor) => {
+        ancestor.setAttribute("aria-hidden", " TRUE ");
+      },
+    },
+    {
+      label: "display-none composed ancestor",
+      exclude: (_host, ancestor) => {
+        ancestor.style.display = "none";
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const ancestor = document.createElement("div");
+    const root = ancestor.attachShadow({ mode: "open" });
+    root.append(document.createElement("slot"));
+    const el = document.createElement("lr-dashboard-grid") as LyraDashboardGrid;
+    el.layout = twoCells();
+    ancestor.append(el);
+    document.body.append(ancestor);
+
+    try {
+      await el.updateComplete;
+      const sink = document.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+      )!;
+      const announcer = (el as unknown as {
+        announcer: { throttleMs: number };
+      }).announcer;
+      announcer.throttleMs = 0;
+      scenario.exclude(el, ancestor);
+
+      el.shadowRoot!
+        .querySelector<HTMLElement>('[data-cell-id="a"]')!
+        .dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "ArrowRight",
+            bubbles: true,
+            cancelable: true,
+          })
+        );
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+
+      expect(sink.childElementCount, scenario.label).to.equal(0);
+    } finally {
+      ancestor.remove();
+    }
+  }
 });
 
 it("is accessible in the empty state", async () => {
@@ -196,17 +340,65 @@ describe("default cell composition", () => {
     ];
     await el.updateComplete;
     const widget = el.querySelector('[cell-id="a"]') as HTMLElement;
-    expect(widget).to.exist;
+    expect(widget !== null).to.be.true;
     expect(widget.tagName.toLowerCase()).to.equal("lr-widget");
     expect(widget.getAttribute("slot")).to.equal("cell-a");
     expect((widget as unknown as { label: string }).label).to.equal("Users");
     const renderer = widget.querySelector("lr-widget-renderer") as unknown as {
       tree: unknown;
     } & Element;
-    expect(renderer).to.exist;
+    expect(renderer !== null).to.be.true;
     await (renderer as unknown as { updateComplete: Promise<unknown> })
       .updateComplete;
-    expect(renderer.shadowRoot!.querySelector("lr-stat")).to.exist;
+    expect(renderer.shadowRoot!.querySelector("lr-stat") !== null).to.be.true;
+  });
+
+  it("creates default cells in the adopted grid's owner realm", async () => {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const FrameHTMLElement = frameWindow.HTMLElement;
+    frameWindow.customElements.define(
+      tag("widget"),
+      class extends FrameHTMLElement {}
+    );
+    frameWindow.customElements.define(
+      tag("widget-renderer"),
+      class extends FrameHTMLElement {}
+    );
+    // Render once in the defining realm so Lit attaches its constructed stylesheets before the
+    // normal custom-element adoption lifecycle moves the existing shadow root to another document.
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.layout = [
+      {
+        id: "realm-cell",
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1,
+        widget: { type: "text", props: { text: "Realm content" } },
+      },
+    ];
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      const widget = el.querySelector<HTMLElement>('[cell-id="realm-cell"]');
+      const renderer = widget?.querySelector<HTMLElement>(
+        tag("widget-renderer")
+      );
+      expect(widget !== null).to.be.true;
+      expect(renderer !== null && renderer !== undefined).to.be.true;
+      expect(widget instanceof frameWindow.HTMLElement).to.be.true;
+      expect(renderer instanceof frameWindow.HTMLElement).to.be.true;
+      expect(widget?.ownerDocument === frameDocument).to.be.true;
+      expect(renderer?.ownerDocument === frameDocument).to.be.true;
+    } finally {
+      iframe.remove();
+    }
   });
 
   it("updates an already-adopted default cell in place when layout changes", async () => {
@@ -222,7 +414,7 @@ describe("default cell composition", () => {
     expect(
       (el.querySelector('[cell-id="a"]') as unknown as { label: string }).label
     ).to.equal("Renamed");
-    expect(el.querySelector('[cell-id="a"]')).to.equal(widget);
+    expect(el.querySelector('[cell-id="a"]') === widget).to.be.true;
   });
 
   it("routes a user-authored child into its wrapper by cell-id instead of creating a default cell", async () => {
@@ -266,10 +458,224 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    expect(el.querySelector('[cell-id="a"]')).to.exist;
+    expect(el.querySelector('[cell-id="a"]') !== null).to.be.true;
     el.layout = [];
     await el.updateComplete;
-    expect(el.querySelector('[cell-id="a"]')).to.not.exist;
+    expect(el.querySelector('[cell-id="a"]') === null).to.be.true;
+  });
+});
+
+describe("owner-realm pointer interactions", () => {
+  it("schedules and cancels announcement throttling in an adopted grid's owner window", async () => {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const scheduled = new Map<number, VoidFunction>();
+    const delays: number[] = [];
+    const cleared: number[] = [];
+    let nextTimer = 700;
+    const originalSetTimeout = frameWindow.setTimeout;
+    const originalClearTimeout = frameWindow.clearTimeout;
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout = 0) => {
+      if (typeof handler !== "function") {
+        throw new TypeError("The dashboard-grid test only accepts timer callbacks.");
+      }
+      const timer = nextTimer++;
+      scheduled.set(timer, handler as VoidFunction);
+      delays.push(timeout);
+      return timer;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((timer?: number) => {
+      if (timer === undefined) return;
+      cleared.push(timer);
+      scheduled.delete(timer);
+    }) as typeof frameWindow.clearTimeout;
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.layout = twoCells();
+    for (const cell of el.layout) {
+      const content = frameDocument.createElement("div");
+      content.setAttribute("cell-id", cell.id);
+      el.append(content);
+    }
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      el.shadowRoot!
+        .querySelector<HTMLElement>('[data-cell-id="a"]')!
+        .dispatchEvent(
+          new frameWindow.KeyboardEvent("keydown", {
+            key: "ArrowRight",
+            bubbles: true,
+            cancelable: true,
+          })
+        );
+
+      expect(scheduled.size, "the frame schedules the pending announcement").to.equal(1);
+      expect(delays).to.deep.equal([500]);
+      const [timer] = scheduled.keys();
+      el.remove();
+      expect(cleared, "disconnect cancels through the same frame window").to.deep.equal([
+        timer,
+      ]);
+    } finally {
+      el.remove();
+      frameWindow.setTimeout = originalSetTimeout;
+      frameWindow.clearTimeout = originalClearTimeout;
+      iframe.remove();
+    }
+  });
+
+  it("listens for an adopted grid's gesture events on its owner window", async () => {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.cellsDraggable = true;
+    el.columns = 4;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    const content = frameDocument.createElement("div");
+    content.setAttribute("cell-id", "a");
+    el.append(content);
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="cell"]'
+      )!;
+      wrapper.setPointerCapture = () => {};
+      let moveDetail: { position: { x: number; y: number } } | undefined;
+      el.addEventListener("lr-cell-move", (event) => {
+        moveDetail = (event as CustomEvent).detail;
+      });
+
+      wrapper.dispatchEvent(
+        new frameWindow.PointerEvent("pointerdown", {
+          pointerId: 17,
+          button: 0,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+          composed: true,
+        })
+      );
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent("pointermove", {
+          pointerId: 17,
+          clientX: 10_000,
+          clientY: 0,
+        })
+      );
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent("pointerup", {
+          pointerId: 17,
+          clientX: 10_000,
+          clientY: 0,
+        })
+      );
+
+      expect(moveDetail?.position).to.deep.equal({ x: 3, y: 0 });
+    } finally {
+      iframe.remove();
+    }
+  });
+
+  it("does not start a drag from an iframe-realm interactive cell child", async () => {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.cellsDraggable = true;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    const button = frameDocument.createElement("button");
+    button.setAttribute("cell-id", "a");
+    el.append(button);
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="cell"]'
+      )!;
+      wrapper.setPointerCapture = () => {};
+
+      button.dispatchEvent(
+        new frameWindow.PointerEvent("pointerdown", {
+          pointerId: 23,
+          button: 0,
+          bubbles: true,
+          composed: true,
+        })
+      );
+
+      expect(wrapper.hasAttribute("data-dragging")).to.be.false;
+    } finally {
+      iframe.remove();
+    }
+  });
+
+  it("listens for an adopted grid's resize events on its owner window", async () => {
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.cellsResizable = true;
+    el.columns = 4;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    const content = frameDocument.createElement("div");
+    content.setAttribute("cell-id", "a");
+    el.append(content);
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      const handle = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="resize-handle"]'
+      )!;
+      handle.setPointerCapture = () => {};
+      let resizeDetail: { size: { w: number; h: number } } | undefined;
+      el.addEventListener("lr-cell-resize", (event) => {
+        resizeDetail = (event as CustomEvent).detail;
+      });
+
+      handle.dispatchEvent(
+        new frameWindow.PointerEvent("pointerdown", {
+          pointerId: 29,
+          button: 0,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+          composed: true,
+        })
+      );
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent("pointermove", {
+          pointerId: 29,
+          clientX: 10_000,
+          clientY: 0,
+        })
+      );
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent("pointerup", {
+          pointerId: 29,
+          clientX: 10_000,
+          clientY: 0,
+        })
+      );
+
+      expect(resizeDetail?.size).to.deep.equal({ w: 4, h: 1 });
+    } finally {
+      iframe.remove();
+    }
   });
 });
 
@@ -296,6 +702,100 @@ describe("roving keyboard navigation", () => {
     expect(a.getAttribute("tabindex")).to.equal("-1");
     expect(b.getAttribute("tabindex")).to.equal("0");
     expect(el.shadowRoot!.activeElement).to.equal(b);
+  });
+
+  it("uses the adopted owner realm CSS escape when keyboard focus targets a special cell id", async () => {
+    const specialId = 'target\"] [data-cell-id=\"decoy';
+    const layout: DashboardCell[] = [
+      { id: "start", x: 0, y: 0, w: 1, h: 1 },
+      { id: specialId, x: 1, y: 0, w: 1, h: 1 },
+      { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
+    ];
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`,
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+
+    const ownerEscape = frameWindow.CSS.escape.bind(frameWindow.CSS);
+    let ownerCalls = 0;
+    const restoreOwner = replaceCssEscape(frameWindow.CSS, (identifier) => {
+      ownerCalls += 1;
+      return ownerEscape(identifier);
+    });
+    const restoreAmbient = replaceCssEscape(CSS, () => "decoy");
+    try {
+      el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="start"]')!.dispatchEvent(
+        new frameWindow.KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      await el.updateComplete;
+      await Promise.resolve();
+
+      expect(ownerCalls).to.equal(1);
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["cellId"]).to.equal(specialId);
+    } finally {
+      restoreAmbient();
+      restoreOwner();
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it("falls back to an exact cell-id scan when adopted owner CSS escape is missing or throws", async () => {
+    const specialId = 'target\"] [data-cell-id=\"decoy';
+    const layout: DashboardCell[] = [
+      { id: "start", x: 0, y: 0, w: 1, h: 1 },
+      { id: specialId, x: 1, y: 0, w: 1, h: 1 },
+      { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
+    ];
+    for (const mode of ["missing", "throwing"] as const) {
+      const { iframe, frameDocument, frameWindow } = createRealmFrame();
+      const el = (await fixture(
+        html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`,
+      )) as LyraDashboardGrid;
+      el.remove();
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      let ownerCalls = 0;
+      const restoreOwner = replaceCssEscape(
+        frameWindow.CSS,
+        mode === "missing"
+          ? undefined
+          : () => {
+              ownerCalls += 1;
+              throw new Error("owner CSS escape unavailable");
+            },
+      );
+      const restoreAmbient = replaceCssEscape(CSS, () => "decoy");
+      try {
+        el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="start"]')!.dispatchEvent(
+          new frameWindow.KeyboardEvent("keydown", {
+            key: "ArrowRight",
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        await el.updateComplete;
+        await Promise.resolve();
+
+        expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["cellId"]).to.equal(specialId);
+        expect(ownerCalls).to.equal(mode === "throwing" ? 1 : 0);
+      } finally {
+        restoreAmbient();
+        restoreOwner();
+        el.remove();
+        iframe.remove();
+      }
+    }
   });
 
   it("Home/End jump to the first/last cell", async () => {
@@ -1013,7 +1513,8 @@ describe("pointer drag", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, locked: true }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="resize-handle"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="resize-handle"]') === null).to
+      .be.true;
   });
 });
 
@@ -1263,6 +1764,18 @@ describe("accessibility", () => {
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
     ).to.equal("Ops overview");
+  });
+
+  it('preserves an explicitly empty host aria-label instead of replacing it with the fallback', async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid aria-label=""></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+    ).to.equal("");
   });
 });
 

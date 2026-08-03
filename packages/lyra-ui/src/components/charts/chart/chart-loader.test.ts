@@ -5,7 +5,58 @@ import {
   loadChartJsWithZoom,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
+  type ChartJsModule,
 } from './chart-loader.js';
+
+const CHART_REGISTERABLE_KEYS = [
+  'LineController',
+  'BarController',
+  'ScatterController',
+  'DoughnutController',
+  'PieController',
+  'RadarController',
+  'PolarAreaController',
+  'BubbleController',
+  'LineElement',
+  'PointElement',
+  'BarElement',
+  'ArcElement',
+  'LinearScale',
+  'CategoryScale',
+  'RadialLinearScale',
+  'Filler',
+  'Tooltip',
+  'Legend',
+] as const;
+
+function fakeChartModule(): ChartJsModule {
+  class FakeChart {
+    static register(..._items: unknown[]): void {}
+    constructor(_item: HTMLCanvasElement, _configuration: unknown) {}
+  }
+  const registrationItem = {};
+  return {
+    Chart: FakeChart,
+    defaults: {
+      plugins: { legend: { labels: { generateLabels: () => [] } } },
+    },
+    ...Object.fromEntries(CHART_REGISTERABLE_KEYS.map((key) => [key, registrationItem])),
+  } as unknown as ChartJsModule;
+}
+
+async function captureWarnings<T>(operation: () => Promise<T>): Promise<{
+  result: T;
+  warnings: unknown[][];
+}> {
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    return { result: await operation(), warnings };
+  } finally {
+    console.warn = originalWarn;
+  }
+}
 
 it('resolves the Chart.js module', async () => {
   const mod = await loadChartJs();
@@ -20,6 +71,78 @@ it('caches the module — a second call returns the same promise result', async 
 });
 
 describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => {
+  it('normalizes a valid Chart.js default export and prefers a valid named namespace', async () => {
+    const fallback = fakeChartModule();
+    const fromDefault = await loadChartAndZoom(
+      () => Promise.resolve({ default: fallback } as never),
+      () => Promise.reject(new Error('unused')),
+    );
+    expect(fromDefault?.mod === fallback).to.be.true;
+
+    const named = fakeChartModule();
+    const mixed = Object.assign(named, { default: fallback });
+    const capabilityFirst = await loadChartAndZoom(
+      () => Promise.resolve(mixed as never),
+      () => Promise.reject(new Error('unused')),
+    );
+    expect(capabilityFirst?.mod === named).to.be.true;
+  });
+
+  it('fails closed with a clear Error when Chart.js lacks a consumed core capability', async () => {
+    const malformedCases: Array<[string, unknown]> = [
+      [
+        'Chart',
+        {
+          ...fakeChartModule(),
+          Chart: Object.assign(() => ({}), { register() {} }),
+        },
+      ],
+      [
+        'Chart.register',
+        {
+          ...fakeChartModule(),
+          Chart: class {
+            constructor(_item: HTMLCanvasElement, _configuration: unknown) {}
+          },
+        },
+      ],
+      ['defaults', { ...fakeChartModule(), defaults: null }],
+      ...CHART_REGISTERABLE_KEYS.map(
+        (key) => [key, { ...fakeChartModule(), [key]: undefined }] as [string, unknown],
+      ),
+    ];
+
+    for (const [capability, malformed] of malformedCases) {
+      const { result, warnings } = await captureWarnings(() =>
+        loadChartAndZoom(
+          () => Promise.resolve(malformed as never),
+          () => Promise.reject(new Error('unused')),
+        ),
+      );
+      expect(result === null, capability).to.be.true;
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error, capability).to.be.true;
+      expect(error!.message, capability).to.contain('chart.js');
+      expect(error!.message, capability).to.contain(capability);
+    }
+  });
+
+  it('rejects malformed named and default-wrapped Chart.js namespaces', async () => {
+    for (const malformed of [
+      { Chart: class {}, defaults: {} },
+      { default: { Chart: class {}, defaults: {} } },
+    ]) {
+      const { result, warnings } = await captureWarnings(() =>
+        loadChartAndZoom(
+          () => Promise.resolve(malformed as never),
+          () => Promise.reject(new Error('unused')),
+        ),
+      );
+      expect(result === null).to.be.true;
+      expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
+    }
+  });
+
   it('does not import chartjs-plugin-zoom when the caller does not request it', async () => {
     let zoomImportCalled = false;
     const fakeChart = await import('chart.js');
@@ -109,6 +232,34 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
     const loggedArgs = calls.flat();
     expect(loggedArgs).to.contain(zoomError);
   });
+
+  it('normalizes plugins capability-first and rejects a plugin without a non-empty id', async () => {
+    const chart = fakeChartModule();
+    const namedPlugin = { id: 'named-zoom' };
+    const fallbackPlugin = { id: 'default-zoom' };
+    const mixed = Object.assign(namedPlugin, { default: fallbackPlugin });
+    const result = await loadChartAndZoom(
+      () => Promise.resolve(chart),
+      () => Promise.resolve(mixed as never),
+      true,
+    );
+    expect(result!.zoomPlugin).to.equal(namedPlugin);
+
+    for (const malformed of [{}, { default: { id: '' } }]) {
+      const { result: degraded, warnings } = await captureWarnings(() =>
+        loadChartAndZoom(
+          () => Promise.resolve(chart),
+          () => Promise.resolve(malformed as never),
+          true,
+        ),
+      );
+      expect(degraded!.zoomPlugin).to.equal(undefined);
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error).to.be.true;
+      expect(error!.message).to.contain('chartjs-plugin-zoom');
+      expect(error!.message).to.contain('id');
+    }
+  });
 });
 
 describe('loadChartJsWithZoom (memoized zoom-plugin load)', () => {
@@ -178,11 +329,29 @@ describe('loadChartJsWithDataLabels (memoized data-labels plugin load)', () => {
     }
   });
 
-  it('reads `mod.default ?? mod` so the plugin object is registered, not the module namespace', async () => {
+  it('normalizes a default-wrapped plugin to the registerable capability', async () => {
     const sentinelPlugin = { id: 'datalabels-sentinel' };
     const plugin = await loadDataLabelsPlugin(() =>
       Promise.resolve({ default: sentinelPlugin } as never),
     );
     expect(plugin).to.equal(sentinelPlugin);
+  });
+
+  it('prefers a valid named plugin capability and rejects malformed namespace/default shapes', async () => {
+    const named = { id: 'named-datalabels' };
+    const fallback = { id: 'default-datalabels' };
+    const mixed = Object.assign(named, { default: fallback });
+    expect(await loadDataLabelsPlugin(() => Promise.resolve(mixed as never))).to.equal(named);
+
+    for (const malformed of [{ render: () => undefined }, { default: { id: 42 } }]) {
+      const { result, warnings } = await captureWarnings(() =>
+        loadDataLabelsPlugin(() => Promise.resolve(malformed as never)),
+      );
+      expect(result).to.equal(undefined);
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error).to.be.true;
+      expect(error!.message).to.contain('chartjs-plugin-datalabels');
+      expect(error!.message).to.contain('id');
+    }
   });
 });

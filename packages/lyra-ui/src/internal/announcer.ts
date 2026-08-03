@@ -1,5 +1,6 @@
 import { tag } from './prefix.js';
 import { finiteDuration } from './numbers.js';
+import { isAccessibilityVisible } from './accessibility-visibility.js';
 
 /** Options for a single `Announcer.announce()` call. */
 export interface AnnounceOptions {
@@ -15,9 +16,22 @@ export interface AnnouncerOptions {
   /** Invoked with the coalesced text whenever a burst flushes (on the
    *  trailing edge, or immediately for a `{ force: true }` call). */
   onFlush: (text: string) => void;
+  /** Timer host used for scheduling and cancellation. Components that can be adopted into another
+   *  document should pass (or later bind) that document's `defaultView`. */
+  timerHost?: AnnouncerTimerHost;
+}
+
+/** Minimal timer surface used by `Announcer`; a `Window` satisfies this contract. */
+export interface AnnouncerTimerHost {
+  setTimeout(handler: () => void, timeout: number): number;
+  clearTimeout(handle: number): void;
 }
 
 const DEFAULT_THROTTLE_MS = 500;
+const ambientTimerHost: AnnouncerTimerHost = {
+  setTimeout: (handler, timeout) => globalThis.setTimeout(handler, timeout) as unknown as number,
+  clearTimeout: (handle) => globalThis.clearTimeout(handle),
+};
 
 /**
  * Trailing-edge debounce/coalesce for screen-reader announcements.
@@ -47,12 +61,14 @@ export class Announcer {
   throttleMs: number;
 
   private readonly onFlush: (text: string) => void;
-  private timer?: ReturnType<typeof setTimeout>;
+  private timerHost: AnnouncerTimerHost;
+  private timer?: number;
   private pending?: string;
 
   constructor(options: AnnouncerOptions) {
     this.throttleMs = options.throttleMs ?? DEFAULT_THROTTLE_MS;
     this.onFlush = options.onFlush;
+    this.timerHost = options.timerHost ?? ambientTimerHost;
   }
 
   /** The latest text awaiting flush, if a burst is currently in progress. */
@@ -80,13 +96,29 @@ export class Announcer {
     // the same window just overwrite `pending` above, so the flush deadline
     // stays anchored to the first call (trailing-edge debounce) instead of
     // being pushed back on every subsequent call.
-    this.timer ??= setTimeout(() => this.flush(), this.throttleMs);
+    this.timer ??= this.timerHost.setTimeout(() => this.flush(), this.throttleMs);
+  }
+
+  /**
+   * Rebind future timers to `timerHost`. A pending burst is canceled on the previous host and
+   * rescheduled on the new one without losing its latest text.
+   */
+  setTimerHost(timerHost: AnnouncerTimerHost): void {
+    if (timerHost === this.timerHost) return;
+    if (this.timer !== undefined) {
+      this.timerHost.clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+    this.timerHost = timerHost;
+    if (this.pending !== undefined) {
+      this.timer = this.timerHost.setTimeout(() => this.flush(), this.throttleMs);
+    }
   }
 
   /** Cancel any pending (not yet flushed) announcement without flushing it. */
   cancel(): void {
     if (this.timer !== undefined) {
-      clearTimeout(this.timer);
+      this.timerHost.clearTimeout(this.timer);
       this.timer = undefined;
     }
     this.pending = undefined;
@@ -94,7 +126,7 @@ export class Announcer {
 
   private flush(): void {
     if (this.timer !== undefined) {
-      clearTimeout(this.timer);
+      this.timerHost.clearTimeout(this.timer);
       this.timer = undefined;
     }
     const text = this.pending;
@@ -111,6 +143,11 @@ export interface AnnouncementSinkOptions {
   /** Document the sink is mounted in. Defaults to the ambient `document`; pass the consumer's own
    *  `ownerDocument` when it may live in an iframe or another adopted document. */
   document?: Document;
+  /** Component or other semantic source whose accessibility visibility gates writes. A document
+   *  sink cannot inherit `hidden`/`inert`/CSS/closed-details visibility from the source it
+   *  announces for. A box-generating source also honors `content-visibility:auto` skipping;
+   *  browsers cannot expose that distinction for a source whose own display is `contents`. */
+  source?: Element;
   /** How long an announced node stays in the sink before it is swept, in ms. Long enough for a
    *  screen reader to have read it; short enough that focus returning to the page later never
    *  finds a pile of stale text to re-read. Defaults to 5000. */
@@ -159,6 +196,11 @@ interface SinkRecord {
 // looking at; weakly keyed so a torn-down document is never retained by this module.
 const sinksByDocument = new WeakMap<Document, Map<AnnouncementPoliteness, SinkRecord>>();
 
+function mountSink(doc: Document, record: SinkRecord): void {
+  const parent = doc.body ?? doc.documentElement;
+  if (record.element.parentNode !== parent) parent.appendChild(record.element);
+}
+
 function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkRecord {
   let byPoliteness = sinksByDocument.get(doc);
   if (!byPoliteness) {
@@ -166,7 +208,12 @@ function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkReco
     sinksByDocument.set(doc, byPoliteness);
   }
   const existing = byPoliteness.get(politeness);
-  if (existing) return existing;
+  if (existing) {
+    // Consumer DOM reconciliation can replace `<body>` or remove library-owned marker nodes.
+    // Keep the existing object (all held handles reference it) and remount it before reuse.
+    mountSink(doc, existing);
+    return existing;
+  }
 
   const element = doc.createElement('div');
   element.setAttribute(ANNOUNCEMENT_SINK_ATTRIBUTE, politeness);
@@ -179,9 +226,8 @@ function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkReco
   element.setAttribute('aria-atomic', 'false');
   element.setAttribute('aria-relevant', 'additions');
   element.style.cssText = SINK_HIDDEN_CSS_TEXT;
-  (doc.body ?? doc.documentElement).appendChild(element);
-
   const record: SinkRecord = { element, refs: 0 };
+  mountSink(doc, record);
   byPoliteness.set(politeness, record);
   return record;
 }
@@ -214,7 +260,14 @@ export function acquireAnnouncementSink(
 
   const record = sinkRecord(doc, politeness);
   record.refs += 1;
-  const sweeps = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+  const ownerWindow = doc.defaultView;
+  const timerHost: AnnouncerTimerHost = ownerWindow
+    ? {
+        setTimeout: (handler, timeout) => ownerWindow.setTimeout(handler, timeout),
+        clearTimeout: (handle) => ownerWindow.clearTimeout(handle),
+      }
+    : ambientTimerHost;
+  const sweeps = new Map<HTMLElement, number>();
   let released = false;
 
   const sink: AnnouncementSink = {
@@ -222,14 +275,24 @@ export function acquireAnnouncementSink(
     politeness,
     messageTtlMs: finiteDuration(options.messageTtlMs ?? DEFAULT_MESSAGE_TTL_MS, DEFAULT_MESSAGE_TTL_MS),
     announce(text: string): void {
-      if (released || text === '') return;
+      if (
+        released ||
+        text === '' ||
+        (options.source &&
+          (options.source.ownerDocument !== doc || !isAccessibilityVisible(options.source)))
+      ) {
+        return;
+      }
+      // A still-held handle must recover if application-level body reconciliation detached the
+      // shared marker since acquisition; otherwise every later message would land off-document.
+      mountSink(doc, record);
       const message = doc.createElement('div');
       message.textContent = text;
       record.element.appendChild(message);
       const ttl = finiteDuration(sink.messageTtlMs, DEFAULT_MESSAGE_TTL_MS);
       sweeps.set(
         message,
-        setTimeout(() => {
+        timerHost.setTimeout(() => {
           sweeps.delete(message);
           message.remove();
         }, ttl),
@@ -239,7 +302,7 @@ export function acquireAnnouncementSink(
       if (released) return;
       released = true;
       for (const [message, sweep] of sweeps) {
-        clearTimeout(sweep);
+        timerHost.clearTimeout(sweep);
         message.remove();
       }
       sweeps.clear();

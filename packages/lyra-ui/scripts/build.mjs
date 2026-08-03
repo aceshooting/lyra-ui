@@ -1,7 +1,11 @@
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { compactBuildJavaScript } from './compact-build-js.mjs';
+import { checkLocalizationSlices } from './check-localization-slices.mjs';
+import { createMigrationRuntimeInventory } from './migrate-wa.mjs';
+import { normalizeMixinDeclarations } from './normalize-mixin-declarations.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -28,12 +32,50 @@ await new Promise((resolve, reject) => {
   });
 });
 
+const normalizedMixins = await normalizeMixinDeclarations(join(packageDir, 'dist'));
+console.log(
+  `Published mixin declarations normalized: ${normalizedMixins.replacements} base declaration(s) ` +
+    `across ${normalizedMixins.filesChanged} file(s).`,
+);
+
 await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.css'));
 
 const stylesDir = join(packageDir, 'dist', 'styles');
 await mkdir(stylesDir, { recursive: true });
 await Promise.all(
-  ['native.css', 'utilities.css'].map((name) =>
+  ['design-tokens.css', 'native.css', 'utilities.css'].map((name) =>
     cp(join(packageDir, 'src', 'styles', name), join(stylesDir, name)),
   ),
 );
+
+const compacted = await compactBuildJavaScript(join(packageDir, 'dist'));
+console.log(
+  `Published JavaScript compacted: ${compacted.beforeBytes.toLocaleString('en')} -> ` +
+    `${compacted.afterBytes.toLocaleString('en')} bytes across ${compacted.files} modules.`,
+);
+
+// The public migration executable is deliberately assembled from only its two runtime modules
+// and a compact, prevalidated migration projection. Publishing scripts/ wholesale would expose
+// contributor-only maintenance helpers, while publishing the 4+ MiB public-surface inventory
+// would violate the package budget for data the CLI never reads.
+const migrationCliDir = join(packageDir, 'dist', 'cli');
+await mkdir(migrationCliDir, { recursive: true });
+await Promise.all([
+  cp(join(packageDir, 'scripts', 'migrate-wa.mjs'), join(migrationCliDir, 'migrate-wa.mjs')),
+  cp(
+    join(packageDir, 'scripts', 'component-inventory.mjs'),
+    join(migrationCliDir, 'component-inventory.mjs'),
+  ),
+]);
+const componentInventory = JSON.parse(
+  await readFile(join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
+);
+await writeFile(
+  join(migrationCliDir, 'migration-contract.json'),
+  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory))}\n`,
+  'utf8',
+);
+await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
+
+await checkLocalizationSlices(packageDir);
+console.log('Unbundled localization slice imports and public fallback catalog verified.');

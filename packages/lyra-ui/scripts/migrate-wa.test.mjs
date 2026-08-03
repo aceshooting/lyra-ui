@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 import {
   MIGRATION_REPORT_SCHEMA_VERSION,
   buildMigrationContract,
+  collectFiles,
+  createMigrationRuntimeInventory,
   migrateFiles,
   migrateText,
   parseArgs,
@@ -165,6 +167,28 @@ test('the migration contract validates every reserved rewrite rule array', () =>
   }
 });
 
+test('the migration contract fails closed on accessibility profile drift', () => {
+  const missingReview = structuredClone(inventory);
+  delete missingReview.mappings[0].parity.accessibility;
+  assert.throws(() => buildMigrationContract(missingReview), /missing accessibility parity review/);
+
+  const unknownBehavior = structuredClone(inventory);
+  unknownBehavior.accessibilityProfiles.synthetic.keyboard.push('invented-key-contract');
+  assert.throws(() => buildMigrationContract(unknownBehavior), /unknown keyboard behavior invented-key-contract/);
+
+  const staleComparison = structuredClone(inventory);
+  staleComparison.mappings[0].parity.accessibility.comparison.status = 'target-additive';
+  assert.throws(() => buildMigrationContract(staleComparison), /stored accessibility comparison is stale/);
+
+  const runtime = createMigrationRuntimeInventory(inventory);
+  assert.deepEqual(runtime.accessibilityProfiles, inventory.accessibilityProfiles);
+  assert.deepEqual(
+    runtime.mappings.map((mapping) => mapping.parity.accessibility),
+    inventory.mappings.map((mapping) => mapping.parity.accessibility),
+  );
+  assert.equal(buildMigrationContract(runtime).mappings.size, inventory.mappings.length);
+});
+
 test('free and Pro package identities share the Web Awesome ecosystem without conflating tiers', () => {
   assert.deepEqual(
     contract.packageIdentities.get('@awesome.me/webawesome'),
@@ -178,6 +202,69 @@ test('free and Pro package identities share the Web Awesome ecosystem without co
     contract.packageIdentities.get('@shoelace-style/shoelace'),
     { ecosystem: 'shoelace', tiers: new Set(['free']) },
   );
+});
+
+test('the packaged runtime projection stays narrow, complete, and fail-closed', () => {
+  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory);
+  const runtimeContract = buildMigrationContract(runtimeInventory);
+  assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, 1);
+  assert.equal(runtimeContract.mappings.size, checkedInventory.mappings.length);
+  assert.deepEqual(
+    runtimeContract.packageIdentities.get('@awesome.me/webawesome-pro'),
+    { ecosystem: 'webawesome', tiers: new Set(['free', 'pro']) },
+  );
+  assert.ok(
+    JSON.stringify(runtimeInventory).length < 400_000,
+    'the CLI must not republish the multi-megabyte public-surface inventory',
+  );
+
+  const malformed = structuredClone(runtimeInventory);
+  malformed.mappings[0].rewrites.attributes.push({ from: 'old', to: 'new', guess: true });
+  assert.throws(() => buildMigrationContract(malformed), /unknown key/);
+});
+
+test('the packaged runtime executes from its adjacent projected contract', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-packaged-runtime-v8-'));
+  try {
+    const cliDir = path.join(scratch, 'cli');
+    const sourceDir = path.join(scratch, 'consumer');
+    fs.mkdirSync(cliDir);
+    fs.mkdirSync(sourceDir);
+    fs.copyFileSync(migratePath, path.join(cliDir, 'migrate-wa.mjs'));
+    fs.copyFileSync(
+      path.join(scriptDir, 'component-inventory.mjs'),
+      path.join(cliDir, 'component-inventory.mjs'),
+    );
+    fs.writeFileSync(
+      path.join(cliDir, 'migration-contract.json'),
+      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory))}\n`,
+    );
+
+    const source = path.join(sourceDir, 'component.ts');
+    fs.writeFileSync(
+      source,
+      [
+        "import '@awesome.me/webawesome/dist/components/accordion-item/accordion-item.js';",
+        "document.body.innerHTML = '<wa-accordion-item>Panel</wa-accordion-item>';",
+        '',
+      ].join('\n'),
+    );
+    const result = spawnSync(process.execPath, [path.join(cliDir, 'migrate-wa.mjs'), sourceDir], {
+      cwd: scratch,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(
+      fs.readFileSync(source, 'utf8'),
+      [
+        "import '@aceshooting/lyra-ui/components/layout/details/accordion-item.js';",
+        "document.body.innerHTML = '<lr-accordion-item>Panel</lr-accordion-item>';",
+        '',
+      ].join('\n'),
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('inventory-v1 migration coverage classifies every pinned tag without claiming blanket renames', () => {
@@ -197,6 +284,27 @@ test('inventory-v1 migration coverage classifies every pinned tag without claimi
   assert.match(
     formatMigrationCoverageSummary(result.summary, inputs.upstreamTags),
     /3 automatic, 3 manual, 5 README relationships\./,
+  );
+});
+
+test('migration coverage reads inherited events from a compact Lyra manifest', () => {
+  const inputs = migrationCoverageFixture();
+  const widget = inputs.lyraManifest.modules[0].declarations.find(
+    (declaration) => declaration.tagName === 'lr-widget',
+  );
+  const inheritedEvents = widget.events;
+  widget.name = 'LyraWidget';
+  widget.superclass = { name: 'LyraWidgetBase', module: '/synthetic-base.js' };
+  delete widget.events;
+  inputs.lyraManifest.modules.unshift({
+    path: 'synthetic-base.ts',
+    declarations: [{ kind: 'class', name: 'LyraWidgetBase', events: inheritedEvents }],
+  });
+
+  assert.deepEqual(
+    analyzeMigrationCoverage(inputs).errors,
+    [],
+    'a migrated listener remains covered when its event is declared on a resolvable base class',
   );
 });
 
@@ -614,7 +722,7 @@ test('a retained root registration import blocks automatic mappings in a mixed-s
     assert.equal(fs.readFileSync(source, 'utf8'), input);
     assert.deepEqual(
       new Set(report.warnings.map((entry) => entry.warningCode)),
-      new Set(['MAPPING_REVIEW_BLOCKED', 'CONCEPTUAL_MAPPING', 'PACKAGE_IMPORT_BLOCKED']),
+      new Set(['REGISTRATION_CLOSURE_REQUIRED', 'CONCEPTUAL_MAPPING', 'PACKAGE_IMPORT_BLOCKED']),
     );
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
@@ -695,6 +803,134 @@ test('a root package import receives granular registration for root-excluded tar
   }
 });
 
+test('automatic markup stays unchanged until the scanned target set proves registration closure', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-registration-proof-v8-'));
+  try {
+    const importFree = path.join(scratch, 'import-free.html');
+    const cdnOnly = path.join(scratch, 'cdn-only.html');
+    const importFreeInput = '<wa-widget></wa-widget>\n';
+    const cdnOnlyInput = [
+      '<script type="module" src="https://cdn.example.test/webawesome.js"></script>',
+      '<wa-widget></wa-widget>',
+      '',
+    ].join('\n');
+    fs.writeFileSync(importFree, importFreeInput);
+    fs.writeFileSync(cdnOnly, cdnOnlyInput);
+
+    const report = migrateFiles({ files: [importFree, cdnOnly], inventory, cwd: scratch });
+    assert.equal(report.filesChanged, 0);
+    assert.equal(fs.readFileSync(importFree, 'utf8'), importFreeInput);
+    assert.equal(fs.readFileSync(cdnOnly, 'utf8'), cdnOnlyInput);
+    assert.equal(
+      report.warnings.filter((entry) => entry.warningCode === 'REGISTRATION_CLOSURE_REQUIRED').length,
+      2,
+    );
+    assert.ok(
+      report.warnings.every(
+        (entry) =>
+          entry.warningCode !== 'REGISTRATION_CLOSURE_REQUIRED' ||
+          entry.message.includes('@aceshooting/lyra-ui/components/forms/widget/widget.js'),
+      ),
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a free package root cannot authorize a Pro-only tag rewrite', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-tier-proof-v8-'));
+  try {
+    const source = path.join(scratch, 'pro.ts');
+    const input = [
+      "import '@awesome.me/webawesome';",
+      "document.body.innerHTML = '<wa-data-grid></wa-data-grid>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+
+    const proInventory = structuredClone(inventory);
+    const dataGrid = proInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
+    dataGrid.classification = 'exact';
+    dataGrid.rationale = null;
+    dataGrid.parity.lightDom = 'surface-only';
+    dataGrid.parity.behaviorReviewFlags = [];
+
+    const report = migrateFiles({ files: [source], inventory: proInventory, cwd: scratch });
+    assert.equal(report.filesChanged, 0);
+    assert.equal(fs.readFileSync(source, 'utf8'), input);
+    assert.deepEqual(
+      new Set(report.warnings.map((entry) => entry.warningCode)),
+      new Set(['PACKAGE_IMPORT_BLOCKED', 'REGISTRATION_CLOSURE_REQUIRED']),
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a free package deep import cannot masquerade as a Pro registration entry', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-deep-tier-proof-v8-'));
+  try {
+    const source = path.join(scratch, 'pro.ts');
+    const input = [
+      "import '@awesome.me/webawesome/dist/components/data-grid/data-grid.js';",
+      "document.body.innerHTML = '<wa-data-grid></wa-data-grid>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+
+    const proInventory = structuredClone(inventory);
+    const dataGrid = proInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
+    dataGrid.classification = 'exact';
+    dataGrid.rationale = null;
+    dataGrid.parity.lightDom = 'surface-only';
+    dataGrid.parity.behaviorReviewFlags = [];
+
+    const report = migrateFiles({ files: [source], inventory: proInventory, cwd: scratch });
+    assert.equal(report.filesChanged, 0);
+    assert.equal(fs.readFileSync(source, 'utf8'), input);
+    assert.deepEqual(
+      new Set(report.warnings.map((entry) => entry.warningCode)),
+      new Set(['PACKAGE_TIER_MISMATCH', 'REGISTRATION_CLOSURE_REQUIRED']),
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a different component deep import does not prove registration for a rewritten tag', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-mismatched-registration-v8-'));
+  try {
+    const source = path.join(scratch, 'mismatch.ts');
+    const input = [
+      "import '@awesome.me/webawesome/dist/components/widget/widget.js';",
+      "document.body.innerHTML = '<wa-data-grid></wa-data-grid>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+
+    const proInventory = structuredClone(inventory);
+    const dataGrid = proInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
+    dataGrid.classification = 'exact';
+    dataGrid.rationale = null;
+    dataGrid.parity.lightDom = 'surface-only';
+    dataGrid.parity.behaviorReviewFlags = [];
+
+    const report = migrateFiles({ files: [source], inventory: proInventory, cwd: scratch });
+    assert.equal(report.filesChanged, 1, 'the independently safe widget registration still migrates');
+    assert.equal(
+      fs.readFileSync(source, 'utf8'),
+      [
+        "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';",
+        "document.body.innerHTML = '<wa-data-grid></wa-data-grid>';",
+        '',
+      ].join('\n'),
+    );
+    assert.ok(report.warnings.some((entry) => entry.warningCode === 'REGISTRATION_CLOSURE_REQUIRED'));
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test('comments, prose, class names, unrelated packages, and partial strings are false-positive safe', () => {
   const input = fixture('no-false-positives.input.ts');
   const result = migrateText(input, contract, {
@@ -735,6 +971,44 @@ test('CSS rewrites never alter comments inside an otherwise migrated component r
   const untouched = migrateText(commentOnlySelector, contract, { file: 'selector-comment.css' });
   assert.equal(untouched.content, commentOnlySelector);
   assert.deepEqual(untouched.changes, []);
+});
+
+test('directory targets include standalone CSS in the default scan set', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-css-directory-v8-'));
+  try {
+    const stylesheet = path.join(scratch, 'component.css');
+    const source = path.join(scratch, 'registration.ts');
+    fs.writeFileSync(stylesheet, 'wa-widget { color: var(--wa-old-color); }\n');
+    fs.writeFileSync(source, "import '@awesome.me/webawesome/dist/components/widget/widget.js';\n");
+    fs.writeFileSync(path.join(scratch, 'ignored.txt'), 'wa-widget {}\n');
+
+    const files = collectFiles([scratch], parseArgs([scratch]).extensions);
+    assert.deepEqual(files, [stylesheet, source].sort());
+    const report = migrateFiles({ files, inventory, cwd: scratch });
+    assert.equal(report.filesChanged, 2);
+    assert.equal(fs.readFileSync(stylesheet, 'utf8'), 'lr-widget { color: var(--lr-new-color); }\n');
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('manual mappings report one tag warning and every optional peer requirement', () => {
+  const markdown = checkedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-markdown');
+  assert.ok(markdown?.parity.runtime.optionalPeers.length > 0);
+  const result = migrateText('<wa-markdown></wa-markdown>\n', buildMigrationContract(checkedInventory), {
+    file: 'manual.html',
+  });
+  assert.equal(
+    result.warnings.filter((entry) => entry.warningCode === 'WARNING_REQUIRED').length,
+    1,
+  );
+  assert.deepEqual(
+    result.warnings
+      .filter((entry) => entry.warningCode === 'OPTIONAL_PEER_REQUIRED')
+      .map((entry) => entry.target)
+      .sort(),
+    [...markdown.parity.runtime.optionalPeers].sort(),
+  );
 });
 
 test('the lyra-v7 profile inserts only absent defaults with canonical boolean presence syntax', () => {
@@ -874,17 +1148,41 @@ test('CLI --check is non-mutating and exits nonzero until the migration is clean
   }
 });
 
+test('CLI --check remains nonzero when registration closure is unresolved', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-check-registration-v8-'));
+  try {
+    const source = path.join(scratch, 'component.html');
+    const input = '<wa-accordion-item>Panel</wa-accordion-item>\n';
+    fs.writeFileSync(source, input);
+    const result = spawnSync(process.execPath, [migratePath, '--check', source], {
+      cwd: scratch,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(fs.readFileSync(source, 'utf8'), input);
+    assert.match(result.stdout, /REGISTRATION_CLOSURE_REQUIRED/);
+    assert.match(result.stdout, /Migration check failed:/);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test('migrateFiles writes a stable location-aware JSON report and honors dry-run', () => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-v8-'));
   try {
     const source = path.join(scratch, 'component.html');
+    const registration = path.join(scratch, 'registration.ts');
     const reportPath = path.join(scratch, 'report.json');
     const input = fixture('component.input.html');
     const expected = fixture('component.expected.html');
     fs.writeFileSync(source, input);
+    fs.writeFileSync(
+      registration,
+      "import '@awesome.me/webawesome/dist/components/widget/widget.js';\n",
+    );
 
     const dryReport = migrateFiles({
-      files: [source],
+      files: [source, registration],
       inventory,
       dryRun: true,
       reportPath,
@@ -894,8 +1192,8 @@ test('migrateFiles writes a stable location-aware JSON report and honors dry-run
     assert.equal(dryReport.schemaVersion, MIGRATION_REPORT_SCHEMA_VERSION);
     assert.equal(dryReport.origin, null);
     assert.equal(dryReport.dryRun, true);
-    assert.equal(dryReport.filesScanned, 1);
-    assert.equal(dryReport.filesChanged, 1);
+    assert.equal(dryReport.filesScanned, 2);
+    assert.equal(dryReport.filesChanged, 2);
     assert.ok(dryReport.changes.length > 0);
     assert.equal(dryReport.warnings.length, 0);
     assert.deepEqual(Object.keys(dryReport.changes[0]), [
@@ -912,11 +1210,11 @@ test('migrateFiles writes a stable location-aware JSON report and honors dry-run
     ]);
     assert.deepEqual(JSON.parse(fs.readFileSync(reportPath, 'utf8')), dryReport);
 
-    const applied = migrateFiles({ files: [source], inventory, dryRun: false, cwd: scratch });
+    const applied = migrateFiles({ files: [source, registration], inventory, dryRun: false, cwd: scratch });
     assert.equal(fs.readFileSync(source, 'utf8'), expected);
-    assert.equal(applied.filesChanged, 1);
+    assert.equal(applied.filesChanged, 2);
 
-    const rerun = migrateFiles({ files: [source], inventory, dryRun: false, cwd: scratch });
+    const rerun = migrateFiles({ files: [source, registration], inventory, dryRun: false, cwd: scratch });
     assert.equal(rerun.filesChanged, 0);
     assert.deepEqual(rerun.changes, []);
     assert.deepEqual(rerun.warnings, []);

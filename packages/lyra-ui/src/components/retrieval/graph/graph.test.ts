@@ -4,6 +4,7 @@ import './graph.js';
 import { LyraGraph } from './graph.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const nodes = [
@@ -11,6 +12,21 @@ const nodes = [
   { id: 'b', label: 'B' },
 ];
 const links = [{ source: 'a', target: 'b' }];
+
+function announcementSink(
+  doc: Document = document,
+  politeness: 'polite' | 'assertive' = 'polite',
+): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function announcementTexts(
+  doc: Document = document,
+  politeness: 'polite' | 'assertive' = 'polite',
+): string[] {
+  const sink = announcementSink(doc, politeness);
+  return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
 
 function stubPointerCapture(canvas: HTMLCanvasElement): {
   captured: Set<number>;
@@ -118,16 +134,10 @@ function stubIntersectionObserver() {
   };
 }
 
-// MUST stay the very first test in this file: `getScratchCtx()` (src/internal/canvas.ts) memoizes
-// its canvas 2D context at module scope for the lifetime of this page, on first call, forever -- a
-// later call can never observe a null context again once any earlier test has already resolved it
-// to a real one (several showEdgeLabels-driven tests further down do exactly that). Stubbing
-// `getContext` to null here, before anything else in the file has ever touched it, is the only way
-// to exercise edgeLabelWidth()'s `!ctx` branch at all. The long-label/short-edge declutter-gate
-// test later in this file still passes under the resulting heuristic width (a 51-character label
-// is huge under either measurement, so it still clears that test's gate) -- verified by running the
-// full file after adding this.
-it('edgeLabelWidth falls back to a character-count heuristic when getScratchCtx() returns null (no canvas 2D context available)', async () => {
+// Each graph owns its measurement canvas in the same document realm as the host. Stubbing the
+// canvas prototype before the first width read exercises the no-2D-context fallback without
+// sharing or poisoning another document's cached context.
+it('edgeLabelWidth falls back to a character-count heuristic when its owner-realm canvas has no 2D context', async () => {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
     function (this: HTMLCanvasElement) {
@@ -145,9 +155,20 @@ it('edgeLabelWidth falls back to a character-count heuristic when getScratchCtx(
 });
 
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
-  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  const el = (await fixture(
+    html`<lr-graph .strings=${{ loading: 'Loading graph data' }}></lr-graph>`,
+  )) as LyraGraph;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
+  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+  expect(skeleton !== null).to.be.true;
+  await (skeleton as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  expect(el.shadowRoot!.querySelector('.loading-label')!.textContent).to.equal(
+    'Loading graph data',
+  );
+  expect(
+    el.shadowRoot!.querySelector('[role="alert"], [role="status"], [aria-live]') === null,
+    'the controller-owned loading state must not create a second shadow live region',
+  ).to.be.true;
   expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
 
   el.nodes = nodes;
@@ -160,6 +181,219 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('svg')).to.exist;
+});
+
+it('announces graph navigation through one light-DOM sink without speaking the initial item', async () => {
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
+  el.strings = { graphItemAnnouncement: '{item}, position {index} of {total}' };
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const sink = announcementSink();
+  expect(sink !== null, 'a connected graph must acquire its sink before announcing').to.be.true;
+  expect(sink!.getRootNode() === document, 'the live region must be in document light DOM').to.be
+    .true;
+  expect(announcementTexts(), 'mounting a graph must not announce its initial graph item').to.deep
+    .equal([]);
+
+  const mirror = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.hasAttribute('aria-live'), 'the mirror must not be a second live region').to.be
+    .false;
+  expect(mirror.hasAttribute('role')).to.be.false;
+  expect(mirror.textContent).to.contain('position 1 of 3');
+
+  const firstNode = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+  firstNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(announcementTexts()).to.have.length(1);
+  expect(announcementTexts()[0]).to.contain('position 2 of 3');
+});
+
+it('releases and reacquires its announcement sink when adopted into another document', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const el = document.createElement('lr-graph') as LyraGraph;
+  el.seed = 7;
+  el.selectionMode = 'single';
+  el.nodes = nodes;
+  el.links = links;
+  document.body.appendChild(el);
+
+  try {
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const originalSink = announcementSink();
+    const originalAssertiveSink = announcementSink(document, 'assertive');
+    expect(originalSink !== null, 'the original document must own the connected graph sink').to.be
+      .true;
+    expect(originalAssertiveSink !== null).to.be.true;
+
+    foreignDocument.adoptNode(el);
+    expect(originalSink!.isConnected, 'adoption must release the old document sink').to.be.false;
+    expect(originalAssertiveSink!.isConnected).to.be.false;
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    const adoptedSink = announcementSink(foreignDocument);
+    const adoptedAssertiveSink = announcementSink(foreignDocument, 'assertive');
+    expect(adoptedSink !== null, 'reconnect must acquire a sink in the adopted document').to.be.true;
+    expect(adoptedAssertiveSink !== null).to.be.true;
+    expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
+    expect(announcementTexts(foreignDocument), 'reconnect must not re-announce stale state').to.deep
+      .equal([]);
+
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    expect(announcementTexts(foreignDocument)).to.have.length(1);
+    expect(announcementTexts(foreignDocument)[0]).to.contain('1 selected');
+    expect(announcementTexts(), 'nothing may be announced into the old document').to.deep.equal([]);
+
+    el.remove();
+    expect(adoptedSink!.isConnected, 'disconnect must release the adopted document sink').to.be
+      .false;
+    expect(adoptedAssertiveSink!.isConnected).to.be.false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen surfaces after adoption', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignDocument = frame.contentDocument!;
+  const foreignWindow = frame.contentWindow!;
+  const el = document.createElement('lr-graph') as LyraGraph;
+  el.renderer = 'canvas';
+  el.seed = 7;
+  el.nodes = nodes;
+  el.links = links;
+  document.body.appendChild(el);
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('canvas').length === 1, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  await waitUntil(() => (el as unknown as { d3?: unknown }).d3 !== undefined, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const OriginalResizeObserver = foreignWindow.ResizeObserver;
+  const OriginalIntersectionObserver = foreignWindow.IntersectionObserver;
+  const originalRequestAnimationFrame = foreignWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = foreignWindow.cancelAnimationFrame;
+  const originalMatchMedia = foreignWindow.matchMedia;
+  const originalGetComputedStyle = foreignWindow.getComputedStyle;
+  const originalCreateElement = foreignDocument.createElement;
+  let resizeObservers = 0;
+  let intersectionObservers = 0;
+  let nextFrame = 80;
+  const requestedFrames: number[] = [];
+  const canceledFrames: number[] = [];
+  const mediaQueries: string[] = [];
+  let styleReads = 0;
+  const createdNames: string[] = [];
+
+  class RealmResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {
+      resizeObservers += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  class RealmIntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '0px';
+    readonly thresholds = [0];
+    constructor(_callback: IntersectionObserverCallback) {
+      intersectionObservers += 1;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+
+  (foreignWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    RealmResizeObserver as unknown as typeof ResizeObserver;
+  (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    RealmIntersectionObserver as unknown as typeof IntersectionObserver;
+  foreignWindow.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+    const id = nextFrame++;
+    requestedFrames.push(id);
+    return id;
+  }) as typeof requestAnimationFrame;
+  foreignWindow.cancelAnimationFrame = ((id: number) => {
+    canceledFrames.push(id);
+  }) as typeof cancelAnimationFrame;
+  foreignWindow.matchMedia = ((query: string) => {
+    mediaQueries.push(query);
+    return {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener(): void {},
+      removeListener(): void {},
+      addEventListener(): void {},
+      removeEventListener(): void {},
+      dispatchEvent(): boolean { return true; },
+    };
+  }) as typeof matchMedia;
+  foreignWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    styleReads += 1;
+    return originalGetComputedStyle.call(foreignWindow, element, pseudo);
+  }) as typeof getComputedStyle;
+  foreignDocument.createElement = ((name: string, options?: ElementCreationOptions) => {
+    createdNames.push(name);
+    return originalCreateElement.call(foreignDocument, name, options);
+  }) as typeof foreignDocument.createElement;
+
+  try {
+    foreignDocument.adoptNode(el);
+    foreignDocument.body.appendChild(el);
+    await el.updateComplete;
+
+    expect(resizeObservers).to.equal(1);
+    expect(intersectionObservers).to.equal(1);
+    expect(mediaQueries.some((query) => query.startsWith('(resolution: '))).to.be.true;
+    const internals = el as unknown as {
+      pickCanvas?: HTMLCanvasElement;
+      drawCanvas(): void;
+      scheduleViewportChange(): void;
+      onCanvasPointerMove(event: PointerEvent): void;
+    };
+    expect(internals.pickCanvas?.ownerDocument === foreignDocument).to.be.true;
+    expect(createdNames).to.include('canvas');
+    internals.drawCanvas();
+    expect(styleReads).to.be.greaterThan(0);
+    internals.scheduleViewportChange();
+    internals.onCanvasPointerMove({ clientX: 1, clientY: 1 } as PointerEvent);
+    const focusResult = el.focusNode('a');
+    expect(requestedFrames.length).to.be.greaterThan(3);
+
+    const pendingFrames = [...requestedFrames];
+    el.remove();
+    expect(await focusResult).to.be.false;
+    expect(pendingFrames.every((id) => canceledFrames.includes(id))).to.be.true;
+  } finally {
+    el.remove();
+    (foreignWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      OriginalResizeObserver;
+    (foreignWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+      OriginalIntersectionObserver;
+    foreignWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    foreignWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    foreignWindow.matchMedia = originalMatchMedia;
+    foreignWindow.getComputedStyle = originalGetComputedStyle;
+    foreignDocument.createElement = originalCreateElement;
+    frame.remove();
+  }
 });
 
 it('renders an svg with a circle per node once d3 loads', async () => {
@@ -1145,10 +1379,11 @@ describe('focus & fit (J4 camera)', () => {
     expect(k).to.be.closeTo(8, 0.01); // max-zoom
   });
 
-  it('focusNode announces graphNodeFocused via the live region', async () => {
+  it('focusNode announces graphNodeFocused through the light-DOM sink and shadow mirror', async () => {
     const el = await mountWide();
     await el.focusNode('a');
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('Centered on A');
+    expect(announcementTexts().at(-1)).to.contain('Centered on A');
   });
 
   it('jumps in a single transform write under prefers-reduced-motion (no rAF tween)', async () => {
@@ -1414,16 +1649,20 @@ describe('selection (J4)', () => {
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 selected');
   });
 
-  it('does not announce "0 selected" on mount (selectedNodeIds/selectedLinkIds default to []), so the mount-time focused-item fallback still speaks', async () => {
+  it('keeps the initial item only in the aria-hidden mirror without announcing a mount-time selection', async () => {
     // selectedNodeIds/selectedLinkIds both default to `[]`, a non-undefined default -- Lit marks
     // a property "changed" on the component's very first update whenever it has one, so an
     // unguarded willUpdate() would set graphLiveText to the localized "0 selected" immediately on
     // mount and permanently block render()'s `this.graphLiveText || graphItemAnnouncement(...)`
-    // fallback for the focused node/link/community, even with no selection ever made.
+    // inspection fallback for the focused node/link/community, even with no selection ever made.
     const el = await mountSelectable('single');
-    const liveText = el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+    const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
+    const liveText = mirror.textContent;
     expect(liveText).to.not.contain('0 selected');
     expect(liveText).to.contain('Node A');
+    expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+    expect(announcementTexts(), 'initial item and selection state must both stay silent').to.deep
+      .equal([]);
   });
 
   it('is accessible with a selection applied', async () => {
@@ -1457,10 +1696,15 @@ describe('type filtering (J5)', () => {
   ];
 
   async function mountFiltered(hiddenTypes: string[] = []): Promise<LyraGraph> {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.hiddenTypes = hiddenTypes;
-    el.nodes = typedFilterNodes;
-    el.links = typedFilterLinks;
+    // Bind before connection so a non-empty `hiddenTypes` value is genuinely initial state, not a
+    // post-mount property transition that should be announced.
+    const el = (await fixture(html`
+      <lr-graph
+        .hiddenTypes=${hiddenTypes}
+        .nodes=${typedFilterNodes}
+        .links=${typedFilterLinks}
+      ></lr-graph>
+    `)) as LyraGraph;
     await el.updateComplete;
     const expectedVisible = typedFilterNodes.filter(
       (n) => n.type == null || !hiddenTypes.includes(n.type),
@@ -1495,15 +1739,18 @@ describe('type filtering (J5)', () => {
     expect(el.simNodes.map((n) => n.id)).to.have.members(['a', 'c']);
   });
 
-  it('announces graphNodesHidden on change, including "0 of N" when cleared', async () => {
+  it('mirrors an initial hidden count silently, then announces the live clear to "0 of N"', async () => {
     const el = await mountFiltered(['person']);
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 of 3 nodes hidden');
+    expect(announcementTexts(), 'initially configured filtering must not announce on mount').to.deep
+      .equal([]);
     el.hiddenTypes = [];
     await el.updateComplete;
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('0 of 3 nodes hidden');
+    expect(announcementTexts().at(-1)).to.contain('0 of 3 nodes hidden');
   });
 
   it('hide then re-show restores each node at its remembered settled position (distance ~ 0)', async () => {
@@ -2005,8 +2252,8 @@ describe('canvas renderer — static draw', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('canvas mode\'s live-region announces the first graph item via graphItemAnnouncement before anything is focused/hidden', async () => {
-    // graphLiveText (the `||` left side of render()'s canvas-mode live-region expression) starts
+  it('canvas mode mirrors the first graph item without announcing it before focus/navigation', async () => {
+    // graphLiveText (the `||` left side of render()'s canvas-mode mirror expression) starts
     // out empty and activeGraphItem defaults to 0, so a fresh mount with items present already
     // exercises the `normalizedGraphItem() >= 0` true side of the ternary on its own, with no
     // focus/hiddenTypes interaction needed.
@@ -2020,6 +2267,8 @@ describe('canvas renderer — static draw', () => {
     const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
     // graphItemCount() === simNodes.length(2) + simLinks.length(1) + communities(0) === 3.
     expect(liveRegion.textContent).to.contain('(1 of 3)');
+    expect(liveRegion.getAttribute('aria-hidden')).to.equal('true');
+    expect(announcementTexts()).to.deep.equal([]);
   });
 
   it('switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)', async () => {
@@ -4448,8 +4697,8 @@ describe('styling', () => {
 
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
 // when the optional `d3` peers fail to load, <lr-graph> must fail closed into a visible,
-// accessible role="alert" error state instead of leaving a permanently blank surface.
-// Mirrors lr-map's identical treatment.
+// accessible visible error state plus a light-DOM assertive announcement instead of leaving a
+// permanently blank surface.
 describe('optional d3 peer failure', () => {
   it('renders a visible, accessible error state instead of a blank surface when the d3 peers fail to load', async () => {
     // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
@@ -4464,8 +4713,13 @@ describe('optional d3 peer failure', () => {
         timeout: 2000,
       });
       const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-      expect(errorEl.getAttribute('role')).to.equal('alert');
+      expect(errorEl.hasAttribute('aria-hidden'), 'the visible error must remain discoverable').to.be
+        .false;
+      expect(errorEl.hasAttribute('role'), 'the shadow mirror must not be a second alert').to.be.false;
       expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+      expect(announcementTexts(document, 'assertive')).to.deep.equal([
+        errorEl.textContent!.trim(),
+      ]);
       expect(el.getAttribute('aria-busy')).to.equal('false');
       expect(el.shadowRoot!.querySelectorAll('svg, canvas').length).to.equal(0);
       expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
@@ -4489,6 +4743,9 @@ describe('optional d3 peer failure', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
         'Bibliothèque de graphe absente',
       );
+      expect(announcementTexts(document, 'assertive')).to.deep.equal([
+        'Bibliothèque de graphe absente',
+      ]);
     } finally {
       el.remove();
     }

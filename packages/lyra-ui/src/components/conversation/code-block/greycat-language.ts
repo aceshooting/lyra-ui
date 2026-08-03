@@ -1,4 +1,4 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import type { ShikiLanguageInput } from './shiki-types.js';
 
 // Duration-unit / time / float suffixes GCL's number lexer actually
 // recognizes (`us|ms|min|hour|day`, `time`, `f`/`F`) -- the lexer accepts any
@@ -28,7 +28,7 @@ const NUMBER_PATTERN = `\\b(?:${NUMBER_SEGMENT})+\\b`;
  * shapes below are sourced from GreyCat's own grammar, not guessed by
  * analogy.
  */
-export const GREYCAT_LANGUAGE: OptionalPeerApi = {
+export const GREYCAT_LANGUAGE: ShikiLanguageInput = {
   name: 'gcl',
   displayName: 'GreyCat',
   scopeName: 'source.gcl',

@@ -196,6 +196,60 @@ it('dims a disabled toolbar button through the shared disabled-opacity token', a
   expect(getComputedStyle(button).opacity).to.equal('0.25');
 });
 
+it('recreates both canvas observers in the adopted owner realm', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-flow-canvas id="owner-flow"></lr-flow-canvas>
+    <lr-flow-controls for="owner-flow"></lr-flow-controls>
+  </div>`);
+  const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+  const canvas = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+  await controls.updateComplete;
+  wrapper.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let rootObservations = 0;
+  let lockObservations = 0;
+  let relevantDisconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private relevant = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === frameDocument && options?.childList && options.subtree) {
+        this.relevant = true;
+        rootObservations += 1;
+      }
+      if (target === canvas && options?.attributeFilter?.includes('locked')) {
+        this.relevant = true;
+        lockObservations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.relevant) relevantDisconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(wrapper));
+    await controls.updateComplete;
+    expect(rootObservations, 'the destination window watches for replacement canvases').to.equal(1);
+    expect(lockObservations, 'the destination window watches the resolved canvas lock').to.equal(1);
+    document.adoptNode(wrapper);
+    expect(relevantDisconnects, 'adoption disconnects both owner observers').to.be.at.least(2);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (wrapper.ownerDocument !== document) document.adoptNode(wrapper);
+    wrapper.remove();
+    iframe.remove();
+  }
+});
+
 it('is accessible with a resolved canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>

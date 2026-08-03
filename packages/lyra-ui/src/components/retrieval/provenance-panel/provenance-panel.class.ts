@@ -14,6 +14,11 @@ import '../community-card/community-card.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './provenance-panel.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraProvenance {
   entities?: LyraEntity[];
@@ -49,6 +54,24 @@ export interface LyraProvenancePanelEventMap {
  * @since 4.0.0
  */
 export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    provenanceChunks: LYRA_DEFAULT_provenanceChunks,
+    provenanceCommunities: LYRA_DEFAULT_provenanceCommunities,
+    provenanceEmpty: LYRA_DEFAULT_provenanceEmpty,
+    provenanceEntities: LYRA_DEFAULT_provenanceEntities,
+    provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
+    provenanceRelationships: LYRA_DEFAULT_provenanceRelationships,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) provenance: LyraProvenance | null = null;

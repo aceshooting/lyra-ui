@@ -15,6 +15,11 @@ import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
@@ -155,6 +160,26 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @since 4.0.0
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    items: LYRA_DEFAULT_items,
+    open: LYRA_DEFAULT_open,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    taskListCompletedOfTotal: LYRA_DEFAULT_taskListCompletedOfTotal,
+    taskListLabel: LYRA_DEFAULT_taskListLabel,
+    taskListStepCompletedAnnounce: LYRA_DEFAULT_taskListStepCompletedAnnounce,
+    taskListStepFailedAnnounce: LYRA_DEFAULT_taskListStepFailedAnnounce,
+    taskListStepStartedAnnounce: LYRA_DEFAULT_taskListStepStartedAnnounce,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it. */

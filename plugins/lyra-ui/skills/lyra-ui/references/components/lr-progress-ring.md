@@ -2,7 +2,7 @@
 
 # `lr-progress-ring`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/progress/progress-ring.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-progress-ring.js';` (stable tag alias; registers the tag)
 - **Class** `LyraProgressRing`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-ring.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -26,6 +26,8 @@ visible default-slot text when supplied, then the localized "Progress". Non-fini
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
+Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
+tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the

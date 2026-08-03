@@ -1,33 +1,40 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import {
+  isHtmlSanitizer,
+  resolveOptionalPeerCapability,
+  type HtmlSanitizer,
+} from '../../../internal/optional-peer-capabilities.js';
 
-export type MammothApi = OptionalPeerApi;
+export interface MammothApi {
+  convertToHtml(input: { arrayBuffer: ArrayBuffer }): Promise<{
+    value: string;
+    messages: unknown[];
+  }>;
+}
 
 export interface DocxDeps {
   mammoth: MammothApi | undefined;
-  DOMPurify: OptionalPeerApi | undefined;
+  DOMPurify: HtmlSanitizer | undefined;
 }
 
 let depsPromise: Promise<DocxDeps> | undefined;
 let resolvedDeps: DocxDeps | undefined;
 
-function unwrapDefault(value: OptionalPeerApi): OptionalPeerApi {
-  return value.default ?? value;
-}
-
-function hasCallable(value: OptionalPeerApi | undefined, name: string): value is OptionalPeerApi {
-  return value != null && typeof value[name] === 'function';
+function isMammothApi(value: unknown): value is MammothApi {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'convertToHtml' in value &&
+    typeof value.convertToHtml === 'function'
+  );
 }
 
 export async function loadMammothAndSanitizer(
-  importMammoth: () => Promise<OptionalPeerApi> = () =>
-    import('mammoth/mammoth.browser.js') as Promise<OptionalPeerApi>,
-  importDompurify: () => Promise<OptionalPeerApi> = () =>
-    import('dompurify') as Promise<OptionalPeerApi>,
+  importMammoth: () => Promise<unknown> = () => import('mammoth/mammoth.browser.js'),
+  importDompurify: () => Promise<unknown> = () => import('dompurify'),
 ): Promise<DocxDeps> {
   let mammoth: MammothApi | undefined;
   try {
-    const candidate = unwrapDefault(await importMammoth());
-    mammoth = hasCallable(candidate, 'convertToHtml') ? candidate : undefined;
+    mammoth = resolveOptionalPeerCapability(await importMammoth(), isMammothApi) ?? undefined;
   } catch (error) {
     console.warn(
       '<lr-docx-viewer> needs the optional peer dependency `mammoth` to convert DOCX documents — install it with `pnpm add mammoth`:',
@@ -35,10 +42,9 @@ export async function loadMammothAndSanitizer(
     );
   }
 
-  let DOMPurify: OptionalPeerApi | undefined;
+  let DOMPurify: HtmlSanitizer | undefined;
   try {
-    const candidate = unwrapDefault(await importDompurify());
-    DOMPurify = hasCallable(candidate, 'sanitize') ? candidate : undefined;
+    DOMPurify = resolveOptionalPeerCapability(await importDompurify(), isHtmlSanitizer) ?? undefined;
   } catch (error) {
     console.warn(
       '<lr-docx-viewer> needs the optional peer dependency `dompurify` to sanitize converted HTML — install it with `pnpm add dompurify`:',

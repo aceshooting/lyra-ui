@@ -2,7 +2,7 @@
 
 # `lr-details`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/details/details.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-details.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDetails`, also available unregistered from `@aceshooting/lyra-ui/components/layout/details/details.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -4,8 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError } from '../../../internal/resource-loader.js';
+import {
+  isAbortError,
+  resolveOwnerFetchTarget,
+  type OwnerFetchTarget,
+} from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
 import {
@@ -16,6 +19,12 @@ import {
   type LyraIncludeMode,
 } from './include-resource.js';
 import { styles } from './include.styles.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraIncludeMode } from './include-resource.js';
 
@@ -57,6 +66,9 @@ export interface LyraIncludeEventMap extends LyraTextViewerTargetEventMap {
    * both migrated spellings resolve here. Neither is deprecated.
    */
   'lr-error': CustomEvent<LyraIncludeErrorDetail>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
 }
 
 class LyraIncludeBase extends LyraElement<LyraIncludeEventMap> {}
@@ -70,6 +82,7 @@ interface RemoteIncludeSource {
   kind: 'remote';
   url: string;
   fragment: string;
+  owner: OwnerFetchTarget['view'];
 }
 
 type IncludeSource = SamePageIncludeSource | RemoteIncludeSource;
@@ -100,11 +113,13 @@ function decodedFragment(hash: string): string {
   }
 }
 
+function isTemplateElement(element: Element): element is HTMLTemplateElement {
+  return element.localName === 'template' && 'content' in element;
+}
+
 function allElements(root: ParentNode): Element[] {
   const elements = [...root.querySelectorAll('*')];
-  for (const template of elements.filter(
-    (element): element is HTMLTemplateElement => element instanceof HTMLTemplateElement,
-  )) {
+  for (const template of elements.filter(isTemplateElement)) {
     elements.push(...allElements(template.content));
   }
   return elements;
@@ -159,7 +174,7 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * `lr-include-error` to build your own error UI, and author meaningful
  * fallback content inside `<lr-include>` for when the source never
  * succeeds; that fallback (and any previously successful include) is left
- * untouched on failure. No `aria-live` region wraps the slot either: the
+ * untouched on failure. No live region wraps the slot either: the
  * fragment can contain its own landmarks and nested content, and forcing the
  * whole host into a live region would re-announce all of it on every load.
  *
@@ -176,15 +191,35 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * @event lr-load - The source fragment was sanitized and written into the light DOM.
  * @event lr-include-error - Loading, selecting, or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`. Mirrors Web Awesome's `wa-include-error`.
  * @event lr-error - The same failure under the spelling Shoelace's `sl-error` migrates to; it always fires alongside `lr-include-error` with the identical detail object. Neither spelling is deprecated.
+ * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
+ *   Fired whenever included-content search state changes. `detail: { query: string; matchCount:
+ *   number; activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
+ *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
+ *   non-cancelable.
+ * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
+ *   included content. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
+ *   Bubbling, composed, and non-cancelable.
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  * @status stable
  * @since 4.0.0
  */
 export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
-  // `srOnly` is not optional chrome here: the shared anchor-target mixin's
-  // `renderAnchorLiveRegion()` emits its `role="status"` node with
-  // `class="sr-only"`, so without this stylesheet the localized anchor-jump
-  // announcement paints as visible body text beside the transcluded fragment.
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  // `srOnly` keeps the anchor-target mixin's aria-hidden diagnostic mirror from painting as
+  // visible body text beside the transcluded fragment. The spoken copy lives in light DOM.
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /**
@@ -251,7 +286,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   async reload(): Promise<void> {
     const source = this.resolveSource();
     if (source?.kind === 'remote') {
-      invalidateIncludeResource(source.url, this.effectiveMode);
+      invalidateIncludeResource(source.url, this.effectiveMode, source.owner);
     }
     await this.load();
   }
@@ -266,12 +301,13 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     if (value.startsWith('#')) {
       return { kind: 'same-page', fragment: decodedFragment(value) };
     }
+    const target = resolveOwnerFetchTarget(this, value);
+    if (!target) return null;
     try {
-      const parsed = new URL(value, this.ownerDocument.baseURI);
+      const parsed = new target.view.URL(target.url);
       const fragment = decodedFragment(parsed.hash);
       parsed.hash = '';
-      const url = safeFetchUrl(parsed.href);
-      return url ? { kind: 'remote', url, fragment } : null;
+      return { kind: 'remote', url: parsed.href, fragment, owner: target.view };
     } catch {
       return null;
     }
@@ -309,7 +345,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       const target = elementWithId(template.content, fragmentId);
       if (!target) return null;
       const children =
-        target instanceof HTMLTemplateElement ? target.content.childNodes : target.childNodes;
+        isTemplateElement(target) ? target.content.childNodes : target.childNodes;
       for (const child of children) output.append(child.cloneNode(true));
     } else {
       output.append(template.content.cloneNode(true));
@@ -370,6 +406,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     // reaches the fetch.
     this.setAttribute('aria-busy', 'false');
     if (!this.src.trim()) return; // idle no-op: no fetch, no events, content untouched
+    if (!this.isConnected) return;
 
     const source = this.resolveSource();
     if (!source) {
@@ -395,18 +432,28 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
           source.url,
           this.effectiveMode,
           this.cache,
+          source.owner,
         );
         this.resourceLease = lease;
         markup = await lease.promise;
       }
-      if (markup == null || !this.isConnected || generation !== this.generation) return;
+      if (
+        markup == null ||
+        !this.isConnected ||
+        generation !== this.generation ||
+        (source.kind === 'remote' && this.ownerDocument.defaultView !== source.owner)
+      ) return;
 
       const fragment = this.fragmentFromSanitized(markup, fragmentId);
       if (!fragment) {
         this.fail(0, 'missing-fragment');
         return;
       }
-      if (generation !== this.generation || !this.isConnected) return;
+      if (
+        generation !== this.generation ||
+        !this.isConnected ||
+        (source.kind === 'remote' && this.ownerDocument.defaultView !== source.owner)
+      ) return;
       this.replaceChildren(fragment);
       // `innerHTML` is imperative light-DOM work and does not schedule a Lit update. The shared
       // text-viewer target observes loaded text during `updated()`, so explicitly invalidate it
@@ -415,7 +462,12 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       this.setAttribute('aria-busy', 'false');
       this.emit('lr-load', { src: this.src });
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return; // silent
+      if (
+        isAbortError(error) ||
+        !this.isConnected ||
+        generation !== this.generation ||
+        (source.kind === 'remote' && this.ownerDocument.defaultView !== source.owner)
+      ) return; // silent
       if (error instanceof IncludeResourceError) {
         this.fail(error.status, error.reason, error.cause ?? error);
       } else {

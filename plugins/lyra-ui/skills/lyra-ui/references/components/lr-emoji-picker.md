@@ -2,7 +2,7 @@
 
 # `lr-emoji-picker`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-emoji-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEmojiPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -56,7 +56,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 **Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
 `lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
 `value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. `lr-invalid` (no detail) is emitted once when native validity fails. Programmatic
+host events. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
+fails; preventing it also prevents the native `invalid` event that produced it. Programmatic
 `value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is

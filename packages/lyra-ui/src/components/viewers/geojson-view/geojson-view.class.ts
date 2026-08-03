@@ -2,13 +2,13 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
 import {
   isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
   readResponseText,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -19,6 +19,13 @@ import {
   type LyraMap,
 } from '../../media/map/map.class.js';
 import { styles } from './geojson-view.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The three structural container tags accepted by the GeoJSON bridge. */
 export type GeoJsonTypeTag = 'Feature' | 'FeatureCollection' | 'GeometryCollection';
@@ -244,6 +251,9 @@ type GeojsonViewState =
 
 export interface LyraGeojsonViewEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
 }
 
 class LyraGeojsonViewBase extends LyraElement<LyraGeojsonViewEventMap> {}
@@ -255,18 +265,56 @@ class LyraGeojsonViewBase extends LyraElement<LyraGeojsonViewEventMap> {}
  *
  * @customElement lr-geojson-view
  * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
- * @csspart base - The root container. It owns the named region in non-map states, the missing-peer
- *   fallback, and while a lazy map initializes; the loaded map canvas then owns that landmark.
- * @csspart status - The feature-count status line.
+ * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
+ *   Fired whenever searchable metadata state changes. `detail: { query: string; matchCount: number;
+ *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
+ *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
+ *   non-cancelable.
+ * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
+ *   searchable metadata. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
+ *   Bubbling, composed, and non-cancelable.
+ * @csspart base - The root container with explicit `aria-busy`. It owns the named region in
+ *   non-map states, the missing-peer fallback, and while a lazy map initializes; the loaded map
+ *   canvas then owns that landmark.
+ * @csspart status - The ordinary feature-count line; a successful transition announces through
+ *   the shared document-level polite region.
  * @csspart metadata - Searchable, selectable serialized GeoJSON metadata; scrolls inline rather
  *   than widening a narrow allocation.
  * @csspart missing-library - The missing-maplibre-gl callout shown alongside the json-viewer fallback.
- * @csspart error - The error region.
- * @csspart spinner - The loading status region.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
+ * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
+ *   transitions announce through the shared document-level polite region.
  * @status stable
  * @since 4.0.0
  */
 export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    geojsonViewFeatureCount: LYRA_DEFAULT_geojsonViewFeatureCount,
+    geojsonViewInvalid: LYRA_DEFAULT_geojsonViewInvalid,
+    geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
+    geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() src = '';
@@ -285,6 +333,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
   private generation = 0;
   private lastLoadSrc = '';
   private registeredMap: LyraMap | null = null;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   /** @internal test-only hook forcing the missing-peer fallback path without needing to actually
    *  uninstall `maplibre-gl` in this test environment. */
@@ -328,6 +377,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -339,11 +389,33 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     this.registeredMap = null;
     this.loadState = { kind: 'idle' };
     this.mapReady = false;
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.loadState.kind === 'loaded') {
+      const peerAvailable = this.loadState.peerAvailable;
+      this.announcements.transition(
+        'load',
+        peerAvailable ? 'loaded' : 'error',
+        peerAvailable
+          ? this.featureCountStatus(this.loadState.featureCount)
+          : this.localize('geojsonViewMissingMapLibrary'),
+        peerAvailable ? 'polite' : 'assertive',
+      );
+    } else {
+      this.announcements.transition(
+        'load',
+        this.loadState.kind,
+        this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
+      );
+    }
     this.syncMapCanvasReadyCallback();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -354,14 +426,14 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     this.lastLoadSrc = this.src;
     this.mapReady = false;
     if (!this.src) { this.loadState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
     this.loadState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
@@ -403,15 +475,19 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     return this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel');
   }
 
+  private featureCountStatus(featureCount: number): string {
+    return this.localize('geojsonViewFeatureCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(featureCount),
+      pluralCount: featureCount,
+    });
+  }
+
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'loaded': {
         const { value, featureCount, center, zoom, peerAvailable } = this.loadState;
         const metadata = JSON.stringify(value, null, 2);
-        const statusText = this.localize('geojsonViewFeatureCount', undefined, {
-          count: getNumberFormat(this.effectiveLocale).format(featureCount),
-          pluralCount: featureCount,
-        });
+        const statusText = this.featureCountStatus(featureCount);
         if (!peerAvailable) {
           return html`
             <p part="missing-library">${this.localize('geojsonViewMissingMapLibrary')}</p>
@@ -426,7 +502,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
         }
         const dataLayers: GeoJsonDataLayer[] = [{ sourceId: 'lr-geojson', geojson: value as never }];
         return html`
-          <div part="status" role="status">${statusText}</div>
+          <div part="status">${statusText}</div>
           <pre part="metadata">${metadata}</pre>
           <lr-map
             .center=${center}
@@ -439,9 +515,12 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
         `;
       }
       case 'loading':
-        return html`<div part="spinner"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
+        return html`<div part="spinner">
+          <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+          <span class="sr-only">${this.localize('loadingDocument')}</span>
+        </div>`;
       case 'error':
-        return html`<div part="error" role="alert">${this.loadState.message}</div>`;
+        return html`<div part="error">${this.loadState.message}</div>`;
       case 'idle':
       default:
         return html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -456,6 +535,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
       part="base"
       role=${mapOwnsLandmark ? nothing : 'region'}
       aria-label=${mapOwnsLandmark ? nothing : this.effectiveLabel}
+      aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }

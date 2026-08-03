@@ -11,6 +11,11 @@ import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './tab-group.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraTab } from './tab.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled`
@@ -41,8 +46,12 @@ interface TabDef {
  * subtree an open modal has inerted is inert *as a whole*, and treating every tab as non-navigable
  * there would reset `active` to `''` and blank every panel for as long as the dialog is open.
  */
+function isHtmlElement(child: Element): child is HTMLElement {
+  return child.nodeType === 1 && child.namespaceURI === 'http://www.w3.org/1999/xhtml';
+}
+
 function isInertChild(child: Element): boolean {
-  return child instanceof HTMLElement && child.inert;
+  return isHtmlElement(child) && child.inert;
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
@@ -171,6 +180,18 @@ export interface LyraTabGroupEventMap {
  * @since 8.0.0
  */
 export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    scrollNext: LYRA_DEFAULT_scrollNext,
+    scrollPrevious: LYRA_DEFAULT_scrollPrevious,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The active tab's `slot`/id. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
@@ -218,6 +239,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private nextOpaqueId = 0;
   private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
+  private mutationObserverDocument?: Document;
+  private mutationObserverGeneration = 0;
   private rehomeTabFocus = false;
 
   constructor() {
@@ -245,12 +268,28 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // every record is filtered down to direct-child mutations only before
     // triggering a resync, keeping panel-internal churn from forcing a tabs
     // recompute and re-render on every unrelated mutation.
-    this.mutationObserver = new MutationObserver((records) => {
+    this.resetMutationObserver();
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.mutationObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.mutationObserver !== observer ||
+        this.mutationObserverDocument !== ownerDocument ||
+        this.mutationObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       const isDirectChild = (node: Node) => node.parentNode === this;
       const relevant = records.some((r) => (r.type === 'childList' ? r.target === this : isDirectChild(r.target)));
       if (relevant) this.syncTabs();
     });
-    this.mutationObserver.observe(this, {
+    this.mutationObserver = observer;
+    this.mutationObserverDocument = ownerDocument;
+    observer.observe(this, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -260,8 +299,18 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetMutationObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetMutationObserver();
+  }
+
+  private resetMutationObserver(): void {
+    this.mutationObserverGeneration += 1;
     this.mutationObserver?.disconnect();
     this.mutationObserver = undefined;
+    this.mutationObserverDocument = undefined;
   }
 
   /**
@@ -538,13 +587,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    */
   private scrollTabs(edge: 'start' | 'end'): void {
     const tablist = this.renderRoot.querySelector('[part~="tablist"]');
-    if (!(tablist instanceof HTMLElement)) return;
+    if (!tablist || !isHtmlElement(tablist) || typeof tablist.scrollBy !== 'function') return;
     const step = Math.max(1, tablist.clientWidth * SCROLL_STEP_RATIO);
     const towardEnd = edge === 'end' ? 1 : -1;
     const physical = this.effectiveDirection === 'rtl' ? -towardEnd : towardEnd;
     tablist.scrollBy({
       left: step * physical,
-      behavior: prefersReducedMotion() ? 'instant' : 'smooth',
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'instant' : 'smooth',
     });
   }
 

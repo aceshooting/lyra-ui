@@ -18,7 +18,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      # contract-policy's component-metadata gate reproduces immutable release-tag evidence and
+      # intentionally fails closed in shallow clones.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -28,8 +32,9 @@ jobs:
       - run: pnpm lint
 
   # Static/config consistency checks: none of these need a library build, a docs build, or a
-  # browser -- they read already-committed files (custom-elements.json, llms/, plugin manifests,
-  # README) and either validate or regenerate-and-diff them.
+  # browser. They read already-committed files (custom-elements.json, llms/, plugin manifests,
+  # README), except for the content-addressed read-only npm fetch that proves the pinned upstream
+  # public manifests, and either validate or regenerate-and-diff them.
   static-checks:
     runs-on: ubuntu-latest
     steps:
@@ -40,6 +45,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: node scripts/release-integrity.test.mjs
+      - run: pnpm --filter @aceshooting/lyra-ui test:public-api
+      - run: pnpm --filter @aceshooting/lyra-ui test:pinned-upstream-manifests
+      # Fetches exact public npm tarballs with lifecycle scripts impossible, validates their
+      # identities plus SHA-512/SHA-256 pins, and feeds only custom-elements.json into the strict
+      # inventory comparator. Clone-built analyzer variants are not canonical evidence.
+      - run: pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
       # lyra-ui's own Chromium suite runs in the build-and-coverage job via test:coverage --
       # this only needs to cover the other workspace package(s), e.g. lyra-flags's own test script.
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
@@ -52,21 +64,22 @@ jobs:
       # from the checked-in component inventory. Regenerate-and-diff catches a new/moved component
       # even when a contributor ran only the non-mutating lint check locally.
       - run: pnpm registrations
-      - run: git diff --exit-code -- packages/lyra-ui/src/lyra.ts packages/lyra-ui/src/internal/root-registration-allowlist.ts packages/lyra-ui/package.json
+      - run: git diff --exit-code -- packages/lyra-ui/src/all.ts packages/lyra-ui/src/ssr/all.ts packages/lyra-ui/src/components/lr-*.ts packages/lyra-ui/src/internal/root-registration-allowlist.ts packages/lyra-ui/package.json
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm --filter @aceshooting/lyra-ui run generate-editor-data
       - run: git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 
   # The one time lyra-ui's own Chromium suite actually runs (a separate `pnpm test` step would
   # just re-run the identical file set with coverage instrumentation off). This is the longest
-  # single job (test:coverage alone runs ~4.5min) -- everything it needs (build, bundle-size,
-  # coverage) is sequential and dist-dependent, so it stays one job rather than splitting further.
+  # single job; coverage runs one instrumented browser file at a time to avoid exhausting
+  # high-core runners. Everything it needs (build, bundle-size, coverage) is sequential and
+  # dist-dependent, so it stays one job rather than splitting further.
   build-and-coverage:
     runs-on: ubuntu-latest
     steps:
@@ -81,6 +94,8 @@ jobs:
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
       # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
       - run: pnpm build
+      # Recompute the inventory's per-component standalone gzip evidence from this exact build.
+      - run: pnpm --filter @aceshooting/lyra-ui check:component-quality:built
       # Proves root + every granular import under plain Node, renders the complete declared SSR
       # matrix, then loads a real DSD response in Chromium and rejects hydration warnings,
       # replaced server nodes, or broken client-render fallbacks.
@@ -107,7 +122,7 @@ jobs:
       # fails when a floor drifted far below it (a floor 5+ points low has stopped being a gate)
       # or above it. Refresh with `--write-floors`; lowering one needs `--allow-lower` and shows up
       # in the diff. Deliberately its own step so the failure names itself instead of surfacing as
-      # a mystery inside the 4.5-minute test step.
+      # a mystery inside the long coverage step.
       - run: pnpm --filter @aceshooting/lyra-ui check:coverage-floors
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
@@ -169,15 +184,10 @@ jobs:
       # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in
       # contract-policy because it shells out to `npm pack --dry-run`, which needs a built dist/.
       - run: pnpm --filter @aceshooting/lyra-ui check:package-size
-
-      # NOTE: the public-API semver gate (scripts/public-api-diff.mjs, `check:public-api`) is
-      # deliberately NOT wired here yet. Its .d.ts-parsing half is written against the TypeScript
-      # compiler API (`ts.createSourceFile`, `ts.SyntaxKind`, ...) across 25 call sites, and this
-      # repo pins typescript ^7.0.2 -- the native Go port, whose JS entry exports two keys and
-      # none of those functions. `node --test scripts/public-api-diff.test.mjs` fails 5 of 6 with
-      # `ReferenceError: ts is not defined`. Wiring it in this state would only make CI red.
-      # Wire this step (and `test:public-api` into contract-policy) once that half is reimplemented
-      # without the compiler API. See docs/agents/component-qualification.md for the gate pattern.
+      # Downloads the latest published package into an isolated temporary directory and compares
+      # its normalized CEM/exports/declarations with this built tree. The pure parser/semver tests
+      # run in static-checks; this is the networked release gate.
+      - run: pnpm --filter @aceshooting/lyra-ui check:public-api
 
   # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
   # dist/ -- independent of build-and-coverage/packed-consumer. storybook:check drives Chromium
@@ -213,13 +223,22 @@ jobs:
       - run: pnpm docs:check-show-code
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): a full 83-story x 3-axis run now reproduces
-  # 249/249 clean, so a mismatch here is a real signal rather than run-to-run capture noise. Split
-  # into its own job (rather than folded into docs-and-storybook, which also needs docs:build)
-  # because test:visual alone runs ~3.5min and would otherwise sit in the critical path of the
-  # faster docs checks.
+  # packages/lyra-ui/visual-baselines/README.md): the manifest's 83 stories now produce 253
+  # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
+  # 207 compared with retained baselines and 46 as explicit ephemeral semantic/pixel evidence; all
+  # capture or console errors remain blocking. The axis-level capture inventory is sorted and
+  # round-robin partitioned into three deterministic shards (85/84/84 captures) so the historical
+  # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
+    name: visual-regression / shard ${{ matrix.shard }}/3
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
+    env:
+      VISUAL_SHARD_INDEX: ${{ matrix.shard }}
+      VISUAL_SHARD_TOTAL: '3'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -236,11 +255,29 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: visual-regression-diff
+          name: visual-regression-diff-${{ matrix.shard }}-of-3
           path: packages/lyra-ui/.visual-diff-output
           if-no-files-found: ignore
           retention-days: 14
           include-hidden-files: true
+
+  # Keep one stable required-check name for branch protection and release qualification while the
+  # expensive work fans out above. `always()` makes a failed/cancelled matrix leg an explicit red
+  # aggregate instead of skipping this job.
+  visual-regression-gate:
+    name: visual-regression
+    if: ${{ always() }}
+    needs: visual-regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all visual-regression shards
+        env:
+          VISUAL_REGRESSION_RESULT: ${{ needs.visual-regression.result }}
+        run: |
+          if [[ "$VISUAL_REGRESSION_RESULT" != "success" ]]; then
+            echo "Visual-regression matrix concluded: $VISUAL_REGRESSION_RESULT" >&2
+            exit 1
+          fi
 
   platform-contracts:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }}
@@ -281,3 +318,8 @@ jobs:
           WTR_BROWSER: ${{ matrix.browser }}
           WTR_STRICT_CONSOLE: '1'
         run: pnpm --filter @aceshooting/lyra-ui test:platform
+      # The package supports Node 20. Exercise the real tarball/install/import/type/style bundle
+      # matrix once at that floor; the dedicated packed-consumer job covers Node 22.
+      - name: Run packed consumer at the supported Node floor
+        if: ${{ matrix.browser == 'firefox' && matrix.node-version == 20 }}
+        run: pnpm build && pnpm check:packed-consumer

@@ -20,16 +20,84 @@
 
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { scopeFromElement, resolveTextQuote } from '../../../internal/text-quote.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
-import { normalizeShikiLanguage, SHIKI_THEMES } from '../code-block/code-loader.js';
-import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
+import {
+  normalizeShikiLanguage,
+  SHIKI_THEMES,
+  type ShikiHighlighter,
+} from '../code-block/code-loader.js';
+import type { ShikiTransformer } from '../code-block/shiki-types.js';
+import {
+  loadMarkdownDeps,
+  getMarkdownDepsIfLoaded,
+  type MarkdownDeps,
+  type MarkedModule,
+} from './markdown-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';
+
+/** One owner-window animation frame plus a settlement promise that cleanup can resolve. */
+interface MarkdownOwnedAnimationFrame {
+  owner: Window;
+  handle?: number;
+  settled: Promise<void>;
+  resolve(): void;
+}
+
+/** Owns the single coalesced animation frame shared by each Markdown variant's streaming path. */
+export class MarkdownOwnedAnimationFrameController {
+  private pending?: MarkdownOwnedAnimationFrame;
+
+  get handle(): number | undefined {
+    return this.pending?.handle;
+  }
+
+  get settled(): Promise<void> | undefined {
+    return this.pending?.settled;
+  }
+
+  request(owner: Window, callback: () => void): number | undefined {
+    if (this.pending) return this.pending.handle;
+    let resolveFrame!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      resolveFrame = resolve;
+    });
+    const pending: MarkdownOwnedAnimationFrame = { owner, settled, resolve: resolveFrame };
+    this.pending = pending;
+    try {
+      pending.handle = owner.requestAnimationFrame(() => {
+        if (this.pending !== pending) return;
+        this.pending = undefined;
+        pending.resolve();
+        callback();
+      });
+    } catch {
+      if (this.pending === pending) this.pending = undefined;
+      pending.resolve();
+      return undefined;
+    }
+    return pending.handle;
+  }
+
+  cancel(): boolean {
+    const pending = this.pending;
+    if (!pending) return false;
+    this.pending = undefined;
+    try {
+      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
+    } catch {
+      // The owner browsing context may already be gone; clearing `pending` above keeps any late
+      // callback inert, and settlement remains mandatory for `updateComplete` callers.
+    } finally {
+      pending.resolve();
+    }
+    return true;
+  }
+}
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
@@ -150,7 +218,7 @@ function mathExtension(renderMath: (token: MathToken) => string) {
       if (inline) return { type: 'math', raw: inline[0], tex: inline[1]!.replace(/\\\$/g, '$').trim(), display: false };
       return undefined;
     },
-    renderer(token: OptionalPeerApi): string {
+    renderer(token: unknown): string {
       return renderMath(token as MathToken);
     },
   };
@@ -161,10 +229,10 @@ function mathExtension(renderMath: (token: MathToken) => string) {
  *  properties/state and pass them through unchanged, so this is the single parsing contract for
  *  both. */
 export interface ParseMarkdownOptions {
-  marked: OptionalPeerApi;
+  marked: MarkedModule;
   /** Snapshot of `<lr-markdown>`'s shared configurable parser defaults. Core omits this, keeping
    *  its public surface lean while still using the same parsing implementation. */
-  markedConfiguration?: OptionalPeerApi;
+  markedConfiguration?: Record<string, unknown>;
   content: string;
   gfm: boolean;
   linkTarget: string | null;
@@ -247,7 +315,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
   // instance.
   instance.use({
     renderer: {
-      heading(this: OptionalPeerApi, token: OptionalPeerApi) {
+      heading(token) {
         // Clamped to [1, 6]: a positive offset can never push a heading
         // past <h6> (there is no <h7>), and the floor at 1 is defensive
         // since headingOffset is meant to be additive-only (0 is the only
@@ -261,10 +329,10 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const idAttr = headingAnchorsOption && slug ? ` id="${escapeHtml(slug)}"` : '';
         return `<h${depth} part="heading"${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
       },
-      paragraph(this: OptionalPeerApi, token: OptionalPeerApi) {
+      paragraph(token) {
         return `<p part="paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
       },
-      list(this: OptionalPeerApi, token: OptionalPeerApi) {
+      list(token) {
         const ordered = token.ordered;
         const start = token.start;
         let body = '';
@@ -273,7 +341,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
         return `<${tag} part="list"${startAttr}>\n${body}</${tag}>\n`;
       },
-      code(this: OptionalPeerApi, token: OptionalPeerApi) {
+      code(token) {
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
         const body = `${token.text.replace(/\n$/, '')}\n`;
         const text = token.escaped ? body : escapeHtml(body);
@@ -286,15 +354,15 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
         return `<pre part="code-block" tabindex="0"><code${cls}>${text}</code></pre>\n`;
       },
-      codespan(this: OptionalPeerApi, token: OptionalPeerApi) {
+      codespan(token) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
         // pre-escape token.text itself) -- only the added part="inline-code" differs.
         return `<code part="inline-code">${escapeHtml(token.text)}</code>`;
       },
-      blockquote(this: OptionalPeerApi, token: OptionalPeerApi) {
+      blockquote(token) {
         return `<blockquote part="blockquote">\n${this.parser.parse(token.tokens)}</blockquote>\n`;
       },
-      table(this: OptionalPeerApi, token: OptionalPeerApi) {
+      table(token) {
         // Built directly here (rather than delegating to the inherited
         // tablecell()) so a scope="col" can be added -- marked's own
         // default tablecell() never emits it, and without it a screen
@@ -316,7 +384,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
         return `<table part="table">\n${thead}${tbody}</table>\n`;
       },
-      link(this: OptionalPeerApi, token: OptionalPeerApi) {
+      link(token) {
         const text = this.parser.parseInline(token.tokens);
         const href = cleanHref(token.href);
         if (href === null) return text;
@@ -326,7 +394,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
           : '';
         return `<a part="link" href="${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
       },
-      image(this: OptionalPeerApi, token: OptionalPeerApi) {
+      image(token) {
         // Mirrors marked's own default image() renderer (alt text
         // re-rendered through the plain textRenderer so nested emphasis/
         // strong/etc. inside the alt collapses to plain text, href run
@@ -338,7 +406,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
         return `<img part="img" src="${escapeHtml(href)}" alt="${escapeHtml(altText)}"${titleAttr}>`;
       },
-      html(this: OptionalPeerApi, token: OptionalPeerApi) {
+      html(token) {
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;
       },
     },
@@ -355,7 +423,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
     const configuredDefaults = Object.fromEntries(
       Object.entries(options.markedConfiguration).filter(([, value]) => value != null),
     );
-    if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults);
+    if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults as never);
   }
   return { html: instance.parse(content, { gfm, async: false }), hadMathFallback };
 }
@@ -428,20 +496,21 @@ export function createMarkdownKatexState(): MarkdownKatexState {
  * from `code-block-shared.ts`'s own `codeBlockLineTransformer` -- that one targets
  * `<lr-code-block>`'s `part="pre"`/`part="code"`/line-numbers contract, which doesn't apply here.
  */
-export function markdownCodeTransformer(lang: string) {
+export function markdownCodeTransformer(lang: string): ShikiTransformer {
   return {
     name: 'lr-markdown-code-block',
-    pre(node: OptionalPeerApi) {
+    pre(node) {
       node.properties.part = ['code-block'];
-      node.properties.tabindex = '0';
+      node.properties['tabindex'] = '0';
     },
-    code(node: OptionalPeerApi) {
-      const classes = Array.isArray(node.properties.class)
-        ? node.properties.class
-        : node.properties.class
-          ? [node.properties.class]
+    code(node) {
+      const classValue = node.properties['class'];
+      const classes = Array.isArray(classValue)
+        ? classValue.map(String)
+        : classValue
+          ? [String(classValue)]
           : [];
-      node.properties.class = [...classes, `language-${lang}`];
+      node.properties['class'] = [...classes, `language-${lang}`];
     },
   };
 }
@@ -453,7 +522,10 @@ export function markdownCodeTransformer(lang: string) {
  * block keeps its plain fallback permanently rather than being rediscovered as pending forever.
  * Shared by both variants' `highlightPending()`; only the *loading* half above it differs.
  */
-export function tokenizeMarkdownHighlight(hl: OptionalPeerApi, pending: PendingHighlight): string | null {
+export function tokenizeMarkdownHighlight(
+  hl: ShikiHighlighter,
+  pending: PendingHighlight,
+): string | null {
   try {
     const highlighted = hl.codeToHtml(pending.code, {
       lang: normalizeShikiLanguage(pending.lang),
@@ -556,7 +628,7 @@ export interface RenderMarkdownOptions {
   math: boolean;
   /** The instance's own `parseMarkdown()` -- see `ParseMarkdownOptions` for what it resolves. */
   parse: (
-    marked: OptionalPeerApi,
+    marked: MarkedModule,
     pendingKeys: PendingHighlight[],
     headingTreeOut: MarkdownHeadingItem[],
   ) => { html: string; hadMathFallback: boolean };
@@ -648,6 +720,11 @@ export function applyMarkdownAriaBusy(host: Element, busy: boolean): void {
 
 // -- anchors ------------------------------------------------------------------------------------
 
+function markdownScrollBehavior(root: Element): ScrollBehavior {
+  const view = root.ownerDocument.defaultView;
+  return !view || prefersReducedMotion(view) ? 'auto' : 'smooth';
+}
+
 /**
  * Scrolls a `fragment` anchor's heading into view. `headingAnchors` may be off, so the target
  * heading might carry no `id` attribute in the DOM at all -- and even with it on, DOMPurify's
@@ -663,9 +740,16 @@ export function applyMarkdownFragmentAnchor(
   if (!anchor.id) return false;
   const index = headingTree.findIndex((h) => h.id === anchor.id);
   if (index < 0) return false;
-  const el = root.querySelector(`#${CSS.escape(anchor.id)}`) ?? root.querySelectorAll('h1, h2, h3, h4, h5, h6')[index];
+  const escape = root.ownerDocument.defaultView?.CSS?.escape;
+  const escapedIdMatch = escape
+    ? root.querySelector(`#${escape(anchor.id)}`)
+    : Array.from(root.querySelectorAll('[id]')).find((candidate) => candidate.getAttribute('id') === anchor.id);
+  const el = escapedIdMatch ?? root.querySelectorAll('h1, h2, h3, h4, h5, h6')[index];
   if (!el) return false;
-  el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  el.scrollIntoView({
+    behavior: markdownScrollBehavior(root),
+    block: 'start',
+  });
   return true;
 }
 
@@ -680,10 +764,13 @@ export function applyMarkdownTextQuoteAnchor(
   const range = resolveTextQuote(scopeFromElement(root), anchor, locale);
   if (!range) return false;
   const target =
-    range.startContainer.nodeType === Node.ELEMENT_NODE
+    range.startContainer.nodeType === 1
       ? (range.startContainer as Element)
       : range.startContainer.parentElement;
-  (target ?? root).scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+  (target ?? root).scrollIntoView({
+    behavior: markdownScrollBehavior(root),
+    block: 'center',
+  });
   return true;
 }
 
@@ -731,7 +818,7 @@ export function repaintMarkdownHighlights(options: {
   }
   for (const [tone, ranges] of rangesByTone) options.handle.setRanges(tone, ranges);
   options.handle.setActive(activeRange);
-  if (!supportsCustomHighlights()) {
+  if (!supportsCustomHighlights(options.root.ownerDocument)) {
     // The `<mark>`-wrap fallback creates real elements but carries no `part` of its own (the module
     // is shared by every adopting viewer, so it can't know this component's part naming) -- stamped
     // here so a consumer can still target `::part(highlight)` in browsers lacking the CSS Custom
@@ -776,7 +863,15 @@ export function hitTestHighlightRanges(
  *  relative/prefixed path, which would never match a relative `internal-link-prefix`. */
 export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | null {
   if (!prefix) return null;
-  const anchor = e.composedPath().find((el): el is HTMLAnchorElement => el instanceof HTMLAnchorElement);
+  const anchor = e.composedPath().find(
+    (target): target is EventTarget & { localName: string; getAttribute(name: string): string | null } =>
+      typeof target === 'object' &&
+      target !== null &&
+      'localName' in target &&
+      target.localName === 'a' &&
+      'getAttribute' in target &&
+      typeof target.getAttribute === 'function',
+  );
   if (!anchor) return null;
   const href = anchor.getAttribute('href') ?? '';
   return href.startsWith(prefix) ? href : null;

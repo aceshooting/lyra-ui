@@ -69,13 +69,13 @@
   surfaces register from these exact paths:
 
   ```js
-  import '@aceshooting/lyra-ui/components/layout/page/page.js';
-  import '@aceshooting/lyra-ui/components/media/video/video.js';
-  import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
-  import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-  import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
-  import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
-  import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+  import '@aceshooting/lyra-ui/components/lr-page.js';
+  import '@aceshooting/lyra-ui/components/lr-video.js';
+  import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
+  import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+  import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
+  import '@aceshooting/lyra-ui/components/lr-split-panel.js';
+  import '@aceshooting/lyra-ui/components/lr-alert.js';
   ```
 
   The component-family references contain the exact surface and the 7.x migration notes for
@@ -116,6 +116,35 @@
     major after the complete following major release line.
   - Registration imports, allowlists, package side effects, migration classifications and the
     component scaffold are inventory-driven and freshness-checked.
+
+  ### Design-system operations and integrations
+
+  - Every public tag has a stable tag-shaped registration entry point such as
+    `@aceshooting/lyra-ui/components/lr-input.js`. Existing family registration paths remain
+    supported, while class-only modules stay available at their family paths.
+  - Public optional-peer APIs now use Lyra-owned structural interfaces instead of leaking peer
+    implementation types or `any`. They remain compatible with the supported Chart.js, Marked,
+    Shiki, MapLibre, D3, DOMPurify and document-viewer peers without making those packages required
+    dependencies.
+  - Event contract checks now compare concrete detail schemas across event maps, class JSDoc and
+    the Custom Elements Manifest, reject `any`, and preserve native `Event`/`InputEvent`
+    constructors for native relays.
+  - The theme runtime distinguishes system-following `auto` from cascade-owned `unset`, supports a
+    validated brand accent, and provides reusable built-in or application-defined presets through
+    the same persistence and change-event path.
+  - An authored canonical token inventory generates DTCG-compatible interchange, fixture CSS,
+    Storybook token data and stable documentation/editor inputs, with freshness checks against the
+    production token styles.
+  - Synthetic `en-XA` and mirrored RTL `ar-XB` pseudo-locales exercise string expansion,
+    interpolation and direction without presenting themselves as human translations.
+  - Runnable React 19, Vue and Svelte examples verify granular registration, typed properties and
+    typed custom events against the packed package.
+  - Generated component quality and integration references expose recorded accessibility,
+    browser, SSR, optional-peer, dependency and bundle evidence without converting missing human
+    review into a pass.
+  - Governance, support and RFC documents define the contribution and compatibility process, and
+    the bundled composition skill teaches consumers to assemble Lyra interfaces from stable public
+    entry points.
 
   ### Attribute renames (breaking)
 

@@ -2,7 +2,7 @@
 
 # `lr-agent-eval-dashboard`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-agent-eval-dashboard.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAgentEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -2,7 +2,7 @@
 
 # `lr-export-button`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/export-button/export-button.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-export-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraExportButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -49,7 +49,8 @@ substitute your own server-generated download instead of the built-in client-sid
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
-throw into consumer code), `lr-show`, `lr-hide` (format-menu visibility transitions)
+throw into consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions;
+self-imposed closes caused by disablement, loading, or an unusable format list emit neither event)
 
 **Slots:** none.
 
@@ -104,7 +105,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
-downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
+downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 
 **Known gotchas:**

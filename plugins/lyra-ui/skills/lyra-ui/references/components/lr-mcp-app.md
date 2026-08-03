@@ -2,7 +2,7 @@
 
 # `lr-mcp-app`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-mcp-app.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMcpApp`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -49,6 +49,11 @@ Changing `resource` mounts a fresh iframe/window generation; messages from the p
 Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
+
+Loading and unavailable messages remain ordinary visible text. After the initial baseline, adding
+or replacing a valid resource announces the localized loading state through the shared polite
+light-DOM sink; changing from an available resource to no resource announces unavailability through
+the shared assertive sink. Initial and reconnect renders stay silent.
 
 **CSS parts:** `base`, `frame`, `loading`, `error`.
 

@@ -3,6 +3,14 @@ import type { PropertyValues } from 'lit';
 import './map.js';
 import type { LyraMap } from './map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 const RASTER_STYLE = {
   version: 8,
@@ -17,14 +25,36 @@ const RASTER_STYLE = {
 };
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(
+    html`<lr-map .strings=${{ loading: 'Chargement de la carte…' }}></lr-map>`,
+  )) as LyraMap;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+  expect(skeleton !== null).to.be.true;
+  const updatedSkeleton = skeleton as HTMLElement & {
+    announce: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  await updatedSkeleton.updateComplete;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
+  expect(base.getAttribute('aria-busy')).to.equal('true');
+  expect(updatedSkeleton.announce).to.be.false;
+  expect(
+    el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length,
+  ).to.equal(0);
+  expect(
+    updatedSkeleton.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]')
+      .length,
+  ).to.equal(0);
+  expect(el.shadowRoot!.querySelector('.sr-only')?.textContent?.trim()).to.equal(
+    'Chargement de la carte…',
+  );
   expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
 
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
 });
@@ -96,11 +126,126 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
   }
 });
 
+it('uses the adopted owner realm for intersection observation, token reads, and teardown', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const originalIntersectionObserver = Object.getOwnPropertyDescriptor(
+    frameWindow,
+    'IntersectionObserver',
+  );
+  let observerConstructions = 0;
+  let observerDisconnects = 0;
+  let observedInOwnerRealm = false;
+  class OwnerIntersectionObserver {
+    constructor(_callback: IntersectionObserverCallback) {
+      observerConstructions += 1;
+    }
+    observe(target: Element): void {
+      observedInOwnerRealm = target.ownerDocument === frameDocument;
+    }
+    unobserve(): void {}
+    disconnect(): void {
+      observerDisconnects += 1;
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  Object.defineProperty(frameWindow, 'IntersectionObserver', {
+    configurable: true,
+    value: OwnerIntersectionObserver,
+  });
+
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+    new Promise(() => {});
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    expect(observerConstructions).to.equal(1);
+    expect(observedInOwnerRealm).to.be.true;
+
+    let addedLayer: { paint?: { 'fill-opacity'?: number } } | undefined;
+    const fakeMap = {
+      remove(): void {},
+      getSource(): undefined {
+        return undefined;
+      },
+      addSource(): void {},
+      getLayer(): undefined {
+        return undefined;
+      },
+      addLayer(layer: { paint?: { 'fill-opacity'?: number } }): void {
+        addedLayer = layer;
+      },
+    };
+    const originalGetComputedStyleDescriptor = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'getComputedStyle',
+    );
+    const originalGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+    let ownerStyleReads = 0;
+    Object.defineProperty(frameWindow, 'getComputedStyle', {
+      configurable: true,
+      value: (element: Element, pseudo?: string | null) => {
+        ownerStyleReads += 1;
+        const style = originalGetComputedStyle(element, pseudo);
+        return new Proxy(style, {
+          get(target, property) {
+            if (property === 'getPropertyValue') {
+              return (name: string) =>
+                name === '--lr-map-choropleth-fill-opacity'
+                  ? '0.42'
+                  : target.getPropertyValue(name);
+            }
+            const value = Reflect.get(target, property, target) as unknown;
+            return typeof value === 'function' ? value.bind(target) : value;
+          },
+        });
+      },
+    });
+    try {
+      const privateMap = el as unknown as {
+        _map?: typeof fakeMap;
+        applyChoropleth(): void;
+      };
+      privateMap._map = fakeMap;
+      el.choropleth = choropleth('owner-realm', [[0, '#000000']]);
+      privateMap.applyChoropleth();
+      expect(ownerStyleReads).to.be.greaterThan(0);
+      expect(addedLayer?.paint?.['fill-opacity']).to.equal(0.42);
+      privateMap._map = undefined;
+    } finally {
+      if (originalGetComputedStyleDescriptor) {
+        Object.defineProperty(frameWindow, 'getComputedStyle', originalGetComputedStyleDescriptor);
+      } else {
+        delete (frameWindow as unknown as { getComputedStyle?: typeof getComputedStyle })
+          .getComputedStyle;
+      }
+    }
+  } finally {
+    el.remove();
+    if (originalIntersectionObserver) {
+      Object.defineProperty(frameWindow, 'IntersectionObserver', originalIntersectionObserver);
+    } else {
+      delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+        .IntersectionObserver;
+    }
+    iframe.remove();
+    expect(observerDisconnects).to.equal(1);
+  }
+});
+
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
 // when the optional peer `maplibre-gl` fails to load, <lr-map> must fail closed into a visible,
-// accessible role="alert" error state instead of silently rendering an empty container with no
-// on-page indication anything is wrong. Mirrors docx-viewer/pdf-viewer's own `part="error"
-// role="alert"` treatment for the exact same "optional peer missing" shape.
+// accessible error state instead of silently rendering an empty container with no on-page
+// indication anything is wrong. Its interrupting announcement belongs in the pre-mounted shared
+// light-DOM sink, not in a shadow-root live region.
 it('renders a visible, accessible error state instead of a blank container when the maplibre-gl peer fails to load', async () => {
   // Deliberately not using `fixture()` (which connects the element and fires its own real
   // connectedCallback() immediately): `loadLibrary` must be overridden *before* the element ever
@@ -117,8 +262,9 @@ it('renders a visible, accessible error state instead of a blank container when 
       { timeout: 2000 },
     );
     const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-    expect(errorEl.getAttribute('role')).to.equal('alert');
+    expect(errorEl.getAttribute('role')).to.equal(null);
     expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+    expect(assertiveAnnouncements()).to.deep.equal([errorEl.textContent!.trim()]);
     expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.map).to.be.undefined;
     expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);

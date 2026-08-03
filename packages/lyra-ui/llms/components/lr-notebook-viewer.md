@@ -2,7 +2,7 @@
 
 # `lr-notebook-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-notebook-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraNotebookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -51,7 +51,9 @@ matches.
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
-`detail: { error }`, fetching, parsing, or validating the notebook failed.
+`detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
+non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
+`scrollToAnchor()` call is applied.
 
 Migration note: the previously declared `lr-highlight-activate` event was never emitted by
 `lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus

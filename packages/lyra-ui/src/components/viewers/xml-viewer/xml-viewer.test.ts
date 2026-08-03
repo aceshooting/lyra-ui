@@ -278,6 +278,78 @@ describe('copy', () => {
     const event = await eventPromise;
     expect(event.detail.text).to.include('<root>');
   });
+
+  it('uses the adopted owner clipboard and fails closed in an ownerless document', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const MainXMLSerializer = window.XMLSerializer;
+    const FrameXMLSerializer = frameWindow.XMLSerializer;
+    let mainWrites = 0;
+    let mainSerializations = 0;
+    let frameSerializations = 0;
+    const frameWrites: string[] = [];
+    class MainTrackedXMLSerializer {
+      serializeToString(node: Node): string {
+        mainSerializations++;
+        return new MainXMLSerializer().serializeToString(node);
+      }
+    }
+    class FrameTrackedXMLSerializer {
+      serializeToString(node: Node): string {
+        frameSerializations++;
+        return new FrameXMLSerializer().serializeToString(node);
+      }
+    }
+    window.XMLSerializer = MainTrackedXMLSerializer as unknown as typeof XMLSerializer;
+    frameWindow.XMLSerializer = FrameTrackedXMLSerializer as unknown as typeof XMLSerializer;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+    });
+    const el = (await fixture(
+      html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      button.click();
+      await Promise.resolve();
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.have.length(1);
+      expect(frameWrites[0]).to.include('<root>');
+      expect(mainSerializations).to.equal(0);
+      expect(frameSerializations).to.equal(1);
+
+      el.remove();
+      ownerlessDocument.adoptNode(el);
+      button.click();
+      await Promise.resolve();
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.have.length(1);
+      expect(mainSerializations).to.equal(0);
+      expect(frameSerializations).to.equal(1);
+    } finally {
+      el.remove();
+      window.XMLSerializer = MainXMLSerializer;
+      frameWindow.XMLSerializer = FrameXMLSerializer;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
+    }
+  });
 });
 
 // `search`/`searchNext`/`searchPrevious`/`clearSearch` are a purely imperative API here -- the
@@ -369,7 +441,11 @@ describe('node-path anchors', () => {
     // false, which would blow past mocha's per-test timeout given two such calls below.
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 1] })).to.be.true;
+    const event = await eventPromise as CustomEvent<{ found: boolean }>;
+    expect(event.detail).to.deep.equal({ found: true });
+    expect(event.cancelable).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 1, 0, '@href'] })).to.be.true;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [99] })).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;

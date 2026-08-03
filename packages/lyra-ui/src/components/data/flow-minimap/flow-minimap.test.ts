@@ -4,6 +4,16 @@ import './flow-minimap.js';
 import type { LyraFlowMinimap } from './flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
 import { styles } from './flow-minimap.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 const nodes: FlowNode[] = [
   { id: 'a', position: { x: 0, y: 0 } },
@@ -320,6 +330,81 @@ it('arrow keys pan the canvas viewport in each physical direction', async () => 
   expect(wrapper.viewport.y).to.be.greaterThan(0);
 });
 
+it('announces viewport changes as light-DOM additions and keeps an aria-hidden shadow mirror', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const mirror = minimap.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  expect(sinkTexts(), 'the first companion snapshot must stay silent').to.deep.equal([]);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.getAttribute('role')).to.equal(null);
+  expect(mirror.getAttribute('aria-live')).to.equal(null);
+
+  // Pin a stable viewport after the canvas's initial measurement/layout work. That keeps the
+  // right/left/right round trip deterministic while still exercising the public keyboard path.
+  wrapper.setViewport({ x: 0, y: 0, zoom: 1 });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+
+  const press = async (key: string): Promise<void> => {
+    rect.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await minimap.updateComplete;
+  };
+  await press('ArrowRight');
+  await press('ArrowLeft');
+  await press('ArrowRight');
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  const messages = sinkTexts();
+  expect(messages).to.have.length(3);
+  expect(messages[0]).to.equal(messages[2]);
+  expect(mirror.textContent?.trim()).to.equal(messages[2]);
+
+  wrapper.remove();
+  expect(sinkElement() === null).to.be.true;
+});
+
+it('re-targets its shared sink with the canvas when adopted into another document', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+
+  try {
+    frameDocument.body.append(wrapper);
+    await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
+    await minimap.updateComplete;
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
+    await minimap.updateComplete;
+
+    expect(sinkElement() === null, 'the original document must release both adopted holders').to.be.true;
+    expect(sinkTexts(frameDocument)).to.have.length(1);
+  } finally {
+    wrapper.remove();
+    iframe.remove();
+  }
+});
+
 it('cannot pan the canvas through minimap keyboard controls while locked', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
@@ -338,6 +423,66 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
   expect(wrapper.viewport).to.deep.equal(before);
+});
+
+it('tracks an adopted iframe viewport drag on its owner window and releases it symmetrically', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const iframe = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    iframe.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(iframe);
+  await loaded;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(wrapper));
+    await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
+    await minimap.updateComplete;
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+    (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+    rect.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 73,
+      clientX: 10,
+      clientY: 10,
+    }));
+    expect(
+      (minimap as unknown as { dragEventWindow?: Window }).dragEventWindow === frameWindow,
+      'the viewport drag retains its iframe owner window',
+    ).to.be.true;
+
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointercancel', { pointerId: 73 }));
+    expect((minimap as unknown as { dragState?: unknown }).dragState === undefined).to.be.true;
+    expect(
+      (minimap as unknown as { dragEventWindow?: Window }).dragEventWindow === undefined,
+    ).to.be.true;
+
+    rect.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 74,
+      clientX: 10,
+      clientY: 10,
+    }));
+    wrapper.remove();
+    expect(
+      (minimap as unknown as { dragEventWindow?: Window }).dragEventWindow === undefined,
+      'disconnect releases the exact retained window',
+    ).to.be.true;
+  } finally {
+    wrapper.remove();
+    iframe.remove();
+  }
 });
 
 it('pointercancel ends a viewport drag so a later pointermove no longer pans the canvas', async () => {
@@ -410,6 +555,55 @@ it('re-resolves against a new for target when the for attribute changes at runti
   await new Promise((r) => requestAnimationFrame(r));
   await minimap.updateComplete;
   expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('reconstructs its canvas watcher against the adopted iframe document on every reconnect', async () => {
+  const iframe = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    iframe.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(iframe);
+  await loaded;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const OriginalFrameObserver = frameWindow.MutationObserver;
+  let documentObservations = 0;
+  let disconnects = 0;
+  class FrameObserver {
+    private readonly inner: MutationObserver;
+    constructor(callback: MutationCallback) {
+      this.inner = new OriginalFrameObserver(callback);
+    }
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === frameDocument) documentObservations += 1;
+      this.inner.observe(target, options);
+    }
+    disconnect(): void {
+      disconnects += 1;
+      this.inner.disconnect();
+    }
+    takeRecords(): MutationRecord[] { return this.inner.takeRecords(); }
+  }
+  frameWindow.MutationObserver = FrameObserver as unknown as typeof MutationObserver;
+  let minimap: LyraFlowMinimap | undefined;
+
+  try {
+    minimap = (await fixture(html`<lr-flow-minimap></lr-flow-minimap>`)) as LyraFlowMinimap;
+    frameDocument.body.append(frameDocument.adoptNode(minimap));
+    await minimap.updateComplete;
+    expect(documentObservations, 'the canvas watcher observes the iframe document').to.equal(1);
+
+    minimap.remove();
+    frameDocument.body.append(minimap);
+    await minimap.updateComplete;
+    expect(documentObservations, 'reconnect builds a fresh iframe-document watcher').to.equal(2);
+    minimap.remove();
+    expect(disconnects, 'owner-realm observers are torn down on each disconnect').to.be.greaterThan(0);
+  } finally {
+    minimap?.remove();
+    frameWindow.MutationObserver = OriginalFrameObserver;
+    iframe.remove();
+  }
 });
 
 it('resolves a for-target canvas that mounts into the document after the minimap itself', async () => {

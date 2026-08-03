@@ -2,7 +2,7 @@
 
 # `lr-rag-eval-dashboard`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRagEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

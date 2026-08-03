@@ -238,7 +238,8 @@ mutation.
   `selectable` attribute means `multiple`.
 - `selectableRows: ((row) => boolean) | null = null` (JS-only).
 - `selectedKeys: Array<string | number> = []` (JS-only).
-- `selectedRows: Row[]` (read-only, JS-only).
+- `selectedRows: Row[]` (writable, JS-only) — assigning rows that belong to the current source
+  maps them to `selectedKeys`; detached rows are ignored and single-selection mode keeps the first.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: Array<{ id: string; desc: boolean }> = []` (JS-only).
@@ -331,6 +332,10 @@ consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live re
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
 document-level region rather than `::part(live-region)`; the part still tells you what the grid
 last announced.
+
+Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
+localized loading text to that shared polite sink, including repeated loading cycles. The visible
+`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`.
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
@@ -546,10 +551,14 @@ own "consumer computes/renders" contract rather than assuming addition.
 - `expandedKeys: Set<string | number> = new Set()` (attribute: false) — consumer-controlled expanded
   state; update it in response to `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
-- `moreLabel: string = 'Load more'` (attribute `more-label`)
-- `emptyHeading: string = 'No data'` (attribute `empty-heading`)
+- `moreLabel: string = ''` (attribute `more-label`) — when empty/unset, the button renders the
+  localized `loadMore` fallback (`'Load more'` in the default English catalog)
+- `emptyHeading: string = ''` (attribute `empty-heading`) — when empty/unset, the built-in empty
+  state renders the localized `noData` fallback (`'No data'` in the default English catalog)
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading: string = 'No columns configured'` (attribute `no-columns-heading`)
+- `noColumnsHeading: string = ''` (attribute `no-columns-heading`) — when empty/unset, the
+  no-columns state renders the localized `noColumns` fallback (`'No columns configured'` in the
+  default English catalog)
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
 - `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
   state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
@@ -558,10 +567,12 @@ own "consumer computes/renders" contract rather than assuming addition.
   field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
   parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
   filled
-- `revealColumnsLabel: string = 'Show all columns'` (attribute `reveal-columns-label` — the
-  reveal-button's label while `priority`-hidden columns are hidden)
-- `hideColumnsLabel: string = 'Show fewer columns'` (attribute `hide-columns-label` — the same
-  button's label once they've been revealed)
+- `revealColumnsLabel: string = ''` (attribute `reveal-columns-label`) — the reveal button's label
+  while `priority`-hidden columns are hidden; when empty/unset, it renders the localized
+  `showAllColumns` fallback (`'Show all columns'` in the default English catalog)
+- `hideColumnsLabel: string = ''` (attribute `hide-columns-label`) — the same button's label once
+  the columns have been revealed; when empty/unset, it renders the localized `showFewerColumns`
+  fallback (`'Show fewer columns'` in the default English catalog)
 - `showAllColumns: boolean = false` (attribute `show-all-columns`, reflected) — forces responsive
   priority columns visible and is updated by the built-in reveal button
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `showAllColumns` to
@@ -618,7 +629,8 @@ cell, holding `grandTotal`, is a `footer-cell` instead, matching every other foo
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
-visually-hidden `role="status"` node, since the placeholder rows are the visible affordance),
+visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
+affordance; the part has no live-region role in either appearance),
 `skeleton` (each `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
 and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
 geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
@@ -727,9 +739,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
   re-measure when real content arrives — exactly as they do between any two different data sets. For
   pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`. Either
-  loading appearance keeps exactly one `role="status"` live region announcing the state: every
-  placeholder opts out of `<lr-skeleton>`'s own announcement, so a skeleton table never announces
-  once per placeholder row.
+  Initial declarative loading stays silent; every later transition into either loading appearance
+  appends the localized loading text to the document's shared light-DOM polite sink, including
+  repeated cycles. `[part="base"]` exposes `aria-busy`, `[part="loading"]` is an `aria-hidden`
+  mirror rather than a live region, and every placeholder opts out of `<lr-skeleton>`'s own
+  announcement, so a skeleton table never announces once per placeholder row.
 - `columns[].cellTitle` returning an empty string **or** `undefined` omits the `title` attribute
   entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
   own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the
@@ -933,7 +947,7 @@ pagination.hrefTemplate = (page) =>
 **Known gotchas:**
 - user activation only emits an intent. Until the host applies a new `page`, the numeric input
   returns to the currently controlled value; assigning the page triggers the localized
-  `role="status"` announcement
+  announcement in the shared light-DOM polite sink
 - cancel `lr-before-page-change` for a policy veto; preventing `lr-page-change` has no effect because
   that second event is the accepted, non-cancelable controlled intent
 - the jump input accepts only whole pages in `1..pageCount`; empty, fractional, and out-of-range
@@ -1048,8 +1062,10 @@ focus cursor to the next word in **declaration order** (not weight/placement ord
 `ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
 `lr-word-click` for the currently-focused word. A `[part="focus-ring"]` `<rect>` is drawn around
 the focused word (absent until a word has actually been focused via keyboard or click), and a
-visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) announces
-`"${text}, ${weight}"` on every focus move.
+shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
+and repeated edge movements append repeated announcements even when their text is identical.
+`[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
+no live-region role of its own.
 
 **Properties:**
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
@@ -1088,7 +1104,8 @@ the currently-focused word — a no-op if nothing is focused yet)
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `word` (each `<text>`), `focus-ring` (the rect around the roving-focus
-cursor's word), `live-region` (visually-hidden `role="status" aria-live="polite"` announcement text),
+cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the latest announcement;
+the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
 (the no-data placeholder)
 
@@ -1152,9 +1169,11 @@ A Canvas-rendered heatmap with a DPR-aware, resize-aware redraw loop, in one of 
 GitHub-style Sunday–Saturday × week grid built from `days`, colored by quartile bucket rather than
 the matrix mode's continuous ramp). Every cell is independently addressable despite being
 canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
-with that cell's label + value; the canvas is `tabindex="0"` with arrow-key roving focus (a stroked
-ring redrawn over the focused cell on every draw, plus `[part="live-region"]` announcing it); and a
-  click, or Enter/Space on the focused cell, fires `lr-cell-click`.
+with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
+with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
+cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
+on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
+movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 
 Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
 interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
@@ -1205,7 +1224,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
   row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
-  description to the host's own `aria-label`, and appends a "(selected)" suffix to the live-region
+  description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lr-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
@@ -1215,7 +1234,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
   its low DOM footprint.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
-  formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
+  formats the per-cell hover tooltip and keyboard announcement text; receives the cell
   position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
   calendar mode) and its value. `CalendarCellPos.date` is a **required** ISO `yyyy-mm-dd` string,
   present for every grid position — including a sparse gap position with no matching entry in `days`
@@ -1299,8 +1318,8 @@ force a redraw manually.
 
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
-`live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
-keyboard-focused cell), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+`live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
+announcement uses the shared light-DOM polite sink), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
 bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
@@ -1382,16 +1401,16 @@ same color as `--lr-heatmap-focus-ring-color`).
   than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
   end-aligned.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
-  (calendar mode: a day-count + range summary instead) — `[part="canvas"]` inside it is a real
-  focusable, keyboard-operable, per-cell-interactive control (roving arrow-key focus,
-  `[part="live-region"]` announcements, `lr-cell-click`), and `role="img"` is documented (ARIA) to
-  flatten its subtree to a single image for some assistive tech, which conflicted with that
-  focusable descendant — fixed, matching `lr-lite-chart`/`lr-word-cloud`'s existing `role="group"`
-  pattern.
+  (calendar mode: a day-count + range summary instead). In default canvas mode,
+  `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,
+  per-cell-interactive control (roving arrow-key focus, shared light-DOM announcements,
+  `lr-cell-click`). `role="img"` would flatten that interactive subtree for some assistive tech.
+  With `accessibleCells`, the canvas becomes `aria-hidden` and the native cell-button overlay owns
+  the interactive semantics instead.
 - `NaN`/non-finite cell values in matrix mode are correctly treated as no-data now (alongside `-1`),
   and repeated DPR crossings (moving the window across displays with different pixel ratios) no
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
-- calendar mode's date labels (used by the default `cellText` template and the tooltip/live-region
+- calendar mode's date labels (used by the default `cellText` template and the tooltip/announcement
   text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
   `'en'` — fixed. The canvas-drawn axis chrome is now locale-aware too: month labels use
   `toLocaleString(undefined, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
@@ -1677,8 +1696,9 @@ when assigned):
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
   declarative one
 - `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements:
-  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then the `label`
-  attribute, then the slotted label text (nested items excluded) in the declarative one
+  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then flattened
+  accessibility-visible slotted label text (nested items excluded), then the `label` fallback in
+  the declarative one. Direct and forwarding-slot text/ARIA/visibility mutations update the name
 - `hasChildren: boolean` — whether this node has at least one child in whichever model is in use.
   Leaf nodes never expose `aria-expanded` and cannot expand or collapse. It also reports `false`
   past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
@@ -1705,6 +1725,10 @@ pending state starts or ends. Disabling or disconnecting an item invalidates the
 the default slot and never set `slot="children"` yourself. `expand-icon` and `collapse-icon`
 override the owning tree's corresponding icon for one item. The label/children slots are unused in
 the data model.
+
+Visual slot selection is separate from `nodeLabel` extraction: flattened element-only and visible
+`aria-hidden` content still chooses the authored slot instead of the `label` fallback, while hidden
+content is omitted from the spoken name. Host `aria-label` remains authoritative by presence.
 
 **CSS parts:** `base` and `tree-item` are aliases on the same outer wrapper around the row and child
 group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`, `item`,
@@ -1852,6 +1876,10 @@ with a console warning), `top-start`, `top-end` (floating corner overlays), `bot
 **CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `arrowhead`, `stub`
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
 `live-region`, `edge-list` (a visually hidden list of every edge).
+
+`live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
+actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
+identical repeated messages are appended as separate announcements.
 
 **Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
 spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over
@@ -2038,7 +2066,9 @@ success, danger, and warning colors respectively. Their expanded names are
 **Additional API surface:**
 
 - `part="instructions"` — Visually hidden keyboard instructions for the viewport.
-- `part="live-region"` — Visually hidden viewport-change announcements.
+- `part="live-region"` — Visually hidden, `aria-hidden` mirror of the latest viewport-change text.
+  The initial companion snapshot is silent; interaction-requested changes append to the document's
+  shared light-DOM polite sink, including repeated identical snapshots.
 
 ---
 
@@ -2397,6 +2427,10 @@ sorting, and bulk selection.
 `tagFilter`. **Events:** `lr-filter-change`, `lr-open`, `lr-selection-change`, `lr-sort`. **CSS
 parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+
+`selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
+selection stays silent; every post-mount `selectedIds` change appends the localized selected count
+to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 
 ## `lr-graph-query-builder`
 

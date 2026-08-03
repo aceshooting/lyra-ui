@@ -12,6 +12,11 @@ import {
   type ShikiLanguageInput,
 } from '../../conversation/code-block/code-loader.js';
 import { styles } from './diff-view.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
@@ -61,6 +66,21 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  * @since 4.0.0
  */
 export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    copyDiff: LYRA_DEFAULT_copyDiff,
+    diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
+    diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
+    diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
+    diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
+    remove: LYRA_DEFAULT_remove,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The "before" text. Default `''` renders an all-additions diff of `newText`. */
@@ -107,7 +127,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     languages: Record<string, ShikiLanguageInput>,
   ) => Promise<ShikiHighlighterCore | null> = loadShikiHighlighterCore;
 
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimer?: { owner: Window; handle: number };
 
   // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
   // changes. A render triggered purely by `justCopied` toggling reuses the same result.
@@ -120,8 +140,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       (changed.has('oldText') || changed.has('newText')) &&
       this.justCopied
     ) {
-      clearTimeout(this.copyTimeoutId);
-      this.copyTimeoutId = undefined;
+      this.cancelCopyTimer();
       this.justCopied = false;
     }
     if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
@@ -147,9 +166,20 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = undefined;
+    this.cancelCopyTimer();
     this.justCopied = false;
+  }
+
+  adoptedCallback(): void {
+    // A disconnected node can be adopted without receiving another disconnect notification.
+    this.cancelCopyTimer();
+    this.justCopied = false;
+  }
+
+  private cancelCopyTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   private syncHighlight(): void {
@@ -187,7 +217,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   private tokenizeLines(hl: ShikiHighlighterCore, text: string, lang: string): string[] | null {
     try {
       const html = hl.codeToHtml(text, { lang, themes: SHIKI_THEMES });
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
+      if (!DOMParserCtor) return null;
+      const doc = new DOMParserCtor().parseFromString(html, 'text/html');
       const lines = Array.from(doc.querySelectorAll('code > .line')).map((line) => line.innerHTML);
       const expected = splitLines(text).length;
       while (lines.length > expected) lines.pop();
@@ -272,20 +304,31 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   private onCopyClick = (): void => {
     const text = this.unifiedText;
+    this.emit('lr-copy', { text });
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    if (!owner) return;
     try {
-      navigator.clipboard?.writeText(text).catch(() => {
+      owner.navigator.clipboard?.writeText(text).catch(() => {
         // best-effort -- lr-copy still fires with the intended text regardless
       });
     } catch {
       // Some clipboard shims and restricted browser contexts throw before returning a promise.
-      // The event contract remains best-effort and still reports the intended snapshot below.
+      // The event contract remains best-effort and still reports the intended snapshot above.
     }
-    this.emit('lr-copy', { text });
     this.justCopied = true;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = setTimeout(() => {
+    this.cancelCopyTimer();
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.copyTimer?.owner !== owner
+        || this.copyTimer.handle !== handle
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.copyTimer = undefined;
       this.justCopied = false;
     }, COPY_CONFIRM_MS);
+    this.copyTimer = { owner, handle };
   };
 
   // Tracks each op's index within the *original* per-source-line `oldText`/`newText` arrays --

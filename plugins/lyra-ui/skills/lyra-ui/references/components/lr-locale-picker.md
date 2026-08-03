@@ -2,7 +2,7 @@
 
 # `lr-locale-picker`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-locale-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`

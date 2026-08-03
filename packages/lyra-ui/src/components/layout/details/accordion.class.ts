@@ -11,6 +11,11 @@ import type {
 } from './accordion-item.class.js';
 import type { LyraDetails } from './details.class.js';
 import { styles } from './accordion.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
 export type LyraAccordionPanel = LyraAccordionItem | LyraDetails;
@@ -47,6 +52,16 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  * @since 4.0.0
  */
 export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    expand: LYRA_DEFAULT_expand,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _mode: LyraAccordionMode = 'multiple';
@@ -257,7 +272,8 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   private handleFocusIn = (event: FocusEvent): void => {
     const item = event.composedPath().find(
       (node): node is LyraAccordionItem =>
-        node instanceof HTMLElement && node.localName === tag('accordion-item'),
+        (node as Partial<Node> | null)?.nodeType === 1 &&
+        (node as Element).localName === tag('accordion-item'),
     );
     if (!item || !this.panels.has(item) || item.disabled) return;
     this.syncRovingTabIndex(item);
@@ -266,7 +282,8 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   private handleKeyDown = (event: KeyboardEvent): void => {
     const current = event.composedPath().find(
       (node): node is LyraAccordionItem =>
-        node instanceof HTMLElement && node.localName === tag('accordion-item'),
+        (node as Partial<Node> | null)?.nodeType === 1 &&
+        (node as Element).localName === tag('accordion-item'),
     );
     if (!current || !this.panels.has(current) || current.disabled) return;
     const items = this.enabledItems();

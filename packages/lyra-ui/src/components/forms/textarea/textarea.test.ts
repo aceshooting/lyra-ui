@@ -3,6 +3,7 @@ import type { PropertyValues } from 'lit';
 import './textarea.js';
 import type { LyraTextarea } from './textarea.js';
 import { styles } from './textarea.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
@@ -461,6 +462,14 @@ describe('accessibleLabel', () => {
     expect(ta.getAttribute('aria-label')).to.equal('Custom name');
   });
 
+  it('preserves an explicitly empty host aria-label instead of applying a fallback', async () => {
+    const el = (await fixture(html`
+      <lr-textarea label="Notes" placeholder="ph" aria-label=""></lr-textarea>
+    `)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(ta.getAttribute('aria-label')).to.equal('');
+  });
+
   it('routes the default textbox name through localization overrides', async () => {
     const el = (await fixture(html`
       <lr-textarea .strings=${{ textareaLabel: 'Texte multiligne' }}></lr-textarea>
@@ -758,7 +767,8 @@ describe('switching resize away from "auto"', () => {
     // requestAnimationFrame-before-ResizeObserver delivery ordering within a frame make it
     // impractical to force two genuinely overlapping deliveries through real timing alone.
     const fakeRafId = requestAnimationFrame(() => {});
-    (el as unknown as { resizeRaf?: number }).resizeRaf = fakeRafId;
+    (el as unknown as { resizeRaf?: number; resizeRafOwner?: Window }).resizeRaf = fakeRafId;
+    (el as unknown as { resizeRafOwner?: Window }).resizeRafOwner = window;
 
     const originalCancel = window.cancelAnimationFrame;
     let canceledId: number | undefined;
@@ -933,14 +943,19 @@ describe('lr-textarea with-count', () => {
     expect(countOf(el).textContent!.trim()).to.equal('2 chars');
   });
 
-  it('keeps the visible count out of the accessibility tree and announces it politely', async () => {
+  it('keeps both shadow count copies out of the accessibility tree and pre-mounts a polite sink', async () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea with-count value="ab" aria-label="Notes"></lr-textarea>`,
     );
     expect(countOf(el).getAttribute('aria-hidden')).to.equal('true');
-    const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
-    expect(el.shadowRoot!.querySelectorAll('[aria-live="polite"]').length).to.equal(1);
-    expect(live.textContent!.trim()).to.equal('');
+    const mirror = el.shadowRoot!.querySelector('.count-announcement') as HTMLElement;
+    expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+    expect(el.shadowRoot!.querySelector('[aria-live], [role="status"]') === null).to.be.true;
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+    expect(Boolean(sink), 'the sink is mounted before typing starts').to.be.true;
+    expect(sink.childElementCount).to.equal(0);
   });
 
   it('is accessible with the count rendered', async () => {
@@ -981,23 +996,160 @@ describe('lr-textarea scrollPosition()', () => {
 });
 
 describe('lr-textarea with-count live announcement', () => {
-  it('republishes the count to the polite live region once typing pauses', async () => {
+  it('appends the count to the light-DOM polite sink once typing pauses', async () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea with-count aria-label="Notes"></lr-textarea>`,
     );
     el.strings = { textareaCharacterCount: '{count} chars' };
     await el.updateComplete;
-    const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
+    const mirror = el.shadowRoot!.querySelector('.count-announcement') as HTMLElement;
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
     const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
     textarea.value = 'abc';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
     // Still silent immediately after the keystroke -- announcing per character would talk over
     // the character just typed.
-    expect(live.textContent!.trim()).to.equal('');
+    expect(mirror.textContent!.trim()).to.equal('');
+    expect(sink.childElementCount).to.equal(0);
     await new Promise((resolve) => setTimeout(resolve, 1400));
     await el.updateComplete;
-    expect(live.textContent!.trim()).to.equal('3 chars');
+    expect(mirror.textContent!.trim()).to.equal('3 chars');
+    expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal(['3 chars']);
+  });
+
+  it('keeps a debounced count silent while the textarea host is hidden', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea hidden with-count aria-label="Notes"></lr-textarea>`,
+    );
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+    textarea.value = 'abc';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+
+    expect(sink.childElementCount).to.equal(0);
+  });
+
+  it('releases on disconnect and reconnects without replaying the last count', async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea with-count aria-label="Notes"></lr-textarea>`,
+    );
+    const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+    expect(document.querySelector(selector) !== null).to.be.true;
+
+    el.remove();
+    expect(document.querySelector(selector) === null).to.be.true;
+
+    document.body.append(el);
+    const sink = document.querySelector<HTMLElement>(selector)!;
+    expect(Boolean(sink)).to.be.true;
+    expect(sink.childElementCount).to.equal(0);
+    el.remove();
+  });
+
+  it('rebinds resize observation, animation frames, and count timers to an adopted realm', async () => {
+    const frame = document.createElement('iframe');
+    const loaded = oneEvent(frame, 'load');
+    frame.srcdoc = '<!doctype html><html><body></body></html>';
+    document.body.append(frame);
+    await loaded;
+
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const originalFrameResizeObserver = frameWindow.ResizeObserver;
+    const originalFrameRequestAnimationFrame = frameWindow.requestAnimationFrame;
+    const originalFrameCancelAnimationFrame = frameWindow.cancelAnimationFrame;
+    const originalFrameSetTimeout = frameWindow.setTimeout;
+    const originalFrameClearTimeout = frameWindow.clearTimeout;
+    const originalParentRequestAnimationFrame = window.requestAnimationFrame;
+    const originalParentSetTimeout = window.setTimeout;
+    let resizeCallback: ResizeObserverCallback | undefined;
+    let frameObserverConstructions = 0;
+    let frameAnimationFrames = 0;
+    let frameAnimationCancels = 0;
+    let frameCountTimers = 0;
+    let frameTimerClears = 0;
+    let parentAnimationFrames = 0;
+    let parentCountTimers = 0;
+
+    class TrackingResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        frameObserverConstructions += 1;
+        resizeCallback = callback;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+
+    frameWindow.ResizeObserver = TrackingResizeObserver;
+    frameWindow.requestAnimationFrame = (() => {
+      frameAnimationFrames += 1;
+      return 71;
+    }) as typeof frameWindow.requestAnimationFrame;
+    frameWindow.cancelAnimationFrame = ((handle: number) => {
+      if (handle === 71) frameAnimationCancels += 1;
+    }) as typeof frameWindow.cancelAnimationFrame;
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number) => {
+      if (timeout === 1000) frameCountTimers += 1;
+      return 72;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle === 72) frameTimerClears += 1;
+    }) as typeof frameWindow.clearTimeout;
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      parentAnimationFrames += 1;
+      return originalParentRequestAnimationFrame(callback);
+    }) as typeof window.requestAnimationFrame;
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (timeout === 1000) parentCountTimers += 1;
+      return originalParentSetTimeout(handler, timeout, ...args);
+    }) as typeof window.setTimeout;
+
+    let el: LyraTextarea | undefined;
+    try {
+      // Render in the defining realm before adoption so Lit's constructed styles are installed.
+      el = await fixture<LyraTextarea>(html`
+        <lr-textarea resize="auto" with-count aria-label="Notes"></lr-textarea>
+      `);
+      el.remove();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      expect(frameObserverConstructions).to.equal(1);
+
+      const textarea = el.input!;
+      textarea.value = 'abc';
+      textarea.dispatchEvent(new frameWindow.InputEvent('input', { bubbles: true }));
+      expect(frameCountTimers).to.equal(1);
+      expect(parentCountTimers).to.equal(0);
+
+      resizeCallback?.(
+        [{ contentRect: { width: 999 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      expect(frameAnimationFrames).to.equal(1);
+      expect(parentAnimationFrames).to.equal(0);
+
+      el.remove();
+      expect(frameTimerClears).to.equal(1);
+      expect(frameAnimationCancels).to.equal(1);
+    } finally {
+      el?.remove();
+      frameWindow.ResizeObserver = originalFrameResizeObserver;
+      frameWindow.requestAnimationFrame = originalFrameRequestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originalFrameCancelAnimationFrame;
+      frameWindow.setTimeout = originalFrameSetTimeout;
+      frameWindow.clearTimeout = originalFrameClearTimeout;
+      window.requestAnimationFrame = originalParentRequestAnimationFrame;
+      window.setTimeout = originalParentSetTimeout;
+      frame.remove();
+    }
   });
 });
 

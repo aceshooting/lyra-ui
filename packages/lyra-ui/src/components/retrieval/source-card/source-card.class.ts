@@ -5,6 +5,11 @@ import type { LyraFrame } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SourceCardExpandDetail {
   sourceId: string;
@@ -91,6 +96,20 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @since 4.0.0
  */
 export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    showLess: LYRA_DEFAULT_showLess,
+    showMore: LYRA_DEFAULT_showMore,
+    sourcePageSuffix: LYRA_DEFAULT_sourcePageSuffix,
+    untitledSource: LYRA_DEFAULT_untitledSource,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */

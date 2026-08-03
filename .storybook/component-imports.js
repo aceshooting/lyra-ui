@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
  * with a `- **Import** \`import '…';\`` line, and
  * `packages/lyra-ui/scripts/check-llms-artifacts.mjs` already resolves every one of those
  * specifiers against a real source module on every lint run. Deriving the docs-site line from the
- * same text means a path can never be right in one place and stale in the other, and 275
+ * same text means a path can never be right in one place and stale in the other, and 283
  * hand-written import lines never exist to go stale in the first place.
  *
  * Guessing the path from the manifest instead (strip `.class`, prefix the family) would
@@ -37,7 +37,7 @@ function componentImportSpecifier(reference) {
   return reference.match(IMPORT_LINE)?.[1];
 }
 
-/** Build the `{ 'lr-tag': '@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js' }` map. */
+/** Build the `{ 'lr-tag': '@aceshooting/lyra-ui/components/lr-tag.js' }` map. */
 function readComponentImports(directory = REFERENCE_DIR) {
   const imports = {};
   for (const file of readdirSync(directory).sort()) {
@@ -50,7 +50,7 @@ function readComponentImports(directory = REFERENCE_DIR) {
 
 /**
  * Serves the map to the preview bundle. A virtual module rather than an eager
- * `import.meta.glob(..., '?raw')` over the same files: those 275 reference files are ~1.6 MB of
+ * `import.meta.glob(..., '?raw')` over the same files: those 283 reference files are ~1.6 MB of
  * markdown, and only one line of each is wanted, so parsing them here keeps the docs bundle to the
  * ~20 KB the map itself weighs.
  */

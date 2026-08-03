@@ -184,6 +184,9 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private _effectiveOrientation: StepperOrientation = "horizontal";
   private resizeObserver?: ResizeObserver;
+  private resizeObservedElement?: HTMLElement;
+  private resizeObserverOwnerDocument?: Document;
+  private resizeObserverGeneration = 0;
   private pendingStepFocusId?: string;
   @query('[part="base"]') private baseEl?: HTMLElement;
   /** Best-known inline size before `baseEl` exists (or as a fallback while it's momentarily
@@ -232,7 +235,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.resizeObserver?.disconnect();
+    this.resetResizeObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetResizeObserver();
   }
 
   protected override firstUpdated(): void {
@@ -307,7 +314,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     ) {
       if (this.orientationBreakpoints.containerObservationEnabled)
         this.armResizeObserver();
-      else this.resizeObserver?.disconnect();
+      else this.resetResizeObserver();
     }
   }
 
@@ -346,17 +353,50 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   /** Creates (idempotently) and (re-)observes `[part="base"]` -- a no-op until `baseEl` exists (see
    *  `firstUpdated()`/`connectedCallback()`). */
   private armResizeObserver(): void {
-    if (!this.resizeObserver) {
-      this.resizeObserver = new ResizeObserver((entries) => {
-        const box = entries[0]?.contentBoxSize?.[0];
-        const width = box
-          ? box.inlineSize
-          : this.baseEl?.getBoundingClientRect().width ?? 0;
-        this.measuredInlineSize = width;
-        this.updateEffectiveOrientation(width, true);
-      });
+    const observedElement = this.baseEl;
+    if (!this.isConnected || !observedElement) return;
+    const ownerDocument = this.ownerDocument;
+    if (
+      this.resizeObserver &&
+      this.resizeObservedElement === observedElement &&
+      this.resizeObserverOwnerDocument === ownerDocument
+    ) {
+      return;
     }
-    if (this.baseEl) this.resizeObserver.observe(this.baseEl);
+
+    this.resetResizeObserver();
+    const ResizeObserverConstructor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    const generation = this.resizeObserverGeneration;
+    const observer = new ResizeObserverConstructor((entries) => {
+      if (
+        this.resizeObserver !== observer ||
+        this.resizeObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.baseEl !== observedElement
+      ) {
+        return;
+      }
+      const box = entries[0]?.contentBoxSize?.[0];
+      const width = box
+        ? box.inlineSize
+        : observedElement.getBoundingClientRect().width;
+      this.measuredInlineSize = width;
+      this.updateEffectiveOrientation(width, true);
+    });
+    this.resizeObserver = observer;
+    this.resizeObservedElement = observedElement;
+    this.resizeObserverOwnerDocument = ownerDocument;
+    observer.observe(observedElement);
+  }
+
+  private resetResizeObserver(): void {
+    this.resizeObserverGeneration += 1;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeObservedElement = undefined;
+    this.resizeObserverOwnerDocument = undefined;
   }
 
   private selectStep(step: StepItem, index: number): void {

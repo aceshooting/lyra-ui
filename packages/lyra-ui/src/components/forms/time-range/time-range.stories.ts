@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { TimeRangePreset, TimeRangeValueFormatter } from './time-range.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const presets: TimeRangePreset[] = [
   { label: 'Last 7 days', start: 0, end: 7 },

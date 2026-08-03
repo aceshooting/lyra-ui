@@ -23,6 +23,16 @@
 //                           `effectiveDirection`/`isRtl` so horizontal arrows follow text
 //                           direction, unless the surface is physically oriented (2-D canvas
 //                           coordinates, an ltr-pinned strip) and says so via a suppression.
+//   shadow-live-region      `role="status"`, `role="alert"`, and active `aria-live` markup inside
+//                           a component template is not announced reliably across AT/browser
+//                           pairs. Stateful announcements must use the shared light-DOM sink.
+//   announcement-source     Component-owned light-DOM sinks must identify their owner document
+//                           and source element, so adoption targets the right realm and the shared
+//                           announcer suppresses hidden, inert, or stale-document messages.
+//   nul-byte                A literal NUL makes ordinary source tools treat a text file as binary;
+//                           express an intentional delimiter with an escaped source spelling.
+//   announcer-timer-realm   A component-owned Announcer must bind its timers to the host's owner
+//                           window on connection/adoption instead of retaining the ambient realm.
 //   physical-css            *.styles.ts must use logical properties (inset-inline-*,
 //                           margin-inline-*, text-align: start/end, ...) instead of physical
 //                           left/right ones, except inside `:dir()` rules, in rule blocks that
@@ -120,6 +130,11 @@ function stripJsComments(source) {
 }
 
 const lineOf = (source, index) => source.slice(0, index).split('\n').length;
+
+/** Literal NUL bytes are never valid source text, even when JavaScript accepts them in a string. */
+export function findNulByteLines(source) {
+  return [...new Set(Array.from(source.matchAll(/\0/gu), (match) => lineOf(source, match.index)))];
+}
 
 /**
  * True when the flagged line, or the contiguous comment block right above it, contains a
@@ -290,20 +305,97 @@ function checkIntlOutsideCache(file, stripped, findings) {
 
 const LOCALE_SENSITIVE_METHOD = /\.(toLocale[A-Za-z]*|localeCompare)\s*\(/g;
 
-function isUnsafeDirectLocale(expression) {
-  if (expression === undefined) return true;
-  const locale = expression.trim();
-  if (!locale || locale === 'undefined' || locale === 'null') return true;
-  if (/^(['"`])(?:\\.|(?!\1)[\s\S])*\1$/.test(locale)) return true;
-  if (/\bthis\s*\.\s*locale\b|\bresolveLyraLocale\s*\(/.test(locale)) return true;
-  return false;
+function safeConstInitializer(identifier, source, beforeIndex) {
+  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const declaration = new RegExp(
+    `\\bconst\\s+${escaped}(?:\\s*:[^=;\\n]+)?\\s*=\\s*([^;\\n]+)`,
+    'gu',
+  );
+  let initializer;
+  let initializerIndex = -1;
+  for (const match of source.matchAll(declaration)) {
+    if (match.index >= beforeIndex) break;
+    initializer = match[1];
+    initializerIndex = match.index;
+  }
+  return initializer === undefined ? undefined : { initializer, initializerIndex };
+}
+
+/**
+ * Positive proof that one locale expression crossed the safe Intl boundary. An arbitrary variable
+ * name is never evidence by itself: a local identifier is accepted only when its nearest preceding
+ * `const` initializer is itself provably safe.
+ */
+function isSafeDirectLocale(expression, source, beforeIndex, seen = new Set()) {
+  if (expression === undefined) return false;
+  let locale = expression.trim();
+  while (locale.startsWith('(') && locale.endsWith(')')) locale = locale.slice(1, -1).trim();
+  if (/^this\s*\.\s*(?:effectiveLocale|effectiveIntlLocale)$/u.test(locale)) return true;
+  if (/^resolveIntlLocale\s*\([\s\S]*\)$/u.test(locale)) return true;
+
+  const fallback = locale.match(/^([\s\S]+?)\s*(?:\|\||\?\?)\s*undefined$/u);
+  if (fallback) return isSafeDirectLocale(fallback[1], source, beforeIndex, seen);
+
+  if (!/^[A-Za-z_$][\w$]*$/u.test(locale) || seen.has(locale)) return false;
+  const declaration = safeConstInitializer(locale, source, beforeIndex);
+  if (!declaration) return false;
+  seen.add(locale);
+  return isSafeDirectLocale(
+    declaration.initializer,
+    source,
+    declaration.initializerIndex,
+    seen,
+  );
+}
+
+/** Pure classification seam used by the checker's unit tests. */
+export function isSafeIntlLocaleExpression(
+  expression,
+  { source = '', beforeIndex = source.length } = {},
+) {
+  return isSafeDirectLocale(expression, source, beforeIndex);
+}
+
+function assertUnsafeIntlLocaleRule() {
+  const source = `
+    const safeAlias = this.effectiveLocale;
+    const safeResolved = resolveIntlLocale(rawLocale);
+  `;
+  for (const expression of [
+    'this.effectiveLocale',
+    'this.effectiveIntlLocale',
+    'resolveIntlLocale(rawLocale)',
+    'safeAlias',
+    'safeResolved',
+  ]) {
+    if (!isSafeDirectLocale(expression, source, source.length)) {
+      throw new Error(`unsafe-intl-locale self-test rejected safe expression: ${expression}`);
+    }
+  }
+  for (const expression of [
+    undefined,
+    '',
+    'undefined',
+    'null',
+    "'en'",
+    'this.locale',
+    'resolveLyraLocale(this)',
+    'getLyraLocale()',
+    'rawLocale',
+    // Even a reassuring name is not proof without a safe initializer.
+    'effectiveLocale',
+  ]) {
+    if (isSafeDirectLocale(expression, source, source.length)) {
+      throw new Error(`unsafe-intl-locale self-test accepted unsafe expression: ${String(expression)}`);
+    }
+  }
 }
 
 function checkUnsafeIntlLocale(file, stripped, findings) {
   for (const match of stripped.matchAll(LOCALE_SENSITIVE_METHOD)) {
     const args = splitTopLevelArgs(balancedArgText(stripped, match.index + match[0].length));
     const localeArg = match[1] === 'localeCompare' ? args[1] : args[0];
-    if (!isUnsafeDirectLocale(localeArg)) continue;
+    if (isSafeDirectLocale(localeArg, stripped, match.index)) continue;
     findings.push(
       `${rel(file)}:${lineOf(stripped, match.index)} [unsafe-intl-locale] .${match[1]}() must receive ` +
         `this.effectiveLocale/effectiveIntlLocale or a locale derived from resolveIntlLocale(); ` +
@@ -350,7 +442,240 @@ function checkRtlArrowKeys(file, stripped, rawLines, findings) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 6: physical-css
+// Rule 6: shadow-live-region
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns active live-region attributes written as markup in a component source file. Comments
+ * are blanked first, so public JSDoc may describe the semantics without tripping the runtime rule.
+ * Host `setAttribute()` calls are intentionally outside this syntax: the host lives in the
+ * consumer's light DOM. `aria-live="off"` is also allowed to suppress a nested region.
+ */
+export function findShadowLiveRegionMarkup(source) {
+  const stripped = stripJsComments(source);
+  const findings = [];
+  const pattern = /\b(role|aria-live)\s*=\s*(['"])(status|alert|polite|assertive)\2/g;
+
+  for (const match of stripped.matchAll(pattern)) {
+    const attribute = match[1];
+    const value = match[3];
+    if (attribute === 'role' ? value !== 'status' && value !== 'alert' : value !== 'polite' && value !== 'assertive') {
+      continue;
+    }
+    findings.push({ attribute, line: lineOf(stripped, match.index), value });
+  }
+
+  return findings;
+}
+
+/**
+ * Finds nested components whose default host semantics would create a live region inside their
+ * parent's shadow root. Skeleton is true-defaulting, so attribute omission and `aria-hidden` do
+ * not disable its host `role="status"`; callers must use a property binding.
+ */
+export function findImplicitShadowLiveComponents(source) {
+  const stripped = stripJsComments(source);
+  const findings = [];
+  const skeleton = /<lr-skeleton\b([^>]*)>/gs;
+
+  for (const match of stripped.matchAll(skeleton)) {
+    if (/\.announce\s*=\s*\$\{\s*false\s*\}/u.test(match[1])) continue;
+    findings.push({ line: lineOf(stripped, match.index), tag: 'lr-skeleton' });
+  }
+
+  return findings;
+}
+
+function checkShadowLiveRegion(file, source, findings) {
+  for (const match of findShadowLiveRegionMarkup(source)) {
+    findings.push(
+      `${rel(file)}:${match.line} [shadow-live-region] ${match.attribute}="${match.value}" is rendered ` +
+        `inside the component shadow root, where announcements are unreliable; route state changes through ` +
+        'acquireAnnouncementSink() in src/internal/announcer.ts, or put host semantics on the light-DOM custom element',
+    );
+  }
+  for (const match of findImplicitShadowLiveComponents(source)) {
+    findings.push(
+      `${rel(file)}:${match.line} [shadow-live-region] nested <${match.tag}> uses its default host ` +
+        'role="status" inside the parent shadow root; bind .announce=${false} and keep any needed ' +
+        'loading label as ordinary non-live parent content',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule 7: announcement-source
+// ---------------------------------------------------------------------------
+
+/** Returns the closing parenthesis for a call whose opening parenthesis is at `openingIndex`. */
+function findCallEnd(source, openingIndex) {
+  let depth = 1;
+  let quote = '';
+  for (let index = openingIndex + 1; index < source.length; index++) {
+    const character = source[index];
+    if (quote) {
+      if (character === '\\') index++;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '(') depth++;
+    else if (character === ')' && --depth === 0) return index;
+  }
+  return -1;
+}
+
+/** Splits a call's arguments without treating nested object/array/call commas as separators. */
+function splitTopLevelArguments(source) {
+  const argumentsFound = [];
+  let start = 0;
+  let braces = 0;
+  let brackets = 0;
+  let parentheses = 0;
+  let quote = '';
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index];
+    if (quote) {
+      if (character === '\\') index++;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') braces++;
+    else if (character === '}') braces--;
+    else if (character === '[') brackets++;
+    else if (character === ']') brackets--;
+    else if (character === '(') parentheses++;
+    else if (character === ')') parentheses--;
+    else if (character === ',' && braces === 0 && brackets === 0 && parentheses === 0) {
+      argumentsFound.push(source.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  argumentsFound.push(source.slice(start).trim());
+  return argumentsFound;
+}
+
+/** Proves that an inline options object owns the requested top-level property. */
+function hasTopLevelObjectProperty(argument, propertyName) {
+  const source = argument.trim();
+  if (!source.startsWith('{')) return false;
+  let braces = 0;
+  let brackets = 0;
+  let parentheses = 0;
+  let quote = '';
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index];
+    if (quote) {
+      if (character === '\\') index++;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') braces++;
+    else if (character === '}') braces--;
+    else if (character === '[') brackets++;
+    else if (character === ']') brackets--;
+    else if (character === '(') parentheses++;
+    else if (character === ')') parentheses--;
+
+    if (
+      braces === 1 &&
+      brackets === 0 &&
+      parentheses === 0 &&
+      source.startsWith(propertyName, index) &&
+      !/[\w$]/u.test(source[index - 1] ?? '') &&
+      !/[\w$]/u.test(source[index + propertyName.length] ?? '')
+    ) {
+      let previous = index - 1;
+      while (previous >= 0 && /\s/u.test(source[previous])) previous--;
+      let next = index + propertyName.length;
+      while (next < source.length && /\s/u.test(source[next])) next++;
+      if ((source[previous] === '{' || source[previous] === ',') && /[:,}]/u.test(source[next] ?? '')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Finds component/controller sink acquisitions that cannot be statically proven to bind both the
+ * owner document and producing element. Low-level callers outside the component/internal source
+ * trees remain free to omit them; this policy guards every shipped producer that announces for a
+ * user-facing component.
+ */
+export function findUnboundAnnouncementSinks(source) {
+  const stripped = stripJsComments(source);
+  const findings = [];
+  const pattern = /\bacquireAnnouncementSink\s*\(/gu;
+  for (const match of stripped.matchAll(pattern)) {
+    const openingIndex = stripped.indexOf('(', match.index);
+    const closingIndex = findCallEnd(stripped, openingIndex);
+    if (closingIndex < 0) {
+      findings.push({ line: lineOf(stripped, match.index), reason: 'unterminated call' });
+      continue;
+    }
+    const argumentsFound = splitTopLevelArguments(stripped.slice(openingIndex + 1, closingIndex));
+    const options = argumentsFound[1] ?? '';
+    const missing = ['document', 'source'].filter(
+      (propertyName) => !hasTopLevelObjectProperty(options, propertyName),
+    );
+    if (missing.length > 0) {
+      findings.push({
+        line: lineOf(stripped, match.index),
+        reason: `missing inline ${missing.join(' and ')} option${missing.length === 1 ? '' : 's'}`,
+      });
+    }
+  }
+  return findings;
+}
+
+function checkAnnouncementSource(file, source, findings) {
+  for (const match of findUnboundAnnouncementSinks(source)) {
+    findings.push(
+      `${rel(file)}:${match.line} [announcement-source] acquireAnnouncementSink() ${match.reason}; ` +
+        'pass an inline { document: ..., source: <producing element> } options object so hidden, inert, ' +
+        'and adopted sources cannot write to an active or stale document live region',
+    );
+  }
+}
+
+/**
+ * Returns each Announcer construction when the containing component cannot prove it rebinds the
+ * timer host through `ownerDocument.defaultView`. One binding can serve repeated constructions in
+ * the same class module; runtime tests still prove connection/adoption timing.
+ */
+export function findUnboundAnnouncerTimerHosts(source) {
+  const stripped = stripJsComments(source);
+  const constructions = Array.from(stripped.matchAll(/\bnew\s+Announcer\s*\(/gu));
+  if (constructions.length === 0) return [];
+  if (/\.setTimerHost\s*\(/u.test(stripped) && /this\.ownerDocument\.defaultView/u.test(stripped)) {
+    return [];
+  }
+  return constructions.map((match) => ({ line: lineOf(stripped, match.index) }));
+}
+
+function checkAnnouncerTimerRealm(file, source, findings) {
+  for (const match of findUnboundAnnouncerTimerHosts(source)) {
+    findings.push(
+      `${rel(file)}:${match.line} [announcer-timer-realm] components constructing Announcer must ` +
+        'bind its timer host to this.ownerDocument.defaultView on connection/adoption',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule 9: physical-css
 // ---------------------------------------------------------------------------
 
 const PHYSICAL_PATTERNS = [
@@ -488,74 +813,99 @@ function loadBaselines() {
 
 // ---------------------------------------------------------------------------
 
-const baselines = loadBaselines();
+export function runSourcePolicy() {
+  const baselines = loadBaselines();
 
-if (process.argv.includes('--list-baselines')) {
-  for (const rule of RATCHET_RULES) console.log(`${rule}: ${baselines[rule].length} baselined file(s)`);
-  process.exit(0);
-}
+  assertUnsafeIntlLocaleRule();
 
-const knownKeys = defaultStringKeys();
-const componentFiles = walk(componentsRoot).filter(isSource).sort();
-const internalFiles = walk(internalRoot)
-  .filter(isSource)
-  .filter((file) => path.basename(file) !== 'intl-cache.ts')
-  .sort();
-
-const findings = [];
-const notes = [];
-const strippedByFile = new Map();
-
-for (const file of [...componentFiles, ...internalFiles]) {
-  strippedByFile.set(file, stripJsComments(fs.readFileSync(file, 'utf8')));
-}
-
-for (const file of componentFiles) {
-  const stripped = strippedByFile.get(file);
-  const rawLines = fs.readFileSync(file, 'utf8').split('\n');
-  if (file.endsWith('.styles.ts')) {
-    checkPhysicalCss(file, rawLines, findings);
-    continue;
+  if (process.argv.includes('--list-baselines')) {
+    for (const rule of RATCHET_RULES) console.log(`${rule}: ${baselines[rule].length} baselined file(s)`);
+    return;
   }
-  checkLocalizeFallback(file, stripped, knownKeys, findings);
-  checkIntlOutsideCache(file, stripped, findings);
-  checkUnsafeIntlLocale(file, stripped, findings);
-  checkPointercancelPairing(file, stripped, rawLines, findings);
-  checkRtlArrowKeys(file, stripped, rawLines, findings);
-}
 
-for (const file of internalFiles) {
-  checkIntlOutsideCache(file, strippedByFile.get(file), findings);
-  checkUnsafeIntlLocale(file, strippedByFile.get(file), findings);
-}
+  const knownKeys = defaultStringKeys();
+  const componentTreeFiles = walk(componentsRoot);
+  const internalTreeFiles = walk(internalRoot);
+  const componentFiles = componentTreeFiles.filter(isSource).sort();
+  const allInternalFiles = internalTreeFiles.filter(isSource).sort();
+  const internalFiles = allInternalFiles.filter((file) => path.basename(file) !== 'intl-cache.ts');
 
-const offenders = collectRatchetOffenders(componentFiles, strippedByFile);
-for (const rule of RATCHET_RULES) {
-  const baseline = new Set(baselines[rule]);
-  const current = new Set(offenders[rule]);
-  for (const file of offenders[rule]) {
-    if (baseline.has(file)) continue;
-    const reason =
-      rule === 'keyboard-test-coverage'
-        ? 'handles keydown but its colocated test never simulates keyboard input (sendKeys / KeyboardEvent / keydown dispatch)'
-        : 'calls this.localize() but its colocated test references neither `.strings` nor registerLyraLocale';
-    findings.push(`${file}:1 [${rule}] ${reason}; new components must ship this coverage`);
+  const findings = [];
+  const notes = [];
+  const strippedByFile = new Map();
+
+  for (const file of [...componentTreeFiles, ...internalTreeFiles].filter((candidate) => candidate.endsWith('.ts'))) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const line of findNulByteLines(source)) {
+      findings.push(
+        `${rel(file)}:${line} [nul-byte] literal NUL makes source tooling treat this text file as ` +
+          'binary; use an escaped source spelling such as \\u0000 for an intentional delimiter',
+      );
+    }
   }
-  for (const file of baselines[rule]) {
-    if (!current.has(file))
-      notes.push(`note: ${file} is no longer an offender for ${rule} -- remove it from scripts/source-policy-baselines.json`);
+
+  for (const file of [...componentFiles, ...allInternalFiles]) {
+    const source = fs.readFileSync(file, 'utf8');
+    strippedByFile.set(file, stripJsComments(source));
+  }
+
+  for (const file of componentFiles) {
+    const stripped = strippedByFile.get(file);
+    const rawSource = fs.readFileSync(file, 'utf8');
+    const rawLines = rawSource.split('\n');
+    if (file.endsWith('.styles.ts')) {
+      checkPhysicalCss(file, rawLines, findings);
+      continue;
+    }
+    checkLocalizeFallback(file, stripped, knownKeys, findings);
+    checkIntlOutsideCache(file, stripped, findings);
+    checkUnsafeIntlLocale(file, stripped, findings);
+    checkPointercancelPairing(file, stripped, rawLines, findings);
+    checkRtlArrowKeys(file, stripped, rawLines, findings);
+    checkShadowLiveRegion(file, rawSource, findings);
+    checkAnnouncementSource(file, rawSource, findings);
+    if (file.endsWith('.class.ts')) checkAnnouncerTimerRealm(file, rawSource, findings);
+  }
+
+  for (const file of internalFiles) {
+    checkIntlOutsideCache(file, strippedByFile.get(file), findings);
+    checkUnsafeIntlLocale(file, strippedByFile.get(file), findings);
+    if (path.basename(file) !== 'announcer.ts') {
+      checkAnnouncementSource(file, fs.readFileSync(file, 'utf8'), findings);
+    }
+  }
+
+  const offenders = collectRatchetOffenders(componentFiles, strippedByFile);
+  for (const rule of RATCHET_RULES) {
+    const baseline = new Set(baselines[rule]);
+    const current = new Set(offenders[rule]);
+    for (const file of offenders[rule]) {
+      if (baseline.has(file)) continue;
+      const reason =
+        rule === 'keyboard-test-coverage'
+          ? 'handles keydown but its colocated test never simulates keyboard input (sendKeys / KeyboardEvent / keydown dispatch)'
+          : 'calls this.localize() but its colocated test references neither `.strings` nor registerLyraLocale';
+      findings.push(`${file}:1 [${rule}] ${reason}; new components must ship this coverage`);
+    }
+    for (const file of baselines[rule]) {
+      if (!current.has(file))
+        notes.push(`note: ${file} is no longer an offender for ${rule} -- remove it from scripts/source-policy-baselines.json`);
+    }
+  }
+
+  for (const note of notes) console.log(note);
+
+  if (findings.length > 0) {
+    console.error(`Source policy failed with ${findings.length} finding(s):`);
+    for (const finding of findings.sort()) console.error(`- ${finding}`);
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `Source policy passed for ${componentFiles.length + allInternalFiles.length} source files ` +
+        `(baselines: ${RATCHET_RULES.map((rule) => `${baselines[rule].length} ${rule}`).join(', ')})`,
+    );
   }
 }
 
-for (const note of notes) console.log(note);
-
-if (findings.length > 0) {
-  console.error(`Source policy failed with ${findings.length} finding(s):`);
-  for (const finding of findings.sort()) console.error(`- ${finding}`);
-  process.exitCode = 1;
-} else {
-  console.log(
-    `Source policy passed for ${componentFiles.length + internalFiles.length} source files ` +
-      `(baselines: ${RATCHET_RULES.map((rule) => `${baselines[rule].length} ${rule}`).join(', ')})`,
-  );
-}
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) runSourcePolicy();

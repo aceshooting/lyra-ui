@@ -1,6 +1,11 @@
 import { property } from 'lit/decorators.js';
 import { LyraMenuItem, type LyraMenuItemEventMap } from './menu-item.class.js';
 import type { MenuFocusTarget } from './menu-shared.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
   focus: FocusEvent;
@@ -42,6 +47,16 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * @since 4.0.0
  */
 export class LyraDropdownItem extends LyraMenuItem {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   /** Whether the submenu is currently open. Assigning it, or changing the reflected
    * `submenu-open` attribute, drives the same panel as `openSubmenu()` / `closeSubmenu()` without
    * moving focus. Like those methods, it is a no-op until submenu content is connected.

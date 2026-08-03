@@ -25,12 +25,12 @@ function parseHexTriplet(value: string): [number, number, number] | null {
  *  syntax -- `ctx.fillStyle`'s own getter re-serializes right back to hex for an opaque color (per
  *  the CSS Color serialization algorithm canvas 2D uses), so both forms are tried on either side of
  *  the round-trip. Returns `null` when `value` doesn't parse as a color at all. */
-function toRgb(value: string): [number, number, number] | null {
+function toRgb(value: string, ownerDocument: Document): [number, number, number] | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const direct = parseRgbTriplet(trimmed) ?? parseHexTriplet(trimmed);
   if (direct) return direct;
-  const ctx = getScratchCtx();
+  const ctx = getScratchCtx(ownerDocument);
   if (!ctx) return null;
   const sentinel = 'rgb(1, 2, 3)';
   ctx.fillStyle = sentinel;
@@ -54,9 +54,16 @@ function relativeLuminance([r, g, b]: [number, number, number]): number {
  *  (prefers-color-scheme: dark)` fallback is what's active, since both arrive through the exact same
  *  `--lr-color-text`/`--lr-color-surface` custom properties every other themed surface reads. */
 export function resolveIsDarkTheme(host: Element): boolean {
-  const style = getComputedStyle(host);
-  const text = toRgb(style.getPropertyValue('--lr-color-text'));
-  const surface = toRgb(style.getPropertyValue('--lr-color-surface'));
+  const view = host.ownerDocument.defaultView;
+  if (!view || typeof view.getComputedStyle !== 'function') return false;
+  let style: CSSStyleDeclaration;
+  try {
+    style = view.getComputedStyle(host);
+  } catch {
+    return false;
+  }
+  const text = toRgb(style.getPropertyValue('--lr-color-text'), host.ownerDocument);
+  const surface = toRgb(style.getPropertyValue('--lr-color-surface'), host.ownerDocument);
   if (!text || !surface) return false;
   return relativeLuminance(text) > relativeLuminance(surface);
 }
@@ -69,25 +76,44 @@ export function resolveIsDarkTheme(host: Element): boolean {
  *  component that can't just let CSS repaint itself. Returns a cleanup function. */
 export function watchDarkTheme(host: HTMLElement, onChange: () => void): () => void {
   const view = host.ownerDocument.defaultView;
-  const colorSchemeQuery = view?.matchMedia?.('(prefers-color-scheme: dark)');
-  colorSchemeQuery?.addEventListener('change', onChange);
+  if (!view || !host.isConnected) return () => {};
+  let active = true;
+  const update = (): void => {
+    if (!active || !host.isConnected || host.ownerDocument.defaultView !== view) return;
+    onChange();
+  };
+  let colorSchemeQuery: MediaQueryList | undefined;
+  try {
+    colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
+    colorSchemeQuery?.addEventListener('change', update);
+  } catch {
+    colorSchemeQuery = undefined;
+  }
 
   let observer: MutationObserver | undefined;
-  if (typeof MutationObserver !== 'undefined') {
+  const Observer = view.MutationObserver;
+  if (typeof Observer === 'function') {
     const targets: Element[] = [host];
     let parent = host.parentElement;
     while (parent) {
       targets.push(parent);
       parent = parent.parentElement;
     }
-    observer = new MutationObserver(onChange);
-    for (const target of targets) {
-      observer.observe(target, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'] });
+    try {
+      observer = new Observer(update);
+      for (const target of targets) {
+        observer.observe(target, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'] });
+      }
+    } catch {
+      observer?.disconnect();
+      observer = undefined;
     }
   }
 
   return () => {
-    colorSchemeQuery?.removeEventListener('change', onChange);
+    if (!active) return;
+    active = false;
+    colorSchemeQuery?.removeEventListener('change', update);
     observer?.disconnect();
   };
 }

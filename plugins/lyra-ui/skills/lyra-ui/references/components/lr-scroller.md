@@ -2,7 +2,7 @@
 
 # `lr-scroller`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/scroller/scroller.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-scroller.js';` (stable tag alias; registers the tag)
 - **Class** `LyraScroller`, also available unregistered from `@aceshooting/lyra-ui/components/layout/scroller/scroller.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

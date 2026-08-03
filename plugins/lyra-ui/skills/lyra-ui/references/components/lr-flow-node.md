@@ -2,7 +2,7 @@
 
 # `lr-flow-node`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/flow-node/flow-node.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flow-node.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

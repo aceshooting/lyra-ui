@@ -2,7 +2,7 @@
 
 # `lr-policy-summary`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/policy-summary/policy-summary.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-policy-summary.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPolicySummary`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/policy-summary/policy-summary.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -21,6 +21,15 @@ import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
  *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination
@@ -38,6 +47,23 @@ const DEFAULT_SKELETON_ROWS = 3;
  *  thousands of nodes for a state that exists for a few hundred milliseconds. An explicit
  *  `skeletonRows` is honored verbatim and is not capped. */
 const MAX_DERIVED_SKELETON_ROWS = 20;
+
+interface OwnedAnimationFrame {
+  owner: Window;
+  handle: number;
+}
+
+interface TableResizeState {
+  key: string;
+  pointerId: number;
+  startX: number;
+  startWidth: number;
+  minWidth: number;
+  maxWidth: number;
+  handle: HTMLElement;
+  /** Width stored before this drag, restored if the live preview is canceled or vetoed. */
+  previousWidth: number | undefined;
+}
 
 /**
  * Tri-state boolean converter for `empty-compact`. An absent attribute stays `undefined` -- "keep
@@ -372,8 +398,9 @@ export interface LyraTableEventMap<T = unknown> {
  * spinner, while `'skeleton'` keeps the real `<colgroup>`/`<thead>` (and the
  * filter/pagination chrome) and fills the body with `skeletonRows` placeholder
  * rows, so column geometry survives the load instead of collapsing and
- * reflowing. Either way exactly one `role="status"` live region announces the
- * state — every placeholder opts out of `<lr-skeleton>`'s own announcement.
+ * reflowing. Initial declarative loading stays silent; every post-mount transition into either
+ * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
+ * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
  * Columns with `editable: true` open a native text/number editor on
  * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned.
  * `editable: 'always'` instead renders that editor in every body cell of the
@@ -485,7 +512,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart filter-label - The `<label>` wrapping the filter input.
  * @csspart loading - The loading-state wrapper. Under `loadingAppearance="spinner"` (the default)
  *   it is the visible block holding the spinner; under `"skeleton"` it is the visually-hidden
- *   `role="status"` node, since the placeholder rows are the visible affordance.
+ *   aria-hidden announcement mirror, since the placeholder rows are the visible affordance. It is
+ *   never itself live; post-mount loading announcements use the shared light-DOM polite sink.
  * @csspart skeleton - Each `<lr-skeleton>` placeholder inside a `loadingAppearance="skeleton"`
  *   body cell. Its rows and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts (that
  *   is what keeps them geometrically identical to real rows), so this is the part to target for
@@ -537,6 +565,28 @@ export interface LyraTableEventMap<T = unknown> {
  * @since 4.0.0
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    expand: LYRA_DEFAULT_expand,
+    loadMore: LYRA_DEFAULT_loadMore,
+    loading: LYRA_DEFAULT_loading,
+    noColumns: LYRA_DEFAULT_noColumns,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    resizeColumn: LYRA_DEFAULT_resizeColumn,
+    showAllColumns: LYRA_DEFAULT_showAllColumns,
+    showFewerColumns: LYRA_DEFAULT_showFewerColumns,
+    tableEditCell: LYRA_DEFAULT_tableEditCell,
+    tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
+    tableFilterPlaceholder: LYRA_DEFAULT_tableFilterPlaceholder,
+    tableLoading: LYRA_DEFAULT_tableLoading,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) columns: TableColumn<T>[] = [];
@@ -732,6 +782,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  by the time `updated()` runs, so a dedicated flag is needed. Mirrors `lr-app-rail`'s
    *  `persistReady`. */
   private persistReady = false;
+  private announcementSink?: AnnouncementSink;
+  private loadingAnnouncementsReady = false;
 
   /** Roving-tabindex position among header cells; `null` until a header is
    *  clicked/navigated to, at which point `focusedColKey()` falls back to
@@ -756,19 +808,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private editorHadFocusBeforeUpdate = false;
   @state() private resizedColumnWidths = new Map<string, number>();
 
-  private resizeState?: {
-    key: string;
-    pointerId: number;
-    startX: number;
-    startWidth: number;
-    minWidth: number;
-    maxWidth: number;
-    handle: HTMLElement;
-    /** `resizedColumnWidths.get(key)` as it stood before this drag started -- `undefined` when the
-     *  column hadn't been drag/keyboard-resized yet (still on its declared `width`/intrinsic size).
-     *  Restored verbatim if the drag-end commit below is vetoed. */
-    previousWidth: number | undefined;
-  };
+  private resizeState?: TableResizeState;
+  /** Window that owns the active resize gesture's global pointer listeners. */
+  private resizeEventWindow?: Window;
 
   private rowsByKey = new Map<string, { row: T; index: number }>();
   private columnsByKey = new Map<string, TableColumn<T>>();
@@ -781,13 +823,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  lite-chart.ts's connectedCallback()/disconnectedCallback() ResizeObserver
    *  lifecycle. */
   private resizeObserver?: ResizeObserver;
-  /** rAF id for the coalesced `resizeObserver` callback below — an animated ancestor resize (a
+  /** Owner-bound rAF for the coalesced `resizeObserver` callback below — an animated ancestor resize (a
    *  CSS transition/drag on a containing panel) can fire the observer once per animation frame,
    *  and each tick's full synchronous read+write pass (offsetParent over every priority header,
    *  a fresh `[data-col-key]` query per sticky column, an aria-valuenow write per resize handle)
    *  would otherwise run unbatched on every single one of them. Mirrors lite-chart.ts's/
    *  heatmap.class.ts's own `drawRafId` coalescing pattern. */
-  private layoutRafId?: number;
+  private layoutFrame: OwnedAnimationFrame | null = null;
   /** The `[part='base']` element `resizeObserver` is currently observing —
    *  `render()`'s columns/rows-empty branches swap in the built-in
    *  (or `empty`-slotted) empty state instead,
@@ -808,14 +850,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
     if (explicit !== undefined) return Math.max(0, explicit);
-    const themed = getComputedStyle(this).getPropertyValue('--lr-table-resize-min-width').trim();
+    const ownerWindow = this.ownerDocument.defaultView;
+    const hostStyle = ownerWindow?.getComputedStyle(this);
+    const themed = hostStyle?.getPropertyValue('--lr-table-resize-min-width').trim() ?? '';
     const value = Number.parseFloat(themed);
     if (!Number.isFinite(value)) return 48;
     if (themed.endsWith('rem')) {
-      return Math.max(0, value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
+      const rootFontSize = Number.parseFloat(
+        ownerWindow?.getComputedStyle(this.ownerDocument.documentElement).fontSize ?? '',
+      );
+      return Number.isFinite(rootFontSize) ? Math.max(0, value * rootFontSize) : 48;
     }
     if (themed.endsWith('em')) {
-      return Math.max(0, value * Number.parseFloat(getComputedStyle(this).fontSize));
+      const hostFontSize = Number.parseFloat(hostStyle?.fontSize ?? '');
+      return Number.isFinite(hostFontSize) ? Math.max(0, value * hostFontSize) : 48;
     }
     return Math.max(0, value);
   }
@@ -864,13 +912,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
     const header = handle.closest('th[data-col-key]') as HTMLElement | null;
-    if (!key || !column || !header) return;
+    const resizeEventWindow = this.ownerDocument.defaultView;
+    if (!key || !column || !header || !resizeEventWindow) return;
+    const replacedStartWidth = this.resizeState?.key === key
+      ? this.resizeState.startWidth
+      : undefined;
+    this.cancelResizeGesture();
     const minWidth = this.minimumResizeWidth(column);
     this.resizeState = {
       key,
       pointerId: event.pointerId,
       startX: event.clientX,
-      startWidth: header.getBoundingClientRect().width,
+      startWidth: replacedStartWidth ?? header.getBoundingClientRect().width,
       minWidth,
       maxWidth: this.maximumResizeWidth(column, minWidth),
       handle,
@@ -879,10 +932,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     event.preventDefault();
     event.stopPropagation();
     handle.setPointerCapture?.(event.pointerId);
-    window.addEventListener('pointermove', this.onResizePointerMove);
-    window.addEventListener('pointerup', this.onResizePointerEnd);
-    window.addEventListener('pointercancel', this.onResizePointerEnd);
-    window.addEventListener('lostpointercapture', this.onResizePointerEnd);
+    this.resizeEventWindow = resizeEventWindow;
+    resizeEventWindow.addEventListener('pointermove', this.onResizePointerMove);
+    resizeEventWindow.addEventListener('pointerup', this.onResizePointerEnd);
+    resizeEventWindow.addEventListener('pointercancel', this.onResizePointerEnd);
+    resizeEventWindow.addEventListener('lostpointercapture', this.onResizePointerEnd);
   };
 
   private onResizePointerMove = (event: PointerEvent): void => {
@@ -964,10 +1018,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       }
     }
     this.resizeState = undefined;
-    window.removeEventListener('pointermove', this.onResizePointerMove);
-    window.removeEventListener('pointerup', this.onResizePointerEnd);
-    window.removeEventListener('pointercancel', this.onResizePointerEnd);
-    window.removeEventListener('lostpointercapture', this.onResizePointerEnd);
+    this.detachResizePointerListeners();
 
     if (event.type !== 'pointerup') {
       const reverted = new Map(this.resizedColumnWidths);
@@ -991,6 +1042,36 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.resizedColumnWidths = reverted;
   };
 
+  private detachResizePointerListeners(): void {
+    const resizeEventWindow = this.resizeEventWindow;
+    if (!resizeEventWindow) return;
+    resizeEventWindow.removeEventListener('pointermove', this.onResizePointerMove);
+    resizeEventWindow.removeEventListener('pointerup', this.onResizePointerEnd);
+    resizeEventWindow.removeEventListener('pointercancel', this.onResizePointerEnd);
+    resizeEventWindow.removeEventListener('lostpointercapture', this.onResizePointerEnd);
+    this.resizeEventWindow = undefined;
+  }
+
+  private rollbackResizePreview(state: TableResizeState): void {
+    const reverted = new Map(this.resizedColumnWidths);
+    if (state.previousWidth === undefined) reverted.delete(state.key);
+    else reverted.set(state.key, state.previousWidth);
+    this.resizedColumnWidths = reverted;
+  }
+
+  private cancelResizeGesture(): void {
+    const state = this.resizeState;
+    this.resizeState = undefined;
+    this.detachResizePointerListeners();
+    if (!state) return;
+    try {
+      state.handle.releasePointerCapture?.(state.pointerId);
+    } catch {
+      // Native capture may already have been released by removal/cancellation.
+    }
+    this.rollbackResizePreview(state);
+  }
+
   /** Coalesces however many `resizeObserver` callback ticks land in one animation frame (an
    *  animated/dragged ancestor resize can fire the observer once per frame) into a single
    *  read+write pass, instead of re-running `recomputeColumnsHidden()` / `applyStickyOffsets()` /
@@ -998,14 +1079,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  tick. A second tick that lands while a frame is already pending is a no-op; the id resets once
    *  the scheduled frame runs, so the very next tick after that schedules a fresh one. */
   private scheduleLayoutSync = (): void => {
-    if (this.layoutRafId !== undefined) return;
-    this.layoutRafId = requestAnimationFrame(() => {
-      this.layoutRafId = undefined;
-      if (!this.isConnected) return;
+    if (this.layoutFrame) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const frame: OwnedAnimationFrame = { owner, handle: 0 };
+    frame.handle = owner.requestAnimationFrame(() => {
+      if (this.layoutFrame !== frame) return;
+      this.layoutFrame = null;
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
       this.recomputeColumnsHidden();
       this.applyStickyOffsets();
       this.syncResizeHandleValues();
     });
+    this.layoutFrame = frame;
   };
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -1027,7 +1113,23 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(this.scheduleLayoutSync);
+    this.syncAnnouncementSink();
+    const owner = this.ownerDocument.defaultView;
+    const ResizeObserverCtor = owner?.ResizeObserver;
+    let observer: ResizeObserver | undefined;
+    if (ResizeObserverCtor) {
+      observer = new ResizeObserverCtor(() => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner ||
+          this.resizeObserver !== observer
+        ) {
+          return;
+        }
+        this.scheduleLayoutSync();
+      });
+    }
+    this.resizeObserver = observer;
     // A reconnect re-creates the observer above but the shadow root content
     // survives across disconnect/reconnect (Lit doesn't tear down the shadow
     // root) — re-observe [part='base'] here if it already exists from before
@@ -1048,18 +1150,37 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    window.removeEventListener('pointermove', this.onResizePointerMove);
-    window.removeEventListener('pointerup', this.onResizePointerEnd);
-    window.removeEventListener('pointercancel', this.onResizePointerEnd);
-    window.removeEventListener('lostpointercapture', this.onResizePointerEnd);
-    this.resizeState = undefined;
+    this.releaseAnnouncementSink();
+    this.cancelResizeGesture();
     this.resizeObserver?.disconnect();
-    if (this.layoutRafId !== undefined) {
-      cancelAnimationFrame(this.layoutRafId);
-      this.layoutRafId = undefined;
-    }
+    this.resizeObserver = undefined;
+    const frame = this.layoutFrame;
+    if (frame) frame.owner.cancelAnimationFrame(frame.handle);
+    this.layoutFrame = null;
     this.observedBase = undefined;
     this.observedHeaders.clear();
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private loadingText(): string {
+    return this.localize('tableLoading', this.loadingLabel || undefined);
   }
 
   private observeBase(base: Element): void {
@@ -1161,11 +1282,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (text === '') {
       entries = this.rows.map((row, index) => ({ row, index }));
     } else {
-      const normalized = text.toLocaleLowerCase(locale);
+      const intlLocale = this.effectiveLocale;
+      const normalized = text.toLocaleLowerCase(intlLocale);
       entries = this.rows.flatMap((row, index) => {
         const matches = this.filter
           ? this.filter(row, text)
-          : safeStringifyForFilter(row).toLocaleLowerCase(locale).includes(normalized);
+          : safeStringifyForFilter(row).toLocaleLowerCase(intlLocale).includes(normalized);
         return matches ? [{ row, index }] : [];
       });
     }
@@ -1566,6 +1688,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (
+      this.loadingAnnouncementsReady &&
+      changed.has('loading') &&
+      this.loading &&
+      this.columns.length > 0
+    ) {
+      this.announcementSink?.announce(this.loadingText());
+    }
+    this.loadingAnnouncementsReady = true;
     // Persist `showAllColumns` whenever it changes, but never on the initial update -- willUpdate()
     // restored it on that pass, so writing it back would be redundant, and with no `storage-key` set
     // `writePersistedState(undefined, ...)` is a silent no-op regardless.
@@ -1959,8 +2090,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   /** One placeholder. `announce` is switched off on every one of them: `<lr-skeleton>` defaults it
    *  to `true`, which would make each of the N x M cells its own `role="status"` live region and
-   *  turn a single "Loading rows" announcement into a storm of them. The one status node
-   *  `render()` puts inside `[part='base']` carries the announcement for the whole grid instead.
+   *  turn a single "Loading rows" announcement into a storm of them. The table's shared light-DOM
+   *  announcement sink carries the post-mount state transition for the whole grid instead.
    *  A property binding (not `?announce=`) is required to assign `false` to a `true`-defaulting
    *  boolean property. */
   private renderSkeletonPlaceholder(): TemplateResult {
@@ -2015,9 +2146,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const skeletonLoading = this.loading && this.loadingAppearance === 'skeleton';
     if (this.loading && !skeletonLoading) {
       return html`<div part="base" aria-busy="true">
-        <div part="loading" role="status" aria-live="polite">
-          <lr-spinner label-placement="after" accessible-label=${this.localize('tableLoading', this.loadingLabel || undefined)}>
-            ${this.localize('tableLoading', this.loadingLabel || undefined)}
+        <div part="loading" aria-hidden="true">
+          <lr-spinner label-placement="after" accessible-label=${this.loadingText()}>
+            ${this.loadingText()}
           </lr-spinner>
         </div>
       </div>`;
@@ -2283,8 +2414,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return html`
       <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy=${skeletonLoading ? 'true' : 'false'}>
         ${skeletonLoading
-          ? html`<div part="loading" class="sr-only" role="status" aria-live="polite">
-              ${this.localize('tableLoading', this.loadingLabel || undefined)}
+          ? html`<div part="loading" class="sr-only" aria-hidden="true">
+              ${this.loadingText()}
             </div>`
           : nothing}
         ${this.filterable

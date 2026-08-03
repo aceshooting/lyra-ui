@@ -2,7 +2,7 @@
 
 # `lr-segmented`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/segmented/segmented.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-segmented.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSegmented`, also available unregistered from `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

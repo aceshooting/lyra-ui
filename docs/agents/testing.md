@@ -65,7 +65,7 @@
   `@web/dev-server-core`'s browser `sendMessage` serializes it with `stable()`, whose very first
   statement is `structuredClone(obj)`; `structuredClone` throws `DataCloneError` on any DOM
   value, so the message is never sent, the session never finishes, and the file reports
-  `0 passed, 0 failed` at the 180s `testsFinishTimeout` with no per-test detail — which reads
+  `0 passed, 0 failed` only when the per-file `testsFinishTimeout` expires, with no per-test detail — which reads
   exactly like an infinite loop or an environment/resource-contention issue and is easy to
   misdiagnose as one. It is neither: chai's own message formatting is fine (~2 ms), and deleting
   `actual`/`expected` off the caught `AssertionError` before rethrowing makes the identical

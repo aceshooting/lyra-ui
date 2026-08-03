@@ -19,10 +19,11 @@ export function lockScroll(doc: Document = document): () => void {
   if (count === 0) {
     previousOverflow.set(doc, root.style.overflow);
     previousPadding.set(doc, root.style.paddingInlineEnd);
-    const scrollbarWidth = (doc.defaultView?.innerWidth ?? 0) - root.clientWidth;
+    const view = doc.defaultView;
+    const scrollbarWidth = (view?.innerWidth ?? 0) - root.clientWidth;
     root.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      const currentPadding = parseFloat(getComputedStyle(root).paddingInlineEnd) || 0;
+    if (scrollbarWidth > 0 && view) {
+      const currentPadding = parseFloat(view.getComputedStyle(root).paddingInlineEnd) || 0;
       root.style.paddingInlineEnd = `${currentPadding + scrollbarWidth}px`;
     }
   }

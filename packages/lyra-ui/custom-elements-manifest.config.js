@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { applyComponentMetadataToManifest } from './scripts/component-metadata.mjs';
+import { sourceEventTypeContracts } from './scripts/check-event-contracts.mjs';
 
 const componentMetadata = JSON.parse(
   readFileSync(new URL('./scripts/fixtures/component-metadata.json', import.meta.url), 'utf8'),
@@ -42,9 +43,10 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     'lr-checkbox',
     {
       checked: { default: 'false', attribute: 'checked' },
+      defaultChecked: { default: 'false', attribute: 'checked', reflects: true },
       customError: { default: 'null', attribute: 'custom-error' },
       disabled: { default: 'false', attribute: 'disabled' },
-      form: { default: 'null', attribute: 'form', createAttribute: true },
+      form: { default: 'null', attribute: 'form', createAttribute: true, reflects: true },
       indeterminate: { default: 'false', attribute: 'indeterminate' },
       name: { default: "''", attribute: 'name' },
       required: { default: 'false', attribute: 'required' },
@@ -108,6 +110,12 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-dropdown-item',
+    {
+      submenuOpen: { default: 'false', attribute: 'submenu-open', reflects: true },
+    },
+  ],
+  [
     'lr-file-input',
     {
       disabled: { default: 'false', attribute: 'disabled' },
@@ -115,7 +123,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
         default: 'false',
         attribute: 'dragging',
         reflects: true,
-        readonly: true,
+        readonly: false,
         createAttribute: true,
       },
       files: { default: '[]' },
@@ -159,6 +167,14 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-number-input',
+    {
+      inputMode: { default: "'numeric'", attribute: 'inputmode' },
+      step: { default: '1', attribute: 'step' },
+      type: { default: "'number'", attribute: 'type', reflects: true },
+    },
+  ],
+  [
     'lr-popover',
     {
       for: { default: "''", attribute: 'for' },
@@ -192,8 +208,9 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     'lr-radio-group',
     {
       customError: { default: 'null', attribute: 'custom-error' },
+      defaultValue: { default: "''", attribute: 'value', reflects: true },
       disabled: { default: 'false', attribute: 'disabled' },
-      form: { default: 'null', attribute: 'form' },
+      form: { default: 'null', attribute: 'form', reflects: true },
       name: { default: "''", attribute: 'name' },
       required: { default: 'false', attribute: 'required' },
       value: { default: "''", attribute: 'value' },
@@ -214,14 +231,15 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-select',
     {
-      form: { default: 'null', attribute: 'form' },
+      form: { default: 'null', attribute: 'form', reflects: true },
       selectedOptions: { default: '[]', readonly: false },
+      value: { default: "''", attribute: 'value' },
     },
   ],
   [
     'lr-slider',
     {
-      form: { default: 'null', attribute: 'form', createAttribute: true },
+      form: { default: 'null', attribute: 'form', createAttribute: true, reflects: true },
       name: { default: 'null', attribute: 'name' },
     },
   ],
@@ -235,9 +253,10 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     'lr-switch',
     {
       checked: { default: 'false', attribute: 'checked' },
+      defaultChecked: { default: 'false', attribute: 'checked', reflects: true },
       customError: { default: 'null', attribute: 'custom-error' },
       disabled: { default: 'false', attribute: 'disabled' },
-      form: { default: 'null', attribute: 'form', createAttribute: true },
+      form: { default: 'null', attribute: 'form', createAttribute: true, reflects: true },
       name: { default: "''", attribute: 'name' },
       required: { default: 'false', attribute: 'required' },
     },
@@ -387,9 +406,9 @@ export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
 ]);
 
 // Event-map interfaces are the runtime/type source of truth, but CEM does not connect a class's
-// LyraElement<TEventMap> parameter to its `@event` records. Project the constructors covered by
-// component event tests so native Event/InputEvent/FocusEvent contracts remain distinguishable
-// from CustomEvent payloads in generated metadata.
+// LyraElement<TEventMap> parameter to its `@event` records. These explicit native-event canaries
+// are also exercised by the synthetic plugin test; the package-link phase merges them with every
+// concrete EventMap schema discovered from source.
 export const EVENT_RUNTIME_CONTRACTS = new Map([
   ['lr-checkbox', { change: 'Event' }],
   [
@@ -397,10 +416,11 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
     {
       change: 'Event',
       input: 'InputEvent',
-      'lr-hide': 'CustomEvent',
-      'lr-show': 'CustomEvent',
+      'lr-hide': 'CustomEvent<undefined>',
+      'lr-show': 'CustomEvent<undefined>',
     },
   ],
+  ['lr-drawer', { 'lr-hide': 'CustomEvent<LyraDialogHideDetail>' }],
   ['lr-input', { change: 'Event', input: 'InputEvent' }],
   ['lr-number-input', { change: 'Event', input: 'InputEvent' }],
   ['lr-otp-input', { change: 'Event', input: 'InputEvent' }],
@@ -798,7 +818,12 @@ export default {
               );
             }
             member.default = `'${lockedType}'`;
+            // CEM labels syntax-level subclass overrides as inherited. This entry is now a
+            // reviewed runtime projection for the locked subclass, so retain it during compacting
+            // as the subclass's own effective default rather than falling back to LyraChart's.
+            delete member.inheritedFrom;
             attribute.default = `'${lockedType}'`;
+            delete attribute.inheritedFrom;
           }
         }
 
@@ -866,8 +891,12 @@ export default {
               }
               member.default = metadata.default;
               if (metadata.attribute) member.attribute ??= metadata.attribute;
-              if (metadata.reflects) member.reflects = true;
+              if (metadata.reflects !== undefined) member.reflects = metadata.reflects;
               if (metadata.readonly !== undefined) member.readonly = metadata.readonly;
+              // Every entry in this table is backed by a focused runtime contract. Once projected,
+              // it is an effective subclass override and must survive compact-manifest inheritance
+              // pruning instead of being replaced with its base class's default/type/reflection.
+              delete member.inheritedFrom;
 
               if (!metadata.attribute) continue;
               let attribute = declaration.attributes.find((candidate) => candidate.name === metadata.attribute);
@@ -885,6 +914,7 @@ export default {
               }
               attribute.fieldName ??= name;
               attribute.default = metadata.default;
+              delete attribute.inheritedFrom;
             }
           }
         }
@@ -923,6 +953,10 @@ export default {
                 );
               }
               entry.type = { ...entry.type, text: metadata.writeType };
+              // The wider setter vocabulary is the reviewed effective contract for this tag, not
+              // an unchanged inherited entry. Keep it in the compact declaration (notably
+              // lr-tag's additional `text` write token).
+              delete entry.inheritedFrom;
             }
           }
         }
@@ -933,17 +967,50 @@ export default {
     {
       name: 'lr-event-runtime-contracts',
       packageLinkPhase({ customElementsManifest }) {
+        const contracts = sourceEventTypeContracts(customElementsManifest);
+        const visitedExplicitTags = new Set();
+        for (const [tagName, explicit] of EVENT_RUNTIME_CONTRACTS) {
+          const contract = contracts.get(tagName) ?? {};
+          for (const [name, type] of Object.entries(explicit)) {
+            if (contract[name] !== undefined && contract[name] !== type) {
+              throw new Error(
+                `${tagName}#${name}: explicit event type ${type} conflicts with source EventMap ${contract[name]}`,
+              );
+            }
+            contract[name] = type;
+          }
+          contracts.set(tagName, contract);
+        }
         for (const module of customElementsManifest.modules ?? []) {
           for (const declaration of module.declarations ?? []) {
-            const contract = EVENT_RUNTIME_CONTRACTS.get(declaration.tagName);
+            if (EVENT_RUNTIME_CONTRACTS.has(declaration.tagName)) {
+              visitedExplicitTags.add(declaration.tagName);
+            }
+            const contract = contracts.get(declaration.tagName);
             if (!contract) continue;
             for (const [name, type] of Object.entries(contract)) {
               const event = declaration.events?.find((candidate) => candidate.name === name);
               if (!event) {
-                throw new Error(`${declaration.tagName}: event projection requires public event ${name}`);
+                if (EVENT_RUNTIME_CONTRACTS.get(declaration.tagName)?.[name] !== undefined) {
+                  throw new Error(`${declaration.tagName}: event projection requires public event ${name}`);
+                }
+                // Shared/mixin EventMaps may intentionally document inherited events once on the
+                // owner rather than materializing them on every consumer declaration.
+                continue;
               }
               event.type = { text: type };
+              // A subclass-authored event description can deliberately refine inherited runtime
+              // behavior. The projection table is the review boundary that makes retaining that
+              // event in the compact subclass declaration explicit.
+              if (EVENT_RUNTIME_CONTRACTS.get(declaration.tagName)?.[name] !== undefined) {
+                delete event.inheritedFrom;
+              }
             }
+          }
+        }
+        for (const tagName of EVENT_RUNTIME_CONTRACTS.keys()) {
+          if (!visitedExplicitTags.has(tagName)) {
+            throw new Error(`${tagName}: event projection requires component declaration`);
           }
         }
 

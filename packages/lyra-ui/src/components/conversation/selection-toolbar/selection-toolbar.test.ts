@@ -226,6 +226,43 @@ it('replaces an inactive overlay handle after a settled detach so Escape still d
   expect(dismissals).to.equal(1);
 });
 
+it('does not re-arm its former document during a detached update and reconnects to its new owner', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const el = (await fixture(html`
+      <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+    `)) as LyraSelectionToolbar;
+    let dismissals = 0;
+    el.addEventListener('lr-dismiss', () => dismissals++);
+
+    el.remove();
+    el.text = 'changed while detached';
+    await el.updateComplete;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(el.open).to.be.true;
+    expect(dismissals).to.equal(0);
+
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(el.open).to.be.true;
+    expect(dismissals).to.equal(0);
+
+    frameDocument.dispatchEvent(
+      new frameWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(dismissals).to.equal(1);
+  } finally {
+    frame.remove();
+  }
+});
+
 it('snapshots selection detail before awaiting clipboard writes', async () => {
   const originalWriteText = navigator.clipboard.writeText;
   let release: (() => void) | undefined;
@@ -250,5 +287,224 @@ it('snapshots selection detail before awaiting clipboard writes', async () => {
     expect(event.detail.anchor).to.deep.equal(oldAnchor);
   } finally {
     navigator.clipboard.writeText = originalWriteText;
+  }
+});
+
+it('uses owner-window geometry and observers, and retires an adopted positioning callback', async () => {
+  interface ObserverRecord {
+    callback: ResizeObserverCallback;
+    observed: Element[];
+    disconnects: number;
+  }
+
+  const recordsFor = (records: ObserverRecord[]): typeof ResizeObserver =>
+    class implements ResizeObserver {
+      private readonly record: ObserverRecord;
+
+      constructor(callback: ResizeObserverCallback) {
+        this.record = { callback, observed: [], disconnects: 0 };
+        records.push(this.record);
+      }
+
+      observe(target: Element): void {
+        this.record.observed.push(target);
+      }
+
+      unobserve(): void {}
+
+      disconnect(): void {
+        this.record.disconnects++;
+      }
+    };
+
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const mainObserver = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+  const frameObserver = Object.getOwnPropertyDescriptor(frameWindow, 'ResizeObserver');
+  const frameInnerWidth = Object.getOwnPropertyDescriptor(frameWindow, 'innerWidth');
+  const mainRecords: ObserverRecord[] = [];
+  const frameRecords: ObserverRecord[] = [];
+  Object.defineProperty(window, 'ResizeObserver', {
+    configurable: true,
+    value: recordsFor(mainRecords),
+  });
+  Object.defineProperty(frameWindow, 'ResizeObserver', {
+    configurable: true,
+    value: recordsFor(frameRecords),
+  });
+  Object.defineProperty(frameWindow, 'innerWidth', { configurable: true, value: 420 });
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  mainRecords.length = 0;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    // Force styleMap to recompute after adoption without creating fresh child custom elements in
+    // the destination document (constructed stylesheets intentionally remain document-scoped).
+    el.requestUpdate();
+    await el.updateComplete;
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+
+    expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-inline-start')).to.equal('210px');
+    expect(mainRecords.length).to.equal(0);
+    expect(frameRecords.length).to.equal(1);
+    expect(frameRecords[0]!.observed.length).to.equal(1);
+    expect(frameRecords[0]!.observed[0] === toolbar).to.be.true;
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    expect(frameRecords[0]!.disconnects).to.equal(1);
+    expect(mainRecords.length).to.equal(1);
+
+    toolbar.removeAttribute('data-positioned');
+    toolbar.style.removeProperty('--lr-selection-toolbar-inline-start');
+    frameRecords[0]!.callback([], {} as ResizeObserver);
+    expect(toolbar.hasAttribute('data-positioned')).to.be.false;
+    expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-inline-start')).to.equal('');
+
+    mainRecords[0]!.callback([], {} as ResizeObserver);
+    expect(toolbar.hasAttribute('data-positioned')).to.be.true;
+  } finally {
+    el.remove();
+    if (mainObserver) Object.defineProperty(window, 'ResizeObserver', mainObserver);
+    else Reflect.deleteProperty(window, 'ResizeObserver');
+    if (frameObserver) Object.defineProperty(frameWindow, 'ResizeObserver', frameObserver);
+    else Reflect.deleteProperty(frameWindow, 'ResizeObserver');
+    if (frameInnerWidth) Object.defineProperty(frameWindow, 'innerWidth', frameInnerWidth);
+    else Reflect.deleteProperty(frameWindow, 'innerWidth');
+    frame.remove();
+  }
+});
+
+it('computes ownerless coordinates without consulting ambient viewport geometry', async () => {
+  const inertDocument = document.implementation.createHTMLDocument('ownerless toolbar');
+  const innerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+
+  try {
+    el.remove();
+    inertDocument.adoptNode(el);
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      get(): never {
+        throw new Error('ambient viewport consulted');
+      },
+    });
+    const coordinates = (el as unknown as { coordinates(): Record<string, string> }).coordinates();
+    expect(coordinates['--lr-selection-toolbar-inline-start']).to.equal('0px');
+  } finally {
+    if (innerWidth) Object.defineProperty(window, 'innerWidth', innerWidth);
+    else Reflect.deleteProperty(window, 'innerWidth');
+    el.remove();
+  }
+});
+
+it('uses the current owner clipboard and suppresses adopted or ownerless async completions', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+  let rejectWrite!: (reason: unknown) => void;
+  const pending = new Promise<void>((_resolve, reject) => {
+    rejectWrite = reject;
+  });
+  let mainWrites = 0;
+  let frameWrites = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => { mainWrites++; return pending; } },
+  });
+  Object.defineProperty(frameWindow.navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => { frameWrites++; return pending; } },
+  });
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  let actions = 0;
+  let errors = 0;
+  el.addEventListener('lr-selection-action', () => actions++);
+  el.addEventListener('lr-copy-error', () => errors++);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const copy = el.shadowRoot!.querySelector('[data-action="copy"]') as HTMLElement;
+    copy.click();
+    await Promise.resolve();
+
+    document.body.append(document.adoptNode(el));
+    rejectWrite(new frameWindow.DOMException('Denied', 'NotAllowedError'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(frameWrites).to.equal(1);
+    expect(mainWrites).to.equal(0);
+    expect(actions).to.equal(0);
+    expect(errors).to.equal(0);
+
+    const inertDocument = document.implementation.createHTMLDocument('ownerless toolbar');
+    el.remove();
+    inertDocument.adoptNode(el);
+    copy.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mainWrites).to.equal(0);
+  } finally {
+    el.remove();
+    if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+    if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+    else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+    frame.remove();
+  }
+});
+
+it('does not mutate or focus stale roving buttons after adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const actions = [...el.shadowRoot!.querySelectorAll('lr-button[data-action]')] as Array<
+    HTMLElement & { updateComplete: Promise<unknown> }
+  >;
+  await Promise.all(actions.map((action) => action.updateComplete));
+  const controls = actions.map(
+    (action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement,
+  );
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  actions.forEach((action) => {
+    Object.defineProperty(action, 'updateComplete', { configurable: true, value: pending });
+  });
+  let focusCalls = 0;
+  actions[1]!.focus = () => {
+    focusCalls++;
+  };
+
+  try {
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+    toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    release();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(controls.map((control) => control.tabIndex)).to.deep.equal([0, -1, -1, -1]);
+    expect(focusCalls).to.equal(0);
+  } finally {
+    el.remove();
+    frame.remove();
   }
 });

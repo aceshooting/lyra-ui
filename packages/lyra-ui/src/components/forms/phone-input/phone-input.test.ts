@@ -238,7 +238,10 @@ it('projects label, hint, and error chrome and names the actual native controls'
   expect(input.getAttribute('aria-label')).to.equal('Mobile');
   expect(select.getAttribute('aria-label')).to.equal('Calling country');
   expect(descriptionIds).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
-  expect(descriptionIds).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+  const error = el.shadowRoot!.querySelector('[part="error"]')!;
+  expect(descriptionIds).to.include(error.id);
+  expect(error.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
 });
 
 it('allows a host aria-label to name the internal telephone input', async () => {

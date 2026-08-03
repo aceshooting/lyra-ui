@@ -1,8 +1,40 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
 import type { LyraProgressBar } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
+
+class ProgressBarLabelForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const progress = this.ownerDocument.createElement('lr-progress-bar');
+    progress.append(this.ownerDocument.createElement('slot'));
+    root.append(progress);
+  }
+}
+customElements.define('progress-bar-label-forward-wrapper', ProgressBarLabelForwardWrapper);
+
+class ProgressRingLabelForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const progress = this.ownerDocument.createElement('lr-progress-ring');
+    progress.append(this.ownerDocument.createElement('slot'));
+    root.append(progress);
+  }
+}
+customElements.define('progress-ring-label-forward-wrapper', ProgressRingLabelForwardWrapper);
+
+const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
+
+async function mountServerRenderedProgressRing(markup: string): Promise<LyraProgressRing> {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+    setHTMLUnsafe(value: string): void;
+  };
+  container.setHTMLUnsafe(markup);
+  return container.firstElementChild as LyraProgressRing;
+}
 
 it('reflects value on both progress components', async () => {
   const bar = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
@@ -174,6 +206,199 @@ it('uses visible consumer labels in the accessible names of both progress roles'
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await bar.updateComplete;
   expect(barBase.getAttribute('aria-label')).to.equal('Upload documents');
+});
+
+it('can render the indeterminate ring before a browser render root exists', () => {
+  const el = document.createElement('lr-progress-ring') as LyraProgressRing;
+  el.indeterminate = true;
+  el.append('Syncing files');
+  expect(() => el.render()).not.to.throw();
+});
+
+it('keeps the server-first progress name during hydration, then adopts the declarative ring label', async () => {
+  const el = await mountServerRenderedProgressRing(
+    `<lr-progress-ring indeterminate>${SERVER_SHADOW}Syncing files</lr-progress-ring>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).to.equal(
+    'Progress',
+  );
+
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).to.equal(
+    'Syncing files',
+  );
+});
+
+it('derives the ring label before the first paint on a browser-only mount', async () => {
+  const el = document.createElement('lr-progress-ring') as LyraProgressRing;
+  el.indeterminate = true;
+  el.append('Syncing files');
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).to.equal(
+      'Syncing files',
+    );
+  } finally {
+    el.remove();
+  }
+});
+
+it('tracks accessible label mutations and reassignment through forwarding slots', async () => {
+  const barWrapper = (await fixture(html`
+    <progress-bar-label-forward-wrapper>
+      <span data-label>Uploading files</span>
+    </progress-bar-label-forward-wrapper>
+  `)) as ProgressBarLabelForwardWrapper;
+  const ringWrapper = (await fixture(html`
+    <progress-ring-label-forward-wrapper>
+      <span data-label>Syncing files</span>
+    </progress-ring-label-forward-wrapper>
+  `)) as ProgressRingLabelForwardWrapper;
+  const bar = barWrapper.shadowRoot!.querySelector('lr-progress-bar') as LyraProgressBar;
+  const ring = ringWrapper.shadowRoot!.querySelector('lr-progress-ring') as LyraProgressRing;
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  const barRole = bar.shadowRoot!.querySelector<HTMLElement>('[role="progressbar"]')!;
+  const ringRole = ring.shadowRoot!.querySelector<HTMLElement>('[role="progressbar"]')!;
+  const barLabel = barWrapper.querySelector<HTMLElement>('[data-label]')!;
+  const ringLabel = ringWrapper.querySelector<HTMLElement>('[data-label]')!;
+  expect(barRole.getAttribute('aria-label')).to.equal('Uploading files');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Syncing files');
+
+  barLabel.textContent = 'Uploading reports';
+  ringLabel.textContent = 'Syncing reports';
+  await Promise.resolve();
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Uploading reports');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Syncing reports');
+
+  barLabel.setAttribute('aria-label', 'Uploading exports');
+  ringLabel.setAttribute('aria-label', 'Syncing exports');
+  await Promise.resolve();
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Uploading exports');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Syncing exports');
+
+  barLabel.hidden = true;
+  ringLabel.style.display = 'none';
+  await Promise.resolve();
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Progress');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Progress');
+
+  barLabel.hidden = false;
+  ringLabel.style.removeProperty('display');
+  barLabel.removeAttribute('aria-label');
+  ringLabel.removeAttribute('aria-label');
+  barLabel.textContent = 'Excluded bar text ';
+  ringLabel.textContent = 'Excluded ring text ';
+  const visibleBarChild = barWrapper.ownerDocument.createElement('span');
+  visibleBarChild.style.visibility = 'visible';
+  visibleBarChild.textContent = 'Exposed upload label';
+  const visibleRingChild = ringWrapper.ownerDocument.createElement('span');
+  visibleRingChild.style.visibility = 'visible';
+  visibleRingChild.textContent = 'Exposed sync label';
+  barLabel.append(visibleBarChild);
+  ringLabel.append(visibleRingChild);
+  barLabel.style.visibility = 'hidden';
+  ringLabel.style.visibility = 'hidden';
+  // Let the observer enqueue its owner-realm post-cascade refresh, then drain that frame and timer.
+  await Promise.resolve();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Exposed upload label');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Exposed sync label');
+
+  barLabel.setAttribute('aria-hidden', 'true');
+  ringLabel.setAttribute('aria-hidden', ' TRUE ');
+  await Promise.resolve();
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Progress');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Progress');
+
+  const barReplacement = barWrapper.ownerDocument.createElement('span');
+  barReplacement.textContent = 'Uploading invoices';
+  const ringReplacement = ringWrapper.ownerDocument.createElement('span');
+  ringReplacement.textContent = 'Syncing invoices';
+  const barReassigned = oneEvent(bar.querySelector('slot')!, 'slotchange');
+  const ringReassigned = oneEvent(ring.querySelector('slot')!, 'slotchange');
+  barLabel.replaceWith(barReplacement);
+  ringLabel.replaceWith(ringReplacement);
+  await Promise.all([barReassigned, ringReassigned]);
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(barRole.getAttribute('aria-label')).to.equal('Uploading invoices');
+  expect(ringRole.getAttribute('aria-label')).to.equal('Syncing invoices');
+});
+
+it('preserves an explicitly empty host aria-label on both progress roles', async () => {
+  const bar = (await fixture(html`
+    <lr-progress-bar aria-label="">Upload files</lr-progress-bar>
+  `)) as LyraProgressBar;
+  const ring = (await fixture(html`
+    <lr-progress-ring aria-label="">Sync files</lr-progress-ring>
+  `)) as LyraProgressRing;
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(bar.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal('');
+  expect(ring.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal('');
+});
+
+it('constructs progress label observers in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+
+  const bar = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
+  const ring = (await fixture(html`<lr-progress-ring>Sync</lr-progress-ring>`)) as LyraProgressRing;
+  bar.remove();
+  ring.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(bar), frameDocument.adoptNode(ring));
+    await Promise.all([bar.updateComplete, ring.updateComplete]);
+    expect(
+      constructions,
+      'each component constructs its base and label observers in the adopted realm',
+    ).to.be.greaterThan(3);
+  } finally {
+    bar.remove();
+    ring.remove();
+    if (observerDescriptor) {
+      Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
+    } else {
+      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    }
+    frame.remove();
+  }
+});
+
+it('refreshes the cached ring label after it changes while disconnected', async () => {
+  const el = (await fixture(html`<lr-progress-ring>Syncing files</lr-progress-ring>`)) as LyraProgressRing;
+  el.remove();
+  el.textContent = 'Syncing reports';
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).to.equal(
+      'Syncing reports',
+    );
+  } finally {
+    el.remove();
+  }
 });
 
 it('applies --lr-progress-height to the track', async () => {

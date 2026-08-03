@@ -2,12 +2,12 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { createRef, ref, type Ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
 import {
   isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -15,14 +15,28 @@ import { srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import type {
   LyraAnchor,
   LyraHighlightTone,
 } from '../document-viewer/anchors.js';
-import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
+import {
+  getEpubJs,
+  type EpubBook,
+  type EpubContents,
+  type EpubLocation,
+  type EpubNavigationItem,
+  type EpubRendition,
+  type EpubSearchResult,
+  type EpubSpineItem,
+} from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type EbookState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string };
 
@@ -114,12 +128,42 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart previous-icon - The previous button icon.
  * @csspart next-icon - The next button icon.
  * @csspart mount - The stable element epub.js renders into.
- * @csspart error - The error message region.
- * @csspart announcer - The visually-hidden `role="status"` region search results announce through.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
+ * @csspart announcer - The aria-hidden shadow-tree mirror retained for styling compatibility;
+ *   search announcements are appended to the shared document-level polite region.
  * @status stable
  * @since 4.0.0
  */
 export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    ebookViewerLoadError: LYRA_DEFAULT_ebookViewerLoadError,
+    ebookViewerNextChapter: LYRA_DEFAULT_ebookViewerNextChapter,
+    ebookViewerPreviousChapter: LYRA_DEFAULT_ebookViewerPreviousChapter,
+    ebookViewerRegionLabel: LYRA_DEFAULT_ebookViewerRegionLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL fetched as an ArrayBuffer and rendered as an EPUB. */
@@ -157,10 +201,18 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private relocatedLocation?: string;
   private paintedHighlightCfis: string[] = [];
   private searchAnnotationCfi?: string;
-  private readonly announcer = new Announcer({ onFlush: (text) => this.announceViaLiveRegion(text) });
+  private readonly announcements = new ViewerAnnouncementController(this);
+  private readonly announcer = new Announcer({
+    onFlush: (text) => this.announcements.announcePolite(text),
+  });
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // reaches DocumentAnchorTarget's own cleanup/live-region wiring
+    this.announcements.transition(
+      'load',
+      this.ebookState.kind,
+      this.ebookState.kind === 'error' ? this.ebookState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('location')) {
       const fromRelocated = this.relocatedLocation === this.location;
@@ -174,6 +226,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
+    this.announcements.connect();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no
@@ -188,6 +243,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   override disconnectedCallback(): void {
     this.generation++;
     this.anchorOperationGeneration++;
+    this.announcer.cancel();
+    this.announcements.disconnect();
     this.teardown();
     // Reset rather than leaving a stale "ready" state: without this, a
     // reconnect that isn't followed by a fresh load (src unset, or the
@@ -197,6 +254,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     // every click instead of surfacing an empty/idle state.
     this.ebookState = { kind: 'idle' };
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
+  }
+
+  adoptedCallback(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
+    this.announcements.adopted();
   }
 
   private teardown(): void {
@@ -222,8 +285,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.ebookState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
@@ -232,7 +295,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     let factory: ((data: ArrayBuffer) => EpubBook) | null;
     try {
       [data, factory] = await Promise.all([
-        fetch(url, signal ? { signal } : undefined).then((response) => {
+        fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined).then((response) => {
           if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
           return readResponseArrayBuffer(response);
         }),
@@ -271,7 +334,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         book.destroy();
         return;
       }
-      rendition.on('relocated', (loc: OptionalPeerApi) => {
+      rendition.on('relocated', (loc: EpubLocation) => {
         const cfi = loc?.start?.cfi ?? '';
         const href = loc?.start?.href ?? '';
         if (!cfi || cfi === this.location) return;
@@ -279,7 +342,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         this.location = cfi;
         this.emit('lr-location-change', { cfi, href });
       });
-      rendition.on('selected', (cfiRange: string, contents: OptionalPeerApi) => {
+      rendition.on('selected', (cfiRange: string, contents: EpubContents) => {
         const selection = contents?.window?.getSelection?.();
         const text = selection ? String(selection.toString()) : '';
         if (!text.trim()) return;
@@ -360,7 +423,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const items: EbookTocItem[] = [];
     const seen = new WeakSet<object>();
     const stack = (book.navigation?.toc ?? [])
-      .map((entry: OptionalPeerApi) => ({ entry, level: 1 }))
+      .map((entry: EpubNavigationItem) => ({ entry, level: 1 }))
       .reverse();
     while (stack.length > 0 && items.length < MAX_TOC_ITEMS) {
       const current = stack.pop()!;
@@ -375,7 +438,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       });
       if (level >= MAX_TOC_DEPTH || !Array.isArray(entry.subitems)) continue;
       for (let index = entry.subitems.length - 1; index >= 0; index--) {
-        stack.push({ entry: entry.subitems[index], level: level + 1 });
+        stack.push({ entry: entry.subitems[index]!, level: level + 1 });
       }
     }
     return items;
@@ -422,16 +485,16 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const book = this.book;
     const generation = this.generation;
     if (!book) return null;
-    const spineItems: OptionalPeerApi[] = book.spine?.spineItems ?? [];
+    const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
     for (const item of spineItems) {
       let loaded = false;
       try {
         await item.load(book.load?.bind(book));
         loaded = true;
         if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
-        const results: OptionalPeerApi[] = (await item.find(quote)) ?? [];
+        const results: EpubSearchResult[] = (await item.find(quote)) ?? [];
         if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
-        if (results.length) return results[0].cfi;
+        if (results.length) return results[0]!.cfi;
       } catch {
         continue;
       } finally {
@@ -485,7 +548,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
     const matches: EbookSearchMatch[] = [];
     const book = this.book;
-    const spineItems: OptionalPeerApi[] = book.spine?.spineItems ?? [];
+    const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
     for (const item of spineItems) {
       if (generation !== this.searchGeneration) return this.searchMatches.length;
       let loaded = false;
@@ -493,7 +556,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         await item.load(book.load?.bind(book));
         loaded = true;
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
-        const results: OptionalPeerApi[] = (await item.find(query)) ?? [];
+        const results: EpubSearchResult[] = (await item.find(query)) ?? [];
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         for (const r of results) {
           if (matches.length >= MAX_SEARCH_MATCHES) break;
@@ -613,25 +676,20 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   }
 
   /** Resolves a `{ token, fallback }` pair to the mark's `fill` `styles` arg, reading the token's
-   *  live concrete value off this instance via `getComputedStyle` (falling back to its
+   *  live concrete value off this instance via its owner window's `getComputedStyle` (falling back to its
    *  light-theme default when unresolved, e.g. before this element's own stylesheet is attached). */
   private resolveHighlightFill({ token, fallback }: { token: string; fallback: string }): { fill: string } {
-    const value = typeof getComputedStyle === 'function' ? getComputedStyle(this).getPropertyValue(token).trim() : '';
+    const value = this.ownerDocument.defaultView?.getComputedStyle(this).getPropertyValue(token).trim() ?? '';
     return { fill: value || fallback };
-  }
-
-  private announceViaLiveRegion(text: string): void {
-    const region = this.renderRoot.querySelector('[part="announcer"]');
-    if (region) region.textContent = text;
   }
 
   // -- rendering --------------------------------------------------------------------------------------------
 
   private renderStatus(): TemplateResult | typeof nothing {
     if (this.ebookState.kind === 'loading') {
-      return html`<p class="status-note" role="status">${this.localize('loadingDocument')}</p>`;
+      return html`<p class="status-note">${this.localize('loadingDocument')}</p>`;
     }
-    if (this.ebookState.kind === 'error') return html`<div part="error" role="alert">${this.ebookState.message}</div>`;
+    if (this.ebookState.kind === 'error') return html`<div part="error">${this.ebookState.message}</div>`;
     if (this.ebookState.kind === 'idle') {
       return html`<p class="status-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
@@ -652,7 +710,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         </div>
         <div part="mount" role="region" aria-label=${this.accessibleLabel || this.name || this.localize('ebookViewerRegionLabel')} ${ref(this.mountRef)}></div>
         ${this.renderStatus()}
-        <div part="announcer" role="status" class="sr-only"></div>
+        <div part="announcer" class="sr-only" aria-hidden="true"></div>
         ${this.renderAnchorLiveRegion()}
       </div>
     `;

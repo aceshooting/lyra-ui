@@ -6,6 +6,11 @@ import { nextId } from "../../../internal/a11y.js";
 import { chevronIcon } from "../../../internal/icons.js";
 import { styles } from "./dock-panel.styles.js";
 import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`
  *  are logical-inline (mirror left/right depending on writing direction);
@@ -44,7 +49,7 @@ const LENGTH_RE =
 export function parseLengthPx(
   length: string,
   containerPx: number,
-  fontSizeEl: Element = document.documentElement
+  fontSizeEl?: Element
 ): number | undefined {
   const trimmed = length.trim();
   if (!trimmed) return undefined;
@@ -55,16 +60,39 @@ export function parseLengthPx(
   switch (match[2]) {
     case "%":
       return (value / 100) * containerPx;
-    case "rem":
-      return (
-        value * parseFloat(getComputedStyle(document.documentElement).fontSize)
-      );
-    case "em":
-      return value * parseFloat(getComputedStyle(fontSizeEl).fontSize);
-    case "vw":
-      return (value / 100) * window.innerWidth;
-    case "vh":
-      return (value / 100) * window.innerHeight;
+    case "rem": {
+      const ownerDocument = fontSizeEl?.ownerDocument
+        ?? (typeof document === "undefined" ? undefined : document);
+      const ownerWindow = ownerDocument?.defaultView;
+      const root = ownerDocument?.documentElement;
+      const fontSize = ownerWindow && root
+        ? parseFloat(ownerWindow.getComputedStyle(root).fontSize)
+        : Number.NaN;
+      return Number.isFinite(fontSize) ? value * fontSize : undefined;
+    }
+    case "em": {
+      const ownerDocument = fontSizeEl?.ownerDocument
+        ?? (typeof document === "undefined" ? undefined : document);
+      const ownerWindow = ownerDocument?.defaultView;
+      const metricsElement = fontSizeEl ?? ownerDocument?.documentElement;
+      const fontSize = ownerWindow
+        && metricsElement
+        ? parseFloat(ownerWindow.getComputedStyle(metricsElement).fontSize)
+        : Number.NaN;
+      return Number.isFinite(fontSize) ? value * fontSize : undefined;
+    }
+    case "vw": {
+      const ownerWindow = fontSizeEl
+        ? fontSizeEl.ownerDocument.defaultView
+        : (typeof window === "undefined" ? undefined : window);
+      return ownerWindow ? (value / 100) * ownerWindow.innerWidth : undefined;
+    }
+    case "vh": {
+      const ownerWindow = fontSizeEl
+        ? fontSizeEl.ownerDocument.defaultView
+        : (typeof window === "undefined" ? undefined : window);
+      return ownerWindow ? (value / 100) * ownerWindow.innerHeight : undefined;
+    }
     default:
       return value;
   }
@@ -131,6 +159,19 @@ interface DragState {
  * @since 4.0.0
  */
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
+    dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
+    dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) edge: DockPanelEdge = "end";
@@ -158,6 +199,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   resizable = true;
 
   private drag: DragState | null = null;
+  private dragOwnerWindow?: Window;
   private readonly contentId = nextId("dock-panel-content");
   // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
@@ -178,6 +220,13 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     super.disconnectedCallback();
     this.endDrag();
     this.containerResizeObserver?.disconnect();
+    this.containerResizeObserver = undefined;
+  }
+
+  adoptedCallback(): void {
+    this.endDrag();
+    this.containerResizeObserver?.disconnect();
+    this.containerResizeObserver = undefined;
   }
 
   /** Creates (idempotently) and (re-)observes the containing element with a
@@ -187,8 +236,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  render that was otherwise never being triggered. A no-op when not yet
    *  connected (no `parentElement`). */
   private armContainerResizeObserver(): void {
-    if (!this.parentElement) return;
-    this.containerResizeObserver ??= new ResizeObserver(() =>
+    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!this.parentElement || !ResizeObserverCtor) return;
+    this.containerResizeObserver ??= new ResizeObserverCtor(() =>
       this.requestUpdate()
     );
     this.containerResizeObserver.observe(this.parentElement);
@@ -253,8 +303,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private containerPx(): number {
     const parent = this.parentElement;
     const rect = parent?.getBoundingClientRect();
-    if (this.axis === "inline") return rect?.width ?? window.innerWidth;
-    return rect?.height ?? window.innerHeight;
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (this.axis === "inline") return rect?.width ?? ownerWindow?.innerWidth ?? 0;
+    return rect?.height ?? ownerWindow?.innerHeight ?? 0;
   }
 
   private resolveBoundsPx(): { minPx: number; maxPx: number } {
@@ -295,20 +346,24 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private onPointerDown = (e: PointerEvent): void => {
     if (!this.resizable || this.collapsed || this.drag) return;
+    const handle = e.currentTarget as HTMLElement;
+    const ownerWindow = handle.ownerDocument.defaultView;
+    if (!ownerWindow) return;
     this.drag = {
       pointerId: e.pointerId,
       startPos: this.axis === "inline" ? e.clientX : e.clientY,
       startSizePx: this.currentSizePx(),
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    window.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
+    this.dragOwnerWindow = ownerWindow;
+    handle.setPointerCapture(e.pointerId);
+    ownerWindow.addEventListener("pointermove", this.onPointerMove);
+    ownerWindow.addEventListener("pointerup", this.onPointerUp);
     // A drag can end without a pointerup: a system gesture / palm rejection
     // can fire pointercancel, and losing capture (e.g. element removed) fires
     // lostpointercapture -- both need the same teardown as pointerup or the
     // handle keeps "resizing" in response to unrelated movement.
-    window.addEventListener("pointercancel", this.onPointerUp);
-    window.addEventListener("lostpointercapture", this.onPointerUp);
+    ownerWindow.addEventListener("pointercancel", this.onPointerUp);
+    ownerWindow.addEventListener("lostpointercapture", this.onPointerUp);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -329,11 +384,13 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   };
 
   private endDrag(): void {
+    const ownerWindow = this.dragOwnerWindow;
     this.drag = null;
-    window.removeEventListener("pointermove", this.onPointerMove);
-    window.removeEventListener("pointerup", this.onPointerUp);
-    window.removeEventListener("pointercancel", this.onPointerUp);
-    window.removeEventListener("lostpointercapture", this.onPointerUp);
+    this.dragOwnerWindow = undefined;
+    ownerWindow?.removeEventListener("pointermove", this.onPointerMove);
+    ownerWindow?.removeEventListener("pointerup", this.onPointerUp);
+    ownerWindow?.removeEventListener("pointercancel", this.onPointerUp);
+    ownerWindow?.removeEventListener("lostpointercapture", this.onPointerUp);
   }
 
   private onHandleKeyDown = (e: KeyboardEvent): void => {

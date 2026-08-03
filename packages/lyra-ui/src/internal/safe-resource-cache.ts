@@ -9,6 +9,7 @@ export interface ResourceCacheAcquireOptions {
 }
 
 type ResourceLoader<T> = (signal?: AbortSignal) => Promise<T>;
+type AbortControllerConstructor = new () => AbortController;
 
 interface ResourceCacheEntry<T> {
   readonly key: string;
@@ -27,12 +28,18 @@ interface ResourceCacheEntry<T> {
 export class BoundedResourceCache<T> {
   private readonly entries = new Map<string, ResourceCacheEntry<T>>();
   private readonly maximumEntries: number;
+  private readonly AbortControllerCtor: AbortControllerConstructor | null;
 
-  constructor(maximumEntries: number) {
+  constructor(
+    maximumEntries: number,
+    AbortControllerCtor: AbortControllerConstructor | null =
+      typeof globalThis.AbortController === 'function' ? globalThis.AbortController : null,
+  ) {
     this.maximumEntries =
       Number.isFinite(maximumEntries) && maximumEntries > 0
         ? Math.max(1, Math.floor(maximumEntries))
         : 1;
+    this.AbortControllerCtor = AbortControllerCtor;
   }
 
   get size(): number {
@@ -97,7 +104,9 @@ export class BoundedResourceCache<T> {
     loader: ResourceLoader<T>,
     retained: boolean,
   ): ResourceCacheEntry<T> {
-    const controller = typeof AbortController === 'undefined' ? undefined : new AbortController();
+    const controller = this.AbortControllerCtor
+      ? new this.AbortControllerCtor()
+      : undefined;
     let entry!: ResourceCacheEntry<T>;
     const promise = Promise.resolve()
       .then(() => loader(controller?.signal))

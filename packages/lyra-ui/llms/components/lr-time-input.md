@@ -2,7 +2,7 @@
 
 # `lr-time-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/input/time-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-time-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTimeInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/time-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -71,6 +71,10 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 `base time-input input-wrapper` (same node), `input`, `segment`, `segment-literal`, `start`, `end`,
 `clear-button`, `expand-button`, `expand-icon`, `popup`, `columns`, `column`, `column-item`,
 `column-item-selected`, `now-button`, `hint`, and `error`.
+
+`error` is ordinary visible validation text referenced by the segmented input through
+`aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
+has one description path instead of being duplicated by a second live-region announcement.
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 

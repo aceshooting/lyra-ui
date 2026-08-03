@@ -19,6 +19,22 @@ import '../../overlays/overlay/popover.class.js';
 import '../../forms/input/input.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+function isElementNode(value: EventTarget): value is Element {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<Element> & { nodeType?: unknown };
+  return (
+    candidate.nodeType === 1 &&
+    typeof candidate.matches === 'function' &&
+    typeof candidate.getBoundingClientRect === 'function'
+  );
+}
+
 
 /** Extra `LyraEntity` fields a plain `GraphNode` doesn't carry -- merged in by node id to build
  *  the entity shown in the details popover and neighbor rows. A node with no entry here still
@@ -80,7 +96,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * stays open after an `renderer="svg"` click, this component re-reads that same resolved node
  * element's `getBoundingClientRect()` and re-calls `showAt()` every time the composed `lr-graph`
  * emits its own `lr-viewport-change` (a frame-coalesced pan/zoom/simulation-tick signal) --
- * schedules no `requestAnimationFrame` loop of its own, unlike an idle popover polling the DOM on
+ * schedules no continuous popover-polling loop of its own, unlike an idle popover polling the DOM
  * every frame regardless of whether anything actually moved. Selecting a node any other
  * way -- a search result, a neighbor row, a path-strip element, keyboard Enter/Space on a graph
  * node (which never dispatches a native `click`) -- has no click event to read a rect from, so it
@@ -140,6 +156,32 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @since 4.1.0
  */
 export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphExplorerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    graphExplorerFindPath: LYRA_DEFAULT_graphExplorerFindPath,
+    graphExplorerLabel: LYRA_DEFAULT_graphExplorerLabel,
+    graphExplorerPin: LYRA_DEFAULT_graphExplorerPin,
+    graphExplorerPinned: LYRA_DEFAULT_graphExplorerPinned,
+    graphExplorerPinnedHeading: LYRA_DEFAULT_graphExplorerPinnedHeading,
+    graphExplorerSearchPlaceholder: LYRA_DEFAULT_graphExplorerSearchPlaceholder,
+    graphExplorerSearchResultsLabel: LYRA_DEFAULT_graphExplorerSearchResultsLabel,
+    graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
+    graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
@@ -201,6 +243,27 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private linksByNodeId = new Map<string, GraphLink[]>();
   private degreeByNodeId = new Map<string, number>();
   private communityLabelById = new Map<string, string | undefined>();
+  private announcementSink?: AnnouncementSink;
+  private activationFrameId?: number;
+  private activationFrameOwner?: Window;
+  private activationFrameDocument?: Document;
+  private activationFrameResolve?: (ready: boolean) => void;
+  private activationFramePageHide?: () => void;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+    if (this.hasUpdated) this.resumePresetActivation();
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected || this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.announcementSink?.release();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -215,9 +278,19 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.selectedNodeId &&
       !this.isVisibleNode(this.selectedNodeId)
     ) {
-      this.activationGeneration++;
+      this.invalidateActivation();
       this.setInternalSelectedNodeId(null);
       if (this.popoverEl) this.popoverEl.open = false;
+    }
+    if (
+      this.searchQuery.trim() &&
+      (changed.has('searchQuery') ||
+        changed.has('nodes') ||
+        changed.has('hiddenTypes') ||
+        changed.has('locale') ||
+        changed.has('strings'))
+    ) {
+      this.announcementSink?.announce(this.searchResultAnnouncement());
     }
   }
 
@@ -229,7 +302,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       Object.is(this.internalSelectionAssignment.value, this.selectedNodeId);
     this.internalSelectionAssignment = undefined;
     if (internallyAssigned) return;
-    const generation = ++this.activationGeneration;
+    const generation = this.invalidateActivation();
     const id = this.selectedNodeId;
     if (!id) {
       if (this.popoverEl) this.popoverEl.open = false;
@@ -250,7 +323,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.selectedNodeId === id &&
       graph.shadowRoot?.querySelector('lr-skeleton')
     ) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (!(await this.waitForActivationFrame(generation))) return;
     }
     if (
       generation === this.activationGeneration &&
@@ -262,6 +335,94 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     }
   }
 
+  private waitForActivationFrame(generation: number): Promise<boolean> {
+    this.cancelActivationFrame();
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected || generation !== this.activationGeneration) {
+      return Promise.resolve(false);
+    }
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const settle = (ready: boolean): void => {
+        if (settled) return;
+        settled = true;
+        resolve(ready);
+      };
+      let handle: number;
+      const onPageHide = (): void => {
+        if (
+          this.activationFrameOwner === ownerWindow &&
+          this.activationFrameDocument === ownerDocument &&
+          this.activationFrameResolve === settle
+        ) {
+          this.cancelActivationFrame();
+        }
+      };
+      try {
+        handle = ownerWindow.requestAnimationFrame(() => {
+          const current =
+            this.activationFrameId === handle &&
+            this.activationFrameOwner === ownerWindow &&
+            this.activationFrameDocument === ownerDocument &&
+            this.activationFrameResolve === settle &&
+            generation === this.activationGeneration &&
+            this.isConnected &&
+            this.ownerDocument === ownerDocument;
+          if (current) this.clearActivationFrameRecord();
+          settle(current);
+        });
+      } catch {
+        settle(false);
+        return;
+      }
+      this.activationFrameId = handle;
+      this.activationFrameOwner = ownerWindow;
+      this.activationFrameDocument = ownerDocument;
+      this.activationFrameResolve = settle;
+      this.activationFramePageHide = onPageHide;
+      ownerWindow.addEventListener('pagehide', onPageHide, { once: true });
+    });
+  }
+
+  private clearActivationFrameRecord(): void {
+    if (this.activationFramePageHide) {
+      this.activationFrameOwner?.removeEventListener('pagehide', this.activationFramePageHide);
+    }
+    this.activationFrameId = undefined;
+    this.activationFrameOwner = undefined;
+    this.activationFrameDocument = undefined;
+    this.activationFrameResolve = undefined;
+    this.activationFramePageHide = undefined;
+  }
+
+  private cancelActivationFrame(): void {
+    const handle = this.activationFrameId;
+    const ownerWindow = this.activationFrameOwner;
+    const settle = this.activationFrameResolve;
+    this.clearActivationFrameRecord();
+    try {
+      if (handle !== undefined) ownerWindow?.cancelAnimationFrame(handle);
+    } finally {
+      settle?.(false);
+    }
+  }
+
+  private invalidateActivation(): number {
+    this.activationGeneration += 1;
+    this.cancelActivationFrame();
+    return this.activationGeneration;
+  }
+
+  private resumePresetActivation(): void {
+    const id = this.selectedNodeId;
+    const graph = this.graphEl;
+    if (!id || !graph || !this.isVisibleNode(id)) return;
+    const generation = this.invalidateActivation();
+    void this.activatePresetWhenGraphReady(id, graph, generation);
+  }
+
   private setInternalSelectedNodeId(value: string | null): void {
     if (Object.is(this.selectedNodeId, value)) return;
     this.internalSelectionAssignment = { value };
@@ -270,10 +431,22 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   override disconnectedCallback(): void {
-    this.activationGeneration++;
+    this.invalidateActivation();
     this.pendingNodeId = undefined;
     this.trackedNodeEl = undefined;
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.invalidateActivation();
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    if (this.isConnected) {
+      this.syncAnnouncementSink();
+      this.resumePresetActivation();
+    }
   }
 
   private rebuildDerivedCollections(): void {
@@ -361,6 +534,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     );
   }
 
+  private searchResultAnnouncement(matches = this.matchingNodes()): string {
+    if (!matches) return '';
+    return matches.length === 0
+      ? this.localize('viewerSearchNoMatches')
+      : this.localize('viewerSearchMatchCount', undefined, {
+          count: getNumberFormat(this.effectiveLocale).format(matches.length),
+          pluralCount: matches.length,
+        });
+  }
+
   private neighborIdsOf(id: string): Set<string> {
     const ids = new Set<string>();
     for (const link of this.linksByNodeId.get(id) ?? []) {
@@ -414,6 +597,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.pinLiveText = this.localize(wasPinned ? 'graphExplorerUnpinned' : 'graphExplorerPinned', undefined, {
       label: this.nodeLabel(id),
     });
+    this.announcementSink?.announce(this.pinLiveText);
     this.emit('lr-pin-change', { pinnedNodeIds: next });
   }
 
@@ -445,7 +629,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  Space fallback for a direct graph node activation. */
   private async activateEntity(id: string): Promise<void> {
     if (!this.canActivateNode(id)) return;
-    const generation = ++this.activationGeneration;
+    const generation = this.invalidateActivation();
     this.setInternalSelectedNodeId(id);
     this.trackedNodeEl = undefined;
     const graph = this.graphEl;
@@ -480,7 +664,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     }
     const nodeEl = event
       .composedPath()
-      .find((el): el is Element => el instanceof Element && el.matches('[part="node"]'));
+      .find((el): el is Element => isElementNode(el) && el.matches('[part="node"]'));
     if (!nodeEl) {
       this.trackedNodeEl = undefined;
       return { x: event.clientX, y: event.clientY, width: 0, height: 0 };
@@ -493,13 +677,21 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private onGraphNodeClick = (event: CustomEvent<{ id: string; x: number; y: number }>): void => {
     const id = event.detail.id;
     if (!this.canActivateNode(id)) return;
-    this.activationGeneration++;
+    const generation = this.invalidateActivation();
     this.setInternalSelectedNodeId(id);
     this.pendingNodeId = id;
-    queueMicrotask(() => {
-      if (this.pendingNodeId === id) {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    ownerWindow.queueMicrotask(() => {
+      if (
+        generation === this.activationGeneration &&
+        this.isConnected &&
+        this.ownerDocument === ownerDocument &&
+        this.pendingNodeId === id
+      ) {
         this.pendingNodeId = undefined;
-        void this.activateEntity(id);
+        if (this.selectedNodeId === id && this.isVisibleNode(id)) void this.activateEntity(id);
       }
     });
   };
@@ -533,7 +725,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onPopoverHide = (): void => {
-    this.activationGeneration++;
+    this.invalidateActivation();
     this.trackedNodeEl = undefined;
     this.setInternalSelectedNodeId(null);
   };
@@ -573,14 +765,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                       `,
                     )}
               </div>
-              <div class="sr-only" role="status" aria-live="polite">
-                ${matches.length === 0
-                  ? this.localize('viewerSearchNoMatches')
-                  : this.localize('viewerSearchMatchCount', undefined, {
-                      count: getNumberFormat(this.effectiveLocale).format(matches.length),
-                      pluralCount: matches.length,
-                    })}
-              </div>
+              <div class="sr-only" aria-hidden="true">${this.searchResultAnnouncement(matches)}</div>
             `
           : nothing}
         ${this.pinnedNodeIds.length
@@ -603,7 +788,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               </div>
             `
           : nothing}
-        <div class="sr-only" role="status" aria-live="polite">${this.pinLiveText}</div>
+        <div class="sr-only" aria-hidden="true">${this.pinLiveText}</div>
         ${this.path.length ? html`<lr-path-strip part="path" .path=${this.path}></lr-path-strip>` : nothing}
         <lr-graph
           part="graph"

@@ -12,6 +12,11 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter, spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_rename, LYRA_DEFAULT_untitledConversation } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ConversationItemRenameDetail {
   title: string;
@@ -186,6 +191,15 @@ export interface LyraConversationItemEventMap {
  * @since 4.0.0
  */
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    rename: LYRA_DEFAULT_rename,
+    untitledConversation: LYRA_DEFAULT_untitledConversation,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The session's display title. */

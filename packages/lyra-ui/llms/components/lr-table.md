@@ -2,7 +2,7 @@
 
 # `lr-table`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/table/table.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-table.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTable`, also available unregistered from `@aceshooting/lyra-ui/components/data/table/table.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -194,10 +194,14 @@ own "consumer computes/renders" contract rather than assuming addition.
 - `expandedKeys: Set<string | number> = new Set()` (attribute: false) — consumer-controlled expanded
   state; update it in response to `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
-- `moreLabel: string = 'Load more'` (attribute `more-label`)
-- `emptyHeading: string = 'No data'` (attribute `empty-heading`)
+- `moreLabel: string = ''` (attribute `more-label`) — when empty/unset, the button renders the
+  localized `loadMore` fallback (`'Load more'` in the default English catalog)
+- `emptyHeading: string = ''` (attribute `empty-heading`) — when empty/unset, the built-in empty
+  state renders the localized `noData` fallback (`'No data'` in the default English catalog)
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading: string = 'No columns configured'` (attribute `no-columns-heading`)
+- `noColumnsHeading: string = ''` (attribute `no-columns-heading`) — when empty/unset, the
+  no-columns state renders the localized `noColumns` fallback (`'No columns configured'` in the
+  default English catalog)
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
 - `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
   state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
@@ -206,10 +210,12 @@ own "consumer computes/renders" contract rather than assuming addition.
   field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
   parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
   filled
-- `revealColumnsLabel: string = 'Show all columns'` (attribute `reveal-columns-label` — the
-  reveal-button's label while `priority`-hidden columns are hidden)
-- `hideColumnsLabel: string = 'Show fewer columns'` (attribute `hide-columns-label` — the same
-  button's label once they've been revealed)
+- `revealColumnsLabel: string = ''` (attribute `reveal-columns-label`) — the reveal button's label
+  while `priority`-hidden columns are hidden; when empty/unset, it renders the localized
+  `showAllColumns` fallback (`'Show all columns'` in the default English catalog)
+- `hideColumnsLabel: string = ''` (attribute `hide-columns-label`) — the same button's label once
+  the columns have been revealed; when empty/unset, it renders the localized `showFewerColumns`
+  fallback (`'Show fewer columns'` in the default English catalog)
 - `showAllColumns: boolean = false` (attribute `show-all-columns`, reflected) — forces responsive
   priority columns visible and is updated by the built-in reveal button
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `showAllColumns` to
@@ -266,7 +272,8 @@ cell, holding `grandTotal`, is a `footer-cell` instead, matching every other foo
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
-visually-hidden `role="status"` node, since the placeholder rows are the visible affordance),
+visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
+affordance; the part has no live-region role in either appearance),
 `skeleton` (each `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
 and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
 geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
@@ -375,9 +382,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
   re-measure when real content arrives — exactly as they do between any two different data sets. For
   pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`. Either
-  loading appearance keeps exactly one `role="status"` live region announcing the state: every
-  placeholder opts out of `<lr-skeleton>`'s own announcement, so a skeleton table never announces
-  once per placeholder row.
+  Initial declarative loading stays silent; every later transition into either loading appearance
+  appends the localized loading text to the document's shared light-DOM polite sink, including
+  repeated cycles. `[part="base"]` exposes `aria-busy`, `[part="loading"]` is an `aria-hidden`
+  mirror rather than a live region, and every placeholder opts out of `<lr-skeleton>`'s own
+  announcement, so a skeleton table never announces once per placeholder row.
 - `columns[].cellTitle` returning an empty string **or** `undefined` omits the `title` attribute
   entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
   own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the

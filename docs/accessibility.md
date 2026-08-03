@@ -24,7 +24,8 @@ that row means — this table summarizes, the script decides.
 | Guarantee | Gate | Runs in |
 |---|---|---|
 | Every component has an axe-core assertion, in its own directory's tests, in a test that mounts its own tag | `check:qualification` + the browser suite | `pnpm lint`, `pnpm test` |
-| No axe-core violation in a component's default **and** populated/open states | `expect(el).to.be.accessible()` in the browser suite | `pnpm test`, CI `build-and-coverage` |
+| No axe-core violation in each component's qualifying populated/open state (or the complete default state for the two recorded primitive exemptions) | `check:qualification` + `expect(el).to.be.accessible()` in the browser suite | `pnpm lint`, `pnpm test`, CI `build-and-coverage` |
+| Every pinned upstream mapping records reviewed semantic, naming, keyboard, focus, state, announcement, and motion profiles; automatic mappings may not omit a recorded upstream behavior | `check:component-inventory` + `test:component-inventory` + `test:migrate-wa` | `pnpm lint` |
 | No axe-core `wcag2a`/`wcag2aa` violation on a curated set of representative story renderings in the built docs site | `storybook:check` | CI `docs-and-storybook` |
 | Every `--lr-color-<variant>-on-<emphasis>` token clears 4.5:1 against the `-fill-` token it pairs with (WCAG 2.2 SC 1.4.3), and the border tokens that identify a control clear 3:1 against the page surface (SC 1.4.11) — in **both** the light and dark palettes | `check:contrast` | `pnpm lint` |
 | Categorical chart series stay distinguishable after protanopia/deuteranopia/tritanopia simulation (OKLab distance ≥ 0.10) | `check:contrast` | `pnpm lint` |
@@ -33,20 +34,25 @@ that row means — this table summarizes, the script decides.
 | No `::part()` selector that parses but can never match (dead focus/hover styling) | `check:part-reachability` | `pnpm lint` |
 | Every built-in user-facing string — including `aria-*`, `title`, `placeholder`, `alt` — is translatable and has a default entry | `check:default-strings`, `check:translations`, `check:source-policy` | `pnpm lint` |
 | No layout that overflows the document at 390px, in LTR or RTL, on any component's docs page | `storybook:check` | CI `docs-and-storybook` |
-| No unreviewed visual change in light, dark, or RTL rendering | `test:visual` | CI `visual-regression` |
+| Tracked visual baselines stay stable; pending-review axes still pass registration, nonblank, forced-colors pixel, and narrow-allocation guards without committing unreviewed PNGs | `test:visual` | CI `visual-regression` |
 
 Measured on this tree at 8.0.0:
 
-- **283 of 283 components** carry at least one axe-core assertion in their own component directory,
-  in a test that mounts their own tag — 695 `expect(el).to.be.accessible()` assertions in total.
-- The Storybook sweep runs axe-core restricted to the `wcag2a` and `wcag2aa` tags over 18 story
+- Every public component carries exact same-test, same-instance axe-core evidence in its component
+  directory, or a narrow reviewed exemption recorded by the qualification gate. The generated
+  component-quality reference is the authoritative per-tag count and evidence index.
+- The Storybook sweep runs axe-core restricted to the `wcag2a` and `wcag2aa` tags over 21 story
   renderings — mostly interacted-with states (a dialog while open, a toast after it fires, a picker
-  after a selection), plus one dark-theme and one high-contrast-theme rendering. It is a curated
+  after a selection), plus one dark-theme rendering. It is a curated
   smoke set, not per-component coverage; per-component axe coverage comes from the browser suite
   above.
 - The same sweep audits **every** component docs page for layout overflow, trapped overlays, and
   console/page errors at 980px, at 390px, and at 390px with `dir="rtl"`.
-- The visual-regression baseline covers 83 stories × 3 axes (light, dark, RTL) = 249 captures.
+- The visual-regression manifest covers 83 stories and 253 live captures. Every story exercises
+  light, dark, and RTL; selected intrinsic-color, chart, and responsive stories add real
+  forced-colors or 320px narrow browser axes. While human review is pending, 207 captures compare
+  with retained baselines and 46 remain explicitly ephemeral evidence. The manifest records every
+  per-profile and pending-review exemption and is the authoritative matrix.
 
 `check:qualification` is what keeps the first row from decaying: a component may not claim `stable`
 maturity without that per-tag evidence. Components that predate the gate carry dated, reviewed
@@ -117,7 +123,8 @@ RTL is not an opt-in per component and is not a separate stylesheet.
 - `lang` selects locale data. It does **not** silently change writing direction.
 
 Covered by: the 390px-RTL pass of the Storybook docs audit, the RTL axis of visual regression, and
-`dir="rtl"` fixtures in 102 component test files.
+component-owned `dir="rtl"` browser fixtures. The generated qualification reference is the
+authoritative per-tag evidence index.
 
 ---
 
@@ -144,11 +151,11 @@ the contrast obligation for the values you supply. `check:contrast` runs against
 palette, not against yours. When you fork the ramp, pair each `--lr-color-<variant>-on-<emphasis>`
 token with the `--lr-color-<variant>-fill-<emphasis>` it is meant to sit on, and re-measure.
 
-High-contrast mode: Lyra ships a `high-contrast` theme that maps its semantic tokens onto CSS system
-colors (`Canvas`, `CanvasText`, ...). One story is axe-checked in that theme by the Storybook sweep.
-It is **not** audited per component, and it is a theme, not a response to the browser's
-`forced-colors` media feature — a page rendered under Windows High Contrast without selecting that
-theme is unverified territory.
+Forced colors: Lyra does not ship or advertise a separate `high-contrast` theme. Selected visual
+fixtures run Chromium with the real `forced-colors: active` emulation, including painted-pixel
+checks for intrinsic color surfaces and non-color chart encodings. This is targeted automated
+evidence, not a per-component Windows High Contrast audit or a manual assistive-technology review;
+the broader platform remains unverified as recorded in the support policy.
 
 ---
 

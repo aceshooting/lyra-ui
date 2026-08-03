@@ -11,6 +11,11 @@ import '../../utility/live-region/live-region.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './trace-tree.styles.js';
 import type { LyraSpan } from './span.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from './span.js';
 
@@ -140,6 +145,38 @@ export interface LyraTraceTreeEventMap {
  * @since 4.0.0
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
+    collapse: LYRA_DEFAULT_collapse,
+    cost: LYRA_DEFAULT_cost,
+    details: LYRA_DEFAULT_details,
+    duration: LYRA_DEFAULT_duration,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    spanKindAgent: LYRA_DEFAULT_spanKindAgent,
+    spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
+    spanKindLlm: LYRA_DEFAULT_spanKindLlm,
+    spanKindOther: LYRA_DEFAULT_spanKindOther,
+    spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
+    spanKindTool: LYRA_DEFAULT_spanKindTool,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    tokensIn: LYRA_DEFAULT_tokensIn,
+    tokensOut: LYRA_DEFAULT_tokensOut,
+    traceTree: LYRA_DEFAULT_traceTree,
+    traceTreeMetricLabel: LYRA_DEFAULT_traceTreeMetricLabel,
+    traceTreeSpanStatus: LYRA_DEFAULT_traceTreeSpanStatus,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /**
@@ -272,7 +309,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   private toggleSpan(id: string): void {
     const collapsed = this.collapsedIds.has(id);
     if (!collapsed) {
-      (this.renderRoot.querySelector(`[data-id="${CSS.escape(id)}"]`) as HTMLElement | null)?.focus();
+      this.renderedRowById(id)?.focus();
     }
     const next = new Set(this.collapsedIds);
     if (collapsed) next.delete(id);
@@ -309,7 +346,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       }
       this.focusedId = current?.id ?? null;
       if (current) {
-        (this.renderRoot.querySelector(`[data-id="${CSS.escape(current.id)}"]`) as HTMLElement | null)?.focus();
+        this.renderedRowById(current.id)?.focus();
       }
     }
   }
@@ -318,7 +355,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     if (!row) return;
     this.focusedId = row.span.id;
     void this.updateComplete.then(() => {
-      (this.renderRoot.querySelector(`[data-id="${CSS.escape(row.span.id)}"]`) as HTMLElement | null)?.focus();
+      this.renderedRowById(row.span.id)?.focus();
     });
   }
 
@@ -453,10 +490,26 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }
   }
 
+  private renderedRowById(id: string): HTMLElement | null {
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    if (typeof ownerCss?.escape === 'function') {
+      return this.renderRoot.querySelector<HTMLElement>(`[data-id="${ownerCss.escape(id)}"]`);
+    }
+    return (
+      Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[data-id]')).find(
+        (element) => element.dataset['id'] === id,
+      ) ?? null
+    );
+  }
+
   protected override updated(changed: PropertyValues): void {
     if ((changed.has('activeSpanId') || changed.has('spans') || changed.has('collapsedIds')) && this.activeSpanId) {
-      const row = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
-      row?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      const row = this.renderedRowById(this.activeSpanId);
+      if (row) {
+        const ownerWindow = row.ownerDocument.defaultView;
+        const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+        row.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+      }
     }
     if (this.pendingAnnouncements.length > 0) {
       const texts = this.pendingAnnouncements;

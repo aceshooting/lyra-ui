@@ -19,6 +19,8 @@ Read it end to end only if you genuinely need everything. Otherwise:
 | know what to `npm install` | `llms/peers.md` |
 | port `wa-*`/`sl-*` markup | `llms/migration.md` (per-tag classification, safe rewrites, and warnings) |
 
-Import paths always carry the source family segment —
-`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js`, never `components/<tag>/`. Each entry
-registers its tag as a side effect; the sibling `.class.js` exports the class without registering.
+Prefer stable tag-shaped registration imports such as
+`@aceshooting/lyra-ui/components/lr-input.js`; each registers its tag as a side effect without
+coupling application code to Lyra's source-family layout. Existing family-shaped registration
+paths remain supported. Class-only and helper modules continue to use their owning family paths;
+a sibling `.class.js` exports a class without registering it.

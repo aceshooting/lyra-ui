@@ -339,6 +339,43 @@ describe("<lr-scroller>", () => {
   });
 });
 
+it("constructs its resize observer in the adopted owner realm and disconnects it on adoption", async () => {
+  const el = await fixture<LyraScroller>(html`<lr-scroller>content</lr-scroller>`);
+  await el.updateComplete;
+  el.remove();
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    frame.remove();
+    throw new Error("The iframe realm was unavailable.");
+  }
+  const originalResizeObserver = frameWindow.ResizeObserver;
+  let constructions = 0;
+  let disconnects = 0;
+  class OwnerResizeObserver implements ResizeObserver {
+    constructor(_callback: ResizeObserverCallback) { constructions += 1; }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void { disconnects += 1; }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions, "the destination window constructs the observer").to.equal(1);
+    document.adoptNode(el);
+    expect(disconnects, "adoption tears down the old owner observer").to.equal(1);
+  } finally {
+    frameWindow.ResizeObserver = originalResizeObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
+
 describe("double-click jumps to an edge", () => {
   const viewportOf = (el: LyraScroller): HTMLElement =>
     el.shadowRoot!.querySelector('[part~="viewport"]') as HTMLElement;

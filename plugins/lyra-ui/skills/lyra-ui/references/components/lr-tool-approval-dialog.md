@@ -2,7 +2,7 @@
 
 # `lr-tool-approval-dialog`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tool-approval-dialog.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolApprovalDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -121,6 +121,11 @@ entirely and returns to the read-only view of the *original* `args` — there is
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
 read-only view every time the dialog transitions from closed to open, so a reused instance never
 leaks one proposal's half-finished edit into the next.
+
+The visible JSON error remains ordinary descriptive text. A transition from a valid draft into
+invalid JSON is additionally appended once to the shared assertive light-DOM announcement sink;
+further invalid keystrokes do not repeat it. An invalid draft already present at initial mount or
+reconnect establishes a silent baseline rather than replaying stale context.
 
 Initial focus deliberately does *not* land on Approve: approving a tool call is a consequential,
 potentially irreversible action, so a user who opens the dialog and reflexively presses Enter/Space

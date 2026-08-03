@@ -2,7 +2,7 @@
 
 # `lr-embedding-explorer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-embedding-explorer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEmbeddingExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`

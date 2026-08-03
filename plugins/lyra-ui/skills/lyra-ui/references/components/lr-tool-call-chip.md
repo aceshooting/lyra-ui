@@ -2,7 +2,7 @@
 
 # `lr-tool-call-chip`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tool-call-chip.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolCallChip`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

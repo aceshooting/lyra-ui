@@ -2,7 +2,7 @@
 
 # `lr-lite-chart`
 
-- **Import** `import '@aceshooting/lyra-ui/components/charts/chart/lite-chart.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-lite-chart.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLiteChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -9,6 +9,11 @@ import '../../utility/live-region/live-region.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './span-waterfall.styles.js';
 import type { LyraSpan } from '../trace-tree/span.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from '../trace-tree/span.js';
 
@@ -103,6 +108,32 @@ export interface LyraSpanWaterfallEventMap {
  * @since 4.0.0
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    spanKindAgent: LYRA_DEFAULT_spanKindAgent,
+    spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
+    spanKindLlm: LYRA_DEFAULT_spanKindLlm,
+    spanKindOther: LYRA_DEFAULT_spanKindOther,
+    spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
+    spanKindTool: LYRA_DEFAULT_spanKindTool,
+    spanStartedAtOffset: LYRA_DEFAULT_spanStartedAtOffset,
+    spanWaterfall: LYRA_DEFAULT_spanWaterfall,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
@@ -188,7 +219,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.focusedId = span.id;
     this.announceFocus(span);
     previous?.setAttribute('tabindex', '-1');
-    const next = this.renderRoot.querySelector<HTMLElement>(`[data-id="${CSS.escape(span.id)}"]`);
+    const next = this.renderedBarById(span.id);
     next?.setAttribute('tabindex', '0');
     next?.focus();
   }
@@ -261,10 +292,26 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
   }
 
+  private renderedBarById(id: string): HTMLElement | null {
+    const ownerCss = this.ownerDocument.defaultView?.CSS;
+    if (typeof ownerCss?.escape === 'function') {
+      return this.renderRoot.querySelector<HTMLElement>(`[data-id="${ownerCss.escape(id)}"]`);
+    }
+    return (
+      Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[data-id]')).find(
+        (element) => element.dataset['id'] === id,
+      ) ?? null
+    );
+  }
+
   protected override updated(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
-      const bar = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
-      bar?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      const bar = this.renderedBarById(this.activeSpanId);
+      if (bar) {
+        const ownerWindow = bar.ownerDocument.defaultView;
+        const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+        bar.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+      }
     }
   }
 

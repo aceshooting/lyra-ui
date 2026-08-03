@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 
 export const COMPONENT_METADATA_SCHEMA_VERSION = 1;
 export const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
+export const UNRELEASED_VERSION = 'unreleased';
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?$/;
 const GIT_OBJECT_ID_PATTERN = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -79,6 +80,14 @@ export function hasCompleteGitHistory(repoRoot) {
   return git(repoRoot, ['rev-parse', '--is-shallow-repository'], { allowFailure: true }) === 'false';
 }
 
+export function requireCompleteGitHistory(repoRoot) {
+  if (!hasCompleteGitHistory(repoRoot)) {
+    throw new Error(
+      'Component metadata requires a non-shallow clone with release tags; fetch full history and tags before writing or checking it.',
+    );
+  }
+}
+
 /**
  * Captures the exact public-tag inputs used for `since` derivation. Release commit/blob ids make
  * the evidence auditable while the checked-in tag lists keep validation available in shallow CI.
@@ -130,6 +139,113 @@ export function currentHistoryRecord(packageVersion, rawManifest, manifest) {
   };
 }
 
+function taggedCurrentReleaseFindings(current, release) {
+  const findings = [];
+  const expectedTag = `lyra-ui@${current?.version}`;
+  if (release?.tag !== expectedTag || release?.version !== current?.version) {
+    findings.push(`expected exact tag ${expectedTag}`);
+  }
+  if (!GIT_OBJECT_ID_PATTERN.test(release?.sourceCommit ?? '')) {
+    findings.push('source commit provenance is missing or invalid');
+  }
+  if (release?.manifestPresent !== true) {
+    findings.push('the tagged release has no component manifest');
+  }
+  if (!GIT_OBJECT_ID_PATTERN.test(release?.manifestBlob ?? '')) {
+    findings.push('manifest blob provenance is missing or invalid');
+  }
+  if (!SHA256_PATTERN.test(release?.manifestSha256 ?? '')) {
+    findings.push('manifest digest provenance is missing or invalid');
+  }
+  if (!Array.isArray(release?.tags)) findings.push('tagged manifest tags are missing');
+  return findings;
+}
+
+/**
+ * Keeps the exact current-version tag outside `history.releases` as an immutable
+ * `history.taggedCurrent` snapshot. Mutable worktree `history.current` can then evolve at the same
+ * package version without rewriting what the tag actually shipped.
+ */
+export function partitionReleaseHistoryAtCurrent(
+  reproducedReleases,
+  current,
+  { taggedCurrent = null } = {},
+) {
+  const expectedTag = `lyra-ui@${current?.version}`;
+  const candidates = (reproducedReleases ?? []).filter(
+    (release) => release.tag === expectedTag && release.version === current?.version,
+  );
+  if (candidates.length === 0) {
+    if (taggedCurrent !== null) {
+      throw new Error(`Recorded tagged-current snapshot ${taggedCurrent.tag} is missing from Git history.`);
+    }
+    return { releases: reproducedReleases, taggedCurrent: null, currentRelease: null };
+  }
+  if (candidates.length !== 1) {
+    throw new Error(
+      `Release history has ${candidates.length} tags for current version ${current?.version}; expected at most one.`,
+    );
+  }
+  const currentRelease = candidates[0];
+  const sameVersionOthers = (reproducedReleases ?? []).filter(
+    (release) => release !== currentRelease && release.version === current?.version,
+  );
+  if (sameVersionOthers.length) {
+    throw new Error(
+      `Release history has another tag for current version ${current?.version}: ${sameVersionOthers.map((release) => release.tag).join(', ')}.`,
+    );
+  }
+  const findings = taggedCurrentReleaseFindings(current, currentRelease);
+  if (findings.length) {
+    throw new Error(`Tagged current release is invalid: ${findings.join('; ')}.`);
+  }
+  if (taggedCurrent !== null && !sameJson(taggedCurrent, currentRelease)) {
+    throw new Error(
+      `Recorded tagged-current snapshot ${expectedTag} differs from immutable Git tag evidence.`,
+    );
+  }
+  return {
+    releases: reproducedReleases.filter((release) => release !== currentRelease),
+    taggedCurrent: currentRelease,
+    currentRelease,
+  };
+}
+
+/**
+ * Reconciles the immutable current-version tag independently from mutable worktree current. On the
+ * next version write, `rolloverCurrent` moves that exact snapshot into the prior-release list.
+ * Every unrelated Git/fixture difference remains a hard stale-history failure.
+ */
+export function reconcileCurrentReleaseHistory(
+  history,
+  reproducedReleases,
+  { rolloverCurrent = false, requirePersistedTaggedCurrent = false } = {},
+) {
+  const recordedReleases = history?.releases ?? [];
+  const recordedTaggedCurrent = history?.taggedCurrent ?? null;
+  if (recordedTaggedCurrent === null && sameJson(reproducedReleases, recordedReleases)) {
+    return { releases: recordedReleases, taggedCurrent: null, currentRelease: null };
+  }
+  const partitioned = partitionReleaseHistoryAtCurrent(reproducedReleases, history?.current, {
+    taggedCurrent: recordedTaggedCurrent,
+  });
+  if (!partitioned.currentRelease || !sameJson(partitioned.releases, recordedReleases)) {
+    throw new Error('Checked-in component release history is stale; run component-metadata:history.');
+  }
+  if (requirePersistedTaggedCurrent && recordedTaggedCurrent === null &&
+      (partitioned.currentRelease.manifestSha256 !== history?.current?.manifestSha256 ||
+       !sameJson(partitioned.currentRelease.tags, history?.current?.tags))) {
+    throw new Error(
+      'history.taggedCurrent must persist the immutable release snapshot before same-version current metadata can evolve.',
+    );
+  }
+  return {
+    releases: rolloverCurrent ? reproducedReleases : recordedReleases,
+    taggedCurrent: rolloverCurrent ? null : partitioned.taggedCurrent,
+    currentRelease: partitioned.currentRelease,
+  };
+}
+
 export function deriveSinceByTag(history) {
   const sinceByTag = new Map();
   const releases = [...(history?.releases ?? [])].sort((left, right) =>
@@ -140,8 +256,13 @@ export function deriveSinceByTag(history) {
       if (!sinceByTag.has(tag)) sinceByTag.set(tag, release.version);
     }
   }
-  for (const tag of history?.current?.tags ?? []) {
-    if (!sinceByTag.has(tag)) sinceByTag.set(tag, history.current.version);
+  for (const tag of history?.taggedCurrent?.tags ?? []) {
+    if (!sinceByTag.has(tag)) sinceByTag.set(tag, history.taggedCurrent.version);
+  }
+  if (!history?.taggedCurrent) {
+    for (const tag of history?.current?.tags ?? []) {
+      if (!sinceByTag.has(tag)) sinceByTag.set(tag, history.current.version);
+    }
   }
   return sinceByTag;
 }
@@ -363,8 +484,11 @@ export function componentMetadataByTag(
     const profileName = profileByTag.get(tag);
     if (!profileName) throw new Error(`${tag}: no authored maturity assignment`);
     const profile = metadata.profiles[profileName];
-    const since = sinceByTag.get(tag) ?? packageVersion ?? null;
-    if (!parseVersion(since)) throw new Error(`${tag}: history does not derive a valid since version`);
+    const since = sinceByTag.get(tag) ??
+      (metadata.history?.taggedCurrent ? UNRELEASED_VERSION : packageVersion ?? null);
+    if (since !== UNRELEASED_VERSION && !parseVersion(since)) {
+      throw new Error(`${tag}: history does not derive a valid since version`);
+    }
     return [tag, {
       status: profile.status,
       since,
@@ -385,7 +509,9 @@ export function componentMetadataByTag(
  */
 export function annotateComponentSource(source, { tag, status, since }) {
   if (!COMPONENT_STATUSES.includes(status)) throw new Error(`${tag}: invalid source annotation status`);
-  if (!parseVersion(since)) throw new Error(`${tag}: invalid source annotation since version`);
+  if (since !== UNRELEASED_VERSION && !parseVersion(since)) {
+    throw new Error(`${tag}: invalid source annotation since version`);
+  }
   const marker = `@customElement ${tag}`;
   const markerIndex = source.indexOf(marker);
   if (markerIndex < 0 || source.indexOf(marker, markerIndex + marker.length) >= 0) {
@@ -558,6 +684,9 @@ export function validateComponentMetadata(metadata, { inventory, manifest, packa
   if (!Array.isArray(releases)) {
     findings.push('history.releases must be an array');
   } else {
+    if (releases.some((release) => release.version === current?.version)) {
+      findings.push('history.current.version must remain outside history.releases');
+    }
     const sorted = [...releases].sort((left, right) => compareVersions(left.version, right.version));
     if (!sameJson(releases, sorted)) findings.push('history.releases must be version-sorted');
     const seenTags = new Set();
@@ -596,6 +725,46 @@ export function validateComponentMetadata(metadata, { inventory, manifest, packa
     }
   }
 
+  const taggedCurrent = metadata?.history?.taggedCurrent;
+  if (taggedCurrent !== undefined && taggedCurrent !== null) {
+    const prefix = `history.taggedCurrent (${String(taggedCurrent.tag)})`;
+    if (taggedCurrent.tag !== `lyra-ui@${current?.version}` ||
+        taggedCurrent.version !== current?.version) {
+      findings.push(`${prefix}: tag and version must match history.current.version`);
+    }
+    if (!GIT_OBJECT_ID_PATTERN.test(taggedCurrent.sourceCommit ?? '')) {
+      findings.push(`${prefix}: missing or invalid source commit provenance`);
+    }
+    if (taggedCurrent.manifestPresent !== true) {
+      findings.push(`${prefix}: tagged current release must contain the component manifest`);
+    }
+    if (!GIT_OBJECT_ID_PATTERN.test(taggedCurrent.manifestBlob ?? '')) {
+      findings.push(`${prefix}: manifest blob must be a Git object id`);
+    }
+    if (!SHA256_PATTERN.test(taggedCurrent.manifestSha256 ?? '')) {
+      findings.push(`${prefix}: manifest digest must be SHA-256`);
+    }
+    if (!Array.isArray(taggedCurrent.tags)) {
+      findings.push(`${prefix}: tags must be an array`);
+    } else {
+      const sortedTags = [...taggedCurrent.tags].sort(compareText);
+      if (!sameJson(taggedCurrent.tags, sortedTags)) {
+        findings.push(`${prefix}: manifest tags must be sorted`);
+      }
+      if (new Set(taggedCurrent.tags).size !== taggedCurrent.tags.length) {
+        findings.push(`${prefix}: duplicate manifest tags`);
+      }
+    }
+    if ((releases ?? []).some((release) =>
+      release.tag === taggedCurrent.tag || release.version === taggedCurrent.version)) {
+      findings.push(`${prefix}: snapshot must remain outside history.releases until version rollover`);
+    }
+  }
+
+  if (inventory?.pins?.lyraVersion !== packageJson.version) {
+    findings.push('inventory.pins.lyraVersion must match package.json');
+  }
+
   if (metadata?.policy?.semverCoverage?.stable !== 'full' ||
       metadata?.policy?.semverCoverage?.experimental !== 'full') {
     findings.push('stable and experimental APIs must both retain full semver coverage');
@@ -610,8 +779,15 @@ export function validateComponentMetadata(metadata, { inventory, manifest, packa
   const sinceByTag = deriveSinceByTag(metadata?.history);
   for (const tag of manifestTags) {
     const since = sinceByTag.get(tag);
-    if (!since) findings.push(`${tag}: history does not derive a since version`);
-    else if (compareVersions(since, packageJson.version) > 0) findings.push(`${tag}: since is newer than package.json`);
+    if (!since) {
+      if (!metadata?.history?.taggedCurrent) {
+        findings.push(`${tag}: history does not derive a since version`);
+      }
+      continue;
+    }
+    if (compareVersions(since, packageJson.version) > 0) {
+      findings.push(`${tag}: since is newer than package.json`);
+    }
   }
 
   try {
@@ -635,10 +811,21 @@ export function validateComponentMetadata(metadata, { inventory, manifest, packa
   return findings.sort(compareText);
 }
 
-export function applyMaturityToInventory(metadata, inventory) {
+export function applyMaturityToInventory(
+  metadata,
+  inventory,
+  { packageVersion = metadata?.history?.current?.version } = {},
+) {
+  if (!parseVersion(packageVersion)) {
+    throw new Error(`Cannot project component inventory for invalid package version ${String(packageVersion)}`);
+  }
   const expected = expectedMaturity(metadata, inventory);
   return {
     ...inventory,
+    pins: {
+      ...inventory.pins,
+      lyraVersion: packageVersion,
+    },
     components: inventory.components.map((component) => ({
       ...component,
       maturity: expected.get(component.tag),

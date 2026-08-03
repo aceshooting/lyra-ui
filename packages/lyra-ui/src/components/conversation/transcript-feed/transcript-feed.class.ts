@@ -6,6 +6,11 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './transcript-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraTranscriptEntry {
   id: string;
@@ -55,6 +60,17 @@ export interface LyraTranscriptFeedEventMap {
  * @since 4.0.0
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    jumpToLatest: LYRA_DEFAULT_jumpToLatest,
+    transcriptFeedEmpty: LYRA_DEFAULT_transcriptFeedEmpty,
+    transcriptFeedInterim: LYRA_DEFAULT_transcriptFeedInterim,
+    transcriptFeedLabel: LYRA_DEFAULT_transcriptFeedLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];

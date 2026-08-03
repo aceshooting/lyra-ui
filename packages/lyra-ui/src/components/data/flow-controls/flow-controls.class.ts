@@ -5,6 +5,11 @@ import type { LyraFrame } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-controls.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_flowControlsLabel, LYRA_DEFAULT_flowLockCanvas, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomToFit } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 interface FlowCanvasLike extends HTMLElement {
   registerCompanion(cb: (snapshot: FlowStructureSnapshot) => void): () => void;
@@ -79,6 +84,18 @@ export type FlowControlsAppearance = LyraFrame;
  * @since 4.0.0
  */
 export class LyraFlowControls extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    flowControlsLabel: LYRA_DEFAULT_flowControlsLabel,
+    flowLockCanvas: LYRA_DEFAULT_flowLockCanvas,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
+    zoomToFit: LYRA_DEFAULT_zoomToFit,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Id of the `lr-flow-canvas` this cluster drives. Empty (the default) resolves to the nearest
@@ -102,8 +119,11 @@ export class LyraFlowControls extends LyraElement {
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private lockObserver?: MutationObserver;
+  private lockObserverDocument?: Document;
   /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
   private canvasWatcher?: MutationObserver;
+  private canvasWatcherDocument?: Document;
+  private ownerRealmGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -113,12 +133,24 @@ export class LyraFlowControls extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetOwnerRealmWork();
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmWork();
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.lockObserver?.disconnect();
     this.lockObserver = undefined;
+    this.lockObserverDocument = undefined;
+    this.lockObserverDocument = undefined;
     this.canvasWatcher?.disconnect();
     this.canvasWatcher = undefined;
+    this.canvasWatcherDocument = undefined;
     this.canvasEl = undefined;
   }
 
@@ -154,21 +186,66 @@ export class LyraFlowControls extends LyraElement {
     this.locked = false;
     this.canvasEl = canvas;
     if (!canvas) return;
+    const ownerDocument = this.ownerDocument;
+    const generation = this.ownerRealmGeneration;
     this.locked = canvas.locked;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
+      if (
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.canvasEl !== canvas
+      ) {
+        return;
+      }
       this.snapshot = snapshot;
     });
-    this.lockObserver = new MutationObserver(() => {
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.lockObserver !== observer ||
+        this.lockObserverDocument !== ownerDocument ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.canvasEl !== canvas
+      ) {
+        return;
+      }
       this.locked = canvas.locked;
     });
-    this.lockObserver.observe(canvas, { attributes: true, attributeFilter: ['locked'] });
+    this.lockObserver = observer;
+    this.lockObserverDocument = ownerDocument;
+    observer.observe(canvas, { attributes: true, attributeFilter: ['locked'] });
   }
 
   private watchForCanvas(): void {
-    if (this.canvasWatcher) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.canvasWatcher && this.canvasWatcherDocument === ownerDocument) return;
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
+    this.canvasWatcherDocument = undefined;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!this.isConnected || !MutationObserverCtor) return;
     const root = this.getRootNode() as Document | ShadowRoot;
-    this.canvasWatcher = new MutationObserver(() => this.resolveAndAttach());
-    this.canvasWatcher.observe(root, { childList: true, subtree: true });
+    const generation = this.ownerRealmGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.canvasWatcher !== observer ||
+        this.canvasWatcherDocument !== ownerDocument ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.getRootNode() !== root
+      ) {
+        return;
+      }
+      this.resolveAndAttach();
+    });
+    this.canvasWatcher = observer;
+    this.canvasWatcherDocument = ownerDocument;
+    observer.observe(root, { childList: true, subtree: true });
   }
 
   private toggleLock = (): void => {

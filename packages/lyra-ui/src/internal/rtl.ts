@@ -7,7 +7,8 @@ import type { Placement } from '@floating-ui/dom';
  * arrow-key direction) has to consult this explicitly to match.
  */
 export function isRtl(el: Element): boolean {
-  return getComputedStyle(el).direction === 'rtl';
+  const view = el.ownerDocument.defaultView;
+  return view ? view.getComputedStyle(el).direction === 'rtl' : false;
 }
 
 /**

@@ -2,7 +2,7 @@
 
 # `lr-attachment-chip`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-attachment-chip.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAttachmentChip`, also available unregistered from `@aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -75,7 +75,8 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
-for `pending`/`done`), `progress`, `progress-fill`, `spinner`, `retry-button`, `preview-button`,
+for `pending`/`done`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
+adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 `remove-button`
 
 **`status-text` carries no live-region role (public surface change).** It is plain visible text

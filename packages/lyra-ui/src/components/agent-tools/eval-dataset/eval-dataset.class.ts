@@ -6,6 +6,11 @@ import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInputEventMap } from '../../media/file-input/file-input.class.js';
 import type { ExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
 import { styles } from './eval-dataset.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_RENDERED_EXAMPLES = 100;
 
@@ -98,6 +103,24 @@ export interface LyraEvalDatasetEventMap {
  * @since 4.1.0
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    evalDatasetAddExample: LYRA_DEFAULT_evalDatasetAddExample,
+    evalDatasetColumnExpectedOutput: LYRA_DEFAULT_evalDatasetColumnExpectedOutput,
+    evalDatasetColumnInput: LYRA_DEFAULT_evalDatasetColumnInput,
+    evalDatasetColumnTags: LYRA_DEFAULT_evalDatasetColumnTags,
+    evalDatasetEmpty: LYRA_DEFAULT_evalDatasetEmpty,
+    evalDatasetImportLabel: LYRA_DEFAULT_evalDatasetImportLabel,
+    evalDatasetLabel: LYRA_DEFAULT_evalDatasetLabel,
+    evalDatasetNoMatches: LYRA_DEFAULT_evalDatasetNoMatches,
+    evalDatasetRemoveExample: LYRA_DEFAULT_evalDatasetRemoveExample,
+    evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,
+    evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Controlled dataset: every example currently known to the host. This component never

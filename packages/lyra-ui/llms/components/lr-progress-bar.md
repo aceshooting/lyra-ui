@@ -2,7 +2,7 @@
 
 # `lr-progress-bar`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/progress/progress-bar.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-progress-bar.js';` (stable tag alias; registers the tag)
 - **Class** `LyraProgressBar`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-bar.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -24,7 +24,10 @@ formatted percentage.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
-Live label mutations stay synchronized.
+Live label mutations and reassignment stay synchronized through nested forwarding slots. Hidden,
+inert, CSS-hidden and `aria-hidden` branches do not name the role; a visible descendant can restore
+text suppressed only by an ancestor's `visibility:hidden|collapse`. Host `aria-label` precedence is
+presence-based, so an explicitly empty value remains empty rather than invoking a fallback.
 
 **Slots:** default — label content; `label` — compatibility alias for the default slot.
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,

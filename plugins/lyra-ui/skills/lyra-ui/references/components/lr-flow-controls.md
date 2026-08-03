@@ -2,7 +2,7 @@
 
 # `lr-flow-controls`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/flow-controls/flow-controls.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flow-controls.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowControls`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-controls/flow-controls.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

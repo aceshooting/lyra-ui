@@ -2,11 +2,16 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import { Announcer } from '../../../internal/announcer.js';
+import { Announcer, acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface PaletteItem {
   /** The `FlowNode.type` a placement/drop creates. */
@@ -60,6 +65,24 @@ export interface LyraNodePaletteEventMap {
  * @since 4.0.0
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    items: LYRA_DEFAULT_items,
+    nodePaletteDragHint: LYRA_DEFAULT_nodePaletteDragHint,
+    nodePaletteEmpty: LYRA_DEFAULT_nodePaletteEmpty,
+    nodePaletteLabel: LYRA_DEFAULT_nodePaletteLabel,
+    nodePalettePlaceholder: LYRA_DEFAULT_nodePalettePlaceholder,
+    nodePaletteResultCount: LYRA_DEFAULT_nodePaletteResultCount,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) items: PaletteItem[] = [];
@@ -75,7 +98,13 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private readonly listId = nextId('node-palette-list');
   private readonly hintId = nextId('node-palette-hint');
-  private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });
+  private announcementSink?: AnnouncementSink;
+  private readonly announcer = new Announcer({
+    onFlush: (text) => {
+      this.liveText = text;
+      this.announcementSink?.announce(text);
+    },
+  });
   /** Gates the item-count announcement so a freshly-mounted palette (or one that receives its
    *  initial `items` before/at connect) never announces its own starting count -- mirrors
    *  `<lr-chat-message>`/`<lr-branch-picker>`'s identical `isMounting` gate. */
@@ -135,11 +164,28 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return -1;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.announcer.cancel();
     this.liveText = '';
     this.isMounting = true;
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -332,7 +378,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
             },
             )}
       </div>
-      <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">${this.liveText}</div>
+      <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
       <span id=${this.hintId} class="sr-only">${this.localize('nodePaletteDragHint')}</span>
       <slot name="footer"></slot>
     </div>`;

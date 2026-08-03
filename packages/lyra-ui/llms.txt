@@ -38,10 +38,13 @@ codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
 
 ## Rules that apply to every component
 
-- Import path is `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` — always with the family
-  segment, never `components/<tag>/`. `llms/index.md` has the exact path per tag.
+- Prefer the stable tag-shaped registration path
+  `@aceshooting/lyra-ui/components/<tag>.js`, for example `components/lr-input.js`. Existing
+  family-shaped registration paths remain supported; class-only and helper modules still use their
+  owning family paths. `llms/index.md` lists the exact supported paths.
 - Theme only by setting `--lr-theme-*` custom properties; never hardcode a value that fights them.
-- Public events are `lr-`-prefixed `CustomEvent`s, bubbling and composed, payload on `event.detail`.
+- Lyra-specific events are `lr-`-prefixed `CustomEvent`s, bubbling and composed, with payload on
+  `event.detail`; native wrappers may also relay the exact native events listed in their sections.
 - Form controls are form-associated: they participate in native `<form>` submission and validation.
 - Every built-in string is localizable via `registerLyraLocale()` or a per-instance `.strings`.
 - Locale selection does not set writing direction; inherit an explicit `dir="rtl"` for RTL layout.

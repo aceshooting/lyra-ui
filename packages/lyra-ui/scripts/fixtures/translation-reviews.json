@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1232,
-    "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+    "keyCount": 1234,
+    "sha256": "sha256:dc8758e4c2811e2e10a2317496cff92189e5a68a0fc77145c951589ba2853534"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -167,12 +167,12 @@
       "locale": "fa",
       "direction": "rtl",
       "source": {
-        "keyCount": 1232,
-        "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+        "keyCount": 1234,
+        "sha256": "sha256:dc8758e4c2811e2e10a2317496cff92189e5a68a0fc77145c951589ba2853534"
       },
       "catalog": {
-        "keyCount": 1232,
-        "sha256": "sha256:ca36d9b51afd15866f23e5708246c64c96fc2a35f72116c98e99659c8fca849e"
+        "keyCount": 1234,
+        "sha256": "sha256:618cae55d668687c2295e92edef28886760a9dea663b2ecb8092ce459141cbc7"
       },
       "translator": {
         "status": "complete-original",
@@ -183,8 +183,8 @@
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-02",
-        "evidence": "An AI-assisted independent repository review inspected all 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections against the frozen catalog hash, verified every placeholder and plural shape plus all 42 exact-English allowlist rationales, and confirmed fa-IR fallback, plural selection, and RTL behavior on Chromium, Firefox, and WebKit; no upstream translated text was consulted. This records a code-and-language review and does not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-03",
+        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity."
       },
       "englishIdenticalAllowlist": [
         {
@@ -202,6 +202,14 @@
         {
           "messagePath": "boxPlotQ3",
           "rationale": "Q3 is the standard statistical notation for the third quartile."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and the punctuation used between a slide position and its content."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncementSeparator",
+          "rationale": "A full stop and trailing space are the conventional separator between independent spoken slide summaries."
         },
         {
           "messagePath": "chartSummarySeparator",
@@ -361,12 +369,12 @@
       "locale": "he",
       "direction": "rtl",
       "source": {
-        "keyCount": 1232,
-        "sha256": "sha256:87d51cf63fe718c819175d7f390854c9926b865ab090687a0446290c2ef55b08"
+        "keyCount": 1234,
+        "sha256": "sha256:dc8758e4c2811e2e10a2317496cff92189e5a68a0fc77145c951589ba2853534"
       },
       "catalog": {
-        "keyCount": 1232,
-        "sha256": "sha256:4b0d8c1804dadbfd57fa07668ab08b8bb1c88ab4e2865050fb88f978af43c85c"
+        "keyCount": 1234,
+        "sha256": "sha256:a1ea0ac1eec75f1a9f2bfea90e55eeaa6440c992775f86d008cc025adb302c92"
       },
       "translator": {
         "status": "complete-original",
@@ -377,8 +385,8 @@
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-02",
-        "evidence": "An AI-assisted independent repository review checked all 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 English-identical rationales. The exact frozen catalog then passed structural/schema validation, the review-ledger unit test, the package build and type check, and 113 focused Chromium localization, locale-picker, package-entrypoint, and RTL tests. This records a code-and-language review and does not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-03",
+        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity."
       },
       "englishIdenticalAllowlist": [
         {
@@ -388,6 +396,14 @@
         {
           "messagePath": "avPlayerRateOption",
           "rationale": "The value contains only the supplied playback rate and the locale-neutral multiplication sign."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and the punctuation used between a slide position and its content."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncementSeparator",
+          "rationale": "A full stop and trailing space are the conventional separator between independent spoken slide summaries."
         },
         {
           "messagePath": "chartSummarySeparator",

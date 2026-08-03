@@ -2,7 +2,7 @@
 
 # `lr-icon`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/icon/icon.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-icon.js';` (stable tag alias; registers the tag)
 - **Class** `LyraIcon`, also available unregistered from `@aceshooting/lyra-ui/components/utility/icon/icon.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -85,9 +85,11 @@ source tree.
 
 - `svg` — the rendered SVG, whether built-in or fetched.
 - `use` — every `<use>` in the rendered SVG.
-- `error` — the visually hidden `role="alert"` shown when a remote icon fails. It carries a
+- `error` — the visually hidden, `aria-hidden` shadow mirror shown when a remote icon fails. The
   localized message (`iconLoadError`, `iconTooLarge`, or `iconSanitizerMissing`), never the raw
-  platform error, and re-localizes when the locale changes.
+  platform error, is appended to Lyra's shared assertive light-DOM announcement sink. The sink
+  stays silent while the icon or a composed ancestor is hidden, inert, `aria-hidden`, or hidden by
+  rendered CSS.
 - `empty` — the `aria-hidden` marker rendered when a remote icon resolved to an empty but valid
   document.
 

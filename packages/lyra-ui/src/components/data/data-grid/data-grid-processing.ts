@@ -1,4 +1,4 @@
-import { getCollator } from '../../../internal/intl-cache.js';
+import { getCollator, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import type {
   DataGridAggregation,
   DataGridColumn,
@@ -104,10 +104,11 @@ export function matchesFilter<Row>(
   filter: unknown,
   locale: string,
 ): boolean {
+  const intlLocale = resolveIntlLocale(locale);
   const value = columnValue(column, row);
   if (column.filterFn) return Boolean(column.filterFn(value, filter, row));
   const type: DataGridFilterType = column.filterType ?? 'text';
-  const collator = getCollator(locale, { sensitivity: 'base', numeric: true });
+  const collator = getCollator(intlLocale, { sensitivity: 'base', numeric: true });
 
   if (type === 'number-range') return matchesRange(value, filter, false);
   if (type === 'date-range') return matchesRange(value, filter, true);
@@ -123,8 +124,8 @@ export function matchesFilter<Row>(
     return needles.every((needle) => values.some((candidate) => sameValue(candidate, needle, locale)));
   }
 
-  return comparableText(value).toLocaleLowerCase(locale).includes(
-    comparableText(filter).toLocaleLowerCase(locale),
+  return comparableText(value).toLocaleLowerCase(intlLocale).includes(
+    comparableText(filter).toLocaleLowerCase(intlLocale),
   );
 }
 
@@ -151,6 +152,7 @@ export function searchRows<Row>(
   locale: string,
   searchFn: ((value: unknown, term: string, row: Row) => boolean) | null,
 ): Row[] {
+  const intlLocale = resolveIntlLocale(locale);
   const needle = term.trim();
   if (!needle) return [...rows];
   const searchable = columns.filter((column) => (column.field || column.value) && column.searchable !== false);
@@ -159,7 +161,9 @@ export function searchRows<Row>(
       const value = columnValue(column, row);
       return searchFn
         ? Boolean(searchFn(value, needle, row))
-        : comparableText(value).toLocaleLowerCase(locale).includes(needle.toLocaleLowerCase(locale));
+        : comparableText(value)
+            .toLocaleLowerCase(intlLocale)
+            .includes(needle.toLocaleLowerCase(intlLocale));
     }),
   );
 }

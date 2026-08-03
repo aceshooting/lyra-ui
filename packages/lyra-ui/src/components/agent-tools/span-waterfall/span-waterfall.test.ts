@@ -10,6 +10,15 @@ const SPANS: LyraSpan[] = [
   { id: 'llm', parentId: 'root', name: 'gpt-turbo', kind: 'llm', startMs: 130, endMs: 390, status: 'running' },
 ];
 
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
 describe('lr-span-waterfall', () => {
   it('renders one row per span in start order, regardless of hierarchy', async () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
@@ -139,6 +148,64 @@ describe('lr-span-waterfall', () => {
     expect(bar.getAttribute('aria-current')).to.equal('true');
     const inactive = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
     expect(inactive.getAttribute('aria-current')).to.equal('false');
+  });
+
+  it('uses adopted owner motion/CSS realms and falls back to an exact id scan without owner CSS.escape', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const originalTopEscape = window.CSS.escape;
+    const originalOwnerEscape = ownerWindow.CSS.escape;
+    const specialId = 'span\" ] owner';
+    const secondSpecialId = 'span two\" ] owner';
+    const el = document.createElement('lr-span-waterfall') as LyraSpanWaterfall;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      window.CSS.escape = () => {
+        throw new Error('ambient CSS.escape must not be used');
+      };
+      el.spans = [
+        { ...SPANS[0]!, id: specialId },
+        { ...SPANS[1]!, id: secondSpecialId },
+      ];
+      document.body.append(el);
+      await el.updateComplete;
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      await el.updateComplete;
+
+      let behavior: ScrollBehavior | undefined;
+      const bar = el.shadowRoot!.querySelector('[part="bar"]') as HTMLElement;
+      bar.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
+        behavior = options?.behavior;
+      }) as typeof bar.scrollIntoView;
+      el.activeSpanId = specialId;
+      await el.updateComplete;
+      expect(behavior).to.equal('auto');
+
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(secondSpecialId);
+
+      el.activeSpanId = '';
+      await el.updateComplete;
+      (ownerWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
+      behavior = undefined;
+      el.activeSpanId = specialId;
+      await el.updateComplete;
+      expect(behavior).to.equal('auto');
+    } finally {
+      el.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      window.CSS.escape = originalTopEscape;
+      ownerWindow.CSS.escape = originalOwnerEscape;
+      frame.remove();
+    }
   });
 
   it('hides the axis when hide-axis is set', async () => {

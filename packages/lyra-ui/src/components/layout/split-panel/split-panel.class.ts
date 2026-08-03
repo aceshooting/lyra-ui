@@ -1,9 +1,14 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './split-panel.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_POSITION = 50;
 const DEFAULT_SNAP_THRESHOLD = 12;
@@ -28,6 +33,15 @@ export type SnapFunction = (options: SnapFunctionParams) => number;
 export type SplitPanelSnapFunction = SnapFunction;
 export type SplitPanelSnapFunctionOptions = SnapFunctionParams;
 export type SplitPanelSnapFunctionParams = SnapFunctionParams;
+
+const snapConverter: ComplexAttributeConverter<string | SnapFunction | undefined> = {
+  fromAttribute(value): string {
+    return value ?? '';
+  },
+  toAttribute(value): string | null {
+    return typeof value === 'string' && value !== '' ? value : null;
+  },
+};
 
 export interface LyraSplitPanelEventMap {
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
@@ -77,6 +91,14 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @since 8.0.0
  */
 export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    resizeDivider: LYRA_DEFAULT_resizeDivider,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _startPosition = DEFAULT_POSITION;
@@ -183,7 +205,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Pane whose pixel size remains fixed while the host resizes. */
-  @property()
+  @property({ reflect: true })
   get primary(): SplitPanelPrimary | undefined {
     return this._primary;
   }
@@ -216,7 +238,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private _snap: string | SnapFunction = '';
   /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. Assigning the
    * Web Awesome `undefined` spelling restores the inert empty-string read default. */
-  @property()
+  @property({ reflect: true, converter: snapConverter })
   get snap(): string | SnapFunction {
     return this._snap;
   }

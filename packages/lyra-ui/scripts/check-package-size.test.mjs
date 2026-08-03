@@ -9,19 +9,24 @@ import {
 const budgets = {
   baseline: { packedBytes: 1_000, unpackedBytes: 4_000, fileCount: 40 },
   maximum: { packedBytes: 750, unpackedBytes: 3_000, fileCount: 25 },
+  minimumByteReductionPercent: 25,
+  fileCountBudget: {
+    baseArtifactCeiling: 15,
+    stableTagAliasCount: 4,
+    emittedFilesPerAlias: 2,
+    entrypointHeadroom: 2,
+  },
 };
 
-test('requires byte ceilings to stay below the baseline, without demanding a fixed reduction', () => {
+test('requires byte ceilings to enforce the approved minimum reduction', () => {
   assert.doesNotThrow(() => validatePackageBudgets(budgets));
-  // A ceiling anywhere under the baseline is legitimate -- the rule is that the tarball may never
-  // grow back past where 8.0.0 started, not that it must hit a particular percentage. Encoding a
-  // target here is what previously left the gate permanently red.
-  assert.doesNotThrow(() =>
-    validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 999 } }),
+  assert.throws(
+    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 751 } }),
+    /must enforce at least a 25% reduction/,
   );
   assert.throws(
-    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 1_000 } }),
-    /must stay below its baseline/,
+    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, fileCount: 26 } }),
+    /must match the reviewed stable-alias derivation/,
   );
 });
 
@@ -32,7 +37,11 @@ test('reports byte, file-count, and dangling-map regressions', () => {
         packedBytes: 751,
         unpackedBytes: 3_001,
         fileCount: 26,
-        files: [{ path: 'dist/component.js.map' }, { path: 'dist/component.js' }],
+        files: [
+          { path: 'dist/component.js.map' },
+          { path: 'dist/component.js' },
+          { path: 'src/component.ts' },
+        ],
       },
       budgets,
     ),
@@ -41,6 +50,7 @@ test('reports byte, file-count, and dangling-map regressions', () => {
       'unpackedBytes 3,001 exceeds hard budget 3,000',
       'fileCount 26 exceeds hard budget 25',
       'published tarball contains 1 dangling JavaScript/declaration map(s)',
+      'published tarball contains 1 unnecessary TypeScript source file(s)',
     ],
   );
 });

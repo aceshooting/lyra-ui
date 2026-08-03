@@ -24,14 +24,21 @@ export function buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]):
   return [header, ...body].join('\r\n');
 }
 
-/** Triggers a browser download of `content` as `filename`. */
-export function downloadBlob(content: string, filename: string, mime: string): void {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+/** Triggers a browser download of `content` as `filename` in `ownerDocument`'s realm. */
+export function downloadBlob(
+  content: string,
+  filename: string,
+  mime: string,
+  ownerDocument: Document = document,
+): void {
+  const view = ownerDocument.defaultView;
+  if (!view) throw new Error('Cannot start a download without a browsing context.');
+  const blob = new view.Blob([content], { type: mime });
+  const url = view.URL.createObjectURL(blob);
+  const a = ownerDocument.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   // Deferred revoke: Safari can cancel the download if the URL is revoked immediately.
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  view.setTimeout(() => view.URL.revokeObjectURL(url), 5000);
 }

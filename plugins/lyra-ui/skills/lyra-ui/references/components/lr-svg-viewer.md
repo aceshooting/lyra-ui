@@ -2,7 +2,7 @@
 
 # `lr-svg-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-svg-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSvgViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -54,8 +54,11 @@ timers) rather than failing immediately.
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found.
 
-**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `anchor-live-region` (the visually-hidden
-`role="status"` element announcing anchor-jump results to assistive tech),
+**CSS parts:** `base`, `body`, `svg`, `spinner` (ordinary loading content; later transitions use the
+shared document-level polite sink), `error` (ordinary visible text; later transitions use the shared
+document-level assertive sink), `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree),
 `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
 `region-highlight-target` (transparent activation geometry with an independent minimum hit area),

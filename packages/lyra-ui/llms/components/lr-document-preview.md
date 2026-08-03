@@ -2,7 +2,7 @@
 
 # `lr-document-preview`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-document-preview.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDocumentPreview`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -101,9 +101,10 @@ download fallback for any `mime-type` this component doesn't natively support. I
 `mime-type` resolves to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
 
 **CSS parts:** `base`, `header` (hidden entirely when `filename` is unset), `filename`, `body`,
-`spinner` (indeterminate `role="status"`, or `role="progressbar"` once numeric progress is known —
-used both for `status="converting"` and this component's own in-flight text fetch), `error`
-(`role="alert"` — used both for `status="error"` and a failed text fetch), `download-link` (only
+`spinner` (ordinary non-live shadow content while indeterminate, or `role="progressbar"` once
+numeric progress is known — used both for `status="converting"` and this component's own in-flight
+text fetch), `error` (ordinary visible shadow text used both for `status="error"` and a failed text
+fetch; error transitions use the shared document-level assertive sink), `download-link` (only
 rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
@@ -162,13 +163,14 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 </lr-document-preview>
 ```
 
-Accessibility: the `"converting"` state without numeric `progress` is a `role="status"` region
-wrapping a visually-hidden "Converting document…" string — a *plain* static region, not routed
-through `<lr-live-region>`/`Announcer`, since (like `<lr-typing-indicator>`) it only ever has one
-thing to announce (entering the state), not a rapidly-repeating stream. Once real `progress` is
-available, the region becomes a standard `role="progressbar"` instead, self-describing via
-`aria-valuenow` with no extra live-region wiring. `status="error"` renders `[part="error"]` as
-`role="alert"` — a one-shot assertive notice, without needing the announcer machinery either.
+Accessibility: after the initial silent baseline, entering `"converting"` without numeric
+`progress` appends the localized "Converting document…" transition to the pre-mounted shared
+document-level polite sink; the visible spinner and its visually-hidden label remain ordinary,
+non-live shadow content. Once finite `progress` is available, the spinner becomes a standard
+`role="progressbar"`, self-describing via `aria-valuenow`, and does not duplicate that information
+through the live sink. A later finite-to-indeterminate transition is announced. `status="error"`
+keeps `[part="error"]` as ordinary visible text and appends later error transitions to the shared
+document-level assertive sink.
 
 **Known gotchas:**
 - `status="converting"`/`status="error"` always win over format dispatch, regardless of

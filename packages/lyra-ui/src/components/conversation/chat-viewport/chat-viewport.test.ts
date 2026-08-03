@@ -5,6 +5,19 @@ import '../../layout/virtual-list/virtual-list.js';
 import type { LyraChatViewport } from './chat-viewport.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(
+  politeness: 'polite' | 'assertive',
+  doc: Document = document,
+): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+}
+
+function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
+  const sink = sinkElement(politeness, doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 /** Waits two animation frames -- enough for this component's own rAF-coalesced growth tick (and,
  *  when a slotted lr-virtual-list is involved, its own rAF-coalesced scroll handler) to settle. */
@@ -67,21 +80,351 @@ it('pins overflow-x explicitly alongside overflow-y so the transcript never grow
   expect(scroll.overflowY).to.equal('auto');
 });
 
-it('forwards the live announcement policy to the internal log and reacts to property changes', async () => {
+it('routes opt-in announcements through a light-DOM sink while keeping the meaningful shadow log non-live', async () => {
   const polite = (await fixture(
-    html`<lr-chat-viewport live="polite"></lr-chat-viewport>`,
+    html`<lr-chat-viewport live="polite"><div>Existing message</div></lr-chat-viewport>`,
   )) as LyraChatViewport;
   const log = polite.shadowRoot!.querySelector('[role="log"]')!;
   expect(polite.live).to.equal('polite');
-  expect(log.getAttribute('aria-live')).to.equal('polite');
+  expect(log.getAttribute('aria-live')).to.equal('off');
+  expect(sinkTexts('polite'), 'declarative content must stay silent on first mount').to.deep.equal([]);
+
+  for (let i = 0; i < 2; i++) {
+    const message = document.createElement('div');
+    message.textContent = 'Repeated message';
+    polite.append(message);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(
+    sinkTexts('polite'),
+    'identical additions must remain separate so assistive technology reads both',
+  ).to.deep.equal(['Repeated message', 'Repeated message']);
 
   polite.live = 'assertive';
   await polite.updateComplete;
-  expect(log.getAttribute('aria-live')).to.equal('assertive');
+  expect(log.getAttribute('aria-live')).to.equal('off');
+  expect(sinkElement('polite') === null).to.be.true;
+  expect(sinkElement('assertive') !== null).to.equal(true);
 
   polite.live = 'off';
   await polite.updateComplete;
   expect(log.getAttribute('aria-live')).to.equal('off');
+  expect(sinkElement('assertive') === null).to.be.true;
+  const silent = document.createElement('div');
+  silent.textContent = 'Not announced';
+  polite.append(silent);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(sinkElement('polite') === null).to.be.true;
+  expect(sinkElement('assertive') === null).to.be.true;
+});
+
+it('announces only accessibility-visible text from newly appended children', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"></lr-chat-viewport>`,
+  )) as LyraChatViewport;
+
+  const hidden = document.createElement('div');
+  hidden.hidden = true;
+  hidden.textContent = 'Hidden attribute';
+  const inert = document.createElement('div');
+  inert.setAttribute('inert', '');
+  inert.textContent = 'Inert subtree';
+  const ariaHidden = document.createElement('div');
+  ariaHidden.setAttribute('aria-hidden', ' TRUE ');
+  ariaHidden.textContent = 'ARIA-hidden subtree';
+  const displayNone = document.createElement('div');
+  displayNone.style.display = 'none';
+  displayNone.textContent = 'Display-none subtree';
+  const contentHidden = document.createElement('div');
+  contentHidden.style.contentVisibility = 'hidden';
+  contentHidden.textContent = 'Content-visibility subtree';
+  const visibilityHidden = document.createElement('div');
+  visibilityHidden.style.visibility = 'hidden';
+  visibilityHidden.textContent = 'Visibility-hidden text';
+
+  const visible = document.createElement('div');
+  visible.append('Visible message ');
+  const hiddenDescendant = document.createElement('span');
+  hiddenDescendant.hidden = true;
+  hiddenDescendant.textContent = 'hidden descendant';
+  const inertDescendant = document.createElement('span');
+  inertDescendant.setAttribute('inert', '');
+  inertDescendant.textContent = 'inert descendant';
+  const ariaHiddenDescendant = document.createElement('span');
+  ariaHiddenDescendant.setAttribute('aria-hidden', 'true');
+  ariaHiddenDescendant.textContent = 'aria-hidden descendant';
+  const displayNoneDescendant = document.createElement('span');
+  displayNoneDescendant.style.display = 'none';
+  displayNoneDescendant.textContent = 'display-none descendant';
+  const namedDescendant = document.createElement('span');
+  namedDescendant.setAttribute('aria-label', 'Accessible detail');
+  namedDescendant.textContent = 'unexposed label source';
+  const script = document.createElement('script');
+  script.type = 'application/json';
+  script.textContent = 'script content';
+  visible.append(
+    hiddenDescendant,
+    inertDescendant,
+    ariaHiddenDescendant,
+    displayNoneDescendant,
+    namedDescendant,
+    script,
+  );
+
+  el.append(hidden, inert, ariaHidden, displayNone, contentHidden, visibilityHidden, visible);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(sinkTexts('polite')).to.deep.equal(['Visible message Accessible detail']);
+});
+
+it('announces only composed content from custom elements, closed details, and replaced elements', async () => {
+  const message = (await fixture(html`
+    <lr-chat-message status="sent">
+      Visible message body
+      <div slot="failure">Unassigned failure details</div>
+    </lr-chat-message>
+  `)) as HTMLElement & { updateComplete: Promise<unknown> };
+  await message.updateComplete;
+  message.remove();
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"></lr-chat-viewport>`,
+  )) as LyraChatViewport;
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = 'Visible summary';
+  const closedContent = document.createElement('span');
+  closedContent.textContent = 'Closed detail content';
+  details.append(summary, closedContent);
+  const image = document.createElement('img');
+  image.alt = 'Architecture diagram';
+
+  el.append(message, details, image);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(sinkTexts('polite')).to.deep.equal([
+    'Visible message body',
+    'Visible summary',
+    'Architecture diagram',
+  ]);
+});
+
+it('releases and re-acquires its opt-in announcement sink after cross-document adoption', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"><div>Existing message</div></lr-chat-viewport>`,
+  )) as LyraChatViewport;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+
+  try {
+    frameDocument.body.append(el);
+    const message = frameDocument.createElement('div');
+    message.textContent = 'Inside frame';
+    el.append(message);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sinkElement('polite') === null, 'the old document must release the adopted viewport').to.be.true;
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(['Inside frame']);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('rebinds observers, animation frames, reduced motion, and drag listeners to its adopted owner realm', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"><div>Existing message</div></lr-chat-viewport>`,
+  )) as LyraChatViewport;
+  el.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalResizeObserver = ownerWindow.ResizeObserver;
+  const originalMutationObserver = ownerWindow.MutationObserver;
+  const originalRequestAnimationFrame = ownerWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = ownerWindow.cancelAnimationFrame;
+  const originalMatchMedia = ownerWindow.matchMedia;
+  const originalAddEventListener = ownerWindow.addEventListener;
+  const originalRemoveEventListener = ownerWindow.removeEventListener;
+  const frameCallbacks = new Map<number, FrameRequestCallback>();
+  const canceledFrames: number[] = [];
+  const addedPointerListeners: string[] = [];
+  const removedPointerListeners: string[] = [];
+  const resizeCallbacks: ResizeObserverCallback[] = [];
+  let contentMutationCallback: MutationCallback | undefined;
+  const mediaQueries: string[] = [];
+  let nextFrameId = 400;
+  let resizeObserverConstructions = 0;
+  let resizeObserverDisconnects = 0;
+  let mutationObserverConstructions = 0;
+  let mutationObserverDisconnects = 0;
+
+  class FrameResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      resizeObserverConstructions++;
+      resizeCallbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {
+      resizeObserverDisconnects++;
+    }
+  }
+
+  class FrameMutationObserver {
+    private readonly callback: MutationCallback;
+    constructor(callback: MutationCallback) {
+      mutationObserverConstructions++;
+      this.callback = callback;
+    }
+    observe(target: Node): void {
+      if (target === el) contentMutationCallback = this.callback;
+    }
+    disconnect(): void {
+      mutationObserverDisconnects++;
+    }
+    takeRecords(): MutationRecord[] {
+      return [];
+    }
+  }
+
+  ownerWindow.ResizeObserver = FrameResizeObserver as unknown as typeof ResizeObserver;
+  ownerWindow.MutationObserver = FrameMutationObserver as unknown as typeof MutationObserver;
+  ownerWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    const id = ++nextFrameId;
+    frameCallbacks.set(id, callback);
+    return id;
+  }) as typeof ownerWindow.requestAnimationFrame;
+  ownerWindow.cancelAnimationFrame = ((id: number) => {
+    canceledFrames.push(id);
+    frameCallbacks.delete(id);
+  }) as typeof ownerWindow.cancelAnimationFrame;
+  ownerWindow.matchMedia = ((query: string) => {
+    mediaQueries.push(query);
+    return {
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => true,
+    };
+  }) as typeof ownerWindow.matchMedia;
+  ownerWindow.addEventListener = function (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    if (type.startsWith('pointer') || type === 'lostpointercapture') {
+      addedPointerListeners.push(type);
+    }
+    originalAddEventListener.call(ownerWindow, type, listener, options);
+  } as typeof ownerWindow.addEventListener;
+  ownerWindow.removeEventListener = function (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ) {
+    if (type.startsWith('pointer') || type === 'lostpointercapture') {
+      removedPointerListeners.push(type);
+    }
+    originalRemoveEventListener.call(ownerWindow, type, listener, options);
+  } as typeof ownerWindow.removeEventListener;
+
+  try {
+    ownerDocument.body.append(ownerDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(resizeObserverConstructions).to.equal(2);
+    expect(mutationObserverConstructions, 'base and content observers use the adopted window').to.be
+      .at.least(2);
+    expect(contentMutationCallback).to.be.a('function');
+
+    const staleResizeCallbacks = resizeCallbacks.slice();
+    const staleMutationCallback = contentMutationCallback!;
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    let staleScrollCalls = 0;
+    scroll.scrollTo = () => {
+      staleScrollCalls++;
+    };
+    const observerControls = el as unknown as {
+      armObservers(): void;
+      growthFrame: unknown;
+      teardownObservers(): void;
+    };
+    observerControls.teardownObservers();
+    observerControls.armObservers();
+    expect(resizeObserverConstructions).to.equal(4);
+    expect(contentMutationCallback, 'rearm installs a new content observer callback').to.not.equal(
+      staleMutationCallback,
+    );
+
+    for (const callback of staleResizeCallbacks) {
+      callback([], {} as ResizeObserver);
+      callback([], {} as ResizeObserver);
+    }
+    const staleMessage = ownerDocument.createElement('div');
+    staleMessage.textContent = 'Stale observer message';
+    staleMutationCallback(
+      [{ addedNodes: [staleMessage] } as unknown as MutationRecord],
+      {} as MutationObserver,
+    );
+    expect(observerControls.growthFrame, 'stale callbacks must not schedule current-realm work').to.equal(null);
+    expect(staleScrollCalls, 'a stale scroll observer must not move the current viewport').to.equal(0);
+    expect(sinkTexts('polite', ownerDocument), 'a stale mutation observer must not announce').to.deep.equal([]);
+
+    const message = ownerDocument.createElement('div');
+    message.textContent = 'Frame message';
+    el.append(message);
+    contentMutationCallback!(
+      [{ addedNodes: [message] } as unknown as MutationRecord],
+      {} as MutationObserver,
+    );
+
+    scroll.dispatchEvent(new ownerWindow.WheelEvent('wheel', { bubbles: true, composed: true }));
+    scroll.dispatchEvent(new ownerWindow.PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    expect(frameCallbacks.size, 'growth and user-intent frames use the adopted window').to.equal(2);
+    expect(addedPointerListeners).to.include.members([
+      'pointerup',
+      'pointercancel',
+      'lostpointercapture',
+    ]);
+
+    const firstExpiryId = Math.max(...frameCallbacks.keys());
+    const firstExpiry = frameCallbacks.get(firstExpiryId)!;
+    frameCallbacks.delete(firstExpiryId);
+    firstExpiry(0);
+    expect(frameCallbacks.size, 'the nested expiry frame stays in the adopted window').to.equal(2);
+
+    el.follow = false;
+    await el.updateComplete;
+    el.scrollToBottom({ behavior: 'smooth' });
+    await el.updateComplete;
+    expect(mediaQueries).to.include('(prefers-reduced-motion: reduce)');
+
+    const pendingAtDisconnect = [...frameCallbacks.keys()];
+    el.remove();
+    expect(resizeObserverDisconnects).to.equal(resizeObserverConstructions);
+    expect(mutationObserverDisconnects).to.equal(mutationObserverConstructions);
+    expect(canceledFrames).to.include.members(pendingAtDisconnect);
+    expect(frameCallbacks.size).to.equal(0);
+    expect(removedPointerListeners).to.include.members([
+      'pointerup',
+      'pointercancel',
+      'lostpointercapture',
+    ]);
+  } finally {
+    el.remove();
+    ownerWindow.ResizeObserver = originalResizeObserver;
+    ownerWindow.MutationObserver = originalMutationObserver;
+    ownerWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    ownerWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    ownerWindow.matchMedia = originalMatchMedia;
+    ownerWindow.addEventListener = originalAddEventListener;
+    ownerWindow.removeEventListener = originalRemoveEventListener;
+    iframe.remove();
+  }
 });
 
 it('forwards a host aria-label to the role="log" element, winning over the label property', async () => {

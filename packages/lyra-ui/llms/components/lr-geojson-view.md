@@ -2,7 +2,7 @@
 
 # `lr-geojson-view`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-geojson-view.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGeojsonView`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -42,13 +42,26 @@ text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
 text, independent of whether the optional map peer is available.
 
-**Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+**Events:**
+- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever serialized-metadata search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
 
-**CSS parts:** `base` (the root container), `status` (the feature-count status line, `role="status"`,
-shown only in the `<lr-map>` path), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
+The three shared text-viewer events bubble and compose and are non-cancelable.
+
+**CSS parts:** `base` (the root container with explicit `aria-busy="true"|"false"`), `status` (the
+ordinary feature-count line, shown only in the `<lr-map>` path; a successful transition uses the
+shared document-level polite sink), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
 rendered in both map and fallback paths), `missing-library` (the missing-`maplibre-gl` callout shown
-alongside the `lr-json-viewer` fallback), `error` (the error region, `role="alert"`), `spinner`
-(the loading status region).
+alongside the `lr-json-viewer` fallback; its transition uses the shared document-level assertive
+sink), `error` (ordinary visible error text; later transitions use the same assertive sink),
+`spinner` (a decorative skeleton plus an ordinary visually-hidden localized label; later loading
+transitions use the shared document-level polite sink). No active live semantics are rendered in
+the viewer's shadow tree.
 
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote

@@ -11,7 +11,7 @@
 
 ## What this is
 
-`@aceshooting/lyra-ui` (current published version: `packages/lyra-ui/package.json`) is a free,
+`@aceshooting/lyra-ui` (current source version: `packages/lyra-ui/package.json`) is a free,
 clean-room Lit 3 web-component library — an open-source companion to Web Awesome that reimplements
 several Web Awesome **Pro** components plus original extras. Positioning, non-negotiable:
 
@@ -42,7 +42,8 @@ lyra-ui/                          (repo root — this file lives here)
                                   11 family dirs (agent-tools, charts, conversation, data, forms,
                                    layout, media, overlays, retrieval, utility, viewers), one dir
                                    per component inside each — NOT a flat components/<name>/
-        lyra.ts                   barrel: generated side-effect imports + curated named re-exports
+        lyra.ts                   pure package-root barrel with curated named re-exports
+        all.ts                    generated side-effect imports for the compatibility registration entry
       llms.txt                    CONSUMER-facing entry index (not this file's audience)
       llms/<family>.md            CONSUMER-facing API reference — AUTHORED, one file per
                                    src/components/<family>/ directory; edit these
@@ -75,12 +76,12 @@ pnpm build       # -r: per package -> dist/ (ESM + .d.ts). lyra-ui runs scripts/
                  #     tsc -p tsconfig.build.json (tsconfig.json with source maps OFF, since
                  #     package.json#files ships dist and not src), copies the CSS assets, then
                  #     check:build-artifacts fails on any .map or sourceMappingURL left in dist
-pnpm test        # -r: @web/test-runner (wtr) for @aceshooting/lyra-ui;
+pnpm test        # -r: builds lyra-ui first (its entrypoint tests import dist/), then runs wtr;
                  #     @aceshooting/lyra-flags has no test runner, just a plain Node script
 pnpm lint        # -r: for lyra-ui NOT just a type check — the full contract-policy chain
                  #     + tsc --noEmit + test:types
 pnpm manifest    # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements.json
-pnpm registrations # regenerate root imports, registration allowlist, and package sideEffects
+pnpm registrations # regenerate all.ts imports, tag aliases, registration allowlist, and sideEffects
 pnpm docs        # Storybook (.storybook/), demos every component live at localhost:6006
 pnpm create:component --family utility --name status-panel # validated new-component scaffold
 ```
@@ -98,8 +99,11 @@ its baseline in all three engines; see
   red check names the specific job to reproduce instead of "build-test". A separate
   `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox/WebKit × Node
   20/22. `.github/workflows/full-engine.yml` runs the complete non-coverage suite in four
-  deterministic Firefox/WebKit shards on a weekly schedule and by manual dispatch.
-- `prepack` (run by npm, not CI) determines tarball contents and regenerates the editor data
+  deterministic shards per browser on a weekly schedule and by manual dispatch; releases require
+  the push CI and all eight dispatched shards to succeed for the exact main commit before any
+  release tag is created.
+- `prepack` (run by npm, not CI) begins by stamping package-version metadata, then determines
+  tarball contents and regenerates the editor data
   (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`); CI now regenerates and
   freshness-checks those files too.
 - `check:hit-area` (WCAG 2.5.8) and `check:numeric-guards` are blocking parts of `pnpm lint`.
@@ -297,7 +301,7 @@ Full rules and incident write-ups: **[docs/agents/testing.md](docs/agents/testin
 - A reported failure already failed twice (auto-retry) — fix or quarantine, never re-run and
   shrug.
 - Never let a failing assertion carry a DOM node as chai's `actual`/`expected` — the whole file
-  hangs (`0 passed, 0 failed` at 180s); compare ids/tag names/lengths instead.
+  hangs until the per-file watchdog; compare ids/tag names/lengths instead.
 - `?attr=${false}` can never reset a `true`-defaulting boolean property — use
   `.prop=${false}`.
 - `@sinonjs/fake-timers` does not work under wtr — use real timers with margined thresholds.

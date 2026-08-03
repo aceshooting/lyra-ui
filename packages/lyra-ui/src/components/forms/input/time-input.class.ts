@@ -24,6 +24,7 @@ import {
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
+  relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
@@ -41,6 +42,11 @@ import {
   type TimePatternPart,
 } from './time-input-shared.js';
 import { styles } from './time-input.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraTimeInputHourFormat = TimeHourFormat;
 export type LyraTimeInputStep = number | 'any';
@@ -136,6 +142,24 @@ const placementConverter: ComplexAttributeConverter<LyraTimeInputPlacement> = {
 const blankDraft = (): TimeDraft => ({ hour: null, minute: null, second: null, dayPeriod: null });
 const pad = (value: number): string => String(value).padStart(2, '0');
 
+function isElementNode(value: unknown): value is Element {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as Partial<Element>;
+  return candidate.nodeType === 1 &&
+    typeof candidate.getRootNode === 'function' &&
+    typeof candidate.contains === 'function';
+}
+
+function containsElement(container: Element | null, value: unknown): value is Element {
+  if (!container || !isElementNode(value)) return false;
+  try {
+    // Calling a native Node method also rejects a structural lookalike that is not a real DOM node.
+    return container.contains(value);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * `<lr-time-input>` — a locale-aware segmented time field with an attached column picker.
  *
@@ -191,7 +215,8 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  * @csspart column-item-selected - A selected picker option; also carries `column-item`.
  * @csspart now-button - The default Now footer action.
  * @csspart hint - The hint message.
- * @csspart error - The validation message.
+ * @csspart error - Ordinary validation text referenced by the segmented input through
+ *   `aria-describedby`; it is not a live region, avoiding duplicate native validation feedback.
  * @cssprop [--column-item-height=2.25em] - Picker row height.
  * @cssprop [--column-width=3em] - Picker column width.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Picker opening duration.
@@ -212,6 +237,35 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  * @since 4.0.0
  */
 export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    timeInputDayPeriod: LYRA_DEFAULT_timeInputDayPeriod,
+    timeInputEmptySegment: LYRA_DEFAULT_timeInputEmptySegment,
+    timeInputHour: LYRA_DEFAULT_timeInputHour,
+    timeInputInvalid: LYRA_DEFAULT_timeInputInvalid,
+    timeInputLabel: LYRA_DEFAULT_timeInputLabel,
+    timeInputMaxMessage: LYRA_DEFAULT_timeInputMaxMessage,
+    timeInputMinMessage: LYRA_DEFAULT_timeInputMinMessage,
+    timeInputMinute: LYRA_DEFAULT_timeInputMinute,
+    timeInputNow: LYRA_DEFAULT_timeInputNow,
+    timeInputOpen: LYRA_DEFAULT_timeInputOpen,
+    timeInputPopup: LYRA_DEFAULT_timeInputPopup,
+    timeInputRangeMessage: LYRA_DEFAULT_timeInputRangeMessage,
+    timeInputSecond: LYRA_DEFAULT_timeInputSecond,
+    timeInputStepMessage: LYRA_DEFAULT_timeInputStepMessage,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   static override properties = {
@@ -640,26 +694,18 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const target = event.target as HTMLElement;
     this.activeSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
     const related = event.relatedTarget;
-    if (related instanceof Element && this.renderRoot.querySelector('[part="input"]')?.contains(related)) return;
-    this.dispatchEvent(new FocusEvent('focus', {
-      bubbles: true,
-      composed: true,
-      relatedTarget: event.relatedTarget,
-    }));
+    if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
+    relayNativeEvent(this, event);
     this.emit('lr-focus');
   };
 
   private onSegmentBlur = (event: FocusEvent): void => {
     event.stopPropagation();
     const related = event.relatedTarget;
-    if (related instanceof Element && this.renderRoot.querySelector('[part="input"]')?.contains(related)) return;
+    if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
     this.touched = true;
     this.resetDigitBuffer();
-    this.dispatchEvent(new FocusEvent('blur', {
-      bubbles: true,
-      composed: true,
-      relatedTarget: event.relatedTarget,
-    }));
+    relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
 
@@ -675,7 +721,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   override blur(): void {
     const active = this.shadowRoot?.activeElement;
-    if (active instanceof HTMLElement) active.blur();
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
+    }
   }
 
   override click(): void {
@@ -790,7 +838,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private onDocumentPointerDown = (event: Event): void => {
     const target = event.composedPath()[0];
-    if (target instanceof Element && composedContains(this, target)) return;
+    if (isElementNode(target) && composedContains(this, target)) return;
     void this.requestVisibility(false, true, false);
   };
 
@@ -1145,7 +1193,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
                 >${this.localize('timeInputNow')}</button>`
               : html`<slot name="footer" @slotchange=${this.updateSlotState}></slot>`}
         </div>
-        <div id=${this.errorId} part="error" role="alert" ?hidden=${!hasError}>
+        <div id=${this.errorId} part="error" ?hidden=${!hasError}>
           ${shownError}<slot name="error" @slotchange=${this.updateSlotState}></slot>
         </div>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>

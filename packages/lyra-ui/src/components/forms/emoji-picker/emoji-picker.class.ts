@@ -10,6 +10,11 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
 // emoji-data-loader.ts); re-exported so `export *` from emoji-picker.js keeps the public paths.
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 export type { EmojiPickerItem, EmojiPickerGroup };
 
 const VIRTUALIZE_AT = 200;
@@ -40,7 +45,9 @@ function probePixels(probe: HTMLElement, fallback: number, allowZero = false): n
   // `clientWidth`/`scrollTop` numbers this geometry is combined with. A rect is in transformed
   // viewport space, so a scaled ancestor would rescale the column count and row pitch relative to
   // the scroller they drive.
-  const px = Number.parseFloat(getComputedStyle(probe).inlineSize);
+  const computed = probe.ownerDocument.defaultView?.getComputedStyle(probe);
+  if (!computed) return fallback;
+  const px = Number.parseFloat(computed.inlineSize);
   if (!Number.isFinite(px) || px < 0) return fallback;
   return px > 0 || allowZero ? px : fallback;
 }
@@ -95,7 +102,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal search `<input>`'s own `focus`, for the same
  *   reason as `blur`.
- * @event lr-invalid - The emoji picker failed a validity check.
+ * @event lr-invalid - The emoji picker failed a validity check. Cancelable — preventing this
+ *   alias also prevents the native `invalid` event that produced it.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
@@ -146,6 +154,32 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @since 4.0.0
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    emojiPickerEmpty: LYRA_DEFAULT_emojiPickerEmpty,
+    emojiPickerGridLabel: LYRA_DEFAULT_emojiPickerGridLabel,
+    emojiPickerGroupActivities: LYRA_DEFAULT_emojiPickerGroupActivities,
+    emojiPickerGroupAnimalsNature: LYRA_DEFAULT_emojiPickerGroupAnimalsNature,
+    emojiPickerGroupComponent: LYRA_DEFAULT_emojiPickerGroupComponent,
+    emojiPickerGroupFlags: LYRA_DEFAULT_emojiPickerGroupFlags,
+    emojiPickerGroupFoodDrink: LYRA_DEFAULT_emojiPickerGroupFoodDrink,
+    emojiPickerGroupObjects: LYRA_DEFAULT_emojiPickerGroupObjects,
+    emojiPickerGroupPeopleBody: LYRA_DEFAULT_emojiPickerGroupPeopleBody,
+    emojiPickerGroupSmileysEmotion: LYRA_DEFAULT_emojiPickerGroupSmileysEmotion,
+    emojiPickerGroupSymbols: LYRA_DEFAULT_emojiPickerGroupSymbols,
+    emojiPickerGroupTravelPlaces: LYRA_DEFAULT_emojiPickerGroupTravelPlaces,
+    emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    item: LYRA_DEFAULT_item,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _groups: EmojiPickerGroup[] = [];
@@ -205,13 +239,24 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // Re-arms the geometry sensor after a reconnect; the cache is deliberately kept across the
     // disconnect, so the first delivery here still re-renders if the tokens moved while detached.
     this.observeGeometryProbe();
+    this.syncGridObserver();
     // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
     // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
     // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
     // <lr-lite-chart>'s pointText falling back to a built-in template only when unset).
     if (this.groupsWereSet) return;
+    const ownerDocument = this.ownerDocument;
+    const generation = this.ownerRealmGeneration;
     void this.loadGroups().then((loaded) => {
-      if (!this.isConnected || !loaded || this.groupsWereSet) return;
+      if (
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        !loaded ||
+        this.groupsWereSet
+      ) {
+        return;
+      }
       this.groups = loaded;
     });
   }
@@ -229,12 +274,18 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    * for small sets so consumers keep the simple grouped light-DOM shape they already receive. */
   private virtualScrollTop = 0;
   private virtualScrollRaf?: number;
+  private virtualScrollRafWindow?: Window;
+  private virtualScrollRafDocument?: Document;
   private observedGrid?: HTMLElement;
   private observedGridVirtualized = false;
   private gridResizeObserver?: ResizeObserver;
+  private gridResizeObserverDocument?: Document;
   private geometryProbe?: { root: HTMLElement; item: HTMLElement; gap: HTMLElement; row: HTMLElement };
   private geometryCache?: EmojiPickerGeometry;
   private geometryObserver?: ResizeObserver;
+  private geometryObserverDocument?: Document;
+  private geometryObserverRoot?: HTMLElement;
+  private ownerRealmGeneration = 0;
 
   @query('[part="search"]') private searchEl?: HTMLInputElement;
 
@@ -312,7 +363,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private syncGeometryProbe(): void {
     if (this.geometryProbe || !this.isVirtualized) return;
     const makeProbe = (name: string): HTMLDivElement => {
-      const probe = document.createElement('div');
+      const probe = this.ownerDocument.createElement('div');
       probe.dataset['probe'] = name;
       return probe;
     };
@@ -333,11 +384,45 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  actually differ, with no per-frame reads. */
   private observeGeometryProbe(): void {
     const probe = this.geometryProbe;
-    if (!probe) return;
-    this.geometryObserver ??= new ResizeObserver(this.onGeometryResize);
-    this.geometryObserver.observe(probe.item);
-    this.geometryObserver.observe(probe.gap);
-    this.geometryObserver.observe(probe.row);
+    const ownerDocument = this.ownerDocument;
+    if (!probe || !this.isConnected) return;
+    if (
+      this.geometryObserver &&
+      this.geometryObserverDocument === ownerDocument &&
+      this.geometryObserverRoot === probe.root
+    ) {
+      return;
+    }
+    this.resetGeometryObserver();
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const generation = this.ownerRealmGeneration;
+    const observer = new ResizeObserverCtor(() => {
+      if (
+        this.geometryObserver !== observer ||
+        this.geometryObserverDocument !== ownerDocument ||
+        this.geometryObserverRoot !== probe.root ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onGeometryResize();
+    });
+    this.geometryObserver = observer;
+    this.geometryObserverDocument = ownerDocument;
+    this.geometryObserverRoot = probe.root;
+    observer.observe(probe.item);
+    observer.observe(probe.gap);
+    observer.observe(probe.row);
+  }
+
+  private resetGeometryObserver(): void {
+    this.geometryObserver?.disconnect();
+    this.geometryObserver = undefined;
+    this.geometryObserverDocument = undefined;
+    this.geometryObserverRoot = undefined;
   }
 
   private onGeometryResize = (): void => {
@@ -510,9 +595,15 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // (Shift+Tab back into the grid, a consumer's own `focus()` call).
   private onGridFocusIn = (event: FocusEvent): void => {
     const button = event.target;
-    if (!(button instanceof HTMLButtonElement)) return;
-    const indexed = Number(button.dataset['index']);
-    const index = Number.isInteger(indexed) ? indexed : this.optionButtons().indexOf(button);
+    if (
+      (button as Partial<Node> | null)?.nodeType !== 1 ||
+      (button as Partial<Element>).localName !== 'button'
+    ) {
+      return;
+    }
+    const option = button as HTMLButtonElement;
+    const indexed = Number(option.dataset['index']);
+    const index = Number.isInteger(indexed) ? indexed : this.optionButtons().indexOf(option);
     if (index >= 0 && index !== this.activeIndex) this.setActiveIndex(index, false);
   };
 
@@ -520,25 +611,95 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     if (!this.isVirtualized) return;
     const grid = event.currentTarget as HTMLElement;
     this.virtualScrollTop = grid.scrollTop;
-    if (this.virtualScrollRaf !== undefined) return;
-    this.virtualScrollRaf = requestAnimationFrame(() => {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    if (
+      this.virtualScrollRaf !== undefined &&
+      this.virtualScrollRafWindow === ownerWindow &&
+      this.virtualScrollRafDocument === ownerDocument
+    ) {
+      return;
+    }
+    this.cancelVirtualScrollFrame();
+    const generation = this.ownerRealmGeneration;
+    let handle = 0;
+    handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.virtualScrollRaf !== handle ||
+        this.virtualScrollRafWindow !== ownerWindow ||
+        this.virtualScrollRafDocument !== ownerDocument ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.virtualScrollRaf = undefined;
-      if (this.isConnected) this.requestUpdate();
+      this.virtualScrollRafWindow = undefined;
+      this.virtualScrollRafDocument = undefined;
+      this.requestUpdate();
     });
+    this.virtualScrollRaf = handle;
+    this.virtualScrollRafWindow = ownerWindow;
+    this.virtualScrollRafDocument = ownerDocument;
   };
+
+  private cancelVirtualScrollFrame(): void {
+    if (this.virtualScrollRaf !== undefined) {
+      this.virtualScrollRafWindow?.cancelAnimationFrame(this.virtualScrollRaf);
+    }
+    this.virtualScrollRaf = undefined;
+    this.virtualScrollRafWindow = undefined;
+    this.virtualScrollRafDocument = undefined;
+  }
 
   private syncGridObserver(): void {
     const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
     const virtualized = this.isVirtualized;
-    if (grid === this.observedGrid && virtualized === this.observedGridVirtualized) return;
-    this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
-    this.gridResizeObserver?.disconnect();
+    const ownerDocument = this.ownerDocument;
+    if (
+      grid === this.observedGrid &&
+      virtualized === this.observedGridVirtualized &&
+      (!virtualized || this.gridResizeObserverDocument === ownerDocument)
+    ) {
+      return;
+    }
+    this.resetGridObserver();
+    if (!this.isConnected) return;
     this.observedGrid = grid ?? undefined;
     this.observedGridVirtualized = virtualized;
     if (!grid || !virtualized) return;
     grid.addEventListener('scroll', this.onGridScroll, { passive: true });
-    this.gridResizeObserver = new ResizeObserver(() => this.requestUpdate());
-    this.gridResizeObserver.observe(grid);
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const generation = this.ownerRealmGeneration;
+    const observer = new ResizeObserverCtor(() => {
+      if (
+        this.gridResizeObserver !== observer ||
+        this.gridResizeObserverDocument !== ownerDocument ||
+        this.observedGrid !== grid ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.requestUpdate();
+    });
+    this.gridResizeObserver = observer;
+    this.gridResizeObserverDocument = ownerDocument;
+    observer.observe(grid);
+  }
+
+  private resetGridObserver(): void {
+    this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
+    this.gridResizeObserver?.disconnect();
+    this.gridResizeObserver = undefined;
+    this.gridResizeObserverDocument = undefined;
+    this.observedGrid = undefined;
+    this.observedGridVirtualized = false;
+    this.cancelVirtualScrollFrame();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -568,19 +729,19 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
-    this.gridResizeObserver?.disconnect();
-    this.gridResizeObserver = undefined;
+    this.resetOwnerRealmResources();
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmResources();
+  }
+
+  private resetOwnerRealmResources(): void {
+    this.ownerRealmGeneration += 1;
+    this.resetGridObserver();
     // The probe node itself stays in the shadow root (it is re-observed on reconnect); only the
     // observer is torn down, so nothing keeps measuring while detached.
-    this.geometryObserver?.disconnect();
-    this.geometryObserver = undefined;
-    this.observedGrid = undefined;
-    this.observedGridVirtualized = false;
-    if (this.virtualScrollRaf !== undefined) {
-      cancelAnimationFrame(this.virtualScrollRaf);
-      this.virtualScrollRaf = undefined;
-    }
+    this.resetGeometryObserver();
   }
 
   private renderEmojiButton(item: EmojiPickerItem, itemIndex: number, total: number): TemplateResult {

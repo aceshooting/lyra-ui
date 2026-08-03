@@ -2,7 +2,7 @@
 
 # `lr-textarea`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/textarea/textarea.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-textarea.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTextarea`, also available unregistered from `@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -53,7 +53,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean` | `false` | SSR slot-presence hints; neither is required for hydrated client-side slot detection. |
 | `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
 | `customError` | `custom-error` | `string \| null` | `null` | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it. |
-| `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; wins over `label`, `placeholder`, and the localized default. |
+| `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default. |
 | `spellcheck` | `spellcheck` | `boolean` | `true` | Forwarded to the native `<textarea>`. |
 | `autofocus` | `autofocus` | `boolean` | `false` | Forwarded to the native `<textarea>`. |
 | `title` | `title` | `string` | `''` | Forwarded to the native `<textarea>`. |
@@ -170,10 +170,14 @@ original declarative `value`, matching native `defaultValue` behavior.
 | `hint` / `form-control-help-text` | Compatibility names on the hint message. |
 | `error` | The error message. |
 
-The visible `[part="count"]` is `aria-hidden`; a separate polite live region beside it republishes
-the same text about a second after the user stops typing, so a screen reader is not told the count
-on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), matching the native
-`maxlength` the count reports against, and the remaining count floors at zero — only a
+The visible `[part="count"]` is `aria-hidden`; the internal shadow `.count-announcement` node is
+also an `aria-hidden` mirror (it is not a public CSS part), while the debounced spoken update is
+appended to the shared light-DOM
+`[data-lr-live-region="polite"]` sink about a second after the user stops typing. A screen reader is
+therefore not told the count on every keystroke, and the announcement remains reliable across the
+shadow boundary. The sink stays silent while the textarea or a composed ancestor is hidden, inert,
+`aria-hidden`, or hidden by rendered CSS. Lengths count UTF-16 code units (one emoji counts as two),
+matching the native `maxlength` the count reports against, and the remaining count floors at zero — only a
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
 state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
 dropped rather than rendered as `NaN`, and the count counts up from zero instead.

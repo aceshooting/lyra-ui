@@ -2,7 +2,7 @@
 
 # `lr-thread-list`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-thread-list.js';` (stable tag alias; registers the tag)
 - **Class** `LyraThreadList`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

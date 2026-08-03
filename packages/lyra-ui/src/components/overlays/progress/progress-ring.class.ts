@@ -1,9 +1,19 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+} from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ringStyles } from './progress.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_MAX = 100;
 
@@ -11,8 +21,9 @@ const DEFAULT_MAX = 100;
  * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator.
  *
  * @customElement lr-progress-ring
- * @slot - Optional center label whose text names the progressbar unless an explicit accessible
- * label overrides it; live text mutations stay synchronized.
+ * @slot - Optional center label whose visible accessible text names the progressbar unless an
+ * explicit accessible label overrides it; live mutations stay synchronized through forwarding
+ * slots.
  * @csspart base - Compatibility name for the progress wrapper; use `progress-ring`.
  * @csspart progress-ring - The progress wrapper. It is the same node as `base`.
  * @csspart track - The SVG track.
@@ -35,6 +46,17 @@ const DEFAULT_MAX = 100;
  * @since 4.0.0
  */
 export class LyraProgressRing extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, ringStyles];
   @property({ type: Number, reflect: true }) value = 0;
   @property({ type: Number }) max = 100;
@@ -43,34 +65,117 @@ export class LyraProgressRing extends LyraElement {
   @property() label = '';
   /** Lyra compatibility alias for `label`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  // Assigned nodes do not exist in Lit's server DOM. Cache their accessible text only when the
+  // browser can sample it, before a client-only first paint or just after the hydration render.
+  private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly onLabelSlotChange = (event: Event): void => {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    this.bindLabelObserverTargets();
+    this.recomputeVisibleLabelText();
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
-    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
+      ?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.recomputeVisibleLabelText();
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.bindLabelObserverTargets();
+    if (this.hasUpdated) this.recomputeVisibleLabelText();
+    else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    let ancestor = composedParentElement(this);
+    while (ancestor) {
+      this.labelObserver.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+      });
+      ancestor = composedParentElement(ancestor);
+    }
+    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
   }
 
   override disconnectedCallback(): void {
+    this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
     super.disconnectedCallback();
   }
 
-  private get visibleLabelText(): string {
-    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+  private accessibleVisibleText(node: Node): string {
+    if (node.nodeType === 3) return node.textContent ?? '';
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const visibilityHidden = isAccessibilityVisibilityHidden(element);
+    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
+    if (accessibleLabel?.trim()) return accessibleLabel;
+    const childNodes =
+      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : element.childNodes;
+    return Array.from(childNodes, (child) =>
+      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleVisibleText(child),
+    ).join(' ');
+  }
+
+  private computeVisibleLabelText(): string {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+    const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
     // assignedNodes({flatten:true}) returns the slot's FALLBACK children when nothing is
     // assigned, and this slot's fallback is the formatted percent -- so an unslotted ring would
     // name itself "40%" and the localized 'progress' name (plus any registerLyraLocale override)
     // would be permanently unreachable. Only consumer-assigned content may name the control.
-    if (!slot || slot.assignedNodes().length === 0) return '';
-    return (
-      slot
-        ?.assignedNodes({ flatten: true })
-        .map((node) => node.textContent ?? '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim() ?? ''
-    );
+    const nodes = slot
+      ? slot.assignedNodes().length > 0
+        ? slot.assignedNodes({ flatten: true })
+        : []
+      : Array.from(lightDomNodes ?? []).filter(
+          (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
+        );
+    return nodes
+      .map((node) => this.accessibleVisibleText(node))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private recomputeVisibleLabelText(): void {
+    const next = this.computeVisibleLabelText();
+    if (next === this.cachedVisibleLabelText) return;
+    this.cachedVisibleLabelText = next;
+    this.requestUpdate();
   }
 
   /** `max`, normalized to a finite number and guarded against `<= 0` — which would otherwise
@@ -100,12 +205,11 @@ export class LyraProgressRing extends LyraElement {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - this.percent / 100);
+    const hostLabel = this.getAttribute('aria-label');
     const label =
-      this.getAttribute('aria-label') ||
-      this.label ||
-      this.accessibleLabel ||
-      this.visibleLabelText ||
-      this.localize('progress');
+      hostLabel !== null
+        ? hostLabel
+        : this.label || this.accessibleLabel || this.cachedVisibleLabelText || this.localize('progress');
     return html`<div part="base progress-ring" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
@@ -114,7 +218,7 @@ export class LyraProgressRing extends LyraElement {
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${this.indeterminate ? circumference * 0.65 : offset}></circle>
       </svg>
-      <span part="label"><slot @slotchange=${() => this.requestUpdate()}>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
+      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
     </div>`;
   }
 }

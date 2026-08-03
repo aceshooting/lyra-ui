@@ -6,6 +6,11 @@ import { nextId } from '../../../internal/a11y.js';
 import { buildCsv, downloadBlob, type CsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ExportFormat = 'csv' | 'json';
 
@@ -42,9 +47,9 @@ export interface LyraExportButtonEventMap {
  *   downloaded. `detail: { format, error }`.
  * @event lr-show - The format menu is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Not fired for markup that renders open from the start.
- * @event lr-hide - The format menu is about to close. Cancelable on the same terms as `lr-show`,
- *   except for a close this component imposes on itself (disablement, `loading`, or a format list
- *   collapsing to one entry), which is neither announced nor vetoable.
+ * @event lr-hide - The format menu is about to close. Cancelable on the same terms as `lr-show`.
+ *   A close this component imposes on itself (disablement, `loading`, or a format list collapsing
+ *   to one entry) emits no lifecycle event and therefore offers no veto point.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
@@ -54,6 +59,19 @@ export interface LyraExportButtonEventMap {
  * @since 4.0.0
  */
 export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    exportButtonLabel: LYRA_DEFAULT_exportButtonLabel,
+    exportFormatMenuLabel: LYRA_DEFAULT_exportFormatMenuLabel,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) rows: Record<string, unknown>[] = [];
@@ -85,6 +103,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private readonly menuId = nextId('export-menu');
   private cleanup?: () => void;
+  private pointerDocument?: Document;
   private _isFirstUpdate = true;
   private openVetoed = false;
   /** Which menu item to focus the next time `open` flips true; reset after use. */
@@ -96,8 +115,21 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    this.unbindDocumentPointer();
     this.open = false;
+  }
+
+  private bindDocumentPointer(): void {
+    const owner = this.ownerDocument;
+    if (this.pointerDocument === owner) return;
+    this.unbindDocumentPointer();
+    owner.addEventListener('pointerdown', this.onDocPointer);
+    this.pointerDocument = owner;
+  }
+
+  private unbindDocumentPointer(): void {
+    this.pointerDocument?.removeEventListener('pointerdown', this.onDocPointer);
+    this.pointerDocument = undefined;
   }
 
   private onDocPointer = (e: PointerEvent): void => {
@@ -194,7 +226,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       const active = activeElementIn(this.shadowRoot);
       if (
         active === this.triggerEl ||
-        (active instanceof HTMLElement && active.getAttribute('part') === 'menu-item')
+        active?.getAttribute('part') === 'menu-item'
       ) {
         if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
         const ownerHTMLElement = this.ownerDocument.defaultView?.HTMLElement;
@@ -267,12 +299,12 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       // property), which bypasses openMenu() entirely. Mirrors lr-menu/
       // lr-select/lr-combobox, whose lr-show/lr-hide veto point likewise
       // runs one step earlier, in willUpdate().
-      document.removeEventListener('pointerdown', this.onDocPointer);
+      this.unbindDocumentPointer();
       if (this.open) {
         const anchor = this.triggerEl;
         const menu = this.menuEl;
         if (anchor && menu) this.cleanup = place(anchor, menu);
-        document.addEventListener('pointerdown', this.onDocPointer);
+        this.bindDocumentPointer();
         this.focusMenuItem(this.pendingMenuFocusIndex);
         this.pendingMenuFocusIndex = 0;
       }
@@ -346,9 +378,15 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
           buildCsv(this.rows, this.effectiveColumns()),
           `${this.filename}.csv`,
           'text/csv;charset=utf-8;',
+          this.ownerDocument,
         );
       } else {
-        downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
+        downloadBlob(
+          JSON.stringify(this.rowsForExport(), null, 2),
+          `${this.filename}.json`,
+          'application/json',
+          this.ownerDocument,
+        );
       }
       this.emit('lr-export-complete', { format });
     } catch (error) {

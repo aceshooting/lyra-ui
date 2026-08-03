@@ -9,6 +9,12 @@ import { styles } from './retrieval-results.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as the (deduplicated)
  *  `RetrievalChunk` records they refer to -- a host wanting "what got selected" rarely wants to
@@ -96,7 +102,9 @@ function safeScore(score: number): number {
  * host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
  * collection/state transition removes every focused result action.
- * @csspart error - The error message region (`role="alert"`), shown while `error` is non-empty.
+ * @csspart error - The neutral, visible error message shown while `error` is non-empty. New
+ *   non-empty errors are announced through a shared assertive light-DOM region; initial and
+ *   reconnect content is not replayed.
  * @csspart spinner - The initial-load `<lr-spinner>`, shown while `loading` is true and `chunks`
  * is still empty.
  * @csspart empty - The `<lr-empty>` wrapper, shown when `chunks` is empty and neither `error` nor
@@ -144,6 +152,22 @@ function safeScore(score: number): number {
  * @since 4.1.0
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
+    chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    loadMore: LYRA_DEFAULT_loadMore,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+    retrievalResultsSelectRow: LYRA_DEFAULT_retrievalResultsSelectRow,
+    untitledSource: LYRA_DEFAULT_untitledSource,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
@@ -190,9 +214,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  fires `lr-load-more`; otherwise shows the built-in `[part="load-more"]` footer. */
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
 
-  /** Non-empty replaces the entire result view with a `role="alert"` error message -- caller-
+  /** Non-empty replaces the entire result view with a neutral, visible error message -- caller-
    *  supplied text, not routed through `localize()` (the same stance `<lr-document-preview>`'s own
-   *  `error-message` takes for the same reason: this is app/network data, not library copy). */
+   *  `error-message` takes for the same reason: this is app/network data, not library copy). New
+   *  non-empty values are announced through a shared assertive light-DOM region; initial and
+   *  reconnect content is not replayed. */
   @property() error = '';
 
   /** Accessible name for the results region. Defaults to the localized `chunkInspectorLabel`
@@ -202,6 +228,23 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private pendingFocusTarget: string | 'base' | undefined;
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
+  private isMounting = true;
+  private errorAnnouncementSink?: AnnouncementSink;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.isMounting = true;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
 
   private deepActiveElement(): Element | null {
     return deepActiveElementIn(this.shadowRoot);
@@ -216,7 +259,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         continue;
       }
       const root = current.getRootNode();
-      current = root instanceof ShadowRoot ? root.host : null;
+      current = root.nodeType === 11 && 'host' in root ? (root as ShadowRoot).host : null;
     }
     return null;
   }
@@ -269,6 +312,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (!wasMounting && changed.has('error') && this.error !== '' && this.isConnected) {
+      this.errorAnnouncementSink?.announce(this.error);
+    }
     this.previousProcessedChunkIds = this.error
       ? []
       : this.processedChunks.chunks.map((chunk) => chunk.id);
@@ -460,7 +508,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const label = this.getAttribute('aria-label') || this.label || this.localize('chunkInspectorLabel');
 
     if (this.error) {
-      return html`<div part="base" tabindex="-1"><div part="error" role="alert">${this.error}</div></div>`;
+      return html`<div part="base" tabindex="-1"><div part="error">${this.error}</div></div>`;
     }
 
     const processed = this.processedChunks;

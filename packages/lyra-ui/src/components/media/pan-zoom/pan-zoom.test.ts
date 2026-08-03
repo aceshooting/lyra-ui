@@ -61,6 +61,36 @@ it('keeps keyboard zoom while leaving slotted editors alone', async () => {
   expect(key.defaultPrevented).to.be.false;
 });
 
+it('leaves iframe-realm slotted editors alone after adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom></lr-pan-zoom>`);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const editor = frameDocument.createElement('input');
+    el.append(editor);
+    const key = new frameWindow.KeyboardEvent('keydown', {
+      key: '+',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    editor.dispatchEvent(key);
+    await el.updateComplete;
+
+    expect(el.zoom, 'an editor created by the adopted realm must retain the keystroke').to.equal(1);
+    expect(key.defaultPrevented).to.be.false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
 it('normalizes malformed zoom configuration to finite usable values', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom zoom="NaN" min-zoom="NaN" max-zoom="Infinity" zoom-step="-1"></lr-pan-zoom>

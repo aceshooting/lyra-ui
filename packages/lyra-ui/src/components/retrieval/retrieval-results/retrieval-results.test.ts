@@ -81,7 +81,7 @@ it('keeps the initial-load spinner semantic owner named after late host aria-lab
     shadowRoot: ShadowRoot;
   };
   const spinnerLabel = () =>
-    spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
+    spinner.shadowRoot.querySelector('[role="progressbar"]')!.getAttribute('aria-label');
 
   expect(spinner != null).to.be.true;
   expect(spinnerLabel()).to.equal('Policy results');
@@ -98,15 +98,27 @@ it('keeps the initial-load spinner semantic owner named after late host aria-lab
   expect(spinnerLabel()).to.equal('Policy results');
 });
 
-it('renders a role="alert" error message and suppresses everything else when error is set', async () => {
+it('renders a neutral error message and announces only later errors from light DOM', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results error="Retrieval failed" .chunks=${chunks}></lr-retrieval-results>`,
   )) as LyraRetrievalResults;
   await el.updateComplete;
   const alert = el.shadowRoot!.querySelector('[part="error"]')!;
-  expect(alert.getAttribute('role')).to.equal('alert');
+  expect(alert.getAttribute('role')).to.be.null;
   expect(alert.textContent).to.include('Retrieval failed');
   expect(el.shadowRoot!.querySelector('[part="row"]')).to.not.exist;
+  const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
+  expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
+
+  el.error = 'A newer failure';
+  await el.updateComplete;
+  expect(sink().lastElementChild?.textContent).to.equal('A newer failure');
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(sink().children.length, 'reconnect does not replay the current error').to.equal(0);
 });
 
 it('renders one row per chunk (unsorted input), sorted descending by score by default', async () => {
@@ -717,4 +729,25 @@ describe('styling', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='load-more'\]:hover/);
   });
+});
+
+it('walks from a foreign-realm shadow descendant to its chunk host', async () => {
+  const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const host = iframe.contentDocument!.createElement('article');
+    host.setAttribute('data-chunk-id', 'foreign-chunk');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const action = iframe.contentDocument!.createElement('button');
+    shadow.append(action);
+    expect(shadow instanceof ShadowRoot, 'fixture really crosses constructor realms').to.equal(false);
+
+    const anchor = (el as unknown as {
+      chunkAnchor(start: Element | null): Element | null;
+    }).chunkAnchor(action);
+    expect(anchor?.getAttribute('data-chunk-id')).to.equal('foreign-chunk');
+  } finally {
+    iframe.remove();
+  }
 });

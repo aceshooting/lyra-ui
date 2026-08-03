@@ -1,7 +1,6 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import type { EmojiPickerGroup } from './emoji-types.js';
 
-export type EmojiDataApi = OptionalPeerApi;
+export type EmojiDataApi = unknown;
 
 let cached: Promise<EmojiPickerGroup[] | null> | undefined;
 
@@ -13,8 +12,8 @@ let cached: Promise<EmojiPickerGroup[] | null> | undefined;
  * an injectable seam for tests (see `emoji-data-loader.test.ts`).
  */
 export async function loadEmojiData(
-  importData: () => Promise<OptionalPeerApi> = () =>
-    import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } }) as Promise<OptionalPeerApi>,
+  importData: () => Promise<unknown> = () =>
+    import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } }),
 ): Promise<EmojiPickerGroup[] | null> {
   try {
     const raw = await importData();
@@ -96,7 +95,7 @@ const GROUP_LABEL_KEYS: Record<number, string> = {
  * `GROUP_LABELS` lookup above (the raw entries carry no label of their own), paired with the
  * matching `GROUP_LABEL_KEYS` entry so `<lr-emoji-picker>` can localize the heading at render time.
  */
-function adaptEmojiPickerElementData(raw: OptionalPeerApi): EmojiPickerGroup[] {
+function adaptEmojiPickerElementData(raw: unknown): EmojiPickerGroup[] {
   // A JSON module import resolves to either the bare array directly or a namespace object
   // wrapping it as `.default`, depending on the bundler/interop configuration doing the
   // resolving -- confirmed against the real published package: Node's native JSON import

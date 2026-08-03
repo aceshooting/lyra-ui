@@ -6,6 +6,11 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './animated-image.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_animatedImageDefaultAlt, LYRA_DEFAULT_pauseWithContext, LYRA_DEFAULT_playWithContext } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_FROZEN_FRAME_DIMENSION = 8192;
 const MAX_FROZEN_FRAME_PIXELS = 16_777_216;
@@ -83,6 +88,16 @@ export interface LyraAnimatedImageEventMap {
  * @since 4.0.0
  */
 export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    animatedImageDefaultAlt: LYRA_DEFAULT_animatedImageDefaultAlt,
+    pauseWithContext: LYRA_DEFAULT_pauseWithContext,
+    playWithContext: LYRA_DEFAULT_playWithContext,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The path to the image to load. Always re-validated against a
@@ -131,6 +146,11 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   @query('[part="canvas"]') private canvasEl?: HTMLCanvasElement;
   @query('[part="play-button"]') private playButtonEl?: HTMLButtonElement;
 
+  /** Lit's server renderer constructs the element without a browser-owned document. */
+  private get ownerWindow(): Window | null {
+    return (this.ownerDocument as Document | undefined)?.defaultView ?? null;
+  }
+
   /** The effective playing state after reduced-motion arbitration -- also
    *  reflected as a `playing` host attribute. Read-only; control playback
    *  via `play`. */
@@ -144,8 +164,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.mediaQuery =
-      typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
+    this.mediaQuery = this.ownerWindow?.matchMedia?.('(prefers-reduced-motion: reduce)');
     this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
     // A preference change while detached cannot deliver an event to this instance. Re-run the
     // same arbitration on every connection so `playing` never reflects the stale pre-detach
@@ -180,7 +199,9 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       }
     }
 
-    const nextPlaying = this.play && !(this.respectReducedMotion && prefersReducedMotion());
+    const nextPlaying = this.play && !(
+      this.respectReducedMotion && prefersReducedMotion(this.ownerWindow)
+    );
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
       this.toggleAttribute('playing', nextPlaying);
@@ -212,7 +233,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     if (img && canvas) {
       const width = img.naturalWidth;
       const height = img.naturalHeight;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = this.ownerWindow?.devicePixelRatio || 1;
       const requestedWidth = width * dpr;
       const requestedHeight = height * dpr;
       const dimensionScale = Math.min(
@@ -284,7 +305,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     // local so the two never drift out of sync with each other.
     const frozen = this.hasLoaded && !this.playing;
     const showControls = this.hasLoaded && !this.hasError;
-    const disabled = this.respectReducedMotion && prefersReducedMotion();
+    const disabled = this.respectReducedMotion && prefersReducedMotion(this.ownerWindow);
 
     return html`
       <div part="base">

@@ -4,8 +4,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -13,6 +12,12 @@ import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   if (a.kind !== 'region' || b.kind !== 'region') return false;
@@ -54,8 +59,10 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart svg - The sanitized SVG document, once loaded.
- * @csspart spinner - The loading region.
- * @csspart error - The error region.
+ * @csspart spinner - Ordinary loading content; transitions announce through the shared
+ *   document-level polite region.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
  * @csspart frame-viewport - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
  * @csspart frame-content - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
  * @csspart frame-controls - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
@@ -81,6 +88,30 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeImage: LYRA_DEFAULT_documentPreviewTypeImage,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
+    highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    svgViewerLabel: LYRA_DEFAULT_svgViewerLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as sanitized inline SVG. */
@@ -103,9 +134,11 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
 
   @state() private fetchState: SvgFetchState = { kind: 'idle' };
   private generation = 0;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -113,11 +146,21 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     this.generation++;
     this.beginAbortableLoad();
     this.fetchState = { kind: 'idle' };
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -128,8 +171,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       this.fetchState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -137,7 +180,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadSvgSanitizer();
@@ -146,7 +189,9 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       const raw = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
       const markup = sanitizer.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } });
-      if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', markup };
+      if (this.isConnected && generation === this.generation) {
+        this.fetchState = { kind: 'loaded', markup: markup as string };
+      }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       const message = error instanceof LyraUserFacingError
@@ -164,9 +209,9 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
           html`<div part="svg" role="img" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('svgViewerLabel')}>${unsafeSVG(this.fetchState.markup)}</div>`,
         );
       case 'loading':
-        return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+        return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error':
-        return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+        return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
       default:
         return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
@@ -308,11 +353,13 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     const highlight = this.highlights.find((h) => h.anchor === anchor || sameRegionAnchor(h.anchor, anchor));
     if (!highlight) return false;
     await this.updateComplete;
-    const region = this.renderRoot.querySelector(
-      `[part="region-highlight"][data-id="${CSS.escape(highlight.id)}"]`,
-    );
+    // Use a constant selector plus an exact attribute comparison. Besides accepting every valid
+    // consumer id (including selector punctuation), this keeps anchor resolution independent of
+    // an ambient or missing `CSS.escape` when the element is adopted into another realm.
+    const region = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
+      .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
-    const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
     region.scrollIntoView({ behavior, block: 'center', inline: 'center' });
     return true;
   }

@@ -3,6 +3,7 @@ import './document-preview.js';
 import type { LyraDocumentPreview } from './document-preview.js';
 import { styles } from './document-preview.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const IMAGE_DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -138,7 +139,7 @@ describe('text/* and application/json dispatch', () => {
       `)) as LyraDocumentPreview;
       const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
       expect(spinner).to.exist;
-      expect(spinner.getAttribute('role')).to.equal('status');
+      expect(spinner.getAttribute('role')).to.equal(null);
       expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Loading document…');
       resolveFetch(textResponse('done'));
       await aTimeout(20);
@@ -167,7 +168,7 @@ describe('text/* and application/json dispatch', () => {
       await el.updateComplete;
       const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
       expect(error).to.exist;
-      expect(error.getAttribute('role')).to.equal('alert');
+      expect(error.getAttribute('role')).to.equal(null);
       expect(error.textContent).to.equal('Failed to load document.');
       // A fetch failure is this component's own rendering concern, not the
       // host-owned status prop -- it stays whatever the host set it to.
@@ -610,7 +611,7 @@ describe('status="converting"', () => {
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner).to.exist;
-    expect(spinner.getAttribute('role')).to.equal('status');
+    expect(spinner.getAttribute('role')).to.equal(null);
     expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Converting document…');
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
   });
@@ -625,6 +626,23 @@ describe('status="converting"', () => {
     expect(spinner.getAttribute('aria-valuemin')).to.equal('0');
     expect(spinner.getAttribute('aria-valuemax')).to.equal('100');
     expect(spinner.querySelector('.spinner-text')!.textContent).to.equal('42%');
+  });
+
+  it('keeps determinate progress self-describing and announces only a later indeterminate transition', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview status="ready"></lr-document-preview>
+    `);
+    const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+
+    el.status = 'converting';
+    el.progress = 42;
+    await el.updateComplete;
+    expect(document.querySelector(selector)?.childElementCount).to.equal(0);
+
+    el.progress = undefined;
+    await el.updateComplete;
+    expect(document.querySelector(selector)?.textContent).to.equal('Converting document…');
+    expect(document.querySelector(selector)?.childElementCount).to.equal(1);
   });
 
   it('keeps the determinate ring mask opaque when a consumer themes the shadow color translucent', async () => {
@@ -671,12 +689,12 @@ describe('status="converting"', () => {
     `)) as LyraDocumentPreview;
     expect(Number.isNaN(el.progress)).to.be.true;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-    expect(spinner.getAttribute('role')).to.equal('status');
+    expect(spinner.getAttribute('role')).to.equal(null);
   });
 });
 
 describe('status="error"', () => {
-  it('renders errorMessage in [part="error"] with role="alert", regardless of mime-type', async () => {
+  it('renders errorMessage as ordinary visible text, regardless of mime-type', async () => {
     const el = (await fixture(html`
       <lr-document-preview
         status="error"
@@ -687,9 +705,27 @@ describe('status="error"', () => {
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error).to.exist;
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('Conversion failed: unsupported source encoding.');
     expect(el.shadowRoot!.querySelector('pre')).to.not.exist;
+  });
+
+  it('suppresses a mounted error, then announces a later identical transition in light DOM', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview status="error" error-message="Conversion failed."></lr-document-preview>
+    `);
+    const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+    const sink = document.querySelector(selector);
+    expect(sink?.childElementCount).to.equal(0);
+
+    el.status = 'ready';
+    await el.updateComplete;
+    el.status = 'error';
+    await el.updateComplete;
+
+    expect(document.querySelector(selector)?.textContent).to.equal('Conversion failed.');
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length)
+      .to.equal(0);
   });
 });
 

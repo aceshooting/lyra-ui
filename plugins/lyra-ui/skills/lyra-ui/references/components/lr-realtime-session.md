@@ -2,7 +2,7 @@
 
 # `lr-realtime-session`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-realtime-session.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRealtimeSession`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -33,6 +33,11 @@ composed push-to-talk events continue bubbling.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.
+
+Visible status and error text remain ordinary, non-live content. After the initial baseline,
+non-error `state` transitions are appended to the shared polite light-DOM announcement sink and a
+transition to `error` uses the shared assertive sink instead. Initial and reconnect renders stay
+silent, and sinks follow the component's `ownerDocument` when it is adopted.
 
 **Slots:** `controls` — provider-specific actions appended to the built-in session controls.
 **Optional peer deps:** none. Transport, credentials, capture permission, and media playback

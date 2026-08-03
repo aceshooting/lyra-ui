@@ -2,7 +2,7 @@
 
 # `lr-menu-item`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/menu/menu-item.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-menu-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMenuItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -86,6 +86,8 @@ while the legacy `lr-menu-select` likewise bubbles once to the outermost menu. T
 nested-selection name. A non-vetoed selection closes the whole chain behind it. A submenu's own
 `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
 menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
+`lr-show` is cancelable. `lr-hide` is cancelable while the menu is connected and non-cancelable
+only for the disconnect-driven close, where the removed menu cannot honour a veto.
 
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
@@ -199,7 +201,14 @@ where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys
 one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
 behaves identically.
 `getTextLabel(): string` returns the visible label used by type-ahead and Shoelace-compatible
-integrations, without including nested submenu text.
+integrations, without including nested submenu text. Direct and flattened, forwarded default-slot
+labels are observed live: in-place text edits, forwarding-slot reassignments, and relevant
+visibility changes update type-ahead, the computed submenu-parent name, and the computed
+submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
+assignment stays authoritative even while hidden and therefore does not expose slot fallback;
+fallback contributes after the assignment is removed. A consumer-authored `aria-label` on the
+item, or `label`/`aria-label` on the submenu, wins by attribute presence — including an explicitly
+empty value and a value supplied after Lyra initially computed the name.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or

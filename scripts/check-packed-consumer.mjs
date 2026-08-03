@@ -32,36 +32,16 @@ const optionalPeerFamilyTags = componentInventory.components
   .map((component) => component.tag)
   .sort();
 
-// The package root is registration-free by design, but it is not registration-*silent* under an
-// eager (non-tree-shaking) Node import: three curated re-exports are imperative APIs that cannot
-// work without their element, so each one pulls that element's registration entry --
-// `toast()` -> toaster.js -> toast.js -> toast-item.js, `confirm()` -> dialog.js, and the
-// widget-renderer default registry -> the elements it renders. A bundler drops all of it, because
-// `./dist/lyra.js` is absent from package.json#sideEffects and nothing here is referenced; the
-// `rootBarrel` bundle entry below proves exactly that. This list is the eager-import counterpart:
-// it is the complete set that a bare `await import('@aceshooting/lyra-ui')` may define, and the
-// fixture fails on any addition -- which is how a registration import silently creeping back into
-// the root gets caught.
-const rootHelperRegisteredTags = [
-  'lr-badge',
-  'lr-button',
-  'lr-card',
-  'lr-dialog',
-  'lr-markdown',
-  'lr-media-card',
-  'lr-result-card',
-  'lr-result-field',
-  'lr-stat',
-  'lr-toast',
-  'lr-toast-item',
-];
+// A direct Node import and a production tree-shaken import must agree: the package root defines no
+// tags. Imperative helpers register the exact elements they need only when the helper is invoked.
+const rootHelperRegisteredTags = [];
 
 // Keep the aggregate barrel budget as an auditable sum rather than an unexplained moving ceiling.
-// The first term is the measured graph of the entry this budget actually guards; the second is a
-// named allowance for the aggregate implementation growth described on `bundleEntries.core` below.
+// The reviewed baseline remains fixed; the only v8 allowance is the measured stable-root expansion
+// described on `bundleEntries.core` below.
 const coreRawBudget = {
-  measuredAllEntryBytes: 3_580_000,
-  reviewedGrowthAllowanceBytes: 220_000,
+  reviewedBaselineBytes: 3_400_000,
+  stableRootRegistrationAllowanceBytes: 200_000,
 };
 
 const bundleEntries = {
@@ -80,15 +60,10 @@ const bundleEntries = {
     // import is not lost -- it is now the `rootBarrel` entry below, where "collapses to nothing"
     // is the assertion rather than an unnoticed hole.
     //
-    // Re-baselined against a real measurement of the new entry rather than carried over: 3495.5
-    // KiB (3,579,374 B) raw / 850.8 KiB gzip across 7 output files with optional peers
-    // externalized, and its static graph reaches zero optional peers (0 eager, 0 physically
-    // bundled), so none of those bytes can be a peer's. That is ~163 KiB above the last root-barrel
-    // measurement below, which is expected in the split's direction: `all.js` reaches every
-    // root-included component through a registration entry that a tree-shaker must keep, whereas
-    // the old root reached the same classes as removable re-exports. The named allowance leaves
-    // ~6% headroom, and the `button` gzip canary below -- unchanged, and still the tight one --
-    // remains the signal for a foreign dependency leaking into the shared eager layer.
+    // The release ceiling deliberately retains the previously reviewed 3,400,000 B aggregate
+    // baseline instead of re-baselining to the current measurement. The only added term is the
+    // named stable-root registration allowance audited below, keeping future aggregate growth
+    // visible while the `button` gzip canary remains the tighter foreign-dependency signal.
     //
     // History below is the pre-8.0.0 audit trail from when this entry measured the side-effectful
     // root barrel. It is kept because the growth it records is the same aggregate implementation
@@ -128,12 +103,13 @@ const bundleEntries = {
     // the whole set puts the otherwise-stabilized graph at ~3262.2 KiB on the packed-consumer
     // scale, below the existing 3320.3 KiB ceiling. The 200,000 B named allowance rounds that
     // measured expansion up by ~27%; combined with the baseline it leaves ~2.9% total headroom
-    // over the observed 3416.1 KiB bundle. The button gzip canary below remains unchanged and
-    // measured 40.7 KiB against its 42,000 B ceiling, while the core static graph contains only
-    // Lit and Floating UI beyond Lyra itself. This is aggregate implementation weight, not an
-    // optional-peer leak.
+    // over the observed 3416.1 KiB bundle. The independently fixed button gzip target below
+    // remains the tighter shared-layer canary, while the core static graph contains only Lit and
+    // Floating UI beyond Lyra itself. This is aggregate implementation weight, not an optional-
+    // peer leak.
     maxRawBytes:
-      coreRawBudget.measuredAllEntryBytes + coreRawBudget.reviewedGrowthAllowanceBytes,
+      coreRawBudget.reviewedBaselineBytes +
+      coreRawBudget.stableRootRegistrationAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
@@ -158,49 +134,11 @@ const bundleEntries = {
   // more sensitive to a foreign dependency's low-entropy-relative-to-its-size bytes landing in an
   // otherwise tiny, highly-compressible bundle.
   //
-  // Raised from 28_000 after the 2026-07-20 --lr-button-gap/--lr-button-radius cssprops (measured
-  // 28,050 B gzip, just over the old ceiling) -- like the `core` re-baseline above, the added code
-  // is two more custom-property reads in button's own stylesheet, not a new dependency, so this is
-  // legitimate growth, not a leak. Deliberately re-baselined rather than waived; the shared
-  // LyraElement/token-layer growth from the same-day review-sweep fixes also landed here since
-  // `button` is built on the `core` fixture, which is why the ceiling had crept close to 28,000
-  // already before this bump. Measured ~27.4 KiB gzip as of this bump; budget leaves modest
-  // headroom for normal Lit/token growth while staying tight enough to catch an accidental heavy
-  // import.
-  //
-  // Raised from 31_000 after the 2026-07-23 full-repository remediation made inherited
-  // locale/direction changes reactive in LyraElement. The isolated button remained a single
-  // 31_014 B-gzip (30.3 KiB) file with no optional-peer chunk; 32_000 leaves less than 1 KiB of
-  // headroom while accommodating the intentional shared-base behavior.
-  //
-  // Raised from 32_000 for 8.0.0, alongside the `core` re-baseline above and for the same reason:
-  // the growth is in the shared base layer this entry deliberately measures, not in a new
-  // dependency. Measured 39.1 KiB gzip (148.3 KiB raw) as a single output file. The canary's own
-  // question -- did something heavy reach the eager graph -- was answered directly rather than
-  // inferred: an isolated `<lr-button>` still emits ONE file with no dynamic-import chunk, and its
-  // static graph spans 14 modules whose only bare specifiers are `lit` and `lit/decorators.js`.
-  // Zero optional peers, so the delta is LyraElement's token/locale/interaction layer plus button's
-  // own class and styles. 44_000 keeps headroom over the current 42.1 KiB build -- still far below
-  // the gzip footprint of the smallest optional peer this canary exists to catch.
-  //
-  // Raised from 44_000 later in 8.0.0, for the same reason as every bump above and verified the
-  // same way: the canary's question is whether something heavy reached the eager graph, and the
-  // answer is still no -- an isolated `<lr-button>` builds to ONE file with no dynamic-import
-  // chunk and no optional peer. Measured 44.6 KiB gzip (171.0 KiB raw). The delta over the last
-  // bump is shared base-layer work that button pays for by construction: the external-label bridge
-  // (`internal/form-control-labels.ts`, installed from LyraElement's constructor for
-  // form-associated hosts), the barred-validation predicate, and the shared required-marker sheet.
-  // 48_000 leaves ~2.3 KiB, in line with the headroom each earlier re-baseline kept.
-  //
-  // Worth knowing before the next bump: button's weight is not really button. Measured attribution
-  // is 33.7% the built-in English catalog (DEFAULT_STRINGS, 1232 keys, pinned into every component
-  // because resolveLyraString indexes it with a runtime key), 23.4% the token sheets, 14.6% Lit
-  // itself, and only ~15% LyraElement plus button's own class and styles. Stubbing the catalog
-  // alone puts this entry at 28.3 KiB. Until a per-component message slice exists, every bump here
-  // is really the catalog being counted again.
+  // This is the approved release target, backed by per-component English catalog slices and the
+  // lean base token sheet. It is intentionally not a measured-current-plus-headroom rebaseline.
   button: {
     fixture: 'core',
-    maxGzipBytes: 48_000,
+    maxGzipBytes: 30 * 1024,
   },
   // Retention canaries rather than size budgets: these entries are imported only for side effects,
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and
@@ -224,6 +162,9 @@ const bundleEntries = {
     fixture: 'core',
   },
   autoloaderCdn: {
+    fixture: 'core',
+  },
+  ssrHydration: {
     fixture: 'core',
   },
   flag: {
@@ -276,6 +217,53 @@ async function pack(packageDir, destination) {
     throw new Error(`Expected one new package tarball from ${packageDir}, found ${packed.join(', ') || 'none'}`);
   }
   return join(destination, packed[0]);
+}
+
+async function verifyPackedMigrationCli(fixtureDir) {
+  const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
+  const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
+  const expectedCliFiles = [
+    'component-inventory.mjs',
+    'migrate-wa.mjs',
+    'migration-contract.json',
+  ];
+  if (JSON.stringify(cliFiles) !== JSON.stringify(expectedCliFiles)) {
+    throw new Error(
+      `Packed migration runtime must contain only ${expectedCliFiles.join(', ')}; found ${cliFiles.join(', ') || 'none'}`,
+    );
+  }
+
+  const migrationFixture = join(fixtureDir, 'migration-cli');
+  await mkdir(migrationFixture, { recursive: true });
+  const registration = join(migrationFixture, 'registration.ts');
+  const markup = join(migrationFixture, 'component.html');
+  const stylesheet = join(migrationFixture, 'component.css');
+  await Promise.all([
+    writeFile(
+      registration,
+      "import '@awesome.me/webawesome/dist/components/accordion-item/accordion-item.js';\n",
+    ),
+    writeFile(markup, '<wa-accordion-item>Panel</wa-accordion-item>\n'),
+    writeFile(stylesheet, 'wa-accordion-item::part(base) { color: currentColor; }\n'),
+  ]);
+
+  const executable = join(fixtureDir, 'node_modules', '.bin', binName('lyra-ui-migrate'));
+  await run(executable, [migrationFixture], fixtureDir, 'packed migration CLI apply check');
+  await run(executable, ['--check', migrationFixture], fixtureDir, 'packed migration CLI idempotence check');
+
+  const migrated = await Promise.all([
+    readFile(registration, 'utf8'),
+    readFile(markup, 'utf8'),
+    readFile(stylesheet, 'utf8'),
+  ]);
+  const expected = [
+    "import '@aceshooting/lyra-ui/components/layout/details/accordion-item.js';\n",
+    '<lr-accordion-item>Panel</lr-accordion-item>\n',
+    'lr-accordion-item::part(base) { color: currentColor; }\n',
+  ];
+  if (JSON.stringify(migrated) !== JSON.stringify(expected)) {
+    throw new Error(`Packed migration CLI produced unexpected output:\n${migrated.join('\n')}`);
+  }
 }
 
 async function writeFixture(
@@ -395,7 +383,7 @@ console.log('Node ESM package imports passed.');
   // `src/all.ts` is generated from, so a new component is covered the day it is scaffolded.
   await writeFile(
     join(fixtureDir, 'src', 'node-registration-contract.mjs'),
-    `const ROOT_HELPER_TAGS = ${JSON.stringify(rootHelperRegisteredTags)};
+    `const ROOT_EXPECTED_TAGS = ${JSON.stringify(rootHelperRegisteredTags)};
 const ROOT_INCLUDED_TAGS = ${JSON.stringify(rootIncludedTags)};
 const OPTIONAL_PEER_TAGS = ${JSON.stringify(optionalPeerFamilyTags)};
 const EVERY_TAG = [...ROOT_INCLUDED_TAGS, ...OPTIONAL_PEER_TAGS];
@@ -407,10 +395,10 @@ if (typeof root.LyraEmpty !== 'function' || typeof root.LyraElement !== 'functio
   throw new Error('the package root did not expose its named class surface');
 }
 const afterRoot = definedAmong(EVERY_TAG).join(',');
-if (afterRoot !== ROOT_HELPER_TAGS.join(',')) {
+if (afterRoot !== ROOT_EXPECTED_TAGS.join(',')) {
   throw new Error(
     'importing the package root registered an unexpected component set.\\n' +
-      '  allowed (imperative-helper re-exports only): ' + ROOT_HELPER_TAGS.join(',') + '\\n' +
+      '  expected: ' + (ROOT_EXPECTED_TAGS.join(',') || '(none)') + '\\n' +
       '  actual: ' + (afterRoot || '(none)'),
   );
 }
@@ -422,7 +410,7 @@ if (customElements.get('lr-empty') !== root.LyraEmpty) {
   throw new Error('the granular registration entry did not register the root barrel class');
 }
 const afterGranular = definedAmong(EVERY_TAG).join(',');
-const expectedAfterGranular = [...ROOT_HELPER_TAGS, 'lr-empty'].sort().join(',');
+const expectedAfterGranular = [...ROOT_EXPECTED_TAGS, 'lr-empty'].sort().join(',');
 if (afterGranular !== expectedAfterGranular) {
   throw new Error(
     'a granular registration entry registered more than its own tag.\\n' +
@@ -445,8 +433,8 @@ if (leaked.length > 0) {
   throw new Error('all.js registered optional-peer-family tag(s): ' + leaked.join(','));
 }
 console.log(
-  'Registration-split contract passed (root registers ' + ROOT_HELPER_TAGS.length +
-    ' helper tag(s); all.js registers ' + ROOT_INCLUDED_TAGS.length + ').',
+  'Registration-split contract passed (root registers no tags; all.js registers ' +
+    ROOT_INCLUDED_TAGS.length + ').',
 );
 `,
   );
@@ -752,6 +740,9 @@ export const loaded = true;
     autoloaderCdn: `import '@aceshooting/lyra-ui/autoloader-cdn.js';
 export const loaded = true;
 `,
+    ssrHydration: `import '@aceshooting/lyra-ui/ssr-loader.js';
+export const loaded = true;
+`,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
     chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
@@ -892,6 +883,9 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   if (entry === 'autoloaderCdn' && !javascript.includes('data-lr-autoload-pending')) {
     violations.push('the bare CDN autoloader import lost its auto-start implementation');
   }
+  if (entry === 'ssrHydration' && !javascript.includes('defer-hydration')) {
+    violations.push('the packed SSR loader lost its transitive Lit hydration hook');
+  }
   if (entry === 'button' && javascript.includes('data-lr-autoload-pending')) {
     violations.push('a granular component import unexpectedly pulled in the optional autoloader');
   }
@@ -1029,6 +1023,8 @@ async function main() {
       maplibreV5Fixture,
       'MapLibre v5 peer tree check',
     );
+
+    await verifyPackedMigrationCli(coreFixture);
 
     await run(
       process.execPath,

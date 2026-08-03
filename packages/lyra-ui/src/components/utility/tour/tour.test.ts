@@ -14,6 +14,15 @@ function makeSteps(count: number, overridesFor?: (index: number) => Partial<Tour
   }));
 }
 
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
 /**
  * A browser's real :hover/:active pseudo-classes track the physical pointer and cannot be forced
  * from a dispatched event, so a state rule's value is read off the shipped rule and then *painted*
@@ -799,6 +808,51 @@ describe('lr-tour', () => {
     }
   });
 
+  it('resolves a foreign-realm target and uses that target window\'s reduced-motion preference', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const target = ownerDocument.createElement('button');
+    const tour = document.createElement('lr-tour') as LyraTour;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      const lifecycle = tour as unknown as {
+        renderRoot: HTMLElement | DocumentFragment;
+        createRenderRoot(): ShadowRoot;
+      };
+      lifecycle.renderRoot = lifecycle.createRenderRoot();
+      target.id = 'foreign-tour-target';
+      ownerDocument.body.append(target, ownerDocument.adoptNode(tour));
+      await tour.updateComplete;
+
+      let behavior: ScrollBehavior | undefined;
+      target.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
+        behavior = options?.behavior;
+      }) as typeof target.scrollIntoView;
+      tour.steps = [{ id: 'foreign', target, heading: 'Foreign target' }];
+      await tour.updateComplete;
+      tour.start();
+      await tour.updateComplete;
+
+      expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.false;
+      expect(behavior).to.equal('auto');
+    } finally {
+      if (tour.open) {
+        tour.end('api');
+        await tour.updateComplete;
+      }
+      tour.remove();
+      target.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      frame.remove();
+    }
+  });
+
   it('normalizes invalid, throwing, and detached targets to the missing-target path', async () => {
     const detached = document.createElement('button');
     const targets: TourStep['target'][] = [
@@ -819,6 +873,24 @@ describe('lr-tour', () => {
       expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.true;
       tour.end('api');
       await tour.updateComplete;
+    }
+  });
+
+  it('fails closed when a resolver returns a connected target from another document', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const target = frame.contentDocument!.createElement('button');
+    frame.contentDocument!.body.append(target);
+    try {
+      const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
+      tour.steps = [{ id: 'cross-document', target: () => target, heading: 'Missing' }];
+      const missing = oneEvent(tour, 'lr-tour-target-missing');
+      tour.start();
+      await missing;
+      await tour.updateComplete;
+      expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.true;
+    } finally {
+      frame.remove();
     }
   });
 
@@ -1006,6 +1078,56 @@ describe('lr-tour', () => {
     }
   });
 
+  it('does not hijack directional keys from a foreign-realm slotted control after adoption', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const tour = document.createElement('lr-tour') as LyraTour;
+    try {
+      const lifecycle = tour as unknown as {
+        renderRoot: HTMLElement | DocumentFragment;
+        createRenderRoot(): ShadowRoot;
+      };
+      lifecycle.renderRoot = lifecycle.createRenderRoot();
+      ownerDocument.body.append(ownerDocument.adoptNode(tour));
+      await tour.updateComplete;
+      const firstTarget = ownerDocument.createElement('button');
+      const secondTarget = ownerDocument.createElement('button');
+      const input = ownerDocument.createElement('input');
+      firstTarget.id = 'foreign-target-0';
+      secondTarget.id = 'foreign-target-1';
+      ownerDocument.body.append(firstTarget, secondTarget);
+      tour.append(input);
+      tour.steps = [
+        { id: 'first', target: '#foreign-target-0', heading: 'First' },
+        { id: 'second', target: '#foreign-target-1', heading: 'Second' },
+      ];
+      await tour.updateComplete;
+      tour.start();
+      await tour.updateComplete;
+
+      const event = new ownerWindow.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(event);
+      await tour.updateComplete;
+
+      expect(event.defaultPrevented).to.be.false;
+      expect(tour.activeIndex).to.equal(0);
+    } finally {
+      if (tour.open) {
+        tour.end('api');
+        await tour.updateComplete;
+      }
+      tour.remove();
+      frame.remove();
+    }
+  });
+
   describe('i18n', () => {
     it('renders the built-in English strings unchanged with no locale registered', async () => {
       const el = (await fixture(
@@ -1084,9 +1206,11 @@ describe('lr-tour', () => {
       await tour.updateComplete;
       let count = 0;
       let detail: unknown;
+      let cancelable: boolean | undefined;
       tour.addEventListener('lr-tour-end', (e) => {
         count++;
         detail = (e as CustomEvent).detail;
+        cancelable = e.cancelable;
       });
 
       tour.remove();
@@ -1095,6 +1219,7 @@ describe('lr-tour', () => {
 
       expect(count).to.equal(1);
       expect(detail).to.equal('unmount');
+      expect(cancelable, 'removal has already happened and cannot be vetoed').to.be.false;
       expect(tour.open).to.be.false;
     });
 

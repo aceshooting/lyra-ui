@@ -1,0 +1,23 @@
+{
+  "$comment": "Exact public npm artifacts used for the blocking upstream-surface comparison. The tarball integrity and manifest digest must be reviewed together with every version change; the checker reads only package metadata and the published custom-elements manifest, and never executes package lifecycle scripts.",
+  "schemaVersion": 1,
+  "registry": "https://registry.npmjs.org/",
+  "packages": {
+    "webawesome": {
+      "name": "@awesome.me/webawesome",
+      "version": "3.11.0",
+      "tarballUrl": "https://registry.npmjs.org/@awesome.me/webawesome/-/webawesome-3.11.0.tgz",
+      "tarballIntegrity": "sha512-WM8kyP+AdAT3/zwNpc/YzN3Nu5pRD6ksREFZAct/DIn6KMnQs8lPVfiPbJrOpKMk8OaSnQX19iiwFGjoswXVXw==",
+      "manifestPath": "package/dist/custom-elements.json",
+      "manifestSha256": "bdf206659b2fa5b2f10935ea90d7c452977017d8a9b21f5d3e415e07b368a11e"
+    },
+    "shoelace": {
+      "name": "@shoelace-style/shoelace",
+      "version": "2.20.1",
+      "tarballUrl": "https://registry.npmjs.org/@shoelace-style/shoelace/-/shoelace-2.20.1.tgz",
+      "tarballIntegrity": "sha512-FSghU95jZPGbwr/mybVvk66qRZYpx5FkXL+vLNpy1Vp8UsdwSxXjIHE3fsvMbKWTKi9UFfewHTkc5e7jAqRYoQ==",
+      "manifestPath": "package/dist/custom-elements.json",
+      "manifestSha256": "ec01e908669c64a8a2cec05c738496adda632f86a79d1edc730764a0ce7d728a"
+    }
+  }
+}

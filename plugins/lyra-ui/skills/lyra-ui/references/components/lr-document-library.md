@@ -2,7 +2,7 @@
 
 # `lr-document-library`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/document-library/document-library.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-document-library.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDocumentLibrary`, also available unregistered from `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -22,3 +22,7 @@ sorting, and bulk selection.
 `tagFilter`. **Events:** `lr-filter-change`, `lr-open`, `lr-selection-change`, `lr-sort`. **CSS
 parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+
+`selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
+selection stays silent; every post-mount `selectedIds` change appends the localized selected count
+to the document's shared light-DOM polite sink, including zero and repeated equal counts.

@@ -607,6 +607,10 @@ function programRegistersElement(program, options = {}) {
       node.type === 'FunctionExpression' ||
       node.type === 'ArrowFunctionExpression'
     ) {
+      // For a package-entry import audit, only work performed while modules evaluate can register
+      // a tag. An exported imperative helper may deliberately call defineElement() when invoked;
+      // traversing its body would conflate that opt-in behavior with a bare import side effect.
+      if (options.importEvaluationOnly) return;
       const parameterBindings = new Set(bindings);
       const parameterNamespaces = new Set(namespaces);
       const parameterNames = new Set();
@@ -873,30 +877,6 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
 ];
 
-/**
- * Registration edges the package root is allowed to reach. Both are imperative helpers that build
- * their element at call time (`toast()` renders an `<lr-toast>`, `confirm()` an `<lr-dialog>`), so
- * the helper module has to own that element's registration. Neither costs a consumer who never
- * imports the helper: the root barrel is registration-free, so a bundler drops the helper — and
- * with it the registration entry — unless the helper is actually named.
- */
-const DOCUMENTED_ROOT_REGISTRATION_EDGES = [
-  // `registerDefaultWidgetTypes()` maps widget names onto eight built-in tags, so it has to
-  // register exactly those eight. A host that wants a leaner graph supplies its own registry.
-  ...[
-    'src/components/agent-tools/result-card/result-card.ts',
-    'src/components/agent-tools/result-card/result-field.ts',
-    'src/components/conversation/markdown/markdown.ts',
-    'src/components/data/stat/stat.ts',
-    'src/components/forms/button/button.ts',
-    'src/components/layout/card/card.ts',
-    'src/components/media/media-card/media-card.ts',
-    'src/components/overlays/badge/badge.ts',
-  ].map((target) => `src/lyra.ts -> src/components/conversation/widget-renderer/default-registry.ts -> ${target}`),
-  'src/lyra.ts -> src/components/overlays/dialog/confirm.ts -> src/components/overlays/dialog/dialog.ts',
-  'src/lyra.ts -> src/components/overlays/toast/toaster.ts -> src/components/overlays/toast/toast.ts',
-].sort();
-
 function preview(entries, limit = 12) {
   const shown = entries.slice(0, limit).map((entry) => `    ${entry}`);
   if (entries.length > limit) shown.push(`    …and ${entries.length - limit} more`);
@@ -1003,6 +983,7 @@ async function checkRegistrationArchitecture() {
   // re-exporting the registrar is the public API consumers use to define their own tags.
   const rootRegistrationPaths = findTransitiveRegistrationPaths([rootPath], modules, {
     capabilityReexportRegisters: false,
+    importEvaluationOnly: true,
   })
     .map(pathKey)
     .sort();
@@ -1010,10 +991,10 @@ async function checkRegistrationArchitecture() {
     describeListMismatch(
       'the package root must not reach registration entries at runtime',
       rootRegistrationPaths,
-      DOCUMENTED_ROOT_REGISTRATION_EDGES,
+      [],
       're-export the component from its `*.class.js` module, not from the sibling registration ' +
-        'entry; an imperative helper that must register its own element needs an explicit entry in ' +
-        'DOCUMENTED_ROOT_REGISTRATION_EDGES.',
+        'entry; imperative helpers must import pure class modules and call defineElement() only ' +
+        'inside the helper invocation.',
     ),
   );
 

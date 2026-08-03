@@ -365,8 +365,8 @@ describe('status accents and progress', () => {
     )) as LyraAttachmentChip;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
     expect(spinner).to.exist;
-    expect(spinner.getAttribute('role')).to.equal('status');
-    expect(spinner.getAttribute('aria-label')).to.equal('Uploading a.zip');
+    expect(spinner.getAttribute('role')).to.equal(null);
+    expect(spinner.getAttribute('aria-hidden')).to.equal('true');
     expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
   });
 
@@ -417,6 +417,21 @@ describe('status accents and progress', () => {
     )) as LyraAttachmentChip;
     expect(nan.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
     expect(nan.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
+    const spinner = nan.shadowRoot!.querySelector('[part="spinner"]')!;
+    expect(spinner.getAttribute('role')).to.equal(null);
+    expect(spinner.getAttribute('aria-hidden')).to.equal('true');
+  });
+
+  it('keeps high-frequency upload ticks out of every live region', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip name="a.zip" status="uploading" progress="1"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    for (const progress of [2, 3, 4, 5]) {
+      el.progress = progress;
+      await el.updateComplete;
+    }
+    expect(sinkTexts('assertive')).to.deep.equal([]);
+    expect(sinkTexts('polite')).to.deep.equal([]);
   });
 
   it('shows the same clamped number in status-text as the progressbar aria-valuenow, for an out-of-range progress', async () => {
@@ -508,6 +523,38 @@ describe('status accents and progress', () => {
     second.remove();
     expect(sinkElement('assertive') === null, 'the last disconnect unmounts it').to.be.true;
   });
+
+  it('retargets its sink when adopted into another document and releases it there', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip status="uploading"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const targetDocument = frame.contentDocument!;
+
+    try {
+      targetDocument.body.append(targetDocument.adoptNode(el));
+      await el.updateComplete;
+
+      const targetSink = targetDocument.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+      );
+      expect(targetSink?.ownerDocument === targetDocument).to.be.true;
+      expect(sinkElement('assertive') === null, 'the old document released this chip handle').to.be.true;
+
+      el.status = 'error';
+      await el.updateComplete;
+      expect(Array.from(targetSink?.children ?? [], (child) => child.textContent ?? '')).to.deep.equal([
+        'Upload failed',
+      ]);
+      el.remove();
+      expect(
+        targetDocument.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`).length,
+      ).to.equal(0);
+    } finally {
+      el.remove();
+      frame.remove();
+    }
+  });
 });
 
 describe('retry affordance', () => {
@@ -563,8 +610,12 @@ describe('remove affordance', () => {
 
   it('tints the remove button on hover and deepens it while pressed', async () => {
     // The pressed mix is written from the button's own `transparent` fill, which is the one
-    // color-mix() shape that can silently resolve to nothing at all. Read the rendered colour.
-    const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    // color-mix() shape that can silently resolve to nothing at all. Read the rendered colour,
+    // with the transition disabled so each read observes the state's target rather than WebKit's
+    // still-transparent first transition frame.
+    const el = (await fixture(
+      html`<lr-attachment-chip name="a.txt" style="--lr-transition-fast: 0s"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     const resting = getComputedStyle(btn).backgroundColor;
     const rect = btn.getBoundingClientRect();
@@ -797,12 +848,13 @@ describe('uploadingLabel wiring', () => {
     expect(progress.getAttribute('aria-label')).to.equal('Envoi de report.pdf');
   });
 
-  it('wires uploadingLabel into the spinner aria-label when progress is indeterminate', async () => {
+  it('wires uploadingLabel into visible status text while the indeterminate spinner stays decorative', async () => {
     const el = (await fixture(html`
       <lr-attachment-chip name="report.pdf" status="uploading" uploading-label="Envoi de"></lr-attachment-chip>
     `)) as LyraAttachmentChip;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]')!;
-    expect(spinner.getAttribute('aria-label')).to.equal('Envoi de report.pdf');
+    expect(spinner.getAttribute('aria-hidden')).to.equal('true');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi de…');
   });
 });
 

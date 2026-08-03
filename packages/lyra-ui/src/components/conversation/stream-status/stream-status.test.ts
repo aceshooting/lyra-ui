@@ -373,6 +373,82 @@ it('re-arms the stall timer on reconnect while still "streaming", e.g. after bei
   expect(el.phase).to.equal('stalled');
 });
 
+it('owns the stall timeout in the adopted window and rejects stale callbacks', async () => {
+  const el = (await fixture(html`<lr-stream-status></lr-stream-status>`)) as LyraStreamStatus;
+  await el.updateComplete;
+  el.remove();
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const originalMainSet = window.setTimeout;
+  const originalMainClear = window.clearTimeout;
+  const originalFrameSet = frameWindow.setTimeout;
+  const originalFrameClear = frameWindow.clearTimeout;
+  const mainCallbacks = new Map<number, VoidFunction>();
+  const frameCallbacks = new Map<number, VoidFunction>();
+  const frameCancellations: number[] = [];
+  let mainHandle = 6400;
+  let frameHandle = 7400;
+
+  window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+    if (delay !== 43210) return originalMainSet.call(window, handler, delay, ...args);
+    if (typeof handler !== 'function') throw new TypeError('Expected a timeout callback.');
+    const handle = ++mainHandle;
+    mainCallbacks.set(handle, handler as VoidFunction);
+    return handle;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined && mainCallbacks.has(handle)) mainCallbacks.delete(handle);
+    else originalMainClear.call(window, handle);
+  }) as typeof window.clearTimeout;
+  frameWindow.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+    if (delay !== 43210) return originalFrameSet.call(frameWindow, handler, delay, ...args);
+    if (typeof handler !== 'function') throw new TypeError('Expected a timeout callback.');
+    const handle = ++frameHandle;
+    frameCallbacks.set(handle, handler as VoidFunction);
+    return handle;
+  }) as typeof frameWindow.setTimeout;
+  frameWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined && frameCallbacks.has(handle)) {
+      frameCancellations.push(handle);
+      frameCallbacks.delete(handle);
+    } else {
+      originalFrameClear.call(frameWindow, handle);
+    }
+  }) as typeof frameWindow.clearTimeout;
+
+  try {
+    frameDocument.adoptNode(el);
+    expect(frameCallbacks.size, 'detached adoption must not arm a timeout').to.equal(0);
+
+    frameDocument.body.append(el);
+    el.phase = 'streaming';
+    el.stallThresholdMs = 43210;
+    await el.updateComplete;
+    expect(mainCallbacks.size, 'the parent window must not own an iframe timeout').to.equal(0);
+    expect(frameCallbacks.size).to.equal(1);
+    const [oldHandle, staleTimeout] = Array.from(frameCallbacks.entries())[0]!;
+
+    document.adoptNode(el);
+    expect(frameCancellations, 'adoption clears through the retained iframe owner').to.include(oldHandle);
+    expect(mainCallbacks.size, 'detached adoption must not arm the destination timeout').to.equal(0);
+    staleTimeout();
+    expect(el.phase, 'a stale source-realm timeout cannot stall the adopted component').to.equal('streaming');
+
+    document.body.append(el);
+    expect(mainCallbacks.size, 'reconnect re-arms in the destination window').to.equal(1);
+    Array.from(mainCallbacks.values())[0]!();
+    expect(el.phase).to.equal('stalled');
+  } finally {
+    el.remove();
+    window.setTimeout = originalMainSet;
+    window.clearTimeout = originalMainClear;
+    frameWindow.setTimeout = originalFrameSet;
+    frameWindow.clearTimeout = originalFrameClear;
+    iframe.remove();
+  }
+});
+
 it('does not arm a stall timer on connect while phase is not "streaming"', async () => {
   const el = (await fixture(html`<lr-stream-status stall-threshold-ms="40"></lr-stream-status>`)) as LyraStreamStatus;
   let stalled = false;

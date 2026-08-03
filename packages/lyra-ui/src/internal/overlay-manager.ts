@@ -119,8 +119,25 @@ interface OverlayDocumentState {
 const states = new WeakMap<Document, OverlayDocumentState>();
 const hostEntries = new WeakMap<HTMLElement, OverlayEntry>();
 
-/** Returns the deepest focused descendant across open shadow roots. */
-export function deepActiveElement(doc: Document = document): Element | null {
+function createInactiveOverlayHandle(): OverlayHandle {
+  return {
+    focusInitial: () => undefined,
+    focusAutofocus: () => false,
+    updateRestoreFocusTo: () => undefined,
+    deactivate: () => undefined,
+    suspend: () => undefined,
+    resume: () => undefined,
+    isTopmost: () => false,
+    isActive: () => false,
+    dismissBackdrop: () => false,
+  };
+}
+
+/** Returns the deepest focused descendant across open shadow roots, or `null` when no document
+ * exists in the current realm. */
+export function deepActiveElement(
+  doc: Document | null | undefined = typeof document === 'undefined' ? undefined : document,
+): Element | null {
   return deepActiveElementIn(doc);
 }
 
@@ -694,7 +711,8 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   const inheritedReturnTarget = previous?.active ? previous.restoreFocusTo : undefined;
   if (previous?.active) previous.handle.deactivate({ restoreFocus: false });
 
-  const doc = options.host.ownerDocument;
+  const doc = (options.host as unknown as { readonly ownerDocument?: Document | null }).ownerDocument;
+  if (!doc) return createInactiveOverlayHandle();
   const active = deepActiveElement(doc);
   const captured = active && typeof (active as HTMLElement).focus === 'function' ? (active as HTMLElement) : null;
   const entry = {} as OverlayEntry;

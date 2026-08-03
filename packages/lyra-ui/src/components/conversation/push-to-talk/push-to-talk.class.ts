@@ -6,18 +6,38 @@ import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type PushToTalkMode = 'hold' | 'toggle';
 export type PushToTalkState = 'idle' | 'requesting' | 'denied' | 'recording' | 'error';
 
 const CANDIDATE_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 
-function isPushToTalkSupported(): boolean {
-  return (
-    typeof MediaRecorder !== 'undefined' &&
-    typeof navigator !== 'undefined' &&
-    !!navigator.mediaDevices?.getUserMedia
-  );
+interface OwnedTimer {
+  owner: Window;
+  handle: number;
+}
+
+interface OwnedAnimationFrame {
+  owner: Window;
+  handle: number;
+}
+
+interface PushToTalkWindow extends Window {
+  MediaRecorder: typeof MediaRecorder;
+  Blob: typeof Blob;
+  Uint8Array: Uint8ArrayConstructor;
+  AudioContext?: typeof AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+}
+
+function isPushToTalkSupported(owner: Window | null): owner is PushToTalkWindow {
+  const runtime = owner as PushToTalkWindow | null;
+  return !!runtime?.MediaRecorder && typeof runtime.navigator.mediaDevices?.getUserMedia === 'function';
 }
 
 // One-off local glyphs, matching lr-attachment-trigger's convention of keeping single-use icons
@@ -100,6 +120,26 @@ export interface LyraPushToTalkEventMap {
  * @since 4.0.0
  */
 export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    pushToTalkCancelled: LYRA_DEFAULT_pushToTalkCancelled,
+    pushToTalkDenied: LYRA_DEFAULT_pushToTalkDenied,
+    pushToTalkError: LYRA_DEFAULT_pushToTalkError,
+    pushToTalkHold: LYRA_DEFAULT_pushToTalkHold,
+    pushToTalkRequesting: LYRA_DEFAULT_pushToTalkRequesting,
+    pushToTalkStart: LYRA_DEFAULT_pushToTalkStart,
+    pushToTalkStarted: LYRA_DEFAULT_pushToTalkStarted,
+    pushToTalkStop: LYRA_DEFAULT_pushToTalkStop,
+    pushToTalkStopped: LYRA_DEFAULT_pushToTalkStopped,
+    pushToTalkUnsupported: LYRA_DEFAULT_pushToTalkUnsupported,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) mode: PushToTalkMode = 'hold';
@@ -122,6 +162,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @state() private elapsedMs = 0;
+  /** The server-safe first-render answer is unsupported. A browser-only mount seeds its owner
+   *  realm before rendering; hydration keeps the server answer for one update, then corrects it. */
+  @state() private captureSupported = false;
 
   private _state: PushToTalkState = 'idle';
   /** Read-only recording lifecycle, reflected to the `data-state` attribute. Drive it via
@@ -146,14 +189,26 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private recorder?: MediaRecorder;
   private chunks: Blob[] = [];
   private recordingStartedAt = 0;
+  /** Window that granted the active capture. Native objects and scheduled work for a take stay
+   *  bound to this realm even if the custom element is adopted before the recorder stops. */
+  private captureWindow?: PushToTalkWindow;
   private cancelRequested = false;
   private recorderStopRequested = false;
-  private tickTimer?: ReturnType<typeof setInterval>;
-  private maxDurationTimer?: ReturnType<typeof setTimeout>;
+  private tickTimer?: OwnedTimer;
+  private maxDurationTimer?: OwnedTimer;
   private audioCtx?: AudioContext;
   private analyser?: AnalyserNode;
   private levelData?: Uint8Array<ArrayBuffer>;
-  private levelRafId?: number;
+  private levelFrame?: OwnedAnimationFrame;
+
+  /** Lit's server DOM intentionally gives custom elements no browser-owned document. */
+  private get ownerWindow(): Window | null {
+    return (this.ownerDocument as Document | undefined)?.defaultView ?? null;
+  }
+
+  private syncCaptureSupport(): void {
+    this.captureSupported = isPushToTalkSupported(this.ownerWindow);
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -165,7 +220,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (this._state === 'recording' || this._state === 'requesting') this.cancel();
   }
 
+  adoptedCallback(): void {
+    this.syncCaptureSupport();
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
+    if (this.hasUpdated) this.syncCaptureSupport();
+    else this.seedFirstRenderState(() => this.syncCaptureSupport());
     if (changed.has('disabled') && this.disabled && (this._state === 'recording' || this._state === 'requesting')) {
       this.cancel();
     }
@@ -181,7 +242,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   /** Programmatically starts/stops a take using the component's configured interaction mode. */
   override click(): void {
-    if (this.disabled || !isPushToTalkSupported()) return;
+    if (this.disabled || !isPushToTalkSupported(this.ownerWindow)) return;
     if (this.mode === 'toggle') {
       this.trigger?.click();
     } else if (this._state === 'recording') {
@@ -191,10 +252,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
   }
 
-  private resolveMimeType(): string {
+  private resolveMimeType(owner: PushToTalkWindow): string {
     if (this.mimeType) return this.mimeType;
     for (const candidate of CANDIDATE_MIME_TYPES) {
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(candidate)) return candidate;
+      if (owner.MediaRecorder.isTypeSupported?.(candidate)) return candidate;
     }
     return '';
   }
@@ -219,7 +280,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  is denied, errors, or the control is disabled/unsupported/already active/requesting. */
   async start(): Promise<boolean> {
     if (this.disabled || this._state === 'recording' || this._state === 'requesting') return false;
-    if (!isPushToTalkSupported()) return false;
+    const owner = this.ownerWindow;
+    if (!isPushToTalkSupported(owner)) return false;
+    this.captureWindow = owner;
     this.cancelRequested = false;
     this.setState('requesting');
     try {
@@ -229,59 +292,82 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
           ...(this.audioConstraints ?? {}),
         },
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (this.disabled || !this.isConnected || this.cancelRequested) {
+      const stream = await owner.navigator.mediaDevices.getUserMedia(constraints);
+      if (
+        this.disabled ||
+        !this.isConnected ||
+        this.cancelRequested ||
+        this.captureWindow !== owner ||
+        this.ownerWindow !== owner
+      ) {
         for (const track of stream.getTracks()) track.stop();
         this.cancelRequested = false;
+        if (this.captureWindow === owner) this.captureWindow = undefined;
         this.setState('idle');
         this.emit('lr-record-cancel');
         this.announce(this.localize('pushToTalkCancelled'));
         return false;
       }
       this._stream = stream;
-      const mimeType = this.resolveMimeType();
-      this.recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const mimeType = this.resolveMimeType(owner);
+      const recorder = new owner.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      this.recorder = recorder;
       this.recorderStopRequested = false;
       this.chunks = [];
-      this.recorder.ondataavailable = (e: BlobEvent) => {
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (this.recorder !== recorder || this.captureWindow !== owner) return;
         if (!e.data || e.data.size === 0) return;
         this.chunks.push(e.data);
         if (this.timesliceMs > 0) this.emit('lr-record-chunk', { blob: e.data });
       };
-      this.recorder.onstop = () => this.finalizeStop();
+      recorder.onstop = () => this.finalizeStop(recorder, owner);
       // Both duration-like properties are clamped right here, at the point they reach a native
       // timer/API, rather than by normalizing the public property itself -- same convention as
       // lr-playback's scheduleTick() for interval-ms. `> 0` already excludes NaN/negative (both
       // fail that comparison), but not Infinity or an oversized finite value that would otherwise
       // overflow setTimeout's 32-bit delay or fail MediaRecorder.start()'s unsigned-long timeslice.
       const timeslice = this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
-      this.recorder.start(timeslice);
-      this.recordingStartedAt = performance.now();
+      recorder.start(timeslice);
+      this.recordingStartedAt = owner.performance.now();
       this.elapsedMs = 0;
       this.setState('recording');
       this.emit('lr-record-start', { stream });
       this.announce(this.localize('pushToTalkStarted'));
-      if (this.levelEvents) this.startLevelMeter(stream);
+      if (this.levelEvents) this.startLevelMeter(stream, owner);
       if (this.maxDurationMs > 0) {
         const delay = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
-        this.maxDurationTimer = setTimeout(() => this.stop(), delay);
+        const timer: OwnedTimer = { owner, handle: 0 };
+        timer.handle = owner.setTimeout(() => {
+          if (this.maxDurationTimer !== timer || this.captureWindow !== owner) return;
+          this.maxDurationTimer = undefined;
+          this.stop();
+        }, delay);
+        this.maxDurationTimer = timer;
       }
       if (this.showTimer) {
-        this.tickTimer = setInterval(() => {
-          this.elapsedMs = performance.now() - this.recordingStartedAt;
+        const timer: OwnedTimer = { owner, handle: 0 };
+        timer.handle = owner.setInterval(() => {
+          if (this.tickTimer !== timer || this.captureWindow !== owner || this._state !== 'recording') return;
+          this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
         }, 1000);
+        this.tickTimer = timer;
       }
       return true;
     } catch (err) {
       this.teardownStream();
-      if (this.cancelRequested || this.disabled || !this.isConnected) {
+      if (
+        this.cancelRequested ||
+        this.disabled ||
+        !this.isConnected ||
+        this.ownerWindow !== owner
+      ) {
         this.cancelRequested = false;
         this.setState('idle');
         this.emit('lr-record-cancel');
         if (this.isConnected) this.announce(this.localize('pushToTalkCancelled'));
         return false;
       }
-      const denied = err instanceof DOMException && err.name === 'NotAllowedError';
+      const denied = typeof err === 'object' && err !== null && 'name' in err && err.name === 'NotAllowedError';
       this.setState(denied ? 'denied' : 'error');
       this.emit('lr-record-error', { error: err as DOMException | Error });
       this.announce(this.localize(denied ? 'pushToTalkDenied' : 'pushToTalkError'));
@@ -309,15 +395,17 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (cancelled) this.cancelRequested = true;
     if (this.recorderStopRequested) return;
     this.recorderStopRequested = true;
+    this.stopRuntimeLoops();
     const recorder = this.recorder;
     if (recorder && recorder.state !== 'inactive') recorder.stop();
   }
 
-  private finalizeStop(): void {
+  private finalizeStop(recorder: MediaRecorder, owner: PushToTalkWindow): void {
+    if (this.recorder !== recorder || this.captureWindow !== owner) return;
     const cancelled = this.cancelRequested;
-    const durationMs = Math.round(performance.now() - this.recordingStartedAt);
-    const mimeType = this.recorder?.mimeType || this.resolveMimeType() || 'audio/webm';
-    const blob = new Blob(this.chunks, { type: mimeType });
+    const durationMs = Math.round(owner.performance.now() - this.recordingStartedAt);
+    const mimeType = recorder.mimeType || this.resolveMimeType(owner) || 'audio/webm';
+    const blob = new owner.Blob(this.chunks, { type: mimeType });
     this.teardownStream();
     this.setState('idle');
     if (cancelled) {
@@ -333,35 +421,47 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private teardownStream(): void {
     for (const track of this._stream?.getTracks() ?? []) track.stop();
     this._stream = null;
+    if (this.recorder) {
+      this.recorder.ondataavailable = null;
+      this.recorder.onstop = null;
+    }
     this.recorder = undefined;
     this.recorderStopRequested = false;
     this.chunks = [];
-    if (this.tickTimer !== undefined) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = undefined;
-    }
-    if (this.maxDurationTimer !== undefined) {
-      clearTimeout(this.maxDurationTimer);
-      this.maxDurationTimer = undefined;
-    }
+    this.stopRuntimeLoops();
+    this.captureWindow = undefined;
+  }
+
+  private stopRuntimeLoops(): void {
+    if (this.tickTimer) this.tickTimer.owner.clearInterval(this.tickTimer.handle);
+    this.tickTimer = undefined;
+    if (this.maxDurationTimer) this.maxDurationTimer.owner.clearTimeout(this.maxDurationTimer.handle);
+    this.maxDurationTimer = undefined;
     this.stopLevelMeter();
   }
 
-  private startLevelMeter(stream: MediaStream): void {
-    const AudioCtxCtor =
-      window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  private startLevelMeter(stream: MediaStream, owner: PushToTalkWindow): void {
+    const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
     if (!AudioCtxCtor) return;
-    this.audioCtx = new AudioCtxCtor();
-    const source = this.audioCtx.createMediaStreamSource(stream);
-    this.analyser = this.audioCtx.createAnalyser();
+    const audioCtx = new AudioCtxCtor();
+    this.audioCtx = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    this.analyser = audioCtx.createAnalyser();
     this.analyser.fftSize = 256;
     source.connect(this.analyser);
-    this.levelData = new Uint8Array(this.analyser.frequencyBinCount);
-    this.tickLevel();
+    this.levelData = new owner.Uint8Array(this.analyser.frequencyBinCount);
+    this.sampleLevel(owner);
   }
 
-  private tickLevel = (): void => {
-    if (!this.analyser || !this.levelData || this._state !== 'recording') return;
+  private sampleLevel(owner: PushToTalkWindow): void {
+    if (
+      !this.analyser ||
+      !this.levelData ||
+      this._state !== 'recording' ||
+      this.captureWindow !== owner
+    ) {
+      return;
+    }
     this.analyser.getByteTimeDomainData(this.levelData);
     let sumSquares = 0;
     for (const v of this.levelData) {
@@ -370,14 +470,19 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
     const rms = Math.sqrt(sumSquares / this.levelData.length);
     this.emit('lr-level', { level: Math.min(1, rms) });
-    this.levelRafId = requestAnimationFrame(this.tickLevel);
-  };
+    const request: OwnedAnimationFrame = { owner, handle: 0 };
+    request.handle = owner.requestAnimationFrame(() => {
+      if (this.levelFrame !== request) return;
+      this.levelFrame = undefined;
+      if (!this.isConnected || this.ownerWindow !== owner) return;
+      this.sampleLevel(owner);
+    });
+    this.levelFrame = request;
+  }
 
   private stopLevelMeter(): void {
-    if (this.levelRafId !== undefined) {
-      cancelAnimationFrame(this.levelRafId);
-      this.levelRafId = undefined;
-    }
+    if (this.levelFrame) this.levelFrame.owner.cancelAnimationFrame(this.levelFrame.handle);
+    this.levelFrame = undefined;
     this.analyser = undefined;
     this.levelData = undefined;
     if (this.audioCtx) {
@@ -397,7 +502,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private onPointerDown = (e: PointerEvent): void => {
     if (this.mode !== 'hold' || this.disabled) return;
     e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Firefox throws NotFoundError when a synthetic pointerdown carries an id that is not in its
+    // active-pointer registry; a real pointer can also disappear between dispatch and capture.
+    // Capture improves release delivery but is not a prerequisite for requesting the microphone,
+    // so that platform race must not abort the gesture.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Continue with the hold gesture; pointerup/blur/cancel still share the same release path.
+    }
     void this.start();
   };
   private onPointerUp = (): void => {
@@ -464,7 +577,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private get statusText(): string {
-    if (!isPushToTalkSupported()) return this.localize('pushToTalkUnsupported');
+    if (!this.captureSupported) return this.localize('pushToTalkUnsupported');
     switch (this._state) {
       case 'requesting':
         return this.localize('pushToTalkRequesting');
@@ -478,7 +591,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   override render(): TemplateResult {
-    const supported = isPushToTalkSupported();
+    const supported = this.captureSupported;
     const recording = this._state === 'recording';
     const status = this.statusText;
     return html`

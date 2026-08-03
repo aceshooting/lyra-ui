@@ -2,7 +2,7 @@
 
 # `lr-pagination`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/pagination/pagination.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-pagination.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPagination`, also available unregistered from `@aceshooting/lyra-ui/components/data/pagination/pagination.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -197,7 +197,7 @@ pagination.hrefTemplate = (page) =>
 **Known gotchas:**
 - user activation only emits an intent. Until the host applies a new `page`, the numeric input
   returns to the currently controlled value; assigning the page triggers the localized
-  `role="status"` announcement
+  announcement in the shared light-DOM polite sink
 - cancel `lr-before-page-change` for a policy veto; preventing `lr-page-change` has no effect because
   that second event is the accepted, non-cancelable controlled intent
 - the jump input accepts only whole pages in `1..pageCount`; empty, fractional, and out-of-range

@@ -2,7 +2,7 @@
 
 # `lr-pie-chart`
 
-- **Import** `import '@aceshooting/lyra-ui/components/charts/chart/pie-chart.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-pie-chart.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPieChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/pie-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -46,8 +46,9 @@ index, label, value }`).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
-rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load — see
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
+failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,

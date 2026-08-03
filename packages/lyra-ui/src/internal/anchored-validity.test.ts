@@ -41,6 +41,72 @@ it("falls back to host validity when the connected anchor is not a legal descend
   anchor.remove();
 });
 
+it("recognizes a foreign-realm NotFoundError without swallowing a lookalike", () => {
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const anchor = document.createElement("input");
+  document.body.append(anchor);
+  try {
+    const foreignError = new frame.contentWindow!.DOMException("Not a descendant", "NotFoundError");
+    expect(foreignError instanceof DOMException, "not the ambient-realm brand").to.be.false;
+    const calls: unknown[][] = [];
+    const internals = {
+      setValidity: (...args: unknown[]) => {
+        calls.push(args);
+        if (args.length === 3) throw foreignError;
+      },
+    };
+    const controller = new AnchoredValidityController(
+      { addController: () => {} },
+      internals as unknown as ElementInternals,
+      () => anchor,
+    );
+
+    expect(() => controller.setValidity({ valueMissing: true }, "Required")).not.to.throw();
+    expect(calls).to.have.length(2);
+
+    const lookalike = { name: "NotFoundError" };
+    const spoofingInternals = {
+      setValidity: (...args: unknown[]) => {
+        if (args.length === 3) throw lookalike;
+      },
+    };
+    const spoofingController = new AnchoredValidityController(
+      { addController: () => {} },
+      spoofingInternals as unknown as ElementInternals,
+      () => anchor,
+    );
+    let thrown: unknown;
+    try {
+      spoofingController.setValidity({ valueMissing: true }, "Required");
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown === lookalike, "the lookalike is rethrown unchanged").to.be.true;
+
+    const runtime = globalThis as unknown as { DOMException?: typeof DOMException };
+    const NativeDOMException = runtime.DOMException;
+    try {
+      runtime.DOMException = undefined;
+      let partialDomThrown: unknown;
+      try {
+        controller.setValidity({ valueMissing: true }, "Required");
+      } catch (error) {
+        partialDomThrown = error;
+      }
+      expect(
+        partialDomThrown === foreignError,
+        "without a brand-checking intrinsic, the foreign error is rethrown unchanged",
+      ).to.be.true;
+    } finally {
+      runtime.DOMException = NativeDOMException;
+    }
+  } finally {
+    anchor.remove();
+    frame.remove();
+  }
+});
+
 it("uses a connected descendant anchor without a host fallback", () => {
   const host = document.createElement("div");
   const anchor = document.createElement("input");

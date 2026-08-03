@@ -11,6 +11,11 @@ import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_numberInputDecrease, LYRA_DEFAULT_numberInputIncrease, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Number-input events, including the native cancelable edit veto exposed by its mapped API. */
 export interface LyraNumberInputEventMap extends LyraInputEventMap {
@@ -55,6 +60,22 @@ export interface LyraNumberInputEventMap extends LyraInputEventMap {
  * @since 4.0.0
  */
 export class LyraNumberInput extends LyraInput {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    numberInputDecrease: LYRA_DEFAULT_numberInputDecrease,
+    numberInputIncrease: LYRA_DEFAULT_numberInputIncrease,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, inputStyles, numberInputStyles];
 
   protected override get inputWrapperParts(): string {

@@ -137,6 +137,107 @@ describe('lr-compare-panel', () => {
     expect(paneB.scrollTop).to.be.greaterThan(0);
   });
 
+  it('owns scroll-sync frames in the adopted window and clears suppression on cleanup', async () => {
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
+    await el.updateComplete;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalMainRequest = window.requestAnimationFrame;
+    const originalMainCancel = window.cancelAnimationFrame;
+    const originalFrameRequest = frameWindow.requestAnimationFrame;
+    const originalFrameCancel = frameWindow.cancelAnimationFrame;
+    const mainFrames = new Map<number, FrameRequestCallback>();
+    const frameFrames = new Map<number, FrameRequestCallback>();
+    const frameCancellations: number[] = [];
+    let mainHandle = 6200;
+    let frameHandle = 7200;
+
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++mainHandle;
+      mainFrames.set(handle, callback);
+      return handle;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((handle: number) => {
+      mainFrames.delete(handle);
+    }) as typeof window.cancelAnimationFrame;
+    frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++frameHandle;
+      frameFrames.set(handle, callback);
+      return handle;
+    }) as typeof frameWindow.requestAnimationFrame;
+    frameWindow.cancelAnimationFrame = ((handle: number) => {
+      frameCancellations.push(handle);
+      frameFrames.delete(handle);
+    }) as typeof frameWindow.cancelAnimationFrame;
+
+    try {
+      frameDocument.adoptNode(el);
+      expect(frameFrames.size, 'detached adoption never arms scroll synchronization').to.equal(0);
+      frameDocument.body.append(el);
+      el.syncScroll = true;
+      await el.updateComplete;
+
+      const paneA = el.shadowRoot!.querySelector('[part="pane-a"]') as HTMLElement;
+      const paneB = el.shadowRoot!.querySelector('[part="pane-b"]') as HTMLElement;
+      let sourceTop = 50;
+      let destinationTop = 0;
+      Object.defineProperties(paneA, {
+        scrollHeight: { configurable: true, value: 200 },
+        clientHeight: { configurable: true, value: 100 },
+        scrollTop: {
+          configurable: true,
+          get: () => sourceTop,
+          set: (value: number) => {
+            sourceTop = value;
+          },
+        },
+      });
+      Object.defineProperties(paneB, {
+        scrollHeight: { configurable: true, value: 200 },
+        clientHeight: { configurable: true, value: 100 },
+        scrollTop: {
+          configurable: true,
+          get: () => destinationTop,
+          set: (value: number) => {
+            destinationTop = value;
+          },
+        },
+      });
+
+      paneA.dispatchEvent(new Event('scroll'));
+      expect(destinationTop).to.equal(50);
+      expect(mainFrames.size, 'the parent window must not own an iframe sync frame').to.equal(0);
+      expect(frameFrames.size).to.equal(1);
+      const [oldHandle, staleFrame] = Array.from(frameFrames.entries())[0]!;
+
+      document.adoptNode(el);
+      expect(frameCancellations, 'adoption cancels through the retained source owner').to.include(oldHandle);
+      expect(mainFrames.size, 'detached adoption does not re-arm scroll sync').to.equal(0);
+      document.body.append(el);
+
+      sourceTop = 25;
+      destinationTop = 0;
+      paneA.dispatchEvent(new Event('scroll'));
+      expect(destinationTop, 'cleanup releases suppression before reconnect').to.equal(25);
+      expect(mainFrames.size).to.equal(1);
+
+      staleFrame(0);
+      sourceTop = 75;
+      paneA.dispatchEvent(new Event('scroll'));
+      expect(mainFrames.size, 'a stale frame cannot release the current sync guard').to.equal(1);
+      expect(destinationTop).to.equal(25);
+    } finally {
+      el.remove();
+      window.requestAnimationFrame = originalMainRequest;
+      window.cancelAnimationFrame = originalMainCancel;
+      frameWindow.requestAnimationFrame = originalFrameRequest;
+      frameWindow.cancelAnimationFrame = originalFrameCancel;
+      iframe.remove();
+    }
+  });
+
   it('does not sync scroll between panes when sync-scroll is unset (the default)', async () => {
     const el = (await fixture(html`
       <lr-compare-panel style="--lr-compare-panel-max-height: 50px">

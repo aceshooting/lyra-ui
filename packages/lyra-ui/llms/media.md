@@ -33,16 +33,18 @@ rewrite it rather than leaving it in place.
 **Slots:** none.
 
 **CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
-(the localized `role="alert"` rendered instead when the peer resolver is unavailable or rejects)
+(ordinary localized visible text rendered instead when the peer resolver is unavailable or rejects)
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
-image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
+image when `country` or `language` is used. Import
+`@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, the component fails closed with a localized `[part="error"]` alert (see gotchas).
+installed, the component fails closed with localized visible `[part="error"]` text and a shared
+light-DOM assertive announcement (see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -59,7 +61,8 @@ tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throw
 those rather than falling back, and a language picker should degrade to showing the raw tag rather
 than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
 
-**Locale picker recipe.** `<lr-locale-picker>` (`components/forms/locale-picker/`) is the built-in
+**Locale picker recipe.** `<lr-locale-picker>`
+(`@aceshooting/lyra-ui/components/lr-locale-picker.js`) is the built-in
 locale switcher — a closed-list dropdown over the locale registry or an explicit catalog, with
 `lr-flag`/`localeNativeName()` rows and full form association out of the box. The manual
 composition below remains available for an app that wants different chrome (its own dismiss
@@ -107,12 +110,17 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 **Known gotchas:**
-- `country`/`language` resolution is opt-in through `components/flag/flag-peer.js`; the root barrel
+- `country`/`language` resolution is opt-in through
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
-  `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
-  the host) while resolving, then **fails closed** into a localized `<span part="error" role="alert">`
-  (the `flagLoadError` message key, `"Flag unavailable"` by default) plus a one-time `console.warn`
+  decorative `<lr-skeleton variant="rect" announce="false">` placeholder while resolving. The
+  host exposes `aria-busy="true"`, and ordinary sr-only text preserves the localized `loading`
+  label without creating a shadow live region. Resolution failure then **fails closed** into ordinary localized
+  `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
+  Each fresh failure appends that same localized message to the document's pre-mounted
+  `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
+  retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
   page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
@@ -152,7 +160,8 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 
 **Additional API surface:**
 
-- `part="error"` — Localized alert rendered when the optional peer resolver is unavailable or fails.
+- `part="error"` — Ordinary localized visible text rendered when the optional peer resolver is
+  unavailable or fails; the fresh transition is announced by the shared light-DOM assertive sink.
 
 ---
 
@@ -222,12 +231,15 @@ dimming at `length <= 1`), `--lr-focus-ring-*`.
 ## `lr-map`
 
 A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
-and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anything unexposed.
+and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for common imperative
+operations. Its runtime value is the underlying MapLibre map.
 
 **Properties:**
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
-- `mapStyle: StyleSpecification | string = DEFAULT_STYLE` (attribute: false) — the default is a
+- `mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE` (attribute: false) —
+  `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from MapLibre's
+  `StyleSpecification`, including its string or multi-sprite form. The default is a
   basic OSM raster tile style pointing at **OpenStreetMap's shared demo tile server**. Fine for
   local development, but its usage policy forbids bulk/production traffic, requires an identifying
   User-Agent, and rate-limits or IP-blocks non-compliant clients
@@ -268,7 +280,11 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
   `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
 
-**Getters:** `map` → the raw `maplibregl.Map` instance.
+**Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
+through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
+`resize()` subset so merely importing Lyra does not require `maplibre-gl` declarations. A consumer
+that installed the optional peer and needs its full imperative API can explicitly narrow the runtime
+value to `maplibregl.Map`.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
 (`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
@@ -276,9 +292,10 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (`role="alert"` message
-rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load, e.g.
-not installed)
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (ordinary localized visible
+text rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load,
+e.g. not installed). The post-mount failure is appended to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
@@ -323,8 +340,9 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   already calling `setCenter`/`setZoom`) — the choropleth and `dataLayers` are both automatically
   re-applied once the new style's own `'style.load'` fires, since a style change wipes every
   layer/source maplibre-gl knows about.
-- Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
-  hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- Point markers now have a declarative API (`markers`, above) with popup support — narrowing the
+  runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
+  way to place pins.
 - A marker uses `label` as its accessible name, falling back to the localized map label. Popup
   ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
@@ -341,8 +359,10 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   to the legend swatch's `background`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders).
-- while the `maplibre-gl` peer is resolving, the host shows a `<lr-skeleton variant="rect">` with
-  `aria-busy="true"` in place of the map container.
+- while the `maplibre-gl` peer is resolving, the host/base expose `aria-busy="true"` and show a
+  decorative `<lr-skeleton variant="rect" announce="false">` in place of the map container.
+  Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
+  region.
 - construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this
   element being observed intersecting the viewport (`IntersectionObserver`), independent of whether
   the `maplibre-gl` peer has already loaded — an off-screen `<lr-map>` swaps its skeleton for the
@@ -363,7 +383,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
-- `fileCount: number` and `dragging: boolean` (read-only)
+- `fileCount: number = 0` and `dragging: boolean = false` — writable public state. Assigning
+  `files` resynchronizes `fileCount` to the selected-file count; the next real drag event resumes
+  ownership of `dragging` and its accept/reject state.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -549,8 +571,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
 **Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
-native bubbling/composed `change` when that range gesture commits; plus composed `focus` and
-`blur` events from the internal range input.
+`lr-change` and native bubbling/composed `change` when that range gesture commits; plus composed
+`focus` and `blur` events from the internal range input.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
@@ -743,7 +765,8 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 
 **CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size`, `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
-for `pending`/`done`), `progress`, `progress-fill`, `spinner`, `retry-button`, `preview-button`,
+for `pending`/`done`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
+adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 `remove-button`
 
 **`status-text` carries no live-region role (public surface change).** It is plain visible text
@@ -1420,7 +1443,10 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
-  The independent `[part="live-region"]` announcement remains active when the counter is hidden.
+  Spoken position updates remain active when the counter is hidden: the shadow
+  `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
+  shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor
+  is excluded from the accessibility tree.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
@@ -1444,8 +1470,10 @@ between the counter and the close button.
 
 **CSS parts:** `backdrop`, `panel` (`role="dialog"` + `aria-modal="true"` while open; fills the
 padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible localized "Image N of
-Total"), `live-region` (visually-hidden `role="status"` that announces position on *every* `index`
-change, including consumer-driven ones), `actions` (wrapper, `hidden` when nothing is slotted),
+Total"), `live-region` (an `aria-hidden` shadow text mirror; each post-mount `index` change,
+including a consumer-driven one, appends the localized position to the document's shared
+`[data-lr-live-region="polite"]` sink; initial mount and reconnect are silent), `actions` (wrapper,
+`hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
 embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
@@ -1495,6 +1523,11 @@ generation-guarded, including across disconnect/reconnect.
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
 changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.
 
+`error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
+failure appends the localized message to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink; identical retries append distinct children, and sink
+ownership is released/reacquired across disconnect or document adoption.
+
 ## `lr-image-viewer`
 
 A full pan/zoom raster-image viewer with labeled region highlights and opt-in region annotation, the
@@ -1523,6 +1556,11 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+`error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
+failure or transition to an unsafe source appends the localized message to the document's
+pre-mounted `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains
+visible but does not interrupt on mount; identical later failures append distinct children.
 
 While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
 Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
@@ -1603,6 +1641,11 @@ inside), `cue-match` (added alongside `cue` on a row matching the current search
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
 `cue-time`, `cue-speaker`, `cue-text`, and `error`.
 
+`error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
+playback, or unsafe-source failure appends the localized message to the document's pre-mounted
+`[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains visible but does
+not interrupt on mount; identical later failures append distinct children.
+
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a
 consumer stylesheet. The three cue states are separate part *names* rather than attribute selectors,
@@ -1645,15 +1688,16 @@ can be set on the element or on any ancestor.
 
 ## `lr-video`
 
-An inline native video player with custom controls, safe declarative sources/tracks, selectable
-captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video API under
-the `lr-` prefix. Import the granular registration entry with
+Experimental inline native video player with custom controls, safe declarative sources/tracks,
+selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
+API under the `lr-` prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video/video.js'`.
 
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
 `autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
-`current-time`), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
+`currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
+accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
 'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`, `playing:
 boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload: 'auto' |
 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
@@ -1717,9 +1761,9 @@ failed, or empty thumbnail files fail closed to no preview; no caught remote err
 
 ## `lr-video-playlist`
 
-A direct-child `<lr-video>` playlist with a visible current-video stage and keyboard-navigable item
-list. It mirrors the public Web Awesome Video Playlist API under the `lr-` prefix. Import the
-granular registration entry with
+Experimental direct-child `<lr-video>` playlist with a visible current-video stage and
+keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
+prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js'`.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every

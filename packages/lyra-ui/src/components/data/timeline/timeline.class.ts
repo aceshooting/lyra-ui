@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './timeline.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_timeline } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type TimelineOrientation = 'vertical' | 'horizontal';
 
@@ -40,6 +45,14 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  * @since 4.0.0
  */
 export class LyraTimeline extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    timeline: LYRA_DEFAULT_timeline,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an

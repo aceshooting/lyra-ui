@@ -5,6 +5,11 @@ import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import '../markdown/markdown.class.js';
 import { styles } from './streaming-text.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_COALESCE_MS = 50;
 
@@ -128,6 +133,19 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * @since 4.0.0
  */
 export class LyraStreamingText extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The full current text so far -- always the complete string, never a
@@ -186,6 +204,8 @@ export class LyraStreamingText extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.coalescer.setTimerHost(ownerWindow);
     if (this.hasUpdated && this.displayedContent !== this.content) {
       this.coalescer.announce(this.content, { force: true });
     }
@@ -237,6 +257,11 @@ export class LyraStreamingText extends LyraElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.coalescer.cancel();
+  }
+
+  adoptedCallback(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.coalescer.setTimerHost(ownerWindow);
   }
 
   /** Whether Markdown mode is actually in effect right now, resolving the

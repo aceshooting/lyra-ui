@@ -14,6 +14,11 @@ import { tag } from '../../../internal/prefix.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraVideo, LyraVideoControls } from '../video/video.js';
 import { styles } from './video-playlist.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraVideoPlaylistRepeat = 'none' | 'one' | 'all';
 
@@ -149,10 +154,21 @@ function frozenTrack(
  * @csspart playlist-item - An individual playlist item button.
  * @csspart playlist-thumbnail - Thumbnail within a playlist item.
  * @csspart playlist-title - Title text within a playlist item.
- * @status stable
+ * @status experimental
  * @since 8.0.0
  */
 export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    pause: LYRA_DEFAULT_pause,
+    play: LYRA_DEFAULT_play,
+    videoPlaylistLabel: LYRA_DEFAULT_videoPlaylistLabel,
+    videoPlaylistUntitled: LYRA_DEFAULT_videoPlaylistUntitled,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Controls preset forwarded to every direct child video. */
@@ -216,7 +232,10 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
 
   private observeChildren(): void {
     this.mutationObserver?.disconnect();
-    this.mutationObserver = new MutationObserver(() => {
+    this.mutationObserver = undefined;
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.mutationObserver = new MutationObserverCtor(() => {
       this.scheduleAfterUpdate(() => {
         this.reconcileChildren();
         this.requestUpdate();
@@ -288,8 +307,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     // platform has already blurred it, and there is no way left to tell "the user was on this row"
     // apart from "focus was never in the playlist at all".
     const rovingHadFocus =
-      this.shadowRoot?.activeElement instanceof HTMLElement &&
-      this.shadowRoot.activeElement.getAttribute('part') === 'playlist-item';
+      this.shadowRoot?.activeElement?.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
 
     for (const video of previousVideos) {

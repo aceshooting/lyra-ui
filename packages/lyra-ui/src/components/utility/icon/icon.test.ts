@@ -1,4 +1,5 @@
 import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './icon.js';
 import type { LyraIcon } from './icon.js';
 import { getIconLibrary, registerIconLibrary, unregisterIconLibrary } from './icon-library.js';
@@ -93,6 +94,58 @@ it('tracks assigned SVG attribute and descendant mutations only while connected'
   expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M3 3');
 });
 
+it('clones and observes custom SVG content with the adopted owner-document realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const frameDocument = frame.contentDocument!;
+    // Upgrade and render in the defining realm first; Lit constructed stylesheets cannot be
+    // installed for the first time in a different document.
+    const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+    el.remove();
+    frameDocument.adoptNode(el);
+    const group = frameDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const path = frameDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M1 1');
+    group.append(path);
+    el.append(group);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+
+    const copy = el.shadowRoot!.querySelector<SVGPathElement>('svg > g > path');
+    expect(Boolean(copy), 'foreign-realm Element checks do not discard assigned geometry').to.be.true;
+    expect(copy!.ownerDocument === frameDocument).to.be.true;
+    path.setAttribute('d', 'M2 2');
+    await aTimeout(0);
+    expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M2 2');
+    expect(
+      Boolean(frameDocument.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)),
+      'the adopted icon acquires its sink in the active document',
+    ).to.be.true;
+  } finally {
+    frame.remove();
+  }
+});
+
+it('pre-mounts and releases its assertive remote-error announcement sink', async () => {
+  const el = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
+  const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+  const sink = document.querySelector<HTMLElement>(selector)!;
+
+  expect(Boolean(sink), 'the sink exists before any remote load can fail').to.be.true;
+  expect(sink.parentElement === document.body).to.be.true;
+  expect(sink.childElementCount).to.equal(0);
+
+  el.remove();
+  expect(document.querySelector(selector) === null, 'the last icon holder releases the sink').to.be.true;
+
+  document.body.append(el);
+  const reconnected = document.querySelector<HTMLElement>(selector)!;
+  expect(Boolean(reconnected), 'reconnect acquires a fresh owner-document sink').to.be.true;
+  expect(reconnected.childElementCount, 'reconnect does not replay stale state').to.equal(0);
+  el.remove();
+});
+
 // ---------------------------------------------------------------------------
 // Icon libraries, remote `src`, and the sanitization pipeline
 // ---------------------------------------------------------------------------
@@ -182,6 +235,137 @@ describe('lr-icon icon libraries', () => {
     }
   });
 
+  it('imports a cached canonical SVG into the adopted owner realm before running a mutator', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameView = frame.contentWindow!;
+    const originalOwnerFetch = frameView.fetch;
+    frameView.fetch = (() => Promise.resolve(svgResponse(CIRCLE_SVG))) as typeof frameView.fetch;
+    try {
+      const frameDocument = frame.contentDocument!;
+      let mutatorDocument: Document | undefined;
+      registerIconLibrary('owner-realm-lib', {
+        resolver: () => 'https://icons.test/owner-realm.svg',
+        mutator: (svg) => {
+          mutatorDocument = svg.ownerDocument;
+        },
+      });
+      const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      el.remove();
+      el.library = 'owner-realm-lib';
+      el.name = 'star';
+      frameDocument.adoptNode(el);
+      const loaded = oneEvent(el, 'lr-load');
+      frameDocument.body.append(el);
+      await loaded;
+
+      expect(mutatorDocument === frameDocument).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.ownerDocument === frameDocument).to.be.true;
+    } finally {
+      unregisterIconLibrary('owner-realm-lib');
+      __clearIconResourceCacheForTesting();
+      frameView.fetch = originalOwnerFetch;
+      frame.remove();
+    }
+  });
+
+  it('resolves and fetches relative sources in each pre-connect adopted owner realm', async () => {
+    const firstFrame = document.createElement('iframe');
+    const secondFrame = document.createElement('iframe');
+    document.body.append(firstFrame, secondFrame);
+    const firstView = firstFrame.contentWindow!;
+    const secondView = secondFrame.contentWindow!;
+    const originalAmbientFetch = window.fetch;
+    const originalFirstFetch = firstView.fetch;
+    const originalSecondFetch = secondView.fetch;
+    const firstRequests: string[] = [];
+    const secondRequests: string[] = [];
+    let ambientRequests = 0;
+    try {
+      const firstBase = firstFrame.contentDocument!.createElement('base');
+      firstBase.href = 'https://first-owner.test/app/';
+      firstFrame.contentDocument!.head.append(firstBase);
+      const secondBase = secondFrame.contentDocument!.createElement('base');
+      secondBase.href = 'https://second-owner.test/dashboard/';
+      secondFrame.contentDocument!.head.append(secondBase);
+
+      window.fetch = (() => {
+        ambientRequests += 1;
+        return Promise.reject(new Error('ambient fetch must not service an adopted icon'));
+      }) as typeof window.fetch;
+      firstView.fetch = ((input: RequestInfo | URL) => {
+        firstRequests.push(String(input));
+        return Promise.resolve(svgResponse(CIRCLE_SVG));
+      }) as typeof firstView.fetch;
+      secondView.fetch = ((input: RequestInfo | URL) => {
+        secondRequests.push(String(input));
+        return Promise.resolve(svgResponse(RECT_SVG));
+      }) as typeof secondView.fetch;
+
+      // Render once in the defining realm so Lit can install its shared constructed stylesheet;
+      // the remote source itself is still configured and first loaded only after disconnected
+      // adoption into the destination document.
+      const first = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      first.remove();
+      firstFrame.contentDocument!.adoptNode(first);
+      first.src = 'icons/shared.svg';
+      const firstLoaded = oneEvent(first, 'lr-load');
+      firstFrame.contentDocument!.body.append(first);
+
+      const second = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      second.remove();
+      secondFrame.contentDocument!.adoptNode(second);
+      second.src = 'icons/shared.svg';
+      const secondLoaded = oneEvent(second, 'lr-load');
+      secondFrame.contentDocument!.body.append(second);
+      await Promise.all([firstLoaded, secondLoaded]);
+
+      expect(ambientRequests).to.equal(0);
+      expect(firstRequests).to.deep.equal(['https://first-owner.test/app/icons/shared.svg']);
+      expect(secondRequests).to.deep.equal([
+        'https://second-owner.test/dashboard/icons/shared.svg',
+      ]);
+      expect(first.shadowRoot!.querySelectorAll('[part="svg"] circle').length).to.equal(1);
+      expect(second.shadowRoot!.querySelectorAll('[part="svg"] rect').length).to.equal(1);
+
+      // An absolute URL can still produce different responses in different client contexts
+      // (same-origin credentials, service workers, and policy all belong to the calling window),
+      // so the canonical cache must not let one owner satisfy another owner's request.
+      const firstShared = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      firstShared.remove();
+      firstFrame.contentDocument!.adoptNode(firstShared);
+      firstShared.src = 'https://shared-icons.test/icon.svg';
+      const firstSharedLoaded = oneEvent(firstShared, 'lr-load');
+      firstFrame.contentDocument!.body.append(firstShared);
+
+      const secondShared = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      secondShared.remove();
+      secondFrame.contentDocument!.adoptNode(secondShared);
+      secondShared.src = 'https://shared-icons.test/icon.svg';
+      const secondSharedLoaded = oneEvent(secondShared, 'lr-load');
+      secondFrame.contentDocument!.body.append(secondShared);
+      await Promise.all([firstSharedLoaded, secondSharedLoaded]);
+
+      expect(firstRequests).to.deep.equal([
+        'https://first-owner.test/app/icons/shared.svg',
+        'https://shared-icons.test/icon.svg',
+      ]);
+      expect(secondRequests).to.deep.equal([
+        'https://second-owner.test/dashboard/icons/shared.svg',
+        'https://shared-icons.test/icon.svg',
+      ]);
+      expect(firstShared.shadowRoot!.querySelectorAll('[part="svg"] circle').length).to.equal(1);
+      expect(secondShared.shadowRoot!.querySelectorAll('[part="svg"] rect').length).to.equal(1);
+    } finally {
+      window.fetch = originalAmbientFetch;
+      firstView.fetch = originalFirstFetch;
+      secondView.fetch = originalSecondFetch;
+      __clearIconResourceCacheForTesting();
+      firstFrame.remove();
+      secondFrame.remove();
+    }
+  });
+
   it('strips scripting from fetched SVG markup before it reaches the DOM', async () => {
     const flag = window as unknown as Record<string, unknown>;
     delete flag['__lrIconXss'];
@@ -225,7 +409,7 @@ describe('lr-icon icon libraries', () => {
     }
   });
 
-  it('renders a localized alert, not the raw failure text, when the fetch fails', async () => {
+  it('announces a localized failure through light DOM, not a shadow live region', async () => {
     const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
     try {
       const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
@@ -233,11 +417,36 @@ describe('lr-icon icon libraries', () => {
       el.src = 'https://icons.test/missing.svg';
       await errored;
       const alert = el.shadowRoot!.querySelector('[part="error"]')!;
-      expect(alert.getAttribute('role')).to.equal('alert');
+      expect(alert.getAttribute('role')).to.equal(null);
+      expect(alert.getAttribute('aria-hidden')).to.equal('true');
       expect(alert.textContent!.trim().length > 0).to.be.true;
       expect(alert.textContent!.includes('404')).to.be.false;
       expect(alert.textContent!.includes('Not Found')).to.be.false;
+      const sink = document.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+      )!;
+      expect(sink.parentElement === document.body).to.be.true;
+      expect(sink.childElementCount).to.equal(1);
+      expect(sink.textContent).to.equal(alert.textContent);
       expect(partCount(el, 'svg')).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps a remote failure silent while the icon host is hidden', async () => {
+    const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
+    try {
+      const el = (await fixture(html`<lr-icon hidden></lr-icon>`)) as LyraIcon;
+      const sink = document.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+      )!;
+      const errored = oneEvent(el, 'lr-error');
+      el.src = 'https://icons.test/hidden-missing.svg';
+      await errored;
+
+      expect(sink.childElementCount).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
     } finally {
       restore();
     }

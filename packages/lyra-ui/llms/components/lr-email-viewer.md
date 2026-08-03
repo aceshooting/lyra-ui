@@ -2,7 +2,7 @@
 
 # `lr-email-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-email-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEmailViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -38,9 +38,18 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
-`lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
-`Uint8Array` of the decoded attachment — an attachment button was activated.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or parsing fails.
+- `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
+  `Uint8Array` of the decoded attachment — an attachment button was activated.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-message search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered message.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,

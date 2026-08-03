@@ -207,6 +207,61 @@ describe('lr-document-compare', () => {
       paneNew.dispatchEvent(new Event('scroll'));
       expect(paneOld.scrollTop).to.equal(oldMax);
     });
+
+    it('cancels a pending scroll-sync frame through its scheduling window when adopted', async () => {
+      const el = await sideBySideFixture();
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      Object.defineProperties(paneOld, {
+        scrollHeight: { configurable: true, value: 600 },
+        clientHeight: { configurable: true, value: 100 },
+      });
+      Object.defineProperties(paneNew, {
+        scrollHeight: { configurable: true, value: 300 },
+        clientHeight: { configurable: true, value: 100 },
+      });
+      const oldMax = paneOld.scrollHeight - paneOld.clientHeight;
+      const iframe = document.createElement('iframe');
+      document.body.append(iframe);
+      const frameDocument = iframe.contentDocument!;
+      const frameWindow = iframe.contentWindow!;
+      const originalRequest = window.requestAnimationFrame;
+      const originalCancel = window.cancelAnimationFrame;
+      const originalFrameRequest = frameWindow.requestAnimationFrame;
+      const originalFrameCancel = frameWindow.cancelAnimationFrame;
+      const cancelled: number[] = [];
+      let nextHandle = 500;
+      let frameRequests = 0;
+      window.requestAnimationFrame = (() => ++nextHandle) as typeof window.requestAnimationFrame;
+      window.cancelAnimationFrame = ((handle: number) => { cancelled.push(handle); }) as typeof window.cancelAnimationFrame;
+      frameWindow.requestAnimationFrame = (() => {
+        frameRequests++;
+        return ++nextHandle;
+      }) as typeof frameWindow.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = (() => undefined) as typeof frameWindow.cancelAnimationFrame;
+      try {
+        paneOld.scrollTop = oldMax;
+        paneOld.dispatchEvent(new Event('scroll'));
+        const oldOwnerHandle = nextHandle;
+
+        frameDocument.body.append(el);
+        expect(cancelled).to.include(oldOwnerHandle);
+
+        // Adoption must also clear the suppression guard so a scroll in the new document can
+        // schedule against that document's animation clock.
+        const frameRequestsBeforeScroll = frameRequests;
+        paneOld.scrollTop = oldMax * 0.5;
+        paneOld.dispatchEvent(new frameWindow.Event('scroll'));
+        expect(frameRequests).to.equal(frameRequestsBeforeScroll + 1);
+      } finally {
+        el.remove();
+        window.requestAnimationFrame = originalRequest;
+        window.cancelAnimationFrame = originalCancel;
+        frameWindow.requestAnimationFrame = originalFrameRequest;
+        frameWindow.cancelAnimationFrame = originalFrameCancel;
+        iframe.remove();
+      }
+    });
   });
 
   describe('synchronized highlight anchors (side-by-side)', () => {

@@ -2,7 +2,6 @@ import { type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, buildQuoteAnchor } from '../../../internal/text-quote.js';
@@ -15,6 +14,7 @@ import {
   type ShikiLanguageInput,
 } from '../code-block/code-loader.js';
 import type { KatexApi } from './katex-loader.js';
+import type { MarkedModule } from './markdown-loader.js';
 import {
   applyMarkdownAriaBusy,
   applyMarkdownFragmentAnchor,
@@ -28,6 +28,7 @@ import {
   markdownLanguageSetChanged,
   markdownMathPeerError,
   markdownNeedsReparse,
+  MarkdownOwnedAnimationFrameController,
   parseMarkdownDocument,
   renderMarkdownContent,
   renderMarkdownDocument,
@@ -45,6 +46,11 @@ import { styles } from './markdown.styles.js';
 // two different converters, and the reflecting one would start behaving differently the moment any
 // of the three gained `reflect: true`.
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
@@ -192,6 +198,19 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * @since 4.0.0
  */
 export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The Markdown source to render. */
@@ -349,6 +368,9 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  Markdown parse per assignment. The final `streaming = false` update cancels this frame and
    *  renders synchronously, so consumers never lose the last chunk. */
   private streamingRenderRaf?: number;
+  /** The browsing context and settlement hook for `streamingRenderRaf`; RAF handles are
+   *  realm-local, and disconnect/adoption must settle a pending `updateComplete` wait. */
+  private readonly streamingRenderFrames = new MarkdownOwnedAnimationFrameController();
 
   /** Keys from `PendingHighlight` that failed to highlight -- peer missing, language unrecognized,
    *  or tokenization threw. Once a key lands here, `code()` stops re-discovering it as pending on
@@ -370,12 +392,13 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   override disconnectedCallback(): void {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
-    if (this.streamingRenderRaf !== undefined) {
-      cancelAnimationFrame(this.streamingRenderRaf);
-      this.streamingRenderRaf = undefined;
-    }
+    this.cancelStreamingRender();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
+  }
+
+  adoptedCallback(): void {
+    this.cancelStreamingRender();
   }
 
   /** Binds selection -> `lr-text-select` once, on the stable `[part="content"]` wrapper --
@@ -411,26 +434,42 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     }
     if (this.streaming && changed.has('content')) this.scheduleStreamingRender();
     else {
-      if (this.streamingRenderRaf !== undefined) {
-        cancelAnimationFrame(this.streamingRenderRaf);
-        this.streamingRenderRaf = undefined;
-      }
+      this.cancelStreamingRender();
       this.renderMarkdown();
+    }
+  }
+
+  private cancelStreamingRender(): void {
+    const handle = this.streamingRenderRaf;
+    this.streamingRenderRaf = undefined;
+    if (!this.streamingRenderFrames.cancel() && handle !== undefined) {
+      this.ownerDocument.defaultView?.cancelAnimationFrame(handle);
     }
   }
 
   private scheduleStreamingRender(): void {
     if (this.streamingRenderRaf !== undefined) return;
-    this.streamingRenderRaf = requestAnimationFrame(() => {
-      this.streamingRenderRaf = undefined;
+    const view = this.ownerDocument.defaultView;
+    if (!view) {
       if (this.isConnected) this.renderMarkdown();
+      return;
+    }
+    const handle = this.streamingRenderFrames.request(view, () => {
+      this.streamingRenderRaf = undefined;
+      if (this.isConnected && this.ownerDocument.defaultView === view) this.renderMarkdown();
     });
+    if (handle === undefined) {
+      if (this.isConnected) this.renderMarkdown();
+    } else if (this.streamingRenderFrames.handle === handle) {
+      this.streamingRenderRaf = handle;
+    }
   }
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    if (this.streamingRenderRaf === undefined) return complete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const settled = this.streamingRenderFrames.settled;
+    if (!settled) return complete;
+    await settled;
     return super.getUpdateComplete();
   }
 
@@ -551,7 +590,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  `markdown-shared.ts` -- resolves every input `parseMarkdownDocument()` needs from this
    *  instance's own properties/state, byte-identical to this method's pre-extraction behavior. */
   private parseMarkdown(
-    marked: OptionalPeerApi,
+    marked: MarkedModule,
     pendingKeys: PendingHighlight[],
     headingTreeOut: MarkdownHeadingItem[],
   ): { html: string; hadMathFallback: boolean } {

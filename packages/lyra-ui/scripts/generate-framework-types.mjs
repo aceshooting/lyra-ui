@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifestFile = path.join(packageDir, 'custom-elements.json');
@@ -446,7 +447,7 @@ export function generateFrameworkTypes(manifest) {
 }
 
 export function generate({ write = true } = {}) {
-  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+  const manifest = expandManifestInheritance(JSON.parse(readFileSync(manifestFile, 'utf8')));
   const output = generateFrameworkTypes(manifest);
   if (write) {
     for (const [relative, text] of output) {

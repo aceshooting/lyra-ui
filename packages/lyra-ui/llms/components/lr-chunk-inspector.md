@@ -2,7 +2,7 @@
 
 # `lr-chunk-inspector`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/chunk-inspector/chunk-inspector.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-chunk-inspector.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChunkInspector`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/chunk-inspector/chunk-inspector.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

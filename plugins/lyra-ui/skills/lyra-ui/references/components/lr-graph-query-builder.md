@@ -2,7 +2,7 @@
 
 # `lr-graph-query-builder`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGraphQueryBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

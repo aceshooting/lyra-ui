@@ -65,11 +65,11 @@ export class LyraAppRailItem extends LyraElement {
   // leak into the flyout label. Mirrors `lr-chip`'s `labelText` getter.
   private get labelText(): string {
     return Array.from(this.childNodes)
-      .filter(
-        (n): n is Text | Element =>
-          (n.nodeType === Node.TEXT_NODE || n instanceof Element) &&
-          !(n instanceof Element && n.getAttribute("slot") === "icon")
-      )
+      .filter((node): node is Text | Element => {
+        if (node.nodeType === 3) return true;
+        if (node.nodeType !== 1) return false;
+        return (node as Element).getAttribute("slot") !== "icon";
+      })
       .map((n) => n.textContent ?? "")
       .join("")
       .trim();

@@ -1,5 +1,12 @@
-import { expect } from '@open-wc/testing';
-import { assertTableDimensions, assertTableSize, LyraResourceLimitError, readResponseText } from './resource-loader.js';
+import { expect, fixture, html } from '@open-wc/testing';
+import {
+  assertTableDimensions,
+  assertTableSize,
+  isAbortError,
+  LyraResourceLimitError,
+  readResponseText,
+  resolveOwnerFetchTarget,
+} from './resource-loader.js';
 
 it('caps streamed response data even without a Content-Length header', async () => {
   const response = new Response('1234567890');
@@ -36,4 +43,35 @@ it('accepts a table sitting exactly on the row and column budget', () => {
 it('rejects dimensions over the row or column budget', () => {
   expect(() => assertTableDimensions(3, 1, 2, 2)).to.throw(LyraResourceLimitError);
   expect(() => assertTableDimensions(1, 3, 2, 2)).to.throw(LyraResourceLimitError);
+});
+
+it('resolves fetch targets against an adopted element owner document and retains its fetch realm', async () => {
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const base = frameDocument.createElement('base');
+  base.href = 'https://frame.example/application/nested/';
+  frameDocument.head.append(base);
+  const element = document.createElement('div');
+  frameDocument.adoptNode(element);
+  frameDocument.body.append(element);
+
+  const target = resolveOwnerFetchTarget(element, '../fixtures/data.csv');
+  expect(target?.url).to.equal('https://frame.example/application/fixtures/data.csv');
+  expect(target?.view === frameWindow).to.equal(true);
+});
+
+it('fails owner fetch resolution closed without a browsing context or for unsafe sources', () => {
+  const detachedDocument = document.implementation.createHTMLDocument('detached');
+  const detachedElement = detachedDocument.createElement('div');
+  expect(detachedDocument.defaultView === null).to.equal(true);
+  expect(resolveOwnerFetchTarget(detachedElement, 'relative.json') === null).to.equal(true);
+  expect(resolveOwnerFetchTarget(document.createElement('div'), 'relative.json') === null).to.equal(true);
+  expect(resolveOwnerFetchTarget(document.body, 'javascript:alert(1)') === null).to.equal(true);
+});
+
+it('recognizes abort errors created in another browsing context', async () => {
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const ownerError = new iframe.contentWindow!.DOMException('cancelled', 'AbortError');
+  expect(isAbortError(ownerError)).to.equal(true);
 });

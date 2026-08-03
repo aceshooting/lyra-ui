@@ -11,6 +11,7 @@ const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 // small: ordinary exported functions and classes are tree-shakeable and do not belong here.
 export const CURATED_PUBLIC_SIDE_EFFECT_ENTRIES = Object.freeze([
   { source: 'src/autoloader-cdn.ts', exportPath: './autoloader-cdn.js' },
+  { source: 'src/hydration.ts', exportPath: './hydration.js' },
   { source: 'src/ssr-loader.ts', exportPath: './ssr-loader.js' },
 ]);
 
@@ -87,12 +88,13 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
 // `import '.../flag-peer.js'` and never reads an export, so a bundler honoring `sideEffects`
 // drops the module outright unless it is declared here. Derived from the walk (not carried over
 // from the previous package.json) so a rename or family move can't silently strand an entry.
-// Per-family barrels (`components/<family>/index.ts`) belong here for the same reason the root
-// barrel does: they `export *` from every registration module in the family, so importing one
-// registers those tags.
+// Per-family barrels (`components/<family>/index.ts`) and the stable one-tag alias entries
+// (`components/lr-*.ts`) belong here for the same reason: their documented contract is an import-
+// time registration, so a bare consumer import must survive production tree shaking.
   for (const file of walk(componentsRoot)) {
-    if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts') continue;
     const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
+    const topLevelAlias = !relPath.includes('/') && /^lr-[a-z0-9-]+\.ts$/.test(relPath);
+    if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts' && !topLevelAlias) continue;
     required.add(`./src/components/${relPath}`);
     required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
   }

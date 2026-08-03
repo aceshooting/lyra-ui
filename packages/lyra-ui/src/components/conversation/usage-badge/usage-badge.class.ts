@@ -6,6 +6,11 @@ import { place } from '../../../internal/positioner.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_open, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 interface FormattedDuration {
   key: 'durationMilliseconds' | 'durationSeconds';
@@ -64,6 +69,28 @@ function formatDuration(ms: number, locale: string): FormattedDuration {
  * @since 4.0.0
  */
 export class LyraUsageBadge extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    open: LYRA_DEFAULT_open,
+    tokensIn: LYRA_DEFAULT_tokensIn,
+    tokensOut: LYRA_DEFAULT_tokensOut,
+    usageBadgeCostLabel: LYRA_DEFAULT_usageBadgeCostLabel,
+    usageBadgeLabel: LYRA_DEFAULT_usageBadgeLabel,
+    usageBadgeLatencyLabel: LYRA_DEFAULT_usageBadgeLatencyLabel,
+    usageBadgeTokensIn: LYRA_DEFAULT_usageBadgeTokensIn,
+    usageBadgeTokensInLabel: LYRA_DEFAULT_usageBadgeTokensInLabel,
+    usageBadgeTokensOut: LYRA_DEFAULT_usageBadgeTokensOut,
+    usageBadgeTokensOutLabel: LYRA_DEFAULT_usageBadgeTokensOutLabel,
+    usageBadgeTotalTokensLabel: LYRA_DEFAULT_usageBadgeTotalTokensLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Input tokens. Normalized to a non-negative integer, locale-formatted. Segment omitted

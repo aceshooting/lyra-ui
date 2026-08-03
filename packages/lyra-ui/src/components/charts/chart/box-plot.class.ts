@@ -1,16 +1,28 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { loadChartJs } from './chart-loader.js';
+import { loadChartJs, type ChartJsModule } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCanvasColor, seriesPalette } from './chart-colors.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import {
+  resolveOptionalPeerCapability,
+  unwrapOptionalPeerDefault,
+} from '../../../internal/optional-peer-capabilities.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface BoxPlotPoint {
   min: number;
@@ -47,28 +59,104 @@ interface ThemeColors {
   tooltipText: string;
 }
 
-let boxPlotPlugin: Promise<OptionalPeerApi | null> | undefined;
+type BrowserWindow = Window & typeof globalThis;
+
+interface BoxPlotRegistrationConstructor {
+  new (...args: never[]): object;
+}
+
+interface BoxPlotModule {
+  BoxPlotController: BoxPlotRegistrationConstructor;
+  BoxAndWiskers: BoxPlotRegistrationConstructor;
+}
+
+interface BoxPlotChartConfiguration {
+  type: string;
+  data: {
+    labels: string[];
+    datasets: Array<Record<string, unknown>>;
+  };
+  options: Record<string, unknown>;
+}
+
+interface BoxPlotChartRuntime {
+  data: BoxPlotChartConfiguration['data'];
+  options: Record<string, unknown>;
+  destroy(): void;
+  update(mode?: string): void;
+  isDatasetVisible(index: number): boolean;
+  setDatasetVisibility(index: number, visible: boolean): void;
+}
+
+let boxPlotPlugin: Promise<BoxPlotModule | null> | undefined;
+
+function isConstructor(value: unknown): value is BoxPlotRegistrationConstructor {
+  if (typeof value !== 'function') return false;
+  try {
+    Reflect.construct(Object, [], value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function missingBoxPlotCapability(candidate: unknown): string | undefined {
+  if ((typeof candidate !== 'object' && typeof candidate !== 'function') || candidate === null) {
+    return 'module namespace';
+  }
+  const module = candidate as { BoxPlotController?: unknown; BoxAndWiskers?: unknown };
+  if (!isConstructor(module.BoxPlotController)) return 'BoxPlotController';
+  if (!isConstructor(module.BoxAndWiskers)) return 'BoxAndWiskers';
+  return undefined;
+}
+
+function isBoxPlotModule(candidate: unknown): candidate is BoxPlotModule {
+  return missingBoxPlotCapability(candidate) === undefined;
+}
+
+function resolveBoxPlotModule(value: unknown): BoxPlotModule {
+  const module = resolveOptionalPeerCapability(value, isBoxPlotModule);
+  if (module) return module;
+  const candidate = unwrapOptionalPeerDefault(value);
+  const missing = missingBoxPlotCapability(candidate) ?? 'module namespace';
+  throw new Error(
+    'Invalid optional peer `@sgratzl/chartjs-chart-boxplot`: ' +
+      `missing or invalid \`${missing}\` constructor.`,
+  );
+}
+
+/**
+ * Loads and validates the box-plot peer before registering its two constructors.
+ * @internal
+ */
+export async function loadBoxPlotAndRegister(
+  loadChart: () => Promise<ChartJsModule | null> = loadChartJs,
+  importBoxPlot: () => Promise<unknown> = () => import('@sgratzl/chartjs-chart-boxplot'),
+): Promise<BoxPlotModule | null> {
+  try {
+    const [chartMod, imported] = await Promise.all([loadChart(), importBoxPlot()]);
+    if (!chartMod) return null;
+    const boxMod = resolveBoxPlotModule(imported);
+    chartMod.Chart.register(boxMod.BoxPlotController, boxMod.BoxAndWiskers);
+    return boxMod;
+  } catch (error) {
+    console.warn(
+      '<lr-box-plot> needs the optional peer dependency `@sgratzl/chartjs-chart-boxplot` ' +
+        '— install it with `pnpm add @sgratzl/chartjs-chart-boxplot`.',
+      error,
+    );
+    return null;
+  }
+}
 
 /**
  * Lazily loads `@sgratzl/chartjs-chart-boxplot` and registers its controller
  * only when a `<lr-box-plot>` connects — kept separate from the base
  * `chart-loader.ts` so importing `lr-chart.js` alone never pulls this in.
  */
-function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
+function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
   if (!boxPlotPlugin) {
-    boxPlotPlugin = Promise.all([loadChartJs(), import('@sgratzl/chartjs-chart-boxplot')])
-      .then(([chartMod, boxMod]) => {
-        if (!chartMod) return null;
-        chartMod.Chart.register(boxMod.BoxPlotController, boxMod.BoxAndWiskers);
-        return boxMod;
-      })
-      .catch(() => {
-        console.warn(
-          '<lr-box-plot> needs the optional peer dependency `@sgratzl/chartjs-chart-boxplot` ' +
-            '— install it with `pnpm add @sgratzl/chartjs-chart-boxplot`.',
-        );
-        return null;
-      });
+    boxPlotPlugin = loadBoxPlotAndRegister();
   }
   return boxPlotPlugin;
 }
@@ -87,13 +175,43 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  * @csspart legend-swatch - The resolved series-color swatch in a legend item.
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
- * @csspart error - `role="alert"` message shown instead of the canvas when the optional box-plot
- *   peer dependency fails to load.
+ * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
+ *   peer fails to load; its transition is announced through a shared light-DOM alert.
  * @slot data-table - An optional consumer-provided accessible table alternative.
  * @status stable
  * @since 4.0.0
  */
 export class LyraBoxPlot extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    boxPlot: LYRA_DEFAULT_boxPlot,
+    boxPlotData: LYRA_DEFAULT_boxPlotData,
+    boxPlotMax: LYRA_DEFAULT_boxPlotMax,
+    boxPlotMedian: LYRA_DEFAULT_boxPlotMedian,
+    boxPlotMin: LYRA_DEFAULT_boxPlotMin,
+    boxPlotMissingLibrary: LYRA_DEFAULT_boxPlotMissingLibrary,
+    boxPlotQ1: LYRA_DEFAULT_boxPlotQ1,
+    boxPlotQ3: LYRA_DEFAULT_boxPlotQ3,
+    boxPlotSeriesSummary: LYRA_DEFAULT_boxPlotSeriesSummary,
+    boxPlotSummaryEmpty: LYRA_DEFAULT_boxPlotSummaryEmpty,
+    boxPlotSummaryWithData: LYRA_DEFAULT_boxPlotSummaryWithData,
+    chartCategory: LYRA_DEFAULT_chartCategory,
+    chartPointLabel: LYRA_DEFAULT_chartPointLabel,
+    chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
+    chartSeriesNoData: LYRA_DEFAULT_chartSeriesNoData,
+    chartSummarySeparator: LYRA_DEFAULT_chartSummarySeparator,
+    chartTrendDecreasing: LYRA_DEFAULT_chartTrendDecreasing,
+    chartTrendFlat: LYRA_DEFAULT_chartTrendFlat,
+    chartTrendIncreasing: LYRA_DEFAULT_chartTrendIncreasing,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   constructor() {
@@ -128,19 +246,22 @@ export class LyraBoxPlot extends LyraElement {
   private intersectionObserver?: IntersectionObserver;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
-  private chart?: OptionalPeerApi;
-  private chartJsModule?: OptionalPeerApi;
+  private chart?: BoxPlotChartRuntime;
+  private chartJsModule?: ChartJsModule;
   private loadGeneration = 0;
   private descriptionId = nextId('box-plot-description');
   private lastDrawnDirection?: 'ltr' | 'rtl';
   private lastDrawnLocale?: string;
+  private assertiveAnnouncementSink?: AnnouncementSink;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncAnnouncementSink();
     const generation = ++this.loadGeneration;
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod, generation));
-    if (typeof IntersectionObserver !== 'undefined') {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
+    const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
+    if (IntersectionObserverCtor) {
+      this.intersectionObserver = new IntersectionObserverCtor((entries) => {
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
         if (this.visible && !wasVisible) this.drawIfVisible();
@@ -162,9 +283,18 @@ export class LyraBoxPlot extends LyraElement {
   // `<lr-box-plot>` removed before the load settles never constructs a
   // `Chart` bound to a (possibly detached) canvas.
   private async onBoxPlotPluginLoaded(
-    boxMod: OptionalPeerApi | null,
+    boxMod: BoxPlotModule | null,
     generation = this.loadGeneration,
   ): Promise<void> {
+    if (generation !== this.loadGeneration || !this.isConnected) return;
+    // Preserve the server/client loading branch through the first update. A cached optional peer
+    // can otherwise settle during upgrade and skip both the observable loading state and Lit's
+    // declarative-shadow-DOM hydration boundary.
+    try {
+      await this.updateComplete;
+    } catch {
+      return;
+    }
     if (generation !== this.loadGeneration || !this.isConnected) return;
     this.loading = false;
     if (!boxMod) {
@@ -183,15 +313,48 @@ export class LyraBoxPlot extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseAnnouncementSink();
     this.loadGeneration += 1;
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
+  }
+
+  adoptedCallback(): void {
+    this.releaseAnnouncementSink();
+    this.syncAnnouncementSink();
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.assertiveAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.assertiveAnnouncementSink?.release();
+    this.assertiveAnnouncementSink = undefined;
+  }
+
+  private get ownerWindow(): BrowserWindow | undefined {
+    return (this.ownerDocument.defaultView as BrowserWindow | null) ?? undefined;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.isConnected) return;
+    if (
+      changed.has('loadFailed') &&
+      changed.get('loadFailed') !== undefined &&
+      this.loadFailed
+    ) {
+      this.assertiveAnnouncementSink?.announce(this.localize('boxPlotMissingLibrary'));
+    }
     this.setAttribute('aria-busy', String(this.loading));
 
     // `--lr-chart-height` is read by the plot region and host minimum size in
@@ -226,7 +389,8 @@ export class LyraBoxPlot extends LyraElement {
    * on every draw rather than cached.
    */
   private themeColors(): ThemeColors {
-    const cs = getComputedStyle(this);
+    const view = this.ownerWindow;
+    const cs = view ? view.getComputedStyle(this) : this.style;
     return {
       grid: cs.getPropertyValue('--lr-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
       tick: cs.getPropertyValue('--lr-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
@@ -236,7 +400,7 @@ export class LyraBoxPlot extends LyraElement {
     };
   }
 
-  private buildConfig(): OptionalPeerApi {
+  private buildConfig(): BoxPlotChartConfiguration {
     const theme = this.themeColors();
     const palette = seriesPalette(this);
     return {
@@ -259,7 +423,7 @@ export class LyraBoxPlot extends LyraElement {
         locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
-        animation: prefersReducedMotion() ? false : undefined,
+        animation: prefersReducedMotion(this.ownerWindow) ? false : undefined,
         plugins: {
           // The normal-flow DOM legend below can wrap long public labels; a canvas legend cannot.
           legend: { display: false, labels: { color: theme.legend } },
@@ -327,7 +491,10 @@ export class LyraBoxPlot extends LyraElement {
       if (restoredHiddenState) this.chart.update('none');
       return;
     }
-    this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
+    this.chart = new this.chartJsModule.Chart(
+      this.canvasEl,
+      config as never,
+    ) as unknown as BoxPlotChartRuntime;
   }
 
   private drawIfVisible(): void {
@@ -472,14 +639,15 @@ export class LyraBoxPlot extends LyraElement {
     if (this.loading) {
       return html`
         <div part="base">
-          <lr-skeleton variant="rect"></lr-skeleton>
+          <span class="sr-only">${this.localize('loading')}</span>
+          <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
         </div>
       `;
     }
     if (this.loadFailed) {
       return html`
         <div part="base">
-          <div part="error" role="alert">${this.localize('boxPlotMissingLibrary')}</div>
+          <div part="error">${this.localize('boxPlotMissingLibrary')}</div>
         </div>
       `;
     }

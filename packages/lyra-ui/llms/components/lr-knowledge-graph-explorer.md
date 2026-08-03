@@ -2,7 +2,7 @@
 
 # `lr-knowledge-graph-explorer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-knowledge-graph-explorer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraKnowledgeGraphExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

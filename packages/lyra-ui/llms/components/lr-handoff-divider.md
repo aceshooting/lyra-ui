@@ -2,7 +2,7 @@
 
 # `lr-handoff-divider`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/handoff-divider/handoff-divider.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-handoff-divider.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHandoffDivider`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/handoff-divider/handoff-divider.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

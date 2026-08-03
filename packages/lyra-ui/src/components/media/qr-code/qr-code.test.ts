@@ -2,6 +2,14 @@ import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './qr-code.js';
 import type { LyraQrCode, LyraQrCodeErrorCorrection } from './qr-code.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 interface FakeModules {
   size: number;
@@ -82,8 +90,11 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'error');
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('This component needs the optional "qrcode" package installed to render QR codes.');
+    expect(assertiveAnnouncements()).to.deep.equal([
+      'This component needs the optional "qrcode" package installed to render QR codes.',
+    ]);
   });
 
   it('shows the generation-failed error when encoding throws', async () => {
@@ -97,8 +108,15 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'error');
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('This value could not be encoded as a QR code.');
+    el.value = 'hello again';
+    await el.updateComplete;
+    await waitUntil(() => assertiveAnnouncements().length === 2);
+    expect(assertiveAnnouncements()).to.deep.equal([
+      'This value could not be encoded as a QR code.',
+      'This value could not be encoded as a QR code.',
+    ]);
   });
 
   it('ignores a pending peer-load result if the element is disconnected before it resolves', async () => {
@@ -333,6 +351,151 @@ describe('lr-qr-code', () => {
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
     expect(() => (el as unknown as { onDprChange(): void }).onDprChange()).to.not.throw();
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
+  });
+
+  it('uses the adopted owner realm for observers, DPR, styles, images, and cleanup', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'IntersectionObserver',
+    );
+    const originalMatchMedia = Object.getOwnPropertyDescriptor(frameWindow, 'matchMedia');
+    const originalDpr = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
+    const originalImage = Object.getOwnPropertyDescriptor(frameWindow, 'Image');
+    let observerConstructions = 0;
+    let observerDisconnects = 0;
+    let observedInOwnerRealm = false;
+    class OwnerIntersectionObserver {
+      constructor(_callback: IntersectionObserverCallback) {
+        observerConstructions += 1;
+      }
+      observe(target: Element): void {
+        observedInOwnerRealm = target.ownerDocument === frameDocument;
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        observerDisconnects += 1;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(frameWindow, 'IntersectionObserver', {
+      configurable: true,
+      value: OwnerIntersectionObserver,
+    });
+
+    let dprQuery = '';
+    let dprListenerAdds = 0;
+    let dprListenerRemoves = 0;
+    Object.defineProperty(frameWindow, 'devicePixelRatio', { value: 2, configurable: true });
+    Object.defineProperty(frameWindow, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => {
+        dprQuery = query;
+        return {
+          matches: true,
+          media: query,
+          onchange: null,
+          addListener(): void {},
+          removeListener(): void {},
+          addEventListener(): void {
+            if (query.startsWith('(resolution:')) dprListenerAdds += 1;
+          },
+          removeEventListener(): void {
+            if (query.startsWith('(resolution:')) dprListenerRemoves += 1;
+          },
+          dispatchEvent(): boolean {
+            return true;
+          },
+        } as MediaQueryList;
+      },
+    });
+
+    const NativeOwnerImage = frameWindow.Image;
+    let ownerImageConstructions = 0;
+    const OwnerImage = new Proxy(NativeOwnerImage, {
+      construct(target, argumentsList) {
+        ownerImageConstructions += 1;
+        return Reflect.construct(target, argumentsList);
+      },
+    });
+    Object.defineProperty(frameWindow, 'Image', { configurable: true, value: OwnerImage });
+
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.size = 40;
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      el.value = 'owner realm';
+      await waitForPart(el, 'canvas');
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(observerConstructions).to.equal(1);
+      expect(observedInOwnerRealm).to.be.true;
+      expect(dprQuery).to.equal('(resolution: 2dppx)');
+      expect(dprListenerAdds).to.equal(1);
+      expect(canvas.width).to.equal(80);
+      expect(canvas.height).to.equal(80);
+
+      const originalGetComputedStyleDescriptor = Object.getOwnPropertyDescriptor(
+        frameWindow,
+        'getComputedStyle',
+      );
+      const originalGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+      let ownerStyleReads = 0;
+      Object.defineProperty(frameWindow, 'getComputedStyle', {
+        configurable: true,
+        value: (element: Element, pseudo?: string | null) => {
+          ownerStyleReads += 1;
+          return originalGetComputedStyle(element, pseudo);
+        },
+      });
+      try {
+        el.refreshTheme();
+        expect(ownerStyleReads).to.be.greaterThan(0);
+      } finally {
+        if (originalGetComputedStyleDescriptor) {
+          Object.defineProperty(frameWindow, 'getComputedStyle', originalGetComputedStyleDescriptor);
+        } else {
+          delete (frameWindow as unknown as { getComputedStyle?: typeof getComputedStyle })
+            .getComputedStyle;
+        }
+      }
+
+      const embedded = await (
+        el as unknown as {
+          loadEmbeddedImage(src: string): Promise<HTMLImageElement | undefined>;
+        }
+      ).loadEmbeddedImage(RED_IMAGE_DATA);
+      expect(ownerImageConstructions).to.equal(1);
+      expect(embedded?.ownerDocument === frameDocument).to.be.true;
+    } finally {
+      el.remove();
+      if (originalIntersectionObserver) {
+        Object.defineProperty(frameWindow, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+      if (originalMatchMedia) Object.defineProperty(frameWindow, 'matchMedia', originalMatchMedia);
+      else delete (frameWindow as unknown as { matchMedia?: typeof matchMedia }).matchMedia;
+      if (originalDpr) Object.defineProperty(frameWindow, 'devicePixelRatio', originalDpr);
+      else delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+      if (originalImage) Object.defineProperty(frameWindow, 'Image', originalImage);
+      else delete (frameWindow as unknown as { Image?: typeof Image }).Image;
+      iframe.remove();
+      expect(observerDisconnects).to.equal(1);
+      expect(dprListenerRemoves).to.equal(1);
+    }
   });
 
   it('redraws (coalesced) when an ancestor theme attribute mutates, via the shared ThemeWatcher', async () => {

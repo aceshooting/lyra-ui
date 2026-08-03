@@ -32,6 +32,11 @@ import {
   type ExternalLabelActivation,
 } from '../../../internal/form-control-labels.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
  *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
@@ -112,11 +117,11 @@ export interface LyraButtonEventMap {
  * @slot end - Trailing icon/content, rendered after the label.
  * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
  * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
- * @attr {string} form-action - Shoelace alias for `formaction`.
- * @attr {ButtonFormEnctype} form-enctype - Shoelace alias for `formenctype`.
- * @attr {ButtonFormMethod} form-method - Shoelace alias for `formmethod`.
- * @attr {boolean} form-no-validate - Shoelace alias for `formnovalidate`.
- * @attr {string} form-target - Shoelace alias for `formtarget`.
+ * @attr {string} form-action - Compatibility alias for `formaction`.
+ * @attr {ButtonFormEnctype} form-enctype - Compatibility alias for `formenctype`.
+ * @attr {ButtonFormMethod} form-method - Compatibility alias for `formmethod`.
+ * @attr {boolean} form-no-validate - Compatibility alias for `formnovalidate`.
+ * @attr {string} form-target - Compatibility alias for `formtarget`.
  * @attr rel - Compatibility input whose rendered value is always derived from `target`; author
  *   values never weaken the `noopener noreferrer` reverse-tabnabbing guard.
  * @csspart base - Compatibility name for the internal control; use `button`.
@@ -226,6 +231,16 @@ export interface LyraButtonEventMap {
  * @since 4.0.0
  */
 export class LyraButton extends LyraElement<LyraButtonEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   // `sizes` supplies the one form-control ladder (both the `s`/`m`/`l` and the `small`/`medium`/
   // `large` spellings of every tier); `variants` re-points the nine generic colour slots at the
   // active `variant`'s row of the semantic grid. Between them this component needs no per-tier and
@@ -403,9 +418,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  names the action, and the popup relationship is expressed by a host `aria-haspopup`/
    *  `aria-expanded`, which are forwarded to the internal control. */
   @property({ attribute: 'with-caret', type: Boolean, reflect: true }) withCaret = false;
-  /** Shoelace alias for `withCaret`; both attributes reach the same rendered chevron.
+  /** Reflected Shoelace alias for `withCaret`; both attributes reach the same rendered chevron.
    * @default false */
-  @property({ type: Boolean })
+  @property({ type: Boolean, reflect: true })
   get caret(): boolean { return this.withCaret; }
   set caret(next: boolean) { this.withCaret = Boolean(next); }
   /** SSR presence hint for the `start` adornment wrapper. Assigned slot content is still detected

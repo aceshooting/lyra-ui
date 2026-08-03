@@ -51,6 +51,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const srcRoot = path.join(packageDir, 'src');
@@ -159,32 +160,86 @@ export function renderedTags(source) {
 // Module graph
 // ---------------------------------------------------------------------------
 
-/** Blank comments and string bodies so only import specifiers and code structure remain. */
-function stripNoise(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+function parseSource(source, file = 'component.ts') {
+  const result = parseSync(file, source);
+  if (result.errors.length > 0) {
+    const detail = result.errors
+      .slice(0, 3)
+      .map((error) => error.message)
+      .join('; ');
+    throw new Error(`${file}: component-dependency parser failed: ${detail}`);
+  }
+  return result.program;
 }
 
-const STATIC_IMPORT = /(?:^|[\s;}])(?:import|export)(\s[^'";]*?\sfrom\s*|\s*)['"]([^'"]+)['"]/g;
-const DYNAMIC_IMPORT = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-
-/** `[{ specifier, bindings }]` for every module `source` pulls in, lazily or eagerly. */
-function moduleImports(source) {
-  const code = stripNoise(source);
-  const imports = [];
-  for (const match of code.matchAll(STATIC_IMPORT)) {
-    const clause = match[1] ?? '';
-    const bindings = [...clause.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
-      .map((binding) => binding[0])
-      .filter((binding) => !['from', 'type', 'as', 'default'].includes(binding));
-    imports.push({ specifier: match[2], bindings });
+/** Visit every ESTree-compatible node below `node`, including TypeScript-specific nodes. */
+function visitNodes(node, visitor) {
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.type === 'string') visitor(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) visitNodes(child, visitor);
+    } else if (value && typeof value === 'object') visitNodes(value, visitor);
   }
-  for (const match of code.matchAll(DYNAMIC_IMPORT)) imports.push({ specifier: match[1], bindings: [] });
+}
+
+/** `[{ specifier, bindings }]` for every runtime module `source` pulls in, lazily or eagerly. */
+function moduleImports(source, file) {
+  const imports = [];
+  const program = parseSource(source, file);
+  for (const statement of program.body) {
+    if (statement.type === 'ImportDeclaration' && typeof statement.source?.value === 'string') {
+      if (statement.importKind === 'type') continue;
+      const values = statement.specifiers.filter(
+        (specifier) => specifier.type !== 'ImportSpecifier' || specifier.importKind !== 'type',
+      );
+      // An empty import (`import './x.js'` or `import {} from './x.js'`) still evaluates the
+      // target. A declaration containing only `type` specifiers is erased by TypeScript.
+      if (statement.specifiers.length > 0 && values.length === 0) continue;
+      imports.push({
+        specifier: statement.source.value,
+        bindings: values.map((specifier) => specifier.local?.name).filter(Boolean),
+      });
+    } else if (
+      (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportAllDeclaration') &&
+      typeof statement.source?.value === 'string'
+    ) {
+      if (statement.exportKind === 'type') continue;
+      if (
+        statement.type === 'ExportNamedDeclaration' &&
+        statement.specifiers.length > 0 &&
+        statement.specifiers.every((specifier) => specifier.exportKind === 'type')
+      ) continue;
+      imports.push({ specifier: statement.source.value, bindings: [] });
+    }
+  }
+
+  visitNodes(program, (node) => {
+    if (node.type !== 'ImportExpression') return;
+    if (node.source?.type === 'Literal' && typeof node.source.value === 'string') {
+      imports.push({ specifier: node.source.value, bindings: [] });
+    } else if (
+      node.source?.type === 'TemplateLiteral' &&
+      node.source.expressions.length === 0 &&
+      node.source.quasis.length === 1
+    ) {
+      imports.push({ specifier: node.source.quasis[0].value.cooked, bindings: [] });
+    }
+  });
   return imports;
 }
 
 /** Identifiers this module extends, so a superclass's renders reach the subclass's entry. */
-function extendedNames(source) {
-  return new Set([...stripNoise(source).matchAll(/\bextends\s+([A-Za-z_$][A-Za-z0-9_$]*)/g)].map((match) => match[1]));
+function extendedNames(source, file) {
+  const names = new Set();
+  visitNodes(parseSource(source, file), (node) => {
+    if (
+      (node.type === 'ClassDeclaration' || node.type === 'ClassExpression') &&
+      node.superClass?.type === 'Identifier'
+    ) names.add(node.superClass.name);
+  });
+  return names;
 }
 
 /** Resolve a relative specifier against the virtual file map (`.js` -> `.ts`, plus `/index.ts`). */
@@ -218,13 +273,14 @@ function suppressionsIn(source) {
 // ---------------------------------------------------------------------------
 
 /**
- * Findings for every registration entry that renders a `lr-*` element it never registers.
+ * Findings plus deterministic direct/transitive registration edges for every public tag.
  *
  * @param {{ components: Array<{tag: string, classModule: string, registrationModule: string}>,
  *           files: Map<string, string> }} input
- * @returns {string[]}
+ * @returns {{findings: string[], graph: Array<{tag: string, classModule: string,
+ *   registrationModule: string, directComponents: string[], transitiveComponents: string[]}>}}
  */
-export function findMissingDependencies({ components, files }) {
+export function analyzeComponentDependencies({ components, files }) {
   const byTag = new Map(components.map((component) => [component.tag, component]));
   const classModules = new Set(components.map((component) => component.classModule));
   const registrationByModule = new Map(components.map((component) => [component.registrationModule, component.tag]));
@@ -233,7 +289,7 @@ export function findMissingDependencies({ components, files }) {
   // Every entry walks a large slice of the same graph, so the per-file scans are memoized.
   const importCache = new Map();
   const importsOf = (file) => {
-    if (!importCache.has(file)) importCache.set(file, moduleImports(source(file)));
+    if (!importCache.has(file)) importCache.set(file, moduleImports(source(file), file));
     return importCache.get(file);
   };
   const tagCache = new Map();
@@ -243,12 +299,12 @@ export function findMissingDependencies({ components, files }) {
   };
   const extendsCache = new Map();
   const extendsIn = (file) => {
-    if (!extendsCache.has(file)) extendsCache.set(file, extendedNames(source(file)));
+    if (!extendsCache.has(file)) extendsCache.set(file, extendedNames(source(file), file));
     return extendsCache.get(file);
   };
   const targetCache = new Map();
   const targetOf = (file, specifier) => {
-    const key = `${file} ${specifier}`;
+    const key = `${file}\0${specifier}`;
     if (!targetCache.has(key)) targetCache.set(key, resolveSpecifier(files, file, specifier));
     return targetCache.get(key);
   };
@@ -298,6 +354,7 @@ export function findMissingDependencies({ components, files }) {
   }
 
   const findings = [];
+  const graph = [];
   for (const component of components) {
     const entry = component.registrationModule;
     if (!files.has(entry)) {
@@ -358,24 +415,52 @@ export function findMissingDependencies({ components, files }) {
           `${reason ? ` ("${reason}")` : ''} -- <${tag}> is either registered or never rendered; delete the comment`,
       );
     }
+    const directRegistered = importsOf(entry)
+      .map(({ specifier }) => targetOf(entry, specifier))
+      .map((file) => registrationByModule.get(file))
+      .filter(Boolean);
+    const directlyRendered = [...required]
+      .filter(([, renderer]) => renderer === component.tag)
+      .map(([tag]) => tag);
+    const directComponents = [...new Set([...directlyRendered, ...directRegistered])]
+      .filter((tag) => tag !== component.tag && byTag.has(tag))
+      .sort();
+    const directSet = new Set(directComponents);
+    const transitiveComponents = [...registered]
+      .filter((tag) => tag !== component.tag && !directSet.has(tag))
+      .sort();
+    graph.push({
+      tag: component.tag,
+      classModule: component.classModule,
+      registrationModule: component.registrationModule,
+      directComponents,
+      transitiveComponents,
+    });
   }
-  return findings.sort();
+  return {
+    findings: findings.sort(),
+    graph: graph.sort((a, b) => a.tag.localeCompare(b.tag)),
+  };
+}
+
+export function findMissingDependencies(input) {
+  return analyzeComponentDependencies(input).findings;
 }
 
 // ---------------------------------------------------------------------------
 
 /** Shipped source only: tests, stories and ambient declarations register nothing for consumers. */
-function collectSources(dir, files) {
+export function collectSources(dir, files, sourcePackageDir = path.dirname(dir)) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) collectSources(full, files);
+    if (entry.isDirectory()) collectSources(full, files, sourcePackageDir);
     else if (
       entry.name.endsWith('.ts') &&
       !entry.name.endsWith('.test.ts') &&
       !entry.name.endsWith('.stories.ts') &&
       !entry.name.endsWith('.d.ts')
     ) {
-      files.set(path.relative(packageDir, full).replaceAll('\\', '/'), fs.readFileSync(full, 'utf8'));
+      files.set(path.relative(sourcePackageDir, full).replaceAll('\\', '/'), fs.readFileSync(full, 'utf8'));
     }
   }
   return files;

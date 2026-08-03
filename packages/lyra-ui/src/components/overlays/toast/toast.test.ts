@@ -160,6 +160,82 @@ it('create() on the region resolves to the item', async () => {
   expect(item.textContent).to.contain('direct');
 });
 
+it('recreates its child observer in the adopted owner realm', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const descriptor = Object.getOwnPropertyDescriptor(foreignWindow, 'MutationObserver');
+  const NativeMutationObserver = foreignWindow.MutationObserver;
+  let toastObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    override observe(target: Node, options?: MutationObserverInit): void {
+      super.observe(target, options);
+      if ((target as { localName?: string }).localName === 'lr-toast') toastObservations += 1;
+    }
+  }
+  Object.defineProperty(foreignWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.remove();
+
+  try {
+    iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(region));
+    await region.updateComplete;
+    expect(toastObservations).to.be.greaterThan(0);
+  } finally {
+    region.remove();
+    if (descriptor) Object.defineProperty(foreignWindow, 'MutationObserver', descriptor);
+    else delete (foreignWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    iframe.remove();
+  }
+});
+
+it('create() does not depend on the ambient document factory after adoption', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.remove();
+  const descriptor = Object.getOwnPropertyDescriptor(document, 'createElement');
+  const nativeCreateElement = document.createElement;
+
+  try {
+    const foreignWindow = iframe.contentWindow!;
+    const ForeignHTMLElement = (
+      foreignWindow as unknown as { HTMLElement: typeof HTMLElement }
+    ).HTMLElement;
+    class ForeignToastItem extends ForeignHTMLElement {
+      variant = 'neutral';
+      duration = 5000;
+      size = 'medium';
+      withIcon = false;
+      readonly updateComplete = Promise.resolve(true);
+      async show(): Promise<void> {}
+      async hide(): Promise<void> {}
+    }
+    foreignWindow.customElements.define('lr-toast-item', ForeignToastItem);
+    iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(region));
+    await region.updateComplete;
+    Object.defineProperty(document, 'createElement', {
+      configurable: true,
+      value(name: string, options?: ElementCreationOptions) {
+        if (name === 'lr-toast-item') throw new Error('ambient toast-item factory used');
+        return nativeCreateElement.call(document, name, options);
+      },
+    });
+
+    const item = await region.create('Owner item', { duration: 0 });
+    expect(item.ownerDocument === iframe.contentDocument).to.equal(true);
+    expect(typeof item.hide).to.equal('function');
+  } finally {
+    if (descriptor) Object.defineProperty(document, 'createElement', descriptor);
+    else delete (document as Document & { createElement?: Document['createElement'] }).createElement;
+    region.remove();
+    iframe.remove();
+  }
+});
+
 it("create() with no options leaves every field at <lr-toast-item>'s own declared defaults", async () => {
   // create() must not hardcode its own copy of each default -- it should
   // defer entirely to whatever `document.createElement('lr-toast-item')`

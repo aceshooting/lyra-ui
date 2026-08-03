@@ -8,7 +8,10 @@ const preview = readFileSync(join(root, '.storybook/preview.js'), 'utf8');
 const manager = readFileSync(join(root, '.storybook/manager.js'), 'utf8');
 const main = readFileSync(join(root, '.storybook/main.js'), 'utf8');
 const landing = readFileSync(join(root, '.storybook/landing.css'), 'utf8');
+const introduction = readFileSync(join(root, '.storybook/Introduction.mdx'), 'utf8');
+const accessibilityDocs = readFileSync(join(root, 'docs/accessibility.md'), 'utf8');
 const storyThemeSource = readFileSync(join(root, '.storybook/story-theme.js'), 'utf8');
+const docsContainerSource = readFileSync(join(root, '.storybook/docs-container.js'), 'utf8');
 
 const [
   { LYRA_STORYBOOK_THEMES, normalizeStoryThemeName },
@@ -32,8 +35,11 @@ for (const required of [
   "{ value: 'light', title: 'Light' }",
   "{ value: 'dark', title: 'Dark' }",
   "import '../packages/lyra-ui/src/theme.css';",
+  "import '../packages/lyra-ui/src/all.js';",
   "import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';",
+  "import { normalizeStoryThemeName } from './theme-contract.js';",
   'setLyraTheme({ mode: theme, accent: null });',
+  'bootstrapLyraPresentationFromUrl();',
   'decorators: [withLyraTheme]',
   'container: LyraDocsContainer',
 ]) {
@@ -50,6 +56,18 @@ for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-d
     throw new Error(`Storybook preview advertises unsupported presentation state: ${unsupported}`);
   }
 }
+if (preview.includes("import '../packages/lyra-ui/src/lyra.js';")) {
+  throw new Error('Storybook must import all.js because the package root is registration-free');
+}
+if (preview.includes("from './story-theme.js'")) {
+  throw new Error('Storybook manager colors must not enter the component-preview bundle');
+}
+if (/toolbar[^\n]*(?:high-contrast|compact)/i.test(introduction)) {
+  throw new Error('Storybook introduction claims toolbar modes that the preview does not provide');
+}
+if (/ships a `high-contrast` theme|high-contrast-theme rendering/i.test(accessibilityDocs)) {
+  throw new Error('Accessibility docs advertise the removed Storybook-only high-contrast theme');
+}
 // The rule is that no Lyra colour VALUE is copied into Storybook -- not that Lyra token names may
 // not be referenced. `COLOR_PROPERTIES` maps a semantic name to a `--lr-theme-*` custom property and
 // `storyColor()` resolves it with getComputedStyle against the live production theme, which is
@@ -59,6 +77,9 @@ for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-d
 // than any lr-* component.
 if (storyThemeSource.includes('LYRA_THEME_TOKENS')) {
   throw new Error('Storybook preview colors must come from the complete production theme.css, not a copied palette');
+}
+if (storyThemeSource.includes('storyColor') || docsContainerSource.includes("from './story-theme.js'")) {
+  throw new Error('Manager-only Storybook colors must not be imported by preview/docs code');
 }
 if (storyThemeSource.includes("'--lr-theme-") && !storyThemeSource.includes('getComputedStyle')) {
   throw new Error('Storybook must resolve --lr-theme-* values from the live theme, not restate them');
@@ -182,6 +203,14 @@ assert.deepEqual(rawStoryColors('PR #950 and #1999'), []);
 assert.deepEqual(rawStoryColors('&#10003; then color: #abc'), ['#abc']);
 
 const stories = storyFiles(join(root, 'packages/lyra-ui/src/components'));
+const managerThemeImports = stories.filter((path) =>
+  readFileSync(path, 'utf8').includes('.storybook/story-theme.js'),
+);
+if (managerThemeImports.length) {
+  throw new Error(
+    `Story files must import production token helpers, not manager chrome:\n${managerThemeImports.join('\n')}`,
+  );
+}
 // Every offender at once. Throwing on the first file hid the rest behind an edit-and-rerun loop,
 // which is how a single CI run can only ever reveal one of them.
 const offenders = stories

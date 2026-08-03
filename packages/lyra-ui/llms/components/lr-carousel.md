@@ -2,7 +2,7 @@
 
 # `lr-carousel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/carousel/carousel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-carousel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCarousel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/carousel/carousel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -50,7 +50,7 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 - `slides: number = 0` (attribute `slides`, reflected) — live assigned-slide count; updated after
   dynamic child changes
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
-  `aria-label` takes precedence
+  `aria-label` takes precedence by presence, including an explicitly empty value
 
 **8.0 default migration:** navigation and pagination now match the mapped opt-in defaults. Markup
 that relied on Lyra's former always-present arrow row or `showIndicators = true` must add
@@ -81,6 +81,23 @@ emits one event for the whole gesture. Programmatic movement scrolls the same tr
 and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden endcaps so
 forward/backward wrapping continues in the requested direction, then silently resets to the
 matching original slide. Clone idrefs and form-identifying attributes are not duplicated.
+
+Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
+announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
+region. Initial connection and reconnection stay silent. Timer-driven autoplay advances also stay
+silent, while click, keyboard, method, scroll-gesture, and property changes are announced even
+when `autoplay` remains enabled. A change made while the carousel or a composed ancestor is
+`hidden`, `inert`, `aria-hidden`, or CSS-hidden stays silent. Slide announcement text likewise
+omits accessibility-hidden descendants. A subtree-pruned active slide root suppresses the entire
+page announcement rather than synthesizing a position for content outside the tree; a
+`visibility:hidden|collapse` root can still contribute a descendant that explicitly restores
+`visibility:visible`, in which case the position and that exposed descendant are announced.
+Nested forwarding slots contribute their flattened assigned content. Slot fallback text contributes
+only when there is no direct assignment; an accessibility-hidden assignment remains authoritative
+and does not expose the fallback. The `carouselSlideAnnouncement` message (English default:
+`{position}: {content}`) controls the order and punctuation of each position/content pair, and
+`carouselSlideAnnouncementSeparator` (English default: `. `) separates multiple visible-slide
+summaries. A registered locale or the instance's `strings` override can customize both.
 
 Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
 Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The

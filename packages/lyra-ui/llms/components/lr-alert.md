@@ -2,7 +2,7 @@
 
 # `lr-alert`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-alert.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAlert`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/alert/alert.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -23,7 +23,8 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 **Properties:**
 
 - `open: boolean = false` (reflected) — controls visibility. Initial `open` markup establishes
-  state silently; later property or attribute changes run the full lifecycle below.
+  state without a transition event; later property or attribute changes run the full lifecycle
+  below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` resolves through Lyra's shared brand semantic tokens.
@@ -36,11 +37,15 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
 top-end toast region, shows it, and resolves after it hides and is removed. Keep the reference to
-reuse the same identity with another `toast()` call.
+reuse the same identity with another `toast()` call. An alert adopted into another same-origin
+document uses that document's toast region, timers, motion preference, and focus realm. If external
+DOM reconciliation removes a toast without hiding it, the pending promise settles after that
+disconnect proves lasting (a synchronous move into the toast region does not count), stale
+listeners are released, and a later `toast()` starts a fresh lifecycle.
 
 **Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
-detail, and are noncancelable. A transition interrupted by the opposite state does not emit the
-stale after-event.
+detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
+noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
 
 **Slots:** default message content; `icon` for the optional leading icon.
 
@@ -48,9 +53,12 @@ stale after-event.
 native close button. The pinned surface exposes no component CSS custom properties, custom states,
 form association, native-event relays, or delegated native methods.
 
-The rendered message surface has `role="alert"`. The close action's accessible name uses Lyra's
-localized `close` string. Layout uses logical properties, wraps unbroken content at 320px, and the
-toast path reuses the existing Lyra toast layer instead of creating a second placement system.
+The light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and alerts shown
+later expose one assertive, content-derived semantic surface without duplicating it in a shadow or
+shared live region. The optional icon wrapper is decorative (`aria-hidden="true"`); the close action
+remains independently accessible through Lyra's localized `close` string. Layout uses logical
+properties, wraps unbroken content at 320px, and the toast path reuses the existing Lyra toast layer
+instead of creating a second placement system.
 
 ```html
 <lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">

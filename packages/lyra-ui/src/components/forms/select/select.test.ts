@@ -729,7 +729,12 @@ it('re-binds positioning after a disconnect+reconnect while open, ending up clos
   const el = (await fixture(html`<lr-select open><lr-option value="x"></lr-option></lr-select>`)) as LyraSelect;
   await el.updateComplete;
   const parent = el.parentElement!;
+  let teardownHide: CustomEvent | undefined;
+  el.addEventListener('lr-hide', (event) => (teardownHide = event as CustomEvent));
   el.remove();
+  await el.updateComplete;
+  expect(teardownHide !== undefined).to.be.true;
+  expect(teardownHide!.cancelable, 'a disconnected control cannot honour a hide veto').to.be.false;
   parent.appendChild(el);
   await el.updateComplete;
   // `disconnectedCallback()` resets `open` to `false` — asserting that directly

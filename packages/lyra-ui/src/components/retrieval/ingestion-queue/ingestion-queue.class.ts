@@ -13,6 +13,11 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 // defines <lr-badge>/<lr-progress-bar>/<lr-empty>/<lr-virtual-list> as custom elements by the
 // time this component's render() references them.
 import { styles } from './ingestion-queue.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_items, LYRA_DEFAULT_open, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * A document's position in the ingestion pipeline. `'queued'` through `'indexing'` are the
@@ -174,6 +179,36 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  * @since 4.1.0
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    cancel: LYRA_DEFAULT_cancel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    ingestionAttemptCount: LYRA_DEFAULT_ingestionAttemptCount,
+    ingestionCancelWithContext: LYRA_DEFAULT_ingestionCancelWithContext,
+    ingestionChunkCount: LYRA_DEFAULT_ingestionChunkCount,
+    ingestionEmbeddedOfTotal: LYRA_DEFAULT_ingestionEmbeddedOfTotal,
+    ingestionItemProgressLabel: LYRA_DEFAULT_ingestionItemProgressLabel,
+    ingestionQueueEmpty: LYRA_DEFAULT_ingestionQueueEmpty,
+    ingestionQueueLabel: LYRA_DEFAULT_ingestionQueueLabel,
+    ingestionRetryWithContext: LYRA_DEFAULT_ingestionRetryWithContext,
+    ingestionStageCancelled: LYRA_DEFAULT_ingestionStageCancelled,
+    ingestionStageChunking: LYRA_DEFAULT_ingestionStageChunking,
+    ingestionStageDone: LYRA_DEFAULT_ingestionStageDone,
+    ingestionStageEmbedding: LYRA_DEFAULT_ingestionStageEmbedding,
+    ingestionStageExtracting: LYRA_DEFAULT_ingestionStageExtracting,
+    ingestionStageFailed: LYRA_DEFAULT_ingestionStageFailed,
+    ingestionStageIndexing: LYRA_DEFAULT_ingestionStageIndexing,
+    ingestionStageQueued: LYRA_DEFAULT_ingestionStageQueued,
+    ingestionStageUploading: LYRA_DEFAULT_ingestionStageUploading,
+    items: LYRA_DEFAULT_items,
+    open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The queue to render, in display order. Controlled and never mutated by this component --
@@ -210,7 +245,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     super.connectedCallback();
     // Acquired on connect, not on the first failure: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument });
+    this.sink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override disconnectedCallback(): void {

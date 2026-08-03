@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'li
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
@@ -9,6 +10,10 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -21,6 +26,11 @@ import {
   type WordCloudWord,
 } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { WordCloudWord };
 
@@ -70,9 +80,10 @@ export interface WordCloudLegendItem {
  * Instead, like `lr-heatmap`'s cells, the whole `[part="svg"]` is one tab
  * stop with roving arrow-key focus (Home/End jump to the first/last word,
  * Enter/Space activates the focused one), a drawn `[part="focus-ring"]`, and
- * a visually-hidden `aria-live="polite"` status announcement. The SVG focus
- * target carries the group role and accessible name so the semantics follow
- * the element a keyboard user actually focuses.
+ * a shared light-DOM polite status announcement. The host carries the group
+ * role and aggregate accessible name; `[part="live-region"]` is an aria-hidden
+ * mirror of the most recent announcement. Mount is silent, and identical edge
+ * movements append separate announcements.
  *
  * @customElement lr-word-cloud
  * @event lr-word-click - Fired on click, or Enter/Space on the focused word.
@@ -85,7 +96,8 @@ export interface WordCloudLegendItem {
  * @csspart legend-swatch - The color swatch for a legend entry.
  * @csspart legend-label - The visible legend label.
  * @csspart focus-ring - The keyboard focus ring.
- * @csspart live-region - The visually hidden announcement region.
+ * @csspart live-region - An aria-hidden shadow mirror of the current announcement; the actual
+ *   announcement uses the shared light-DOM polite sink.
  * @csspart empty - The empty-state message.
  * @cssprop [--lr-word-cloud-color-1=var(--lr-color-brand)] - First entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-2=var(--lr-color-success)] - Second entry of the default categorical palette.
@@ -99,7 +111,23 @@ export interface WordCloudLegendItem {
  * @since 4.0.0
  */
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    wordCloud: LYRA_DEFAULT_wordCloud,
+    wordCloudLegend: LYRA_DEFAULT_wordCloudLegend,
+    wordCloudWord: LYRA_DEFAULT_wordCloudWord,
+    wordCloudWordAnnouncement: LYRA_DEFAULT_wordCloudWordAnnouncement,
+    wordCloudWords: LYRA_DEFAULT_wordCloudWords,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'role'])];
@@ -140,9 +168,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Roving-focus cursor -- an index into `navOrder()`, not into `cachedLayout.placed`. */
   @state() private focusedIndex: number | null = null;
-  /** Text of the visually-hidden `aria-live="polite"` status announcement. */
+  /** Text mirrored in `[part="live-region"]`. */
   @state() private liveText = '';
 
+  private announcementSink?: AnnouncementSink;
   private authorRole: string | null = null;
   private authorAriaLabel: string | null = null;
   private syncingGeneratedSemantics = false;
@@ -153,6 +182,36 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, this.onThemeInvalidated);
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.releaseAnnouncementSink();
+    this.focusedIndex = null;
+    this.liveText = '';
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
   }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
@@ -305,10 +364,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private announce(word: PlacedWord): void {
-    this.liveText = this.localize('wordCloudWordAnnouncement', undefined, {
+    const text = this.localize('wordCloudWordAnnouncement', undefined, {
       text: word.text,
       weight: getNumberFormat(this.effectiveLocale).format(word.weight),
     });
+    this.liveText = text;
+    this.announcementSink?.announce(text);
   }
 
   private onWordClick = (word: PlacedWord): void => {
@@ -423,7 +484,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
           part="svg"
           role=${nothing}
           aria-label=${nothing}
-          aria-describedby="live-region"
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
           @keydown=${this.onKeyDown}
@@ -443,7 +503,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
             ? svg`<rect part="focus-ring" x=${ring.x} y=${ring.y} width=${ring.width} height=${ring.height}></rect>`
             : ''}
         </svg>
-        <div id="live-region" part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+        <div id="live-region" part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
         ${this.renderLegend(legendItems)}
       </div>
     `;

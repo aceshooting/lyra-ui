@@ -11,6 +11,11 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './activity-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Retained name for the shared semantic vocabulary an entry's `variant` is drawn from. */
 export type ActivityEntryTone = LyraVariant;
@@ -128,6 +133,19 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @since 4.0.0
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    activityFeedCompletedStep: LYRA_DEFAULT_activityFeedCompletedStep,
+    activityFeedCompletedSteps: LYRA_DEFAULT_activityFeedCompletedSteps,
+    activityFeedLabel: LYRA_DEFAULT_activityFeedLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Append-only: stable ids, new entries at the end. Entries never change state once added. */
@@ -176,20 +194,28 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private isMounting = true;
 
   private scrollRafId?: number;
+  private scrollRafOwner?: Window;
+  private scrollRafDocument?: Document;
   private virtualAnchorReleaseRafId?: number;
+  private virtualAnchorReleaseRafOwner?: Window;
+  private virtualAnchorReleaseRafDocument?: Document;
   private anchoringVirtualTail = false;
+  private ownerRealmGeneration = 0;
+  private virtualAnchorRequest = 0;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.shouldFollowLiveTail) this.scrollToLatest();
+  }
 
   override disconnectedCallback(): void {
+    this.resetOwnerRealmWork();
     super.disconnectedCallback();
-    if (this.scrollRafId !== undefined) {
-      cancelAnimationFrame(this.scrollRafId);
-      this.scrollRafId = undefined;
-    }
-    if (this.virtualAnchorReleaseRafId !== undefined) {
-      cancelAnimationFrame(this.virtualAnchorReleaseRafId);
-      this.virtualAnchorReleaseRafId = undefined;
-    }
-    this.anchoringVirtualTail = false;
+  }
+
+  adoptedCallback(): void {
+    this.resetOwnerRealmWork();
+    if (this.isConnected && this.shouldFollowLiveTail) this.scrollToLatest();
   }
 
   /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
@@ -202,6 +228,36 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private get isVirtualized(): boolean {
     return this.entries.length >= this.effectiveVirtualizeThreshold;
+  }
+
+  private get shouldFollowLiveTail(): boolean {
+    return this.expanded && this.mode === 'live' && this.follow;
+  }
+
+  private cancelScrollFrame(): void {
+    if (this.scrollRafId !== undefined) {
+      this.scrollRafOwner?.cancelAnimationFrame(this.scrollRafId);
+    }
+    this.scrollRafId = undefined;
+    this.scrollRafOwner = undefined;
+    this.scrollRafDocument = undefined;
+  }
+
+  private cancelVirtualAnchorReleaseFrame(): void {
+    if (this.virtualAnchorReleaseRafId !== undefined) {
+      this.virtualAnchorReleaseRafOwner?.cancelAnimationFrame(this.virtualAnchorReleaseRafId);
+    }
+    this.virtualAnchorReleaseRafId = undefined;
+    this.virtualAnchorReleaseRafOwner = undefined;
+    this.virtualAnchorReleaseRafDocument = undefined;
+  }
+
+  private resetOwnerRealmWork(): void {
+    this.ownerRealmGeneration += 1;
+    this.virtualAnchorRequest += 1;
+    this.cancelScrollFrame();
+    this.cancelVirtualAnchorReleaseFrame();
+    this.anchoringVirtualTail = false;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -245,39 +301,106 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   private scrollToLatest(): void {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected || !this.shouldFollowLiveTail) return;
+    const generation = this.ownerRealmGeneration;
     if (this.isVirtualized) {
+      this.cancelScrollFrame();
+      this.cancelVirtualAnchorReleaseFrame();
       this.anchoringVirtualTail = true;
+      const request = ++this.virtualAnchorRequest;
       // Deferred to updateComplete: the internal virtual-list may not have re-rendered its own
       // windowed rows for the latest `entries` yet within this same synchronous pass.
       void this.updateComplete.then(() => {
         const list = this.virtualListEl;
-        if (!list || !this.isConnected) {
+        if (
+          request !== this.virtualAnchorRequest ||
+          generation !== this.ownerRealmGeneration ||
+          this.ownerDocument !== ownerDocument ||
+          !this.isConnected
+        ) {
+          return;
+        }
+        if (!list || !this.isVirtualized || !this.shouldFollowLiveTail) {
           this.anchoringVirtualTail = false;
           return;
         }
         list.scrollToIndex(this.entries.length - 1, { align: 'end', behavior: 'auto' });
-        if (this.virtualAnchorReleaseRafId !== undefined) {
-          cancelAnimationFrame(this.virtualAnchorReleaseRafId);
-        }
-        this.virtualAnchorReleaseRafId = requestAnimationFrame(() => {
-          this.virtualAnchorReleaseRafId = requestAnimationFrame(() => {
+        const firstHandle = ownerWindow.requestAnimationFrame(() => {
+          if (
+            this.virtualAnchorReleaseRafId !== firstHandle ||
+            this.virtualAnchorReleaseRafOwner !== ownerWindow ||
+            this.virtualAnchorReleaseRafDocument !== ownerDocument ||
+            request !== this.virtualAnchorRequest ||
+            generation !== this.ownerRealmGeneration ||
+            !this.isConnected ||
+            this.ownerDocument !== ownerDocument
+          ) {
+            return;
+          }
+          this.virtualAnchorReleaseRafId = undefined;
+          this.virtualAnchorReleaseRafOwner = undefined;
+          this.virtualAnchorReleaseRafDocument = undefined;
+          if (!this.anchoringVirtualTail || !this.isVirtualized || !this.shouldFollowLiveTail) {
+            this.anchoringVirtualTail = false;
+            return;
+          }
+          const secondHandle = ownerWindow.requestAnimationFrame(() => {
+            if (
+              this.virtualAnchorReleaseRafId !== secondHandle ||
+              this.virtualAnchorReleaseRafOwner !== ownerWindow ||
+              this.virtualAnchorReleaseRafDocument !== ownerDocument ||
+              request !== this.virtualAnchorRequest ||
+              generation !== this.ownerRealmGeneration ||
+              !this.isConnected ||
+              this.ownerDocument !== ownerDocument
+            ) {
+              return;
+            }
             this.virtualAnchorReleaseRafId = undefined;
+            this.virtualAnchorReleaseRafOwner = undefined;
+            this.virtualAnchorReleaseRafDocument = undefined;
             this.anchoringVirtualTail = false;
           });
+          this.virtualAnchorReleaseRafId = secondHandle;
+          this.virtualAnchorReleaseRafOwner = ownerWindow;
+          this.virtualAnchorReleaseRafDocument = ownerDocument;
         });
+        this.virtualAnchorReleaseRafId = firstHandle;
+        this.virtualAnchorReleaseRafOwner = ownerWindow;
+        this.virtualAnchorReleaseRafDocument = ownerDocument;
       });
       return;
     }
+    this.virtualAnchorRequest += 1;
+    this.cancelVirtualAnchorReleaseFrame();
+    this.anchoringVirtualTail = false;
     if (this.scrollRafId !== undefined) return;
-    this.scrollRafId = requestAnimationFrame(() => {
+    const handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.scrollRafId !== handle ||
+        this.scrollRafOwner !== ownerWindow ||
+        this.scrollRafDocument !== ownerDocument ||
+        generation !== this.ownerRealmGeneration ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.scrollRafId = undefined;
+      this.scrollRafOwner = undefined;
+      this.scrollRafDocument = undefined;
       // Re-check inside the callback -- the reader may have scrolled away in the window between
       // scheduling and firing (identical rationale/pattern to lr-thinking-panel's own
       // onContentMutated rAF coalescing).
-      if (!(this.expanded && this.mode === 'live' && this.follow)) return;
+      if (!this.shouldFollowLiveTail || this.isVirtualized) return;
       const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
       if (body) body.scrollTop = body.scrollHeight;
     });
+    this.scrollRafId = handle;
+    this.scrollRafOwner = ownerWindow;
+    this.scrollRafDocument = ownerDocument;
   }
 
   private completedStepsSummary(): string {

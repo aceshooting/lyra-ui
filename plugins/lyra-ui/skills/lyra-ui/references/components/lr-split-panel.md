@@ -2,7 +2,7 @@
 
 # `lr-split-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-split-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSplitPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -36,11 +36,12 @@ multi-divider events are intentionally a different API.
   as the host changes size. When set, that pane keeps its pixel size and the other pane absorbs the
   resize. Position values are always measured from the selected primary edge.
 - `snap: string | SnapFunction = ''` — pointer-drag snap behavior. A string accepts space-separated
-  pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`). A property-bound
+  pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`) and reflects to the
+  `snap` attribute. A property-bound
   `SnapFunction` receives `{ pos, size, snapThreshold }` in pixels and returns the desired pixel
   position; callback code decides how to use the supplied threshold. The setter also accepts
   `undefined` for mapped source compatibility, clearing the configuration to the canonical `''`
-  read value.
+  read value. Function and empty values remove the serializable attribute.
 - `snapThreshold: number = 12` (attribute `snap-threshold`) — maximum pixel distance at which a
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.

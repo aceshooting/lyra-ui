@@ -26,7 +26,7 @@ const componentMetadataByTag = buildComponentMetadataIndex(customElements);
  * remains the first integration detail the generated API tables cannot tell a reader.
  *
  * The specifier is derived per page from `.storybook/component-imports.js` (see its header for the
- * source of truth) rather than written into 275 story files.
+ * source of truth) rather than written into 283 story files.
  */
 
 /**

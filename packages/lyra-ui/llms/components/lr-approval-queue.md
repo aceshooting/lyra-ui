@@ -2,7 +2,7 @@
 
 # `lr-approval-queue`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-approval-queue.js';` (stable tag alias; registers the tag)
 - **Class** `LyraApprovalQueue`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`

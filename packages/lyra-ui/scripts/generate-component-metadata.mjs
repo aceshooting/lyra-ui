@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 import {
   annotateComponentSource,
+  applyComponentMetadataToManifest,
   applyMaturityToInventory,
   buildReleaseHistory,
   currentHistoryRecord,
-  hasCompleteGitHistory,
+  partitionReleaseHistoryAtCurrent,
+  reconcileCurrentReleaseHistory,
+  requireCompleteGitHistory,
   validateComponentMetadata,
 } from './component-metadata.mjs';
 
@@ -74,22 +77,40 @@ function parseArguments(argv) {
 
 export function run(argv = process.argv.slice(2)) {
   const options = parseArguments(argv);
+  requireCompleteGitHistory(repoRoot);
   let metadata = readJson(metadataPath);
   let inventory = readJson(inventoryPath);
   const rawManifest = fs.readFileSync(manifestPath, 'utf8');
   const manifest = JSON.parse(rawManifest);
   const packageJson = readJson(packageJsonPath);
+  let nextCurrent = currentHistoryRecord(packageJson.version, rawManifest, manifest);
+  let validationManifest = manifest;
+  let validationRawManifest = rawManifest;
   let sourceChanges = [];
+  let nextReleases = metadata.history?.releases ?? [];
+  let nextTaggedCurrent = metadata.history?.taggedCurrent ?? null;
+  const rolloverCurrent = packageJson.version !== metadata.history?.current?.version;
 
   if (options.refreshHistory) {
     const previousTags = new Set((metadata.history?.releases ?? []).map((release) => release.tag));
-    const releases = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
-    const refreshedTags = new Set(releases.map((release) => release.tag));
+    const reproduced = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
+    const refreshedTags = new Set(reproduced.map((release) => release.tag));
     const missing = [...previousTags].filter((tag) => !refreshedTags.has(tag));
     if (missing.length) {
       throw new Error(`Refusing to truncate checked-in release history; missing local tags: ${missing.join(', ')}`);
     }
-    metadata = { ...metadata, history: { ...metadata.history, releases } };
+    const partitioned = partitionReleaseHistoryAtCurrent(reproduced, metadata.history?.current, {
+      taggedCurrent: nextTaggedCurrent,
+    });
+    nextReleases = rolloverCurrent ? reproduced : partitioned.releases;
+    nextTaggedCurrent = rolloverCurrent ? null : partitioned.taggedCurrent;
+  } else if (options.write) {
+    const reproduced = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
+    const reconciled = reconcileCurrentReleaseHistory(metadata.history, reproduced, {
+      rolloverCurrent,
+    });
+    nextReleases = reconciled.releases;
+    nextTaggedCurrent = reconciled.taggedCurrent;
   }
 
   if (options.write) {
@@ -97,17 +118,44 @@ export function run(argv = process.argv.slice(2)) {
       ...metadata,
       history: {
         ...metadata.history,
-        current: currentHistoryRecord(packageJson.version, rawManifest, manifest),
+        releases: nextReleases,
+        taggedCurrent: nextTaggedCurrent,
+        current: nextCurrent,
       },
     };
-    inventory = applyMaturityToInventory(metadata, inventory);
+    // A metadata transition can itself change the CEM projection (most notably, a post-tag
+    // component moves from `unreleased` to the newly bumped version). Predict the deterministic
+    // final manifest bytes so history.current records what the required subsequent manifest run
+    // will write, instead of either blocking the transition or checking in a stale digest.
+    validationManifest = structuredClone(manifest);
+    applyComponentMetadataToManifest(metadata, validationManifest, {
+      packageVersion: packageJson.version,
+    });
+    validationRawManifest = `${JSON.stringify(validationManifest)}\n`;
+    nextCurrent = currentHistoryRecord(
+      packageJson.version,
+      validationRawManifest,
+      validationManifest,
+    );
+    metadata = {
+      ...metadata,
+      history: { ...metadata.history, current: nextCurrent },
+    };
+    inventory = applyMaturityToInventory(metadata, inventory, {
+      packageVersion: packageJson.version,
+    });
     // Build every source edit before touching disk. A detached/malformed component JSDoc or a
     // central policy/CEM mismatch must be detected before any file changes instead of validation
     // leaving a partial mass annotation behind.
     sourceChanges = sourceAnnotationChanges(inventory);
   }
 
-  const findings = validateComponentMetadata(metadata, { inventory, manifest, packageJson, rawManifest });
+  const findings = validateComponentMetadata(metadata, {
+    inventory,
+    manifest: validationManifest,
+    packageJson,
+    rawManifest: validationRawManifest,
+  });
   if (findings.length) {
     throw new Error(`Component metadata validation failed:\n- ${findings.join('\n- ')}`);
   }
@@ -123,11 +171,11 @@ export function run(argv = process.argv.slice(2)) {
     writeJson(inventoryPath, inventory);
   }
 
-  if (options.check && hasCompleteGitHistory(repoRoot)) {
+  if (options.check) {
     const reproduced = buildReleaseHistory(repoRoot, metadata.history.manifestPath);
-    if (JSON.stringify(reproduced) !== JSON.stringify(metadata.history.releases)) {
-      throw new Error('Checked-in component release history is stale; run component-metadata:history.');
-    }
+    reconcileCurrentReleaseHistory(metadata.history, reproduced, {
+      requirePersistedTaggedCurrent: true,
+    });
   }
   console.log(`Component metadata covers ${inventory.components.length} components with reproducible history.`);
 }

@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
-# Regenerates every derived/generated artifact in this repo that pnpm lint/build/test do NOT
-# regenerate on their own -- the exact freshness surface documented as commonly forgotten before a
-# push (manifest, editor data, llms docs, the packaged agent skill, bundle-size budgets, Storybook +
-# its sitemap, and -- opt-in only -- visual regression baselines). Run this before committing any
-# change that adds/removes/renames a component or changes its public properties/attributes/events/
-# CSS parts/CSS custom properties; skipping it is exactly what lets CI's static-checks/
-# build-and-coverage/docs-and-storybook/visual-regression jobs go red on a locally-green branch.
+# Regenerates the repository's derived artifacts in dependency order: source metadata and
+# localization slices, public manifests and inventory metadata, registration/autoloader/event/
+# framework/token surfaces, build-derived quality and size statistics, editor/LLM data, packaged
+# skills, and Storybook. Visual baselines remain an explicit reviewed opt-in. Run this before
+# committing any public-surface change so every downstream artifact is derived from the same source.
 #
 # This script only WRITES files; it does not fail on drift the way scripts/ci.sh's freshness checks
 # do. Run scripts/ci.sh afterward (or just `git status --short` + review the diff) to confirm
 # everything landed clean before committing.
 #
 # Usage:
-#   ./scripts/regen.sh                 # build, manifest, editor data, llms, skill package,
-#                                       # bundle-size budgets, Storybook + sitemap
-#   ./scripts/regen.sh --visual        # ALSO update visual regression baselines (see warning below)
-#   ./scripts/regen.sh --visual --filter <story-slug>   # scope the baseline update to one story
-#   ./scripts/regen.sh --skip-build    # skip the initial `pnpm build` (already fresh / faster reruns)
+#   ./scripts/regen.sh                 # regenerate all non-visual derived artifacts
+#   ./scripts/regen.sh --visual        # promote an already-reviewed candidate set (guarded)
+#   ./scripts/regen.sh --visual --filter <story-slug>   # scope promotion to one reviewed story
+#   ./scripts/regen.sh --skip-build    # reuse an already-fresh dist/ for built measurements
 #
-# Visual baselines are NOT updated by default: packages/lyra-ui/visual-baselines/README.md is
-# explicit that an agent-authored baseline update is "unreviewed until a human visually confirms
-# it" -- blindly re-blessing every story's baseline can silently paper over a real rendering
-# regression. Pass --visual only for a change you've already confirmed renders correctly, and scope
-# it with --filter whenever you can. Always look at the resulting PNG(s) before committing them.
+# Visual baselines are NOT promoted by default. `--visual` copies the exact hash-bound candidates
+# from a preceding normal harness run and refuses to act until manifest.json contains a real,
+# complete human-review record. See packages/lyra-ui/visual-baselines/README.md; never fabricate the
+# reviewer/date fields or use this switch for agent-only inspection.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -45,13 +41,57 @@ done
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m%s\033[0m\n' "$*"; }
 
+step "package metadata (src/internal/package-metadata.ts)"
+pnpm --filter @aceshooting/lyra-ui run package-metadata
+
+step "default-string component slices"
+pnpm --filter @aceshooting/lyra-ui run default-string-slices
+
+step "initial manifest (custom-elements.json)"
+pnpm manifest
+
+step "component inventory from digest-pinned public upstream manifests"
+pnpm --filter @aceshooting/lyra-ui run component-inventory
+
+step "component release metadata and source annotations"
+pnpm --filter @aceshooting/lyra-ui run component-metadata
+
+step "final manifest after component metadata annotations"
+pnpm manifest
+
+step "final component inventory after the annotated manifest"
+pnpm --filter @aceshooting/lyra-ui run component-inventory
+
+step "registration entries, root allowlist, tag aliases, and sideEffects"
+pnpm registrations
+
+step "autoloader manifest"
+pnpm --filter @aceshooting/lyra-ui run autoloader-manifest
+
+step "typed global event surface"
+pnpm --filter @aceshooting/lyra-ui run events
+
+step "framework type surfaces"
+pnpm --filter @aceshooting/lyra-ui run framework-types
+
+step "semantic, chart, and terminal palette artifacts"
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
+
+step "design-token artifacts"
+pnpm --filter @aceshooting/lyra-ui run design-tokens
+
 if [[ "$SKIP_BUILD" != "1" ]]; then
   step "pnpm build"
   pnpm build
 fi
 
-step "manifest (custom-elements.json)"
-pnpm manifest
+step "component qualification and integration evidence"
+pnpm --filter @aceshooting/lyra-ui run component-quality
+
+step "measured bundle-size statistics (reviewed budgets are never generated)"
+pnpm --filter @aceshooting/lyra-ui exec node scripts/check-bundle-size.mjs --write-stats
 
 step "editor data (vscode-html-data.json / vscode-css-data.json / web-types.json)"
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
@@ -59,18 +99,15 @@ pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 step "llms docs (llms-full.txt + llms/**)"
 pnpm --filter @aceshooting/lyra-ui run llms
 
-step "plugin skill package (plugins/lyra-ui/skills/lyra-ui/references/ + skills/lyra-ui.skill)"
+step "plugin skill packages (generated API references + skills/*.skill)"
 ./package.sh
-
-step "bundle-size budgets (scripts/bundle-budgets.json / scripts/bundle-stats.json)"
-pnpm --filter @aceshooting/lyra-ui exec node scripts/check-bundle-size.mjs --write-budgets
 
 step "Storybook + sitemap (storybook-static/, .storybook/sitemap.xml)"
 pnpm docs:build
 
 if [[ "$RUN_VISUAL" == "1" ]]; then
-  step "visual regression baselines (packages/lyra-ui/visual-baselines/**)"
-  warn "Updating visual baselines -- these are unreviewed until a human visually confirms the resulting PNG(s). Do not commit blindly."
+  step "promote reviewed visual candidates (packages/lyra-ui/visual-baselines/**)"
+  warn "Promotion requires a complete human-review record and copies only the exact hash-bound candidates from the preceding reviewed run."
   pnpm --filter @aceshooting/lyra-ui exec node scripts/visual-regression.mjs --update-snapshots "${VISUAL_FILTER[@]}"
 else
   step "visual regression baselines (skipped -- pass --visual to update)"
@@ -89,6 +126,35 @@ fi
 
 step "summary: what changed"
 CHANGED_PATHS=(
+  packages/lyra-ui/src/internal/package-metadata.ts
+  packages/lyra-ui/src/internal/default-strings.generated.ts
+  packages/lyra-ui/src/components/
+  packages/lyra-ui/src/internal/autoloader-tags.ts
+  packages/lyra-ui/src/internal/autoloader-manifest.ts
+  packages/lyra-ui/src/internal/tokens/palette.styles.ts
+  packages/lyra-ui/src/internal/specialist-tokens.styles.ts
+  packages/lyra-ui/src/events.ts
+  packages/lyra-ui/src/custom-elements-jsx.ts
+  packages/lyra-ui/src/vue.ts
+  packages/lyra-ui/src/svelte.ts
+  packages/lyra-ui/src/theme.css
+  packages/lyra-ui/src/all.ts
+  packages/lyra-ui/src/ssr/all.ts
+  packages/lyra-ui/src/components/lr-*.ts
+  packages/lyra-ui/src/internal/root-registration-allowlist.ts
+  packages/lyra-ui/src/styles/design-tokens.css
+  packages/lyra-ui/design-tokens.json
+  packages/lyra-ui/tokens/
+  .storybook/token-preview.generated.js
+  packages/lyra-ui/scripts/fixtures/token-docs.generated.json
+  packages/lyra-ui/scripts/fixtures/token-editor.generated.json
+  packages/lyra-ui/scripts/fixtures/component-inventory.json
+  packages/lyra-ui/scripts/fixtures/component-metadata.json
+  packages/lyra-ui/scripts/fixtures/component-qualification.json
+  packages/lyra-ui/scripts/fixtures/component-integration.json
+  docs/component-quality.md
+  docs/component-integration.md
+  packages/lyra-ui/package.json
   packages/lyra-ui/custom-elements.json
   packages/lyra-ui/vscode-html-data.json
   packages/lyra-ui/vscode-css-data.json
@@ -98,7 +164,7 @@ CHANGED_PATHS=(
   packages/lyra-ui/llms/
   plugins/lyra-ui/skills/lyra-ui/references/
   skills/lyra-ui.skill
-  packages/lyra-ui/scripts/bundle-budgets.json
+  skills/compose-lyra-interfaces.skill
   packages/lyra-ui/scripts/bundle-stats.json
   storybook-static/
   .storybook/sitemap.xml

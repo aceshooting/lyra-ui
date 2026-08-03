@@ -8,6 +8,11 @@ import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraPollStatusEventMap {
   'lr-poll-due': CustomEvent<undefined>;
@@ -40,6 +45,24 @@ const TICK_MS = 1000;
  * @since 4.0.0
  */
 export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    pollInactive: LYRA_DEFAULT_pollInactive,
+    pollPause: LYRA_DEFAULT_pollPause,
+    pollPaused: LYRA_DEFAULT_pollPaused,
+    pollPausedAnnounce: LYRA_DEFAULT_pollPausedAnnounce,
+    pollRefreshing: LYRA_DEFAULT_pollRefreshing,
+    pollRefreshingAnnounce: LYRA_DEFAULT_pollRefreshingAnnounce,
+    pollResume: LYRA_DEFAULT_pollResume,
+    pollResumedAnnounce: LYRA_DEFAULT_pollResumedAnnounce,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Milliseconds until the next scheduled action, as of whenever this was last set -- setting it
@@ -56,7 +79,10 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   @state() private remainingMs = 0;
   @state() private due = false;
-  private tickTimer?: ReturnType<typeof setInterval>;
+  private tickTimer?: number;
+  private tickTimerOwner?: Window;
+  private tickTimerDocument?: Document;
+  private tickerGeneration = 0;
   private targetAt = 0;
   private deadlineConsumed = false;
 
@@ -82,8 +108,15 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.disarmTicker();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.disarmTicker();
+    if (this.isConnected && this.active && !this.paused && this.nextInMs != null && !this.deadlineConsumed) {
+      this.armTicker();
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -177,7 +210,25 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (!this.isConnected || !this.active || this.paused || this.nextInMs == null || this.deadlineConsumed) {
       return;
     }
-    this.tickTimer = setInterval(() => {
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const generation = this.tickerGeneration;
+    const handle = ownerWindow.setInterval(() => {
+      if (
+        this.tickTimer !== handle ||
+        this.tickTimerOwner !== ownerWindow ||
+        this.tickTimerDocument !== ownerDocument ||
+        this.tickerGeneration !== generation ||
+        !this.isConnected ||
+        !this.active ||
+        this.paused ||
+        this.nextInMs == null ||
+        this.deadlineConsumed ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.remainingMs = Math.max(0, this.targetAt - Date.now());
       if (this.remainingMs === 0 && !this.due) {
         this.deadlineConsumed = true;
@@ -187,13 +238,19 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.announce(this.localize('pollRefreshingAnnounce'));
       }
     }, TICK_MS);
+    this.tickTimer = handle;
+    this.tickTimerOwner = ownerWindow;
+    this.tickTimerDocument = ownerDocument;
   }
 
   private disarmTicker(): void {
+    this.tickerGeneration += 1;
     if (this.tickTimer !== undefined) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = undefined;
+      this.tickTimerOwner?.clearInterval(this.tickTimer);
     }
+    this.tickTimer = undefined;
+    this.tickTimerOwner = undefined;
+    this.tickTimerDocument = undefined;
   }
 
   private announce(text: string): void {

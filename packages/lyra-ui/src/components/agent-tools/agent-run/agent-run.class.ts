@@ -13,6 +13,11 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './agent-run.styles.js';
 
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Statuses for which the live elapsed-time ticker (and the built-in Cancel button) apply -- a
  *  run is still genuinely "going" while waiting on the user or an approval gate, not just while
@@ -234,6 +239,32 @@ export interface LyraAgentRunEventMap {
  * @since 4.1.0
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentRunCurrentStepLabel: LYRA_DEFAULT_agentRunCurrentStepLabel,
+    agentRunStatusAnnounce: LYRA_DEFAULT_agentRunStatusAnnounce,
+    agentRunStatusCancelled: LYRA_DEFAULT_agentRunStatusCancelled,
+    agentRunStatusCollecting: LYRA_DEFAULT_agentRunStatusCollecting,
+    agentRunStatusDone: LYRA_DEFAULT_agentRunStatusDone,
+    agentRunStatusIdle: LYRA_DEFAULT_agentRunStatusIdle,
+    agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
+    agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
+    agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
+    cancel: LYRA_DEFAULT_cancel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
+    statusError: LYRA_DEFAULT_statusError,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, srOnly, styles];
 
   /** The run to display. Controlled and never mutated by this component -- pass a new object to

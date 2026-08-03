@@ -162,6 +162,164 @@ describe('lr-copy-button', () => {
     expect(writes).to.deep.equal(['source text', 'attribute text', 'property text']);
   });
 
+  it('uses foreign shadow content, the owner clipboard, and the exact owner feedback timer', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const host = frameDocument.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const source = frameDocument.createElement('span');
+    source.id = 'foreign-copy-source';
+    source.textContent = 'foreign source text';
+    const el = (await fixture(html`
+      <lr-copy-button from="foreign-copy-source" feedback-duration="60000"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const trigger = frameDocument.createElement('button');
+    trigger.textContent = 'Copy foreign source';
+    el.append(trigger);
+    await el.updateComplete;
+
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const nativeSetTimeout = frameWindow.setTimeout.bind(frameWindow);
+    const nativeClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
+    const cancelled: number[] = [];
+    let feedbackHandle: number | undefined;
+    let feedbackCallback: (() => void) | undefined;
+    let mainWrites = 0;
+    const frameWrites: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+    });
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      const handle = nativeSetTimeout(handler, timeout, ...args);
+      if (timeout === el.feedbackDuration) {
+        feedbackHandle = handle;
+        if (typeof handler === 'function') feedbackCallback = handler;
+      }
+      return handle;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) cancelled.push(handle);
+      nativeClearTimeout(handle);
+    }) as typeof frameWindow.clearTimeout;
+
+    try {
+      frameDocument.body.append(host);
+      shadow.append(source, frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      trigger.click();
+      await settle(el);
+
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.deep.equal(['foreign source text']);
+      expect(feedbackHandle).to.be.a('number');
+
+      document.body.append(document.adoptNode(el));
+      expect(cancelled).to.include(feedbackHandle!);
+      await el.updateComplete;
+      expect(feedbackText(el)).to.equal('');
+
+      el.from = '';
+      el.value = 'new owner text';
+      await el.updateComplete;
+      trigger.click();
+      await settle(el);
+      expect(feedbackText(el)).to.equal('Copied!');
+      feedbackCallback?.();
+      await el.updateComplete;
+      expect(feedbackText(el), 'the retired iframe callback cannot clear current feedback').to.equal('Copied!');
+    } finally {
+      if (feedbackHandle !== undefined) nativeClearTimeout(feedbackHandle);
+      el.remove();
+      host.remove();
+      frameWindow.setTimeout = nativeSetTimeout;
+      frameWindow.clearTimeout = nativeClearTimeout;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
+    }
+  });
+
+  it('classifies a rejection from the adopted owner realm and never calls the ambient clipboard', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    let mainWrites = 0;
+    let frameWrites = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.reject(new Error('wrong realm')); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => {
+          frameWrites++;
+          return Promise.reject(new frameWindow.DOMException('Denied', 'NotAllowedError'));
+        },
+      },
+    });
+    const el = (await fixture(html`<lr-copy-button value="owner text"></lr-copy-button>`)) as LyraCopyButton;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      const failed = oneEvent(el, 'lr-copy-error');
+      baseButton(el).click();
+      const event = await failed;
+      expect(event.detail.reason).to.equal('denied');
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.equal(1);
+    } finally {
+      el.remove();
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
+    }
+  });
+
+  it('does not reach the ambient clipboard while disconnected in an ownerless document', async () => {
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    let writes = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { writes++; return Promise.resolve(); } },
+    });
+    const el = (await fixture(html`<lr-copy-button value="ownerless"></lr-copy-button>`)) as LyraCopyButton;
+    const button = baseButton(el);
+    try {
+      el.remove();
+      ownerlessDocument.adoptNode(el);
+      button.click();
+      await Promise.resolve();
+      expect(writes).to.equal(0);
+
+      document.body.append(document.adoptNode(el));
+      await el.updateComplete;
+      expect(feedbackText(el)).to.equal('');
+    } finally {
+      el.remove();
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('treats a missing from target as an error and never falls back to value', async () => {
     const el = (await fixture(html`
       <lr-copy-button from="missing-copy-source" value="must not copy"></lr-copy-button>

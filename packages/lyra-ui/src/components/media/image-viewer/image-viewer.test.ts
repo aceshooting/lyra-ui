@@ -5,8 +5,16 @@ import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { styles } from './image-viewer.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 /** A real 1x1 PNG, for the tests that must keep the loaded frame's DOM alive across an `await`.
  *
@@ -96,20 +104,33 @@ describe('image loading', () => {
     expect(event.detail).to.deep.equal({ naturalWidth: 800, naturalHeight: 600 });
   });
 
-  it('renders the error state and fires lr-render-error when the image fails to load', async () => {
+  it('renders a neutral error and appends repeated image failures to the light-DOM sink', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     const eventPromise = oneEvent(el, 'lr-render-error');
     img.dispatchEvent(new Event('error'));
     await eventPromise;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal('alert');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal(null);
+    expect(assertiveAnnouncements()).to.deep.equal(['The image failed to load.']);
+
+    el.src = 'https://example.test/photo-2.png';
+    await el.updateComplete;
+    const second = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    const repeatedEvent = oneEvent(el, 'lr-render-error');
+    second.dispatchEvent(new Event('error'));
+    await repeatedEvent;
+    expect(assertiveAnnouncements()).to.deep.equal([
+      'The image failed to load.',
+      'The image failed to load.',
+    ]);
   });
 
   it('renders the empty state and never sets an img src for an unsafe src', async () => {
     const el = (await fixture(html`<lr-image-viewer src="javascript:alert(1)"></lr-image-viewer>`)) as LyraImageViewer;
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
   });
 
   it('falls back alt to name, and lets an explicit empty alt mark the image decorative', async () => {

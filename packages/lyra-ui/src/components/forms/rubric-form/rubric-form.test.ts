@@ -4,6 +4,41 @@ import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
 import { styles } from './rubric-form.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+
+type CssEscapeHost = { escape?: (identifier: string) => string };
+
+function createRealmFrame(): {
+  iframe: HTMLIFrameElement;
+  frameDocument: Document;
+  frameWindow: Window & typeof globalThis;
+} {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('Could not create an iframe realm for the rubric-form test.');
+  }
+  return { iframe, frameDocument, frameWindow };
+}
+
+function replaceCssEscape(
+  target: CssEscapeHost,
+  replacement: CssEscapeHost['escape'],
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, 'escape');
+  Object.defineProperty(target, 'escape', {
+    configurable: true,
+    writable: true,
+    value: replacement,
+  });
+  return () => {
+    if (previous) Object.defineProperty(target, 'escape', previous);
+    else Reflect.deleteProperty(target, 'escape');
+  };
+}
 
 const KEYS: RubricKey[] = [
   { key: 'accuracy', type: 'score', label: 'Accuracy', min: 0, max: 5, step: 1, required: true },
@@ -146,7 +181,14 @@ describe('lr-rubric-form', () => {
     submit.click();
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.exist;
+    const error = el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')!;
+    expect(error.textContent?.trim().length).to.be.greaterThan(0);
+    expect(error.getAttribute('role')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+    const score = el.shadowRoot!.querySelector('[data-key="accuracy"] .control')!;
+    expect(score.getAttribute('label') ?? score.getAttribute('aria-label')).to.contain(
+      error.textContent?.trim(),
+    );
   });
 
   it('switches the submit label between rubricSubmit and rubricSubmitAndNext based on has-next', async () => {
@@ -243,6 +285,83 @@ describe('lr-rubric-form', () => {
     el.itemId = 'item-2';
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+  });
+
+  it('uses the adopted owner realm CSS escape to resolve a special-key validity anchor', async () => {
+    const specialKey = 'target\"] [data-key=\"decoy';
+    const keys: RubricKey[] = [
+      { key: specialKey, type: 'comment', required: true },
+      { key: 'decoy', type: 'comment', required: true },
+    ];
+    const { iframe, frameDocument, frameWindow } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`,
+    )) as LyraRubricForm;
+    el.remove();
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+
+    const ownerEscape = frameWindow.CSS.escape.bind(frameWindow.CSS);
+    let ownerCalls = 0;
+    const restoreOwner = replaceCssEscape(frameWindow.CSS, (identifier) => {
+      ownerCalls += 1;
+      return ownerEscape(identifier);
+    });
+    const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+    try {
+      const anchor = el[VALIDITY_ANCHOR]();
+      expect(ownerCalls).to.equal(1);
+      expect(anchor?.closest('[data-key]')?.getAttribute('data-key')).to.equal(specialKey);
+    } finally {
+      restoreAmbient();
+      restoreOwner();
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it('uses an exact key scan for adopted initial focus when owner CSS escape is missing or throws', async () => {
+    const specialKey = 'target\"] [data-key=\"decoy';
+    const keys: RubricKey[] = [
+      { key: specialKey, type: 'comment' },
+      { key: 'decoy', type: 'comment' },
+    ];
+    for (const mode of ['missing', 'throwing'] as const) {
+      const { iframe, frameDocument, frameWindow } = createRealmFrame();
+      const el = (await fixture(
+        html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`,
+      )) as LyraRubricForm;
+      el.remove();
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      let ownerCalls = 0;
+      const restoreOwner = replaceCssEscape(
+        frameWindow.CSS,
+        mode === 'missing'
+          ? undefined
+          : () => {
+              ownerCalls += 1;
+              throw new Error('owner CSS escape unavailable');
+            },
+      );
+      const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
+      try {
+        el.itemId = `item-${mode}`;
+        await el.updateComplete;
+
+        const active = el.shadowRoot!.activeElement as HTMLElement | null;
+        expect(active?.closest('[data-key]')?.getAttribute('data-key')).to.equal(specialKey);
+        expect(ownerCalls).to.equal(mode === 'throwing' ? 1 : 0);
+      } finally {
+        restoreAmbient();
+        restoreOwner();
+        el.remove();
+        iframe.remove();
+      }
+    }
   });
 
   it('renders a .strings override for the empty-keys message', async () => {
@@ -356,7 +475,7 @@ describe('lr-rubric-form', () => {
     // `actual` is a DOM node/NodeList hangs the whole wtr session, because @web/test-runner-mocha
     // ships `err.actual` verbatim in the `wtr-session-finished` message and @web/dev-server-core
     // serializes that message via `structuredClone()`, which throws DataCloneError on DOM values.
-    // The run then reports `0 passed, 0 failed` at the 180s `testsFinishTimeout`.
+    // The run then reports `0 passed, 0 failed` only when the per-file watchdog expires.
     expect(el.labels.length).to.equal(0);
     expect(el.form).to.equal(form);
     expect(el.validity.valid).to.be.false;

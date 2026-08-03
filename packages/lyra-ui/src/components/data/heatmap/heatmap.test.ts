@@ -8,6 +8,16 @@ import {
   resolveRgb,
 } from './heatmap.js';
 import { styles } from './heatmap.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkElement(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function sinkTexts(doc: Document = document): string[] {
+  const sink = sinkElement(doc);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 it('rejects unsafe custom color ramps and discrete legend paints', async () => {
   const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
@@ -78,7 +88,7 @@ function pixelRgb(ctx: CanvasRenderingContext2D, cssX: number, cssY: number): [n
   return [data[0]!, data[1]!, data[2]!];
 }
 
-it('puts the generated group role and summary only on the host semantic owner', async () => {
+it('names the focusable canvas itself as an application while retaining the host group summary', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
   el.colLabels = ['0h', '1h'];
@@ -90,8 +100,8 @@ it('puts the generated group role and summary only on the host semantic owner', 
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(el.getAttribute('role')).to.equal('group');
   expect(el.getAttribute('aria-label')).to.contain('2');
-  expect(canvas.getAttribute('role')).to.be.null;
-  expect(canvas.getAttribute('aria-label')).to.be.null;
+  expect(canvas.getAttribute('role')).to.equal('application');
+  expect(canvas.getAttribute('aria-label')).to.equal(el.getAttribute('aria-label'));
 });
 
 it('does not overwrite an author-supplied role/aria-label', async () => {
@@ -167,7 +177,10 @@ it('treats -1 as a no-data sentinel without throwing', async () => {
 });
 
 it('does not throw a RangeError computing the range label/draw for a very large grid (150k+ cells)', async () => {
-  const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+  // Keep the test's 160k-cell iteration/range pressure while bounding its backing store. At the
+  // default 22px size this creates an 8,860 x 8,820 canvas, beyond SwiftShader's common 8,192px
+  // texture limit and capable of crashing Chromium's renderer before Mocha can report a result.
+  const el = (await fixture(html`<lr-heatmap cell-size="1"></lr-heatmap>`)) as LyraHeatmap;
   el.locale = 'en-US';
   const cols = 400;
   const rows = 400; // 160,000 cells — spreading this into Math.min/Math.max(...flat) blows the call stack.
@@ -635,7 +648,7 @@ describe('per-update-cycle caching (perf)', () => {
 
     const after = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
     // Same reference: a hover-only update (days unchanged) must not rebuild it.
-    expect(after).to.equal(cached);
+    expect(after === cached).to.equal(true);
   });
 
   it('rebuilds the cached calendar grid once `days` actually changes', async () => {
@@ -837,9 +850,49 @@ describe('per-cell hover/focus/click + accessible values', () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.tabIndex).to.equal(0);
-    expect(canvas.getAttribute('role')).to.be.null;
-    expect(canvas.getAttribute('aria-label')).to.be.null;
-    expect(canvas.getAttribute('aria-describedby')).to.equal('live-region');
+    expect(canvas.getAttribute('role')).to.equal('application');
+    expect(canvas.getAttribute('aria-label')).to.equal(el.getAttribute('aria-label'));
+    expect(canvas.getAttribute('aria-describedby')).to.equal(null);
+  });
+
+  it('routes keyboard feedback through a light-DOM sink and repeats identical edge announcements', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[9]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const mirror = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    expect(sinkTexts(), 'the initial heatmap state must stay silent').to.deep.equal([]);
+    expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+    expect(mirror.getAttribute('role')).to.equal(null);
+    expect(mirror.getAttribute('aria-live')).to.equal(null);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(sinkTexts()).to.deep.equal(['Row a, Col x: 9', 'Row a, Col x: 9']);
+
+    el.remove();
+    expect(sinkElement() === null).to.be.true;
+  });
+
+  it('re-targets keyboard announcements after cross-document adoption', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[9]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    try {
+      frameDocument.body.append(el);
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await el.updateComplete;
+      expect(sinkElement() === null, 'the original document must release the adopted heatmap').to.be.true;
+      expect(sinkTexts(frameDocument)).to.deep.equal(['Row a, Col x: 9']);
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
   });
 
   it('matrix mode: shows a tooltip with the row/col label and value on hover, hidden on pointerleave', async () => {
@@ -1191,15 +1244,18 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
     await el.updateComplete;
     expect(el.getAttribute('role')).to.equal('application');
     expect(el.getAttribute('aria-label')).to.equal('Late custom');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.be.null;
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('role')).to.equal('application');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Late custom');
 
     el.removeAttribute('role');
     el.removeAttribute('aria-label');
     await el.updateComplete;
     expect(el.getAttribute('role')).to.equal('group');
     expect(el.getAttribute('aria-label')).to.contain('Heatmap of 1 × 1 cells');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('role')).to.be.null;
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.be.null;
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('role')).to.equal('application');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal(
+      el.getAttribute('aria-label'),
+    );
   });
 
   it('uses a custom cellText formatter for the tooltip and live-region text when provided', async () => {
@@ -2197,6 +2253,186 @@ describe('coverage: draw guard branches', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // clientWidth is 0 while hidden -> falls back to PAD_LEFT(60) + 2*cellSize(10) = 80.
     expect(parseInt(canvas.style.width, 10)).to.equal(80);
+  });
+});
+
+describe('owner-window drawing runtime after adoption', () => {
+  it('rebinds observers, DPR queries, frames, computed styles, and scratch canvases to the current owner', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['row'];
+    el.colLabels = ['column'];
+    el.values = [[1]];
+    el.colorSteps = ['red', 'blue'];
+    await el.updateComplete;
+
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+
+    interface ResizeRecord {
+      callback: ResizeObserverCallback;
+      disconnected: boolean;
+    }
+    interface QueryRecord {
+      media: string;
+      listeners: Set<EventListenerOrEventListenerObject>;
+      removals: number;
+    }
+    const resizeRecords: ResizeRecord[] = [];
+    const queryRecords: QueryRecord[] = [];
+    const frameCallbacks = new Map<number, FrameRequestCallback>();
+    const canceledFrames: number[] = [];
+    let nextFrame = 1;
+    let computedStyleCalls = 0;
+    let scratchCanvasCreations = 0;
+
+    class FrameResizeObserver {
+      readonly record: ResizeRecord;
+      constructor(callback: ResizeObserverCallback) {
+        this.record = { callback, disconnected: false };
+        resizeRecords.push(this.record);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnected = true;
+      }
+    }
+
+    const originals = {
+      resizeObserver: frameWindow.ResizeObserver,
+      matchMedia: frameWindow.matchMedia,
+      requestAnimationFrame: frameWindow.requestAnimationFrame,
+      cancelAnimationFrame: frameWindow.cancelAnimationFrame,
+      getComputedStyle: frameWindow.getComputedStyle,
+      createElement: frameDocument.createElement,
+      devicePixelRatio: Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio'),
+    };
+    const realGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+    const realCreateElement = frameDocument.createElement.bind(frameDocument);
+
+    try {
+      (frameWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        FrameResizeObserver as unknown as typeof ResizeObserver;
+      frameWindow.matchMedia = ((media: string) => {
+        const record: QueryRecord = { media, listeners: new Set(), removals: 0 };
+        queryRecords.push(record);
+        return {
+          media,
+          matches: false,
+          onchange: null,
+          addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+            record.listeners.add(listener);
+          },
+          removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+            if (record.listeners.delete(listener)) record.removals++;
+          },
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => true,
+        } as MediaQueryList;
+      }) as typeof frameWindow.matchMedia;
+      frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+        const handle = nextFrame++;
+        frameCallbacks.set(handle, callback);
+        return handle;
+      }) as typeof frameWindow.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = ((handle: number) => {
+        canceledFrames.push(handle);
+        frameCallbacks.delete(handle);
+      }) as typeof frameWindow.cancelAnimationFrame;
+      frameWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+        computedStyleCalls++;
+        return realGetComputedStyle(element, pseudo);
+      }) as typeof frameWindow.getComputedStyle;
+      frameDocument.createElement = ((name: string, options?: ElementCreationOptions) => {
+        if (name.toLowerCase() === 'canvas') scratchCanvasCreations++;
+        return realCreateElement(name, options);
+      }) as typeof frameDocument.createElement;
+      Object.defineProperty(frameWindow, 'devicePixelRatio', { configurable: true, value: 2 });
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(resizeRecords.length).to.equal(1);
+      const firstDprQuery = queryRecords.find((record) => record.media.includes('resolution: 2dppx'));
+      expect(firstDprQuery !== undefined).to.be.true;
+
+      const staleResize = resizeRecords[0]!;
+      const staleQuery = firstDprQuery!;
+      const staleQueryListeners = [...staleQuery.listeners];
+      staleResize.callback([], {} as ResizeObserver);
+      const firstRequest = (el as unknown as {
+        drawFrameRequest?: { owner: Window; handle: number };
+      }).drawFrameRequest!;
+      expect(firstRequest.owner === frameWindow).to.equal(true);
+      const staleFrame = frameCallbacks.get(firstRequest.handle)!;
+
+      el.remove();
+      expect(staleResize.disconnected).to.be.true;
+      expect(staleQuery.removals).to.equal(1);
+      expect(canceledFrames).to.include(firstRequest.handle);
+
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(resizeRecords.length).to.equal(2);
+      const queryCount = queryRecords.length;
+      staleResize.callback([], {} as ResizeObserver);
+      for (const listener of staleQueryListeners) {
+        const event = new frameWindow.Event('change');
+        if (typeof listener === 'function') listener(event);
+        else listener.handleEvent(event);
+      }
+      staleFrame(0);
+      expect(queryRecords.length).to.equal(queryCount);
+      expect(
+        (el as unknown as { drawFrameRequest?: { owner: Window; handle: number } }).drawFrameRequest ===
+          undefined,
+      ).to.be.true;
+
+      const currentResize = resizeRecords[1]!;
+      currentResize.callback([], {} as ResizeObserver);
+      const currentRequest = (el as unknown as {
+        drawFrameRequest?: { owner: Window; handle: number };
+      }).drawFrameRequest!;
+      const currentFrame = frameCallbacks.get(currentRequest.handle)!;
+      frameCallbacks.delete(currentRequest.handle);
+      currentFrame(10);
+
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(canvas.width).to.equal(parseInt(canvas.style.width, 10) * 2);
+      expect(canvas.height).to.equal(parseInt(canvas.style.height, 10) * 2);
+      expect(computedStyleCalls).to.be.greaterThan(0);
+      expect(scratchCanvasCreations).to.be.greaterThan(0);
+
+      currentResize.callback([], {} as ResizeObserver);
+      const pending = (el as unknown as {
+        drawFrameRequest?: { owner: Window; handle: number };
+      }).drawFrameRequest!;
+      el.remove();
+      expect(currentResize.disconnected).to.be.true;
+      expect(canceledFrames).to.include(pending.handle);
+      const currentDprQuery = [...queryRecords]
+        .reverse()
+        .find((record) => record.media.includes('resolution: 2dppx'));
+      expect(currentDprQuery?.removals).to.equal(1);
+    } finally {
+      el.remove();
+      (frameWindow as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        originals.resizeObserver;
+      frameWindow.matchMedia = originals.matchMedia;
+      frameWindow.requestAnimationFrame = originals.requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = originals.cancelAnimationFrame;
+      frameWindow.getComputedStyle = originals.getComputedStyle;
+      frameDocument.createElement = originals.createElement;
+      if (originals.devicePixelRatio) {
+        Object.defineProperty(frameWindow, 'devicePixelRatio', originals.devicePixelRatio);
+      } else {
+        delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+      }
+      iframe.remove();
+    }
   });
 });
 

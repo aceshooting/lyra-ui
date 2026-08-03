@@ -13,6 +13,11 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_restore, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},
  *  so there is one definition. Named `frame`, not `appearance`: `appearance` is the library's
@@ -127,7 +132,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
- * @event lr-invalid - The composer failed a validity check.
+ * @event lr-invalid - The composer failed a validity check. Cancelable — preventing this alias
+ *   also prevents the native `invalid` event that produced it.
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
@@ -142,6 +148,18 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @since 4.0.0
  */
 export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    composerLabel: LYRA_DEFAULT_composerLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    restore: LYRA_DEFAULT_restore,
+    sendMessage: LYRA_DEFAULT_sendMessage,
+    stopGenerating: LYRA_DEFAULT_stopGenerating,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property() placeholder = '';
@@ -199,7 +217,12 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
   private textareaResizeObserver?: ResizeObserver;
+  private textareaResizeObserverDocument?: Document;
+  private textareaResizeObserverTarget?: HTMLTextAreaElement;
   private textareaResizeRaf?: number;
+  private textareaResizeRafOwner?: Window;
+  private textareaResizeRafDocument?: Document;
+  private textareaResizeGeneration = 0;
 
   // Purely presentational sizing (never form-submitted, unlike `value`/`disabled`/`required`
   // above), so a read-time getter -- mirroring `<lr-audio-visualizer>`'s `effectiveBarCount` --
@@ -327,10 +350,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.textareaResizeObserver?.disconnect();
-    this.textareaResizeObserver = undefined;
-    if (this.textareaResizeRaf !== undefined) cancelAnimationFrame(this.textareaResizeRaf);
-    this.textareaResizeRaf = undefined;
+    this.resetTextareaResizeWork();
+  }
+
+  adoptedCallback(): void {
+    this.resetTextareaResizeWork();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -360,7 +384,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   private resizeTextarea(): void {
     const ta = this.textareaEl;
     if (!ta) return;
-    const cs = getComputedStyle(ta);
+    const cs = this.ownerDocument.defaultView?.getComputedStyle(ta) ?? ta.style;
     const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
     const paddingBlock = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     const borderBlock = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
@@ -413,22 +437,78 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    */
   private armTextareaResizeObserver(): void {
     const ta = this.textareaEl;
-    if (!ta || this.textareaResizeObserver) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ta || !this.isConnected || !ownerWindow?.ResizeObserver) return;
+    if (
+      this.textareaResizeObserver &&
+      this.textareaResizeObserverDocument === ownerDocument &&
+      this.textareaResizeObserverTarget === ta
+    ) {
+      return;
+    }
+    this.resetTextareaResizeWork();
+    const generation = this.textareaResizeGeneration;
     let lastWidth = ta.getBoundingClientRect().width;
-    this.textareaResizeObserver = new ResizeObserver((entries) => {
+    const observer = new ownerWindow.ResizeObserver((entries) => {
+      if (
+        this.textareaResizeObserver !== observer ||
+        this.textareaResizeObserverDocument !== ownerDocument ||
+        this.textareaResizeObserverTarget !== ta ||
+        this.textareaResizeGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       const box = entries[0]?.contentBoxSize?.[0];
       const width = box ? box.inlineSize : (entries[0]?.contentRect.width ?? lastWidth);
       // A sub-pixel-only difference (common with fractional layout/zoom)
       // isn't worth a recompute.
       if (Math.abs(width - lastWidth) < 0.5) return;
       lastWidth = width;
-      if (this.textareaResizeRaf !== undefined) cancelAnimationFrame(this.textareaResizeRaf);
-      this.textareaResizeRaf = requestAnimationFrame(() => {
+      if (this.textareaResizeRaf !== undefined) {
+        this.textareaResizeRafOwner?.cancelAnimationFrame(this.textareaResizeRaf);
+      }
+      const handle = ownerWindow.requestAnimationFrame(() => {
+        if (
+          this.textareaResizeRaf !== handle ||
+          this.textareaResizeRafOwner !== ownerWindow ||
+          this.textareaResizeRafDocument !== ownerDocument ||
+          this.textareaResizeGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument ||
+          this.textareaResizeObserverTarget !== ta
+        ) {
+          return;
+        }
         this.textareaResizeRaf = undefined;
+        this.textareaResizeRafOwner = undefined;
+        this.textareaResizeRafDocument = undefined;
         this.resizeTextarea();
       });
+      this.textareaResizeRaf = handle;
+      this.textareaResizeRafOwner = ownerWindow;
+      this.textareaResizeRafDocument = ownerDocument;
     });
-    this.textareaResizeObserver.observe(ta);
+    this.textareaResizeObserver = observer;
+    this.textareaResizeObserverDocument = ownerDocument;
+    this.textareaResizeObserverTarget = ta;
+    observer.observe(ta);
+  }
+
+  private resetTextareaResizeWork(): void {
+    this.textareaResizeGeneration += 1;
+    this.textareaResizeObserver?.disconnect();
+    this.textareaResizeObserver = undefined;
+    this.textareaResizeObserverDocument = undefined;
+    this.textareaResizeObserverTarget = undefined;
+    if (this.textareaResizeRaf !== undefined) {
+      this.textareaResizeRafOwner?.cancelAnimationFrame(this.textareaResizeRaf);
+    }
+    this.textareaResizeRaf = undefined;
+    this.textareaResizeRafOwner = undefined;
+    this.textareaResizeRafDocument = undefined;
   }
 
   private onTextareaInput = (e: Event): void => {

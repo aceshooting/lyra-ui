@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const themePath = join(packageDir, 'src', 'theme.css');
-const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
 const SERIES = 8;
 const NON_TEXT_CONTRAST = 3;
@@ -182,8 +182,8 @@ function solve(surface, mode) {
 }
 
 /**
- * Rewrites the matching `--lr-<name>: var(--lr-theme-<name>, <hex>)` fallbacks in
- * `src/internal/tokens.styles.ts` so they stay byte-identical to `theme.css`.
+ * Rewrites the matching opt-in fallbacks in `src/internal/specialist-tokens.styles.ts` so they
+ * stay byte-identical to `theme.css`.
  *
  * That equality is a real contract, not tidiness: `theme.css` is optional, and a consumer who never
  * imports it gets the hardcoded fallback instead. If the two drift, importing the theme silently
@@ -191,26 +191,24 @@ function solve(surface, mode) {
  * bridged-token assertions catch. Generating both from one source is what makes the drift
  * impossible rather than merely detected.
  *
- * The light fallbacks sit before the `@media (prefers-color-scheme: dark)` block and the dark ones
- * inside it.
+ * Marker-delimited mode blocks make the write fail closed if the specialist sheet changes shape;
+ * a replacement count of zero must never be reported as successful generation.
  */
-function writeTokenFallbacks(tokensPath, valuesByMode) {
-  let text = readFileSync(tokensPath, 'utf8');
-  // The dark fallbacks live in the `@media (prefers-color-scheme: dark)` block, not a `:host(...)`
-  // selector -- `tokens.styles.ts` bridges the theme for a component dropped onto a dark page with
-  // no theme imported at all, which is a media query by definition.
-  const darkAnchor = text.indexOf('@media (prefers-color-scheme: dark)');
-  if (darkAnchor < 0) throw new Error('could not find the prefers-color-scheme block in tokens.styles.ts');
-  const apply = (region, values) => {
-    for (const [name, hex] of Object.entries(values)) {
-      const pattern = new RegExp(`(--lr-${name}:\\s*var\\(--lr-theme-${name},\\s*)#[0-9a-f]{6}(\\))`, 'gi');
-      region = region.replace(pattern, `$1${hex}$2`);
+function writeTokenFallbacks(filePath, valuesByMode) {
+  let text = readFileSync(filePath, 'utf8');
+  for (const mode of ['light', 'dark']) {
+    const block = Object.entries(valuesByMode[mode] ?? {})
+      .map(([name, hex]) => `    --lr-${name}: var(--lr-theme-${name}, ${hex});`)
+      .join('\n');
+    const pattern = new RegExp(
+      `(/\\* chart fallback ramp: generated \\(${mode}\\) -- see scripts/generate-chart-palette\\.mjs \\*/\\n)[\\s\\S]*?(\\n[ \\t]*/\\* chart fallback ramp: end \\*/)`,
+    );
+    if (!pattern.test(text)) {
+      throw new Error(`missing generated chart-fallback markers for ${mode} in specialist-tokens.styles.ts`);
     }
-    return region;
-  };
-  const light = apply(text.slice(0, darkAnchor), valuesByMode.light ?? {});
-  const dark = apply(text.slice(darkAnchor), valuesByMode.dark ?? {});
-  writeFileSync(tokensPath, light + dark, 'utf8');
+    text = text.replace(pattern, `$1${block}$2`);
+  }
+  writeFileSync(filePath, text, 'utf8');
 }
 
 const themeText = readFileSync(themePath, 'utf8');
@@ -255,7 +253,7 @@ if (!fallbackPattern.test(fallbackText)) throw new Error('missing chart-fallback
 writeFileSync(fallbackPath, fallbackText.replace(fallbackPattern, `$1${fallbackBlock}$2`), 'utf8');
 
 writeTokenFallbacks(
-  tokensPath,
+  specialistTokensPath,
   Object.fromEntries(
     Object.entries(ramps).map(([mode, hexes]) => [
       mode,

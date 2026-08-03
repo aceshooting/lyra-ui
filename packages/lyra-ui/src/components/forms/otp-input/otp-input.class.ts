@@ -7,7 +7,11 @@ import { nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
-import { findImplicitSubmitter, submitOnEnter } from '../../../internal/submit-on-enter.js';
+import {
+  findImplicitSubmitter,
+  isNativeSubmitter,
+  submitOnEnter,
+} from '../../../internal/submit-on-enter.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './otp-input.styles.js';
 import {
@@ -15,6 +19,11 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Which characters a segment accepts. */
 export type OtpInputType = 'numeric' | 'alpha' | 'alphanumeric';
@@ -155,6 +164,22 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @since 8.0.0
  */
 export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    otpInputIncomplete: LYRA_DEFAULT_otpInputIncomplete,
+    otpInputLabel: LYRA_DEFAULT_otpInputLabel,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   /** Visible label. When nonempty, it takes precedence over rich `label`-slot content. */
   @property() label = '';
   /** Supporting text below the field. When nonempty, it takes precedence over the `hint` slot. */
@@ -339,7 +364,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     if (!form) return;
     const submitter = findImplicitSubmitter(form);
     if (!submitter) form.requestSubmit();
-    else if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+    else if (isNativeSubmitter(submitter)) {
       form.requestSubmit(submitter);
     } else {
       // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform
@@ -491,7 +516,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private onInput = (event: Event): void => {
-    if (event instanceof InputEvent && event.isComposing) {
+    if ((event as Event & { isComposing?: unknown }).isComposing === true) {
       event.stopPropagation();
       return;
     }

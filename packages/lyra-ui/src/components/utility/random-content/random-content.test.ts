@@ -1,13 +1,15 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './random-content.js';
 import type { LyraRandomContent } from './random-content.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 // A stand-in for a wrapper component that re-projects its own light-DOM
 // children through a nested `<slot>` (e.g. a card wrapper rendering its own
 // shadow tree around whatever's passed to it). From `lr-random-content`'s
 // point of view this wrapper is one opaque direct child -- its own further
-// children must never become eligible on their own, proving
-// `assignedElements()` was read without `{ flatten: true }`.
+// children must never become eligible on their own. Flattened slot assignment
+// follows forwarding `<slot>` elements but does not cross an arbitrary custom
+// element's shadow root.
 class RandomContentNestedWrapper extends HTMLElement {
   constructor() {
     super();
@@ -16,6 +18,41 @@ class RandomContentNestedWrapper extends HTMLElement {
   }
 }
 customElements.define('random-content-nested-wrapper', RandomContentNestedWrapper);
+
+class RandomContentLiveTextForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const randomContent = document.createElement('lr-random-content');
+    randomContent.mode = 'sequence';
+    const candidate = document.createElement('div');
+    const forwardingSlot = document.createElement('slot');
+    forwardingSlot.textContent = 'Fallback selection';
+    candidate.append(forwardingSlot);
+    randomContent.append(candidate);
+    root.append(randomContent);
+  }
+}
+if (!customElements.get('random-content-live-text-forward-wrapper')) {
+  customElements.define(
+    'random-content-live-text-forward-wrapper',
+    RandomContentLiveTextForwardWrapper,
+  );
+}
+
+class RandomContentPoolForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const randomContent = document.createElement('lr-random-content');
+    randomContent.mode = 'sequence';
+    randomContent.append(document.createElement('slot'));
+    root.append(randomContent);
+  }
+}
+if (!customElements.get('random-content-pool-forward-wrapper')) {
+  customElements.define('random-content-pool-forward-wrapper', RandomContentPoolForwardWrapper);
+}
 
 function shownChild(el: LyraRandomContent): HTMLElement {
   return ([...el.children] as HTMLElement[]).find((child) => !child.hidden)!;
@@ -257,6 +294,47 @@ it('re-runs selection and emits again when the slotted pool changes (slotchange)
   expect((event.detail.items as HTMLElement[]).length).to.equal(1);
 });
 
+it('selects flattened candidates from a direct forwarding slot and restores external author state', async () => {
+  const wrapper = (await fixture(html`
+    <random-content-pool-forward-wrapper>
+      <div id="forwarded-a">Forwarded A</div>
+      <div id="forwarded-b">Forwarded B</div>
+    </random-content-pool-forward-wrapper>
+  `)) as RandomContentPoolForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-random-content') as LyraRandomContent;
+  await el.updateComplete;
+  const first = wrapper.querySelector('#forwarded-a') as HTMLElement;
+  const second = wrapper.querySelector('#forwarded-b') as HTMLElement;
+  expect(
+    [first, second].filter((candidate) => !candidate.hidden).map((candidate) => candidate.id),
+  ).to.deep.equal(['forwarded-a']);
+
+  const change = oneEvent(el, 'lr-content-change');
+  const returned = el.randomize();
+  const event = await change;
+  expect(returned.map((candidate) => candidate.id)).to.deep.equal(['forwarded-b']);
+  expect((event.detail.items as HTMLElement[]).map((candidate) => candidate.id)).to.deep.equal([
+    'forwarded-b',
+  ]);
+
+  el.randomize();
+  expect(first.hidden, 'the first forwarded candidate is selected again').to.be.false;
+  first.setAttribute('hidden', 'until-found');
+  first.setAttribute('aria-hidden', 'true');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(first.hidden, 'component selection remains applied while the candidate is managed').to.be.false;
+  expect(first.getAttribute('aria-hidden')).to.equal('false');
+
+  const forwardingSlot = el.querySelector<HTMLSlotElement>('slot')!;
+  const slotChanged = oneEvent(forwardingSlot, 'slotchange');
+  first.remove();
+  await slotChanged;
+  await Promise.resolve();
+  expect(first.getAttribute('hidden')).to.equal('until-found');
+  expect(first.getAttribute('aria-hidden')).to.equal('true');
+  expect(second.hidden, 'the remaining forwarded candidate is selected').to.be.false;
+});
+
 it('restarts autoplay after a disconnect/reconnect cycle instead of leaving it permanently stopped', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   const el = document.createElement('lr-random-content') as LyraRandomContent;
@@ -319,7 +397,9 @@ it('immediately reapplies one configured selection on reconnect without enabling
   await el.updateComplete;
 
   expect(shownIds(el).length).to.equal(1);
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-live')).to.equal('off');
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(sink.childElementCount).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-live')).to.be.false;
 });
 
 it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async () => {
@@ -331,6 +411,8 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
   `)) as LyraRandomContent;
   await el.updateComplete;
   expect(shownChild(el).id).to.equal('a0');
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  const announcementsBeforeTick = sink.childElementCount;
 
   // autoplay-interval="10" is clamped up to the 1000ms floor -- confirm no
   // tick has happened well before that floor.
@@ -341,6 +423,7 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
   await eventPromise;
   await el.updateComplete;
   expect(shownChild(el).id).to.equal('a1');
+  expect(sink.childElementCount, 'timer-driven selections stay silent').to.equal(announcementsBeforeTick);
 
   let firedAfterDisconnect = false;
   el.addEventListener('lr-content-change', () => (firedAfterDisconnect = true));
@@ -573,7 +656,7 @@ it('treats invalid runtime animation as none and invalid mode as unique', async 
   }
 });
 
-it('forwards a host aria-label to the internal role="status" element, and omits it when absent', async () => {
+it('uses a labelled group for authored aria-label context and no redundant role when unnamed', async () => {
   const withLabel = (await fixture(html`
     <lr-random-content aria-label="Homepage hero copy">
       <div>1</div>
@@ -583,6 +666,7 @@ it('forwards a host aria-label to the internal role="status" element, and omits 
   expect(withLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
     'Homepage hero copy',
   );
+  expect(withLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('group');
 
   const withoutLabel = (await fixture(html`
     <lr-random-content>
@@ -591,52 +675,278 @@ it('forwards a host aria-label to the internal role="status" element, and omits 
   `)) as LyraRandomContent;
   await withoutLabel.updateComplete;
   expect(withoutLabel.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.be.false;
+  expect(withoutLabel.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('role')).to.be.false;
 });
 
-it('suppresses the initial mount announcement, then enables polite announcements for manual changes', async () => {
-  const idle = (await fixture(html`<lr-random-content><div>1</div></lr-random-content>`)) as LyraRandomContent;
+it('suppresses mount announcements, appends every manual selection, and keeps timer-driven autoplay silent', async () => {
+  const idle = (await fixture(html`
+    <lr-random-content mode="sequence"><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
   await idle.updateComplete;
   const idleBase = idle.shadowRoot!.querySelector('[part="base"]')!;
-  expect(idleBase.getAttribute('aria-live')).to.equal('off');
-  expect(idleBase.getAttribute('aria-atomic')).to.equal('true');
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(idleBase.hasAttribute('aria-live')).to.be.false;
+  expect(idleBase.hasAttribute('role')).to.be.false;
+  expect(sink.childElementCount).to.equal(0);
   idle.randomize();
-  await idle.updateComplete;
-  expect(idleBase.getAttribute('aria-live')).to.equal('polite');
+  idle.randomize();
+  idle.randomize();
+  expect([...sink.children].map((node) => node.textContent)).to.deep.equal(['Two', 'One', 'Two']);
 
   const autoplaying = (await fixture(html`
-    <lr-random-content autoplay>
-      <div>1</div>
-      <div>2</div>
+    <lr-random-content autoplay autoplay-interval="10000" mode="sequence">
+      <div>Auto one</div>
+      <div>Auto two</div>
     </lr-random-content>
   `)) as LyraRandomContent;
   await autoplaying.updateComplete;
   const autoBase = autoplaying.shadowRoot!.querySelector('[part="base"]')!;
-  expect(autoBase.getAttribute('aria-live')).to.equal('off');
-  expect(autoBase.getAttribute('aria-atomic')).to.equal('true');
+  const before = sink.childElementCount;
+  autoplaying.randomize();
+  expect(autoBase.hasAttribute('aria-live')).to.be.false;
+  expect(sink.childElementCount, 'manual randomize announces even while autoplay is enabled').to.equal(before + 1);
+  expect(sink.lastElementChild?.textContent).to.equal('Auto two');
 });
 
-it('enables the live region before the first manual selection mutates visible content', async () => {
+it('excludes nested hidden and aria-hidden descendants from manual-selection announcements', async () => {
   const el = (await fixture(html`
     <lr-random-content mode="sequence">
-      <div id="first">First</div>
-      <div id="second">Second</div>
+      <div>Initial</div>
+      <div>
+        Visible
+        <span hidden>native hidden text</span>
+        <span aria-hidden=" TRUE ">ARIA hidden <strong>nested text</strong></span>
+        <span style="display: none">CSS display hidden</span>
+        <span style="visibility: hidden">CSS visibility hidden <span style="visibility: visible">Visibility override</span></span>
+        <span style="content-visibility: hidden">CSS content hidden</span>
+        <span>ending</span>
+      </div>
     </lr-random-content>
   `)) as LyraRandomContent;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part="base"]')!;
-  const first = el.querySelector('#first') as HTMLElement;
-  const originalToggle = first.toggleAttribute.bind(first);
-  let liveAtFirstMutation = '';
-  first.toggleAttribute = ((name: string, force?: boolean) => {
-    liveAtFirstMutation ||= base.getAttribute('aria-live') ?? '';
-    return originalToggle(name, force);
-  }) as typeof first.toggleAttribute;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+
+  el.randomize();
+
+  expect(sink.lastElementChild?.textContent).to.equal('Visible Visibility override ending');
+});
+
+it('extracts and observes assigned text behind a nested forwarding slot without mount noise', async () => {
+  const wrapper = (await fixture(html`
+    <random-content-live-text-forward-wrapper>
+      <span id="forwarded-selection">Initial forwarded selection</span>
+    </random-content-live-text-forward-wrapper>
+  `)) as RandomContentLiveTextForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-random-content') as LyraRandomContent;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(sink.childElementCount, 'initial forwarded content stays silent').to.equal(0);
+
+  wrapper.querySelector('#forwarded-selection')!.textContent = 'Updated forwarded selection';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Updated forwarded selection');
+  expect(sink.textContent).to.not.include('Fallback');
+
+  const selection = wrapper.querySelector('#forwarded-selection') as HTMLElement;
+  const countBeforeHide = sink.childElementCount;
+  selection.hidden = true;
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.childElementCount, 'hiding all selected text does not append an empty message').to.equal(
+    countBeforeHide,
+  );
+  selection.hidden = false;
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Updated forwarded selection');
+  expect(sink.childElementCount).to.equal(countBeforeHide + 1);
+
+  const forwardingSlot = el.querySelector<HTMLSlotElement>('slot')!;
+  const slotChanged = oneEvent(forwardingSlot, 'slotchange');
+  const detail = document.createElement('span');
+  detail.textContent = 'Added forwarded detail';
+  wrapper.append(detail);
+  await slotChanged;
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Updated forwarded selection Added forwarded detail',
+  );
+  expect(sink.textContent).to.not.include('Fallback');
+});
+
+it('announces rendered shadow content and image alternatives without leaking an unassigned named slot', async () => {
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.mode = 'sequence';
+  const initial = document.createElement('div');
+  initial.textContent = 'Initial selection';
+  const candidate = document.createElement('div');
+  const shadowHost = document.createElement('div');
+  const shadow = shadowHost.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<span>Rendered shadow selection</span><slot></slot>';
+  const assigned = document.createElement('span');
+  assigned.textContent = 'Rendered assigned selection';
+  const unassigned = document.createElement('span');
+  unassigned.slot = 'missing';
+  unassigned.textContent = 'Unassigned selection leak';
+  shadowHost.append(assigned, unassigned);
+  const image = document.createElement('img');
+  image.alt = 'Selection diagram';
+  candidate.append(shadowHost, image);
+  el.append(initial, candidate);
+  document.body.append(el);
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.randomize();
+
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Rendered shadow selection Rendered assigned selection Selection diagram',
+  );
+  el.remove();
+});
+
+it('keeps explicit randomize() silent while the component host is hidden', async () => {
+  const el = (await fixture(html`
+    <lr-random-content hidden mode="sequence">
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.randomize();
+  expect(sink.childElementCount, 'a hidden source must not speak through a document sink').to.equal(0);
+
+  el.hidden = false;
+  el.randomize();
+  expect(sink.lastElementChild?.textContent).to.equal('One');
+});
+
+it('rebinds observer, media-query, timer, eligibility, and announcement work to an adopted iframe realm', async () => {
+  const container = (await fixture(html`<div><iframe></iframe></div>`)) as HTMLDivElement;
+  const iframe = container.querySelector('iframe')!;
+  const ownerWindow = iframe.contentWindow!;
+  const ownerDocument = iframe.contentDocument!;
+  const originalMatchMedia = ownerWindow.matchMedia;
+  const originalSetInterval = ownerWindow.setInterval;
+  const originalClearInterval = ownerWindow.clearInterval;
+  const originalMutationObserver = ownerWindow.MutationObserver;
+  let matchMediaCalls = 0;
+  let setIntervalCalls = 0;
+  let clearIntervalCalls = 0;
+  let mutationObserverConstructions = 0;
+  let el: LyraRandomContent | undefined;
+
   try {
+    ownerWindow.matchMedia = ((query: string) => {
+      matchMediaCalls += 1;
+      return originalMatchMedia.call(ownerWindow, query);
+    }) as typeof ownerWindow.matchMedia;
+    ownerWindow.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      setIntervalCalls += 1;
+      return originalSetInterval.call(ownerWindow, handler, timeout, ...args);
+    }) as typeof ownerWindow.setInterval;
+    ownerWindow.clearInterval = ((id?: number) => {
+      clearIntervalCalls += 1;
+      originalClearInterval.call(ownerWindow, id);
+    }) as typeof ownerWindow.clearInterval;
+    class RecordingMutationObserver extends originalMutationObserver {
+      constructor(callback: MutationCallback) {
+        mutationObserverConstructions += 1;
+        super(callback);
+      }
+    }
+    Object.defineProperty(ownerWindow, 'MutationObserver', {
+      configurable: true,
+      writable: true,
+      value: RecordingMutationObserver,
+    });
+
+    el = document.createElement('lr-random-content') as LyraRandomContent;
+    el.autoplay = true;
+    el.autoplayInterval = 10_000;
+    el.items = 3;
+    el.mode = 'sequence';
+    el.innerHTML = '<div id="main-one">Main one</div><div id="main-two">Main two</div>';
+    container.prepend(el);
+    await el.updateComplete;
+    const mainSink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+
+    ownerDocument.adoptNode(el);
+    ownerDocument.body.append(el);
+    await el.updateComplete;
+
+    const frameChild = ownerDocument.createElement('div');
+    frameChild.id = 'frame-three';
+    frameChild.textContent = 'Frame three';
+    el.append(frameChild);
+    await new Promise((resolve) => ownerWindow.setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    expect(el.ownerDocument === ownerDocument).to.be.true;
+    expect(shownIds(el).sort()).to.deep.equal(['frame-three', 'main-one', 'main-two']);
+    expect(matchMediaCalls).to.be.greaterThan(0);
+    expect(setIntervalCalls).to.be.greaterThan(0);
+    expect(mutationObserverConstructions).to.be.greaterThan(0);
+    expect(mainSink.isConnected, 'the old document sink is released during adoption').to.be.false;
+
+    const frameSink = ownerDocument.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+    const beforeManualSelection = frameSink.childElementCount;
     el.randomize();
+    expect(frameSink.childElementCount).to.equal(beforeManualSelection + 1);
+    expect(frameSink.lastElementChild?.textContent).to.equal('Main one Main two Frame three');
+
+    el.remove();
+    expect(clearIntervalCalls).to.be.greaterThan(0);
+    expect(frameSink.isConnected, 'the adopted document sink is released on disconnect').to.be.false;
   } finally {
-    delete (first as Partial<HTMLElement>).toggleAttribute;
+    el?.remove();
+    ownerWindow.matchMedia = originalMatchMedia;
+    ownerWindow.setInterval = originalSetInterval;
+    ownerWindow.clearInterval = originalClearInterval;
+    Object.defineProperty(ownerWindow, 'MutationObserver', {
+      configurable: true,
+      writable: true,
+      value: originalMutationObserver,
+    });
   }
-  expect(liveAtFirstMutation).to.equal('polite');
+});
+
+it('releases its sink on disconnect and reacquires silently on reconnect', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.mode = 'sequence';
+  el.innerHTML = '<div>First</div><div>Second</div>';
+  container.append(el);
+  await el.updateComplete;
+  let sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(sink.childElementCount).to.equal(0);
+  el.randomize();
+  expect(sink.lastElementChild?.textContent).to.equal('Second');
+
+  el.remove();
+  expect(sink.isConnected).to.be.false;
+  el.items = 2;
+  container.append(el);
+  await el.updateComplete;
+  sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(
+    sink.childElementCount,
+    'a detached items update that flushes during reconnect is baseline, not an announcement',
+  ).to.equal(0);
+  el.randomize();
+  expect(sink.childElementCount).to.equal(1);
 });
 
 it('ignores queued focusout and slotchange work after disconnect', async () => {
@@ -719,7 +1029,7 @@ it('observes late author hidden/aria-hidden changes and restores their latest va
   expect(item.getAttribute('aria-hidden')).to.equal('true');
 });
 
-it('only treats direct children as eligible, not elements re-slotted through a nested wrapper (no flatten)', async () => {
+it('keeps a nested custom-element wrapper opaque while flattening only forwarding slot elements', async () => {
   const el = (await fixture(html`
     <lr-random-content items="1" mode="sequence">
       <random-content-nested-wrapper id="wrapper">
@@ -736,9 +1046,9 @@ it('only treats direct children as eligible, not elements re-slotted through a n
 
   expect(wrapper.hidden).to.be.false;
   expect(direct.hidden).to.be.true;
-  // The wrapper's own nested content is never a candidate at all -- proves
-  // `assignedElements()` was read without `{ flatten: true }`, which would
-  // have pulled #nested directly into the pool instead of the wrapper itself.
+  // Flattening follows assigned <slot> elements, not arbitrary custom-element
+  // shadow trees. The wrapper remains one opaque candidate and #nested is
+  // never managed independently.
   expect(nested.hasAttribute('hidden')).to.be.false;
   expect(nested.hasAttribute('aria-hidden')).to.be.false;
 });

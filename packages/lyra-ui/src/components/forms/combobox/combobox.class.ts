@@ -31,12 +31,18 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { tag } from '../../../internal/prefix.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   isOptionSelectedDirty,
   wasOptionInitiallySelected,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -144,6 +150,9 @@ export interface LyraComboboxEventMap {
  * the platform can never do it here).
  * Standard size tiers share their outer control height with sibling Lyra controls; the decorative
  * expand icon scales inside that allocation without creating an independent action target.
+ * An async `source` failure renders as a disabled listbox row, not a shadow-root live region; each
+ * current post-mount rejection appends the localized `comboboxLoadError` message to the shared
+ * light-DOM assertive announcement sink. Raw caught error text is never exposed to users.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -167,11 +176,11 @@ export interface LyraComboboxEventMap {
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
  * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
- *   `preventDefault()` leaves it closed and the reflected attribute untouched. Not cancelable on
- *   the one path where a veto is meaningless: an already-removed element closing on disconnect.
+ *   `preventDefault()` leaves it closed and the reflected attribute untouched.
  * @event lr-after-show - The listbox finished opening and its transition settled.
- * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable on the
- *   same terms as `lr-show`.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
+ *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
+ *   already-removed element closing on disconnect cannot honour a veto.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-clear - The value was cleared.
  * @event {CustomEvent<{ inputValue: string }>} lr-create - Cancelable request to create a
@@ -213,7 +222,8 @@ export interface LyraComboboxEventMap {
  * @csspart tag__remove-button__base - Compatibility name on a tag's remove button.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
- * @csspart error - The error message.
+ * @csspart error - Ordinary form-validation text referenced by the internal input; it is not a
+ *   live region, avoiding a second announcement alongside native validation/focus feedback.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
  * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
@@ -273,6 +283,30 @@ export interface LyraComboboxEventMap {
  * @since 4.0.0
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    comboboxCreate: LYRA_DEFAULT_comboboxCreate,
+    comboboxLabel: LYRA_DEFAULT_comboboxLabel,
+    comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
+    comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
+    comboboxRequired: LYRA_DEFAULT_comboboxRequired,
+    comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -408,8 +442,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private loading = false;
   @state() private sourceFailed = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
+  private sourceErrorAnnouncementSink?: AnnouncementSink;
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
-  private sourceTimer?: ReturnType<typeof setTimeout>;
+  private sourceTimer?: { owner: Window; handle: number; token: number };
   private sourceToken = 0;
   /** Aborted when a newer query supersedes the in-flight one, or on disconnect, so the source's
    *  own `fetch` can cancel. */
@@ -439,6 +474,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private listId = nextId('combobox-list');
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
   private _isFirstUpdate = true;
   private openVetoed = false;
   private transitionToken = 0;
@@ -485,7 +522,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
   }
 
   get form(): HTMLFormElement | null {
@@ -610,7 +648,43 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncSourceErrorAnnouncementSink();
     this.updateValidity();
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (this.open) this.reconnectOpenPopup();
+        else if (this.source && this._selected.length && this.asyncRows.length === 0) {
+          this.runSource('');
+        }
+      });
+    }
+  }
+
+  adoptedCallback(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.unbindDocumentPointer();
+    this.clearSourceTimer();
+    this.sourceToken += 1;
+    this.sourceAbort?.abort();
+    this.sourceAbort = undefined;
+    this.releaseSourceErrorAnnouncementSink();
+    this.syncSourceErrorAnnouncementSink();
+  }
+
+  private syncSourceErrorAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.sourceErrorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseSourceErrorAnnouncementSink();
+    this.sourceErrorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseSourceErrorAnnouncementSink(): void {
+    this.sourceErrorAnnouncementSink?.release();
+    this.sourceErrorAnnouncementSink = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -623,7 +697,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this._isFirstUpdate = !this.hasUpdated;
     this.announceOpenTransition(changed);
     if (changed.has('source')) {
-      clearTimeout(this.sourceTimer);
+      this.clearSourceTimer();
       this.sourceAbort?.abort();
       this.sourceAbort = undefined;
       this.sourceToken++;
@@ -886,8 +960,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete',
+    reason: 'autocomplete' | 'restore',
   ): void {
+    void reason;
     let selected: string[] = [];
     if (typeof state === 'string') {
       try {
@@ -946,14 +1021,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   override disconnectedCallback(): void {
     this.transitionToken++;
+    this.releaseSourceErrorAnnouncementSink();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    clearTimeout(this.sourceTimer);
+    this.clearSourceTimer();
+    this.sourceToken += 1;
     // Cancel any in-flight source request so its fetch is aborted on disconnect.
     this.sourceAbort?.abort();
     this.sourceAbort = undefined;
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.unbindDocumentPointer();
     this.resolveTransitionWaiters('lr-after-show');
     this.resolveTransitionWaiters('lr-after-hide');
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
@@ -1187,7 +1264,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
     // is announced without offering a veto nobody could honour.
     if (!this.isConnected) {
-      this.emit(name);
+      this.emit('lr-hide');
       return;
     }
     if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
@@ -1235,6 +1312,47 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private reconnectOpenPopup(): void {
+    if (!this.isConnected || !this.open) return;
+    this.cleanup?.();
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) {
+      this.cleanup = place(anchor, listbox, { placement: `${this.placement}-start` });
+    }
+    if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
@@ -1249,8 +1367,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
       // itself runs one step earlier, in willUpdate().
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
+      if (this.open && this.isConnected) {
+        this.bindDocumentPointer();
         // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-combobox open>`) --
         // only for an actual closed-to-open transition.
@@ -1263,11 +1381,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           this.cleanup = place(anchor, listbox, { placement: `${this.placement}-start` });
         }
         if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
-      } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+      } else if (!this.open) {
+        this.unbindDocumentPointer();
         if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-hide');
         }
+      } else {
+        this.unbindDocumentPointer();
       }
     }
     if (changed.has('name')) this.syncFormValue();
@@ -1434,12 +1554,25 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private runSource(query: string): void {
     const source = this.source;
     if (!source) return;
-    clearTimeout(this.sourceTimer);
+    this.clearSourceTimer();
     // Abort any in-flight request from a prior query so its fetch can be cancelled.
     this.sourceAbort?.abort();
-    this.sourceTimer = setTimeout(() => {
-      const token = ++this.sourceToken;
-      const controller = new AbortController();
+    this.sourceAbort = undefined;
+    const token = ++this.sourceToken;
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!this.isConnected || !ownerWindow) return;
+    const timer = { owner: ownerWindow, handle: 0, token };
+    timer.handle = ownerWindow.setTimeout(() => {
+      if (
+        this.sourceTimer !== timer ||
+        token !== this.sourceToken ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== ownerWindow
+      ) {
+        return;
+      }
+      this.sourceTimer = undefined;
+      const controller = new ownerWindow.AbortController();
       this.sourceAbort = controller;
       this.loading = true;
       this.sourceFailed = false;
@@ -1451,7 +1584,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       Promise.resolve()
         .then(() => source(query, { signal: controller.signal }))
         .then((rows) => {
-          if (token !== this.sourceToken || !this.isConnected) return;
+          if (
+            token !== this.sourceToken ||
+            !this.isConnected ||
+            this.ownerDocument.defaultView !== ownerWindow
+          ) {
+            return;
+          }
           this.asyncRows = rows;
           this.sourceFailed = false;
           const navigableCount = rows.filter((row) => !row.disabled).length;
@@ -1464,19 +1603,40 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           }
         })
         .catch((err) => {
-          if (token !== this.sourceToken || !this.isConnected) return;
+          if (
+            token !== this.sourceToken ||
+            !this.isConnected ||
+            this.ownerDocument.defaultView !== ownerWindow
+          ) {
+            return;
+          }
           // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
           // that is expected teardown, not a source failure, so don't warn about it.
-          if (err instanceof DOMException && err.name === 'AbortError') return;
+          if (
+            typeof err === 'object' &&
+            err !== null &&
+            'name' in err &&
+            err.name === 'AbortError'
+          ) {
+            return;
+          }
           this.asyncRows = [];
           this.activeIndex = -1;
           this.sourceFailed = true;
+          this.sourceErrorAnnouncementSink?.announce(this.localize('comboboxLoadError'));
           console.warn('<lr-combobox> source() rejected:', err);
         })
         .finally(() => {
           if (token === this.sourceToken) this.loading = false;
         });
     }, this._sourceDelay);
+    this.sourceTimer = timer;
+  }
+
+  private clearSourceTimer(): void {
+    const timer = this.sourceTimer;
+    this.sourceTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   private onInputBlur = (): void => {
@@ -1775,7 +1935,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ${this.loading
             ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">${this.localize('loading', this.loadingText || undefined)}</div>`
             : this.sourceFailed
-              ? html`<div class="source-error" role="alert">${this.localize('comboboxLoadError')}</div>`
+              ? html`<div class="source-error" role="option" aria-selected="false" aria-disabled="true">${this.localize('comboboxLoadError')}</div>`
             : rows.length === 0
               ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.localize('noMatches', this.emptyText || undefined)}</div>`
               : html`${this.renderRows(rows, activeId)}

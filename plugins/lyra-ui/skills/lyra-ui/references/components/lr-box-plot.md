@@ -2,7 +2,7 @@
 
 # `lr-box-plot`
 
-- **Import** `import '@aceshooting/lyra-ui/components/charts/chart/box-plot.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-box-plot.js';` (stable tag alias; registers the tag)
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -42,8 +42,9 @@ its computed color swatches.
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
-`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (`role="alert"` message shown
-instead of `canvas` when the optional box-plot peer fails to load)
+`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
+announced through the shared document-level light-DOM assertive sink)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -76,6 +77,8 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
   A visible or slotted table and the wrapping legend remain in normal document flow, grow the
   component, and cannot overlap following content; oversized tables scroll inside the host.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
-  fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
+  fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
+  The transition into that state is announced through the shared document-level light-DOM
+  assertive sink.
 
 ---

@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './typing-indicator.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_thinking } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * Which animation SHAPE to draw. Deliberately NOT the shared `LyraVariant`: these are three
@@ -71,6 +76,17 @@ export type TypingIndicatorSize = LyraSize;
  * @since 4.0.0
  */
 export class LyraTypingIndicator extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    thinking: LYRA_DEFAULT_thinking,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Which decorative presentation to render. */

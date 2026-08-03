@@ -1,4 +1,9 @@
 import { expect } from '@open-wc/testing';
+import type { ReactiveControllerHost } from 'lit';
+import {
+  ExternalLabelController,
+  type ExternalLabelHost,
+} from './form-control-labels.js';
 import { tag } from './prefix.js';
 
 import '../components/agent-tools/tool-param-form/tool-param-form.js';
@@ -137,9 +142,9 @@ function composedElements(root: HTMLElement): HTMLElement[] {
   return found;
 }
 
-function deepestActiveElement(): Element | null {
-  let active: Element | null = document.activeElement;
-  while (active instanceof HTMLElement && active.shadowRoot?.activeElement) {
+function deepestActiveElement(rootDocument: Document = document): Element | null {
+  let active: Element | null = rootDocument.activeElement;
+  while (active?.shadowRoot?.activeElement) {
     active = active.shadowRoot.activeElement;
   }
   return active;
@@ -199,6 +204,14 @@ describe('external FACE label contract', () => {
         );
         expect(namedTargets.length, 'the role owner receives the external label name').to.be.greaterThan(0);
 
+        const hostName = `Host ${testCase.name} label`;
+        control.setAttribute('aria-label', hostName);
+        await settle(control);
+        const hostNamedTargets = composedElements(control).filter(
+          (element) => element !== control && element.getAttribute('aria-label') === hostName,
+        );
+        expect(hostNamedTargets.length, 'host aria-label takes precedence on the role owner').to.be.greaterThan(0);
+
         // An untrusted click must not open a browser-owned file chooser during the contract run.
         for (const element of composedElements(control)) {
           if (element instanceof HTMLInputElement && element.type === 'file') {
@@ -252,6 +265,105 @@ describe('external FACE label contract', () => {
     }
   });
 
+  it('discovers the first external label inserted after the control has settled', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'input')!;
+    const container = document.createElement('div');
+    const control = document.createElement(tag(testCase.name)) as TestControl;
+    control.id = `external-label-control-${++nextFixtureId}`;
+    container.append(control);
+    document.body.append(container);
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
+
+      const label = document.createElement('label');
+      label.htmlFor = control.id;
+      label.textContent = 'Inserted label';
+      container.prepend(label);
+      await Promise.resolve();
+      await settle(control);
+
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Inserted label');
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('withdraws a removed label and discovers its replacement without a control render', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'input')!;
+    const { container, control, label } = mountFace(testCase);
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+
+      label.remove();
+      await Promise.resolve();
+      await settle(control);
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
+
+      const replacement = document.createElement('label');
+      replacement.htmlFor = control.id;
+      replacement.textContent = 'Replacement without reassignment';
+      container.prepend(replacement);
+      await Promise.resolve();
+      await settle(control);
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(replacement.textContent);
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('tracks native reassociation when a duplicate id enters and leaves the document', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'input')!;
+    const { container, control, label } = mountFace(testCase);
+    const fieldset = control.closest('fieldset')!;
+    const blocker = document.createElement('input');
+    blocker.id = control.id;
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+
+      fieldset.prepend(blocker);
+      await Promise.resolve();
+      await settle(control);
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
+
+      blocker.remove();
+      await Promise.resolve();
+      await settle(control);
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+    } finally {
+      container.remove();
+    }
+  });
+
+  for (const name of ['tool-param-form', 'rubric-form', 'time-range'] as const) {
+    it(`${name} names its aggregate role and gives host aria-label precedence`, async () => {
+      const testCase = FACE_CASES.find((entry) => entry.name === name)!;
+      const { container, control, label } = mountFace(testCase);
+      try {
+        await settle(control);
+        const aggregate = control.shadowRoot?.querySelector('[part~="base"][role="group"]');
+        expect(aggregate?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+
+        control.setAttribute('aria-label', 'Host aggregate name');
+        await settle(control);
+        expect(aggregate?.getAttribute('aria-label') ?? null).to.equal('Host aggregate name');
+      } finally {
+        container.remove();
+      }
+    });
+  }
+
   for (const name of ['checkbox', 'switch', 'radio', 'radio-button'] as const) {
     it(`${name} activates exactly once`, async () => {
       const testCase = FACE_CASES.find((entry) => entry.name === name)!;
@@ -267,6 +379,72 @@ describe('external FACE label contract', () => {
       }
     });
   }
+
+  it('honors cancellation of the label click before focus or toggle activation', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'checkbox')!;
+    const { container, control, label } = mountFace(testCase);
+    try {
+      await settle(control);
+      label.addEventListener('click', (event) => event.preventDefault());
+      label.click();
+      await settle(control);
+
+      expect(Boolean(control.checked)).to.be.false;
+      expect(isComposedDescendant(control, deepestActiveElement())).to.be.false;
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('does not activate a label retargeted before its mutation observer delivers', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'checkbox')!;
+    const { container, control, label } = mountFace(testCase);
+    try {
+      await settle(control);
+      label.htmlFor = 'another-control';
+      label.click();
+      await settle(control);
+
+      expect(Boolean(control.checked)).to.be.false;
+      expect(isComposedDescendant(control, deepestActiveElement())).to.be.false;
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('does not activate when a later label listener retargets it during propagation', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'checkbox')!;
+    const { container, control, label } = mountFace(testCase);
+    try {
+      await settle(control);
+      label.addEventListener('click', () => {
+        label.htmlFor = 'another-control';
+      });
+      label.click();
+      await settle(control);
+
+      expect(Boolean(control.checked)).to.be.false;
+      expect(isComposedDescendant(control, deepestActiveElement())).to.be.false;
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('does not activate after a later label listener disconnects the control', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'checkbox')!;
+    const { container, control, label } = mountFace(testCase);
+    try {
+      await settle(control);
+      label.addEventListener('click', () => control.remove());
+      label.click();
+      await Promise.resolve();
+
+      expect(Boolean(control.checked)).to.be.false;
+      expect(isComposedDescendant(control, deepestActiveElement())).to.be.false;
+    } finally {
+      container.remove();
+    }
+  });
 
   for (const name of ['input', 'checkbox', 'button'] as const) {
     it(`${name} stays inert when disabled by an ancestor fieldset`, async () => {
@@ -379,6 +557,46 @@ describe('external FACE label contract', () => {
       expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
     } finally {
       container.remove();
+    }
+  });
+
+  it('resolves labels and focused descendants against the host owner document', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const foreignDocument = frame.contentDocument!;
+    const host = foreignDocument.createElement('div');
+    host.id = `external-label-control-${++nextFixtureId}`;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const first = foreignDocument.createElement('button');
+    const preferred = foreignDocument.createElement('button');
+    first.textContent = 'First';
+    preferred.textContent = 'Preferred';
+    shadow.append(first, preferred);
+    Object.defineProperty(host, 'renderRoot', { configurable: true, value: shadow });
+    host.focus = () => preferred.focus();
+    const label = foreignDocument.createElement('label');
+    label.htmlFor = host.id;
+    label.textContent = 'Foreign document label';
+    const controller = new ExternalLabelController(
+      host as ExternalLabelHost & ReactiveControllerHost,
+    );
+    try {
+      foreignDocument.body.append(label, host);
+      controller.hostConnected();
+
+      expect(first.getAttribute('aria-label')).to.equal(label.textContent);
+
+      label.textContent = 'Updated foreign label';
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(first.getAttribute('aria-label')).to.equal(label.textContent);
+
+      label.click();
+      await Promise.resolve();
+      expect(deepestActiveElement(foreignDocument) === preferred).to.be.true;
+    } finally {
+      controller.hostDisconnected();
+      frame.remove();
     }
   });
 });

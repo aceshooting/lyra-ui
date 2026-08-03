@@ -2,7 +2,7 @@
 
 # `lr-tool-param-form`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tool-param-form.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -18,6 +18,8 @@
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
 user tweak the arguments before running it"). First-party invention (no Web Awesome equivalent).
+The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
+names the whole parameter form without replacing the individual generated fields' names.
 
 **Supported schema subset:** a *flat* object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
@@ -113,7 +115,8 @@ cannot follow `::part()`), so it is not a selector hook you can use from outside
 renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
 label.
 
-**CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
+**CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
+`error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
 shared part name across both the text and number inputs, and deliberately *not* present on the
 `'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
@@ -162,6 +165,11 @@ an own property is present, so `''`, `0`, and `false` are valid present values. 
 boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
 `{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
 combination does set the nested checkbox's matching native/ARIA required state.
+
+Visible field and root validation errors remain ordinary descriptive text. When user interaction or
+`reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
+one addition to the shared assertive light-DOM announcement sink. Initial and reconnect renders
+establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's

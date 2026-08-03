@@ -25,6 +25,28 @@ it("renders a disclosure panel and reports its state", async () => {
   await expect(el).to.be.accessible();
 });
 
+it("does not toggle for an interactive summary child created in another realm", async () => {
+  const el = (await fixture(html`<lr-details>Content</lr-details>`)) as LyraDetails;
+  const iframe = document.createElement("iframe");
+  document.body.append(iframe);
+  try {
+    const link = iframe.contentDocument!.createElement("a");
+    link.slot = "summary";
+    link.href = "#foreign-details-target";
+    link.textContent = "Read more";
+    link.addEventListener("click", (event) => event.preventDefault());
+    el.append(link);
+    await el.updateComplete;
+
+    expect(link instanceof Element, "fixture really crosses constructor realms").to.equal(false);
+    link.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  } finally {
+    iframe.remove();
+  }
+});
+
 it("closes sibling panels when multiple is false", async () => {
   const el = await fixture(html`<lr-accordion multiple="false">
     <lr-accordion-item open summary="One">A</lr-accordion-item>

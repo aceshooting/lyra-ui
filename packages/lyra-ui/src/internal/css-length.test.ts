@@ -52,6 +52,34 @@ it('falls back to the root font size for em when the host has no computed style'
   expect(resolveCssLength('2em', detached)).to.equal(32);
 });
 
+it('resolves rem and em from the host owner document rather than the ambient document', async () => {
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument) throw new Error('The iframe document was unavailable.');
+  const previousRootSize = frameDocument.documentElement.style.fontSize;
+  try {
+    frameDocument.documentElement.style.fontSize = '10px';
+    const host = frameDocument.createElement('div');
+    host.style.fontSize = '12px';
+    frameDocument.body.append(host);
+    expect(resolveCssLength('2rem', host)).to.equal(20);
+    expect(resolveCssLength('2em', host)).to.equal(24);
+  } finally {
+    frameDocument.documentElement.style.fontSize = previousRootSize;
+    frame.remove();
+  }
+});
+
+it('fails closed for relative units when the host owner document has no browsing context', () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  const host = ownerless.createElement('div');
+  host.style.fontSize = '20px';
+  ownerless.body.append(host);
+  expect(resolveCssLength('2rem', host)).to.be.undefined;
+  expect(resolveCssLength('2em', host)).to.be.undefined;
+  expect(resolveCssLength('2px', host)).to.equal(2);
+});
+
 it('tolerates surrounding whitespace and unit casing', () => {
   expect(resolveCssLength('  900px  ')).to.equal(900);
   expect(resolveCssLength('\t56.25rem\n')).to.equal(resolveCssLength('56.25rem'));

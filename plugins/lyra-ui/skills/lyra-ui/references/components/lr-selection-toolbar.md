@@ -2,7 +2,7 @@
 
 # `lr-selection-toolbar`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSelectionToolbar`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

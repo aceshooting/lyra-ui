@@ -162,6 +162,52 @@ describe('lr-env-list', () => {
     expect(event.detail.text).to.equal('secretvalue');
   });
 
+  it('uses the adopted owner clipboard and fails closed in an ownerless document', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const inertDocument = document.implementation.createHTMLDocument('ownerless');
+    const ambientDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'clipboard');
+    const destinationDescriptor = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const ambientWrites: string[] = [];
+    const destinationWrites: string[] = [];
+    let el: LyraEnvList | undefined;
+
+    try {
+      Object.defineProperty(window.navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (text: string) => ambientWrites.push(text) },
+      });
+      Object.defineProperty(frameWindow.navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (text: string) => destinationWrites.push(text) },
+      });
+      el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'TOKEN', value: 'owner-secret', secret: true }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      button.click();
+      expect(destinationWrites).to.deep.equal(['owner-secret']);
+      expect(ambientWrites).to.deep.equal([]);
+
+      el.remove();
+      inertDocument.body.append(inertDocument.adoptNode(el));
+      button.click();
+      expect(ambientWrites, 'an ownerless secret list must not fall back to the ambient clipboard').to.deep.equal([]);
+    } finally {
+      if (el && el.ownerDocument !== document) document.adoptNode(el);
+      el?.remove();
+      if (ambientDescriptor) Object.defineProperty(window.navigator, 'clipboard', ambientDescriptor);
+      else Reflect.deleteProperty(window.navigator, 'clipboard');
+      if (destinationDescriptor) Object.defineProperty(frameWindow.navigator, 'clipboard', destinationDescriptor);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
+    }
+  });
+
   it('prunes reveal state for names no longer present', async () => {
     const el = (await fixture(
       html`<lr-env-list .entries=${[{ name: 'A', value: '1', secret: true }]}></lr-env-list>`,

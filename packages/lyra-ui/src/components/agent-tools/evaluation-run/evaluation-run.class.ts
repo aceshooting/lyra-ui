@@ -10,6 +10,11 @@ import type { LyraDetailsEventMap } from '../../layout/details/details.class.js'
 import type { LyraGroundingSummaryEventMap } from '../../retrieval/grounding-summary/grounding-summary.class.js';
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail, LyraToolTimelineEventMap } from '../tool-timeline/tool-timeline.class.js';
 import { styles } from './evaluation-run.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunStatusCancelled, LYRA_DEFAULT_evaluationRunStatusIdle, LYRA_DEFAULT_evaluationRunStatusWaitingApproval, LYRA_DEFAULT_evaluationRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How an example's `input`/`output` text is rendered -- `'markdown'` (the default) through
  *  `<lr-markdown>`, `'code'` through `<lr-code-block>` (consulting the matching `*Language`
@@ -158,6 +163,39 @@ function isTerminal(kind: AgentStatusKind): boolean {
  * @since 4.1.0
  */
 export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentRunStatusCollecting: LYRA_DEFAULT_agentRunStatusCollecting,
+    agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
+    evaluationRunExampleCancelledAnnounce: LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce,
+    evaluationRunExampleCompletedAnnounce: LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce,
+    evaluationRunExampleFailedAnnounce: LYRA_DEFAULT_evaluationRunExampleFailedAnnounce,
+    evaluationRunExampleLabel: LYRA_DEFAULT_evaluationRunExampleLabel,
+    evaluationRunExampleStartedAnnounce: LYRA_DEFAULT_evaluationRunExampleStartedAnnounce,
+    evaluationRunExampleWaitingApprovalAnnounce: LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce,
+    evaluationRunExampleWaitingInputAnnounce: LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce,
+    evaluationRunFailedCount: LYRA_DEFAULT_evaluationRunFailedCount,
+    evaluationRunGroundingHeading: LYRA_DEFAULT_evaluationRunGroundingHeading,
+    evaluationRunInputHeading: LYRA_DEFAULT_evaluationRunInputHeading,
+    evaluationRunLabel: LYRA_DEFAULT_evaluationRunLabel,
+    evaluationRunOutputHeading: LYRA_DEFAULT_evaluationRunOutputHeading,
+    evaluationRunProgressLabel: LYRA_DEFAULT_evaluationRunProgressLabel,
+    evaluationRunProgressSummary: LYRA_DEFAULT_evaluationRunProgressSummary,
+    evaluationRunRunningCount: LYRA_DEFAULT_evaluationRunRunningCount,
+    evaluationRunStatusCancelled: LYRA_DEFAULT_evaluationRunStatusCancelled,
+    evaluationRunStatusIdle: LYRA_DEFAULT_evaluationRunStatusIdle,
+    evaluationRunStatusWaitingApproval: LYRA_DEFAULT_evaluationRunStatusWaitingApproval,
+    evaluationRunStatusWaitingInput: LYRA_DEFAULT_evaluationRunStatusWaitingInput,
+    evaluationRunToolTraceHeading: LYRA_DEFAULT_evaluationRunToolTraceHeading,
+    noData: LYRA_DEFAULT_noData,
+    statusError: LYRA_DEFAULT_statusError,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array

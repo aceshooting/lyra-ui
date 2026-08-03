@@ -10,6 +10,11 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The rail's effective presentation -- see the class doc for what each renders. */
 export type AppRailMode = 'full' | 'icon-only' | 'mobile';
@@ -138,8 +143,8 @@ export interface LyraAppRailEventMap {
  *   built-in toggle button, Escape, a backdrop click, a nav-item click while
  *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
  *   Not fired when a consumer sets `open` directly (mirrors `<lr-dialog>`'s
- *   `open`/`close()` split). `detail: AppRailToggleDetail`. Cancelable for
- *   every trigger except the forced mode-change close, which always applies
+ *   `open`/`close()` split). `detail: AppRailToggleDetail`. Conditionally cancelable: every
+ *   interactive trigger can be vetoed, but the forced mode-change close always applies
  *   (vetoing it would leave `open` stuck `true` in a mode where it's
  *   meaningless) -- call `preventDefault()` to keep the overlay as it is.
  * @event lr-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
@@ -183,6 +188,20 @@ export interface LyraAppRailEventMap {
  * @since 4.0.0
  */
 export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    closeNavigation: LYRA_DEFAULT_closeNavigation,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    openNavigation: LYRA_DEFAULT_openNavigation,
+    resizeNavigation: LYRA_DEFAULT_resizeNavigation,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   // `mode` needs a custom accessor (force/auto semantics below) rather than
@@ -292,6 +311,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private mobileMatches = false;
   private mqIconOnly?: MediaQueryList;
   private mqMobile?: MediaQueryList;
+  private mqIconOnlyListener?: (event: MediaQueryListEvent) => void;
+  private mqMobileListener?: (event: MediaQueryListEvent) => void;
   // Derived from mode === 'mobile' && open -- tracked as its own field
   // (rather than recomputed inline everywhere) so willUpdate can detect the
   // specific false->true/true->false transition regardless of which of the
@@ -304,6 +325,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   @query('[part="base"]') private baseEl?: HTMLElement;
   private resizePointerId?: number;
+  private resizeOwnerWindow?: Window;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
   private managedItems = new Set<HTMLElement>();
@@ -314,8 +336,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const railTag = tag('app-rail');
     const next = new Set(
       (slot?.assignedElements({ flatten: true }) ?? []).filter(
-        (item): item is HTMLElement =>
-          item instanceof HTMLElement && item.localName === itemTag,
+        (item): item is HTMLElement => item.localName === itemTag,
       ),
     );
     for (const item of this.managedItems) {
@@ -558,6 +579,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.endResizerGesture();
   }
 
+  adoptedCallback(): void {
+    this.teardownMediaQueries();
+    this.endResizerGesture();
+  }
+
   private activateMobileOverlay(): void {
     this.overlayHandle = activateOverlay({
       host: this,
@@ -577,22 +603,53 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private setupMediaQueries(): void {
+    if (!this.isConnected) return;
     const view = this.ownerDocument.defaultView;
     if (!view?.matchMedia) return;
-    this.mqIconOnly = view.matchMedia(`(max-width: ${this.iconOnlyBreakpoint})`);
-    this.mqMobile = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
-    this.mqIconOnly.addEventListener('change', this.onIconOnlyChange);
-    this.mqMobile.addEventListener('change', this.onMobileChange);
-    this.iconOnlyMatches = this.mqIconOnly.matches;
-    this.mobileMatches = this.mqMobile.matches;
+    const iconOnlyQuery = view.matchMedia(`(max-width: ${this.iconOnlyBreakpoint})`);
+    const mobileQuery = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
+    const iconOnlyListener = (event: MediaQueryListEvent): void => {
+      if (
+        this.mqIconOnly !== iconOnlyQuery ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== view
+      ) {
+        return;
+      }
+      this.onIconOnlyChange(event);
+    };
+    const mobileListener = (event: MediaQueryListEvent): void => {
+      if (
+        this.mqMobile !== mobileQuery ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== view
+      ) {
+        return;
+      }
+      this.onMobileChange(event);
+    };
+    this.mqIconOnly = iconOnlyQuery;
+    this.mqMobile = mobileQuery;
+    this.mqIconOnlyListener = iconOnlyListener;
+    this.mqMobileListener = mobileListener;
+    iconOnlyQuery.addEventListener('change', iconOnlyListener);
+    mobileQuery.addEventListener('change', mobileListener);
+    this.iconOnlyMatches = iconOnlyQuery.matches;
+    this.mobileMatches = mobileQuery.matches;
     if (!this.forced) this.applyComputedMode();
   }
 
   private teardownMediaQueries(): void {
-    this.mqIconOnly?.removeEventListener('change', this.onIconOnlyChange);
-    this.mqMobile?.removeEventListener('change', this.onMobileChange);
+    if (this.mqIconOnly && this.mqIconOnlyListener) {
+      this.mqIconOnly.removeEventListener('change', this.mqIconOnlyListener);
+    }
+    if (this.mqMobile && this.mqMobileListener) {
+      this.mqMobile.removeEventListener('change', this.mqMobileListener);
+    }
     this.mqIconOnly = undefined;
     this.mqMobile = undefined;
+    this.mqIconOnlyListener = undefined;
+    this.mqMobileListener = undefined;
   }
 
   // Split into two single-query listeners (rather than one shared handler
@@ -671,14 +728,18 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private onResizerPointerDown = (e: PointerEvent): void => {
     if (!this.resizable || this._mode !== 'full' || this.resizePointerId !== undefined) return;
+    const resizer = e.currentTarget as HTMLElement;
+    const ownerWindow = resizer.ownerDocument.defaultView;
+    if (!ownerWindow) return;
     this.resizePointerId = e.pointerId;
+    this.resizeOwnerWindow = ownerWindow;
     this.resizeStartX = e.clientX;
     this.resizeStartWidth = this.effectiveRailWidthPx;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    window.addEventListener('pointermove', this.onResizerPointerMove);
-    window.addEventListener('pointerup', this.onResizerPointerUp);
-    window.addEventListener('pointercancel', this.onResizerPointerUp);
-    window.addEventListener('lostpointercapture', this.onResizerPointerUp);
+    resizer.setPointerCapture(e.pointerId);
+    ownerWindow.addEventListener('pointermove', this.onResizerPointerMove);
+    ownerWindow.addEventListener('pointerup', this.onResizerPointerUp);
+    ownerWindow.addEventListener('pointercancel', this.onResizerPointerUp);
+    ownerWindow.addEventListener('lostpointercapture', this.onResizerPointerUp);
     this.dragging = true;
   };
 
@@ -701,12 +762,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
 
   private endResizerGesture(): void {
+    const ownerWindow = this.resizeOwnerWindow;
     this.resizePointerId = undefined;
+    this.resizeOwnerWindow = undefined;
     this.dragging = false;
-    window.removeEventListener('pointermove', this.onResizerPointerMove);
-    window.removeEventListener('pointerup', this.onResizerPointerUp);
-    window.removeEventListener('pointercancel', this.onResizerPointerUp);
-    window.removeEventListener('lostpointercapture', this.onResizerPointerUp);
+    ownerWindow?.removeEventListener('pointermove', this.onResizerPointerMove);
+    ownerWindow?.removeEventListener('pointerup', this.onResizerPointerUp);
+    ownerWindow?.removeEventListener('pointercancel', this.onResizerPointerUp);
+    ownerWindow?.removeEventListener('lostpointercapture', this.onResizerPointerUp);
   }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {

@@ -2,7 +2,7 @@
 
 # `lr-context-meter`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/context-meter/context-meter.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-context-meter.js';` (stable tag alias; registers the tag)
 - **Class** `LyraContextMeter`, also available unregistered from `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

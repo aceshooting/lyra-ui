@@ -31,13 +31,13 @@ version numbers above come from the platform features this library's source actu
 ships untranspiled ES2022 modules with no polyfills and no build-time downleveling, so a runtime
 feature the source uses is a hard floor:
 
-| Feature | Uses in `src/` | Raises the floor to |
+| Feature | Use in the shipped source | Raises the floor to |
 |---|---|---|
-| `color-mix()` | 422 | Chrome 111 · Safari 16.2 · Firefox 113 |
-| `:dir()` | 109 rules across 47 stylesheets | **Chrome 120** · Safari 16.4 · Firefox 49 |
-| `:has()` | 12 rules | Chrome 105 · Safari 15.4 · **Firefox 121** |
-| `@container` / `container-type` | 79 / 56 | Chrome 105 · **Safari 16** · Firefox 110 |
-| `ElementInternals` form association | 268 `attachInternals()` call sites | Chrome 77 · **Safari 16.4** · Firefox 98 |
+| `color-mix()` | shared interaction and semantic-color layers | Chrome 111 · Safari 16.2 · Firefox 113 |
+| `:dir()` | component direction and logical-control styling | **Chrome 120** · Safari 16.4 · Firefox 49 |
+| `:has()` | component state and authored-content styling | Chrome 105 · Safari 15.4 · **Firefox 121** |
+| `@container` / `container-type` | allocation-responsive component layouts | Chrome 105 · **Safari 16** · Firefox 110 |
+| `ElementInternals` form association | form-associated controls | Chrome 77 · **Safari 16.4** · Firefox 98 |
 | `inert` | widely, incl. the overlay manager | Chrome 102 · Safari 15.5 · Firefox 112 |
 | `@layer` | the token cascade | Chrome 99 · Safari 15.4 · Firefox 97 |
 | ES2022 output (`tsconfig` `target`) | the whole package | Chrome 94 · Safari 15.4 · Firefox 93 |
@@ -61,6 +61,8 @@ This table is the support window.
   overlay components, the form-control family, menu, split panel, tab group, tree, carousel, table,
   virtual list). The exact file list is the `test:platform` script entry in
   `packages/lyra-ui/package.json` — that entry, not this sentence, is the definition.
+  The Firefox/Node 20 leg additionally builds and runs the clean packed-consumer install, import,
+  type, style, tree-shaking, and framework-recipe matrix at the supported Node floor.
 
 Firefox and WebKit therefore have **contract-level** coverage, not full coverage. One known,
 deliberate gap: WebKit silently drops a programmatic `addRange()` into a shadow tree, so
@@ -75,7 +77,7 @@ to the matrix requires a WebKit guard first.
 | | |
 |---|---|
 | Supported | **≥ 20** (`engines.node` in both packages) |
-| Proven by CI | Node 22 on every primary job; Node 20 **and** 22 on `platform-contracts` |
+| Proven by CI | Node 22 on every primary job; Node 20 **and** 22 on `platform-contracts`; packed consumers on both supported majors |
 | Module format | ESM only. No CommonJS entry point, no `require()` path. |
 
 Node matters for two things: building/testing this repository, and server-side rendering. The SSR

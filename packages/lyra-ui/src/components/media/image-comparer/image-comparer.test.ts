@@ -55,12 +55,18 @@ it('bridges the native range change event as a bubbling composed native Event', 
   input.value = '64';
   input.dispatchEvent(new Event('input', { bubbles: true }));
   const changed = oneEvent(el, 'change');
+  const mappedChanged = oneEvent(el, 'lr-change');
   input.dispatchEvent(new Event('change', { bubbles: true }));
   const event = await changed;
+  const mappedEvent = await mappedChanged;
 
   expect(event.constructor.name).to.equal('Event');
   expect(event.bubbles).to.be.true;
   expect(event.composed).to.be.true;
+  expect(mappedEvent instanceof CustomEvent).to.be.true;
+  expect(mappedEvent.bubbles).to.be.true;
+  expect(mappedEvent.composed).to.be.true;
+  expect(mappedEvent.cancelable).to.be.false;
   expect(el.position).to.equal(64);
 });
 

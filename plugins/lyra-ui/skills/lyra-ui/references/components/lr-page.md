@@ -2,7 +2,7 @@
 
 # `lr-page`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/page/page.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-page.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPage`, also available unregistered from `@aceshooting/lyra-ui/components/layout/page/page.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

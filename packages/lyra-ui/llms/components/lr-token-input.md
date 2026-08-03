@@ -2,7 +2,7 @@
 
 # `lr-token-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/token-input/token-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-token-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTokenInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

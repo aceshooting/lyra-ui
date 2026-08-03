@@ -2,7 +2,7 @@
 
 # `lr-filter-bar`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-filter-bar.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFilterBar`, also available unregistered from `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

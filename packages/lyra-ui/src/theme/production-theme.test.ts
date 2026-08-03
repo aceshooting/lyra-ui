@@ -34,14 +34,11 @@ async function renderedProbe(): Promise<ProductionThemeProbe> {
 }
 
 const SEMANTIC_ROLES = [
-  ...['quiet', 'normal', 'loud'].flatMap((emphasis) => [
-    `--lr-color-neutral-fill-${emphasis}`,
-    `--lr-color-brand-fill-${emphasis}`,
-  ]),
-  ...['quiet', 'normal', 'loud'].flatMap((emphasis) => [
-    `--lr-color-neutral-on-${emphasis}`,
-    `--lr-color-brand-on-${emphasis}`,
-  ]),
+  ...['quiet', 'normal', 'loud'].flatMap((emphasis) =>
+    ['fill', 'border', 'on'].flatMap((role) => [
+      `--lr-color-neutral-${role}-${emphasis}`,
+      `--lr-color-brand-${role}-${emphasis}`,
+    ])),
 ] as const;
 
 describe('production theme rendering', () => {
@@ -83,7 +80,38 @@ describe('production theme rendering', () => {
         expect(failures.join('\n')).to.equal('');
       }
     } finally {
-      setLyraTheme({ mode: 'auto', accent: null });
+      setLyraTheme({ mode: 'unset', accent: null });
+      localStorage.removeItem('lyra-theme');
+      document.adoptedStyleSheets = originalSheets;
+    }
+  });
+
+  it('routes a production-runtime accent through every brand role and the focus token', async () => {
+    const sheet = await productionThemeSheet();
+    const originalSheets = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [...originalSheets, sheet];
+    try {
+      setLyraTheme({ mode: 'dark', accent: '#e63950' });
+      const probe = await renderedProbe();
+      const rootStyle = getComputedStyle(document.documentElement);
+      const probeStyle = getComputedStyle(probe);
+      const failures: string[] = [];
+
+      for (const token of SEMANTIC_ROLES.filter((name) => name.includes('-brand-'))) {
+        const input = token.replace('--lr-color-', '--lr-theme-color-');
+        const expected = rootStyle.getPropertyValue(input).trim();
+        const actual = probeStyle.getPropertyValue(token).trim();
+        if (!expected) failures.push(`${input} resolved empty`);
+        if (actual !== expected) failures.push(`${token} = ${actual}; expected ${expected}`);
+      }
+      const expectedFocus = rootStyle.getPropertyValue('--lr-theme-color-focus').trim();
+      const actualFocus = probeStyle.getPropertyValue('--lr-focus-ring-color').trim();
+      if (actualFocus !== expectedFocus) {
+        failures.push(`--lr-focus-ring-color = ${actualFocus}; expected ${expectedFocus}`);
+      }
+      expect(failures.join('\n')).to.equal('');
+    } finally {
+      setLyraTheme({ mode: 'unset', accent: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }

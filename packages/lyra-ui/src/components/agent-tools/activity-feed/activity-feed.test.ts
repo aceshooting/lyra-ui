@@ -224,6 +224,86 @@ describe('follow contract (non-virtualized)', () => {
     expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
   });
 
+  it('schedules and cancels tail-follow frames through the exact owner window across adoption', async () => {
+    let el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
+    await el.updateComplete;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalMainRequest = window.requestAnimationFrame;
+    const originalMainCancel = window.cancelAnimationFrame;
+    const originalFrameRequest = frameWindow.requestAnimationFrame;
+    const originalFrameCancel = frameWindow.cancelAnimationFrame;
+    const mainFrames = new Map<number, FrameRequestCallback>();
+    const frameFrames = new Map<number, FrameRequestCallback>();
+    const frameCancellations: number[] = [];
+    let mainHandle = 6100;
+    let frameHandle = 7100;
+
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++mainHandle;
+      mainFrames.set(handle, callback);
+      return handle;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((handle: number) => {
+      mainFrames.delete(handle);
+    }) as typeof window.cancelAnimationFrame;
+    frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const handle = ++frameHandle;
+      frameFrames.set(handle, callback);
+      return handle;
+    }) as typeof frameWindow.requestAnimationFrame;
+    frameWindow.cancelAnimationFrame = ((handle: number) => {
+      frameCancellations.push(handle);
+      frameFrames.delete(handle);
+    }) as typeof frameWindow.cancelAnimationFrame;
+
+    try {
+      frameDocument.adoptNode(el);
+      expect(frameFrames.size, 'detached adoption must not arm a frame').to.equal(0);
+
+      frameDocument.body.append(el);
+      el.expanded = true;
+      el.entries = makeEntries(3);
+      await el.updateComplete;
+      expect(mainFrames.size, 'the parent window must not own an iframe feed frame').to.equal(0);
+      expect(frameFrames.size, 'the iframe window owns the pending tail-follow frame').to.equal(1);
+
+      const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+      let scrollTop = 0;
+      Object.defineProperty(body, 'scrollHeight', { configurable: true, value: 240 });
+      Object.defineProperty(body, 'scrollTop', {
+        configurable: true,
+        get: () => scrollTop,
+        set: (value: number) => {
+          scrollTop = value;
+        },
+      });
+      const [oldHandle, staleFrame] = Array.from(frameFrames.entries())[0]!;
+
+      document.adoptNode(el);
+      expect(frameCancellations, 'adoption cancels through the retained iframe owner').to.include(oldHandle);
+      expect(mainFrames.size, 'detached adoption must not re-arm in the destination').to.equal(0);
+      staleFrame(0);
+      expect(scrollTop, 'a stale source-realm frame cannot scroll the adopted feed').to.equal(0);
+
+      document.body.append(el);
+      expect(mainFrames.size, 'reconnect resumes tail following in the destination window').to.equal(1);
+      const [currentHandle, currentFrame] = Array.from(mainFrames.entries())[0]!;
+      mainFrames.delete(currentHandle);
+      currentFrame(0);
+      expect(scrollTop).to.equal(240);
+    } finally {
+      el.remove();
+      window.requestAnimationFrame = originalMainRequest;
+      window.cancelAnimationFrame = originalMainCancel;
+      frameWindow.requestAnimationFrame = originalFrameRequest;
+      frameWindow.cancelAnimationFrame = originalFrameCancel;
+      iframe.remove();
+    }
+  });
+
   it('releases follow and fires lr-follow-change when the reader scrolls away from the bottom', async () => {
     const el = (await fixture(html`<lr-activity-feed mode="live"></lr-activity-feed>`)) as LyraActivityFeed;
     const body = await forceSmallBody(el);

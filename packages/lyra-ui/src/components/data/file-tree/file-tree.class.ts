@@ -8,6 +8,11 @@ import type { LyraTree, TreeItem, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
 import { LyraTreeItem } from '../tree/tree-item.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' | 'ignored';
 
@@ -87,6 +92,26 @@ export interface LyraFileTreeEventMap {
  * @since 4.0.0
  */
 export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fileTreeDiffSummary: LYRA_DEFAULT_fileTreeDiffSummary,
+    fileTreeLabel: LYRA_DEFAULT_fileTreeLabel,
+    gitStatusAdded: LYRA_DEFAULT_gitStatusAdded,
+    gitStatusConflicted: LYRA_DEFAULT_gitStatusConflicted,
+    gitStatusDeleted: LYRA_DEFAULT_gitStatusDeleted,
+    gitStatusIgnored: LYRA_DEFAULT_gitStatusIgnored,
+    gitStatusModified: LYRA_DEFAULT_gitStatusModified,
+    gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
+    gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) nodes: FileTreeNode[] = [];

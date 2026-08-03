@@ -11,8 +11,8 @@ import {
   resolveLyraString,
   resolveLyraLocale,
   subscribeLyraLocale,
-  type LyraLocaleStrings,
-} from './localization.js';
+} from './localization-runtime.js';
+import type { LyraLocaleStrings } from './localization.js';
 
 export interface LyraEmitOptions {
   /** Set only for events whose listener may veto an operation before it runs. */
@@ -56,7 +56,11 @@ const INHERITED_CONTEXT_ATTRIBUTES = ['locale', 'lang', 'dir', 'class', 'style']
 function composedParentElement(element: Element): Element | null {
   if (element.parentElement) return element.parentElement;
   const root = element.getRootNode();
-  return typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot ? root.host : null;
+  const candidate = (root as { nodeType?: number; host?: unknown }).host;
+  return root.nodeType === 11 && candidate !== null && typeof candidate === 'object' &&
+    typeof (candidate as Element).getAttribute === 'function'
+    ? candidate as Element
+    : null;
 }
 
 /**
@@ -69,6 +73,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   // free to reference them. Both are shared `CSSResult` instances, so adopting them in every
   // component costs one stylesheet in the bundle, not one per component.
   static override styles: CSSResultGroup = [palette, tokens];
+
+  /** @internal English fallbacks owned by this class hierarchy and generated per component. */
+  protected static readonly defaultStrings: Readonly<LyraLocaleStrings> = Object.freeze({});
 
   /**
    * Components commonly forward ARIA host attributes to an internal role and derive localization
@@ -104,7 +111,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   constructor() {
     super();
     // The external-label bridge is a property of being form-associated, not of any one component,
-    // so it is installed here rather than repeated in the thirty-five controls that would each
+    // so it is installed here rather than repeated in every form-associated control that would
     // otherwise have to remember it (and would each be a silent a11y gap when they did not). It
     // costs one controller on a form-associated element and nothing at all on every other.
     if ((this.constructor as { formAssociated?: boolean }).formAssociated) {
@@ -194,8 +201,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   private observeInheritedContext(): void {
     this.inheritedContextObserver?.disconnect();
-    if (typeof MutationObserver === 'undefined') return;
-    const observer = new MutationObserver(() => this.requestUpdate());
+    const Observer = this.ownerDocument?.defaultView?.MutationObserver;
+    if (!Observer) return;
+    const observer = new Observer(() => this.requestUpdate());
     let ancestor = composedParentElement(this);
     while (ancestor) {
       observer.observe(ancestor, {
@@ -248,8 +256,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   /** Starts a component-owned cancellable load and aborts the previous one. */
   protected beginAbortableLoad(): AbortSignal | undefined {
     this.pendingLoadController?.abort();
-    if (typeof AbortController === 'undefined') return undefined;
-    this.pendingLoadController = new AbortController();
+    this.pendingLoadController = undefined;
+    const AbortControllerCtor = this.ownerDocument.defaultView?.AbortController;
+    if (!AbortControllerCtor) return undefined;
+    this.pendingLoadController = new AbortControllerCtor();
     return this.pendingLoadController.signal;
   }
 
@@ -291,7 +301,14 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     fallback?: string,
     values?: Record<string, string | number>,
   ): string {
-    return resolveLyraString(this, key, this.strings, fallback, values);
+    return resolveLyraString(
+      this,
+      key,
+      this.strings,
+      fallback,
+      values,
+      (this.constructor as typeof LyraElement).defaultStrings,
+    );
   }
 
   /** The raw effective locale used for message-catalog lookup and propagation to child controls. */
@@ -364,7 +381,26 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     ...args: LyraEmitArgs<Events, K>
   ): LyraEmittedEvent<Events, K> {
     const [detail, options] = args as [unknown, LyraEmitOptions | undefined];
-    const event = new CustomEvent(name, {
+    // Events belong to the element's current document realm. This matters after iframe adoption:
+    // consumers legitimately use the owner window's constructor for identity checks, and an
+    // event created by the embedding window fails that contract even though dispatch succeeds.
+    // Inert documents have no `defaultView` but still retain their creator realm. A probe created
+    // by that document exposes the correct constructor; the global fallback exists only for
+    // incomplete DOM shims whose `createEvent()` is absent or throws.
+    const ownerDocument = (this as unknown as { ownerDocument?: Document }).ownerDocument;
+    let CustomEventCtor = ownerDocument?.defaultView?.CustomEvent;
+    if (!CustomEventCtor && ownerDocument) {
+      try {
+        const candidate = ownerDocument.createEvent('CustomEvent').constructor;
+        if (typeof candidate === 'function') {
+          CustomEventCtor = candidate as typeof CustomEvent;
+        }
+      } catch {
+        // Fall through to the compatibility constructor below.
+      }
+    }
+    CustomEventCtor ??= globalThis.CustomEvent;
+    const event = new CustomEventCtor(name, {
       detail,
       bubbles: true,
       composed: true,

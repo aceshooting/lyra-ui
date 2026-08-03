@@ -1,6 +1,38 @@
 import { expect } from '@open-wc/testing';
 import { loadD3, loadD3Modules } from './graph-loader.js';
 
+function createD3PeerApis() {
+  const identity = {
+    k: 1,
+    x: 0,
+    y: 0,
+    translate(): typeof identity {
+      return this;
+    },
+    scale(): typeof identity {
+      return this;
+    },
+    toString: () => 'translate(0,0) scale(1)',
+  };
+
+  return {
+    force: {
+      forceSimulation: () => ({}),
+      forceLink: () => ({}),
+      forceManyBody: () => ({}),
+      forceCenter: () => ({}),
+      forceCollide: () => ({}),
+    },
+    drag: { drag: () => ({}) },
+    zoom: {
+      zoom: () => ({}),
+      zoomIdentity: identity,
+      zoomTransform: () => identity,
+    },
+    selection: { select: () => ({}) },
+  };
+}
+
 it('resolves the d3 modules', async () => {
   const mods = await loadD3();
   expect(mods).to.not.be.null;
@@ -23,6 +55,61 @@ it('exposes zoomIdentity and zoomTransform for programmatic camera control (focu
 });
 
 describe('loadD3Modules (uncached, dependency-injectable)', () => {
+  it('resolves all four D3 APIs from default-wrapped module namespaces', async () => {
+    const peers = createD3PeerApis();
+
+    const modules = await loadD3Modules(
+      () => Promise.resolve({ default: peers.force }),
+      () => Promise.resolve({ default: peers.drag }),
+      () => Promise.resolve({ default: peers.zoom }),
+      () => Promise.resolve({ default: peers.selection }),
+    );
+
+    expect(modules).to.not.equal(null);
+    expect(modules!.forceSimulation).to.equal(peers.force.forceSimulation);
+    expect(modules!.drag).to.equal(peers.drag.drag);
+    expect(modules!.zoom).to.equal(peers.zoom.zoom);
+    expect(modules!.zoomIdentity).to.equal(peers.zoom.zoomIdentity);
+    expect(modules!.zoomTransform).to.equal(peers.zoom.zoomTransform);
+    expect(modules!.select).to.equal(peers.selection.select);
+  });
+
+  it('prefers usable D3 APIs on module namespaces over their default exports', async () => {
+    const direct = createD3PeerApis();
+    const fallback = createD3PeerApis();
+
+    const modules = await loadD3Modules(
+      () => Promise.resolve({ ...direct.force, default: fallback.force }),
+      () => Promise.resolve({ ...direct.drag, default: fallback.drag }),
+      () => Promise.resolve({ ...direct.zoom, default: fallback.zoom }),
+      () => Promise.resolve({ ...direct.selection, default: fallback.selection }),
+    );
+
+    expect(modules).to.not.equal(null);
+    expect(modules!.forceSimulation).to.equal(direct.force.forceSimulation);
+    expect(modules!.drag).to.equal(direct.drag.drag);
+    expect(modules!.zoom).to.equal(direct.zoom.zoom);
+    expect(modules!.select).to.equal(direct.selection.select);
+  });
+
+  it('fails closed when a default-wrapped D3 peer lacks a required API', async () => {
+    const peers = createD3PeerApis();
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const modules = await loadD3Modules(
+        () => Promise.resolve({ default: peers.force }),
+        () => Promise.resolve({ default: peers.drag }),
+        () => Promise.resolve({ default: peers.zoom }),
+        () => Promise.resolve({ default: { select: 'not callable' } }),
+      );
+
+      expect(modules).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
   it('resolves null when any one of the four peer dependencies fails to load', async () => {
     const err = new Error('d3-force boom');
     const originalWarn = console.warn;
@@ -62,30 +149,7 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
   });
 
   it('fails closed when resolved peer modules omit a required callable capability', async () => {
-    const identity = {
-      translate(): typeof identity {
-        return this;
-      },
-      scale(): typeof identity {
-        return this;
-      },
-    };
-    const valid = {
-      force: {
-        forceSimulation: () => ({}),
-        forceLink: () => ({}),
-        forceManyBody: () => ({}),
-        forceCenter: () => ({}),
-        forceCollide: () => ({}),
-      },
-      drag: { drag: () => ({}) },
-      zoom: {
-        zoom: () => ({}),
-        zoomIdentity: identity,
-        zoomTransform: () => identity,
-      },
-      selection: { select: () => ({}) },
-    };
+    const valid = createD3PeerApis();
     const malformed = [
       { ...valid, force: { ...valid.force, forceSimulation: undefined } },
       { ...valid, drag: { drag: 'not callable' } },

@@ -56,30 +56,33 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
 ## Non-negotiable conventions
 
-- **Import paths carry the family segment.** `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js`
-  — for example `components/forms/combobox/combobox.js`, **never** `components/combobox/combobox.js`.
-  A missing family segment is a hard module-resolution error. `references/index.md` has the exact
-  path for every tag; the sibling `.class.js` gives the class without registering the tag.
+- **Prefer stable tag registration aliases.**
+  `@aceshooting/lyra-ui/components/<lr-tag>.js` — for example `components/lr-combobox.js` — stays
+  valid if the component's internal family folder moves. `references/index.md` has the exact path
+  for every tag. Class-only `.class.js` entries intentionally retain their owning family path.
 
   ```js
-  import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
+  import '@aceshooting/lyra-ui/components/lr-combobox.js';
   ```
   ```html
   <lr-combobox label="Fruit"></lr-combobox>
   ```
 
-  `import '@aceshooting/lyra-ui';` pulls everything except the 15 peer-gated tags (the chart family,
-  `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`) and defeats tree-shaking —
-  use per-component entries in application code.
+  `import '@aceshooting/lyra-ui';` is registration-free in v8. Use
+  `@aceshooting/lyra-ui/all.js` for the explicit compatibility registration set, or prefer
+  per-component entries in application code. `all.js` omits the 15 peer-gated tags (the chart
+  family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`).
 
 - **Theme only through `--lr-theme-*` custom properties.** Never hardcode a color, spacing or font
   value that fights the token system; override the relevant `--lr-theme-*` property on any ancestor
   instead. `references/tokens.md` is the full catalog — look the name up, don't invent it.
   `@aceshooting/lyra-ui/theme.css` is an optional ready-made light/dark base.
 
-- **Events are `lr-*`-prefixed `CustomEvent`s** (`lr-change`, `lr-input`, …), bubbling and composed,
-  payload on `event.detail`, non-cancelable unless the component's own section says otherwise. Don't
-  assume a native DOM event name works.
+- **Lyra-specific events are `lr-*`-prefixed `CustomEvent`s** (`lr-change`, `lr-input`, …),
+  bubbling and composed, with payload on `event.detail`; they are non-cancelable unless the
+  component's own section says otherwise. Native wrappers may also relay the native `Event`,
+  `InputEvent`, and `FocusEvent` contracts explicitly listed for that component. Don't assume an
+  unlisted native DOM event name works.
 
 - **Complex values need property bindings, not attributes.** An object set as an attribute
   stringifies to `[object Object]`. Lit `.rows=${rows}`, Vue `:rows.prop`, Angular `[rows]`,
@@ -106,11 +109,12 @@ Run `/lyra-ui:migrate-from-wa` or `/lyra-ui:migrate-from-shoelace` to apply the 
 project automatically, or `/lyra-ui:update` for the broader periodic audit (bump to latest,
 sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps upstream).
 
-## Report gaps, bugs, and improvement ideas
+## Report gaps, bugs, and improvement ideas on a user's behalf
 
-`https://www.lyra-ui.com/api/v1/feature-requests` is the single intake path for anything wrong
-with, missing from, or worth improving in lyra-ui — not just "no component covers this." File it
-for any of:
+`https://www.lyra-ui.com/api/v1/feature-requests` is the single automated intake path when an
+assistant reports anything wrong with, missing from, or worth improving in lyra-ui on a user's
+behalf — not just "no component covers this." A person filing their own report can instead use the
+human-facing GitHub routes in `SUPPORT.md`. Use the API for agent-submitted reports about any of:
 
 - **Missing component** — no `lr-*` tag covers the need at all.
 - **Missing capability on an existing component** — the component exists but lacks a prop,
@@ -187,8 +191,9 @@ readable later at `https://www.lyra-ui.com/api/v1/feature-requests/{id}`.
 generically — no source code, no client or product names, no file paths, no credentials. If the
 report cannot be described without such details, do not file it.
 
-Use the API even when you are working inside the lyra-ui repo itself. It is the only intake path —
-do not write the report into a local file instead, where nothing will pick it up.
+Use the API even when you are working inside the lyra-ui repo itself. It is the only supported
+automated intake path — do not write the report into a local file instead, where nothing will pick
+it up, and do not open a GitHub issue on the user's behalf.
 
 Keep the report short and concrete:
 

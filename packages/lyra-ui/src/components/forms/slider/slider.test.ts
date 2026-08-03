@@ -196,6 +196,52 @@ describe('mapped presentation surface', () => {
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('thumb');
   });
 
+  it('schedules and cancels autofocus through the first-render owner window', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const originalRequest = frameWindow.requestAnimationFrame;
+    const originalCancel = frameWindow.cancelAnimationFrame;
+    const callbacks = new Map<number, FrameRequestCallback>();
+    const cancelled: number[] = [];
+    let nextHandle = 90;
+    let el: LyraSlider | undefined;
+
+    try {
+      frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+        const handle = ++nextHandle;
+        callbacks.set(handle, callback);
+        return handle;
+      }) as typeof requestAnimationFrame;
+      frameWindow.cancelAnimationFrame = ((handle: number) => {
+        cancelled.push(handle);
+        callbacks.delete(handle);
+      }) as typeof cancelAnimationFrame;
+      el = document.createElement('lr-slider') as LyraSlider;
+      el.autofocus = true;
+      // Attach the defining realm's constructed styles before adoption without starting an update;
+      // the first real render can then create its controls in the iframe document.
+      const lifecycle = el as unknown as {
+        renderRoot: HTMLElement | DocumentFragment;
+        createRenderRoot(): ShadowRoot;
+      };
+      lifecycle.renderRoot = lifecycle.createRenderRoot();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      expect([...callbacks.keys()]).to.deep.equal([91]);
+      el.remove();
+      expect(cancelled).to.deep.equal([91]);
+      expect(callbacks.size).to.equal(0);
+    } finally {
+      el?.remove();
+      frameWindow.requestAnimationFrame = originalRequest;
+      frameWindow.cancelAnimationFrame = originalCancel;
+      frame.remove();
+    }
+  });
+
   it('anchors both range tooltips on the value axis in horizontal, vertical, and RTL layouts', async () => {
     const horizontal = (await fixture(html`
       <lr-slider dir="rtl" range with-tooltip min-value="20" max-value="80"></lr-slider>
@@ -567,6 +613,129 @@ it('drags the thumb with pointer events and emits lr-input then lr-change on rel
   el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(changeDetail!.value).to.equal(50);
+});
+
+it('keeps an adopted iframe drag on its owner window and releases that window on readoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    thumb.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 82,
+      clientX: 40,
+    }));
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 82,
+      clientX: 100,
+    }));
+    expect(el.valueAsNumber).to.equal(50);
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    const adoptedValue = el.valueAsNumber;
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 82,
+      clientX: 180,
+    }));
+    expect(el.valueAsNumber, 'the retired iframe listener must be gone').to.equal(adoptedValue);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('does not arm a drag while disconnected in an ownerless document', async () => {
+  const inertDocument = document.implementation.createHTMLDocument('ownerless');
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  try {
+    el.remove();
+    inertDocument.adoptNode(el);
+    thumb.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 86,
+      clientX: 40,
+    }));
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    thumb.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 87,
+      clientX: 40,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 87, clientX: 100 }));
+    expect(el.valueAsNumber).to.equal(50);
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 87 }));
+  } finally {
+    el.remove();
+  }
+});
+
+it('retains one iframe owner listener until both concurrent range drags end', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = (await fixture(html`
+    <lr-slider range min="0" max="100" min-value="20" max-value="80" step="1"></lr-slider>
+  `)) as LyraSlider;
+  const minThumb = el.shadowRoot!.querySelector('[part~="thumb-min"]') as HTMLElement;
+  const maxThumb = el.shadowRoot!.querySelector('[part~="thumb-max"]') as HTMLElement;
+  minThumb.setPointerCapture = () => {};
+  maxThumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    minThumb.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 88,
+      clientX: 40,
+    }));
+    maxThumb.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 89,
+      clientX: 160,
+    }));
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 88,
+      clientX: 60,
+    }));
+    expect(el.minValue).to.equal(30);
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointerup', { pointerId: 88 }));
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 89,
+      clientX: 140,
+    }));
+    expect(el.maxValue).to.equal(70);
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointerup', { pointerId: 89 }));
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 89,
+      clientX: 120,
+    }));
+    expect(el.maxValue).to.equal(70);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
 });
 
 it('clicking the track (not the thumb) jumps the thumb to that point and continues the drag', async () => {
@@ -1891,6 +2060,127 @@ it('restores single and range values from persisted form state', async () => {
   await elementUpdated(ranged);
   expect(ranged.minValue).to.equal(25);
   expect(ranged.maxValue).to.equal(75);
+});
+
+it('restores range state supplied by its adopted iframe realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = (await fixture(html`
+    <lr-slider name="window" range min="0" max="100" min-value="10" max-value="90"></lr-slider>
+  `)) as LyraSlider;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const state = new frameWindow.FormData();
+    state.append('window', '25');
+    state.append('window', '75');
+    el.formStateRestoreCallback(state, 'restore');
+    await elementUpdated(el);
+
+    expect(el.minValue).to.equal(25);
+    expect(el.maxValue).to.equal(75);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('constructs range submission and restore state with the adopted owner FormData', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const globals = frameWindow as unknown as { FormData: typeof FormData };
+  const NativeFormData = globals.FormData;
+  let constructions = 0;
+  const TrackingFormData = new Proxy(NativeFormData, {
+    construct(target, args, newTarget) {
+      constructions++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof FormData;
+  const el = (await fixture(html`
+    <lr-slider name="window" range min="0" max="100" min-value="10" max-value="90"></lr-slider>
+  `)) as LyraSlider;
+
+  try {
+    globals.FormData = TrackingFormData;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    constructions = 0;
+    el.minValue = 25;
+    expect(constructions).to.equal(2);
+  } finally {
+    el.remove();
+    globals.FormData = NativeFormData;
+    frame.remove();
+  }
+});
+
+it('does not construct global FormData for a range in an ownerless document', () => {
+  const inertDocument = document.implementation.createHTMLDocument('ownerless');
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const NativeFormData = globals.FormData;
+  let constructions = 0;
+  const TrackingFormData = new Proxy(NativeFormData, {
+    construct(target, args, newTarget) {
+      constructions++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof FormData;
+
+  try {
+    globals.FormData = TrackingFormData;
+    const el = document.createElement('lr-slider') as LyraSlider;
+    inertDocument.adoptNode(el);
+    el.name = 'window';
+    el.range = true;
+    expect(constructions).to.equal(0);
+  } finally {
+    globals.FormData = NativeFormData;
+  }
+});
+
+it('defers range form state without an SSR owner document and resynchronizes on connect', async () => {
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const NativeFormData = globals.FormData;
+  let ambientConstructions = 0;
+  const TrackingFormData = new Proxy(NativeFormData, {
+    construct(target, args, newTarget) {
+      ambientConstructions++;
+      return Reflect.construct(target, args, newTarget);
+    },
+  }) as typeof FormData;
+  const form = document.createElement('form');
+  const el = document.createElement('lr-slider') as LyraSlider;
+  el.name = 'window';
+  Object.defineProperty(el, 'ownerDocument', { configurable: true, value: undefined });
+
+  try {
+    globals.FormData = TrackingFormData;
+    expect(() => {
+      el.range = true;
+    }).not.to.throw();
+    expect(ambientConstructions).to.equal(0);
+  } finally {
+    globals.FormData = NativeFormData;
+    delete (el as unknown as { ownerDocument?: Document }).ownerDocument;
+  }
+
+  form.append(el);
+  document.body.append(form);
+  try {
+    await el.updateComplete;
+    el.minValue = 25;
+    el.maxValue = 75;
+
+    expect(new FormData(form).getAll('window')).to.deep.equal(['25', '75']);
+  } finally {
+    form.remove();
+  }
 });
 
 it('treats a null defaultValue or name as unset', async () => {

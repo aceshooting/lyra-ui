@@ -1,7 +1,12 @@
-import type { LyraDialog, DialogCloseReason } from './dialog.js';
-import './dialog.js';
-import { tag } from '../../../internal/prefix.js';
-import { resolveLyraString } from '../../../internal/localization.js';
+import { LyraDialog, type DialogCloseReason } from './dialog.class.js';
+import { defineElement, tag } from '../../../internal/prefix.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
+import { resolveLyraString } from '../../../internal/localization-runtime.js';
+
+const CONFIRM_DEFAULT_STRINGS = Object.freeze({
+  cancel: LYRA_DEFAULT_cancel,
+  confirm: LYRA_DEFAULT_confirm,
+});
 
 export interface ConfirmOptions {
   /** Dialog title -- rendered as a slotted `<h2>`, which also drives the dialog's accessible name (see dialog.ts). */
@@ -70,6 +75,9 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * if (ok) deleteConversation();
  */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
+  // The root re-exports this helper, so registration belongs to invocation rather than module
+  // evaluation. This keeps a bare root import pure without making the synchronous API async.
+  defineElement('dialog', LyraDialog);
   const { title, description, confirmLabel, cancelLabel, tone = 'neutral' } = options;
 
   return new Promise<boolean>((resolve) => {
@@ -106,13 +114,13 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     });
 
     const cancelButton = createButton(
-      resolveLyraString(dialog, 'cancel', undefined, cancelLabel),
+      resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),
       CANCEL_STYLE,
       () => dialog.close('cancel'),
     );
     cancelButton.slot = 'footer';
     const confirmButton = createButton(
-      resolveLyraString(dialog, 'confirm', undefined, confirmLabel),
+      resolveLyraString(dialog, 'confirm', undefined, confirmLabel, undefined, CONFIRM_DEFAULT_STRINGS),
       CONFIRM_TONE_STYLE[tone],
       () => dialog.close('confirm'),
     );

@@ -8,6 +8,11 @@ import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { MenuSelectDetail } from '../../layout/menu/menu.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources, LYRA_DEFAULT_pause } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Sync lifecycle state of one knowledge source, as last reported by the host. */
 export type KnowledgeSourceSyncStatus = 'idle' | 'syncing' | 'paused' | 'synced' | 'error';
@@ -170,6 +175,46 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @since 4.1.0
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    knowledgeBaseActionsColumn: LYRA_DEFAULT_knowledgeBaseActionsColumn,
+    knowledgeBaseCreateSource: LYRA_DEFAULT_knowledgeBaseCreateSource,
+    knowledgeBaseDeleteAction: LYRA_DEFAULT_knowledgeBaseDeleteAction,
+    knowledgeBaseDocumentCount: LYRA_DEFAULT_knowledgeBaseDocumentCount,
+    knowledgeBaseEmptyDescription: LYRA_DEFAULT_knowledgeBaseEmptyDescription,
+    knowledgeBaseEmptyHeading: LYRA_DEFAULT_knowledgeBaseEmptyHeading,
+    knowledgeBaseHeading: LYRA_DEFAULT_knowledgeBaseHeading,
+    knowledgeBaseHealthColumn: LYRA_DEFAULT_knowledgeBaseHealthColumn,
+    knowledgeBaseHealthDegraded: LYRA_DEFAULT_knowledgeBaseHealthDegraded,
+    knowledgeBaseHealthFailed: LYRA_DEFAULT_knowledgeBaseHealthFailed,
+    knowledgeBaseHealthHealthy: LYRA_DEFAULT_knowledgeBaseHealthHealthy,
+    knowledgeBaseHealthUnknown: LYRA_DEFAULT_knowledgeBaseHealthUnknown,
+    knowledgeBaseNameColumn: LYRA_DEFAULT_knowledgeBaseNameColumn,
+    knowledgeBaseNeedsAttention: LYRA_DEFAULT_knowledgeBaseNeedsAttention,
+    knowledgeBaseNeverSynced: LYRA_DEFAULT_knowledgeBaseNeverSynced,
+    knowledgeBasePauseAction: LYRA_DEFAULT_knowledgeBasePauseAction,
+    knowledgeBasePermissionColumn: LYRA_DEFAULT_knowledgeBasePermissionColumn,
+    knowledgeBasePermissionEditor: LYRA_DEFAULT_knowledgeBasePermissionEditor,
+    knowledgeBasePermissionOwner: LYRA_DEFAULT_knowledgeBasePermissionOwner,
+    knowledgeBasePermissionRestricted: LYRA_DEFAULT_knowledgeBasePermissionRestricted,
+    knowledgeBasePermissionViewer: LYRA_DEFAULT_knowledgeBasePermissionViewer,
+    knowledgeBaseRowActionsLabel: LYRA_DEFAULT_knowledgeBaseRowActionsLabel,
+    knowledgeBaseSyncAction: LYRA_DEFAULT_knowledgeBaseSyncAction,
+    knowledgeBaseSyncColumn: LYRA_DEFAULT_knowledgeBaseSyncColumn,
+    knowledgeBaseSyncError: LYRA_DEFAULT_knowledgeBaseSyncError,
+    knowledgeBaseSyncIdle: LYRA_DEFAULT_knowledgeBaseSyncIdle,
+    knowledgeBaseSyncPaused: LYRA_DEFAULT_knowledgeBaseSyncPaused,
+    knowledgeBaseSyncSynced: LYRA_DEFAULT_knowledgeBaseSyncSynced,
+    knowledgeBaseSyncSyncing: LYRA_DEFAULT_knowledgeBaseSyncSyncing,
+    knowledgeBaseSyncedSources: LYRA_DEFAULT_knowledgeBaseSyncedSources,
+    knowledgeBaseSyncingSources: LYRA_DEFAULT_knowledgeBaseSyncingSources,
+    knowledgeBaseTotalSources: LYRA_DEFAULT_knowledgeBaseTotalSources,
+    pause: LYRA_DEFAULT_pause,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The sources to list, in display order. */

@@ -2,7 +2,7 @@
 
 # `lr-radio-button`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/radio/radio-button.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-radio-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRadioButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

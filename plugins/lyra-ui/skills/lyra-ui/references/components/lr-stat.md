@@ -2,7 +2,7 @@
 
 # `lr-stat`
 
-- **Import** `import '@aceshooting/lyra-ui/components/data/stat/stat.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-stat.js';` (stable tag alias; registers the tag)
 - **Class** `LyraStat`, also available unregistered from `@aceshooting/lyra-ui/components/data/stat/stat.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

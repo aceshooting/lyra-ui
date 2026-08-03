@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './entity-card.js';
 import type { LyraEntity } from './entity-card.class.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Entity Card',
@@ -21,10 +21,10 @@ const entity: LyraEntity = {
   communityId: 'c1',
 };
 
-const types = [{ id: 'person', label: 'Person', color: storyColor('chart1') }];
+const types = () => [{ id: 'person', label: 'Person', color: storyColor('chart1') }];
 
 export const Default: Story = {
-  render: () => html`<lr-entity-card .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>`,
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>`,
 };
 
 export const Empty: Story = {
@@ -36,24 +36,24 @@ export const NoFocusButton: Story = {
   // only ever toggles the attribute's *presence*, and removing an attribute that was never present
   // fires no attributeChangedCallback, so it can never clear a true-defaulting property back to
   // false. A property binding is the only form that actually works here.
-  render: () => html`<lr-entity-card .entity=${entity} .types=${types} .showFocusButton=${false}></lr-entity-card>`,
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types()} .showFocusButton=${false}></lr-entity-card>`,
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lr-entity-card .entity=${entity} .types=${types}></lr-entity-card></div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-entity-card .entity=${entity} .types=${types()}></lr-entity-card></div>`,
 };
 
 export const DensityAndChrome: Story = {
   name: 'compact + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:28rem;">
-      <lr-entity-card .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>
-      <lr-entity-card compact .entity=${entity} .types=${types} community-label="Nobel laureates"></lr-entity-card>
+      <lr-entity-card .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>
+      <lr-entity-card compact .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-entity-card
           frame="plain"
           .entity=${entity}
-          .types=${types}
+          .types=${types()}
           community-label="Nobel laureates"
         ></lr-entity-card>
       </div>

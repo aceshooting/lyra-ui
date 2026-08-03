@@ -2,7 +2,7 @@
 
 # `lr-pptx-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-pptx-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPptxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -29,11 +29,24 @@ DOM text.
 `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
 available for renderer output that exposes DOM text.
 
-**Events:** `lr-load` (`detail: { slideCount }`), `lr-slide-change` (`detail: { index, count }`),
-and `lr-render-error` with `detail.error`.
+**Events:**
+- `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
+- `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
+- `lr-render-error` with `detail.error` when fetching or rendering fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-presentation search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
-**CSS parts:** `base`, `header`, `name`, `notice`, `error`, `nav`, `previous-button`,
-`previous-icon`, `slide-count`, `next-button`, `next-icon`, and `container`.
+The three shared text-viewer events bubble and compose and are non-cancelable.
+
+**CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
+`notice`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`, `next-button`,
+`next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
+visually-hidden localized label; later loading and error transitions use the shared document-level
+polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
@@ -41,5 +54,8 @@ filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textS
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer, so a deep link opened
 through `<lr-document-viewer>` survives the registry hop.
 
-Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the presentation.
+Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
+renderer opens the archive; exceeding either ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also
+expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
+malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.

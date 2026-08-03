@@ -308,7 +308,7 @@ describe('loading / error / empty status region', () => {
       shadowRoot: ShadowRoot;
     };
     const spinnerLabel = () =>
-      spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
+      spinner.shadowRoot.querySelector('[role="progressbar"]')!.getAttribute('aria-label');
 
     expect(spinner != null).to.be.true;
     expect(spinnerLabel()).to.equal('Knowledge search');
@@ -326,13 +326,25 @@ describe('loading / error / empty status region', () => {
     expect(spinnerLabel()).to.equal('Knowledge search');
   });
 
-  it('shows the host-supplied error message verbatim in a role="alert" region', async () => {
+  it('shows errors neutrally and announces only later failures from light DOM', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search error-text="The retrieval service timed out."></lr-retrieval-search>`,
     )) as LyraRetrievalSearch;
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.getAttribute('role')).to.be.null;
     expect(error.textContent!.trim()).to.equal('The retrieval service timed out.');
+    const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
+    expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
+
+    el.errorText = 'The retry also failed.';
+    await el.updateComplete;
+    expect(sink().lastElementChild?.textContent).to.equal('The retry also failed.');
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(sink().children.length, 'reconnect does not replay the current error').to.equal(0);
   });
 
   it('shows a compact lr-empty when empty is true and there is no error/loading', async () => {

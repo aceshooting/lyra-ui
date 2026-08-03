@@ -69,6 +69,27 @@ component and a release blocker for a new one.
   repeat announce again instead of being a silent no-op. Release the handle in
   `disconnectedCallback()`; `<lr-live-region>` composes the sink with `Announcer`'s throttling and
   is the wrapper other components should reuse rather than instantiating either half directly.
+  A component that does acquire directly always passes both ownership fields:
+  `acquireAnnouncementSink(mode, { document: this.ownerDocument, source: this })` (a controller
+  passes its host as `source`). The document binding keeps adoption in the correct realm; the
+  source binding fails closed after a cross-document race and prevents the always-accessible
+  document sink from speaking while the component or a composed ancestor is `hidden`, `inert`,
+  `aria-hidden`, CSS-hidden, in a closed `<details>` content branch, or -- for a box-generating
+  source -- skipped by `content-visibility:auto`. Browsers make the last state indistinguishable
+  from ordinary exposure when the source itself is `display:contents`: `checkVisibility()` returns
+  false for every such boxless element, including semantic elements that remain in the
+  accessibility tree. The shared guard therefore uses the authored/CSS/closed-details checks for
+  that case instead of suppressing every exposed `display:contents` source. A local guard may still
+  avoid unnecessary text work or bind to a box-generating semantic target, but it never replaces
+  the sink-level source contract.
+- **Recursive announcement text extraction distinguishes a pruned subtree from hidden own text.**
+  Use `isAccessibilitySubtreeExcluded()` for `hidden`/`inert`/normalized `aria-hidden`,
+  `display:none`, and `content-visibility:hidden`: those states prune the element and every
+  descendant. Computed `visibility:hidden|collapse` is different — a descendant may restore
+  `visibility:visible` and re-enter the accessibility tree. Suppress that wrapper's own text and
+  accessible label, recurse, and include only descendants whose computed visibility is restored;
+  `isAccessibilityVisibilityHidden()` supplies that own-text check. The shared predicates live in
+  `src/internal/accessibility-visibility.ts` and are re-exported from `internal/a11y.ts`.
 
 ## Native-control wrappers — preserve the useful native contract
 

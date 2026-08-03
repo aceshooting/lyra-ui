@@ -1,10 +1,20 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import {
+  isAccessibilityVisible,
+} from '../../../internal/accessibility-visibility.js';
+import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The library's one semantic-tone vocabulary. */
 export type CalloutVariant = LyraVariant;
@@ -17,10 +27,16 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
 /**
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
- * preserving the semantic role, optional leading icon, and close action.
+ * preserving the accessible content, optional leading icon, and close action.
  * Initial content is not announced as a new live update. Once the first render and slot
- * distribution settle, the region is armed: later updates are polite, or assertive for
- * `variant="danger"`.
+ * distribution settle, later content updates are appended to a shared light-DOM polite sink, or
+ * an assertive one for `variant="danger"`. Announcements normalize accessible heading/message
+ * text, excluding icon and close chrome plus subtree-pruned descendants. A visibility-hidden
+ * wrapper omits its own text but may contain a descendant that restores visibility; updates while
+ * the host or a composed ancestor is hidden stay silent. A nested forwarding slot contributes its
+ * flattened assigned text rather than fallback content, and later assignment or assigned-content
+ * mutations are observed. A nonempty host/property accessible label prefixes the visible update as
+ * context instead of replacing it; an explicitly empty host label still leaves visible text live.
  *
  * @customElement lr-callout
  * @slot - Message content.
@@ -28,7 +44,7 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * @slot icon - Optional icon.
  * @event lr-close - The close action was accepted. Cancelable before the callout hides.
  * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
- * @csspart base - The semantic grid wrapper inside the host-owned callout surface.
+ * @csspart base - The visible grid wrapper inside the host-owned callout surface.
  * @csspart icon - The icon wrapper.
  * @csspart content - The message content.
  * @csspart heading - The heading wrapper.
@@ -62,6 +78,17 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * @since 4.0.0
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, contextualVariants, contextualSizes, styles];
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
@@ -88,15 +115,41 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   @state() private hasIcon = false;
   @state() private hasHeading = false;
-  @state() private liveActive = false;
+  private liveActive = false;
   private connectionGeneration = 0;
+  private politeSink?: AnnouncementSink;
+  private assertiveSink?: AnnouncementSink;
+  private contentObserver?: MutationObserver;
+  private lastAnnouncementText = '';
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('slotchange', this.onForwardedSlotChange);
+    this.politeSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (MutationObserverCtor) {
+      this.contentObserver = new MutationObserverCtor((records) => {
+        if (
+          records.some(
+            (record) => !this.contains(record.target) || this.isAnnouncementMutation(record),
+          )
+        ) {
+          this.observeAnnouncementContent();
+          this.announceCurrentContent();
+        }
+      });
+      this.observeAnnouncementContent();
+    }
     const generation = ++this.connectionGeneration;
-    // The initial render commits with aria-live="off". Wait through the first slot-distribution
-    // paint and any update it schedules before arming; otherwise an initially slotted heading can
-    // become visible in the same update that turns announcements on.
+    // Wait through the first slot-distribution paint and any update it schedules before arming;
+    // otherwise initially slotted content could be mistaken for a later mutation.
     void this.updateComplete
       .then(() => {
         const view = this.ownerDocument?.defaultView;
@@ -106,14 +159,138 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       })
       .then(() => this.updateComplete)
       .then(() => {
-        if (this.isConnected && generation === this.connectionGeneration) this.liveActive = true;
+        if (this.isConnected && generation === this.connectionGeneration) {
+          this.lastAnnouncementText = this.announcementText();
+          this.liveActive = true;
+        }
       });
   }
 
   override disconnectedCallback(): void {
     this.connectionGeneration += 1;
     this.liveActive = false;
+    this.lastAnnouncementText = '';
+    this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+    this.removeEventListener('slotchange', this.onForwardedSlotChange);
+    this.politeSink?.release();
+    this.politeSink = undefined;
+    this.assertiveSink?.release();
+    this.assertiveSink = undefined;
     super.disconnectedCallback();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!this.liveActive || !this.open) return;
+    if (changed.has('open') || changed.has('heading') || changed.has('accessibleLabel')) {
+      this.announceCurrentContent(changed.has('open'));
+    }
+  }
+
+  private isAnnouncementMutation(record: MutationRecord): boolean {
+    if (record.target === this) {
+      return record.type === 'childList' ||
+        (record.type === 'attributes' &&
+          ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'].includes(
+            record.attributeName ?? '',
+          ));
+    }
+    let top: Node = record.target;
+    while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+    if (top.parentNode !== this) return false;
+    if (
+      record.type === 'attributes' &&
+      record.attributeName === 'slot' &&
+      record.target === top
+    ) {
+      return true;
+    }
+    return this.isAnnouncementSlotNode(top);
+  }
+
+  private isAnnouncementSlotNode(node: Node): boolean {
+    if (node.nodeType !== 1) return true;
+    const slotName = (node as Element).getAttribute('slot');
+    return slotName === null || slotName === '' || slotName === 'heading';
+  }
+
+  private announcementObservationOptions(): MutationObserverInit {
+    return {
+      attributes: true,
+      attributeFilter: ['alt', 'aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'open', 'slot', 'style'],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    };
+  }
+
+  private announcementForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return top.parentNode === this && this.isAnnouncementSlotNode(top);
+    });
+  }
+
+  private observeAnnouncementContent(): void {
+    const observer = this.contentObserver;
+    if (!observer) return;
+    observer.disconnect();
+    const options = this.announcementObservationOptions();
+    observer.observe(this, options);
+    for (const slot of this.announcementForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) {
+        observer.observe(assigned, options);
+      }
+    }
+  }
+
+  private onForwardedSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    if (!this.announcementForwardingSlots().includes(slot)) return;
+    this.observeAnnouncementContent();
+    this.announceCurrentContent();
+  };
+
+  private normalizedText(value: string | null | undefined): string {
+    return (value ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  private resolvedAccessibleLabel(): string {
+    const hostLabel = this.getAttribute('aria-label');
+    return this.normalizedText(hostLabel !== null ? hostLabel : this.accessibleLabel);
+  }
+
+  private announcementText(): string {
+    if (!isAccessibilityVisible(this)) return '';
+    const hostLabel = this.getAttribute('aria-label');
+    const context = this.normalizedText(hostLabel !== null ? hostLabel : this.accessibleLabel);
+    const heading = [
+      this.heading,
+      ...Array.from(this.childNodes)
+        .filter((node) => node.nodeType === 1 && (node as Element).getAttribute('slot') === 'heading')
+        .map((node) => composedAccessibilityText(node)),
+    ];
+    const message = Array.from(this.childNodes)
+      .filter((node) => {
+        if (node.nodeType !== 1) return true;
+        const slotName = (node as Element).getAttribute('slot');
+        return slotName === null || slotName === '';
+      })
+      .map((node) => composedAccessibilityText(node));
+    const content = this.normalizedText([...heading, ...message].join(' '));
+    if (!context || context === content) return content;
+    return content ? `${context}: ${content}` : context;
+  }
+
+  private announceCurrentContent(force = false): void {
+    if (!this.liveActive || !this.isConnected || !this.open) return;
+    const text = this.announcementText();
+    if (!force && text === this.lastAnnouncementText) return;
+    this.lastAnnouncementText = text;
+    (this.variant === 'danger' ? this.assertiveSink : this.politeSink)?.announce(text);
   }
   private close = (): void => {
     const event = this.emit('lr-close', undefined, { cancelable: true });
@@ -127,9 +304,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   };
   override render(): TemplateResult {
     if (!this.open) return html``;
-    const label = this.getAttribute('aria-label') || this.accessibleLabel || undefined;
-    return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}"
-      aria-live=${this.liveActive ? (this.variant === 'danger' ? 'assertive' : 'polite') : 'off'}
+    const label = this.resolvedAccessibleLabel() || undefined;
+    return html`<div part="base" role=${label ? 'group' : nothing}
       aria-label=${label || nothing}>
       <span part="icon" ?hidden=${!this.hasIcon}><slot name="icon" @slotchange=${this.onSlotChange}></slot></span>
       <div part="content">

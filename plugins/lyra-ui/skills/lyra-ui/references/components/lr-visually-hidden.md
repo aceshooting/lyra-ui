@@ -2,7 +2,7 @@
 
 # `lr-visually-hidden`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-visually-hidden.js';` (stable tag alias; registers the tag)
 - **Class** `LyraVisuallyHidden`, also available unregistered from `@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

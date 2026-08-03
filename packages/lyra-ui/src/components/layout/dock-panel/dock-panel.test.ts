@@ -58,6 +58,34 @@ describe("parseLengthPx", () => {
     );
     expect(parseLengthPx("2rem", 1000)).to.equal(2 * rootPx);
   });
+
+  it("resolves viewport and root-font units through the supplied element's owner realm", async () => {
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+    const widthDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerWidth");
+    const heightDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerHeight");
+    const probe = frameDocument.createElement("div");
+    frameDocument.body.append(probe);
+    frameDocument.documentElement.style.fontSize = "10px";
+    probe.style.fontSize = "12px";
+
+    try {
+      Object.defineProperty(frameWindow, "innerWidth", { configurable: true, value: 321 });
+      Object.defineProperty(frameWindow, "innerHeight", { configurable: true, value: 654 });
+      expect(parseLengthPx("10vw", 1000, probe)).to.equal(32.1);
+      expect(parseLengthPx("10vh", 1000, probe)).to.equal(65.4);
+      expect(parseLengthPx("2rem", 1000, probe)).to.equal(20);
+      expect(parseLengthPx("2em", 1000, probe)).to.equal(24);
+    } finally {
+      if (widthDescriptor) Object.defineProperty(frameWindow, "innerWidth", widthDescriptor);
+      else delete (frameWindow as unknown as { innerWidth?: number }).innerWidth;
+      if (heightDescriptor) Object.defineProperty(frameWindow, "innerHeight", heightDescriptor);
+      else delete (frameWindow as unknown as { innerHeight?: number }).innerHeight;
+      frame.remove();
+    }
+  });
 });
 
 it("renders with defaults: docked to the end edge, a resizable handle, no collapse toggle", async () => {
@@ -261,6 +289,140 @@ it('resizes via pointer drag and mirrors direction under dir="rtl"', async () =>
   expect(detail.extent).to.equal("350px");
   expect(el.extent).to.equal("350px");
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+});
+
+it("routes an adopted drag through its owner window and removes that realm's listeners on adoption", async () => {
+  const el = await dockedFixture(
+    'extent="300px" min-extent="100px" max-extent="500px"'
+  );
+  el.remove();
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  const originalRemoveEventListener = frameWindow.removeEventListener;
+  const removedPointerTypes: string[] = [];
+  frameWindow.removeEventListener = ((
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions
+  ) => {
+    if (type.startsWith("pointer") || type === "lostpointercapture") removedPointerTypes.push(type);
+    originalRemoveEventListener.call(frameWindow, type, listener, options);
+  }) as typeof frameWindow.removeEventListener;
+
+  try {
+    frameDocument.adoptNode(el);
+    const wrapper = frameDocument.createElement("div");
+    wrapper.style.inlineSize = "600px";
+    frameDocument.body.append(wrapper);
+    wrapper.append(el);
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    const expectedExtent = `${Math.round(
+      Math.min(500, Math.max(100, el.getBoundingClientRect().width + 50))
+    )}px`;
+    handle.dispatchEvent(
+      new frameWindow.PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId: 72,
+        clientX: 200,
+      })
+    );
+
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 72, clientX: 150 })
+    );
+    expect(el.extent, "the ambient window must not own the adopted drag").to.equal("300px");
+
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent("pointermove", { pointerId: 72, clientX: 150 })
+    );
+    expect(el.extent).to.equal(expectedExtent);
+
+    document.adoptNode(el);
+    expect([...new Set(removedPointerTypes)].sort()).to.deep.equal([
+      "lostpointercapture",
+      "pointercancel",
+      "pointermove",
+      "pointerup",
+    ]);
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent("pointermove", { pointerId: 72, clientX: 100 })
+    );
+    expect(el.extent, "the old owner window listener must be removed").to.equal(expectedExtent);
+  } finally {
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    frameWindow.removeEventListener = originalRemoveEventListener;
+    el.remove();
+    frame.remove();
+  }
+});
+
+it("constructs its container observer in the adopted owner realm and disconnects it on adoption", async () => {
+  const el = await dockedFixture();
+  el.remove();
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  const OriginalResizeObserver = frameWindow.ResizeObserver;
+  let constructions = 0;
+  let disconnects = 0;
+  class OwnerResizeObserver implements ResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {
+      constructions++;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {
+      disconnects++;
+    }
+  }
+  frameWindow.ResizeObserver = OwnerResizeObserver;
+
+  try {
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    expect(constructions).to.equal(1);
+    document.adoptNode(el);
+    expect(disconnects).to.equal(1);
+  } finally {
+    frameWindow.ResizeObserver = OriginalResizeObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
+
+it("falls back to its owner viewport when it has no containing element", async () => {
+  const el = await dockedFixture();
+  el.remove();
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  const widthDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerWidth");
+  const heightDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerHeight");
+
+  try {
+    Object.defineProperty(frameWindow, "innerWidth", { configurable: true, value: 321 });
+    Object.defineProperty(frameWindow, "innerHeight", { configurable: true, value: 654 });
+    frameDocument.adoptNode(el);
+    const internals = el as unknown as { containerPx(): number };
+    expect(internals.containerPx()).to.equal(321);
+    el.edge = "top";
+    expect(internals.containerPx()).to.equal(654);
+  } finally {
+    if (widthDescriptor) Object.defineProperty(frameWindow, "innerWidth", widthDescriptor);
+    else delete (frameWindow as unknown as { innerWidth?: number }).innerWidth;
+    if (heightDescriptor) Object.defineProperty(frameWindow, "innerHeight", heightDescriptor);
+    else delete (frameWindow as unknown as { innerHeight?: number }).innerHeight;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
 });
 
 it("ignores a pointermove/pointerup from an unrelated pointerId mid-drag", async () => {

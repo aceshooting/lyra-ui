@@ -2,7 +2,7 @@
 
 # `lr-transcript-feed`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/transcript-feed/transcript-feed.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-transcript-feed.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTranscriptFeed`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/transcript-feed/transcript-feed.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

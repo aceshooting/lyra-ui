@@ -2,7 +2,7 @@
 
 # `lr-include`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/include/include.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-include.js';` (stable tag alias; registers the tag)
 - **Class** `LyraInclude`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/include/include.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -71,6 +71,14 @@ against the new fragment rather than leaving results from the previous content.
   also the name every other Lyra component uses for a load failure, so a generic page-level
   listener catches this one too. Listening to both names on the same element runs your handler
   twice for one failure.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever included-content search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the included content.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful

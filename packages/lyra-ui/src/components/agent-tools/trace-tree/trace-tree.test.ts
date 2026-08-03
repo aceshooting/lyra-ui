@@ -21,6 +21,15 @@ const SPANS: LyraSpan[] = [
   { id: 'llm', parentId: 'root', name: 'gpt-turbo', kind: 'llm', startMs: 130, endMs: 390, status: 'running' },
 ];
 
+const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
+  ((query: string) =>
+    ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as MediaQueryList) as typeof window.matchMedia;
+
 // One root-level row per status tone, so every active-row color rule has something to apply to.
 const STATUS_SPANS: LyraSpan[] = [
   {
@@ -137,6 +146,81 @@ describe('lr-trace-tree', () => {
     expect(llmRow.getAttribute('aria-current')).to.equal('true');
     expect(llmRow.hasAttribute('data-active')).to.be.true;
     expect(el.shadowRoot!.querySelector('[data-id="root"]')!.getAttribute('aria-current')).to.equal('false');
+  });
+
+  it('uses adopted owner motion/CSS realms and falls back to an exact id scan without owner CSS.escape', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerDocument = frame.contentDocument!;
+    const ownerWindow = frame.contentWindow!;
+    const originalTopMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    const originalTopEscape = window.CSS.escape;
+    const originalOwnerEscape = ownerWindow.CSS.escape;
+    const specialId = 'trace\" ] owner';
+    const childSpecialId = 'trace child\" ] owner';
+    const el = document.createElement('lr-trace-tree') as LyraTraceTree;
+    try {
+      window.matchMedia = motionMatchMedia(false);
+      ownerWindow.matchMedia = motionMatchMedia(true);
+      window.CSS.escape = () => {
+        throw new Error('ambient CSS.escape must not be used');
+      };
+      el.spans = [
+        { ...SPANS[0]!, id: specialId },
+        { ...SPANS[1]!, id: childSpecialId, parentId: specialId },
+      ];
+      document.body.append(el);
+      await el.updateComplete;
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      await el.updateComplete;
+
+      let behavior: ScrollBehavior | undefined;
+      const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+      row.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
+        behavior = options?.behavior;
+      }) as typeof row.scrollIntoView;
+      el.activeSpanId = specialId;
+      await el.updateComplete;
+      expect(behavior).to.equal('auto');
+
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(childSpecialId);
+
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(specialId);
+
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(specialId);
+      expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+      await el.expandAll();
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(childSpecialId);
+      el.collapseAll();
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal(specialId);
+
+      el.activeSpanId = '';
+      await el.updateComplete;
+      (ownerWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
+      behavior = undefined;
+      el.activeSpanId = specialId;
+      await el.updateComplete;
+      expect(behavior).to.equal('auto');
+    } finally {
+      el.remove();
+      window.matchMedia = originalTopMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      window.CSS.escape = originalTopEscape;
+      ownerWindow.CSS.escape = originalOwnerEscape;
+      frame.remove();
+    }
   });
 
   it('includes visible token and cost metadata in each explicit row name', async () => {

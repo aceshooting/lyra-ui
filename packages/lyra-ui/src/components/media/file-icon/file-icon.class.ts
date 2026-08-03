@@ -7,6 +7,11 @@ import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/file-siz
 import { finiteRange } from '../../../internal/numbers.js';
 import { getFileTypeMetadata, type LyraFileTypeIcon } from './file-type-metadata.js';
 import { styles } from './file-icon.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const ICON_LABELS: Record<LyraFileTypeIcon, LyraMessageKey> = {
   file: 'fileTypeFile',
@@ -42,6 +47,30 @@ export type LyraFileIconVariant = 'icon' | 'label';
  * @since 4.0.0
  */
 export class LyraFileIcon extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    fileTypeArchive: LYRA_DEFAULT_fileTypeArchive,
+    fileTypeAudio: LYRA_DEFAULT_fileTypeAudio,
+    fileTypeCode: LYRA_DEFAULT_fileTypeCode,
+    fileTypeFile: LYRA_DEFAULT_fileTypeFile,
+    fileTypeImage: LYRA_DEFAULT_fileTypeImage,
+    fileTypePdf: LYRA_DEFAULT_fileTypePdf,
+    fileTypePresentation: LYRA_DEFAULT_fileTypePresentation,
+    fileTypeSpreadsheet: LYRA_DEFAULT_fileTypeSpreadsheet,
+    fileTypeText: LYRA_DEFAULT_fileTypeText,
+    fileTypeVideo: LYRA_DEFAULT_fileTypeVideo,
+    fileTypeWithSize: LYRA_DEFAULT_fileTypeWithSize,
+    fileTypeWord: LYRA_DEFAULT_fileTypeWord,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge. */

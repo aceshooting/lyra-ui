@@ -7,6 +7,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './details.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The library's one size ladder, in either spelling. */
 export type LyraDetailsSize = LyraSize;
@@ -69,6 +74,17 @@ export interface LyraDetailsEventMap {
  * @since 4.0.0
  */
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles];
 
   /** Shared with subclasses so one host never calls `attachInternals()` twice. */
@@ -249,12 +265,15 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     // already exempts such controls from disclosure activation, so leaving their click alone is
     // both the platform contract and the only way a slotted link can navigate.
     const path = event.composedPath();
-    const summaryIndex = path.findIndex((node) => node instanceof HTMLElement && node.localName === 'summary');
+    const summaryIndex = path.findIndex(
+      (node) => (node as Partial<Node> | null)?.nodeType === 1 &&
+        (node as Element).localName === 'summary',
+    );
     if (
       path.slice(0, summaryIndex < 0 ? 0 : summaryIndex).some(
         (node) =>
-          node instanceof Element &&
-          node.matches('a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"])'),
+          (node as Partial<Node> | null)?.nodeType === 1 &&
+          (node as Element).matches('a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"])'),
       )
     ) {
       return;

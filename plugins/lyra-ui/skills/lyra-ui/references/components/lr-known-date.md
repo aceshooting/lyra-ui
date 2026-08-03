@@ -2,7 +2,7 @@
 
 # `lr-known-date`
 
-- **Import** `import '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-known-date.js';` (stable tag alias; registers the tag)
 - **Class** `LyraKnownDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -86,7 +86,20 @@ compatibility alias), `fields` / `form-control-input` (aliases on the flex row),
 block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
 `field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
-small per-field text label), `hint`, `error` (`role="alert"`).
+small per-field text label), `hint`, `error` (visible non-live validation text and the fields'
+`aria-describedby` target).
+
+Once initial rendering and slot distribution settle, a newly visible or changed validation error
+is appended exactly once to Lyra's shared assertive light-DOM announcement sink. Identical renders
+are deduplicated, while clearing and later re-showing the same error announces it again. Initial
+connection and reconnection do not replay an existing error. Hidden, inert, CSS-hidden, and
+`aria-hidden` slotted error content is excluded; revealing meaningful error text is the change that
+announces it. Within that error content, `display:none` and `content-visibility:hidden` prune a
+branch; a `visibility:hidden|collapse` wrapper suppresses its own text while a descendant that
+restores `visibility:visible` remains exposed. Updates also stay silent while the control or a
+composed ancestor is hidden, then the current error announces if it becomes newly visible. This
+tracking follows nested forwarding slots as well: mutations and reassignment of their flattened
+assigned nodes update the announcement without requiring the wrapper component to re-render.
 
 The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
 `form-control-label`. Both names remain on the same node during the compatibility window; use

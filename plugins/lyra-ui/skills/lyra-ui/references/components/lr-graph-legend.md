@@ -2,7 +2,7 @@
 
 # `lr-graph-legend`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGraphLegend`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

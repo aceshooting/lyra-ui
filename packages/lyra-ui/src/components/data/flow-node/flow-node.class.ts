@@ -6,6 +6,11 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './flow-node.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
 const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
@@ -59,6 +64,25 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @since 4.0.0
  */
 export class LyraFlowNode extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    flowInputHandle: LYRA_DEFAULT_flowInputHandle,
+    flowOutputHandle: LYRA_DEFAULT_flowOutputHandle,
+    flowStatusWithDetail: LYRA_DEFAULT_flowStatusWithDetail,
+    flowStatusWithDuration: LYRA_DEFAULT_flowStatusWithDuration,
+    progress: LYRA_DEFAULT_progress,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: 'node-id' }) nodeId = '';
@@ -80,12 +104,52 @@ export class LyraFlowNode extends LyraElement {
   @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
 
   @state() private hasHeaderSlot = false;
+  @state() private pulsesRing = false;
+  private browserStateSeeded = false;
+
+  private sampleHeaderSlotPresence(): void {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    const renderedSlot = renderRoot?.querySelector<HTMLSlotElement>('slot[name="header"]');
+    if (renderedSlot) {
+      this.hasHeaderSlot = renderedSlot.assignedElements({ flatten: true }).length > 0;
+      return;
+    }
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    this.hasHeaderSlot = Array.from(children ?? []).some(
+      (element) => element.getAttribute('slot') === 'header',
+    );
+  }
+
+  private shouldPulseRing(): boolean {
+    const ownerWindow = this.ownerDocument?.defaultView;
+    return this.status === 'running' && !!ownerWindow && !prefersReducedMotion(ownerWindow);
+  }
+
+  private sampleBrowserState(): void {
+    this.sampleHeaderSlotPresence();
+    this.pulsesRing = this.shouldPulseRing();
+    this.browserStateSeeded = true;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      // A reconnect may follow detached light-DOM mutation or adoption into an owner whose motion
+      // preference differs, without any reactive property changing to schedule willUpdate().
+      this.sampleBrowserState();
+    } else {
+      // A server renderer cannot inspect light DOM or a motion preference. During hydration defer
+      // both browser-only answers until the first server-equivalent render has completed.
+      this.seedFirstRenderState(() => this.sampleBrowserState());
+    }
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated) {
-      this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
-    }
-    void changed;
+    super.willUpdate(changed);
+    // On a browser-only mount connectedCallback() seeds synchronously, so resample here to include
+    // same-task property/child writes made after connection but before the first render. A
+    // hydrating mount leaves this false until its server-equivalent first update has completed.
+    if (this.hasUpdated || this.browserStateSeeded) this.sampleBrowserState();
   }
 
   private onHeaderSlotChange = (e: Event): void => {
@@ -191,9 +255,6 @@ export class LyraFlowNode extends LyraElement {
       : withDuration;
   }
 
-  private get pulsesRing(): boolean {
-    return this.status === 'running' && !prefersReducedMotion();
-  }
 }
 
 declare global {

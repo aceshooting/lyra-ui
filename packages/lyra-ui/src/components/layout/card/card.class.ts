@@ -4,6 +4,11 @@ import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
 import { styles } from "./card.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type CardAppearance = LyraAppearance;
 export type CardOrientation = "horizontal" | "vertical";
@@ -43,6 +48,15 @@ const NESTED_CONTROL_SELECTOR = [
   '[role="slider"]',
   '[role="spinbutton"]',
 ].join(",");
+
+function isElementNode(value: EventTarget | undefined): value is Element {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { nodeType?: unknown }).nodeType === 1 &&
+    typeof (value as { matches?: unknown }).matches === "function"
+  );
+}
 
 /**
  * `<lr-card>` — a generic, styled bordered content container: the "small bordered surface with
@@ -88,6 +102,14 @@ const NESTED_CONTROL_SELECTOR = [
  * @since 4.0.0
  */
 export class LyraCard extends LyraElement<LyraCardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    select: LYRA_DEFAULT_select,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
@@ -140,6 +162,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private hasFooterActionsSlot = false;
   @state() private accessibleContentText = "";
   private contentObserver?: MutationObserver;
+  private contentObserverDocument?: Document;
+  private contentObserverGeneration = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -222,7 +246,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   ): boolean {
     for (const node of e.composedPath()) {
       if (node === root) return false;
-      if (node instanceof Element && node.matches(NESTED_CONTROL_SELECTOR))
+      if (isElementNode(node) && node.matches(NESTED_CONTROL_SELECTOR))
         return true;
     }
     return false;
@@ -231,7 +255,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   private onBaseClick = (e: Event): void => {
     const origin = e.composedPath()[0];
     if (
-      origin instanceof Element &&
+      isElementNode(origin) &&
       origin.getAttribute("part") === "activation-button"
     ) {
       this.emit("lr-card-activate");
@@ -244,10 +268,32 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.accessibleContentText = this.textContent?.trim() ?? "";
-    this.contentObserver = new MutationObserver(() => {
+    this.armContentObserver();
+  }
+
+  private armContentObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.contentObserver && this.contentObserverDocument === ownerDocument) return;
+    this.resetContentObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.contentObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.contentObserver !== observer ||
+        this.contentObserverDocument !== ownerDocument ||
+        this.contentObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       this.accessibleContentText = this.textContent?.trim() ?? "";
     });
-    this.contentObserver.observe(this, {
+    this.contentObserver = observer;
+    this.contentObserverDocument = ownerDocument;
+    observer.observe(this, {
       childList: true,
       characterData: true,
       subtree: true,
@@ -256,8 +302,18 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetContentObserver();
+  }
+
+  adoptedCallback(): void {
+    this.resetContentObserver();
+  }
+
+  private resetContentObserver(): void {
+    this.contentObserverGeneration += 1;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
+    this.contentObserverDocument = undefined;
   }
 
   override render(): TemplateResult {

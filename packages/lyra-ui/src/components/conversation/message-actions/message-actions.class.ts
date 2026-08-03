@@ -6,6 +6,11 @@ import '../message-feedback/message-feedback.class.js';
 
 import { styles } from './message-actions.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_edit, LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_messageActionsLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_regenerateResponse, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback';
 
@@ -76,6 +81,23 @@ function editIcon(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    edit: LYRA_DEFAULT_edit,
+    editMessage: LYRA_DEFAULT_editMessage,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    messageActionsLabel: LYRA_DEFAULT_messageActionsLabel,
+    open: LYRA_DEFAULT_open,
+    regenerateResponse: LYRA_DEFAULT_regenerateResponse,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Which built-ins render, in display order. */
@@ -183,7 +205,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const path = event.composedPath();
     const index = stops.findIndex((stop) => path.includes(stop));
     if (index >= 0) {
-      const focused = path[0] instanceof HTMLElement ? path[0] : undefined;
+      const origin = path[0] as Partial<HTMLElement> | undefined;
+      const focused = origin?.nodeType === 1 && typeof origin.focus === 'function'
+        ? origin as HTMLElement
+        : undefined;
       this.setActiveStop(stops, index, focused);
     }
   };
@@ -200,11 +225,20 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       el.hasAttribute('disabled') ||
       (el as HTMLElement & { disabled?: boolean }).disabled === true;
     const direct = [...base.children].filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && el.tagName !== 'SLOT' && !isDisabled(el),
+      (el): el is HTMLElement =>
+        el.nodeType === 1 &&
+        typeof (el as HTMLElement).focus === 'function' &&
+        el.tagName !== 'SLOT' &&
+        !isDisabled(el as HTMLElement),
     );
     const slotEl = base.querySelector('slot') as HTMLSlotElement | null;
     const slotted =
-      slotEl?.assignedElements({ flatten: true }).filter((el): el is HTMLElement => el instanceof HTMLElement && !isDisabled(el)) ?? [];
+      slotEl?.assignedElements({ flatten: true }).filter(
+        (el): el is HTMLElement =>
+          el.nodeType === 1 &&
+          typeof (el as HTMLElement).focus === 'function' &&
+          !isDisabled(el as HTMLElement),
+      ) ?? [];
     return [...direct, ...slotted];
   }
 
@@ -227,9 +261,12 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         return;
       }
       el.removeAttribute('tabindex');
+      const current = activeElementIn(el.shadowRoot);
       const activeInner =
         (preferred && inner.includes(preferred) ? preferred : undefined) ??
-        (activeElementIn(el.shadowRoot) instanceof HTMLElement ? activeElementIn(el.shadowRoot) : undefined) ??
+        (current?.nodeType === 1 && typeof (current as HTMLElement).focus === 'function'
+          ? current as HTMLElement
+          : undefined) ??
         inner[0];
       inner.forEach((control) => {
         control.tabIndex = i === index && control === activeInner ? 0 : -1;
@@ -241,7 +278,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const generation = ++this.stopSyncGeneration;
     const pending = this.focusableStops()
       .map((stop) => (stop as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete)
-      .filter((value): value is Promise<unknown> => value instanceof Promise);
+      .filter(
+        (value): value is Promise<unknown> =>
+          value !== undefined && typeof (value as PromiseLike<unknown>).then === 'function',
+      );
     await Promise.all(pending);
     await Promise.resolve();
     if (generation !== this.stopSyncGeneration || !this.isConnected) return;

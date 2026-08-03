@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Before/after comparison with a native range input. The `handle` slot customizes its visible affordance, `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input.',
+          'Before/after comparison with a native range input. It emits `lr-position-change` while moving and `lr-change` when a gesture commits. The `handle` slot customizes its visible affordance, `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input.',
       },
     },
   },

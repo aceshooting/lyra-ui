@@ -5,6 +5,11 @@ import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './playback.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
 
@@ -56,6 +61,16 @@ export interface LyraPlaybackEventMap {
  * @since 4.0.0
  */
 export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    pause: LYRA_DEFAULT_pause,
+    play: LYRA_DEFAULT_play,
+    playbackPosition: LYRA_DEFAULT_playbackPosition,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   static override properties = {
@@ -87,6 +102,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   @property({ type: Boolean, reflect: true }) override hidden = false;
 
   private timer?: number;
+  private timerWindow?: Window;
   private _playing = false;
   @query('[part="play-button"]') private playButton?: HTMLButtonElement;
 
@@ -105,8 +121,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
       this.emit('lr-play');
       if (this._playing) this.scheduleTick();
     } else {
-      window.clearTimeout(this.timer);
-      this.timer = undefined;
+      this.clearTimer();
       this.emit('lr-pause');
     }
     this.requestUpdate('playing', old);
@@ -120,8 +135,9 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.pause();
+    this.clearTimer();
+    super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -183,11 +199,23 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     // still the current one is allowed to reschedule itself — every other,
     // now-superseded chain quietly stops instead of spawning a second,
     // untracked chain that pause()/disconnectedCallback() can never reach.
-    const id = window.setTimeout(() => {
+    const timerWindow = this.ownerDocument.defaultView;
+    if (!timerWindow) return;
+    const id = timerWindow.setTimeout(() => {
+      if (this.timer !== id || this.timerWindow !== timerWindow) return;
       this.tick();
-      if (this.playing && this.timer === id) this.scheduleTick();
+      if (this.playing && this.timer === id && this.timerWindow === timerWindow) {
+        this.scheduleTick();
+      }
     }, delay);
     this.timer = id;
+    this.timerWindow = timerWindow;
+  }
+
+  private clearTimer(): void {
+    if (this.timer !== undefined) this.timerWindow?.clearTimeout(this.timer);
+    this.timer = undefined;
+    this.timerWindow = undefined;
   }
 
   private tick(): void {

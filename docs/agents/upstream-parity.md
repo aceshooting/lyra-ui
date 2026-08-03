@@ -85,11 +85,17 @@ while doing something else. The vocabulary rules apply to every component, mirro
   Reaching for `internal/` is the signal that a `src/utilities/` re-export is missing.
 
 - **Re-verify against upstream without vendoring it.** `scripts/fixtures/upstream-tags.json` is a
-  names-only, version-pinned inventory. Refresh it by reading the upstream package's own published
-  `custom-elements.json` (or its one-directory-per-component `src/components/` listing) at the
-  version you intend to pin, deriving the tag list from the `customElement` declarations, diffing
-  that against the fixture, and bumping `webawesome.version` / `shoelace.version` in the same change
-  as the rows — the file's own header says to regenerate deliberately, never silently. A version
+  names-only, version-pinned inventory. The blocking `check:pinned-upstream-manifests` gate resolves
+  the exact `@awesome.me/webawesome` and `@shoelace-style/shoelace` versions in
+  `scripts/fixtures/upstream-package-pins.json`, downloads their public npm tarballs directly (so no
+  package lifecycle can run), validates package identity, exact version, tarball SHA-512 and
+  `dist/custom-elements.json` SHA-256, then sends the normalized manifests through the strict
+  component-inventory comparison. Clone-generated analyzer manifests are not canonical evidence;
+  their reflection/default shape can differ from the files consumers actually receive. Refresh the
+  fixtures by reading the upstream packages' published manifests at the version you intend to pin,
+  deriving the tag list from their `customElement` declarations, diffing that against the fixture,
+  and bumping the version, tarball integrity, manifest digest and reviewed inventory in the same
+  change — both fixture headers say to regenerate deliberately, never silently. A version
   bump is rarely a no-op: upstream renames tags, so an unrefreshed table can carry a rewrite rule
   for a tag that no longer exists and none for the one that replaced it. Tag names, version numbers,
   and prose descriptions of behavior are the only things that cross the boundary — never upstream
@@ -97,6 +103,19 @@ while doing something else. The vocabulary rules apply to every component, mirro
   `scripts/check-provenance.mjs` catches the forbidden patterns but cannot detect a copied
   implementation, so the clean-room posture is enforced by you, not by a gate. No `wa-`/`sl-` prefix
   and no upstream branding, ever.
+
+- **Accessibility behavior is reviewed data, not a conclusion inferred from matching members.**
+  `scripts/fixtures/component-inventory.json` carries a structured `accessibilityProfiles` catalog
+  across semantics, naming, keyboard, focus, state, announcement, and motion dimensions. Every
+  upstream mapping references one reviewed upstream profile and one Lyra profile, records the
+  public-contract/automated-test evidence classes, stores the exact missing/additive behavior
+  comparison, and gives a non-empty rationale. The comparison is fail-closed: an unknown behavior,
+  missing profile, stale set difference, or missing target behavior on an `exact`/`rewritten`
+  mapping fails the inventory and migration-contract checks. A new pinned tag therefore needs an
+  explicit assignment; it never inherits a generic profile by tag-name pattern. Populate the
+  upstream side from published public behavior and manifest prose only, and the Lyra side from its
+  authored contract plus automated tests. Never inspect or copy upstream implementation code, and
+  never treat this record as screen-reader, assistive-technology, or human-review evidence.
 
 - **One property name means one thing library-wide.** `src/internal/variants.ts` owns the shared
   styling vocabulary — `LyraVariant` (semantic tone; the one meaning of `variant`), `LyraAppearance`

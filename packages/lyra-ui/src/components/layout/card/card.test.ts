@@ -303,6 +303,57 @@ describe("lr-card", () => {
       expect(count).to.equal(1);
     });
 
+    it("uses the adopted owner observer and recognizes a destination-realm nested control", async () => {
+      const el = (await fixture(html`<lr-card interactive>body</lr-card>`)) as LyraCard;
+      await el.updateComplete;
+      el.remove();
+      const iframe = document.createElement("iframe");
+      document.body.append(iframe);
+      const frameDocument = iframe.contentDocument;
+      const frameWindow = iframe.contentWindow;
+      if (!frameDocument || !frameWindow) {
+        iframe.remove();
+        throw new Error("The iframe realm was unavailable.");
+      }
+      const originalMutationObserver = frameWindow.MutationObserver;
+      let observations = 0;
+      let disconnects = 0;
+      class OwnerMutationObserver implements MutationObserver {
+        private observesCard = false;
+        constructor(_callback: MutationCallback) {}
+        observe(target: Node): void {
+          if (target === el) {
+            this.observesCard = true;
+            observations += 1;
+          }
+        }
+        takeRecords(): MutationRecord[] { return []; }
+        disconnect(): void { if (this.observesCard) disconnects += 1; }
+      }
+      frameWindow.MutationObserver = OwnerMutationObserver;
+
+      try {
+        frameDocument.body.append(frameDocument.adoptNode(el));
+        await el.updateComplete;
+        expect(observations, "the destination window observes the card content").to.be.greaterThan(0);
+        const button = frameDocument.createElement("button");
+        button.textContent = "Edit";
+        el.append(button);
+        let activations = 0;
+        el.addEventListener("lr-card-activate", () => { activations += 1; });
+        button.dispatchEvent(new frameWindow.MouseEvent("click", { bubbles: true, composed: true }));
+        expect(activations, "the foreign-realm nested button keeps its own click").to.equal(0);
+
+        document.adoptNode(el);
+        expect(disconnects, "adoption disconnects the old content observer").to.be.greaterThan(0);
+      } finally {
+        frameWindow.MutationObserver = originalMutationObserver;
+        if (el.ownerDocument !== document) document.adoptNode(el);
+        el.remove();
+        iframe.remove();
+      }
+    });
+
     it("leaves the href path untouched: no tabindex of its own and no lr-card-activate", async () => {
       const el = (await fixture(
         html`<lr-card interactive href="/x">body</lr-card>`

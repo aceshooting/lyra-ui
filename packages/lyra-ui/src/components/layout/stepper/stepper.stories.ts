@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './stepper.js';
 import type { StepItem } from './stepper.js';
-import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const wizardSteps: StepItem[] = [
   { id: 'account', label: 'Account', state: 'completed' },

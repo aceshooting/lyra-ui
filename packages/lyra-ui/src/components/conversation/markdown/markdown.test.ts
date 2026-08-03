@@ -4,6 +4,12 @@ import type { LyraMarkdown, MarkdownHeadingItem } from './markdown.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { __setKatexForTesting } from './markdown.class.js';
+import {
+  applyMarkdownFragmentAnchor,
+  applyMarkdownTextQuoteAnchor,
+  internalLinkHrefFrom,
+  MarkdownOwnedAnimationFrameController,
+} from './markdown-shared.js';
 
 /** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
  *  path this browser uses -- the CSS Custom Highlight API registers ranges with no DOM element to
@@ -301,6 +307,94 @@ it('does not intercept any link when internal-link-prefix is unset', async () =>
   expect(fired).to.be.false;
 });
 
+it('recognizes an internal anchor from a foreign window composed path', () => {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  try {
+    const anchor = iframe.contentDocument!.createElement('a');
+    anchor.setAttribute('href', '/docs/foreign');
+    const event = { composedPath: () => [anchor] } as unknown as MouseEvent;
+
+    expect(internalLinkHrefFrom(event, '/docs/')).to.equal('/docs/foreign');
+  } finally {
+    iframe.remove();
+  }
+});
+
+it('uses the rendered root window for reduced-motion fragment and text-quote scrolling', () => {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const originalMainMatchMedia = window.matchMedia;
+  const originalForeignMatchMedia = foreignWindow.matchMedia;
+  let mainQueries = 0;
+  let foreignQueries = 0;
+  window.matchMedia = ((query: string) => {
+    mainQueries++;
+    return { matches: false, media: query } as MediaQueryList;
+  }) as typeof window.matchMedia;
+  foreignWindow.matchMedia = ((query: string) => {
+    foreignQueries++;
+    return { matches: true, media: query } as MediaQueryList;
+  }) as typeof foreignWindow.matchMedia;
+
+  try {
+    const root = iframe.contentDocument!.createElement('div');
+    root.innerHTML = '<h2 id="foreign-section">Foreign section</h2><p>The quick brown fox</p>';
+    iframe.contentDocument!.body.appendChild(root);
+    const heading = root.querySelector('h2') as HTMLElement;
+    const paragraph = root.querySelector('p') as HTMLElement;
+    let headingBehavior: ScrollBehavior | undefined;
+    let paragraphBehavior: ScrollBehavior | undefined;
+    heading.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      if (typeof options === 'object') headingBehavior = options.behavior;
+    };
+    paragraph.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      if (typeof options === 'object') paragraphBehavior = options.behavior;
+    };
+
+    expect(
+      applyMarkdownFragmentAnchor(
+        root,
+        { kind: 'fragment', id: 'foreign-section' },
+        [{ id: 'foreign-section', label: 'Foreign section', level: 2 }],
+      ),
+    ).to.be.true;
+    expect(
+      applyMarkdownTextQuoteAnchor(root, { kind: 'text-quote', quote: 'brown fox' }),
+    ).to.be.true;
+    expect(headingBehavior).to.equal('auto');
+    expect(paragraphBehavior).to.equal('auto');
+    expect(foreignQueries).to.equal(2);
+    expect(mainQueries).to.equal(0);
+  } finally {
+    window.matchMedia = originalMainMatchMedia;
+    foreignWindow.matchMedia = originalForeignMatchMedia;
+    iframe.remove();
+  }
+});
+
+it('uses non-animated anchor scrolling when the rendered root document has no window', () => {
+  const detachedDocument = document.implementation.createHTMLDocument('detached');
+  const root = detachedDocument.createElement('div');
+  root.innerHTML = '<h2 id="detached-section">Detached section</h2>';
+  detachedDocument.body.appendChild(root);
+  const heading = root.querySelector('h2') as HTMLElement;
+  let behavior: ScrollBehavior | undefined;
+  heading.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+    if (typeof options === 'object') behavior = options.behavior;
+  };
+
+  expect(
+    applyMarkdownFragmentAnchor(
+      root,
+      { kind: 'fragment', id: 'detached-section' },
+      [{ id: 'detached-section', label: 'Detached section', level: 2 }],
+    ),
+  ).to.be.true;
+  expect(behavior).to.equal('auto');
+});
+
 it('percent-encodes a link href that needs it, matching marked\'s own default renderer', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.content = '[t](café.md)';
@@ -568,6 +662,144 @@ it('cancels a stale pending streaming raf when a non-streaming property change t
   el.sanitize = false;
   await el.updateComplete;
   expect((el as unknown as Internals).streamingRenderRaf).to.equal(undefined);
+});
+
+it('schedules streaming work through the owner window animation-frame queue', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const originalMainRaf = window.requestAnimationFrame;
+  const originalForeignRaf = foreignWindow.requestAnimationFrame;
+  let mainRequests = 0;
+  let foreignRequests = 0;
+  window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    mainRequests++;
+    return originalMainRaf.call(window, callback);
+  }) as typeof window.requestAnimationFrame;
+  foreignWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    foreignRequests++;
+    return originalForeignRaf.call(foreignWindow, callback);
+  }) as typeof foreignWindow.requestAnimationFrame;
+
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  try {
+    el.remove();
+    iframe.contentDocument!.body.appendChild(iframe.contentDocument!.adoptNode(el));
+    await el.updateComplete;
+    (el as unknown as { scheduleStreamingRender(): void }).scheduleStreamingRender();
+    expect(foreignRequests).to.equal(1);
+    expect(mainRequests).to.equal(0);
+  } finally {
+    el.remove();
+    window.requestAnimationFrame = originalMainRaf;
+    foreignWindow.requestAnimationFrame = originalForeignRaf;
+    iframe.remove();
+  }
+});
+
+it('cancels a pending streaming frame through the realm that scheduled it after adoption', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const originalMainRequest = window.requestAnimationFrame;
+  const originalForeignRequest = foreignWindow.requestAnimationFrame;
+  const originalMainCancel = window.cancelAnimationFrame;
+  const originalForeignCancel = foreignWindow.cancelAnimationFrame;
+  const mainCancellations: number[] = [];
+  const foreignCancellations: number[] = [];
+  window.cancelAnimationFrame = ((handle: number) => {
+    mainCancellations.push(handle);
+  }) as typeof window.cancelAnimationFrame;
+  foreignWindow.cancelAnimationFrame = ((handle: number) => {
+    foreignCancellations.push(handle);
+  }) as typeof foreignWindow.cancelAnimationFrame;
+  window.requestAnimationFrame = (() => 419) as typeof window.requestAnimationFrame;
+  foreignWindow.requestAnimationFrame = (() => 731) as typeof foreignWindow.requestAnimationFrame;
+
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  type Internals = { scheduleStreamingRender(): void };
+  try {
+    el.remove();
+    iframe.contentDocument!.body.appendChild(iframe.contentDocument!.adoptNode(el));
+    await el.updateComplete;
+    (el as unknown as Internals).scheduleStreamingRender();
+    const pendingUpdate = el.updateComplete;
+    await Promise.resolve();
+
+    document.body.appendChild(document.adoptNode(el));
+    const updateSettled = await Promise.race([
+      pendingUpdate.then(() => true),
+      aTimeout(100).then(() => false),
+    ]);
+    expect(foreignCancellations).to.deep.equal([731]);
+    expect(mainCancellations).to.deep.equal([]);
+    expect(updateSettled, 'adoption cleanup must settle updateComplete').to.be.true;
+  } finally {
+    el.remove();
+    window.requestAnimationFrame = originalMainRequest;
+    foreignWindow.requestAnimationFrame = originalForeignRequest;
+    window.cancelAnimationFrame = originalMainCancel;
+    foreignWindow.cancelAnimationFrame = originalForeignCancel;
+    iframe.remove();
+  }
+});
+
+it('does not schedule an ambient animation frame when adopted into a document with no window', () => {
+  const detachedDocument = document.implementation.createHTMLDocument('detached');
+  const el = detachedDocument.adoptNode(document.createElement('lr-markdown')) as LyraMarkdown;
+  type Internals = { streamingRenderRaf?: number; scheduleStreamingRender(): void };
+  const internals = el as unknown as Internals;
+  try {
+    internals.scheduleStreamingRender();
+    expect(internals.streamingRenderRaf === undefined).to.be.true;
+  } finally {
+    if (internals.streamingRenderRaf !== undefined) {
+      cancelAnimationFrame(internals.streamingRenderRaf);
+      internals.streamingRenderRaf = undefined;
+    }
+  }
+});
+
+it('clears and settles owner-frame state when requestAnimationFrame throws synchronously', () => {
+  const originalRaf = window.requestAnimationFrame;
+  window.requestAnimationFrame = (() => {
+    throw new Error('raf unavailable');
+  }) as typeof window.requestAnimationFrame;
+  const controller = new MarkdownOwnedAnimationFrameController();
+  let callbackCalled = false;
+  try {
+    const handle = controller.request(window, () => {
+      callbackCalled = true;
+    });
+    expect(handle === undefined).to.be.true;
+    expect(controller.handle === undefined).to.be.true;
+    expect(controller.settled === undefined).to.be.true;
+    expect(controller.cancel()).to.be.false;
+    expect(callbackCalled).to.be.false;
+  } finally {
+    window.requestAnimationFrame = originalRaf;
+  }
+});
+
+it('settles owner-frame waiters when a removed owner window rejects cancellation', async () => {
+  const originalRaf = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  window.requestAnimationFrame = (() => 811) as typeof window.requestAnimationFrame;
+  window.cancelAnimationFrame = (() => {
+    throw new Error('owner window removed');
+  }) as typeof window.cancelAnimationFrame;
+  const controller = new MarkdownOwnedAnimationFrameController();
+  try {
+    expect(controller.request(window, () => undefined)).to.equal(811);
+    const settled = controller.settled;
+    expect(settled === undefined).to.be.false;
+    expect(controller.cancel()).to.be.true;
+    await settled;
+    expect(controller.settled === undefined).to.be.true;
+  } finally {
+    window.requestAnimationFrame = originalRaf;
+    window.cancelAnimationFrame = originalCancel;
+  }
 });
 
 it('does not schedule a second streaming raf while one is already pending (scheduleStreamingRender guard)', async () => {
@@ -1412,6 +1644,78 @@ describe('repaintHighlights <mark>-wrap fallback (forced via a hidden Highlight 
     const mark = el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-tone="accent"]');
     expect(mark).to.exist;
     expect(mark!.getAttribute('part')).to.equal('highlight');
+  });
+
+  it('stamps the fallback part when the adopted owner registry rejects CSS highlight registration', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerWindow = iframe.contentWindow!;
+    const ambientHighlight = Object.getOwnPropertyDescriptor(window, 'Highlight');
+    const ambientCss = Object.getOwnPropertyDescriptor(window, 'CSS');
+    const ownerHighlight = Object.getOwnPropertyDescriptor(ownerWindow, 'Highlight');
+    const ownerCss = Object.getOwnPropertyDescriptor(ownerWindow, 'CSS');
+    const ambientCssValue = window.CSS;
+    class AmbientHighlight extends Set<Range> {
+      priority = 0;
+    }
+    const cssWithHighlights = Object.create(ambientCssValue ?? null) as CSS & {
+      highlights: Map<string, AmbientHighlight>;
+    };
+    Object.defineProperty(cssWithHighlights, 'highlights', { value: new Map() });
+    const el = await fixture<LyraMarkdown>(html`<lr-markdown></lr-markdown>`);
+    el.remove();
+
+    try {
+      Object.defineProperty(window, 'Highlight', {
+        configurable: true,
+        value: AmbientHighlight,
+      });
+      Object.defineProperty(window, 'CSS', {
+        configurable: true,
+        value: cssWithHighlights,
+      });
+      Object.defineProperty(ownerWindow, 'Highlight', {
+        configurable: true,
+        value: AmbientHighlight,
+      });
+      Object.defineProperty(ownerWindow, 'CSS', {
+        configurable: true,
+        value: {
+          highlights: {
+            set() {
+              throw new Error('owner registry rejected highlight registration');
+            },
+          },
+        },
+      });
+      expect(supportsCustomHighlights(document)).to.be.true;
+      expect(supportsCustomHighlights(ownerDocument)).to.be.true;
+
+      el.content = 'The quick brown fox jumps over the lazy dog.';
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+      await el.updateComplete;
+
+      const mark = el.shadowRoot!.querySelector(
+        '[part="content"] mark[data-lr-highlight-tone="accent"]',
+      );
+      expect(supportsCustomHighlights(ownerDocument)).to.be.false;
+      expect(mark !== null).to.equal(true);
+      expect(mark!.getAttribute('part')).to.equal('highlight');
+    } finally {
+      el.remove();
+      if (ambientHighlight) Object.defineProperty(window, 'Highlight', ambientHighlight);
+      else Reflect.deleteProperty(window, 'Highlight');
+      if (ambientCss) Object.defineProperty(window, 'CSS', ambientCss);
+      else Reflect.deleteProperty(window, 'CSS');
+      if (ownerHighlight) Object.defineProperty(ownerWindow, 'Highlight', ownerHighlight);
+      else Reflect.deleteProperty(ownerWindow, 'Highlight');
+      if (ownerCss) Object.defineProperty(ownerWindow, 'CSS', ownerCss);
+      else Reflect.deleteProperty(ownerWindow, 'CSS');
+      iframe.remove();
+    }
   });
 });
 

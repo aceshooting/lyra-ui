@@ -260,11 +260,12 @@ multi-divider events are intentionally a different API.
   as the host changes size. When set, that pane keeps its pixel size and the other pane absorbs the
   resize. Position values are always measured from the selected primary edge.
 - `snap: string | SnapFunction = ''` — pointer-drag snap behavior. A string accepts space-separated
-  pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`). A property-bound
+  pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`) and reflects to the
+  `snap` attribute. A property-bound
   `SnapFunction` receives `{ pos, size, snapThreshold }` in pixels and returns the desired pixel
   position; callback code decides how to use the supplied threshold. The setter also accepts
   `undefined` for mapped source compatibility, clearing the configuration to the canonical `''`
-  read value.
+  read value. Function and empty values remove the serializable attribute.
 - `snapThreshold: number = 12` (attribute `snap-threshold`) — maximum pixel distance at which a
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.
@@ -487,7 +488,7 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 - `slides: number = 0` (attribute `slides`, reflected) — live assigned-slide count; updated after
   dynamic child changes
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
-  `aria-label` takes precedence
+  `aria-label` takes precedence by presence, including an explicitly empty value
 
 **8.0 default migration:** navigation and pagination now match the mapped opt-in defaults. Markup
 that relied on Lyra's former always-present arrow row or `showIndicators = true` must add
@@ -518,6 +519,23 @@ emits one event for the whole gesture. Programmatic movement scrolls the same tr
 and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden endcaps so
 forward/backward wrapping continues in the requested direction, then silently resets to the
 matching original slide. Clone idrefs and form-identifying attributes are not duplicated.
+
+Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
+announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
+region. Initial connection and reconnection stay silent. Timer-driven autoplay advances also stay
+silent, while click, keyboard, method, scroll-gesture, and property changes are announced even
+when `autoplay` remains enabled. A change made while the carousel or a composed ancestor is
+`hidden`, `inert`, `aria-hidden`, or CSS-hidden stays silent. Slide announcement text likewise
+omits accessibility-hidden descendants. A subtree-pruned active slide root suppresses the entire
+page announcement rather than synthesizing a position for content outside the tree; a
+`visibility:hidden|collapse` root can still contribute a descendant that explicitly restores
+`visibility:visible`, in which case the position and that exposed descendant are announced.
+Nested forwarding slots contribute their flattened assigned content. Slot fallback text contributes
+only when there is no direct assignment; an accessibility-hidden assignment remains authoritative
+and does not expose the fallback. The `carouselSlideAnnouncement` message (English default:
+`{position}: {content}`) controls the order and punctuation of each position/content pair, and
+`carouselSlideAnnouncementSeparator` (English default: `. `) separates multiple visible-slide
+summaries. A registered locale or the instance's `strings` override can customize both.
 
 Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
 Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The
@@ -1982,6 +2000,8 @@ while the legacy `lr-menu-select` likewise bubbles once to the outermost menu. T
 nested-selection name. A non-vetoed selection closes the whole chain behind it. A submenu's own
 `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
 menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
+`lr-show` is cancelable. `lr-hide` is cancelable while the menu is connected and non-cancelable
+only for the disconnect-driven close, where the removed menu cannot honour a veto.
 
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
@@ -2095,7 +2115,14 @@ where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys
 one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
 behaves identically.
 `getTextLabel(): string` returns the visible label used by type-ahead and Shoelace-compatible
-integrations, without including nested submenu text.
+integrations, without including nested submenu text. Direct and flattened, forwarded default-slot
+labels are observed live: in-place text edits, forwarding-slot reassignments, and relevant
+visibility changes update type-ahead, the computed submenu-parent name, and the computed
+submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
+assignment stays authoritative even while hidden and therefore does not expose slot fallback;
+fallback contributes after the assignment is removed. A consumer-authored `aria-label` on the
+item, or `label`/`aria-label` on the submenu, wins by attribute presence — including an explicitly
+empty value and a value supplied after Lyra initially computed the name.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
@@ -2812,7 +2839,10 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 **Events:** `lr-cell-move` (`detail: { id, position, previous }`), `lr-cell-resize`
 (`detail: { id, size, previous }`), `lr-collision` (`detail: { id, collidedWith, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
-**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region`.
+Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
+sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
+**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
+`aria-hidden` shadow mirror of the latest spoken message).
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.

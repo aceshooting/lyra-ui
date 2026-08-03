@@ -15,9 +15,15 @@ import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-view
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { styles } from './message-parts.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
@@ -77,6 +83,22 @@ export interface LyraMessagePartsEventMap
  * @since 7.0.0
  */
 export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    citation: LYRA_DEFAULT_citation,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    messagePartError: LYRA_DEFAULT_messagePartError,
+    messagePartRetry: LYRA_DEFAULT_messagePartRetry,
+    messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
+    open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
+    thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Ordered message content. */
@@ -106,15 +128,47 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
-  private newErrorIds = new Set<string>();
+  private errorAnnouncementSink?: AnnouncementSink;
+  private suppressNextErrorAnnouncement = true;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    if (this.hasUpdated) {
+      // A reconnect snapshots the current parts as history. This covers a parts write queued while
+      // detached and prevents DOM reparenting from turning old errors into fresh alerts.
+      this.suppressNextErrorAnnouncement = true;
+      this.requestUpdate();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    this.suppressNextErrorAnnouncement = true;
+  }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (!changed.has('parts')) return;
-    const current = this.parts.filter((part) => part.type === 'error').map((part) => part.id);
-    this.newErrorIds = this.hasUpdated
-      ? new Set(current.filter((id) => !this.knownErrorIds.has(id)))
-      : new Set();
-    this.knownErrorIds = new Set(current);
+    const current = this.parts.filter((part) => part.type === 'error');
+    if (this.hasUpdated && !this.suppressNextErrorAnnouncement) {
+      for (const part of current) {
+        if (!this.knownErrorIds.has(part.id)) {
+          this.errorAnnouncementSink?.announce(part.message || this.localize('messagePartError'));
+        }
+      }
+    }
+    this.knownErrorIds = new Set(current.map((part) => part.id));
+  }
+
+  protected override updated(_changed: PropertyValues<this>): void {
+    this.suppressNextErrorAnnouncement = false;
   }
 
   private citationIndex(index: number): number {
@@ -234,7 +288,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       part=${this.partNames(part)}
       data-type=${part.type}
       data-state=${part.state ?? 'complete'}
-      role=${part.type === 'error' && this.newErrorIds.has(part.id) ? 'alert' : nothing}
     >${custom === undefined ? this.renderBuiltin(part, index) : custom}</div>`;
   }
 

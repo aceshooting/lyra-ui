@@ -2,7 +2,7 @@
 
 # `lr-popover`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-popover.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPopover`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/popover.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

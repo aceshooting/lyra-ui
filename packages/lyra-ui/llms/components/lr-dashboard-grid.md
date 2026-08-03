@@ -2,7 +2,7 @@
 
 # `lr-dashboard-grid`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-dashboard-grid.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDashboardGrid`, also available unregistered from `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -29,7 +29,10 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 **Events:** `lr-cell-move` (`detail: { id, position, previous }`), `lr-cell-resize`
 (`detail: { id, size, previous }`), `lr-collision` (`detail: { id, collidedWith, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
-**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region`.
+Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
+sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
+**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
+`aria-hidden` shadow mirror of the latest spoken message).
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.

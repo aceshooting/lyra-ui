@@ -2,6 +2,14 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
 import './message-parts.js';
 import type { LyraMessageParts } from './message-parts.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function assertiveSinkTexts(doc: Document = document): string[] {
+  return Array.from(
+    doc.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
 
 const parts: MessagePart[] = [
   { id: 'text', type: 'text', text: '**Answer**', state: 'complete' },
@@ -109,6 +117,60 @@ it('applies per-instance strings to retry controls', async () => {
   const retry = el.shadowRoot!.querySelector('lr-button') as HTMLElement;
   expect(retry.getAttribute('aria-label')).to.equal('Réessayer cette section');
   expect(retry.textContent?.trim()).to.equal('Réessayer');
+});
+
+it('announces only newly added error parts through the shared assertive light-DOM sink', async () => {
+  const mountedError: MessagePart = { id: 'old-error', type: 'error', message: 'Earlier failure' };
+  const freshError: MessagePart = { id: 'new-error', type: 'error', message: 'Fresh failure' };
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`,
+  )) as LyraMessageParts;
+  expect(assertiveSinkTexts(), 'historical errors present at mount stay silent').to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[data-type="error"]')!.hasAttribute('role')).to.be.false;
+
+  el.parts = [mountedError, freshError];
+  await el.updateComplete;
+  expect(assertiveSinkTexts()).to.deep.equal(['Fresh failure']);
+
+  el.parts = [mountedError];
+  await el.updateComplete;
+  el.parts = [mountedError, freshError];
+  await el.updateComplete;
+  expect(assertiveSinkTexts()).to.deep.equal(['Fresh failure', 'Fresh failure']);
+
+  el.remove();
+  expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`).length).to.equal(0);
+});
+
+it('treats errors queued while detached as a silent reconnect baseline', async () => {
+  const mountedError: MessagePart = { id: 'old-error', type: 'error', message: 'Earlier failure' };
+  const detachedError: MessagePart = { id: 'detached-error', type: 'error', message: 'Detached failure' };
+  const connectedError: MessagePart = { id: 'connected-error', type: 'error', message: 'Connected failure' };
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`,
+  )) as LyraMessageParts;
+  const parent = el.parentNode!;
+
+  el.remove();
+  el.parts = [mountedError, detachedError];
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(assertiveSinkTexts(), 'detached errors are resting content on reconnect').to.deep.equal([]);
+
+  el.parts = [mountedError, detachedError, connectedError];
+  await el.updateComplete;
+  expect(assertiveSinkTexts(), 'the next connected error still announces').to.deep.equal([
+    'Connected failure',
+  ]);
+});
+
+it('localizes an added error part that has no caller-supplied message', async () => {
+  const el = (await fixture(html`
+    <lr-message-parts .strings=${{ messagePartError: 'Échec de la section' }}></lr-message-parts>
+  `)) as LyraMessageParts;
+  el.parts = [{ id: 'new-error', type: 'error', message: '' }];
+  await el.updateComplete;
+  expect(assertiveSinkTexts()).to.deep.equal(['Échec de la section']);
 });
 
 it('is accessible with populated mixed content', async () => {

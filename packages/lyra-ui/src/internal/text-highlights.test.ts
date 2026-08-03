@@ -35,6 +35,24 @@ function findTextNode(root: Element, text: string): Text {
   throw new Error(`Text node containing "${text}" not found`);
 }
 
+function ownerRangeOverText(doc: Document, root: Element, text: string): Range {
+  const walker = doc.createTreeWalker(root, 4);
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    const index = (node as Text).data.indexOf(text);
+    if (index === -1) continue;
+    const range = doc.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + text.length);
+    return range;
+  }
+  throw new Error(`Owner text "${text}" not found`);
+}
+
+class FakeHighlight extends Set<Range> {
+  priority = 0;
+}
+
 describe('supportsCustomHighlights', () => {
   it('returns a boolean without throwing', () => {
     expect(typeof supportsCustomHighlights()).to.equal('boolean');
@@ -362,6 +380,222 @@ describe('acquireHighlightHandle (CSS path, unregistered highlight name)', () =>
       handle.release();
     } finally {
       root.remove();
+    }
+  });
+});
+
+describe('acquireHighlightHandle owner realms', () => {
+  it('keeps CSS registries, ranges, and flash timers isolated per owner document', () => {
+    const firstFrame = document.createElement('iframe');
+    const secondFrame = document.createElement('iframe');
+    document.body.append(firstFrame, secondFrame);
+    const firstView = firstFrame.contentWindow!;
+    const secondView = secondFrame.contentWindow!;
+    const firstDocument = firstFrame.contentDocument!;
+    const secondDocument = secondFrame.contentDocument!;
+    const ambientHighlight = Object.getOwnPropertyDescriptor(window, 'Highlight');
+    const ambientCss = Object.getOwnPropertyDescriptor(window, 'CSS');
+    const ambientCssValue = window.CSS;
+    const firstHighlight = Object.getOwnPropertyDescriptor(firstView, 'Highlight');
+    const secondHighlight = Object.getOwnPropertyDescriptor(secondView, 'Highlight');
+    const firstCss = Object.getOwnPropertyDescriptor(firstView, 'CSS');
+    const secondCss = Object.getOwnPropertyDescriptor(secondView, 'CSS');
+    const ambientSetTimeout = window.setTimeout;
+    const firstSetTimeout = firstView.setTimeout;
+    const firstClearTimeout = firstView.clearTimeout;
+    const firstRegistry = new Map<string, FakeHighlight>();
+    const secondRegistry = new Map<string, FakeHighlight>();
+    let ambientHighlightConstructions = 0;
+    let ambientCssReads = 0;
+    let ambientTimers = 0;
+    let firstTimer: (() => void) | undefined;
+    const firstClears: number[] = [];
+    let firstHandle: ReturnType<typeof acquireHighlightHandle> | undefined;
+    let secondHandle: ReturnType<typeof acquireHighlightHandle> | undefined;
+
+    try {
+      Object.defineProperty(window, 'Highlight', {
+        configurable: true,
+        value: class AmbientHighlightTrap extends FakeHighlight {
+          constructor() {
+            super();
+            ambientHighlightConstructions += 1;
+          }
+        },
+      });
+      Object.defineProperty(window, 'CSS', {
+        configurable: true,
+        get() {
+          ambientCssReads += 1;
+          return ambientCssValue;
+        },
+      });
+      Object.defineProperty(firstView, 'Highlight', {
+        configurable: true,
+        value: FakeHighlight,
+      });
+      Object.defineProperty(secondView, 'Highlight', {
+        configurable: true,
+        value: FakeHighlight,
+      });
+      Object.defineProperty(firstView, 'CSS', {
+        configurable: true,
+        value: { highlights: firstRegistry },
+      });
+      Object.defineProperty(secondView, 'CSS', {
+        configurable: true,
+        value: { highlights: secondRegistry },
+      });
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+        ambientTimers += 1;
+        return ambientSetTimeout(handler, timeout, ...args);
+      }) as typeof window.setTimeout;
+      firstView.setTimeout = ((handler: TimerHandler) => {
+        if (typeof handler === 'function') firstTimer = handler as () => void;
+        return 701;
+      }) as typeof firstView.setTimeout;
+      firstView.clearTimeout = ((handle?: number) => {
+        if (handle !== undefined) firstClears.push(handle);
+      }) as typeof firstView.clearTimeout;
+
+      const firstRoot = firstDocument.createElement('p');
+      firstRoot.textContent = 'first owner range';
+      firstDocument.body.append(firstRoot);
+      const secondRoot = secondDocument.createElement('p');
+      secondRoot.textContent = 'second owner range';
+      secondDocument.body.append(secondRoot);
+      const firstRange = ownerRangeOverText(firstDocument, firstRoot, 'owner');
+      const secondRange = ownerRangeOverText(secondDocument, secondRoot, 'owner');
+      const sharedOwner = {};
+
+      expect(supportsCustomHighlights(firstDocument)).to.be.true;
+      expect(supportsCustomHighlights(secondDocument)).to.be.true;
+      firstHandle = acquireHighlightHandle(sharedOwner, firstDocument);
+      secondHandle = acquireHighlightHandle(sharedOwner, secondDocument);
+      firstHandle.setRanges('accent', [firstRange]);
+      secondHandle.setRanges('accent', [secondRange]);
+
+      expect(ambientHighlightConstructions).to.equal(0);
+      expect(ambientCssReads).to.equal(0);
+      expect(firstRegistry.get('lr-highlight-accent')?.has(firstRange) ?? false).to.be.true;
+      expect(firstRegistry.get('lr-highlight-accent')?.has(secondRange) ?? false).to.be.false;
+      expect(secondRegistry.get('lr-highlight-accent')?.has(secondRange) ?? false).to.be.true;
+      expect(secondRegistry.get('lr-highlight-accent')?.has(firstRange) ?? false).to.be.false;
+
+      firstHandle.flash(firstRange, 500);
+      expect(ambientTimers).to.equal(0);
+      expect(typeof firstTimer).to.equal('function');
+      expect(firstRegistry.get('lr-highlight-flash')?.has(firstRange) ?? false).to.be.true;
+      firstHandle.release();
+      expect(firstClears).to.deep.equal([701]);
+      firstTimer?.();
+      expect(firstRegistry.get('lr-highlight-flash')?.has(firstRange) ?? false).to.be.false;
+      expect(secondRegistry.get('lr-highlight-accent')?.has(secondRange) ?? false).to.be.true;
+    } finally {
+      firstHandle?.release();
+      secondHandle?.release();
+      window.setTimeout = ambientSetTimeout;
+      firstView.setTimeout = firstSetTimeout;
+      firstView.clearTimeout = firstClearTimeout;
+      if (ambientHighlight) Object.defineProperty(window, 'Highlight', ambientHighlight);
+      else Reflect.deleteProperty(window, 'Highlight');
+      if (ambientCss) Object.defineProperty(window, 'CSS', ambientCss);
+      else Reflect.deleteProperty(window, 'CSS');
+      if (firstHighlight) Object.defineProperty(firstView, 'Highlight', firstHighlight);
+      else Reflect.deleteProperty(firstView, 'Highlight');
+      if (secondHighlight) Object.defineProperty(secondView, 'Highlight', secondHighlight);
+      else Reflect.deleteProperty(secondView, 'Highlight');
+      if (firstCss) Object.defineProperty(firstView, 'CSS', firstCss);
+      else Reflect.deleteProperty(firstView, 'CSS');
+      if (secondCss) Object.defineProperty(secondView, 'CSS', secondCss);
+      else Reflect.deleteProperty(secondView, 'CSS');
+      firstFrame.remove();
+      secondFrame.remove();
+    }
+  });
+
+  it('uses owner node constants and timers for the mark fallback', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const ownerView = frame.contentWindow!;
+    const ownerDocument = frame.contentDocument!;
+    const ownerHighlight = Object.getOwnPropertyDescriptor(ownerView, 'Highlight');
+    const ambientNode = Object.getOwnPropertyDescriptor(window, 'Node');
+    const ambientNodeFilter = Object.getOwnPropertyDescriptor(window, 'NodeFilter');
+    const ambientSetTimeout = window.setTimeout;
+    const ownerSetTimeout = ownerView.setTimeout;
+    const ownerClearTimeout = ownerView.clearTimeout;
+    let ambientNodeReads = 0;
+    let ambientTimers = 0;
+    let ownerTimer: (() => void) | undefined;
+    const ownerClears: number[] = [];
+    let handle: ReturnType<typeof acquireHighlightHandle> | undefined;
+
+    try {
+      Object.defineProperty(ownerView, 'Highlight', { configurable: true, value: undefined });
+      class AmbientNodeTrap {}
+      Object.defineProperty(AmbientNodeTrap, 'TEXT_NODE', {
+        configurable: true,
+        get() {
+          ambientNodeReads += 1;
+          return 3;
+        },
+      });
+      class AmbientNodeFilterTrap {}
+      Object.defineProperty(AmbientNodeFilterTrap, 'SHOW_TEXT', {
+        configurable: true,
+        get() {
+          ambientNodeReads += 1;
+          return 4;
+        },
+      });
+      Object.defineProperty(window, 'Node', { configurable: true, value: AmbientNodeTrap });
+      Object.defineProperty(window, 'NodeFilter', {
+        configurable: true,
+        value: AmbientNodeFilterTrap,
+      });
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+        ambientTimers += 1;
+        return ambientSetTimeout(handler, timeout, ...args);
+      }) as typeof window.setTimeout;
+      ownerView.setTimeout = ((handler: TimerHandler) => {
+        if (typeof handler === 'function') ownerTimer = handler as () => void;
+        return 702;
+      }) as typeof ownerView.setTimeout;
+      ownerView.clearTimeout = ((timer?: number) => {
+        if (timer !== undefined) ownerClears.push(timer);
+      }) as typeof ownerView.clearTimeout;
+
+      const root = ownerDocument.createElement('div');
+      root.innerHTML = '<p>owner fallback range</p><p>flash fallback range</p>';
+      ownerDocument.body.append(root);
+      const persistent = ownerRangeOverText(ownerDocument, root, 'owner');
+      const flash = ownerRangeOverText(ownerDocument, root, 'flash');
+      handle = acquireHighlightHandle({}, ownerDocument);
+      handle.setRanges('accent', [persistent]);
+      handle.flash(flash, 500);
+
+      expect(ambientNodeReads).to.equal(0);
+      expect(ambientTimers).to.equal(0);
+      expect(typeof ownerTimer).to.equal('function');
+      expect(root.querySelectorAll('mark').length).to.equal(2);
+      handle.release();
+      expect(ownerClears).to.deep.equal([702]);
+      expect(root.querySelectorAll('mark').length).to.equal(0);
+      ownerTimer?.();
+      expect(root.querySelectorAll('mark').length).to.equal(0);
+    } finally {
+      handle?.release();
+      window.setTimeout = ambientSetTimeout;
+      ownerView.setTimeout = ownerSetTimeout;
+      ownerView.clearTimeout = ownerClearTimeout;
+      if (ownerHighlight) Object.defineProperty(ownerView, 'Highlight', ownerHighlight);
+      else Reflect.deleteProperty(ownerView, 'Highlight');
+      if (ambientNode) Object.defineProperty(window, 'Node', ambientNode);
+      else Reflect.deleteProperty(window, 'Node');
+      if (ambientNodeFilter) Object.defineProperty(window, 'NodeFilter', ambientNodeFilter);
+      else Reflect.deleteProperty(window, 'NodeFilter');
+      frame.remove();
     }
   });
 });

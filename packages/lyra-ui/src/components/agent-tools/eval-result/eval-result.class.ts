@@ -7,6 +7,11 @@ import type { TableColumn } from '../../data/table/table.class.js';
 import '../../forms/rubric-form/rubric-form.class.js';
 import '../../data/table/table.class.js';
 import '../../utility/diff-view/diff-view.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const EMPTY_RUNS: EvalRunResult[] = [];
 const EMPTY_COLUMNS: TableColumn<EvalRunResult>[] = [];
@@ -82,6 +87,21 @@ export interface LyraEvalResultEventMap {
  * @since 4.1.0
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The runs (one per model or prompt version) being compared for this evaluation example. */

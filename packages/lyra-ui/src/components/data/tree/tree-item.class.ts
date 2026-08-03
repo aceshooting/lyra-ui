@@ -3,7 +3,14 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
-import { nextId } from '../../../internal/a11y.js';
+import {
+  composedParentElement,
+  hasRealContent,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisible,
+  isAccessibilityVisibilityHidden,
+  nextId,
+} from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -11,6 +18,11 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
 import type { TreeItem, TreeSelection } from './tree-types.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_RENDER_DEPTH = 64;
 
@@ -49,6 +61,10 @@ export interface LyraTreeItemEventMap {
  * slots, and expansion lifecycle. Lyra's richer `lr-node-*` notifications remain available beside
  * the normalized `lr-expand`/`lr-collapse`/`lr-lazy-*` surface. Per-row icons, secondary
  * descriptions and badges remain additive data-model features.
+ * In the declarative model, flattened real-content presence chooses between the visual slot and
+ * `label` fallback, so decorative or element-only visuals remain rendered. Spoken `nodeLabel`
+ * text is resolved separately from accessibility-visible assigned content and updates through
+ * forwarding slots; a host `aria-label` keeps precedence by presence.
  *
  * `role="treeitem"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/
  * `aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on
@@ -126,6 +142,17 @@ export interface LyraTreeItemEventMap {
  * @since 8.0.0
  */
 export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    item: LYRA_DEFAULT_item,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private readonly itemInternals = this.attachInternals();
@@ -193,7 +220,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   private collapseIconSource: Element | null = null;
   private lifecycleGeneration = 0;
   private lazyGeneration = 0;
-  private lifecycleTimer?: number;
+  private lifecycleTimer?: { owner: Window; handle: number };
 
   private _depth = 0;
   /** Nesting depth, 0 = top-level. Feeds `aria-level` (`depth + 1`) in `willUpdate()` below and the
@@ -263,25 +290,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   /**
    * This item's spoken name, in whichever child model is in use — used for `<lr-tree>`'s reorder
    * announcements. Falls back through `item.accessibleLabel`/`item.label`, then a host
-   * `aria-label`, the `label` attribute, and finally the slotted label text (nested items excluded).
+   * `aria-label`, flattened accessible slotted label text (nested items excluded), and finally the
+   * `label` attribute fallback.
    */
   get nodeLabel(): string {
     if (this.item) return this.item.accessibleLabel || this.item.label;
     const ariaLabel = this.getAttribute('aria-label');
-    if (ariaLabel) return ariaLabel;
-    if (this.label) return this.label;
-    let text = '';
-    for (const node of this.childNodes) {
-      if (this.isChildItem(node)) continue;
-      if (
-        node.nodeType === Node.ELEMENT_NODE &&
-        ['expand-icon', 'collapse-icon'].includes((node as Element).getAttribute('slot') ?? '')
-      ) {
-        continue;
-      }
-      text += node.textContent ?? '';
-    }
-    return text.trim();
+    if (ariaLabel !== null) return ariaLabel;
+    return this.slottedLabelText || this.label;
   }
 
   /**
@@ -338,7 +354,91 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   }
 
   private isChildItem(node: Node): boolean {
-    return node.nodeType === Node.ELEMENT_NODE && (node as Element).localName === tag('tree-item');
+    return node.nodeType === 1 && (node as Element).localName === tag('tree-item');
+  }
+
+  private isDeclarativeLabelNode(node: Node): boolean {
+    if (this.isChildItem(node)) return false;
+    if (node.nodeType !== 1) return true;
+    const slotName = (node as Element).getAttribute('slot');
+    return slotName === null || slotName === '';
+  }
+
+  private labelForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return top.parentNode === this && this.isDeclarativeLabelNode(top);
+    });
+  }
+
+  private accessibleLabelText(
+    node: Node,
+    inheritedTextVisible?: boolean,
+    requireComposedVisibility = false,
+  ): string {
+    if (node.nodeType === 3) {
+      if (inheritedTextVisible === undefined) {
+        const parent = this.composedParentForLabelNode(node);
+        inheritedTextVisible =
+          parent !== null &&
+          !isAccessibilitySubtreeExcluded(parent) &&
+          !isAccessibilityVisibilityHidden(parent) &&
+          (!requireComposedVisibility || isAccessibilityVisible(parent));
+      }
+      return inheritedTextVisible ? node.textContent ?? '' : '';
+    }
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+    if (requireComposedVisibility && ownTextVisible && !isAccessibilityVisible(element)) return '';
+    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
+    if (ariaLabel) return ariaLabel;
+    const forwardingSlot = element.localName === 'slot' ? (element as HTMLSlotElement) : null;
+    const hasAssignment = forwardingSlot !== null && forwardingSlot.assignedNodes().length > 0;
+    const children = hasAssignment
+      ? forwardingSlot.assignedNodes({ flatten: true })
+      : Array.from(element.childNodes);
+    return Array.from(children)
+      .map((child) => {
+        const externalAssignment = hasAssignment && !this.contains(child);
+        return this.accessibleLabelText(
+          child,
+          externalAssignment ? undefined : ownTextVisible,
+          requireComposedVisibility || externalAssignment,
+        );
+      })
+      .join(' ');
+  }
+
+  private get slottedLabelText(): string {
+    return this.declarativeLabelRoots()
+      .map((node) => this.accessibleLabelText(node, true, false))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private declarativeLabelRoots(): Node[] {
+    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    if (!childNodes) return [];
+    return Array.from(childNodes).filter((node) => this.isDeclarativeLabelNode(node));
+  }
+
+  private declarativeLabelNodes(): Node[] {
+    const renderRoot = this.renderRoot as ParentNode | undefined;
+    if (!renderRoot) return [];
+    const slot = renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    if (slot) return slot.assignedNodes({ flatten: true });
+    return this.declarativeLabelRoots()
+      .flatMap((node) => {
+        if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
+        const forwardingSlot = node as HTMLSlotElement;
+        return forwardingSlot.assignedNodes().length > 0
+          ? forwardingSlot.assignedNodes({ flatten: true })
+          : Array.from(forwardingSlot.childNodes);
+      });
   }
 
   /** Whether the default slot has real label content — any element that is not a nested item, or a
@@ -347,17 +447,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    *  Indentation whitespace around nested items does not count, which is why the fallback still
    *  renders for the (extremely common) `<lr-tree-item label="…">` + nested-children shape. */
   private get hasSlottedLabel(): boolean {
-    for (const node of this.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        if ((node.nodeValue ?? '').trim() !== '') return true;
-        continue;
-      }
-      if (node.nodeType === Node.ELEMENT_NODE && !this.isChildItem(node)) {
-        const slot = (node as Element).getAttribute('slot');
-        if (slot !== 'expand-icon' && slot !== 'collapse-icon') return true;
-      }
-    }
-    return false;
+    return hasRealContent(this.declarativeLabelNodes());
   }
 
   /** Moves nested `<lr-tree-item>` children onto the `children` slot so the default slot can stay
@@ -378,6 +468,80 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    *  light-DOM child model. */
   private childObserver?: MutationObserver;
 
+  private observeLabelNode(node: Node): void {
+    if (!this.childObserver) return;
+    if (node.nodeType === 3) {
+      this.childObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.childObserver.observe(node, {
+      attributes: true,
+      attributeFilter: [
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'hidden',
+        'inert',
+        'open',
+        'slot',
+        'style',
+      ],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private composedParentForLabelNode(node: Node): Element | null {
+    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
+    if (assignedSlot) return assignedSlot;
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode() as Document | ShadowRoot;
+    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
+  }
+
+  private observeLabelAncestors(node: Node): void {
+    const observer = this.childObserver;
+    if (!observer) return;
+    let ancestor = this.composedParentForLabelNode(node);
+    while (ancestor) {
+      // Preserve the full host-subtree registration while also watching consumer-owned composed
+      // ancestors whose class/style can retheme an assigned root through `::slotted()` CSS.
+      if (ancestor !== this && !this.contains(ancestor)) {
+        observer.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'],
+        });
+      }
+      ancestor = composedParentElement(ancestor);
+    }
+  }
+
+  private bindChildObserverTargets(): void {
+    if (!this.childObserver) return;
+    this.childObserver.disconnect();
+    this.observeLabelNode(this);
+    for (const slot of this.labelForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) {
+        this.observeLabelNode(assigned);
+        this.observeLabelAncestors(assigned);
+      }
+    }
+  }
+
+  private handleLabelSlotChange = (event: Event): void => {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (
+      target.getRootNode() !== this.renderRoot &&
+      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+    ) return;
+    this.bindChildObserverTargets();
+    this.requestUpdate();
+  };
+
   /** `hasSlottedLabel` and the declarative model's own `hasChildren`, sampled once per update in
    *  `willUpdate()` rather than read live from `render()`. Both answers come from the light DOM,
    *  which a server renderer cannot see at all, so a hydrating item has to reproduce the server's
@@ -386,29 +550,46 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   @state() private slottedLabel = false;
   @state() private slottedChildren = false;
 
+  private sampleLightDomState(): void {
+    this.slottedLabel = this.hasSlottedLabel;
+    // Only the declarative model answers this from the light DOM; the data model's children come
+    // from `item`, which a server render receives as an ordinary property binding.
+    this.slottedChildren = !this.item && this.hasChildren;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.assignChildSlots();
-    this.childObserver = new MutationObserver(() => {
-      this.assignChildSlots();
-      this.requestUpdate();
-      if (this._loading && this.actualChildItems().length > 0) this.finishLazyLoad(this.lazyGeneration);
-    });
-    this.childObserver.observe(this, { childList: true });
+    // The observer is intentionally absent while detached. A reconnect must therefore sample once
+    // before relying on future mutations; first connections remain hydration-aware in willUpdate().
+    if (this.hasUpdated) this.sampleLightDomState();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.childObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.assignChildSlots();
+          this.bindChildObserverTargets();
+          this.requestUpdate();
+          if (this._loading && this.actualChildItems().length > 0) {
+            this.finishLazyLoad(this.lazyGeneration);
+          }
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.handleLabelSlotChange);
+    this.bindChildObserverTargets();
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.removeEventListener('slotchange', this.handleLabelSlotChange);
     this.childObserver?.disconnect();
     this.childObserver = undefined;
     this.lifecycleGeneration++;
     this.lazyGeneration++;
-    if (this.lifecycleTimer !== undefined) window.clearTimeout(this.lifecycleTimer);
-    this.lifecycleTimer = undefined;
+    this.cancelLifecycleTimer();
     // Loading is transient request state. A reconnected item can be expanded again to issue a
     // fresh generation, but a response to the detached request must never expand it later.
     this._loading = false;
     if (this.lazy) this.expanded = false;
+    super.disconnectedCallback();
   }
 
   private actualChildItems(): LyraTreeItem[] {
@@ -428,14 +609,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     super.willUpdate(changed);
     // Runs before render so a nested child is never briefly painted inside [part="label"].
     this.assignChildSlots();
-    const sampleLightDom = (): void => {
-      this.slottedLabel = this.hasSlottedLabel;
-      // Only the declarative model answers this from the light DOM; the data model's children come
-      // from `item`, which a server render receives as an ordinary property binding.
-      this.slottedChildren = !this.item && this.hasChildren;
-    };
-    if (this.hasUpdated) sampleLightDom();
-    else this.seedFirstRenderState(sampleLightDom);
+    if (this.hasUpdated) this.sampleLightDomState();
+    else this.seedFirstRenderState(() => this.sampleLightDomState());
     // A same-id data refresh deliberately reuses this element and its disclosure state. Once the
     // refreshed item becomes disabled, though, the owning tree removes this entire subtree from
     // keyboard navigation. Collapse immediately so enabled descendants cannot remain visibly
@@ -509,8 +684,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   private commitExpanded(expanded: boolean): void {
     if (this.expanded === expanded) return;
     this.lifecycleGeneration++;
-    if (this.lifecycleTimer !== undefined) window.clearTimeout(this.lifecycleTimer);
-    this.lifecycleTimer = undefined;
+    this.cancelLifecycleTimer();
     this.expanded = expanded;
     this.emit(expanded ? 'lr-expand' : 'lr-collapse', { item: this });
     this.emit('lr-node-toggle', { id: this.nodeId, expanded });
@@ -544,21 +718,46 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   }
 
   private scheduleAfterEvent(expanded: boolean, generation: number): void {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
     void this.updateComplete.then(() => {
-      if (generation !== this.lifecycleGeneration || !this.isConnected || this.expanded !== expanded) return;
-      const duration = this.motionDuration(expanded);
-      this.lifecycleTimer = window.setTimeout(() => {
-        this.lifecycleTimer = undefined;
-        if (generation !== this.lifecycleGeneration || !this.isConnected || this.expanded !== expanded) return;
+      if (
+        generation !== this.lifecycleGeneration ||
+        !this.isConnected ||
+        this.expanded !== expanded ||
+        this.ownerDocument.defaultView !== owner
+      ) {
+        return;
+      }
+      const duration = this.motionDuration(expanded, owner);
+      const timer = { owner, handle: 0 };
+      timer.handle = owner.setTimeout(() => {
+        if (this.lifecycleTimer === timer) this.lifecycleTimer = undefined;
+        if (
+          generation !== this.lifecycleGeneration ||
+          !this.isConnected ||
+          this.expanded !== expanded ||
+          this.ownerDocument.defaultView !== owner
+        ) {
+          return;
+        }
         this.emit(expanded ? 'lr-after-expand' : 'lr-after-collapse', { item: this });
       }, duration);
+      this.lifecycleTimer = timer;
     });
   }
 
-  private motionDuration(expanded: boolean): number {
-    if (prefersReducedMotion()) return 0;
+  private cancelLifecycleTimer(): void {
+    const timer = this.lifecycleTimer;
+    if (!timer) return;
+    this.lifecycleTimer = undefined;
+    timer.owner.clearTimeout(timer.handle);
+  }
+
+  private motionDuration(expanded: boolean, owner: Window): number {
+    if (prefersReducedMotion(owner)) return 0;
     const property = expanded ? '--show-duration' : '--hide-duration';
-    const ownStyle = getComputedStyle(this);
+    const ownStyle = owner.getComputedStyle(this);
     const raw =
       ownStyle.getPropertyValue(property).trim() ||
       ownStyle.getPropertyValue('--lr-duration-base').trim();
@@ -737,7 +936,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
         <div part=${this.itemPartNames()}>
           ${this.renderRow({
             icon: nothing,
-            label: this.slottedLabel ? html`<slot></slot>` : this.label,
+            label: this.slottedLabel
+              ? html`<slot @slotchange=${this.handleLabelSlotChange}></slot>`
+              : this.label,
             description: nothing,
             badges: nothing,
           })}

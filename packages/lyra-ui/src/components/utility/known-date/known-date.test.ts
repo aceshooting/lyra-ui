@@ -5,7 +5,22 @@ import '../../forms/input/input.js';
 import '../../forms/button/button.js';
 import type { LyraKnownDate } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+class KnownDateErrorForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const knownDate = this.ownerDocument.createElement('lr-known-date');
+    const errorSlot = this.ownerDocument.createElement('slot');
+    errorSlot.name = 'error';
+    errorSlot.slot = 'error';
+    knownDate.append(errorSlot);
+    root.append(knownDate);
+  }
+}
+customElements.define('known-date-error-forward-wrapper', KnownDateErrorForwardWrapper);
 
 function fields(el: LyraKnownDate): HTMLInputElement[] {
   return Array.from(el.shadowRoot!.querySelectorAll('input[part="field-input"]'));
@@ -266,6 +281,318 @@ it('flags a calendar-invalid combination (Feb 30) as badInput and shows dateInpu
   expect(el.internals.validationMessage).to.equal('Enter a valid date.');
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(errorPart.textContent).to.contain('Enter a valid date.');
+});
+
+it('announces a newly shown validation error once through a pre-mounted assertive light-DOM sink', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-known-date') as LyraKnownDate;
+  el.locale = 'en-GB';
+  container.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  let sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  expect(sink !== null, 'the sink exists before validation changes').to.be.true;
+  expect(sink.childElementCount).to.equal(0);
+  const errorPart = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+  expect(errorPart.hasAttribute('role')).to.be.false;
+  expect(errorPart.hasAttribute('aria-live')).to.be.false;
+
+  typeInto(fieldFor(el, 'day'), '30');
+  typeInto(fieldFor(el, 'month'), '2');
+  typeInto(fieldFor(el, 'year'), '2026');
+  fieldFor(el, 'year').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+  await el.updateComplete;
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Enter a valid date.',
+  ]);
+
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(sink.childElementCount, 'an unrelated render does not duplicate the error').to.equal(1);
+
+  typeInto(fieldFor(el, 'day'), '28');
+  await el.updateComplete;
+  typeInto(fieldFor(el, 'day'), '30');
+  await el.updateComplete;
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Enter a valid date.',
+    'Enter a valid date.',
+  ]);
+
+  el.remove();
+  expect(sink.isConnected).to.be.false;
+  container.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+  sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  expect(sink.childElementCount, 'reconnect does not replay the existing error').to.equal(0);
+});
+
+it('announces only newly visible accessible text from the slotted error', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-known-date') as LyraKnownDate;
+  const error = document.createElement('span');
+  error.slot = 'error';
+  error.hidden = true;
+  error.innerHTML = `
+    <span aria-hidden="true">Decorative warning</span>
+    <span data-visible aria-label="">Initial error</span>
+    <span hidden>Hidden detail</span>
+    <span style="visibility: hidden">CSS-hidden detail</span>
+  `;
+  el.append(error);
+  container.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  expect(sink !== null, 'the assertive sink is pre-mounted').to.be.true;
+  expect(sink.childElementCount).to.equal(0);
+
+  const visible = error.querySelector<HTMLElement>('[data-visible]')!;
+  visible.textContent = 'Visible error';
+  await Promise.resolve();
+  expect(sink.childElementCount, 'changes made while hidden stay silent').to.equal(0);
+
+  error.hidden = false;
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Visible error']);
+
+  const decoration = error.querySelector<HTMLElement>('[aria-hidden="true"]')!;
+  decoration.setAttribute('aria-hidden', ' TRUE ');
+  decoration.textContent = 'Changed decoration';
+  await Promise.resolve();
+  expect(sink.childElementCount, 'aria-hidden text changes do not create a new message').to.equal(1);
+
+  error.style.display = 'none';
+  visible.textContent = 'Updated while CSS-hidden';
+  await Promise.resolve();
+  expect(sink.childElementCount, 'CSS-hidden changes stay silent').to.equal(1);
+
+  error.style.removeProperty('display');
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Visible error',
+    'Updated while CSS-hidden',
+  ]);
+});
+
+it('announces visibility-overridden descendants without hidden parent text', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-known-date') as LyraKnownDate;
+  const error = document.createElement('span');
+  error.slot = 'error';
+  error.innerHTML = `
+    <span data-wrapper style="visibility: hidden">
+      Excluded parent text
+      <span data-visible style="visibility: visible">Initial exposed error</span>
+    </span>
+  `;
+  el.append(error);
+  container.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const wrapper = error.querySelector<HTMLElement>('[data-wrapper]')!;
+  const visible = error.querySelector<HTMLElement>('[data-visible]')!;
+
+  visible.textContent = 'Exposed hidden error';
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Exposed hidden error',
+  ]);
+
+  wrapper.style.visibility = 'collapse';
+  visible.textContent = 'Exposed collapsed error';
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Exposed hidden error',
+    'Exposed collapsed error',
+  ]);
+});
+
+it('tracks accessible error text through a forwarding slot and its assigned-node mutations', async () => {
+  const wrapper = (await fixture(html`
+    <known-date-error-forward-wrapper>
+      <span slot="error">Initial forwarded error</span>
+    </known-date-error-forward-wrapper>
+  `)) as KnownDateErrorForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-known-date') as LyraKnownDate;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const initial = wrapper.querySelector<HTMLElement>('[slot="error"]')!;
+  initial.textContent = 'Changed forwarded error';
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Changed forwarded error',
+  ]);
+
+  initial.style.visibility = 'hidden';
+  initial.textContent = 'Changed while forwarded error is hidden';
+  await Promise.resolve();
+  expect(sink.childElementCount, 'hidden assigned-node changes stay silent').to.equal(1);
+
+  initial.style.visibility = 'visible';
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Changed forwarded error',
+    'Changed while forwarded error is hidden',
+  ]);
+
+  const slot = el.querySelector('slot')!;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  const replacement = document.createElement('span');
+  replacement.slot = 'error';
+  replacement.textContent = 'Replacement forwarded error';
+  wrapper.replaceChildren(replacement);
+  await slotChanged;
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Changed forwarded error',
+    'Changed while forwarded error is hidden',
+    'Replacement forwarded error',
+  ]);
+});
+
+it('recreates its error observer in the adopted owner realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow!;
+  const frameDocument = frame.contentDocument!;
+  const descriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
+  const NativeMutationObserver = frameWindow.MutationObserver;
+  let constructions = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructions += 1;
+    }
+  }
+  Object.defineProperty(frameWindow, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  const el = (await fixture(html`
+    <lr-known-date error-text="Initial frame error"></lr-known-date>
+  `)) as LyraKnownDate;
+  el.remove();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(constructions, 'base and error observers use the adopted window').to.be.greaterThan(1);
+  } finally {
+    el.remove();
+    if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
+    else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    frame.remove();
+  }
+});
+
+it('keeps property errors silent while the host or a composed ancestor is hidden', async () => {
+  const container = (await fixture(html`<div><lr-known-date></lr-known-date></div>`)) as HTMLDivElement;
+  const el = container.querySelector('lr-known-date') as LyraKnownDate;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  expect(sink !== null).to.be.true;
+
+  el.hidden = true;
+  el.errorText = 'Hidden host error';
+  await el.updateComplete;
+  expect(sink.childElementCount, 'a hidden host does not announce').to.equal(0);
+
+  el.hidden = false;
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Hidden host error',
+  ]);
+
+  container.style.visibility = 'hidden';
+  el.errorText = 'Hidden ancestor error';
+  await el.updateComplete;
+  expect(sink.childElementCount, 'a CSS-hidden ancestor does not announce').to.equal(1);
+
+  container.style.removeProperty('visibility');
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Hidden host error',
+    'Hidden ancestor error',
+  ]);
+
+  container.hidden = true;
+  el.errorText = 'Hidden-attribute ancestor error';
+  await el.updateComplete;
+  expect(sink.childElementCount).to.equal(2);
+
+  container.hidden = false;
+  await Promise.resolve();
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Hidden host error',
+    'Hidden ancestor error',
+    'Hidden-attribute ancestor error',
+  ]);
+
+  container.inert = true;
+  el.errorText = 'Inert ancestor error';
+  await el.updateComplete;
+  expect(sink.childElementCount).to.equal(3);
+  container.inert = false;
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Inert ancestor error');
+
+  container.setAttribute('aria-hidden', ' TRUE ');
+  el.errorText = 'ARIA-hidden ancestor error';
+  await el.updateComplete;
+  expect(sink.childElementCount).to.equal(4);
+  container.setAttribute('aria-hidden', 'false');
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('ARIA-hidden ancestor error');
+});
+
+it('announces from a boxless host that explicitly overrides an ancestor hidden visibility', async () => {
+  const container = (await fixture(html`
+    <div style="visibility: hidden">
+      <lr-known-date style="display: contents; visibility: visible"></lr-known-date>
+    </div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector('lr-known-date') as LyraKnownDate;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await el.updateComplete;
+
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  el.errorText = 'Visible override error';
+  await el.updateComplete;
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
+    'Visible override error',
+  ]);
 });
 
 describe('auto-advance and backspace navigation', () => {
@@ -603,6 +930,37 @@ describe('focus/blur bridging', () => {
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
+
+  it('recognizes internal focus transitions after adoption without consulting ambient element constructors', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+    el.remove();
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'HTMLInputElement');
+
+    try {
+      frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+      await el.updateComplete;
+      const day = fieldFor(el, 'day');
+      const month = fieldFor(el, 'month');
+      let blurCount = 0;
+      el.addEventListener('blur', () => blurCount++);
+
+      Object.defineProperty(window, 'HTMLInputElement', {
+        configurable: true,
+        value: class AmbientInputTrap {},
+      });
+      day.focus();
+      month.focus();
+      await el.updateComplete;
+
+      expect(blurCount).to.equal(0);
+    } finally {
+      el.remove();
+      if (descriptor) Object.defineProperty(window, 'HTMLInputElement', descriptor);
+      frame.remove();
+    }
+  });
 });
 
 describe('per-field labels', () => {
@@ -752,6 +1110,16 @@ describe('accessibility', () => {
     await el.updateComplete;
     const fieldset = el.shadowRoot!.querySelector('[part="fieldset"]') as HTMLElement;
     expect(fieldset.getAttribute('aria-label')).to.equal('Date of birth');
+  });
+
+  it('preserves an explicitly empty host aria-label on the fieldset', async () => {
+    const el = (await fixture(
+      html`<lr-known-date label="Ignored legend" aria-label=""></lr-known-date>`,
+    )) as LyraKnownDate;
+    await el.updateComplete;
+    const fieldset = el.shadowRoot!.querySelector('[part="fieldset"]') as HTMLElement;
+    expect(fieldset.hasAttribute('aria-label')).to.be.true;
+    expect(fieldset.getAttribute('aria-label')).to.equal('');
   });
 
   it('wires aria-describedby, aria-invalid, and aria-required onto every field-input', async () => {

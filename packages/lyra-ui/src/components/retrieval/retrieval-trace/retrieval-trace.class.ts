@@ -11,6 +11,11 @@ import type { LyraSpan } from '../../agent-tools/trace-tree/span.js';
 import '../../agent-tools/span-waterfall/span-waterfall.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
 import { styles } from './retrieval-trace.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** One of the five fixed stages a retrieval pipeline moves through, in order. */
 export type RetrievalStageKind = 'query-rewrite' | 'embed' | 'retrieve' | 'rerank' | 'filter';
@@ -117,6 +122,22 @@ export interface LyraRetrievalTraceEventMap {
  * @since 4.1.0
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    retrievalStageEmbed: LYRA_DEFAULT_retrievalStageEmbed,
+    retrievalStageFilter: LYRA_DEFAULT_retrievalStageFilter,
+    retrievalStageQueryRewrite: LYRA_DEFAULT_retrievalStageQueryRewrite,
+    retrievalStageRerank: LYRA_DEFAULT_retrievalStageRerank,
+    retrievalStageRetrieve: LYRA_DEFAULT_retrievalStageRetrieve,
+    retrievalTraceEvidenceToggle: LYRA_DEFAULT_retrievalTraceEvidenceToggle,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The pipeline's stages, in any order -- the internal timeline sorts them by `startMs`. */

@@ -22,6 +22,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type TimeRangeHandle = 'start' | 'end';
 
@@ -143,6 +148,8 @@ export interface LyraTimeRangeEventMap {
  * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
  * accessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for
  * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
+ * The `base` around both handles is still an accessible `role="group"`, named by a host
+ * `aria-label` or native external `<label for>` while the two handles retain their individual names.
  *
  * @customElement lr-time-range
  * @event input - Native event fired continuously while a user moves either handle.
@@ -198,6 +205,17 @@ export interface LyraTimeRangeEventMap {
  * @since 4.0.0
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    rangeEnd: LYRA_DEFAULT_rangeEnd,
+    rangeStart: LYRA_DEFAULT_rangeStart,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -263,6 +281,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   // handle instead of the second pointerdown hijacking which handle the
   // first pointer's subsequent moves apply to.
   private drags = new Map<number, DragState>();
+  /** Exact realm carrying shared drag listeners, retained across adoption for symmetric cleanup. */
+  private dragWindow?: Window;
   private keyboardChanged = false;
 
   private internals: ElementInternals;
@@ -491,10 +511,15 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // would otherwise leak indefinitely.
     this.drags.clear();
     this.keyboardChanged = false;
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
-    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.teardownDragWindow();
+  }
+
+  adoptedCallback(): void {
+    // Adoption can happen while already disconnected, so defensively retire any previous-realm
+    // drag state even when no new disconnected callback will run.
+    this.drags.clear();
+    this.keyboardChanged = false;
+    this.teardownDragWindow();
   }
 
   /** Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without
@@ -518,7 +543,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /** Removes focus from whichever handle currently owns it. */
   override blur(): void {
     const active = activeElementIn(this.shadowRoot);
-    if (active instanceof HTMLElement && active.matches('[part^="handle-"]')) active.blur();
+    if (
+      active?.nodeType === 1
+      && typeof (active as Partial<Element>).matches === 'function'
+      && typeof (active as Partial<HTMLElement>).blur === 'function'
+      && active.matches('[part^="handle-"]')
+    ) (active as HTMLElement).blur();
     else (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.blur();
   }
 
@@ -697,23 +727,30 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
     if (this.effectiveDisabled) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
+    const dragWindow = base.ownerDocument.defaultView;
+    if (!this.isConnected || !dragWindow) return;
+    const firstDrag = this.drags.size === 0;
+    if (!firstDrag && this.dragWindow !== dragWindow) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     this.drags.set(e.pointerId, {
       handle,
       changed: false,
       rect: base.getBoundingClientRect(),
       rtl: isRtl(this),
     });
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    window.addEventListener('pointermove', this.onPointerMove);
-    window.addEventListener('pointerup', this.onPointerUp);
+    if (firstDrag) {
+      this.dragWindow = dragWindow;
+      dragWindow.addEventListener('pointermove', this.onPointerMove);
+      dragWindow.addEventListener('pointerup', this.onPointerUp);
+      dragWindow.addEventListener('pointercancel', this.onPointerUp);
+      dragWindow.addEventListener('lostpointercapture', this.onPointerUp);
+    }
     // A drag can end without a pointerup: a system gesture / palm rejection
     // can fire `pointercancel`, and losing capture (e.g. element removed)
     // fires `lostpointercapture` — both need the same teardown as pointerup
     // or `this.drags` keeps a permanently-stale entry and these window
     // listeners (and the closure keeping this instance alive) never get
     // removed. Mirrors lr-split's identical fix.
-    window.addEventListener('pointercancel', this.onPointerUp);
-    window.addEventListener('lostpointercapture', this.onPointerUp);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -756,11 +793,17 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // listeners — another pointer (e.g. the other finger of a two-finger
     // drag) may still be down.
     if (this.drags.size === 0) {
-      window.removeEventListener('pointermove', this.onPointerMove);
-      window.removeEventListener('pointerup', this.onPointerUp);
-      window.removeEventListener('pointercancel', this.onPointerUp);
-      window.removeEventListener('lostpointercapture', this.onPointerUp);
+      this.teardownDragWindow();
     }
+  }
+
+  private teardownDragWindow(): void {
+    const dragWindow = this.dragWindow;
+    this.dragWindow = undefined;
+    dragWindow?.removeEventListener('pointermove', this.onPointerMove);
+    dragWindow?.removeEventListener('pointerup', this.onPointerUp);
+    dragWindow?.removeEventListener('pointercancel', this.onPointerUp);
+    dragWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -838,7 +881,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
             })}
           </div>`
         : nothing}
-      <div part="base">
+      <div
+        part="base"
+        role="group"
+        aria-label=${this.getAttribute('aria-label') || nothing}
+      >
         <div part="track"></div>
         <div
           part="range"

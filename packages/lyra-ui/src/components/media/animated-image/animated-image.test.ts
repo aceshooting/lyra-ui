@@ -23,8 +23,8 @@ async function loaded(el: LyraAnimatedImage, src = DATA_URI): Promise<void> {
  *  controllable fake `MediaQueryList` so reduced-motion arbitration is
  *  deterministic instead of depending on the ambient CI environment. Restore
  *  via `.restore()` in a `finally` block. */
-function stubReducedMotion(initialMatches: boolean) {
-  const original = window.matchMedia;
+function stubReducedMotion(initialMatches: boolean, ownerWindow: Window = window) {
+  const original = ownerWindow.matchMedia;
   let matches = initialMatches;
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
   const fakeList = {
@@ -36,13 +36,14 @@ function stubReducedMotion(initialMatches: boolean) {
     removeEventListener: (_type: string, cb: (event: MediaQueryListEvent) => void) => listeners.delete(cb),
   } as unknown as MediaQueryList;
 
-  window.matchMedia = ((query: string) =>
+  ownerWindow.matchMedia = ((query: string) =>
     query === '(prefers-reduced-motion: reduce)' ? fakeList : original(query)) as typeof window.matchMedia;
 
   return {
     restore(): void {
-      window.matchMedia = original;
+      ownerWindow.matchMedia = original;
     },
+    listenerCount(): number { return listeners.size; },
     fire(nextMatches: boolean): void {
       matches = nextMatches;
       const event = { matches: nextMatches, media: fakeList.media } as MediaQueryListEvent;
@@ -50,6 +51,53 @@ function stubReducedMotion(initialMatches: boolean) {
     },
   };
 }
+
+it('rebinds reduced-motion and DPR work to the adopted owner window and cleans up symmetrically', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const parentMotion = stubReducedMotion(false);
+  const frameMotion = stubReducedMotion(true, frameWindow);
+  const parentDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+  const frameDpr = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
+  Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
+  Object.defineProperty(frameWindow, 'devicePixelRatio', { value: 3, configurable: true });
+  const el = document.createElement('lr-animated-image') as LyraAnimatedImage;
+  el.alt = 'Adopted image';
+  el.play = true;
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(parentMotion.listenerCount()).to.equal(1);
+    expect(frameMotion.listenerCount()).to.equal(0);
+
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(parentMotion.listenerCount()).to.equal(0);
+    expect(frameMotion.listenerCount()).to.equal(1);
+    expect(el.playing).to.be.false;
+
+    await loaded(el);
+    const canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
+    expect(canvas.width).to.equal(3);
+    expect(canvas.height).to.equal(3);
+
+    el.remove();
+    expect(frameMotion.listenerCount()).to.equal(0);
+  } finally {
+    el.remove();
+    parentMotion.restore();
+    frameMotion.restore();
+    if (parentDpr) Object.defineProperty(window, 'devicePixelRatio', parentDpr);
+    else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    if (frameDpr) Object.defineProperty(frameWindow, 'devicePixelRatio', frameDpr);
+    else delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    frame.remove();
+  }
+});
 
 describe('default render / freeze-frame state', () => {
   it('defaults to not playing; once loaded, canvas is exposed and image is aria-hidden', async () => {

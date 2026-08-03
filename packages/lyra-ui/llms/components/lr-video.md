@@ -2,10 +2,10 @@
 
 # `lr-video`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/video/video.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-video.js';` (stable tag alias; registers the tag)
 - **Class** `LyraVideo`, also available unregistered from `@aceshooting/lyra-ui/components/media/video/video.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -15,15 +15,16 @@
 
 ## `lr-video`
 
-An inline native video player with custom controls, safe declarative sources/tracks, selectable
-captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video API under
-the `lr-` prefix. Import the granular registration entry with
+Experimental inline native video player with custom controls, safe declarative sources/tracks,
+selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
+API under the `lr-` prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video/video.js'`.
 
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
 `autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
-`current-time`), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
+`currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
+accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
 'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`, `playing:
 boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload: 'auto' |
 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =

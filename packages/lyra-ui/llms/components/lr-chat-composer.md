@@ -2,7 +2,7 @@
 
 # `lr-chat-composer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-chat-composer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChatComposer`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -85,7 +85,8 @@ validity and recomputes the current intrinsic constraints.
   composed unlike the native event
 - `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
   reason as `blur`
-- `lr-invalid` (no detail) — one bubbling/composed alias when native validity fails
+- `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
+  preventing it also prevents the native `invalid` event that produced it
 
 **Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
 attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button

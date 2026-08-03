@@ -1,8 +1,131 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import {
+  resolveOptionalPeerCapability,
+  unwrapOptionalPeerDefault,
+} from '../../../internal/optional-peer-capabilities.js';
 
-type ChartJsModule = OptionalPeerApi;
-type ZoomPlugin = OptionalPeerApi;
-type DataLabelsPlugin = OptionalPeerApi;
+/** Peer-neutral Chart.js plugin capability used for registration and per-chart configuration. */
+export interface ChartPluginCapability {
+  id: string;
+  [key: string]: unknown;
+}
+
+interface ChartConstructorCapability {
+  new (item: HTMLCanvasElement, configuration: unknown): object;
+  register(...items: unknown[]): void;
+}
+
+/** The Chart.js module capabilities Lyra uses, kept structural so optional peers do not leak. */
+export interface ChartJsModule {
+  Chart: ChartConstructorCapability;
+  defaults: {
+    plugins?: {
+      legend?: {
+        labels?: {
+          generateLabels?: (chart: object) => unknown[];
+        };
+      };
+    };
+  };
+  LineController: unknown;
+  BarController: unknown;
+  ScatterController: unknown;
+  DoughnutController: unknown;
+  PieController: unknown;
+  RadarController: unknown;
+  PolarAreaController: unknown;
+  BubbleController: unknown;
+  LineElement: unknown;
+  PointElement: unknown;
+  BarElement: unknown;
+  ArcElement: unknown;
+  LinearScale: unknown;
+  CategoryScale: unknown;
+  RadialLinearScale: unknown;
+  Filler: unknown;
+  Tooltip: unknown;
+  Legend: unknown;
+}
+
+export type ZoomPlugin = ChartPluginCapability;
+export type DataLabelsPlugin = ChartPluginCapability;
+
+const CHART_REGISTERABLE_KEYS = [
+  'LineController',
+  'BarController',
+  'ScatterController',
+  'DoughnutController',
+  'PieController',
+  'RadarController',
+  'PolarAreaController',
+  'BubbleController',
+  'LineElement',
+  'PointElement',
+  'BarElement',
+  'ArcElement',
+  'LinearScale',
+  'CategoryScale',
+  'RadialLinearScale',
+  'Filler',
+  'Tooltip',
+  'Legend',
+] as const satisfies readonly (keyof ChartJsModule)[];
+
+function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
+  return (typeof value === 'object' || typeof value === 'function') && value !== null;
+}
+
+function isConstructor(value: unknown): value is new (...args: never[]) => object {
+  if (typeof value !== 'function') return false;
+  try {
+    Reflect.construct(Object, [], value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function missingChartCapability(candidate: unknown): string | undefined {
+  if (!isObjectLike(candidate)) return 'module namespace';
+  if (!isConstructor(candidate['Chart'])) return 'Chart';
+  if (typeof (candidate['Chart'] as unknown as { register?: unknown }).register !== 'function') {
+    return 'Chart.register';
+  }
+  if (!isObjectLike(candidate['defaults'])) return 'defaults';
+  for (const key of CHART_REGISTERABLE_KEYS) {
+    if (!isObjectLike(candidate[key])) return key;
+  }
+  return undefined;
+}
+
+function isChartJsModule(candidate: unknown): candidate is ChartJsModule {
+  return missingChartCapability(candidate) === undefined;
+}
+
+function resolveChartJsModule(value: unknown): ChartJsModule {
+  const module = resolveOptionalPeerCapability(value, isChartJsModule);
+  if (module) return module;
+  const candidate = unwrapOptionalPeerDefault(value);
+  const missing = missingChartCapability(candidate) ?? 'module namespace';
+  throw new Error(
+    `Invalid optional peer \`chart.js\`: missing or invalid \`${missing}\` capability.`,
+  );
+}
+
+function isChartPlugin(candidate: unknown): candidate is ChartPluginCapability {
+  return (
+    isObjectLike(candidate) &&
+    typeof candidate['id'] === 'string' &&
+    candidate['id'].trim().length > 0
+  );
+}
+
+function resolveChartPlugin(value: unknown, packageName: string): ChartPluginCapability {
+  const plugin = resolveOptionalPeerCapability(value, isChartPlugin);
+  if (plugin) return plugin;
+  throw new Error(
+    `Invalid optional peer \`${packageName}\`: expected a plugin with a non-empty string \`id\`.`,
+  );
+}
 
 let chartJs: Promise<ChartJsModule | null> | undefined;
 let zoomLoad: Promise<ChartJsModule | null> | undefined;
@@ -25,14 +148,13 @@ let registered = false;
  * uninstall either package.
  */
 export async function loadChartAndZoom(
-  importChart: () => Promise<ChartJsModule> = () => import('chart.js') as Promise<ChartJsModule>,
-  importZoom: () => Promise<{ default: ZoomPlugin } | ZoomPlugin> = () =>
-    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
+  importChart: () => Promise<unknown> = () => import('chart.js'),
+  importZoom: () => Promise<unknown> = () => import('chartjs-plugin-zoom'),
   needsZoom = false,
 ): Promise<{ mod: ChartJsModule; zoomPlugin: ZoomPlugin | undefined } | null> {
   let mod: ChartJsModule;
   try {
-    mod = await importChart();
+    mod = resolveChartJsModule(await importChart());
   } catch (err) {
     console.warn(
       '<lr-chart> needs the optional peer dependency `chart.js` — install it with `pnpm add chart.js`:',
@@ -45,13 +167,11 @@ export async function loadChartAndZoom(
 
   let zoomPlugin: ZoomPlugin | undefined;
   try {
-    // Reads `mod.default ?? mod`, mirroring `loadDataLabelsPlugin()` below — the plugin ships its
-    // registerable object as the ES-module default export, but a bare (non-ESM-interop) module
-    // shape has no `.default` at all, and reading `.default` unconditionally would silently drop
-    // the plugin (`zoomPlugin` staying `undefined`) instead of registering it.
-    const mod = await importZoom();
-    const plugin = (mod as { default?: ZoomPlugin }).default ?? (mod as ZoomPlugin);
-    zoomPlugin = plugin;
+    // Prefer a capability-bearing namespace, then its validated default export. The plugin ships
+    // its registerable object as the ES-module default, while some CJS interop configurations
+    // expose the object directly; validating the non-empty `id` prevents either malformed shape
+    // from reaching Chart.register().
+    zoomPlugin = resolveChartPlugin(await importZoom(), 'chartjs-plugin-zoom');
   } catch (err) {
     console.warn(
       '<lr-chart> zoom support needs the optional peer dependency `chartjs-plugin-zoom` — ' +
@@ -131,8 +251,7 @@ export function loadChartJs(): Promise<ChartJsModule | null> {
  * actually uninstall the package.
  */
 export function loadChartJsWithZoom(
-  importZoom: () => Promise<{ default: ZoomPlugin } | ZoomPlugin> = () =>
-    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
+  importZoom: () => Promise<unknown> = () => import('chartjs-plugin-zoom'),
 ): Promise<ChartJsModule | null> {
   if (!zoomLoad) {
     zoomLoad = loadChartJs().then(async (mod) => {
@@ -150,21 +269,22 @@ export function loadChartJsWithZoom(
 /**
  * Imports the optional `chartjs-plugin-datalabels` peer and returns the plugin
  * object, or `undefined` if the peer isn't installed (charts still render;
- * data labels are simply inert). Reads `mod.default ?? mod` because the plugin
- * ships its registerable object as the ES-module default export — registering
- * the whole module namespace instead would silently no-op. Un-memoized (unlike
+ * data labels are simply inert). Prefers a capability-bearing namespace, then
+ * its validated default export, because registering either a wrapper namespace
+ * or a malformed object would silently no-op. Un-memoized (unlike
  * `loadChartJsWithDataLabels()` below) so both the success and the
  * degrade-with-a-warning failure paths are directly testable without needing
  * to actually uninstall the package. `importDataLabels` defaults to the real
  * dynamic import; it's a parameter purely so tests can instrument it.
  */
 export async function loadDataLabelsPlugin(
-  importDataLabels: () => Promise<{ default: DataLabelsPlugin } | DataLabelsPlugin> = () =>
-    import('chartjs-plugin-datalabels') as Promise<{ default: DataLabelsPlugin }>,
+  importDataLabels: () => Promise<unknown> = () => import('chartjs-plugin-datalabels'),
 ): Promise<DataLabelsPlugin | undefined> {
   try {
-    const mod = await importDataLabels();
-    return (mod as { default?: DataLabelsPlugin }).default ?? (mod as DataLabelsPlugin);
+    return resolveChartPlugin(
+      await importDataLabels(),
+      'chartjs-plugin-datalabels',
+    );
   } catch (err) {
     console.warn(
       '<lr-chart> data labels need the optional peer dependency `chartjs-plugin-datalabels` — ' +
@@ -195,8 +315,7 @@ export async function loadDataLabelsPlugin(
  * purely so tests can instrument/count the underlying import.
  */
 export function loadChartJsWithDataLabels(
-  importDataLabels: () => Promise<{ default: DataLabelsPlugin } | DataLabelsPlugin> = () =>
-    import('chartjs-plugin-datalabels') as Promise<{ default: DataLabelsPlugin }>,
+  importDataLabels: () => Promise<unknown> = () => import('chartjs-plugin-datalabels'),
 ): Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null> {
   if (!dataLabelsLoad) {
     dataLabelsLoad = loadChartJs().then(async (mod) => {

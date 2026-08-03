@@ -18,6 +18,11 @@ import {
   EXTERNAL_LABEL_ACTIVATION,
   type ExternalLabelActivation,
 } from '../../../internal/form-control-labels.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_iconButtonLabel, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
@@ -33,28 +38,28 @@ export interface LyraIconButtonEventMap {
 const BARE_SVG_GEOMETRY_TAGS = new Set([
   'path', 'circle', 'rect', 'line', 'polygon', 'polyline', 'ellipse', 'g', 'use',
 ]);
+const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
 /** True only for an element that needs the SVG-namespace clone fallback: a whitelisted geometry
- *  tag that was never actually parsed in SVG context (an `SVGElement` instance means it already
- *  has a real SVG parent -- e.g. it arrived nested inside a slotted, complete `<svg>` -- and needs
- *  no help). */
+ *  tag that was never actually parsed in SVG context (the namespace check works even when the
+ *  slotted node was created by another browsing context). */
 function needsSvgNamespaceFallback(node: Element): boolean {
-  return BARE_SVG_GEOMETRY_TAGS.has(node.localName) && !(node instanceof SVGElement);
+  return BARE_SVG_GEOMETRY_TAGS.has(node.localName) && node.namespaceURI !== SVG_NAMESPACE;
 }
 
 /** Clones `node` into the real SVG namespace, recursively. Never called on (and never recurses
- *  into) a custom element -- `localName.includes('-')` -- since `document.createElementNS`-ing a
- *  custom element yields an inert, never-upgrading node -- the exact bug this function's caller
- *  exists to avoid reintroducing for slotted content like `<lr-flag>`. */
+ *  into) a custom element -- `localName.includes('-')` -- since namespace-creating a custom
+ *  element yields an inert, never-upgrading node -- the exact bug this function's caller exists
+ *  to avoid reintroducing for slotted content like `<lr-flag>`. */
 function cloneToSvgNamespace(node: Element): SVGElement | null {
   if (node.localName.includes('-')) return null;
-  const copy = document.createElementNS('http://www.w3.org/2000/svg', node.localName);
+  const copy = node.ownerDocument.createElementNS(SVG_NAMESPACE, node.localName);
   for (const attribute of node.attributes) copy.setAttribute(attribute.name, attribute.value);
   for (const child of node.childNodes) {
-    if (child.nodeType === Node.TEXT_NODE) {
+    if (child.nodeType === 3) {
       copy.append(child.cloneNode(true));
-    } else if (child instanceof Element) {
-      const childCopy = cloneToSvgNamespace(child);
+    } else if (child.nodeType === 1) {
+      const childCopy = cloneToSvgNamespace(child as Element);
       if (childCopy) copy.append(childCopy);
     }
   }
@@ -134,6 +139,16 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @since 4.0.0
  */
 export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    iconButtonLabel: LYRA_DEFAULT_iconButtonLabel,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   // A button is form-associated so it is discoverable through form.elements, mirroring
   // <lr-button>'s identical rationale -- see the class doc above.

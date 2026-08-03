@@ -2,7 +2,7 @@
 
 # `lr-rag-answer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-rag-answer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRagAnswer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -21,14 +21,16 @@ or source fetching.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
-(attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
-`showClaims: boolean = true` (attribute `show-claims`); `label: string = ''`; `accessibleLabel:
-string | null = null` (attribute `aria-label`).
+(attribute: false); `loading: boolean = false`; `error: string = ''` (neutral visible caller text;
+new non-empty values announce through a shared assertive light-DOM region, while initial and
+reconnect content is not replayed); `showSources: boolean = true`; `showClaims: boolean = true`
+(attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+`aria-label`).
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list.
 
-**CSS parts:** `base`, `answer`, `loading`, `error`, `retry`, `grounding`, `citations`,
-`citation-list`, `sources`, `source-list`, `section-heading`.
+**CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
+`grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.

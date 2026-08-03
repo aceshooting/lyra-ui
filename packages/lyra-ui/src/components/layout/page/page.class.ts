@@ -6,6 +6,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { styles } from './page.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_skipToContent } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const DEFAULT_MOBILE_BREAKPOINT = '768px';
 
@@ -104,6 +109,20 @@ function navigationIcon(): SVGTemplateResult {
  * @since 8.0.0
  */
 export class LyraPage extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    closeNavigation: LYRA_DEFAULT_closeNavigation,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    openNavigation: LYRA_DEFAULT_openNavigation,
+    skipToContent: LYRA_DEFAULT_skipToContent,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Presentation derived from the Page's allocated inline size. It begins at `desktop` so server
@@ -288,7 +307,8 @@ export class LyraPage extends LyraElement {
       .composedPath()
       .find(
         (candidate): candidate is HTMLElement =>
-          candidate instanceof HTMLElement && candidate.getAttribute('slot') === 'navigation-toggle',
+          (candidate as Partial<Node> | null)?.nodeType === 1 &&
+          (candidate as Element).getAttribute('slot') === 'navigation-toggle',
       );
     if (trigger) this.rememberTriggerAndToggle(trigger);
   };
@@ -300,7 +320,8 @@ export class LyraPage extends LyraElement {
     if (
       path.some(
         (candidate) =>
-          candidate instanceof HTMLElement && candidate.getAttribute('slot') === 'navigation-toggle',
+          (candidate as Partial<Node> | null)?.nodeType === 1 &&
+          (candidate as Element).getAttribute('slot') === 'navigation-toggle',
       )
     ) {
       return;
@@ -308,7 +329,8 @@ export class LyraPage extends LyraElement {
     const trigger = path
       .find(
         (candidate): candidate is HTMLElement =>
-          candidate instanceof HTMLElement && candidate.hasAttribute('data-toggle-nav'),
+          (candidate as Partial<Node> | null)?.nodeType === 1 &&
+          (candidate as Element).hasAttribute('data-toggle-nav'),
       );
     if (trigger) this.rememberTriggerAndToggle(trigger);
   };

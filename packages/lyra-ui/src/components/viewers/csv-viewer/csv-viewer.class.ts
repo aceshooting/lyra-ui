@@ -2,8 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { assertTableSize, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
+import { assertTableSize, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -19,8 +18,19 @@ import {
 } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type CsvState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rows: unknown[][] } | { kind: 'error'; message: string };
+type OwnedAnimationFrameWait = {
+  owner: Window;
+  handle?: number;
+  resolve: (isCurrent: boolean) => void;
+};
 const MAX_SEARCH_MATCHES = 1_000;
 
 /** `hasHeaderRow` shifts every raw-grid (1-based, header row included) row number down by one to
@@ -88,6 +98,31 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    csvViewerLabel: LYRA_DEFAULT_csvViewerLabel,
+    csvViewerUnavailable: LYRA_DEFAULT_csvViewerUnavailable,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
@@ -113,9 +148,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private loadTask = new LatestTask();
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
   private lastLoadSrc = '';
+  private readonly announcements = new ViewerAnnouncementController(this);
+  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -123,7 +161,36 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
 
   override disconnectedCallback(): void {
     this.loadTask.next();
+    this.cancelPendingAnimationFrames();
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.cancelPendingAnimationFrames();
+    this.announcements.adopted();
+  }
+
+  private waitForOwnerAnimationFrame(): Promise<boolean> {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      const pending: OwnedAnimationFrameWait = { owner, resolve };
+      this.pendingAnimationFrames.add(pending);
+      pending.handle = owner.requestAnimationFrame(() => {
+        if (!this.pendingAnimationFrames.delete(pending)) return;
+        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
+      });
+    });
+  }
+
+  private cancelPendingAnimationFrames(): void {
+    const pendingFrames = [...this.pendingAnimationFrames];
+    this.pendingAnimationFrames.clear();
+    for (const pending of pendingFrames) {
+      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
+      pending.resolve(false);
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -140,6 +207,11 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
@@ -154,8 +226,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -163,7 +235,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const library = await this.loadLibrary();
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
@@ -250,7 +322,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const bodyIndex = rawRow - 1 - headerOffset(this.hasHeaderRow);
     if (bodyIndex < 0) {
       const target = this.renderRoot.querySelector('[part="header-row"]')?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
-      target?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+      target?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
       return !!target;
     }
     this.activeRowKey = bodyIndex;
@@ -269,10 +341,10 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private async scrollColumnIntoView(col: number): Promise<void> {
     const list = this.renderRoot.querySelector('lr-virtual-list') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    if (!await this.waitForOwnerAnimationFrame()) return;
     const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
     const target = row?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
-    target?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+    target?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
   // -- search ---------------------------------------------------------------------------------------
@@ -366,8 +438,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
           @lr-scroll=${this.stopInternalEvent}
         ></lr-virtual-list></div>`;
       }
-    } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
-    else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+    } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+    else if (this.fetchState.kind === 'error') content = html`<div part="error">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('csvViewerLabel')}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;

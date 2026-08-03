@@ -2,15 +2,17 @@ import { setCustomElementsManifest } from '@storybook/web-components';
 import { LyraDocsContainer } from './docs-container.js';
 import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
-import { normalizeStoryThemeName } from './story-theme.js';
+import { normalizeStoryThemeName } from './theme-contract.js';
 import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
 // The preview uses the exact stylesheet consumers import. Storybook-specific colors stay in the
 // manager theme; component previews never maintain a second, partial token palette.
 import '../packages/lyra-ui/src/theme.css';
 // Docs/story authoring only — lr-* components' shadow DOM never sees this.
 import './tailwind.css';
-// Registers every lr-* custom element once, for every story — no per-story imports needed.
-import '../packages/lyra-ui/src/lyra.js';
+// Registers the root-included lr-* custom elements once, for every story — no per-story imports
+// needed. The package root (`lyra.js`) is intentionally registration-free; `all.js` is the
+// explicit compatibility entry that performs registrations.
+import '../packages/lyra-ui/src/all.js';
 // The families above intentionally exclude components with an optional peer
 // dependency (chart.js, maplibre-gl, d3-*) so consumers who import the root
 // barrel never pull in those peers unconditionally. Storybook, unlike a real
@@ -60,6 +62,23 @@ function applyLyraPresentation(globals) {
   root.dir = direction;
   root.dataset.lyraDirection = direction;
 }
+
+function bootstrapLyraPresentationFromUrl() {
+  const serialized = new URL(window.location.href).searchParams.get('globals') ?? '';
+  const globals = Object.fromEntries(
+    serialized
+      .split(';')
+      .map((entry) => entry.split(':', 2))
+      .filter(([name, value]) => name && value),
+  );
+  const theme = normalizeStoryThemeName(globals.theme);
+  setLyraTheme({ mode: theme, accent: null });
+  applyLyraPresentation({ direction: globals.direction });
+}
+
+// Story modules can evaluate top-level fixture data before decorators run. Apply URL-selected
+// production tokens first so a module-level storyColor() resolves the same mode as the canvas.
+bootstrapLyraPresentationFromUrl();
 
 const withLyraTheme = (story, context) => {
   const theme = normalizeStoryThemeName(context.globals.theme);

@@ -29,6 +29,8 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   @property({ reflect: true }) box: ResizeObserverBox = 'content-box';
 
   private observer?: ResizeObserver;
+  private observerDocument?: Document;
+  private observerGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -52,6 +54,10 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     super.disconnectedCallback();
   }
 
+  adoptedCallback(): void {
+    this.disconnect();
+  }
+
   protected override updated(changed: PropertyValues): void {
     // Routed through the base class's connection-aware scheduler rather than
     // a bare queueMicrotask: Lit still runs a scheduled update (and this
@@ -65,20 +71,38 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
+    this.observerGeneration += 1;
     this.observer = disconnectObserver(this.observer);
+    this.observerDocument = undefined;
   }
 
   private observeTargets = (): void => {
     this.disconnect();
-    if (this.disabled) return;
+    const ownerDocument = this.ownerDocument;
+    const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+    if (this.disabled || !this.isConnected || !ResizeObserverCtor) return;
     const targets = slottedElementTargets(this.renderRoot);
-    if (targets.length === 0 || typeof ResizeObserver === 'undefined') return;
-    this.observer = new ResizeObserver((entries) => this.emit('lr-resize', { entries: [...entries] }));
+    if (targets.length === 0) return;
+    const generation = this.observerGeneration;
+    const observer = new ResizeObserverCtor((entries) => {
+      if (
+        this.observer !== observer ||
+        this.observerDocument !== ownerDocument ||
+        this.observerGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.emit('lr-resize', { entries: [...entries] });
+    });
+    this.observer = observer;
+    this.observerDocument = ownerDocument;
     for (const target of targets) {
       try {
-        this.observer.observe(target, { box: this.box });
+        observer.observe(target, { box: this.box });
       } catch {
-        this.observer.observe(target);
+        observer.observe(target);
       }
     }
   };

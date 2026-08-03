@@ -96,6 +96,98 @@ describe('<lr-mutation-observer>', () => {
     expect(result.detail.records.length).to.be.greaterThan(0);
   });
 
+  it('uses the adopted owner constructor and rejects stale callbacks across disconnect/reconnect', async () => {
+    interface ObserverRecord {
+      callback: MutationCallback;
+      observed: Node[];
+      disconnects: number;
+    }
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalObserver = frameWindow.MutationObserver;
+    const records: ObserverRecord[] = [];
+    class OwnerMutationObserver implements MutationObserver {
+      private readonly record: ObserverRecord;
+      constructor(callback: MutationCallback) {
+        this.record = { callback, observed: [], disconnects: 0 };
+        records.push(this.record);
+      }
+      observe(target: Node): void { this.record.observed.push(target); }
+      disconnect(): void { this.record.disconnects += 1; }
+      takeRecords(): MutationRecord[] { return []; }
+    }
+    frameWindow.MutationObserver = OwnerMutationObserver;
+    const el = await fixture<LyraMutationObserver>(
+      html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`,
+    );
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    el.remove();
+    let events = 0;
+    el.addEventListener('lr-mutation', () => { events += 1; });
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(records.length, 'adoption constructs through the destination window').to.be.greaterThan(0);
+      const adoptedCount = records.length;
+      const adoptedObserver = records.at(-1)!;
+      expect(adoptedObserver.observed.length).to.equal(1);
+      expect(adoptedObserver.observed[0] === target).to.equal(true);
+
+      el.remove();
+      expect(adoptedObserver.disconnects, 'disconnect tears down the exact owner observer').to.equal(1);
+      adoptedObserver.callback([], {} as MutationObserver);
+      expect(events, 'a retired callback cannot emit while detached').to.equal(0);
+
+      frameDocument.body.append(el);
+      await aTimeout(0);
+      expect(records.length, 'reconnect constructs a fresh destination observer').to.be.greaterThan(adoptedCount);
+      const reconnectedObserver = records.at(-1)!;
+      adoptedObserver.callback([], {} as MutationObserver);
+      expect(events, 'the first lifecycle remains stale after reconnect').to.equal(0);
+      reconnectedObserver.callback([], {} as MutationObserver);
+      expect(events, 'the current lifecycle still forwards records').to.equal(1);
+    } finally {
+      el.remove();
+      frameWindow.MutationObserver = originalObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      iframe.remove();
+    }
+  });
+
+  it('fails closed when the owner window has no MutationObserver capability', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalObserver = frameWindow.MutationObserver;
+    const el = await fixture<LyraMutationObserver>(
+      html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`,
+    );
+    await aTimeout(0);
+    el.remove();
+    Object.defineProperty(frameWindow, 'MutationObserver', { configurable: true, value: undefined });
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await aTimeout(0);
+      expect((el as unknown as { observer?: MutationObserver }).observer === undefined).to.be.true;
+    } finally {
+      el.remove();
+      Object.defineProperty(frameWindow, 'MutationObserver', {
+        configurable: true,
+        writable: true,
+        value: originalObserver,
+      });
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      iframe.remove();
+    }
+  });
+
   it('supports disabled observation', async () => {
     const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer disabled><div></div></lr-mutation-observer>`);
     expect(el.disabled).to.equal(true);

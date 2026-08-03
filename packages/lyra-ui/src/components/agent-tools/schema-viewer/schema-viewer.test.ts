@@ -1,6 +1,14 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './schema-viewer.js';
 import type { LyraSchemaViewer } from './schema-viewer.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkTexts(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
 
 const schema = {
   type: 'object',
@@ -58,6 +66,8 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
     'Only the first 500 schema nodes are shown.',
   );
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
+  expect(sinkTexts(), 'a schema that mounts already truncated is not a live change').to.deep.equal([]);
 });
 
 it('indexes validation issues once and bounds their rendered work independently of the node ceiling', async () => {
@@ -82,6 +92,30 @@ it('indexes validation issues once and bounds their rendered work independently 
   expect(el.shadowRoot!.querySelector('[part="issue-limit"]')?.textContent).to.equal(
     'Only the first 500 validation issues are shown.',
   );
+  expect(el.shadowRoot!.querySelector('[part="issue-limit"]')?.getAttribute('role')).to.equal(null);
+});
+
+it('announces newly reached node and issue ceilings through the shared light-DOM sink', async () => {
+  const el = (await fixture(html`<lr-schema-viewer .schema=${schema}></lr-schema-viewer>`)) as LyraSchemaViewer;
+  const properties = Object.fromEntries(
+    Array.from({ length: 600 }, (_, index) => [`property-${index}`, { type: 'string' }]),
+  );
+  el.schema = { type: 'object', properties };
+  await el.updateComplete;
+  expect(sinkTexts()).to.deep.equal(['Only the first 500 schema nodes are shown.']);
+
+  el.issues = Array.from({ length: 501 }, (_, index) => ({
+    path: `/properties/property-${index % 499}`,
+    message: `Issue ${index}`,
+  }));
+  await el.updateComplete;
+  expect(sinkTexts()).to.deep.equal([
+    'Only the first 500 schema nodes are shown.',
+    'Only the first 500 validation issues are shown.',
+  ]);
+
+  el.remove();
+  expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
 });
 
 it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe', async () => {

@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 import { buildMigrationContract, buildMirrorMap } from './migrate-wa.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -105,8 +106,9 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
   const errors = [];
   const expected = catalog(upstreamTags);
   const knownUpstream = new Set(expected.map((entry) => entry.tag));
-  const lyraTags = manifestTags(lyraManifest);
-  const lyraEvents = manifestEvents(lyraManifest);
+  const expandedLyraManifest = expandManifestInheritance(lyraManifest);
+  const lyraTags = manifestTags(expandedLyraManifest);
+  const lyraEvents = manifestEvents(expandedLyraManifest);
   const inventoryMappings = Array.isArray(inventory?.mappings) ? inventory.mappings : [];
   const mappingByTag = new Map();
   const upstreamSurfaces = new Map(

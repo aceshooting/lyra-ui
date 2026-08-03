@@ -2,7 +2,7 @@
 
 # `lr-callout`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/callout/callout.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-callout.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCallout`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/callout/callout.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -22,8 +22,7 @@ errors without panel chrome.
 explicit — an unset nested callout inherits its ancestor's semantic colour context without
 materializing a `variant` attribute. Explicitly writing even the same-default `brand` materializes
 the attribute and pins the local brand palette; removing the attribute restores contextual
-inheritance. The property value still picks `[part="base"]`'s role: `alert` for `danger`, `status`
-otherwise),
+inheritance),
 `appearance: 'accent'|'filled'|'outlined'|'plain'|'filled-outlined'` (reflected, with no explicit
 default — when set, controls how much of the active variant palette is spent on fill, border, and
 text; leaving it unset preserves the established quiet-fill/loud-edge treatment),
@@ -35,14 +34,15 @@ medium mapping, and removing the attribute restores contextual inheritance), `he
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
-(`accessible-label`; falls back to a plain host `aria-label` attribute when unset).
+(`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
+has highest precedence by presence, including an explicitly empty value.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
 unless a listener calls `preventDefault()`.
 
 **Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
 
-**CSS parts:** `base` (the transparent semantic grid wrapper inside the host-owned surface), `icon`
+**CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
 `message` (wrapper around the default slot), `close-button` (the close control's hit target, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
@@ -76,6 +76,20 @@ content and the close action. It deliberately does *not* vary by `size`: it sepa
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
 them).
 
-Initial content and initially distributed slots render while `aria-live="off"`. After that first
-render/slot distribution settles, the region arms as `polite` (`assertive` for `danger`) before
-later heading or message updates. Reconnection repeats the same initial-content staging.
+Initial content and initially distributed slots are silent. After that first render/slot
+distribution settles, heading-property changes and direct or nested default/heading-slot additions,
+removals, and text changes are appended to Lyra's shared light-DOM polite sink (`assertive` for
+`danger`). Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
+excludes the icon/close chrome plus content hidden by `hidden`, `inert`, or `aria-hidden="true"` at
+any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
+`visibility:hidden|collapse` wrapper suppresses its own text while a descendant that restores
+`visibility:visible` remains exposed. Updates while the host or a composed ancestor is hidden also
+stay silent. Nested forwarding slots expose their flattened assigned text instead of fallback
+content, and later assignment plus assigned-node text/style/visibility mutations are observed.
+Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
+`aria-label` (or `accessible-label` fallback) prefixes visible update text as context, with an
+equality check preventing duplicate copy; an explicitly empty host label still leaves visible
+heading/message text live.
+`[part="base"]` is an ordinary wrapper, upgraded to a non-live `role="group"` only when it has an
+accessible label. Initial connection, reconnection, adoption, and detached changes that settle
+during staging stay silent; each connection acquires its owning document's shared sink.

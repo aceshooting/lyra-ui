@@ -2,7 +2,7 @@
 
 # `lr-test-results`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-test-results.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTestResults`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -1,8 +1,8 @@
-// Freshness gate for the three generated colour artifacts. `src/internal/tokens/palette.styles.ts`
-// is generated end to end; `src/theme.css` and `src/internal/tokens.styles.ts` carry generated
-// marker blocks inside otherwise hand-authored files. Nothing re-ran or diffed any of them, so a
-// hand edit to a generated block survived indefinitely -- and, because the generators enforce the
-// contrast and CVD-separation floors, a hand-edited ramp is a silent accessibility regression.
+// Freshness gate for every generated colour artifact. The base semantic palette is generated end
+// to end; theme.css, the opt-in specialist sheet, and Chart's JS fallback carry generated marker
+// blocks inside otherwise hand-authored files. Nothing re-ran or diffed all of them, so a hand edit
+// to a generated block could survive indefinitely -- and, because the generators enforce contrast
+// and CVD-separation floors, that is a silent accessibility regression.
 //
 // Deliberately a content round-trip rather than `git diff --exit-code`: comparing against the
 // working tree catches a hand edit that was already committed, and it cannot fail spuriously
@@ -24,7 +24,8 @@ export const PALETTE_GENERATORS = Object.freeze([
 export const PALETTE_ARTIFACTS = Object.freeze([
   'src/internal/tokens/palette.styles.ts',
   'src/theme.css',
-  'src/internal/tokens.styles.ts',
+  'src/internal/specialist-tokens.styles.ts',
+  'src/components/charts/chart/chart-colors.ts',
 ]);
 
 export function checkPaletteFreshness(dir = packageDir) {

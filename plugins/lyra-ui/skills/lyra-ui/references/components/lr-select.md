@@ -2,7 +2,7 @@
 
 # `lr-select`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/select/select.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-select.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSelect`, also available unregistered from `@aceshooting/lyra-ui/components/forms/select/select.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -150,8 +150,10 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart. `lr-after-show` and `lr-after-hide` fire after the corresponding
-listbox transition has settled; an interrupted transition drops its stale after-event.
+its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
+non-cancelable only for the disconnect-driven close, where a veto cannot be honoured.
+`lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
+interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides

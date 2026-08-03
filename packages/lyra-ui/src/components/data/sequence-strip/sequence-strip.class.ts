@@ -5,6 +5,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_items, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SequenceStripItem {
   id: string;
@@ -56,6 +61,16 @@ export interface SequenceStripCategory {
  * @since 4.0.0
  */
 export class LyraSequenceStrip extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    items: LYRA_DEFAULT_items,
+    sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
+    sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) items: SequenceStripItem[] = [];

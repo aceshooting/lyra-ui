@@ -2,6 +2,7 @@ import {
   isAbortError,
   isResourceLimitError,
   readResponseText,
+  type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import {
   BoundedResourceCache,
@@ -21,7 +22,8 @@ export const MAX_INCLUDE_BYTES = 2 * 1024 * 1024;
 
 const INCLUDE_CACHE_ENTRIES = 32;
 const SANITIZE_PROFILE = 'html-v1';
-const resources = new BoundedResourceCache<string>(INCLUDE_CACHE_ENTRIES);
+type IncludeOwner = OwnerFetchTarget['view'];
+let resourcesByOwner = new WeakMap<IncludeOwner, BoundedResourceCache<string>>();
 
 export class IncludeResourceError extends Error {
   constructor(
@@ -38,17 +40,30 @@ function resourceKey(url: string, mode: LyraIncludeMode): string {
   return JSON.stringify([url, mode, MAX_INCLUDE_BYTES, SANITIZE_PROFILE]);
 }
 
+function resourcesFor(owner: IncludeOwner): BoundedResourceCache<string> {
+  let resources = resourcesByOwner.get(owner);
+  if (!resources) {
+    resources = new BoundedResourceCache<string>(
+      INCLUDE_CACHE_ENTRIES,
+      typeof owner.AbortController === 'function' ? owner.AbortController : null,
+    );
+    resourcesByOwner.set(owner, resources);
+  }
+  return resources;
+}
+
 export function acquireSanitizedIncludeResource(
   url: string,
   mode: LyraIncludeMode,
   cache: boolean,
+  owner: IncludeOwner,
 ): ResourceCacheLease<string> {
-  return resources.acquire(
+  return resourcesFor(owner).acquire(
     resourceKey(url, mode),
     async (signal) => {
       let response: Response;
       try {
-        response = await fetch(url, signal ? { mode, signal } : { mode });
+        response = await owner.fetch(url, signal ? { mode, signal } : { mode });
       } catch (error) {
         if (isAbortError(error)) throw error;
         throw new IncludeResourceError('network', 0, error);
@@ -74,11 +89,15 @@ export function acquireSanitizedIncludeResource(
   );
 }
 
-export function invalidateIncludeResource(url: string, mode: LyraIncludeMode): void {
-  resources.invalidate(resourceKey(url, mode));
+export function invalidateIncludeResource(
+  url: string,
+  mode: LyraIncludeMode,
+  owner: IncludeOwner,
+): void {
+  resourcesByOwner.get(owner)?.invalidate(resourceKey(url, mode));
 }
 
-/** @internal Test isolation for the process-wide resource cache. */
+/** @internal Test isolation for the per-owner resource caches. */
 export function __clearIncludeResourceCacheForTesting(): void {
-  resources.clear();
+  resourcesByOwner = new WeakMap();
 }

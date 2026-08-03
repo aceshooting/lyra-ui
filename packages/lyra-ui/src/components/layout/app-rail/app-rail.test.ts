@@ -110,6 +110,39 @@ it('releases parent-owned icon-only state when an item leaves the rail', async (
   expect(item.hasAttribute('icon-only')).to.be.false;
 });
 
+it('manages destination-realm app-rail items structurally after adoption', async () => {
+  const rail = (await fixture(html`<lr-app-rail mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
+  rail.remove();
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument) throw new Error('The iframe document was unavailable.');
+
+  try {
+    frameDocument.adoptNode(rail);
+    frameDocument.body.append(rail);
+    await rail.updateComplete;
+    const slot = rail.shadowRoot!.querySelector<HTMLSlotElement>('[part="nav"] > slot')!;
+    const item = frameDocument.createElement('lr-app-rail-item');
+    item.textContent = 'Destination item';
+    const assigned = oneEvent(slot, 'slotchange');
+    rail.append(item);
+    await assigned;
+    await rail.updateComplete;
+
+    expect(item.hasAttribute('icon-only')).to.be.true;
+
+    const released = oneEvent(slot, 'slotchange');
+    frameDocument.body.append(item);
+    await released;
+    await rail.updateComplete;
+    expect(item.hasAttribute('icon-only')).to.be.false;
+    item.remove();
+  } finally {
+    rail.remove();
+    frame.remove();
+  }
+});
+
 // -- breakpoint-driven mode wiring ---------------------------------------
 
 it('resolves the correct mode on the first rendered frame, before any matchMedia change event', async () => {
@@ -206,6 +239,104 @@ it('detaches the old MediaQueryList listener and attaches a new one when icon-on
   expect(created[2]!.query).to.equal('(max-width: 1200px)');
 });
 
+it('does not arm breakpoint listeners for updates while detached and uses the latest values on reconnect', async () => {
+  const created: Array<{ query: string; addCalls: number; removeCalls: number }> = [];
+  window.matchMedia = ((query: string) => {
+    const entry = { query, addCalls: 0, removeCalls: 0 };
+    created.push(entry);
+    return {
+      matches: false,
+      media: query,
+      addEventListener: () => entry.addCalls++,
+      removeEventListener: () => entry.removeCalls++,
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+
+  const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
+  expect(created.length).to.equal(2);
+  el.remove();
+  expect(created[0]!.removeCalls).to.equal(1);
+  expect(created[1]!.removeCalls).to.equal(1);
+
+  el.iconOnlyBreakpoint = '777px';
+  el.mobileBreakpoint = '333px';
+  await el.updateComplete;
+  expect(created.length, 'a detached update must not bind ambient listeners').to.equal(2);
+
+  document.body.append(el);
+  await el.updateComplete;
+  expect(created.map(({ query }) => query)).to.deep.equal([
+    '(max-width: 960px)',
+    '(max-width: 600px)',
+    '(max-width: 777px)',
+    '(max-width: 333px)',
+  ]);
+  expect(created[2]!.addCalls).to.equal(1);
+  expect(created[3]!.addCalls).to.equal(1);
+  el.remove();
+});
+
+it('ignores a queued old-owner media-query callback after adoption while current callbacks still apply', async () => {
+  type MediaRecord = {
+    query: string;
+    listeners: Set<(event: MediaQueryListEvent) => void>;
+  };
+  const install = (owner: Window): { records: MediaRecord[]; restore(): void } => {
+    const original = owner.matchMedia;
+    const records: MediaRecord[] = [];
+    owner.matchMedia = ((query: string) => {
+      const record: MediaRecord = { query, listeners: new Set() };
+      records.push(record);
+      return {
+        matches: false,
+        media: query,
+        addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) =>
+          record.listeners.add(listener),
+        removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) =>
+          record.listeners.delete(listener),
+      } as unknown as MediaQueryList;
+    }) as typeof owner.matchMedia;
+    return {
+      records,
+      restore(): void {
+        owner.matchMedia = original;
+      },
+    };
+  };
+
+  const ambient = install(window);
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+  if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+  const destination = install(frameWindow);
+  let el: LyraAppRail | undefined;
+
+  try {
+    el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
+    const stale = [...ambient.records[0]!.listeners][0]!;
+    frameDocument.adoptNode(el);
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    expect(ambient.records[0]!.listeners.size).to.equal(0);
+    expect(destination.records.length).to.equal(2);
+
+    stale({ matches: true, media: ambient.records[0]!.query } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect(el.mode, 'a queued callback from the old owner must be inert').to.equal('full');
+
+    const current = [...destination.records[0]!.listeners][0]!;
+    current({ matches: true, media: destination.records[0]!.query } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect(el.mode).to.equal('icon-only');
+  } finally {
+    el?.remove();
+    destination.restore();
+    ambient.restore();
+    frame.remove();
+  }
+});
+
 // -- forcing / auto sentinel ----------------------------------------------
 
 it('forcing mode stops it from responding to further matchMedia changes', async () => {
@@ -257,6 +388,7 @@ it('force-closes an open overlay and emits lr-toggle when mode leaves mobile, ig
 
   expect(el.open).to.be.false;
   expect((ev.detail as AppRailToggleDetail).open).to.be.false;
+  expect(ev.cancelable, 'a forced mode-change close cannot be vetoed').to.be.false;
 });
 
 // -- mobile overlay: toggle button ----------------------------------------
@@ -448,7 +580,7 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   const active = el.shadowRoot!.activeElement as HTMLElement | null;
   // Compared by id, not `.to.equal(panel)` -- a live-DOM-node equality failure would carry two
   // Elements into @web/test-runner-mocha's session-finished message, which structuredClone can't
-  // serialize, silently hanging the whole file until the 180s watchdog kills it.
+  // serialize, silently hanging the whole file until the per-file watchdog kills it.
   expect(active, 'the panel must be the focused element').to.not.equal(null);
   expect(active!.id).to.equal(panel.id);
   expect(active!.getAttribute('part')).to.equal('panel');
@@ -716,7 +848,7 @@ describe('resizable', () => {
 
   it('renders a resizer with role="separator" and correct aria bounds only in \'full\' mode', async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
+      html`<lr-app-rail mode="full" resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]')!;
@@ -801,6 +933,64 @@ describe('resizable', () => {
     await el.updateComplete;
     expect(el.dragging).to.be.false;
     expect(getComputedStyle(base).transitionProperty).to.not.equal('none');
+  });
+
+  it('routes an adopted resizer gesture through its owner window and detaches from that window on adoption', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
+    )) as LyraAppRail;
+    el.remove();
+    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) throw new Error('The iframe realm was unavailable.');
+    const originalRemoveEventListener = frameWindow.removeEventListener;
+    const removedPointerTypes: string[] = [];
+    frameWindow.removeEventListener = ((
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | EventListenerOptions,
+    ) => {
+      if (type.startsWith('pointer') || type === 'lostpointercapture') removedPointerTypes.push(type);
+      originalRemoveEventListener.call(frameWindow, type, listener, options);
+    }) as typeof frameWindow.removeEventListener;
+
+    try {
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      el.mode = 'full';
+      await el.updateComplete;
+      const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+      const resizerTrack = resizer.querySelector('[part="resizer-track"]') as HTMLElement;
+      resizer.setPointerCapture = () => {};
+      resizerTrack.dispatchEvent(
+        new frameWindow.PointerEvent('pointerdown', { pointerId: 71, clientX: 0, bubbles: true }),
+      );
+
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 71, clientX: 40 }));
+      expect(el.railWidthPx, 'the ambient window must not own the adopted drag').to.equal(240);
+
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent('pointermove', { pointerId: 71, clientX: 40 }),
+      );
+      expect(el.railWidthPx).to.equal(280);
+      expect(el.dragging).to.be.true;
+
+      document.adoptNode(el);
+      expect(el.dragging).to.be.false;
+      expect([...new Set(removedPointerTypes)].sort()).to.deep.equal(
+        ['lostpointercapture', 'pointercancel', 'pointermove', 'pointerup'],
+      );
+      frameWindow.dispatchEvent(
+        new frameWindow.PointerEvent('pointermove', { pointerId: 71, clientX: 80 }),
+      );
+      expect(el.railWidthPx, 'the old owner window listener must be removed').to.equal(280);
+    } finally {
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      frameWindow.removeEventListener = originalRemoveEventListener;
+      el.remove();
+      frame.remove();
+    }
   });
 
   it('aborts an active pointer resize when resizable is revoked', async () => {

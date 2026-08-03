@@ -2,7 +2,7 @@
 
 # `lr-stack-trace`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-stack-trace.js';` (stable tag alias; registers the tag)
 - **Class** `LyraStackTrace`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

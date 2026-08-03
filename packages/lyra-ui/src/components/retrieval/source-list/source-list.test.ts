@@ -224,6 +224,79 @@ it('reapplies owned listitem roles after disconnect and reconnect', async () => 
   expect(card.getAttribute('role')).to.equal('listitem');
 });
 
+it('does not let a stale reconnect continuation reapply owned roles after disconnect', async () => {
+  const wrapper = (await fixture(
+    html`<div><lr-source-list expanded><lr-source-card role="article"></lr-source-card></lr-source-list></div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
+  const card = el.querySelector('lr-source-card')!;
+  expect(card.getAttribute('role')).to.equal('listitem');
+
+  el.remove();
+  expect(card.getAttribute('role')).to.equal('article');
+  let resolveUpdate!: (value: boolean) => void;
+  const deferredUpdate = new Promise<boolean>((resolve) => {
+    resolveUpdate = resolve;
+  });
+  Object.defineProperty(el, 'updateComplete', {
+    configurable: true,
+    get: () => deferredUpdate,
+  });
+
+  wrapper.append(el);
+  el.remove();
+  expect(card.getAttribute('role')).to.equal('article');
+  resolveUpdate(true);
+  await deferredUpdate;
+  await Promise.resolve();
+  expect(card.getAttribute('role')).to.equal('article');
+});
+
+it('recreates its role observer in the adopted owner realm and disconnects it on adoption', async () => {
+  const el = (await fixture(
+    html`<lr-source-list expanded><lr-source-card></lr-source-card></lr-source-list>`,
+  )) as LyraSourceList;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let roleObservations = 0;
+  let roleDisconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private observesList = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === el && options?.attributeFilter?.includes('role')) {
+        this.observesList = true;
+        roleObservations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesList) roleDisconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(roleObservations, 'the destination window observes the source list').to.be.greaterThan(0);
+    document.adoptNode(el);
+    expect(roleDisconnects, 'adoption disconnects the old owner observer').to.be.greaterThan(0);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('tracks live author role changes while connected and restores the latest role on release', async () => {
   const card = document.createElement('lr-source-card');
   const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;

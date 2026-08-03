@@ -2,7 +2,7 @@
 
 # `lr-thinking-panel`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-thinking-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraThinkingPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

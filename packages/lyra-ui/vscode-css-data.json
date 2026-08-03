@@ -75,7 +75,7 @@
       "name": "--arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Arrow half-width inherited from the popover surface.\n\n**`<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
+        "value": "**`<lr-dropdown>`, `<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
       }
     },
     {
@@ -152,7 +152,7 @@
       "name": "--body-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`** — Shoelace body padding override.\n\n**`<lr-drawer>`** — Shoelace body padding."
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Shoelace body padding override."
       }
     },
     {
@@ -544,7 +544,7 @@
       "name": "--footer-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`** — Shoelace footer padding override.\n\n**`<lr-drawer>`** — Shoelace footer padding."
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Shoelace footer padding override."
       }
     },
     {
@@ -621,7 +621,7 @@
       "name": "--header-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`** — Mapped header padding override.\n\n**`<lr-drawer>`** — Shoelace header padding."
+        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Mapped header padding override."
       }
     },
     {
@@ -649,7 +649,7 @@
       "name": "--hide-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-dialog>`, `<lr-drawer>`** — Mapped closing animation duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-duration-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
       }
     },
     {
@@ -1399,6 +1399,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — Palette slot: the variant's quiet fill. Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid."
+      }
+    },
+    {
+      "name": "--lr-border-width-medium",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for border width medium. Reads `--lr-theme-border-width-medium`."
+      }
+    },
+    {
+      "name": "--lr-border-width-thick",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for border width thick. Reads `--lr-theme-border-width-thick`."
+      }
+    },
+    {
+      "name": "--lr-border-width-thin",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for border width thin. Reads `--lr-theme-border-width-thin`."
       }
     },
     {
@@ -2200,6 +2221,377 @@
       }
     },
     {
+      "name": "--lr-color-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color border. Reads `--lr-theme-color-surface-border`."
+      }
+    },
+    {
+      "name": "--lr-color-border-strong",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color border strong. Reads `--lr-theme-color-border-strong`."
+      }
+    },
+    {
+      "name": "--lr-color-brand",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand."
+      }
+    },
+    {
+      "name": "--lr-color-brand-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand border loud. Reads `--lr-theme-color-brand-border-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand border normal. Reads `--lr-theme-color-brand-border-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand border quiet. Reads `--lr-theme-color-brand-border-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand fill loud. Reads `--lr-theme-color-brand-fill-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand fill normal. Reads `--lr-theme-color-brand-fill-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand fill quiet. Reads `--lr-theme-color-brand-fill-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand on loud. Reads `--lr-theme-color-brand-on-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand on normal. Reads `--lr-theme-color-brand-on-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand on quiet. Reads `--lr-theme-color-brand-on-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-brand-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color brand quiet."
+      }
+    },
+    {
+      "name": "--lr-color-chart-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 1. Reads `--lr-theme-color-chart-1`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 2. Reads `--lr-theme-color-chart-2`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 3. Reads `--lr-theme-color-chart-3`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 4. Reads `--lr-theme-color-chart-4`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 5. Reads `--lr-theme-color-chart-5`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 6. Reads `--lr-theme-color-chart-6`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 7. Reads `--lr-theme-color-chart-7`."
+      }
+    },
+    {
+      "name": "--lr-color-chart-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color chart 8. Reads `--lr-theme-color-chart-8`."
+      }
+    },
+    {
+      "name": "--lr-color-danger",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger."
+      }
+    },
+    {
+      "name": "--lr-color-danger-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger border loud. Reads `--lr-theme-color-danger-border-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger border normal. Reads `--lr-theme-color-danger-border-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger border quiet. Reads `--lr-theme-color-danger-border-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger fill loud. Reads `--lr-theme-color-danger-fill-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger fill normal. Reads `--lr-theme-color-danger-fill-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger fill quiet. Reads `--lr-theme-color-danger-fill-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger on loud. Reads `--lr-theme-color-danger-on-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger on normal. Reads `--lr-theme-color-danger-on-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger on quiet. Reads `--lr-theme-color-danger-on-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-danger-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color danger quiet."
+      }
+    },
+    {
+      "name": "--lr-color-mix-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color mix active. Reads `--lr-theme-color-mix-active`."
+      }
+    },
+    {
+      "name": "--lr-color-mix-hover",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color mix hover. Reads `--lr-theme-color-mix-hover`."
+      }
+    },
+    {
+      "name": "--lr-color-mix-partner",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color mix partner. Reads `--lr-theme-color-mix-partner`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral border loud. Reads `--lr-theme-color-neutral-border-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral border normal. Reads `--lr-theme-color-neutral-border-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral border quiet. Reads `--lr-theme-color-neutral-border-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral fill loud. Reads `--lr-theme-color-neutral-fill-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral fill normal. Reads `--lr-theme-color-neutral-fill-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral fill quiet. Reads `--lr-theme-color-neutral-fill-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral on loud. Reads `--lr-theme-color-neutral-on-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral on normal. Reads `--lr-theme-color-neutral-on-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-neutral-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color neutral on quiet. Reads `--lr-theme-color-neutral-on-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-no-data",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color no data. Reads `--lr-theme-color-no-data`."
+      }
+    },
+    {
+      "name": "--lr-color-on-brand",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on brand."
+      }
+    },
+    {
+      "name": "--lr-color-on-danger",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on danger."
+      }
+    },
+    {
+      "name": "--lr-color-on-neutral",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on neutral."
+      }
+    },
+    {
+      "name": "--lr-color-on-success",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on success."
+      }
+    },
+    {
+      "name": "--lr-color-on-warning",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on warning."
+      }
+    },
+    {
+      "name": "--lr-color-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color overlay. Reads `--lr-theme-color-overlay`."
+      }
+    },
+    {
+      "name": "--lr-color-overlay-strong",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color overlay strong. Reads `--lr-theme-color-overlay-strong`."
+      }
+    },
+    {
       "name": "--lr-color-picker-checker-color",
       "description": {
         "kind": "markdown",
@@ -2309,6 +2701,202 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-color-picker>`** (default: `var(--lr-form-control-height,var(--lr-size-2-5rem))`) — The centered visible swatch's inline and block size. The interactive trigger stays at least `--lr-icon-button-size`; larger swatch tiers expand it. The value reads the shared form-control height ladder, so the visible swatch follows neighbouring field density."
+      }
+    },
+    {
+      "name": "--lr-color-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color shadow. Reads `--lr-theme-color-shadow`."
+      }
+    },
+    {
+      "name": "--lr-color-success",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success."
+      }
+    },
+    {
+      "name": "--lr-color-success-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success border loud. Reads `--lr-theme-color-success-border-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-success-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success border normal. Reads `--lr-theme-color-success-border-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-success-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success border quiet. Reads `--lr-theme-color-success-border-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-success-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success fill loud. Reads `--lr-theme-color-success-fill-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-success-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success fill normal. Reads `--lr-theme-color-success-fill-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-success-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success fill quiet. Reads `--lr-theme-color-success-fill-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-success-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success on loud. Reads `--lr-theme-color-success-on-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-success-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success on normal. Reads `--lr-theme-color-success-on-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-success-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success on quiet. Reads `--lr-theme-color-success-on-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-success-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color success quiet."
+      }
+    },
+    {
+      "name": "--lr-color-surface",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color surface. Reads `--lr-theme-color-surface-default`."
+      }
+    },
+    {
+      "name": "--lr-color-surface-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color surface overlay. Reads `--lr-theme-color-surface-overlay`."
+      }
+    },
+    {
+      "name": "--lr-color-surface-raised",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color surface raised. Reads `--lr-theme-color-surface-raised`."
+      }
+    },
+    {
+      "name": "--lr-color-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color text. Reads `--lr-theme-color-text-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-text-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color text quiet. Reads `--lr-theme-color-text-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-warning",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning."
+      }
+    },
+    {
+      "name": "--lr-color-warning-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning border loud. Reads `--lr-theme-color-warning-border-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning border normal. Reads `--lr-theme-color-warning-border-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning border quiet. Reads `--lr-theme-color-warning-border-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning fill loud. Reads `--lr-theme-color-warning-fill-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning fill normal. Reads `--lr-theme-color-warning-fill-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning fill quiet. Reads `--lr-theme-color-warning-fill-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning on loud. Reads `--lr-theme-color-warning-on-loud`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning on normal. Reads `--lr-theme-color-warning-on-normal`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning on quiet. Reads `--lr-theme-color-warning-on-quiet`."
+      }
+    },
+    {
+      "name": "--lr-color-warning-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color warning quiet."
       }
     },
     {
@@ -2784,14 +3372,14 @@
       "name": "--lr-details-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-font-size)`) — Details compatibility alias for the item's text size.\n\n**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
       }
     },
     {
       "name": "--lr-details-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Details compatibility alias for the item's spacing.\n\n**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
       }
     },
     {
@@ -3093,6 +3681,55 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-drawer>`** — Inline size for start/end drawers."
+      }
+    },
+    {
+      "name": "--lr-duration-ambient",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for duration ambient. Reads `--lr-theme-duration-slow`."
+      }
+    },
+    {
+      "name": "--lr-duration-base",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for duration base. Reads `--lr-theme-duration-normal`."
+      }
+    },
+    {
+      "name": "--lr-duration-fast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for duration fast. Reads `--lr-theme-duration-fast`."
+      }
+    },
+    {
+      "name": "--lr-duration-icon",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for duration icon. Reads `--lr-theme-duration-icon`."
+      }
+    },
+    {
+      "name": "--lr-easing-emphasized",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for easing emphasized. Reads `--lr-theme-easing-emphasized`."
+      }
+    },
+    {
+      "name": "--lr-easing-linear",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for easing linear. Reads `--lr-theme-easing-linear`."
+      }
+    },
+    {
+      "name": "--lr-easing-standard",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for easing standard. Reads `--lr-theme-easing-standard`."
       }
     },
     {
@@ -3579,6 +4216,139 @@
       }
     },
     {
+      "name": "--lr-focus-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for focus ring color. Reads `--lr-theme-color-focus`."
+      }
+    },
+    {
+      "name": "--lr-focus-ring-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for focus ring offset. Reads `--lr-theme-focus-ring-offset`."
+      }
+    },
+    {
+      "name": "--lr-focus-ring-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for focus ring width. Reads `--lr-theme-focus-ring-width`."
+      }
+    },
+    {
+      "name": "--lr-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font. Reads `--lr-theme-font-family-body`."
+      }
+    },
+    {
+      "name": "--lr-font-mono",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font mono. Reads `--lr-theme-font-family-mono`."
+      }
+    },
+    {
+      "name": "--lr-font-size-2xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size 2xl. Reads `--lr-theme-font-size-2xl`."
+      }
+    },
+    {
+      "name": "--lr-font-size-2xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size 2xs. Reads `--lr-theme-font-size-2xs`."
+      }
+    },
+    {
+      "name": "--lr-font-size-3xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size 3xl. Reads `--lr-theme-font-size-3xl`."
+      }
+    },
+    {
+      "name": "--lr-font-size-3xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size 3xs. Reads `--lr-theme-font-size-3xs`."
+      }
+    },
+    {
+      "name": "--lr-font-size-lg",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size lg. Reads `--lr-theme-font-size-lg`."
+      }
+    },
+    {
+      "name": "--lr-font-size-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size m. Reads `--lr-theme-font-size-m`."
+      }
+    },
+    {
+      "name": "--lr-font-size-md-sm",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size md sm. Reads `--lr-theme-font-size-md-sm`."
+      }
+    },
+    {
+      "name": "--lr-font-size-sm",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size sm. Reads `--lr-theme-font-size-sm`."
+      }
+    },
+    {
+      "name": "--lr-font-size-xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size xl. Reads `--lr-theme-font-size-xl`."
+      }
+    },
+    {
+      "name": "--lr-font-size-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font size xs. Reads `--lr-theme-font-size-xs`."
+      }
+    },
+    {
+      "name": "--lr-font-weight-bold",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font weight bold. Reads `--lr-theme-font-weight-bold`."
+      }
+    },
+    {
+      "name": "--lr-font-weight-medium",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font weight medium. Reads `--lr-theme-font-weight-medium`."
+      }
+    },
+    {
+      "name": "--lr-font-weight-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font weight normal. Reads `--lr-theme-font-weight-normal`."
+      }
+    },
+    {
+      "name": "--lr-font-weight-semibold",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for font weight semibold. Reads `--lr-theme-font-weight-semibold`."
+      }
+    },
+    {
       "name": "--lr-form-control-required-color",
       "description": {
         "kind": "markdown",
@@ -3607,10 +4377,66 @@
       }
     },
     {
+      "name": "--lr-graph-cat-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 1. Reads `--lr-theme-graph-cat-1`."
+      }
+    },
+    {
       "name": "--lr-graph-cat-1..8",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-graph>`** — Ordered categorical fallback palette for a typed node with no `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries). Declared centrally in `tokens.styles.ts` so `<lr-graph>` and any future `<lr-graph-legend>`- style component resolve the identical default."
+        "value": "**`<lr-graph>`** — Ordered categorical fallback palette for a typed node with no `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries). Declared centrally in `specialist-tokens.styles.ts` so `<lr-graph>` and any future `<lr-graph-legend>`-style component resolve the identical default."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 2. Reads `--lr-theme-graph-cat-2`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 3. Reads `--lr-theme-graph-cat-3`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 4. Reads `--lr-theme-graph-cat-4`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 5. Reads `--lr-theme-graph-cat-5`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 6. Reads `--lr-theme-graph-cat-6`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 7. Reads `--lr-theme-graph-cat-7`."
+      }
+    },
+    {
+      "name": "--lr-graph-cat-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for graph cat 8. Reads `--lr-theme-graph-cat-8`."
       }
     },
     {
@@ -3817,6 +4643,13 @@
       }
     },
     {
+      "name": "--lr-hover-brightness",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for hover brightness. Reads `--lr-theme-hover-brightness`."
+      }
+    },
+    {
       "name": "--lr-html-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -3897,7 +4730,7 @@
       "name": "--lr-icon-button-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together."
+        "value": "**`<lr-icon-button>`** (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together.\n\n**Shared design token** — Canonical shared component token for icon button size. Reads `--lr-theme-icon-button-size`."
       }
     },
     {
@@ -4251,6 +5084,48 @@
       }
     },
     {
+      "name": "--lr-layer-base",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer base. Reads `--lr-theme-z-index-base`."
+      }
+    },
+    {
+      "name": "--lr-layer-content",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer content. Reads `--lr-theme-z-index-content`."
+      }
+    },
+    {
+      "name": "--lr-layer-dropdown",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer dropdown. Reads `--lr-theme-z-index-dropdown`."
+      }
+    },
+    {
+      "name": "--lr-layer-modal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer modal. Reads `--lr-theme-z-index-modal`."
+      }
+    },
+    {
+      "name": "--lr-layer-popover",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer popover. Reads `--lr-theme-z-index-popover`."
+      }
+    },
+    {
+      "name": "--lr-layer-toast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for layer toast. Reads `--lr-theme-z-index-toast`."
+      }
+    },
+    {
       "name": "--lr-lightbox-control-bg",
       "description": {
         "kind": "markdown",
@@ -4269,6 +5144,48 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-lightbox>`** — The backdrop scrim color."
+      }
+    },
+    {
+      "name": "--lr-line-height-1-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height 1 4. Reads `--lr-theme-line-height-1-4`."
+      }
+    },
+    {
+      "name": "--lr-line-height-compact",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height compact. Reads `--lr-theme-line-height-compact`."
+      }
+    },
+    {
+      "name": "--lr-line-height-loose",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height loose. Reads `--lr-theme-line-height-loose`."
+      }
+    },
+    {
+      "name": "--lr-line-height-none",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height none. Reads `--lr-theme-line-height-none`."
+      }
+    },
+    {
+      "name": "--lr-line-height-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height normal. Reads `--lr-theme-line-height-normal`."
+      }
+    },
+    {
+      "name": "--lr-line-height-snug",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for line height snug. Reads `--lr-theme-line-height-snug`."
       }
     },
     {
@@ -4423,6 +5340,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-warning-quiet)`) — Warning highlight fill."
+      }
+    },
+    {
+      "name": "--lr-mask-opaque",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for mask opaque."
       }
     },
     {
@@ -4601,6 +5525,20 @@
       }
     },
     {
+      "name": "--lr-opacity-disabled",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for opacity disabled. Reads `--lr-theme-opacity-disabled`."
+      }
+    },
+    {
+      "name": "--lr-opacity-muted",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for opacity muted. Reads `--lr-theme-opacity-muted`."
+      }
+    },
+    {
       "name": "--lr-otp-input-mask-char",
       "description": {
         "kind": "markdown",
@@ -4632,21 +5570,21 @@
       "name": "--lr-otp-input-segment-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-otp-input>`** (default: `var(--lr-theme-otp-input-segment-size,2.5em)`) — Internal role token supplying the standalone segment size when `--segment-size` is unset."
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-theme-otp-input-segment-size,2.5em)`) — Internal role token supplying the standalone segment size when `--segment-size` is unset.\n\n**Shared design token** — Canonical shared component token for otp input segment size. Reads `--lr-theme-otp-input-segment-size`."
       }
     },
     {
       "name": "--lr-overlay-arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`** — Retained Lyra arrow-size fallback.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--arrow-size`."
+        "value": "**`<lr-dropdown>`, `<lr-popover>`** — Retained Lyra fallback for `--arrow-size`."
       }
     },
     {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`** — Maximum inline size of the popup.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--max-width`."
+        "value": "**`<lr-dropdown>`, `<lr-popover>`** — Retained Lyra fallback for `--max-width`."
       }
     },
     {
@@ -4895,6 +5833,13 @@
       }
     },
     {
+      "name": "--lr-popover-viewport-clamp",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for popover viewport clamp. Reads `--lr-theme-popover-viewport-clamp`."
+      }
+    },
+    {
       "name": "--lr-popup-arrow-size",
       "description": {
         "kind": "markdown",
@@ -5087,7 +6032,413 @@
       "name": "--lr-radio-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set.\n\n**`<lr-radio-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the outer edges of the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius; `pill` swaps it for `--lr-radius-pill`."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set."
+      }
+    },
+    {
+      "name": "--lr-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for radius. Reads `--lr-theme-border-radius-m`."
+      }
+    },
+    {
+      "name": "--lr-radius-pill",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for radius pill. Reads `--lr-theme-border-radius-pill`."
+      }
+    },
+    {
+      "name": "--lr-radius-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for radius xs. Reads `--lr-theme-border-radius-xs`."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-05",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 05."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-10",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 10."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-20",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 20."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-30",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 30."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-40",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 40."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-50",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 50."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-60",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 60."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-70",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 70."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-80",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 80."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-90",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 90."
+      }
+    },
+    {
+      "name": "--lr-ramp-brand-95",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp brand 95."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-05",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 05."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-10",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 10."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-20",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 20."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-30",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 30."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-40",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 40."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-50",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 50."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-60",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 60."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-70",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 70."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-80",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 80."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-90",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 90."
+      }
+    },
+    {
+      "name": "--lr-ramp-danger-95",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp danger 95."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-05",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 05."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-10",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 10."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-20",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 20."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-30",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 30."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-40",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 40."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-50",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 50."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-60",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 60."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-70",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 70."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-80",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 80."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-90",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 90."
+      }
+    },
+    {
+      "name": "--lr-ramp-neutral-95",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp neutral 95."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-05",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 05."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-10",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 10."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-20",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 20."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-30",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 30."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-40",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 40."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-50",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 50."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-60",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 60."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-70",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 70."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-80",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 80."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-90",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 90."
+      }
+    },
+    {
+      "name": "--lr-ramp-success-95",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp success 95."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-05",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 05."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-10",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 10."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-20",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 20."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-30",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 30."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-40",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 40."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-50",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 50."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-60",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 60."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-70",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 70."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-80",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 80."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-90",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 90."
+      }
+    },
+    {
+      "name": "--lr-ramp-warning-95",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for ramp warning 95."
       }
     },
     {
@@ -5203,6 +6554,34 @@
       }
     },
     {
+      "name": "--lr-safe-area-bottom",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for safe area bottom."
+      }
+    },
+    {
+      "name": "--lr-safe-area-inline-end",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for safe area inline end."
+      }
+    },
+    {
+      "name": "--lr-safe-area-inline-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for safe area inline start."
+      }
+    },
+    {
+      "name": "--lr-safe-area-top",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for safe area top."
+      }
+    },
+    {
       "name": "--lr-schema-viewer-error-bg",
       "description": {
         "kind": "markdown",
@@ -5255,7 +6634,7 @@
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed."
+        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.\n\n**Shared design token** — Canonical shared component token for scroll fade size. Reads `--lr-theme-scroll-fade-size`."
       }
     },
     {
@@ -5511,6 +6890,678 @@
       }
     },
     {
+      "name": "--lr-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow."
+      }
+    },
+    {
+      "name": "--lr-shadow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow color. Reads `--lr-theme-shadow-color`."
+      }
+    },
+    {
+      "name": "--lr-shadow-l",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow l. Reads `--lr-theme-shadow-l`."
+      }
+    },
+    {
+      "name": "--lr-shadow-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow m. Reads `--lr-theme-shadow-m`."
+      }
+    },
+    {
+      "name": "--lr-shadow-s",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow s. Reads `--lr-theme-shadow-s`."
+      }
+    },
+    {
+      "name": "--lr-shadow-xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow xl. Reads `--lr-theme-shadow-xl`."
+      }
+    },
+    {
+      "name": "--lr-shadow-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for shadow xs. Reads `--lr-theme-shadow-xs`."
+      }
+    },
+    {
+      "name": "--lr-size-0-02em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 02em. Reads `--lr-theme-size-0-02em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-03em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 03em. Reads `--lr-theme-size-0-03em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-04em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 04em. Reads `--lr-theme-size-0-04em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-05rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 05rem. Reads `--lr-theme-size-0-05rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-0625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 0625rem. Reads `--lr-theme-size-0-0625rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-09375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 09375rem. Reads `--lr-theme-size-0-09375rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-125rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 125rem. Reads `--lr-theme-size-0-125rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 15rem. Reads `--lr-theme-size-0-15rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-1875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 1875rem. Reads `--lr-theme-size-0-1875rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 1rem. Reads `--lr-theme-size-0-1rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 25rem. Reads `--lr-theme-size-0-25rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-3125rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 3125rem. Reads `--lr-theme-size-0-3125rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-35em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 35em. Reads `--lr-theme-size-0-35em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 375rem. Reads `--lr-theme-size-0-375rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-3em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 3em. Reads `--lr-theme-size-0-3em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-4375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 4375rem. Reads `--lr-theme-size-0-4375rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-4em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 4em. Reads `--lr-theme-size-0-4em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-4rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 4rem. Reads `--lr-theme-size-0-4rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 5em. Reads `--lr-theme-size-0-5em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 5rem. Reads `--lr-theme-size-0-5rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 625rem. Reads `--lr-theme-size-0-625rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-6875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 6875rem. Reads `--lr-theme-size-0-6875rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-6rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 6rem. Reads `--lr-theme-size-0-6rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-75em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 75em. Reads `--lr-theme-size-0-75em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-75rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 75rem. Reads `--lr-theme-size-0-75rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-7em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 7em. Reads `--lr-theme-size-0-7em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-875em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 875em. Reads `--lr-theme-size-0-875em`."
+      }
+    },
+    {
+      "name": "--lr-size-0-8rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 8rem. Reads `--lr-theme-size-0-8rem`."
+      }
+    },
+    {
+      "name": "--lr-size-0-9375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 0 9375rem. Reads `--lr-theme-size-0-9375rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-0625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 0625rem. Reads `--lr-theme-size-1-0625rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 1rem. Reads `--lr-theme-size-1-1rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 25rem. Reads `--lr-theme-size-1-25rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 5em. Reads `--lr-theme-size-1-5em`."
+      }
+    },
+    {
+      "name": "--lr-size-1-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 5rem. Reads `--lr-theme-size-1-5rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-75rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 75rem. Reads `--lr-theme-size-1-75rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1-875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1 875rem. Reads `--lr-theme-size-1-875rem`."
+      }
+    },
+    {
+      "name": "--lr-size-10px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 10px. Reads `--lr-theme-size-10px`."
+      }
+    },
+    {
+      "name": "--lr-size-10rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 10rem. Reads `--lr-theme-size-10rem`."
+      }
+    },
+    {
+      "name": "--lr-size-12em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 12em. Reads `--lr-theme-size-12em`."
+      }
+    },
+    {
+      "name": "--lr-size-12rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 12rem. Reads `--lr-theme-size-12rem`."
+      }
+    },
+    {
+      "name": "--lr-size-14px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 14px. Reads `--lr-theme-size-14px`."
+      }
+    },
+    {
+      "name": "--lr-size-14rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 14rem. Reads `--lr-theme-size-14rem`."
+      }
+    },
+    {
+      "name": "--lr-size-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 15rem. Reads `--lr-theme-size-15rem`."
+      }
+    },
+    {
+      "name": "--lr-size-16px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 16px. Reads `--lr-theme-size-16px`."
+      }
+    },
+    {
+      "name": "--lr-size-16rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 16rem. Reads `--lr-theme-size-16rem`."
+      }
+    },
+    {
+      "name": "--lr-size-18rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 18rem. Reads `--lr-theme-size-18rem`."
+      }
+    },
+    {
+      "name": "--lr-size-1em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1em. Reads `--lr-theme-size-1em`."
+      }
+    },
+    {
+      "name": "--lr-size-1px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1px. Reads `--lr-theme-size-1px`."
+      }
+    },
+    {
+      "name": "--lr-size-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 1rem. Reads `--lr-theme-size-1rem`."
+      }
+    },
+    {
+      "name": "--lr-size-2-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 2 25rem. Reads `--lr-theme-size-2-25rem`."
+      }
+    },
+    {
+      "name": "--lr-size-2-5ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 2 5ch. Reads `--lr-theme-size-2-5ch`."
+      }
+    },
+    {
+      "name": "--lr-size-2-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 2 5rem. Reads `--lr-theme-size-2-5rem`."
+      }
+    },
+    {
+      "name": "--lr-size-20rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 20rem. Reads `--lr-theme-size-20rem`."
+      }
+    },
+    {
+      "name": "--lr-size-22rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 22rem. Reads `--lr-theme-size-22rem`."
+      }
+    },
+    {
+      "name": "--lr-size-24px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 24px. Reads `--lr-theme-size-24px`."
+      }
+    },
+    {
+      "name": "--lr-size-24rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 24rem. Reads `--lr-theme-size-24rem`."
+      }
+    },
+    {
+      "name": "--lr-size-280px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 280px. Reads `--lr-theme-size-280px`."
+      }
+    },
+    {
+      "name": "--lr-size-28px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 28px. Reads `--lr-theme-size-28px`."
+      }
+    },
+    {
+      "name": "--lr-size-28rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 28rem. Reads `--lr-theme-size-28rem`."
+      }
+    },
+    {
+      "name": "--lr-size-2px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 2px. Reads `--lr-theme-size-2px`."
+      }
+    },
+    {
+      "name": "--lr-size-2rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 2rem. Reads `--lr-theme-size-2rem`."
+      }
+    },
+    {
+      "name": "--lr-size-3-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 3 5em. Reads `--lr-theme-size-3-5em`."
+      }
+    },
+    {
+      "name": "--lr-size-3-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 3 5rem. Reads `--lr-theme-size-3-5rem`."
+      }
+    },
+    {
+      "name": "--lr-size-30rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 30rem. Reads `--lr-theme-size-30rem`."
+      }
+    },
+    {
+      "name": "--lr-size-32rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 32rem. Reads `--lr-theme-size-32rem`."
+      }
+    },
+    {
+      "name": "--lr-size-36rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 36rem. Reads `--lr-theme-size-36rem`."
+      }
+    },
+    {
+      "name": "--lr-size-38rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 38rem. Reads `--lr-theme-size-38rem`."
+      }
+    },
+    {
+      "name": "--lr-size-3ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 3ch. Reads `--lr-theme-size-3ch`."
+      }
+    },
+    {
+      "name": "--lr-size-3px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 3px. Reads `--lr-theme-size-3px`."
+      }
+    },
+    {
+      "name": "--lr-size-3rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 3rem. Reads `--lr-theme-size-3rem`."
+      }
+    },
+    {
+      "name": "--lr-size-48rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 48rem. Reads `--lr-theme-size-48rem`."
+      }
+    },
+    {
+      "name": "--lr-size-4ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 4ch. Reads `--lr-theme-size-4ch`."
+      }
+    },
+    {
+      "name": "--lr-size-4px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 4px. Reads `--lr-theme-size-4px`."
+      }
+    },
+    {
+      "name": "--lr-size-4rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 4rem. Reads `--lr-theme-size-4rem`."
+      }
+    },
+    {
+      "name": "--lr-size-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 5em. Reads `--lr-theme-size-5em`."
+      }
+    },
+    {
+      "name": "--lr-size-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 5rem. Reads `--lr-theme-size-5rem`."
+      }
+    },
+    {
+      "name": "--lr-size-6ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 6ch. Reads `--lr-theme-size-6ch`."
+      }
+    },
+    {
+      "name": "--lr-size-6em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 6em. Reads `--lr-theme-size-6em`."
+      }
+    },
+    {
+      "name": "--lr-size-6px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 6px. Reads `--lr-theme-size-6px`."
+      }
+    },
+    {
+      "name": "--lr-size-6rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 6rem. Reads `--lr-theme-size-6rem`."
+      }
+    },
+    {
+      "name": "--lr-size-7rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 7rem. Reads `--lr-theme-size-7rem`."
+      }
+    },
+    {
+      "name": "--lr-size-8em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 8em. Reads `--lr-theme-size-8em`."
+      }
+    },
+    {
+      "name": "--lr-size-8rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size 8rem. Reads `--lr-theme-size-8rem`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-0-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 0 15rem. Reads `--lr-theme-size-neg-0-15rem`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-0-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 0 25rem. Reads `--lr-theme-size-neg-0-25rem`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-1px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 1px. Reads `--lr-theme-size-neg-1px`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-4px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 4px. Reads `--lr-theme-size-neg-4px`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-6px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 6px. Reads `--lr-theme-size-neg-6px`."
+      }
+    },
+    {
+      "name": "--lr-size-neg-8px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for size neg 8px. Reads `--lr-theme-size-neg-8px`."
+      }
+    },
+    {
       "name": "--lr-skeleton-border-radius",
       "description": {
         "kind": "markdown",
@@ -5613,6 +7664,48 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-source-picker>`** (default: `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — Background of a partially-selected entry's `[part=\"checkbox\"]`."
+      }
+    },
+    {
+      "name": "--lr-space-2xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space 2xl. Reads `--lr-theme-space-2xl`."
+      }
+    },
+    {
+      "name": "--lr-space-2xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space 2xs. Reads `--lr-theme-space-2xs`."
+      }
+    },
+    {
+      "name": "--lr-space-l",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space l. Reads `--lr-theme-space-l`."
+      }
+    },
+    {
+      "name": "--lr-space-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space m. Reads `--lr-theme-space-m`."
+      }
+    },
+    {
+      "name": "--lr-space-s",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space s. Reads `--lr-theme-space-s`."
+      }
+    },
+    {
+      "name": "--lr-space-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for space xs. Reads `--lr-theme-space-xs`."
       }
     },
     {
@@ -6246,6 +8339,230 @@
       }
     },
     {
+      "name": "--lr-terminal-bg-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg black. Reads `--lr-theme-terminal-bg-black`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg blue. Reads `--lr-theme-terminal-bg-blue`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright black. Reads `--lr-theme-terminal-bg-bright-black`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright blue. Reads `--lr-theme-terminal-bg-bright-blue`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright cyan. Reads `--lr-theme-terminal-bg-bright-cyan`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright green. Reads `--lr-theme-terminal-bg-bright-green`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright magenta. Reads `--lr-theme-terminal-bg-bright-magenta`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright red. Reads `--lr-theme-terminal-bg-bright-red`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright white. Reads `--lr-theme-terminal-bg-bright-white`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-bright-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg bright yellow. Reads `--lr-theme-terminal-bg-bright-yellow`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg cyan. Reads `--lr-theme-terminal-bg-cyan`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg green. Reads `--lr-theme-terminal-bg-green`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg magenta. Reads `--lr-theme-terminal-bg-magenta`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg red. Reads `--lr-theme-terminal-bg-red`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg white. Reads `--lr-theme-terminal-bg-white`."
+      }
+    },
+    {
+      "name": "--lr-terminal-bg-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal bg yellow. Reads `--lr-theme-terminal-bg-yellow`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color black. Reads `--lr-theme-terminal-color-black`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color blue. Reads `--lr-theme-terminal-color-blue`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright black. Reads `--lr-theme-terminal-color-bright-black`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright blue. Reads `--lr-theme-terminal-color-bright-blue`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright cyan. Reads `--lr-theme-terminal-color-bright-cyan`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright green. Reads `--lr-theme-terminal-color-bright-green`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright magenta. Reads `--lr-theme-terminal-color-bright-magenta`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright red. Reads `--lr-theme-terminal-color-bright-red`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright white. Reads `--lr-theme-terminal-color-bright-white`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-bright-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color bright yellow. Reads `--lr-theme-terminal-color-bright-yellow`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color cyan. Reads `--lr-theme-terminal-color-cyan`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color green. Reads `--lr-theme-terminal-color-green`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color magenta. Reads `--lr-theme-terminal-color-magenta`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color red. Reads `--lr-theme-terminal-color-red`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color white. Reads `--lr-theme-terminal-color-white`."
+      }
+    },
+    {
+      "name": "--lr-terminal-color-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for terminal color yellow. Reads `--lr-theme-terminal-color-yellow`."
+      }
+    },
+    {
       "name": "--lr-terminal-height",
       "description": {
         "kind": "markdown",
@@ -6390,6 +8707,1840 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the field, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
+      }
+    },
+    {
+      "name": "--lr-theme-border-radius-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for border radius m."
+      }
+    },
+    {
+      "name": "--lr-theme-border-radius-pill",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-radius-pill; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-border-radius-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-radius-xs; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-border-width-medium",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-border-width-medium; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-border-width-thick",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-border-width-thick; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-border-width-thin",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-border-width-thin; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-border-strong",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color border strong."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand border loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand border normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand border quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand fill loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand fill normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand fill quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand on loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand on normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-brand-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color brand on quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 1."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 2."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 3."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 4."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 5."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 6."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 7."
+      }
+    },
+    {
+      "name": "--lr-theme-color-chart-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color chart 8."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger border loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger border normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger border quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger fill loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger fill normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger fill quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger on loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger on normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-danger-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color danger on quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-focus",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color focus."
+      }
+    },
+    {
+      "name": "--lr-theme-color-mix-active",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-color-mix-active; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-mix-hover",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-color-mix-hover; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-mix-partner",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-color-mix-partner; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral border loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral border normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral border quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral fill loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral fill normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral fill quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral on loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral on normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-neutral-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color neutral on quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-no-data",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color no data."
+      }
+    },
+    {
+      "name": "--lr-theme-color-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color overlay."
+      }
+    },
+    {
+      "name": "--lr-theme-color-overlay-strong",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color overlay strong."
+      }
+    },
+    {
+      "name": "--lr-theme-color-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-color-shadow; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success border loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success border normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success border quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success fill loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success fill normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success fill quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success on loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success on normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-success-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color success on quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-surface-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color surface border."
+      }
+    },
+    {
+      "name": "--lr-theme-color-surface-default",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color surface default."
+      }
+    },
+    {
+      "name": "--lr-theme-color-surface-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color surface overlay."
+      }
+    },
+    {
+      "name": "--lr-theme-color-surface-raised",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color surface raised."
+      }
+    },
+    {
+      "name": "--lr-theme-color-text-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color text normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-text-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color text quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-border-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning border loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-border-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning border normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-border-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning border quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning fill loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning fill normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-fill-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning fill quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-on-loud",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning on loud."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-on-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning on normal."
+      }
+    },
+    {
+      "name": "--lr-theme-color-warning-on-quiet",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color warning on quiet."
+      }
+    },
+    {
+      "name": "--lr-theme-duration-fast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-duration-fast; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-duration-icon",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-duration-icon; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-duration-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-duration-base; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-duration-slow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-duration-ambient; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-easing-emphasized",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-easing-emphasized; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-easing-linear",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-easing-linear; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-easing-standard",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-easing-standard; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-focus-ring-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for focus ring offset."
+      }
+    },
+    {
+      "name": "--lr-theme-focus-ring-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for focus ring width."
+      }
+    },
+    {
+      "name": "--lr-theme-font-family-body",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font family body."
+      }
+    },
+    {
+      "name": "--lr-theme-font-family-mono",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font family mono."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-2xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size 2xl."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-2xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size 2xs."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-3xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size 3xl."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-3xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size 3xs."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-lg",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size lg."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size m."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-md-sm",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size md sm."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-sm",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size sm."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size xl."
+      }
+    },
+    {
+      "name": "--lr-theme-font-size-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for font size xs."
+      }
+    },
+    {
+      "name": "--lr-theme-font-weight-bold",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-font-weight-bold; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-font-weight-medium",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-font-weight-medium; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-font-weight-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-font-weight-normal; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-font-weight-semibold",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-font-weight-semibold; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 1."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 2."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 3."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 4."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 5."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 6."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 7."
+      }
+    },
+    {
+      "name": "--lr-theme-graph-cat-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for graph cat 8."
+      }
+    },
+    {
+      "name": "--lr-theme-hover-brightness",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-hover-brightness; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-icon-button-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for icon button size."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-1-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-1-4; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-compact",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-compact; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-loose",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-loose; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-none",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-none; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-normal; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-line-height-snug",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-line-height-snug; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-opacity-disabled",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-opacity-disabled; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-opacity-muted",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-opacity-muted; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-otp-input-segment-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-otp-input-segment-size; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-popover-viewport-clamp",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-popover-viewport-clamp; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-scroll-fade-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-scroll-fade-size; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow color."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-l",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow l."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow m."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-s",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow s."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow xl."
+      }
+    },
+    {
+      "name": "--lr-theme-shadow-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for shadow xs."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-02em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-02em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-03em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-03em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-04em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-04em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-05rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-05rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-0625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-0625rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-09375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-09375rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-125rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-125rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-15rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-1875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-1875rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-1rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-25rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-3125rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-3125rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-35em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-35em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-375rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-3em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-3em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-4375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-4375rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-4em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-4em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-4rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-4rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-5em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-5rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-625rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-6875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-6875rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-6rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-6rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-75em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-75em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-75rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-75rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-7em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-7em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-875em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-875em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-8rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-8rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-0-9375rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-0-9375rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-0625rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-0625rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-1rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-25rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-5em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-5rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-75rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-75rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1-875rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1-875rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-10px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-10px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-10rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-10rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-12em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-12em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-12rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-12rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-14px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-14px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-14rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-14rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-15rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-16px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-16px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-16rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-16rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-18rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-18rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-1rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-1rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-2-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-2-25rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-2-5ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-2-5ch; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-2-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-2-5rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-20rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-20rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-22rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-22rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-24px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-24px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-24rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-24rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-280px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-280px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-28px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-28px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-28rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-28rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-2px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-2px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-2rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-2rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-3-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-3-5em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-3-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-3-5rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-30rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-30rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-32rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-32rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-36rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-36rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-38rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-38rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-3ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-3ch; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-3px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-3px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-3rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-3rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-48rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-48rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-4ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-4ch; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-4px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-4px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-4rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-4rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-5em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-5em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-5rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-5rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-6ch",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-6ch; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-6em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-6em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-6px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-6px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-6rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-6rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-7rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-7rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-8em",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-8em; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-8rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-8rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-0-15rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-0-15rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-0-25rem",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-0-25rem; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-1px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-1px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-4px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-4px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-6px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-6px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-size-neg-8px",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-size-neg-8px; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-space-2xl",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space 2xl."
+      }
+    },
+    {
+      "name": "--lr-theme-space-2xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space 2xs."
+      }
+    },
+    {
+      "name": "--lr-theme-space-l",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space l."
+      }
+    },
+    {
+      "name": "--lr-theme-space-m",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space m."
+      }
+    },
+    {
+      "name": "--lr-theme-space-s",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space s."
+      }
+    },
+    {
+      "name": "--lr-theme-space-xs",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for space xs."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg black."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg blue."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright black."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright blue."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright cyan."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright green."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright magenta."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright red."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright white."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-bright-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg bright yellow."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg cyan."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg green."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg magenta."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg red."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg white."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-bg-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal bg yellow."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color black."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color blue."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-black",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright black."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-blue",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright blue."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright cyan."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright green."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright magenta."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright red."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright white."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-bright-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color bright yellow."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-cyan",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color cyan."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-green",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color green."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-magenta",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color magenta."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-red",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color red."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-white",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color white."
+      }
+    },
+    {
+      "name": "--lr-theme-terminal-color-yellow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for terminal color yellow."
+      }
+    },
+    {
+      "name": "--lr-theme-transition-fast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-transition-fast; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-transition-normal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-transition-base; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-transition-slow",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Application input for --lr-transition-ambient; falls back to the shared token default."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-base",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index base."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-content",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index content."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-dropdown",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index dropdown."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-modal",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index modal."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-popover",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index popover."
+      }
+    },
+    {
+      "name": "--lr-theme-z-index-toast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for z index toast."
       }
     },
     {
@@ -7110,7 +11261,21 @@
       "name": "--lr-transition-ambient",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lr-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lr-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing."
+        "value": "**`<lr-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lr-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lr-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing.\n\n**Shared design token** — Canonical shared component token for transition ambient. Reads `--lr-theme-transition-slow`."
+      }
+    },
+    {
+      "name": "--lr-transition-base",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for transition base. Reads `--lr-theme-transition-normal`."
+      }
+    },
+    {
+      "name": "--lr-transition-fast",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for transition fast. Reads `--lr-theme-transition-fast`."
       }
     },
     {
@@ -7488,7 +11653,7 @@
       "name": "--max-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size inherited from the popover surface.\n\n**`<lr-popover>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the popup.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the tooltip."
+        "value": "**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the popup.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the tooltip."
       }
     },
     {
@@ -7649,7 +11814,7 @@
       "name": "--show-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-dialog>`, `<lr-drawer>`** — Mapped opening animation duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-duration-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
       }
     },
     {
@@ -7684,7 +11849,7 @@
       "name": "--spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-spacing`; set on either name.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-dialog>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical).\n\n**`<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Web Awesome shared region spacing."
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical)."
       }
     },
     {

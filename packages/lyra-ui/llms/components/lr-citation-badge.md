@@ -2,7 +2,7 @@
 
 # `lr-citation-badge`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-citation-badge.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCitationBadge`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

@@ -1126,7 +1126,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/layout/widget/widget.class.js').then((module) => module.LyraWidget),
   },
   'lr-widget-renderer': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/conversation/widget-renderer/widget-renderer.class.js').then((module) => module.LyraWidgetRenderer),
   },
   'lr-word-cloud': {

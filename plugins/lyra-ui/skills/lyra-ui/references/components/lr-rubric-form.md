@@ -2,7 +2,7 @@
 
 # `lr-rubric-form`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-rubric-form.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRubricForm`, also available unregistered from `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -19,7 +19,8 @@ A configurable annotation rubric (LangSmith annotation-queue style): score, cate
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
 `<lr-slider>`; `category` renders `<lr-select>` or `<lr-checkbox-group>` (`multiple`); `comment`
-renders `<lr-textarea>`.
+renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: a host `aria-label` or
+native external `<label for>` names the whole rubric while each key retains its field-level name.
 
 **Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
 required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
@@ -46,11 +47,16 @@ required keys, and any key with an unsupported `type`, still hold it invalid. It
 the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
 here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
 
-**CSS parts:** `base` (the outer wrapper), `field` (one key's wrapper), `label`, `description`,
+**CSS parts:** `base` (the outer `role="group"` wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
 message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
 no entries), and `unsupported` (the fallback note for a key whose `type` is outside the three
 supported ones).
+
+Field-level `error` content is ordinary visible validation text, not a shadow live region. Score
+controls compose the current message into the semantic control's accessible name; category/comment
+controls use their own same-shadow label/error plumbing. `reportValidity()` therefore reveals and
+focuses the error once without an additional `role="alert"` announcement.
 
 **Themeable custom properties:** shared tokens only. The footer's disabled `submit`/`skip` buttons
 dim through `--lr-opacity-disabled`, the same library-wide token every other disabled control

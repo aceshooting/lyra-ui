@@ -31,12 +31,29 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_restore, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
  *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
  *  (and native `<input type=range>`). Mirrors lr-time-range's identical
  *  constant. */
 const PAGE_STEP_MULTIPLIER = 10;
+
+function isFormDataValue(value: unknown): value is FormData {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    const candidate = value as Partial<FormData>;
+    return Object.prototype.toString.call(value) === '[object FormData]'
+      && typeof candidate.append === 'function'
+      && typeof candidate.values === 'function';
+  } catch {
+    return false;
+  }
+}
 
 /** Upper bound on the number of `step` intervals `with-markers` will draw.
  *  A legitimate fractional step (`step="1e-7"` over `[0, 1]`) implies ten
@@ -241,6 +258,18 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @since 4.0.0
  */
 export class LyraSlider extends LyraSliderBase {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    rangeEnd: LYRA_DEFAULT_rangeEnd,
+    rangeStart: LYRA_DEFAULT_rangeStart,
+    restore: LYRA_DEFAULT_restore,
+    sliderLabel: LYRA_DEFAULT_sliderLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -319,7 +348,8 @@ export class LyraSlider extends LyraSliderBase {
       () => this[VALIDITY_ANCHOR](),
     );
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('0', '0');
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);
@@ -622,6 +652,10 @@ export class LyraSlider extends LyraSliderBase {
   // — a two-finger touch, one per range handle — each keep tracking their
   // own handle instead of the second pointerdown hijacking the first.
   private drags = new Map<number, SliderDragState>();
+  /** Exact realm carrying shared drag listeners, retained across adoption for symmetric cleanup. */
+  private dragWindow?: Window;
+  /** The owner realm and handle of the pending autofocus frame, if any. */
+  private autofocusFrame?: { owner: Window; handle: number };
   /** The handle whose keyboard interaction has an uncommitted change pending,
    *  or `null`. Also names the handle the eventual `lr-change` reports. */
   private pendingKeyHandle: SliderHandle | null = null;
@@ -669,9 +703,14 @@ export class LyraSlider extends LyraSliderBase {
 
   protected override firstUpdated(): void {
     if (!this.autofocus) return;
-    requestAnimationFrame(() => {
-      if (this.isConnected && this.autofocus) this.focus();
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const handle = owner.requestAnimationFrame(() => {
+      if (this.autofocusFrame?.owner !== owner || this.autofocusFrame.handle !== handle) return;
+      this.autofocusFrame = undefined;
+      if (this.isConnected && this.ownerDocument.defaultView === owner && this.autofocus) this.focus();
     });
+    this.autofocusFrame = { owner, handle };
   }
 
   override disconnectedCallback(): void {
@@ -685,10 +724,25 @@ export class LyraSlider extends LyraSliderBase {
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
     this.syncInteractionStates();
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
-    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.teardownDragWindow();
+    this.cancelAutofocusFrame();
+  }
+
+  adoptedCallback(): void {
+    // Adoption can happen while already disconnected, so do not rely on another disconnect to
+    // retire work retained from the previous realm.
+    this.drags.clear();
+    this.pendingKeyHandle = null;
+    this.focusedHandle = null;
+    this.syncInteractionStates();
+    this.teardownDragWindow();
+    this.cancelAutofocusFrame();
+  }
+
+  private cancelAutofocusFrame(): void {
+    const autofocusFrame = this.autofocusFrame;
+    this.autofocusFrame = undefined;
+    if (autofocusFrame) autofocusFrame.owner.cancelAnimationFrame(autofocusFrame.handle);
   }
 
   override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -762,7 +816,7 @@ export class LyraSlider extends LyraSliderBase {
     reason: 'autocomplete' | 'restore',
   ): void {
     void reason;
-    if (state instanceof FormData) {
+    if (isFormDataValue(state)) {
       const values = [...state.values()].filter((entry): entry is string => typeof entry === 'string');
       if (values.length >= 2) {
         this.minValue = finiteNumber(Number(values[0]), this._defaultMinValue);
@@ -836,7 +890,12 @@ export class LyraSlider extends LyraSliderBase {
   /** Removes focus from whichever internal thumb currently owns it. */
   override blur(): void {
     const active = activeElementIn(this.shadowRoot);
-    if (active instanceof HTMLElement && active.matches('[part~="thumb"]')) active.blur();
+    if (
+      active?.nodeType === 1
+      && typeof (active as Partial<Element>).matches === 'function'
+      && typeof (active as Partial<HTMLElement>).blur === 'function'
+      && active.matches('[part~="thumb"]')
+    ) (active as HTMLElement).blur();
     else this.firstThumb()?.blur();
   }
 
@@ -902,14 +961,20 @@ export class LyraSlider extends LyraSliderBase {
       this.updateValidity();
       return;
     }
-    const state = new FormData();
+    const FormDataCtor = this.ownerDocument?.defaultView?.FormData;
+    if (!FormDataCtor) {
+      this.internals.setFormValue(null);
+      this.updateValidity();
+      return;
+    }
+    const state = new FormDataCtor();
     const stateKey = this.name || 'value';
     state.append(stateKey, String(this.minValue));
     state.append(stateKey, String(this.maxValue));
     if (!this.name) {
       this.internals.setFormValue(null, state);
     } else {
-      const submission = new FormData();
+      const submission = new FormDataCtor();
       submission.append(this.name, String(this.minValue));
       submission.append(this.name, String(this.maxValue));
       this.internals.setFormValue(submission, state);
@@ -1119,17 +1184,24 @@ export class LyraSlider extends LyraSliderBase {
     captureTarget: HTMLElement,
     rect: DOMRect | null,
     rtl: boolean,
-  ): SliderDragState {
+  ): SliderDragState | undefined {
+    const dragWindow = captureTarget.ownerDocument.defaultView;
+    if (!this.isConnected || !dragWindow) return undefined;
+    const firstDrag = this.drags.size === 0;
+    if (!firstDrag && this.dragWindow !== dragWindow) return undefined;
+    captureTarget.setPointerCapture(pointerId);
     const drag: SliderDragState = { handle, changed: false, rect, rtl };
     this.drags.set(pointerId, drag);
-    captureTarget.setPointerCapture(pointerId);
-    window.addEventListener('pointermove', this.onPointerMove);
-    window.addEventListener('pointerup', this.onPointerUp);
+    if (firstDrag) {
+      this.dragWindow = dragWindow;
+      dragWindow.addEventListener('pointermove', this.onPointerMove);
+      dragWindow.addEventListener('pointerup', this.onPointerUp);
+      dragWindow.addEventListener('pointercancel', this.onPointerUp);
+      dragWindow.addEventListener('lostpointercapture', this.onPointerUp);
+    }
     // A drag can end without a pointerup: a system gesture / palm rejection
     // can fire `pointercancel`, and losing capture (e.g. element removed)
     // fires `lostpointercapture` — both need the same teardown as pointerup.
-    window.addEventListener('pointercancel', this.onPointerUp);
-    window.addEventListener('lostpointercapture', this.onPointerUp);
     this.syncInteractionStates();
     this.requestUpdate();
     return drag;
@@ -1166,6 +1238,7 @@ export class LyraSlider extends LyraSliderBase {
     const thumb = this.handleElement(handle) ?? thumbs[0];
     if (!thumb) return;
     const drag = this.beginDrag(e.pointerId, handle, thumb, rect, rtl);
+    if (!drag) return;
     if (this.setValueFor(handle, target, false)) drag.changed = true;
     // Keyboard interaction (arrow keys, Home/End, ...) can continue
     // seamlessly right after the click, exactly as if the user had tabbed to
@@ -1204,13 +1277,19 @@ export class LyraSlider extends LyraSliderBase {
     // Only the last concurrent drag to end tears down the shared window
     // listeners — an overlapping second pointer may still be down.
     if (this.drags.size === 0) {
-      window.removeEventListener('pointermove', this.onPointerMove);
-      window.removeEventListener('pointerup', this.onPointerUp);
-      window.removeEventListener('pointercancel', this.onPointerUp);
-      window.removeEventListener('lostpointercapture', this.onPointerUp);
+      this.teardownDragWindow();
     }
     this.syncInteractionStates();
     this.requestUpdate();
+  }
+
+  private teardownDragWindow(): void {
+    const dragWindow = this.dragWindow;
+    this.dragWindow = undefined;
+    dragWindow?.removeEventListener('pointermove', this.onPointerMove);
+    dragWindow?.removeEventListener('pointerup', this.onPointerUp);
+    dragWindow?.removeEventListener('pointercancel', this.onPointerUp);
+    dragWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
   }
 
   private onHandleFocus(handle: SliderHandle, event: FocusEvent): void {
@@ -1244,7 +1323,7 @@ export class LyraSlider extends LyraSliderBase {
     return names.some((name) => {
       const slot = this.renderRoot.querySelector<HTMLSlotElement>(`slot[name="${name}"]`);
       return slot?.assignedNodes({ flatten: true }).some((node) =>
-        node.nodeType === Node.ELEMENT_NODE || Boolean(node.textContent?.trim()),
+        node.nodeType === 1 || Boolean(node.textContent?.trim()),
       ) ?? false;
     });
   }

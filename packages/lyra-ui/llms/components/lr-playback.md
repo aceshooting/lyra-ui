@@ -2,7 +2,7 @@
 
 # `lr-playback`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/playback/playback.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-playback.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPlayback`, also available unregistered from `@aceshooting/lyra-ui/components/media/playback/playback.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

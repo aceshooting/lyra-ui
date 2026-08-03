@@ -10,6 +10,14 @@ import '../../layout/segmented/segmented.js';
 import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
 import { styles } from './combobox.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 const basic = () => html`
   <lr-combobox>
@@ -1608,7 +1616,12 @@ it('resets `open` to false on disconnect so a reconnect never resumes half-open 
   expect(el.open).to.be.true;
 
   const parent = el.parentElement!;
+  let teardownHide: CustomEvent | undefined;
+  el.addEventListener('lr-hide', (event) => (teardownHide = event as CustomEvent));
   el.remove();
+  await el.updateComplete;
+  expect(teardownHide !== undefined).to.be.true;
+  expect(teardownHide!.cancelable, 'a disconnected control cannot honour a hide veto').to.be.false;
   parent.appendChild(el);
   await el.updateComplete;
   expect(el.open).to.be.false;
@@ -1748,7 +1761,7 @@ it('localizes and locale-formats the selected-tag overflow count', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="tag"]')[1]!.textContent?.trim()).to.equal('٢ إضافية');
 });
 
-it('renders a localized alert and clears stale rows when an async source fails', async () => {
+it('renders a localized, non-live error row and announces each async source failure in light DOM', async () => {
   const el = (await fixture(html`
     <lr-combobox source-delay="0" open
       .strings=${{ comboboxLoadError: 'Options unavailable' }}></lr-combobox>
@@ -1762,10 +1775,21 @@ it('renders a localized alert and clears stale rows when an async source fails',
     await el.updateComplete;
     await aTimeout(20);
     await el.updateComplete;
-    const alert = el.shadowRoot!.querySelector('[role="alert"]') as HTMLElement;
-    expect(alert.textContent?.trim()).to.equal('Options unavailable');
-    expect(alert.textContent).to.not.contain('private server detail');
+    const error = el.shadowRoot!.querySelector('.source-error') as HTMLElement;
+    expect(error.textContent?.trim()).to.equal('Options unavailable');
+    expect(error.textContent).to.not.contain('private server detail');
+    expect(error.getAttribute('role')).to.equal('option');
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+    expect(assertiveAnnouncements()).to.deep.equal(['Options unavailable']);
     expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
+
+    el.source = async () => {
+      throw new Error('different private detail');
+    };
+    await el.updateComplete;
+    await aTimeout(20);
+    await el.updateComplete;
+    expect(assertiveAnnouncements()).to.deep.equal(['Options unavailable', 'Options unavailable']);
   } finally {
     console.warn = originalWarn;
   }

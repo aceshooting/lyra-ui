@@ -2,7 +2,7 @@
 
 # `lr-chart`
 
-- **Import** `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-chart.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -35,7 +35,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
-- `plugins: object[] = []` — per-instance Chart.js plugins, combined without duplicates with Lyra's
+- `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
+  combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
@@ -102,7 +103,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
   receives separately labelled primary- and secondary-axis total columns. The table totals do not
   depend on the optional visual-label peer being installed
-- `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
+- `config?: LyraChartConfiguration` (attribute: false) — peer-neutral configuration structurally
+  compatible with Chart.js's `ChartConfiguration`, deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
   Explicit `config.data.labels` and `config.data.datasets` arrays are authoritative independently:
@@ -211,8 +213,9 @@ optional overlay content positioned at the chart area's center, useful for dough
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
-`center` slot), `error` (`role="alert"` message rendered in place of `canvas` when the optional
-`chart.js` peer dependency fails to load)
+`center` slot), `error` (neutral visible message rendered in place of `canvas` when the optional
+`chart.js` peer dependency fails to load; the failure transition is announced through the shared
+document-level light-DOM assertive sink)
 
 **Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
 `height` property; sizes the `plot` region and the host's minimum block size, while a visible table

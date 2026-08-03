@@ -2,6 +2,14 @@ import { css } from 'lit';
 import { tag } from './prefix.js';
 import { collectFocusableElements } from './overlay-manager.js';
 
+export {
+  composedParentElement,
+  isAccessibilityExcluded,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisible,
+  isAccessibilityVisibilityHidden,
+} from './accessibility-visibility.js';
+
 let counter = 0;
 
 /** Monotonic unique id, scoped by a short label (e.g. `nextId('listbox')`). */

@@ -831,7 +831,7 @@ describe('lr-button', () => {
       expect(clicked).to.equal(1);
       el.focus();
       // Compare booleans, never DOM nodes, as chai's actual/expected (a failed node comparison
-      // hangs the whole file at 180s).
+      // hangs the whole file until the per-file watchdog).
       expect(el.shadowRoot!.activeElement === anchor, 'focus() should focus the anchor').to.be.true;
       el.blur();
       expect(el.shadowRoot!.activeElement === anchor, 'blur() should unfocus the anchor').to.be
@@ -1031,6 +1031,25 @@ describe('lr-button: with-caret', () => {
     // The glyph carries no accessible name: the label already names the trigger.
     expect(caret.getAttribute('aria-hidden')).to.equal('true');
     expect(el.shadowRoot!.querySelectorAll('[part="caret"] svg').length).to.equal(1);
+  });
+
+  it('reflects the Shoelace caret property in both directions', async () => {
+    const el = (await fixture(html`<lr-button>Menu</lr-button>`)) as LyraButton;
+
+    el.caret = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('caret')).to.be.true;
+    expect(el.withCaret).to.be.true;
+
+    el.caret = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('caret')).to.be.false;
+    expect(el.withCaret).to.be.false;
+
+    el.setAttribute('caret', '');
+    await el.updateComplete;
+    expect(el.caret).to.be.true;
+    expect(el.withCaret).to.be.true;
   });
 
   it('points the caret down by rotating the wrapping part’s glyph', async () => {
@@ -1606,7 +1625,7 @@ describe('lr-button — mapped Shoelace and Web Awesome surface', () => {
     expect((el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement).hidden).to.be.false;
   });
 
-  it('maps Shoelace hyphenated form overrides onto the canonical native override properties', async () => {
+  it('maps compatibility form aliases onto the canonical native override properties', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div>
         <form id="mapped-button-owner"></form>

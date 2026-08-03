@@ -12,27 +12,213 @@ permissions:
   contents: read
 
 jobs:
-  sign:
+  verify:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
+      checks: read
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      tag_sha: ${{ steps.source.outputs.sha }}
+      tarball_sha256: ${{ steps.asset_digest.outputs.sha256 }}
+    steps:
+      - name: Resolve release tag
+        id: tag
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="$DISPATCH_TAG"
+          if [[ ! "$TAG" =~ ^lyra-(ui|flags)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Unsupported release tag '$TAG'. Expected a stable lyra-ui@<semver> or lyra-flags@<semver> tag."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tag without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          persist-credentials: false
+
+      - name: Validate source binding and required test runs
+        id: source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          WORKFLOW_REF: ${{ github.ref }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD^{commit})"
+          TAG_OBJECT_TYPE="$(git cat-file -t "refs/tags/$TAG")"
+          TAG_SHA="$(git rev-parse --verify "refs/tags/$TAG^{commit}")"
+          node scripts/release-integrity.mjs validate-git-tag \
+            --tag "$TAG" \
+            --object-type "$TAG_OBJECT_TYPE" \
+            --checkout-sha "$SHA" \
+            --tag-commit-sha "$TAG_SHA"
+          node scripts/release-integrity.mjs validate-workflow-source \
+            --tag "$TAG" \
+            --event-name "$EVENT_NAME" \
+            --github-ref "$WORKFLOW_REF" \
+            --github-sha "$WORKFLOW_SHA" \
+            --tag-commit-sha "$TAG_SHA"
+          node scripts/release-integrity.mjs wait-ci \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow ci.yml \
+            --timeout-seconds 3600 \
+            --poll-seconds 20
+          node scripts/release-integrity.mjs wait-full-engine \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow full-engine.yml \
+            --timeout-seconds 7200 \
+            --poll-seconds 20
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve source package identity from tag
+        id: pkg
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          node scripts/release-integrity.mjs resolve-tag \
+            --tag "$TAG" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install exact tagged dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download and validate release tarball
+        id: release_asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/release-assets"
+          mkdir -p "$dir"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$dir"
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=(--file "$file")
+          done < <(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print0)
+          node scripts/release-integrity.mjs validate-tarball \
+            --tag "$TAG" \
+            --github-output "$GITHUB_OUTPUT" \
+            "${files[@]}"
+
+      - name: Rebuild exact tagged source and compare release bytes
+        env:
+          PACKAGE_NAME: ${{ steps.pkg.outputs.name }}
+          RELEASE_TARBALL: ${{ steps.release_asset.outputs.path }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          rebuild_dir="$RUNNER_TEMP/tagged-source-rebuild"
+          mkdir -p "$rebuild_dir"
+          pnpm --filter "$PACKAGE_NAME" --fail-if-no-match pack --pack-destination "$rebuild_dir"
+          rebuilt=()
+          while IFS= read -r -d '' file; do
+            rebuilt+=("$file")
+          done < <(find "$rebuild_dir" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#rebuilt[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one tagged-source rebuild, found ${#rebuilt[@]}."
+            exit 1
+          fi
+          node scripts/release-integrity.mjs validate-tarball --tag "$TAG" --file "${rebuilt[0]}"
+          node scripts/release-integrity.mjs compare-rebuild \
+            --release-file "$RELEASE_TARBALL" \
+            --rebuilt-file "${rebuilt[0]}"
+
+      - name: Record verified tarball digest
+        id: asset_digest
+        env:
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+        run: |
+          echo "sha256=$(sha256sum "$TARBALL" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload byte-verified tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-release-tarball
+          path: ${{ steps.release_asset.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  sign:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      actions: read
       contents: write
       id-token: write
       attestations: write
       artifact-metadata: write
     steps:
-      - name: Download release tarball
+      - name: Download byte-verified tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-release-tarball
+          path: ${{ runner.temp }}/verified-release
+
+      - name: Verify transferred artifact digest
         id: release_asset
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
+          EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
         run: |
-          dir="$RUNNER_TEMP/release-assets"
-          mkdir -p "$dir"
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$dir"
+          set -euo pipefail
+          tarballs=()
+          while IFS= read -r -d '' file; do
+            tarballs+=("$file")
+          done < <(find "$RUNNER_TEMP/verified-release" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#tarballs[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one verified tarball, found ${#tarballs[@]}."
+            exit 1
+          fi
+          actual_sha256="$(sha256sum "${tarballs[0]}" | cut -d ' ' -f1)"
+          if [[ "$actual_sha256" != "$EXPECTED_SHA256" ]]; then
+            echo "::error::Transferred tarball digest does not match the read-only verification job."
+            exit 1
+          fi
+          echo "path=${tarballs[0]}" >> "$GITHUB_OUTPUT"
 
-          tarball="$(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
-          test -n "$tarball"
-          echo "path=$tarball" >> "$GITHUB_OUTPUT"
+      - name: Rebind release tag and tarball after approval
+        env:
+          EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+        run: |
+          set -euo pipefail
+          canonical="https://github.com/$GITHUB_REPOSITORY.git"
+          remote_sha="$(git ls-remote --tags "$canonical" "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ "$remote_sha" != "$EXPECTED_TAG_SHA" ]]; then
+            echo "::error::Release tag moved after read-only verification."
+            exit 1
+          fi
+          gh release upload "$TAG" "$TARBALL" --repo "$GITHUB_REPOSITORY" --clobber
+          roundtrip="$RUNNER_TEMP/release-roundtrip"
+          mkdir -p "$roundtrip"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$roundtrip"
+          assets=()
+          while IFS= read -r -d '' file; do assets+=("$file"); done \
+            < <(find "$roundtrip" -maxdepth 1 -type f -name '*.tgz' -print0)
+          if [[ "${#assets[@]}" -ne 1 || "$(sha256sum "${assets[0]}" | cut -d ' ' -f1)" != "$EXPECTED_SHA256" ]]; then
+            echo "::error::GitHub Release does not serve exactly the verified tarball."
+            exit 1
+          fi
 
       - name: Generate release provenance
         id: attest
@@ -42,13 +228,17 @@ jobs:
 
       - name: Upload provenance to GitHub release
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-          TARBALL: ${{ steps.release_asset.outputs.path }}
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ "$remote_sha" != "${{ needs.verify.outputs.tag_sha }}" ]]; then
+            echo "::error::Release tag moved before provenance upload."
+            exit 1
+          fi
           provenance="$TARBALL.sigstore.json"
-          intoto="$TARBALL.intoto.jsonl"
           cp "$BUNDLE" "$provenance"
-          cp "$BUNDLE" "$intoto"
-          gh release upload "$TAG" "$provenance" "$intoto" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "$provenance" --repo "$GITHUB_REPOSITORY" --clobber

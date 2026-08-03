@@ -3,6 +3,11 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A single rendered key token: the compact glyph shown in the key cap, and
  *  the spelled-out word used in the chip's `aria-label` (glyphs like `⌘`/
@@ -192,6 +197,42 @@ const IS_MAC = detectIsMac();
  * @since 4.0.0
  */
 export class LyraKbd extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    kbdAltWord: LYRA_DEFAULT_kbdAltWord,
+    kbdArrowDownWord: LYRA_DEFAULT_kbdArrowDownWord,
+    kbdArrowLeftWord: LYRA_DEFAULT_kbdArrowLeftWord,
+    kbdArrowRightWord: LYRA_DEFAULT_kbdArrowRightWord,
+    kbdArrowUpWord: LYRA_DEFAULT_kbdArrowUpWord,
+    kbdBackspaceWord: LYRA_DEFAULT_kbdBackspaceWord,
+    kbdCommandWord: LYRA_DEFAULT_kbdCommandWord,
+    kbdControlVisual: LYRA_DEFAULT_kbdControlVisual,
+    kbdControlWord: LYRA_DEFAULT_kbdControlWord,
+    kbdDeleteVisual: LYRA_DEFAULT_kbdDeleteVisual,
+    kbdDeleteWord: LYRA_DEFAULT_kbdDeleteWord,
+    kbdEndWord: LYRA_DEFAULT_kbdEndWord,
+    kbdEnterWord: LYRA_DEFAULT_kbdEnterWord,
+    kbdEscapeVisual: LYRA_DEFAULT_kbdEscapeVisual,
+    kbdEscapeWord: LYRA_DEFAULT_kbdEscapeWord,
+    kbdHomeWord: LYRA_DEFAULT_kbdHomeWord,
+    kbdMinusWord: LYRA_DEFAULT_kbdMinusWord,
+    kbdOptionWord: LYRA_DEFAULT_kbdOptionWord,
+    kbdPageDownVisual: LYRA_DEFAULT_kbdPageDownVisual,
+    kbdPageDownWord: LYRA_DEFAULT_kbdPageDownWord,
+    kbdPageUpVisual: LYRA_DEFAULT_kbdPageUpVisual,
+    kbdPageUpWord: LYRA_DEFAULT_kbdPageUpWord,
+    kbdPlusWord: LYRA_DEFAULT_kbdPlusWord,
+    kbdShiftWord: LYRA_DEFAULT_kbdShiftWord,
+    kbdSpaceWord: LYRA_DEFAULT_kbdSpaceWord,
+    kbdTabWord: LYRA_DEFAULT_kbdTabWord,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** A `+`-separated shortcut, e.g. `'mod+k'`. See the class doc for the

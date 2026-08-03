@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +15,10 @@ import {
   deriveSinceByTag,
   manifestComponentTags,
   parseVersion,
+  partitionReleaseHistoryAtCurrent,
+  reconcileCurrentReleaseHistory,
+  requireCompleteGitHistory,
+  UNRELEASED_VERSION,
   validateComponentMetadata,
   validateManifestMetadataProjection,
 } from './component-metadata.mjs';
@@ -45,9 +51,43 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['published-stable'].length, 264);
   assert.equal(state.metadata.assignments['published-experimental'].length, 2);
   assert.equal(state.metadata.assignments['mapped-experimental'].length, 1);
+  assert.equal(state.metadata.assignments['introduced-mapped-experimental'].length, 2);
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
-  assert.equal(state.metadata.assignments['introduced-stable'].length, 15);
+  assert.equal(state.metadata.assignments['introduced-stable'].length, 13);
   assert.equal(state.metadata.deprecations.length, 9);
+});
+
+test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
+  const state = fixture();
+  const maturity = componentMetadataByTag(state.metadata, {
+    tags: ['lr-video', 'lr-video-playlist'],
+    packageVersion: state.packageJson.version,
+  });
+
+  for (const tag of ['lr-video', 'lr-video-playlist']) {
+    assert.equal(maturity.get(tag).status, 'experimental', `${tag} status`);
+    assert.equal(maturity.get(tag).profile, 'introduced-mapped-experimental', `${tag} profile`);
+  }
+
+  for (const relativePath of [
+    'src/components/media/video/video.class.ts',
+    'src/components/media/video-playlist/video-playlist.class.ts',
+  ]) {
+    assert.match(fs.readFileSync(path.join(packageDir, relativePath), 'utf8'), /@status experimental/);
+  }
+  for (const relativePath of [
+    'src/components/media/video/video.stories.ts',
+    'src/components/media/video-playlist/video-playlist.stories.ts',
+  ]) {
+    assert.match(
+      fs.readFileSync(path.join(packageDir, relativePath), 'utf8'),
+      /tags: \['autodocs', 'experimental'\]/,
+    );
+  }
+
+  const mediaDocs = fs.readFileSync(path.join(packageDir, 'llms/media.md'), 'utf8');
+  assert.match(mediaDocs, /## `lr-video`\n\nExperimental\b/);
+  assert.match(mediaDocs, /## `lr-video-playlist`\n\nExperimental\b/);
 });
 
 test('exact tag history derives the earliest release and leaves renamed prefixes distinct', () => {
@@ -81,6 +121,217 @@ test('history provenance rejects malformed commit, blob, and digest evidence', (
   assert.ok(findings.includes(`${release.tag}: missing or invalid source commit provenance`));
   assert.ok(findings.includes(`${release.tag}: manifest blob must be a Git object id`));
   assert.ok(findings.includes(`${release.tag}: manifest digest must be SHA-256`));
+});
+
+test('a proven current release tag is allowed, then rolls into history on the next version write', () => {
+  const prior = {
+    tag: 'lyra-ui@7.8.1',
+    version: '7.8.1',
+    sourceCommit: '1'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '2'.repeat(40),
+    manifestSha256: '3'.repeat(64),
+    tags: ['lr-a'],
+  };
+  const current = {
+    version: '8.0.0',
+    sourceCommit: null,
+    manifestSha256: '4'.repeat(64),
+    tags: ['lr-a', 'lr-new'],
+  };
+  const taggedCurrent = {
+    tag: 'lyra-ui@8.0.0',
+    version: '8.0.0',
+    sourceCommit: '5'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '6'.repeat(40),
+    manifestSha256: current.manifestSha256,
+    tags: current.tags,
+  };
+  const history = { releases: [prior], current };
+
+  assert.deepEqual(partitionReleaseHistoryAtCurrent([prior, taggedCurrent], current), {
+    releases: [prior],
+    taggedCurrent,
+    currentRelease: taggedCurrent,
+  });
+  assert.deepEqual(reconcileCurrentReleaseHistory(history, [prior, taggedCurrent]), {
+    releases: [prior],
+    taggedCurrent,
+    currentRelease: taggedCurrent,
+  });
+  assert.deepEqual(
+    reconcileCurrentReleaseHistory(history, [prior, taggedCurrent], { rolloverCurrent: true }),
+    { releases: [prior, taggedCurrent], taggedCurrent: null, currentRelease: taggedCurrent },
+  );
+});
+
+test('tagged snapshot stays immutable while same-version worktree current evolves, then rolls over', () => {
+  const current = {
+    version: '8.0.0',
+    sourceCommit: null,
+    manifestSha256: '8'.repeat(64),
+    tags: ['lr-a', 'lr-unreleased'],
+  };
+  const taggedCurrent = {
+    tag: 'lyra-ui@8.0.0',
+    version: '8.0.0',
+    sourceCommit: '5'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '6'.repeat(40),
+    manifestSha256: '4'.repeat(64),
+    tags: ['lr-a'],
+  };
+  const history = { releases: [], taggedCurrent, current };
+
+  assert.deepEqual(reconcileCurrentReleaseHistory(history, [taggedCurrent]), {
+    releases: [],
+    taggedCurrent,
+    currentRelease: taggedCurrent,
+  });
+  assert.deepEqual(
+    reconcileCurrentReleaseHistory(history, [taggedCurrent], { rolloverCurrent: true }),
+    { releases: [taggedCurrent], taggedCurrent: null, currentRelease: taggedCurrent },
+  );
+  assert.deepEqual(Object.fromEntries(deriveSinceByTag(history)), { 'lr-a': '8.0.0' });
+});
+
+test('full-history checks require a persisted snapshot once same-version current diverges', () => {
+  const taggedCurrent = {
+    tag: 'lyra-ui@8.0.0',
+    version: '8.0.0',
+    sourceCommit: '5'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '6'.repeat(40),
+    manifestSha256: '4'.repeat(64),
+    tags: ['lr-a'],
+  };
+  const exactHistory = {
+    releases: [],
+    current: {
+      version: '8.0.0',
+      sourceCommit: null,
+      manifestSha256: taggedCurrent.manifestSha256,
+      tags: taggedCurrent.tags,
+    },
+  };
+  assert.doesNotThrow(() => reconcileCurrentReleaseHistory(
+    exactHistory,
+    [taggedCurrent],
+    { requirePersistedTaggedCurrent: true },
+  ));
+
+  const evolvedHistory = structuredClone(exactHistory);
+  evolvedHistory.current.manifestSha256 = '8'.repeat(64);
+  evolvedHistory.current.tags.push('lr-unreleased');
+  assert.throws(
+    () => reconcileCurrentReleaseHistory(
+      evolvedHistory,
+      [taggedCurrent],
+      { requirePersistedTaggedCurrent: true },
+    ),
+    /history\.taggedCurrent must persist the immutable release snapshot/,
+  );
+  assert.equal(
+    reconcileCurrentReleaseHistory(evolvedHistory, [taggedCurrent]).taggedCurrent,
+    taggedCurrent,
+  );
+});
+
+test('component metadata fails closed in a shallow clone', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-component-metadata-'));
+  const source = path.join(temp, 'source');
+  const shallow = path.join(temp, 'shallow');
+  try {
+    fs.mkdirSync(source);
+    execFileSync('git', ['init', '--quiet'], { cwd: source });
+    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: source });
+    execFileSync('git', ['config', 'user.name', 'Lyra Test'], { cwd: source });
+    fs.writeFileSync(path.join(source, 'README.md'), 'fixture\n');
+    execFileSync('git', ['add', 'README.md'], { cwd: source });
+    execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: source });
+    execFileSync('git', ['clone', '--quiet', '--depth', '1', `file://${source}`, shallow]);
+    assert.throws(
+      () => requireCompleteGitHistory(shallow),
+      /requires a non-shallow clone with release tags/,
+    );
+    assert.doesNotThrow(() => requireCompleteGitHistory(source));
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('a post-tag component remains unreleased until the package version advances', () => {
+  const state = fixture();
+  const metadata = structuredClone(state.metadata);
+  metadata.history.taggedCurrent = {
+    tag: `lyra-ui@${state.packageJson.version}`,
+    version: state.packageJson.version,
+    sourceCommit: '5'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '6'.repeat(40),
+    manifestSha256: '7'.repeat(64),
+    tags: metadata.history.current.tags.filter((tag) => tag !== 'lr-page'),
+  };
+
+  assert.equal(deriveSinceByTag(metadata.history).has('lr-page'), false);
+  assert.equal(
+    componentMetadataByTag(metadata, {
+      tags: ['lr-page'],
+      packageVersion: state.packageJson.version,
+    }).get('lr-page').since,
+    UNRELEASED_VERSION,
+  );
+});
+
+test('current-tag history reconciliation fails closed on provenance and immutable tag drift', () => {
+  const current = {
+    version: '8.0.0',
+    sourceCommit: null,
+    manifestSha256: '8'.repeat(64),
+    tags: ['lr-a', 'lr-unreleased'],
+  };
+  const taggedCurrent = {
+    tag: 'lyra-ui@8.0.0',
+    version: '8.0.0',
+    sourceCommit: '5'.repeat(40),
+    manifestPresent: true,
+    manifestBlob: '6'.repeat(40),
+    manifestSha256: '4'.repeat(64),
+    tags: ['lr-a'],
+  };
+  const history = { releases: [], taggedCurrent, current };
+
+  assert.throws(
+    () => reconcileCurrentReleaseHistory(history, [{
+      ...taggedCurrent,
+      sourceCommit: 'not-a-commit',
+      manifestBlob: 'not-a-blob',
+    }]),
+    /source commit provenance.*manifest blob provenance/,
+  );
+  assert.throws(
+    () => reconcileCurrentReleaseHistory(history, [{
+      ...taggedCurrent,
+      manifestSha256: '7'.repeat(64),
+    }]),
+    /differs from immutable Git tag evidence/,
+  );
+  assert.throws(
+    () => reconcileCurrentReleaseHistory(history, [{
+      ...taggedCurrent,
+      tags: ['lr-other'],
+    }]),
+    /differs from immutable Git tag evidence/,
+  );
+  assert.throws(
+    () => reconcileCurrentReleaseHistory(history, [{
+      ...taggedCurrent,
+      version: '8.0.1',
+      tag: 'lyra-ui@8.0.1',
+    }]),
+    /missing from Git history/,
+  );
 });
 
 test('version comparison is numeric and rejects malformed versions', () => {
@@ -172,12 +423,24 @@ test('applying metadata changes only maturity records and remains deterministic'
   for (const component of stripped.components) {
     component.maturity = { status: 'unclassified', since: null, deprecated: null };
   }
+  stripped.pins.lyraVersion = '7.8.1';
   const applied = applyMaturityToInventory(state.metadata, stripped);
   const second = applyMaturityToInventory(state.metadata, applied);
   assert.deepEqual(second, applied);
   assert.equal(applied.components.find((entry) => entry.tag === 'lr-graph').maturity.since, '4.0.0');
   assert.equal(applied.components.find((entry) => entry.tag === 'lr-page').maturity.since, '8.0.0');
   assert.equal(applied.components.find((entry) => entry.tag === 'lr-icon').maturity.deprecations.length, 1);
+  assert.equal(applied.pins.lyraVersion, state.packageJson.version);
+});
+
+test('validation rejects a stale component-inventory Lyra version pin', () => {
+  const state = fixture();
+  const inventory = structuredClone(state.inventory);
+  inventory.pins.lyraVersion = '7.8.1';
+  assert.ok(
+    validateComponentMetadata(state.metadata, { ...state, inventory })
+      .includes('inventory.pins.lyraVersion must match package.json'),
+  );
 });
 
 test('CEM projection surfaces status, since, policy, and structured member deprecation metadata', () => {

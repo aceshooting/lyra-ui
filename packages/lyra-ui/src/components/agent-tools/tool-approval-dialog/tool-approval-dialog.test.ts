@@ -3,6 +3,7 @@ import './tool-approval-dialog.js';
 import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
 
@@ -22,6 +23,12 @@ function setTextareaValue(el: LyraToolApprovalDialog, value: string): void {
   const ta = textarea(el);
   ta.value = value;
   ta.dispatchEvent(new Event('input'));
+}
+function assertiveSinkTexts(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > div`),
+    (node) => node.textContent ?? '',
+  );
 }
 
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
@@ -150,8 +157,58 @@ describe('editing', () => {
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.hasAttribute('hidden')).to.be.false;
     expect(error.textContent!.length).to.be.greaterThan(0);
+    expect(error.getAttribute('role')).to.equal(null);
     expect(approveButton(el).disabled).to.be.true;
     expect(textarea(el).getAttribute('aria-invalid')).to.equal('true');
+  });
+
+  it('announces each newly invalid edit once through the shared assertive light-DOM sink', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(assertiveSinkTexts(), 'mounting does not announce an error').to.deep.equal([]);
+    editButton(el).click();
+    await el.updateComplete;
+
+    setTextareaValue(el, '{ not valid json');
+    await el.updateComplete;
+    expect(assertiveSinkTexts()).to.deep.equal(['Invalid JSON.']);
+
+    setTextareaValue(el, '{ still invalid');
+    await el.updateComplete;
+    expect(assertiveSinkTexts(), 'typing within one invalid spell stays quiet').to.deep.equal(['Invalid JSON.']);
+
+    setTextareaValue(el, '{"valid":true}');
+    await el.updateComplete;
+    setTextareaValue(el, '{ invalid again');
+    await el.updateComplete;
+    expect(assertiveSinkTexts()).to.deep.equal(['Invalid JSON.', 'Invalid JSON.']);
+
+    el.remove();
+    expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`).length).to.equal(0);
+  });
+
+  it('treats an invalid edit queued while detached as a silent reconnect baseline', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    const parent = el.parentNode!;
+
+    el.remove();
+    setTextareaValue(el, '{ invalid while detached');
+    parent.appendChild(el);
+    await el.updateComplete;
+    expect(assertiveSinkTexts(), 'the detached error is resting content on reconnect').to.deep.equal([]);
+
+    setTextareaValue(el, '{"valid":true}');
+    await el.updateComplete;
+    setTextareaValue(el, '{ invalid after reconnect');
+    await el.updateComplete;
+    expect(assertiveSinkTexts(), 'the next connected invalid transition still announces').to.deep.equal([
+      'Invalid JSON.',
+    ]);
   });
 
   it('clears the error and re-enables Approve once the textarea content becomes valid JSON again', async () => {

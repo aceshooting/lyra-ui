@@ -15,6 +15,7 @@ import {
   readTypeAliases,
   webTypesValue,
 } from './editor-type-values.mjs';
+import { generateManifest } from './generate-manifest.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-accessor-write-types');
@@ -269,4 +270,74 @@ test('source scanning marks conflicting or opaque duplicate alias declarations a
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
+});
+
+test('fresh no-write CEM retains reviewed runtime and public-document subclass contracts', async () => {
+  const { manifest } = await generateManifest({ write: false });
+  const declaration = (tagName) => manifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find((candidate) => candidate.tagName === tagName);
+  const member = (tagName, name, kind = 'field') => declaration(tagName)?.members?.find(
+    (candidate) => candidate.kind === kind && candidate.name === name,
+  );
+  const attribute = (tagName, name) => declaration(tagName)?.attributes?.find(
+    (candidate) => candidate.name === name,
+  );
+
+  for (const tagName of ['lr-checkbox', 'lr-radio-group', 'lr-select', 'lr-slider', 'lr-switch']) {
+    assert.equal(member(tagName, 'form')?.reflects, true, `${tagName}.form reflects`);
+  }
+  for (const tagName of ['lr-checkbox', 'lr-switch']) {
+    assert.equal(member(tagName, 'defaultChecked')?.default, 'false', `${tagName}.defaultChecked default`);
+  }
+  assert.equal(member('lr-radio-group', 'defaultValue')?.default, "''");
+  assert.equal(attribute('lr-select', 'value')?.default, "''");
+
+  assert.equal(member('lr-dropdown', 'placement')?.default, "'bottom-start'");
+  assert.equal(member('lr-dropdown', 'distance')?.default, '0');
+  for (const [tagName, type] of [
+    ['lr-bar-chart', 'bar'],
+    ['lr-bubble-chart', 'bubble'],
+    ['lr-doughnut-chart', 'doughnut'],
+    ['lr-line-chart', 'line'],
+    ['lr-pie-chart', 'pie'],
+    ['lr-polar-area-chart', 'polarArea'],
+    ['lr-radar-chart', 'radar'],
+    ['lr-scatter-chart', 'scatter'],
+  ]) {
+    assert.equal(member(tagName, 'type')?.default, `'${type}'`, `${tagName}.type default`);
+  }
+  assert.equal(member('lr-tag', 'variant')?.type?.text, "BadgeVariant | 'primary' | 'text'");
+  assert.equal(member('lr-option', 'disabled')?.reflects, true);
+  assert.equal(member('lr-dropdown-item', 'submenuOpen')?.reflects, true);
+  assert.equal(member('lr-dropdown-item', 'submenuOpen')?.default, 'false');
+  assert.equal(member('lr-number-input', 'inputMode')?.default, "'numeric'");
+  assert.equal(member('lr-number-input', 'step')?.default, '1');
+
+  const drawerHide = declaration('lr-drawer')?.events?.find(({ name }) => name === 'lr-hide');
+  assert.equal(drawerHide?.type?.text, 'CustomEvent<LyraDialogHideDetail>');
+  assert.match(drawerHide?.description ?? '', /\bCancelable\b/);
+  assert.doesNotMatch(drawerHide?.description ?? '', /non[- ]?cancelable/i);
+
+  for (const tagName of ['lr-combobox', 'lr-file-input']) {
+    const restore = member(tagName, 'formStateRestoreCallback', 'method');
+    assert.equal(restore?.parameters?.[1]?.name, 'reason', `${tagName} restore reason name`);
+    assert.equal(restore?.parameters?.[1]?.optional, undefined, `${tagName} restore reason is required`);
+    assert.equal(restore?.parameters?.[1]?.type?.text, "'autocomplete' | 'restore'");
+  }
+  for (const [tagName, name] of [
+    ['lr-data-grid', 'selectedRows'],
+    ['lr-file-input', 'dragging'],
+    ['lr-file-input', 'fileCount'],
+  ]) {
+    const projectedMember = member(tagName, name);
+    assert.ok(projectedMember, `${tagName}.${name} is public`);
+    assert.notEqual(projectedMember.readonly, true, `${tagName}.${name} is writable`);
+  }
+  assert.equal(member('lr-split-panel', 'snap')?.reflects, true);
+  assert.ok(
+    declaration('lr-image-comparer')?.events?.some(({ name }) => name === 'lr-change'),
+    'lr-image-comparer publishes lr-change',
+  );
+  assert.equal(attribute('lr-video', 'currentTime')?.fieldName, 'currentTime');
 });

@@ -6,7 +6,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
-import { LyraElement, type LyraEmitOptions } from '../../../internal/lyra-element.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   place,
@@ -26,6 +26,11 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import { styles } from './overlay.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
 const DEFAULT_DISTANCE = 8;
@@ -122,6 +127,18 @@ export interface LyraPopoverEventMap {
  * @since 4.0.0
  */
 export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMap> extends LyraElement<Events> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    menuLabel: LYRA_DEFAULT_menuLabel,
+    open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   private _open = false;
   /** Whether the popover is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle.
@@ -185,6 +202,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     controls: string | null;
   };
   private triggerA11yObserver?: MutationObserver;
+  private triggerA11yObserverDocument?: Document;
+  private triggerA11yObserverGeneration = 0;
   /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
    *  call reverts to plain trigger-based behavior. */
@@ -200,6 +219,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private readonly popupId = nextId('popover-popup');
   private lightDismissDocument?: Document;
   private hostIdObserver?: MutationObserver;
+  private hostIdObserverDocument?: Document;
+  private hostIdObserverGeneration = 0;
   /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
   private transitionToken = 0;
   private transitionAnimation?: Animation;
@@ -324,7 +345,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.cleanup?.();
     this.cleanup = undefined;
     this.stopLightDismiss();
-    this.hostIdObserver?.disconnect();
+    this.resetHostIdObserver();
     this.overlayHandle?.suspend();
     this.restoreTriggerA11y();
     // A pending after-event must not announce a transition the detached element left behind.
@@ -332,6 +353,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetHostIdObserver();
+    this.resetTriggerA11yObserver();
   }
   /** Registers every open popover with the shared, topmost-stack-aware overlay manager. Popovers
    *  remain nonmodal and non-focus-trapping; the manager owns Escape and restoration to the
@@ -464,7 +490,22 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       hasControls: trigger.hasAttribute('aria-controls'),
       controls: trigger.getAttribute('aria-controls'),
     };
-    this.triggerA11yObserver ??= new MutationObserver((records) => {
+    this.resetTriggerA11yObserver();
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.triggerA11yObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.triggerA11yObserver !== observer ||
+        this.triggerA11yObserverDocument !== ownerDocument ||
+        this.triggerA11yObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.trigger !== trigger
+      ) {
+        return;
+      }
       if (!this.trigger || !this.triggerA11y) return;
       let authorChanged = false;
       for (const { attributeName } of records) {
@@ -494,14 +535,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       }
       if (authorChanged) this.syncTriggerA11y();
     });
-    this.triggerA11yObserver.observe(trigger, {
+    this.triggerA11yObserver = observer;
+    this.triggerA11yObserverDocument = ownerDocument;
+    observer.observe(trigger, {
       attributes: true,
       attributeFilter: ['aria-haspopup', 'aria-expanded', 'aria-controls'],
     });
   }
   private restoreTriggerA11y(): void {
     if (!this.trigger || !this.triggerA11y) return;
-    this.triggerA11yObserver?.disconnect();
+    this.resetTriggerA11yObserver();
     const restore = (name: string, had: boolean, value: string | null): void => {
       if (had) this.trigger!.setAttribute(name, value ?? '');
       else this.trigger!.removeAttribute(name);
@@ -510,6 +553,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     restore('aria-expanded', this.triggerA11y.hasExpanded, this.triggerA11y.expanded);
     restore('aria-controls', this.triggerA11y.hasControls, this.triggerA11y.controls);
     this.triggerA11y = undefined;
+  }
+
+  private resetTriggerA11yObserver(): void {
+    this.triggerA11yObserverGeneration += 1;
+    this.triggerA11yObserver?.disconnect();
+    this.triggerA11yObserver = undefined;
+    this.triggerA11yObserverDocument = undefined;
   }
   private onTriggerSlotChange = (event: Event): void => {
     const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
@@ -551,12 +601,35 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private observeHostId(): void {
-    this.hostIdObserver ??= new MutationObserver(() => {
-      if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.hostIdObserver && this.hostIdObserverDocument === ownerDocument) return;
+    this.resetHostIdObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor || !this.isConnected) return;
+    const generation = this.hostIdObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.hostIdObserver !== observer ||
+        this.hostIdObserverDocument !== ownerDocument ||
+        this.hostIdObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       if (!this.id) this.id = this.generatedHostId;
       this.syncTriggerA11y();
     });
-    this.hostIdObserver.observe(this, { attributes: true, attributeFilter: ['id'] });
+    this.hostIdObserver = observer;
+    this.hostIdObserverDocument = ownerDocument;
+    observer.observe(this, { attributes: true, attributeFilter: ['id'] });
+  }
+
+  private resetHostIdObserver(): void {
+    this.hostIdObserverGeneration += 1;
+    this.hostIdObserver?.disconnect();
+    this.hostIdObserver = undefined;
+    this.hostIdObserverDocument = undefined;
   }
 
   private setOpen(next: boolean): void {
@@ -577,7 +650,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  `lr-after-show` once the popup's transition has finished. */
   show(): Promise<void> {
     if (this._open) return Promise.resolve();
-    if (this.emitLifecycle('lr-show', { cancelable: true }).defaultPrevented) {
+    if (this.emitCancelableLifecycle('lr-show').defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -593,7 +666,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  Emits `lr-hide` first — vetoing it leaves the popover open — then `lr-after-hide`. */
   hide(options?: { focusTrigger?: boolean }): Promise<void> {
     if (!this._open) return Promise.resolve();
-    if (this.emitLifecycle('lr-hide', { cancelable: true }).defaultPrevented) {
+    if (this.emitCancelableLifecycle('lr-hide').defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -628,11 +701,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * checked against. The `Events extends LyraPopoverEventMap` constraint already guarantees these
    * four lifecycle events keep their detail-less shape, so resolve them against the base map.
    */
-  private emitLifecycle(
-    name: keyof LyraPopoverEventMap,
-    options?: LyraEmitOptions,
+  private emitCancelableLifecycle(
+    name: 'lr-show' | 'lr-hide',
   ): CustomEvent<undefined> {
-    return (this as LyraPopover<LyraPopoverEventMap>).emit(name, undefined, options);
+    return (this as LyraPopover<LyraPopoverEventMap>).emit(name, undefined, { cancelable: true });
+  }
+
+  private emitSettledLifecycle(
+    name: 'lr-after-show' | 'lr-after-hide',
+  ): CustomEvent<undefined> {
+    return (this as LyraPopover<LyraPopoverEventMap>).emit(name);
   }
 
   /** Resolves once the registry-backed popup animation has finished, then emits the matching
@@ -666,7 +744,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.cancelTransitionAnimation();
     }
     if (event === 'lr-after-hide') this.removeAttribute('data-closing');
-    this.emitLifecycle(event);
+    this.emitSettledLifecycle(event);
   }
 
   override render(): TemplateResult {

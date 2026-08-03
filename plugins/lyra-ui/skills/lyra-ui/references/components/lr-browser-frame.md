@@ -2,7 +2,7 @@
 
 # `lr-browser-frame`
 
-- **Import** `import '@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-browser-frame.js';` (stable tag alias; registers the tag)
 - **Class** `LyraBrowserFrame`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -39,10 +39,14 @@ the `frame-src` image. `actions` — extra toolbar controls.
 "Take over" is pressed, `'agent'` when "Hand back" is). `lr-stop` — stop the agent's browser
 session, no detail.
 
-**CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (`role="status"`),
+**CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
 `controller-badge`, `actions`, `take-over-button`, `stop-button`, `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
+
+After mount, each `status` transition is appended to the shared polite light-DOM announcement sink.
+The status already shown on initial mount or reconnect establishes a silent baseline, including a
+status write queued while detached.
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.

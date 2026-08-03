@@ -241,6 +241,102 @@ describe('streaming raf scheduling / renderMarkdown guards', () => {
     cancelAnimationFrame(rafId!);
     internals.streamingRenderRaf = undefined; // cleanup so no stray renderMarkdown() fires later
   });
+
+  it('schedules streaming work through the owner window animation-frame queue', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    const foreignWindow = iframe.contentWindow!;
+    const originalMainRaf = window.requestAnimationFrame;
+    const originalForeignRaf = foreignWindow.requestAnimationFrame;
+    let mainRequests = 0;
+    let foreignRequests = 0;
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      mainRequests++;
+      return originalMainRaf.call(window, callback);
+    }) as typeof window.requestAnimationFrame;
+    foreignWindow.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      foreignRequests++;
+      return originalForeignRaf.call(foreignWindow, callback);
+    }) as typeof foreignWindow.requestAnimationFrame;
+
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
+    try {
+      el.remove();
+      iframe.contentDocument!.body.appendChild(iframe.contentDocument!.adoptNode(el));
+      await el.updateComplete;
+      (el as unknown as { scheduleStreamingRender(): void }).scheduleStreamingRender();
+      expect(foreignRequests).to.equal(1);
+      expect(mainRequests).to.equal(0);
+    } finally {
+      el.remove();
+      window.requestAnimationFrame = originalMainRaf;
+      foreignWindow.requestAnimationFrame = originalForeignRaf;
+      iframe.remove();
+    }
+  });
+
+  it('cancels a pending streaming frame through the realm that scheduled it after adoption', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    const foreignWindow = iframe.contentWindow!;
+    const originalMainRequest = window.requestAnimationFrame;
+    const originalForeignRequest = foreignWindow.requestAnimationFrame;
+    const originalMainCancel = window.cancelAnimationFrame;
+    const originalForeignCancel = foreignWindow.cancelAnimationFrame;
+    const mainCancellations: number[] = [];
+    const foreignCancellations: number[] = [];
+    window.cancelAnimationFrame = ((handle: number) => {
+      mainCancellations.push(handle);
+    }) as typeof window.cancelAnimationFrame;
+    foreignWindow.cancelAnimationFrame = ((handle: number) => {
+      foreignCancellations.push(handle);
+    }) as typeof foreignWindow.cancelAnimationFrame;
+    window.requestAnimationFrame = (() => 613) as typeof window.requestAnimationFrame;
+    foreignWindow.requestAnimationFrame = (() => 947) as typeof foreignWindow.requestAnimationFrame;
+
+    const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
+    type Internals = { scheduleStreamingRender(): void };
+    try {
+      el.remove();
+      iframe.contentDocument!.body.appendChild(iframe.contentDocument!.adoptNode(el));
+      await el.updateComplete;
+      (el as unknown as Internals).scheduleStreamingRender();
+      const pendingUpdate = el.updateComplete;
+      await Promise.resolve();
+
+      document.body.appendChild(document.adoptNode(el));
+      const updateSettled = await Promise.race([
+        pendingUpdate.then(() => true),
+        aTimeout(100).then(() => false),
+      ]);
+      expect(foreignCancellations).to.deep.equal([947]);
+      expect(mainCancellations).to.deep.equal([]);
+      expect(updateSettled, 'adoption cleanup must settle updateComplete').to.be.true;
+    } finally {
+      el.remove();
+      window.requestAnimationFrame = originalMainRequest;
+      foreignWindow.requestAnimationFrame = originalForeignRequest;
+      window.cancelAnimationFrame = originalMainCancel;
+      foreignWindow.cancelAnimationFrame = originalForeignCancel;
+      iframe.remove();
+    }
+  });
+
+  it('does not schedule an ambient animation frame when adopted into a document with no window', () => {
+    const detachedDocument = document.implementation.createHTMLDocument('detached');
+    const el = detachedDocument.adoptNode(document.createElement('lr-markdown-core')) as LyraMarkdownCore;
+    type Internals = { streamingRenderRaf?: number; scheduleStreamingRender(): void };
+    const internals = el as unknown as Internals;
+    try {
+      internals.scheduleStreamingRender();
+      expect(internals.streamingRenderRaf === undefined).to.be.true;
+    } finally {
+      if (internals.streamingRenderRaf !== undefined) {
+        cancelAnimationFrame(internals.streamingRenderRaf);
+        internals.streamingRenderRaf = undefined;
+      }
+    }
+  });
 });
 
 describe('heading anchors / scrollToAnchor (unaffected by the shiki split)', () => {
@@ -929,11 +1025,40 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     const selection = window.getSelection()!;
     selection.removeAllRanges();
     selection.addRange(range);
-    const listener = oneEvent(el, 'lr-text-select');
-    (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
-    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
-    expect(event.detail.text).to.equal('brown');
-    selection.removeAllRanges();
+
+    // WebKit intentionally rejects a programmatic Selection range whose endpoints live in a
+    // shadow tree. Feed the component's composed-selection reader the same real Range in that
+    // engine so this event-plumbing test remains deterministic; native drag-selection behavior
+    // belongs to the browser and is not reproducible with synthetic pointer events.
+    const needsSelectionFacade = selection.rangeCount === 0 || selection.isCollapsed;
+    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+    if (needsSelectionFacade) {
+      const composedRange = {
+        startContainer: textNode,
+        startOffset: 10,
+        endContainer: textNode,
+        endOffset: 15,
+      } as StaticRange;
+      const facade = {
+        rangeCount: 1,
+        isCollapsed: false,
+        getRangeAt: () => range,
+        getComposedRanges: () => [composedRange],
+      } as unknown as Selection;
+      Object.defineProperty(window, 'getSelection', { configurable: true, value: () => facade });
+    }
+    try {
+      const listener = oneEvent(el, 'lr-text-select');
+      (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
+      const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+      expect(event.detail.text).to.equal('brown');
+    } finally {
+      selection.removeAllRanges();
+      if (needsSelectionFacade) {
+        if (ownGetSelectionDescriptor) Object.defineProperty(window, 'getSelection', ownGetSelectionDescriptor);
+        else Reflect.deleteProperty(window, 'getSelection');
+      }
+    }
   });
 
   it('repaintHighlights no-ops when the content root is not yet in the DOM', () => {

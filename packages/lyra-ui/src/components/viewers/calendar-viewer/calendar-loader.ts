@@ -1,18 +1,48 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
-let cached: Promise<OptionalPeerApi | null> | undefined;
+export interface IcalTimeApi {
+  toJSDate(): Date;
+}
+
+export interface IcalEventApi {
+  uid?: string;
+  summary?: string;
+  startDate?: IcalTimeApi;
+  endDate?: IcalTimeApi;
+  location?: string;
+  description?: string;
+}
+
+export interface IcalComponentApi {
+  getAllSubcomponents(name: string): unknown[];
+}
+
+export interface IcalApi {
+  parse(source: string): unknown;
+  Component: new (data: unknown) => IcalComponentApi;
+  Event: new (component: unknown) => IcalEventApi;
+}
+
+function isIcalApi(value: unknown): value is IcalApi {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'parse' in value &&
+    typeof value.parse === 'function' &&
+    'Component' in value &&
+    typeof value.Component === 'function' &&
+    'Event' in value &&
+    typeof value.Event === 'function'
+  );
+}
+
+let cached: Promise<IcalApi | null> | undefined;
 
 export async function loadIcalDeps(
-  importIcal: () => Promise<OptionalPeerApi> = () => import('ical.js') as Promise<OptionalPeerApi>,
-): Promise<OptionalPeerApi | null> {
+  importIcal: () => Promise<unknown> = () => import('ical.js'),
+): Promise<IcalApi | null> {
   try {
-    const module = await importIcal();
-    const candidate = module.default ?? module;
-    return typeof candidate.parse === 'function' &&
-      typeof candidate.Component === 'function' &&
-      typeof candidate.Event === 'function'
-      ? candidate
-      : null;
+    return resolveOptionalPeerCapability(await importIcal(), isIcalApi);
   } catch (error) {
     console.warn(
       '<lr-calendar-viewer> needs the optional peer dependency `ical.js` to parse .ics calendars — install it with `pnpm add ical.js`:',
@@ -22,7 +52,7 @@ export async function loadIcalDeps(
   }
 }
 
-export function loadIcal(): Promise<OptionalPeerApi | null> {
+export function loadIcal(): Promise<IcalApi | null> {
   if (!cached) cached = loadIcalDeps();
   return cached;
 }

@@ -134,6 +134,52 @@ it('locks scroll on a given target document instead of only the top-level docume
   iframe.remove();
 });
 
+it('measures a foreign document scrollbar through that document\'s owner window', () => {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const foreignDocument = iframe.contentDocument!;
+  const root = foreignDocument.documentElement;
+  const widthDescriptor = Object.getOwnPropertyDescriptor(root, 'clientWidth');
+  const ambientDescriptor = Object.getOwnPropertyDescriptor(window, 'getComputedStyle');
+  const ownerDescriptor = Object.getOwnPropertyDescriptor(foreignWindow, 'getComputedStyle');
+  const ambientGetComputedStyle = window.getComputedStyle.bind(window);
+  const ownerGetComputedStyle = foreignWindow.getComputedStyle.bind(foreignWindow);
+  let ambientCalls = 0;
+  let ownerCalls = 0;
+  Object.defineProperty(root, 'clientWidth', {
+    configurable: true,
+    get: () => foreignWindow.innerWidth - 17,
+  });
+  Object.defineProperty(window, 'getComputedStyle', {
+    configurable: true,
+    value(target: Element, pseudo?: string | null) {
+      ambientCalls += 1;
+      return ambientGetComputedStyle(target, pseudo);
+    },
+  });
+  Object.defineProperty(foreignWindow, 'getComputedStyle', {
+    configurable: true,
+    value(target: Element, pseudo?: string | null) {
+      ownerCalls += 1;
+      return ownerGetComputedStyle(target, pseudo);
+    },
+  });
+
+  try {
+    const release = lockScroll(foreignDocument);
+    release();
+    expect(ambientCalls).to.equal(0);
+    expect(ownerCalls).to.be.greaterThan(0);
+  } finally {
+    if (widthDescriptor) Object.defineProperty(root, 'clientWidth', widthDescriptor);
+    else delete (root as unknown as Record<string, unknown>).clientWidth;
+    if (ambientDescriptor) Object.defineProperty(window, 'getComputedStyle', ambientDescriptor);
+    if (ownerDescriptor) Object.defineProperty(foreignWindow, 'getComputedStyle', ownerDescriptor);
+    iframe.remove();
+  }
+});
+
 it('ref-counts each document independently, so locking one does not affect another', () => {
   const iframe = document.createElement('iframe');
   document.body.appendChild(iframe);

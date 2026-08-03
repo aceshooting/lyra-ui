@@ -1385,7 +1385,10 @@ export type LyraCalendarViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraCalendarViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-calendar-viewer-max-height',
   {
     'max-height'?: LyraCalendarViewer['maxHeight'];
@@ -2330,7 +2333,10 @@ export type LyraContactViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraContactViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-contact-viewer-max-height',
   {
     'max-height'?: LyraContactViewer['maxHeight'];
@@ -2530,6 +2536,7 @@ export type LyraDataGridSvelteProps = LyraSvelteElementProps<
   | 'selectable'
   | 'selectableRows'
   | 'selectedKeys'
+  | 'selectedRows'
   | 'server'
   | 'size'
   | 'sort'
@@ -3312,8 +3319,11 @@ export type LyraEmailViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraEmailViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-attachment-open'
-  | 'lr-render-error',
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-email-viewer-max-height',
   {
     'fold-quotes'?: LyraEmailViewer['foldQuotes'];
@@ -3603,6 +3613,8 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | 'customError'
   | 'directory'
   | 'disabled'
+  | 'dragging'
+  | 'fileCount'
   | 'files'
   | 'forbiddenMimeTypes'
   | 'form'
@@ -3643,7 +3655,6 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
     'custom-error'?: LyraFileInput['customError'];
-    'dragging'?: LyraFileInput['dragging'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
     'with-hint'?: LyraFileInput['withHint'];
@@ -3971,7 +3982,10 @@ export type LyraGeojsonViewSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraGeojsonViewEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -4287,7 +4301,10 @@ export type LyraHtmlViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraHtmlViewerEventMap,
-  | 'lr-render-error',
+  | 'lr-anchor-result'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-text-select',
   | '--lr-html-viewer-max-height',
   {
     'max-height'?: LyraHtmlViewer['maxHeight'];
@@ -4421,6 +4438,7 @@ export type LyraImageComparerSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'change'
   | 'focus'
+  | 'lr-change'
   | 'lr-position-change',
   | '--divider-width'
   | '--handle-size',
@@ -4486,9 +4504,12 @@ export type LyraIncludeSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraIncludeEventMap,
+  | 'lr-anchor-result'
   | 'lr-error'
   | 'lr-include-error'
-  | 'lr-load',
+  | 'lr-load'
+  | 'lr-search-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -5626,6 +5647,7 @@ export type LyraNotebookViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraNotebookViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
   | 'lr-search-change',
@@ -6368,9 +6390,12 @@ export type LyraPptxViewerSvelteProps = LyraSvelteElementProps<
   | 'src'
   | 'strings',
   LyraPptxViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-load'
   | 'lr-render-error'
-  | 'lr-slide-change',
+  | 'lr-search-change'
+  | 'lr-slide-change'
+  | 'lr-text-select',
 never,
   {}
 >;
@@ -9177,7 +9202,6 @@ export type LyraVideoSvelteProps = LyraSvelteElementProps<
   {
     'autoplay-muted'?: LyraVideo['autoplayMuted'];
     'autoplay-on-visible'?: LyraVideo['autoplayOnVisible'];
-    'current-time'?: LyraVideo['currentTime'];
     'icon-library'?: LyraVideo['iconLibrary'];
   }
 >;
@@ -9390,6 +9414,7 @@ export type LyraXmlViewerSvelteProps = LyraSvelteElementProps<
   | 'strings'
   | 'xml',
   LyraXmlViewerEventMap,
+  | 'lr-anchor-result'
   | 'lr-copy'
   | 'lr-render-error'
   | 'lr-search-change',

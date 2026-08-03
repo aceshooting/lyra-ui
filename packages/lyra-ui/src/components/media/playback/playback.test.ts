@@ -109,6 +109,66 @@ it('auto-pauses on disconnect', async () => {
   expect(el.playing).to.be.false;
 });
 
+it('schedules and cancels timers in the current owner window across iframe adoption', async () => {
+  const iframe = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    iframe.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(iframe);
+  await loaded;
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const originalMainSetTimeout = window.setTimeout;
+  const originalMainClearTimeout = window.clearTimeout;
+  const originalFrameSetTimeout = frameWindow.setTimeout;
+  const originalFrameClearTimeout = frameWindow.clearTimeout;
+  const mainTimerIds = new Set<number>();
+  const frameTimerIds = new Set<number>();
+  let mainCancellations = 0;
+  let frameCancellations = 0;
+  window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+    const id = originalMainSetTimeout.call(window, handler, timeout, ...args);
+    if (timeout === 1000) mainTimerIds.add(id);
+    return id;
+  }) as typeof window.setTimeout;
+  window.clearTimeout = ((id?: number) => {
+    if (id !== undefined && mainTimerIds.has(id)) mainCancellations += 1;
+    originalMainClearTimeout.call(window, id);
+  }) as typeof window.clearTimeout;
+  frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+    const id = originalFrameSetTimeout.call(frameWindow, handler, timeout, ...args);
+    if (timeout === 1000) frameTimerIds.add(id);
+    return id;
+  }) as typeof frameWindow.setTimeout;
+  frameWindow.clearTimeout = ((id?: number) => {
+    if (id !== undefined && frameTimerIds.has(id)) frameCancellations += 1;
+    originalFrameClearTimeout.call(frameWindow, id);
+  }) as typeof frameWindow.clearTimeout;
+  let el: LyraPlayback | undefined;
+
+  try {
+    el = await fixture<LyraPlayback>(html`
+      <lr-playback length="3" interval-ms="1000"></lr-playback>
+    `);
+    el.play();
+    expect(mainTimerIds.size, 'the initial timer belongs to the main window').to.equal(1);
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(mainCancellations, 'adoption cancels the source-window timer').to.equal(1);
+
+    el.play();
+    expect(frameTimerIds.size, 'the adopted timer belongs to the iframe window').to.equal(1);
+    el.remove();
+    expect(frameCancellations, 'disconnect cancels the iframe-window timer').to.equal(1);
+  } finally {
+    el?.remove();
+    window.setTimeout = originalMainSetTimeout;
+    window.clearTimeout = originalMainClearTimeout;
+    frameWindow.setTimeout = originalFrameSetTimeout;
+    frameWindow.clearTimeout = originalFrameClearTimeout;
+    iframe.remove();
+  }
+});
+
 it('auto-pauses when the element becomes hidden', async () => {
   const el = (await fixture(
     html`<lr-playback length="3" interval-ms="20"></lr-playback>`,

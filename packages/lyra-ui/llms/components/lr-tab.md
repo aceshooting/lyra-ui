@@ -2,7 +2,7 @@
 
 # `lr-tab`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/tab-group/tab.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-tab.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTab`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

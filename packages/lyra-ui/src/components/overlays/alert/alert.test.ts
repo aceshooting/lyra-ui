@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAlert } from './alert.js';
 import './alert.js';
 
@@ -150,6 +151,52 @@ it('runs the same lifecycle for direct open assignments without announcing initi
   expect(el.open).to.be.false;
 });
 
+it('gives static and later-open alerts one light-DOM host role without a duplicate live sink', async () => {
+  const el = (await fixture(html`
+    <lr-alert open closable style=${motionless}>
+      <span slot="icon"><span aria-hidden="true">Decorative icon text</span></span>
+      Initially visible message
+    </lr-alert>
+  `)) as LyraAlert;
+  const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+
+  expect(el.getAttribute('role')).to.equal('alert');
+  expect(el.shadowRoot!.querySelector('[role="alert"], [aria-live]') === null).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')?.getAttribute('aria-hidden'),
+  ).to.equal('true');
+  expect(
+    document.querySelector(sinkSelector) === null,
+    'the semantic host is the only assertive surface',
+  ).to.be.true;
+
+  await el.hide();
+  await el.show();
+
+  expect(el.getAttribute('role')).to.equal('alert');
+  expect(document.querySelector(sinkSelector) === null).to.be.true;
+});
+
+it('restores host alert semantics after reconnect without creating a shadow or shared live region', async () => {
+  const el = (await fixture(html`
+    <lr-alert style=${motionless}>Reconnect announcement</lr-alert>
+  `)) as LyraAlert;
+  const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+
+  await el.show();
+  expect(el.getAttribute('role')).to.equal('alert');
+  expect(document.querySelector(sinkSelector) === null).to.be.true;
+
+  el.remove();
+  el.removeAttribute('role');
+
+  document.body.append(el);
+  expect(el.getAttribute('role')).to.equal('alert');
+  expect(el.shadowRoot!.querySelector('[role="alert"], [aria-live]') === null).to.be.true;
+  expect(document.querySelector(sinkSelector) === null).to.be.true;
+  el.remove();
+});
+
 it('treats show() called immediately after connection as an operation, not silent initial state', async () => {
   const el = document.createElement('lr-alert') as LyraAlert;
   el.style.setProperty('--lr-duration-fast', '0ms');
@@ -256,6 +303,111 @@ it('reduces show/hide and countdown motion when the user requests it', async () 
   }
 });
 
+it('uses the adopted owner realm for motion preferences and focus containment', async () => {
+  const frame = document.createElement('iframe');
+  const loaded = oneEvent(frame, 'load');
+  frame.srcdoc = '<!doctype html><html><body></body></html>';
+  document.body.append(frame);
+  await loaded;
+
+  const frameDocument = frame.contentDocument!;
+  const frameView = frame.contentWindow!;
+  const parentMatchMedia = window.matchMedia;
+  const frameMatchMedia = frameView.matchMedia;
+  let parentQueries = 0;
+  let frameQueries = 0;
+  const mediaResult = (query: string, matches: boolean): MediaQueryList => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent: () => false,
+  });
+
+  window.matchMedia = ((query: string) => {
+    parentQueries += 1;
+    return mediaResult(query, false);
+  }) as typeof window.matchMedia;
+  frameView.matchMedia = ((query: string) => {
+    frameQueries += 1;
+    return mediaResult(query, true);
+  }) as typeof frameView.matchMedia;
+
+  let el: LyraAlert | undefined;
+  try {
+    el = (await fixture(html`
+      <lr-alert countdown="ltr" duration="45" style=${motionless}>Adopted alert</lr-alert>
+    `)) as LyraAlert;
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const inside = frameDocument.createElement('button');
+    inside.textContent = 'Inside';
+    el.append(inside);
+    await el.show();
+
+    expect(frameQueries > 0, 'motion queries use the iframe window').to.be.true;
+    expect(parentQueries, 'the parent media state is irrelevant after adoption').to.equal(0);
+
+    el.dispatchEvent(new frameView.FocusEvent('focusin', { bubbles: true, composed: true }));
+    el.dispatchEvent(new frameView.FocusEvent('focusout', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: inside,
+    }));
+    await new Promise<void>((resolve) => frameView.setTimeout(resolve, 80));
+    expect(el.open, 'an iframe-realm descendant keeps the auto-hide timer paused').to.be.true;
+
+    el.dispatchEvent(new frameView.FocusEvent('focusout', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: frameDocument.body,
+    }));
+    await waitUntil(() => !el!.open, 'leaving the adopted alert resumes its owner-realm timer', {
+      timeout: 300,
+    });
+  } finally {
+    window.matchMedia = parentMatchMedia;
+    frameView.matchMedia = frameMatchMedia;
+    el?.remove();
+    frame.remove();
+  }
+});
+
+it('toast() keeps an adopted alert in its owner document', async () => {
+  const frame = document.createElement('iframe');
+  const loaded = oneEvent(frame, 'load');
+  frame.srcdoc = '<!doctype html><html><body></body></html>';
+  document.body.append(frame);
+  await loaded;
+
+  const frameDocument = frame.contentDocument!;
+  let el: LyraAlert | undefined;
+  try {
+    el = (await fixture(html`
+      <lr-alert style=${motionless}>Adopted toast</lr-alert>
+    `)) as LyraAlert;
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const completion = el.toast();
+    await waitUntil(() => el?.parentElement?.localName === 'lr-toast');
+    expect(el.ownerDocument === frameDocument).to.be.true;
+    expect(el.parentElement?.ownerDocument === frameDocument).to.be.true;
+
+    await el.hide();
+    await completion;
+  } finally {
+    el?.remove();
+    frame.remove();
+  }
+});
+
 it('toast() moves the same alert into the shared Lyra toast stack and removes it after hiding', async () => {
   const el = (await fixture(html`
     <lr-alert closable style=${motionless}>Toast message</lr-alert>
@@ -282,6 +434,27 @@ it('toast() can reuse the same identity after its previous dismissal', async () 
   const second = el.toast();
   await waitUntil(() => el.open);
   expect(el.parentElement?.localName).to.equal('lr-toast');
+  await el.hide();
+  await second;
+});
+
+it('settles an externally removed toast and lets the same alert be toasted again', async () => {
+  const el = (await fixture(html`
+    <lr-alert style=${motionless}>Externally removed toast</lr-alert>
+  `)) as LyraAlert;
+  const first = el.toast();
+  await waitUntil(() => el.open && el.parentElement?.localName === 'lr-toast');
+
+  el.remove();
+  const firstSettled = await Promise.race([
+    first.then(() => true),
+    delay(120).then(() => false),
+  ]);
+  expect(firstSettled, 'a lasting external disconnect must settle toast()').to.be.true;
+
+  const second = el.toast();
+  expect(second === first, 'a later toast() must create a fresh lifecycle').to.be.false;
+  await waitUntil(() => el.parentElement?.localName === 'lr-toast');
   await el.hide();
   await second;
 });
@@ -327,7 +500,8 @@ it('is accessible while closed and when populated/open/closable', async () => {
       Review the pending changes.
     </lr-alert>
   `)) as LyraAlert;
-  expect(open.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('alert');
+  expect(open.getAttribute('role')).to.equal('alert');
+  expect(open.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
   await expect(open).to.be.accessible();
 });
 

@@ -2,7 +2,7 @@
 
 # `lr-code-editor`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/code-editor/code-editor.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-code-editor.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCodeEditor`, also available unregistered from `@aceshooting/lyra-ui/components/forms/code-editor/code-editor.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

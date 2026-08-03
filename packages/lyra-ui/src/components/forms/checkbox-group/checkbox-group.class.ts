@@ -18,6 +18,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -136,6 +141,19 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
  * @since 4.0.0
  */
 export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    checkboxGroupRequired: LYRA_DEFAULT_checkboxGroupRequired,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -206,6 +224,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _warnedDuplicateValues = new Set<string>();
   private pendingRestoreValues?: string[];
   private childObserver?: MutationObserver;
+  private childObserverDocument?: Document;
+  private childObserverGeneration = 0;
   private childControllers = new Map<LyraCheckbox, ReactiveController>();
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
@@ -273,7 +293,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.internals = createInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
   }
 
   private checkboxGroupOwner(element: Element): Element | null {
@@ -293,7 +314,14 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private get boxes(): LyraCheckbox[] {
-    return Array.from(this.querySelectorAll<LyraCheckbox>('lr-checkbox')).filter((box) => this.ownsCheckbox(box));
+    // Lit's server element shim intentionally omits light-DOM traversal. Attribute hydration still
+    // invokes the synchronous `required`/`disabled` setters, so treat that pre-hydration shape as
+    // an empty option collection; the browser-side connect/slot paths reconcile real children.
+    const querySelectorAll = (this as unknown as {
+      querySelectorAll?: (selectors: string) => NodeListOf<LyraCheckbox>;
+    }).querySelectorAll;
+    if (typeof querySelectorAll !== 'function') return [];
+    return Array.from(querySelectorAll.call(this, 'lr-checkbox')).filter((box) => this.ownsCheckbox(box));
   }
 
   /** Whether the group is disabled explicitly or by an ancestor fieldset. */
@@ -382,7 +410,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private isOwnedCheckbox(target: EventTarget | null): target is LyraCheckbox {
-    return target instanceof Element && this.ownsCheckbox(target);
+    return (
+      (target as Partial<Node> | null)?.nodeType === 1 &&
+      this.ownsCheckbox(target as Element)
+    );
   }
 
   private onChildEvent = (event: Event): void => {
@@ -475,8 +506,32 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
-    this.childObserver = new MutationObserver(this.onChildMutations);
-    this.childObserver.observe(this, {
+    this.armChildObserver();
+  }
+
+  private armChildObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.childObserver && this.childObserverDocument === ownerDocument) return;
+    this.resetChildObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.childObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.childObserver !== observer ||
+        this.childObserverDocument !== ownerDocument ||
+        this.childObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onChildMutations(records);
+    });
+    this.childObserver = observer;
+    this.childObserverDocument = ownerDocument;
+    observer.observe(this, {
       attributes: true,
       childList: true,
       subtree: true,
@@ -488,14 +543,24 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.removeEventListener('input', this.onChildEvent);
     this.removeEventListener('change', this.onChildEvent);
     this.removeEventListener('lr-change', this.onChildEvent);
-    this.childObserver?.disconnect();
-    this.childObserver = undefined;
+    this.resetChildObserver();
     for (const [box, controller] of this.childControllers) {
       box.removeController(controller);
       box.setGroupDisabled?.(false);
     }
     this.childControllers.clear();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.resetChildObserver();
+  }
+
+  private resetChildObserver(): void {
+    this.childObserverGeneration += 1;
+    this.childObserver?.disconnect();
+    this.childObserver = undefined;
+    this.childObserverDocument = undefined;
   }
 
   protected override firstUpdated(): void {

@@ -2,7 +2,7 @@
 
 # `lr-mind-map`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-mind-map.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMindMap`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

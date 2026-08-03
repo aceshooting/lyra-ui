@@ -2,7 +2,7 @@
 
 # `lr-menu-label`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/menu/menu-label.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-menu-label.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMenuLabel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu-label.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`

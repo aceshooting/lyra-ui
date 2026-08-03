@@ -169,6 +169,46 @@ it('changing throttleMs between bursts affects the next burst, not one already s
   expect(flushes).to.deep.equal(['a']);
 });
 
+it('uses an injected timer host and rebinds a pending burst without retaining the old host', () => {
+  const firstCallbacks = new Map<number, () => void>();
+  const secondCallbacks = new Map<number, () => void>();
+  const firstClears: number[] = [];
+  const makeTimerHost = (
+    callbacks: Map<number, () => void>,
+    clears: number[],
+    handle: number,
+  ) => ({
+    setTimeout(callback: () => void): number {
+      callbacks.set(handle, callback);
+      return handle;
+    },
+    clearTimeout(timer: number): void {
+      clears.push(timer);
+      callbacks.delete(timer);
+    },
+  });
+  const first = makeTimerHost(firstCallbacks, firstClears, 41);
+  const secondClears: number[] = [];
+  const second = makeTimerHost(secondCallbacks, secondClears, 73);
+  const flushes: string[] = [];
+  const announcer = new Announcer({
+    throttleMs: 500,
+    timerHost: first,
+    onFlush: (text) => flushes.push(text),
+  });
+
+  announcer.announce('adopt me');
+  expect(firstCallbacks.has(41)).to.be.true;
+  announcer.setTimerHost(second);
+  expect(firstClears).to.deep.equal([41]);
+  expect(firstCallbacks.size).to.equal(0);
+  expect(secondCallbacks.has(73)).to.be.true;
+
+  secondCallbacks.get(73)!();
+  expect(flushes).to.deep.equal(['adopt me']);
+  expect(secondClears).to.deep.equal([73]);
+});
+
 it('creates the announcement sink in the document light DOM, not in any shadow root', () => {
   const sink = acquireAnnouncementSink('polite');
   try {
@@ -227,6 +267,80 @@ it('announces an identical repeat again instead of silently rewriting the same s
   }
 });
 
+it('gates writes on an optional source element accessibility visibility', async () => {
+  const ancestor = await fixture<HTMLElement>(html`<div><span>Source</span></div>`);
+  const source = ancestor.querySelector('span')!;
+  const sink = acquireAnnouncementSink('polite', { source });
+  try {
+    source.hidden = true;
+    sink.announce('hidden source');
+    source.hidden = false;
+
+    ancestor.setAttribute('aria-hidden', ' TRUE ');
+    sink.announce('hidden ancestor');
+    ancestor.removeAttribute('aria-hidden');
+
+    ancestor.style.display = 'none';
+    sink.announce('css-hidden ancestor');
+    ancestor.style.removeProperty('display');
+    expect(sinkTexts('polite'), 'excluded source states never reach the document sink').to.deep.equal([]);
+
+    sink.announce('visible source');
+    expect(sinkTexts('polite')).to.deep.equal(['visible source']);
+  } finally {
+    sink.release();
+  }
+});
+
+it('silences an ownerless source but announces for the same source in an attached iframe', async () => {
+  const ownerlessDocument = document.implementation.createHTMLDocument('ownerless source');
+  const ownerlessSource = ownerlessDocument.createElement('div');
+  ownerlessDocument.body.append(ownerlessSource);
+  const ownerlessSink = acquireAnnouncementSink('polite', {
+    document: ownerlessDocument,
+    source: ownerlessSource,
+  });
+
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = iframe.contentDocument!;
+  const frameSource = frameDocument.createElement('div');
+  frameDocument.body.append(frameSource);
+  const frameSink = acquireAnnouncementSink('polite', {
+    document: frameDocument,
+    source: frameSource,
+  });
+
+  try {
+    ownerlessSink.announce('ownerless source');
+    frameSink.announce('rendered source');
+
+    expect(sinkTexts('polite', ownerlessDocument)).to.deep.equal([]);
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(['rendered source']);
+  } finally {
+    ownerlessSink.release();
+    frameSink.release();
+    ownerlessSource.remove();
+    frameSource.remove();
+    iframe.remove();
+  }
+});
+
+it('fails closed when a source is adopted away from the acquired sink document', async () => {
+  const source = await fixture<HTMLElement>(html`<div>Source</div>`);
+  const sink = acquireAnnouncementSink('polite', { source });
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  try {
+    iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(source));
+    sink.announce('wrong document');
+    expect(sinkTexts('polite')).to.deep.equal([]);
+    expect(sinkTexts('polite', iframe.contentDocument!)).to.deep.equal([]);
+  } finally {
+    sink.release();
+    source.remove();
+    iframe.remove();
+  }
+});
+
 it('removes an announced node once its ttl elapses so stale text is never re-read', async () => {
   const sink = acquireAnnouncementSink('polite', { messageTtlMs: 40 });
   try {
@@ -250,6 +364,29 @@ it('shares one sink per politeness and ref-counts it away when the last consumer
 
   second.release();
   expect(sinkElement('polite') === null, 'the last release must unmount the sink').to.be.true;
+});
+
+it('remounts an externally detached shared sink for held and newly acquired handles', () => {
+  const first = acquireAnnouncementSink('polite');
+  let second: ReturnType<typeof acquireAnnouncementSink> | undefined;
+  try {
+    first.element.remove();
+    expect(sinkElement('polite') === null).to.be.true;
+
+    first.announce('from held handle');
+    expect(first.element.parentElement === document.body).to.be.true;
+    expect(sinkTexts('polite')).to.deep.equal(['from held handle']);
+
+    first.element.remove();
+    second = acquireAnnouncementSink('polite');
+    expect(second.element === first.element, 'reacquisition remounts the same shared record').to.be.true;
+    expect(second.element.parentElement === document.body).to.be.true;
+    second.announce('after reacquire');
+    expect(sinkTexts('polite')).to.deep.equal(['from held handle', 'after reacquire']);
+  } finally {
+    second?.release();
+    first.release();
+  }
 });
 
 it('release() is idempotent and never over-decrements the shared ref count', () => {
@@ -310,6 +447,50 @@ it('keys the sink by document so an adopted consumer announces in its own docume
   } finally {
     sink.release();
     expect(sinkElement('polite', ownerDocument) === null).to.be.true;
+  }
+});
+
+it('schedules and cancels message sweeps with the sink document timer realm', async () => {
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  const clears: number[] = [];
+  let nextHandle = 90;
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    const handle = ++nextHandle;
+    if (typeof handler === 'function') callbacks.set(handle, handler);
+    return handle;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) {
+      clears.push(handle);
+      callbacks.delete(handle);
+    }
+  }) as typeof ownerWindow.clearTimeout;
+
+  let sink: ReturnType<typeof acquireAnnouncementSink> | undefined;
+  try {
+    sink = acquireAnnouncementSink('polite', { document: ownerDocument, messageTtlMs: 500 });
+    sink.announce('sweep in frame');
+    expect(callbacks.has(91), 'the frame window scheduled the sweep').to.be.true;
+    const sweep = callbacks.get(91)!;
+    callbacks.delete(91); // a real timer queue drops a fired callback before invoking it
+    sweep();
+    expect(sinkTexts('polite', ownerDocument)).to.deep.equal([]);
+
+    sink.announce('cancel in frame');
+    expect(callbacks.has(92)).to.be.true;
+    sink.release();
+    sink = undefined;
+    expect(clears).to.include(92);
+    expect(callbacks.size).to.equal(0);
+  } finally {
+    sink?.release();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
   }
 });
 

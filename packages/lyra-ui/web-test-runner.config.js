@@ -172,11 +172,16 @@ export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: browserProduct })],
-  // The full suite spans hundreds of files and several optional-peer integration
-  // fixtures. Keep the suite-level watchdog above the normal two-minute
-  // budget, including the coverage-instrumented large-graph benchmark, so a
-  // slow CI worker reports the actual test result instead of turning a
-  // completed browser run into an infrastructure timeout.
+  // The runner otherwise opens half the host's reported CPU count in browser pages. Coverage
+  // instrumentation makes each page import most of the source graph, so high-core hosts can
+  // exhaust Chromium's request/process resources before tests start. Keep ordinary and platform
+  // runs on the runner default; coverage trades a little throughput for a deterministic ceiling
+  // while retaining one runner process and therefore one combined report.
+  ...(collectCoverage ? { concurrency: 1 } : {}),
+  // Individual optional-peer and large-graph files can exceed the runner's two-minute default
+  // under instrumentation. Keep this per-file/browser-session completion (and page-stop)
+  // watchdog high enough for a slow worker to report the actual result without masking a stuck
+  // file behind an unbounded wait.
   testsFinishTimeout: 300000,
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),

@@ -5,10 +5,20 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './pan-zoom.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+function isElementTarget(target: EventTarget): target is Element {
+  const candidate = target as Partial<Element> & { nodeType?: number };
+  return candidate.nodeType === 1 && typeof candidate.matches === 'function';
+}
 
 function ownsKeyboardInput(event: KeyboardEvent): boolean {
   for (const target of event.composedPath()) {
-    if (!(target instanceof Element)) continue;
+    if (!isElementTarget(target)) continue;
     if (target.matches(
       'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
       '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
@@ -48,6 +58,19 @@ export interface LyraPanZoomEventMap {
  * @since 8.0.0
  */
 export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    pdfViewerCurrentZoom: LYRA_DEFAULT_pdfViewerCurrentZoom,
+    resetZoom: LYRA_DEFAULT_resetZoom,
+    zoomControls: LYRA_DEFAULT_zoomControls,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
+    zoomableFrameLabel: LYRA_DEFAULT_zoomableFrameLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number, reflect: true }) zoom = 1;

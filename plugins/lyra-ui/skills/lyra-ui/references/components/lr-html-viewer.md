@@ -2,7 +2,7 @@
 
 # `lr-html-viewer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/html-viewer/html-viewer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-html-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHtmlViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/html-viewer/html-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -27,7 +27,16 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+**Events:**
+- `lr-render-error` with `detail.error` when fetching or sanitizing fails.
+- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+  whenever rendered-document search state changes.
+- `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
+  `scrollToAnchor()` call is applied.
+- `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
+  DOMRect[] }`) — fired after a selection ends inside the rendered document.
+
+The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
 

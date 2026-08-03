@@ -20,6 +20,11 @@ import {
 } from "../../../internal/persisted-state.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 import { styles } from "./split.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const KEYBOARD_STEP = 2;
 
@@ -182,6 +187,16 @@ export interface LyraSplitEventMap {
  * @since 4.0.0
  */
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    open: LYRA_DEFAULT_open,
+    resizeDivider: LYRA_DEFAULT_resizeDivider,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   // `collapseState` needs a custom accessor (force/auto semantics -- see the
@@ -357,6 +372,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
   private drags = new Map<number, DragState>();
+  private dragOwnerWindow?: Window;
   // Panels `updated()` last applied inline flex/order (and, while collapsing,
   // position/inset/inline-size) styles to — tracked so a panel removed from
   // the slot (e.g. a DOM node later reused elsewhere) gets those
@@ -369,6 +385,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   private _effectiveOrientation: SplitOrientation = "horizontal";
   @query('[part="base"]') private baseEl?: HTMLElement;
   private collapseResizeObserver?: ResizeObserver;
+  private collapseObservedElement?: HTMLElement;
+  private collapseObserverOwnerDocument?: Document;
+  private collapseObserverGeneration = 0;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) — see `OrientationBreakpointController`. */
   private orientationBreakpoints = new OrientationBreakpointController(
@@ -426,13 +445,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     // Clean up any remaining event listeners from an in-flight drag.
-    this.drags.clear();
-    window.removeEventListener("pointermove", this.onPointerMove);
-    window.removeEventListener("pointerup", this.onPointerUp);
-    window.removeEventListener("pointercancel", this.onPointerUp);
-    window.removeEventListener("lostpointercapture", this.onPointerUp);
-    this.collapseResizeObserver?.disconnect();
+    this.endDragGestures();
+    this.resetCollapseObserver();
     this.overlayHandle?.suspend();
+  }
+
+  adoptedCallback(): void {
+    this.endDragGestures();
+    this.resetCollapseObserver();
   }
 
   protected override firstUpdated(): void {
@@ -879,20 +899,51 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  there avoids mutating reactive state from `firstUpdated()`/`updated()`, which would create a
    *  redundant lifecycle update and a Lit warning. */
   private armCollapseObserver(): void {
-    if (!this.collapseResizeObserver) {
-      this.collapseResizeObserver = new ResizeObserver((entries) => {
-        const box = entries[0]?.contentBoxSize?.[0];
-        const width = box
-          ? box.inlineSize
-          : this.baseEl?.getBoundingClientRect().width ?? 0;
-        this.measuredInlineSize = width;
-        this.updateCollapseState(width);
-        this.updateEffectiveOrientation(width, true);
-      });
+    const observedElement = this.baseEl;
+    if (!this.isConnected || !observedElement) return;
+    const ownerDocument = this.ownerDocument;
+    if (
+      this.collapseResizeObserver &&
+      this.collapseObservedElement === observedElement &&
+      this.collapseObserverOwnerDocument === ownerDocument
+    ) {
+      return;
     }
-    if (this.baseEl) {
-      this.collapseResizeObserver.observe(this.baseEl);
-    }
+
+    this.resetCollapseObserver();
+    const ResizeObserverConstructor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    const generation = this.collapseObserverGeneration;
+    const observer = new ResizeObserverConstructor((entries) => {
+      if (
+        this.collapseResizeObserver !== observer ||
+        this.collapseObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.baseEl !== observedElement
+      ) {
+        return;
+      }
+      const box = entries[0]?.contentBoxSize?.[0];
+      const width = box
+        ? box.inlineSize
+        : observedElement.getBoundingClientRect().width;
+      this.measuredInlineSize = width;
+      this.updateCollapseState(width);
+      this.updateEffectiveOrientation(width, true);
+    });
+    this.collapseResizeObserver = observer;
+    this.collapseObservedElement = observedElement;
+    this.collapseObserverOwnerDocument = ownerDocument;
+    observer.observe(observedElement);
+  }
+
+  private resetCollapseObserver(): void {
+    this.collapseObserverGeneration += 1;
+    this.collapseResizeObserver?.disconnect();
+    this.collapseResizeObserver = undefined;
+    this.collapseObservedElement = undefined;
+    this.collapseObserverOwnerDocument = undefined;
   }
 
   /** Reacts to a live `collapse`/`orientationBreakpoint` property change (as opposed to the
@@ -902,7 +953,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  a property set here would cost. */
   private syncCollapseObserver(): void {
     if (!this.responsiveObservationEnabled) {
-      this.collapseResizeObserver?.disconnect();
+      this.resetCollapseObserver();
       return;
     }
     this.armCollapseObserver();
@@ -1198,6 +1249,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // guard also covers a synthetic/programmatic pointerdown that CSS
     // wouldn't stop).
     if (this.isDividerDisabled(index)) return;
+    const divider = e.currentTarget as HTMLElement;
+    const ownerWindow = divider.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    if (this.drags.size > 0 && this.dragOwnerWindow !== ownerWindow) return;
     // The divider that dispatched this is itself a child of [part="base"],
     // so baseEl is guaranteed to be already rendered here.
     this.drags.set(e.pointerId, {
@@ -1207,15 +1262,18 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       base: this.baseEl!,
       appliedDelta: 0,
     });
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    window.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
-    // A drag can end without a pointerup: a system gesture / palm rejection
-    // can fire `pointercancel`, and losing capture (e.g. element removed)
-    // fires `lostpointercapture` — both need the same teardown as pointerup
-    // or the divider keeps "resizing" in response to unrelated movement.
-    window.addEventListener("pointercancel", this.onPointerUp);
-    window.addEventListener("lostpointercapture", this.onPointerUp);
+    divider.setPointerCapture(e.pointerId);
+    if (this.drags.size === 1) {
+      this.dragOwnerWindow = ownerWindow;
+      ownerWindow.addEventListener("pointermove", this.onPointerMove);
+      ownerWindow.addEventListener("pointerup", this.onPointerUp);
+      // A drag can end without a pointerup: a system gesture / palm rejection
+      // can fire `pointercancel`, and losing capture (e.g. element removed)
+      // fires `lostpointercapture` — both need the same teardown as pointerup
+      // or the divider keeps "resizing" in response to unrelated movement.
+      ownerWindow.addEventListener("pointercancel", this.onPointerUp);
+      ownerWindow.addEventListener("lostpointercapture", this.onPointerUp);
+    }
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -1278,13 +1336,22 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (!this.drags.has(e.pointerId)) return;
     this.drags.delete(e.pointerId);
     if (e.type === "pointerup") this.persist();
-    if (this.drags.size === 0) {
-      window.removeEventListener("pointermove", this.onPointerMove);
-      window.removeEventListener("pointerup", this.onPointerUp);
-      window.removeEventListener("pointercancel", this.onPointerUp);
-      window.removeEventListener("lostpointercapture", this.onPointerUp);
-    }
+    if (this.drags.size === 0) this.removeDragListeners();
   };
+
+  private removeDragListeners(): void {
+    const ownerWindow = this.dragOwnerWindow;
+    this.dragOwnerWindow = undefined;
+    ownerWindow?.removeEventListener("pointermove", this.onPointerMove);
+    ownerWindow?.removeEventListener("pointerup", this.onPointerUp);
+    ownerWindow?.removeEventListener("pointercancel", this.onPointerUp);
+    ownerWindow?.removeEventListener("lostpointercapture", this.onPointerUp);
+  }
+
+  private endDragGestures(): void {
+    this.drags.clear();
+    this.removeDragListeners();
+  }
 
   private onDividerKeyDown = (e: KeyboardEvent, index: number): void => {
     // Same rail/floating-adjacent guard as onPointerDown.

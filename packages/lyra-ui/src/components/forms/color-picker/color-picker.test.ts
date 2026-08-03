@@ -715,6 +715,120 @@ it('tracks a pointer drag across the hue slider and ends cleanly on pointercance
   expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('180');
 });
 
+it('keeps an adopted iframe drag on its owner window and releases that window on readoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = await opened(html`<lr-color-picker inline label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  slider.setPointerCapture = () => {};
+  slider.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 20,
+      width: 200,
+      height: 20,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    slider.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
+      bubbles: true,
+      composed: true,
+      pointerId: 81,
+      pointerType: 'touch',
+      clientX: 40,
+      clientY: 10,
+    }));
+    const downValue = el.value;
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 81,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 10,
+    }));
+    expect(el.value).to.not.equal(downValue);
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    const adoptedValue = el.value;
+    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
+      pointerId: 81,
+      pointerType: 'touch',
+      clientX: 180,
+      clientY: 10,
+    }));
+    expect(el.value, 'the retired iframe listener must be gone').to.equal(adoptedValue);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('does not arm or mutate a drag while disconnected in an ownerless document', async () => {
+  const inertDocument = document.implementation.createHTMLDocument('ownerless');
+  const el = await opened(html`<lr-color-picker inline label="A" value="#ff0000"></lr-color-picker>`);
+  const slider = part(el, 'hue-slider');
+  slider.setPointerCapture = () => {};
+  slider.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 20,
+      width: 200,
+      height: 20,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  try {
+    el.remove();
+    inertDocument.adoptNode(el);
+    const before = el.value;
+    slider.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 84,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 10,
+    }));
+    expect(el.value).to.equal(before);
+
+    document.body.append(document.adoptNode(el));
+    await el.updateComplete;
+    slider.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 85,
+      pointerType: 'touch',
+      clientX: 40,
+      clientY: 10,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId: 85,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 10,
+    }));
+    expect(el.value).to.not.equal(before);
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 85 }));
+  } finally {
+    el.remove();
+  }
+});
+
 it('reserves touch gestures for the two-dimensional grid while preserving vertical page pan on tracks', async () => {
   const el = await opened(html`<lr-color-picker label="A" opacity></lr-color-picker>`);
   expect(getComputedStyle(part(el, 'grid')).touchAction).to.equal('none');
@@ -1159,6 +1273,97 @@ it('adopts the color returned by the EyeDropper API when it is available', async
   } finally {
     if (saved === undefined) delete globals.EyeDropper;
     else globals.EyeDropper = saved;
+  }
+});
+
+it('uses the adopted owner realm for EyeDropper and its abort signal', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const mainGlobals = window as unknown as { EyeDropper?: unknown };
+  const frameGlobals = frameWindow as unknown as { EyeDropper?: unknown };
+  const savedMain = mainGlobals.EyeDropper;
+  const savedFrame = frameGlobals.EyeDropper;
+  let signal: AbortSignal | undefined;
+  let mainCalls = 0;
+  let frameCalls = 0;
+  let el: LyraColorPicker | undefined;
+
+  try {
+    mainGlobals.EyeDropper = class {
+      open(): Promise<{ sRGBHex: string }> {
+        mainCalls++;
+        return Promise.resolve({ sRGBHex: '#ff0000' });
+      }
+    };
+    frameGlobals.EyeDropper = class {
+      open(options?: { signal?: AbortSignal }): Promise<{ sRGBHex: string }> {
+        frameCalls++;
+        signal = options?.signal;
+        return Promise.resolve({ sRGBHex: '#00ff00' });
+      }
+    };
+    el = await opened();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    expect(count(el, 'eyedropper-button')).to.equal(1);
+
+    (part(el, 'eyedropper-button') as HTMLButtonElement).click();
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(mainCalls).to.equal(0);
+    expect(frameCalls).to.equal(1);
+    expect(signal instanceof frameWindow.AbortSignal).to.be.true;
+    expect(el.value).to.equal('#00ff00');
+  } finally {
+    el?.remove();
+    if (savedMain === undefined) delete mainGlobals.EyeDropper;
+    else mainGlobals.EyeDropper = savedMain;
+    if (savedFrame === undefined) delete frameGlobals.EyeDropper;
+    else frameGlobals.EyeDropper = savedFrame;
+    frame.remove();
+  }
+});
+
+it('aborts an owner-realm EyeDropper and ignores its late result after adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const frameGlobals = frameWindow as unknown as { EyeDropper?: unknown };
+  const savedFrame = frameGlobals.EyeDropper;
+  let signal: AbortSignal | undefined;
+  let resolveResult!: (result: { sRGBHex: string }) => void;
+  const result = new Promise<{ sRGBHex: string }>((resolve) => {
+    resolveResult = resolve;
+  });
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+
+  try {
+    frameGlobals.EyeDropper = class {
+      open(options?: { signal?: AbortSignal }): Promise<{ sRGBHex: string }> {
+        signal = options?.signal;
+        return result;
+      }
+    };
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    (part(el, 'eyedropper-button') as HTMLButtonElement).click();
+    expect(signal instanceof frameWindow.AbortSignal).to.be.true;
+
+    document.body.append(document.adoptNode(el));
+    expect(signal!.aborted).to.be.true;
+    resolveResult({ sRGBHex: '#00ff00' });
+    await result;
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(el.value).to.equal('#ff0000');
+  } finally {
+    el.remove();
+    if (savedFrame === undefined) delete frameGlobals.EyeDropper;
+    else frameGlobals.EyeDropper = savedFrame;
+    frame.remove();
   }
 });
 

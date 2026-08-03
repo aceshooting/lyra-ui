@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -10,10 +10,14 @@ import '../audio-visualizer/audio-visualizer.class.js';
 import '../push-to-talk/push-to-talk.class.js';
 import '../transcript-feed/transcript-feed.class.js';
 import '../../overlays/badge/badge.class.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.class.js';
 import { styles } from './realtime-session.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 export interface LyraRealtimeSessionEventMap {
@@ -53,6 +57,28 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    realtimeSessionConnect: LYRA_DEFAULT_realtimeSessionConnect,
+    realtimeSessionConnected: LYRA_DEFAULT_realtimeSessionConnected,
+    realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
+    realtimeSessionConnectionFailed: LYRA_DEFAULT_realtimeSessionConnectionFailed,
+    realtimeSessionDisconnect: LYRA_DEFAULT_realtimeSessionDisconnect,
+    realtimeSessionDisconnected: LYRA_DEFAULT_realtimeSessionDisconnected,
+    realtimeSessionError: LYRA_DEFAULT_realtimeSessionError,
+    realtimeSessionInterrupt: LYRA_DEFAULT_realtimeSessionInterrupt,
+    realtimeSessionLabel: LYRA_DEFAULT_realtimeSessionLabel,
+    realtimeSessionMute: LYRA_DEFAULT_realtimeSessionMute,
+    realtimeSessionReconnecting: LYRA_DEFAULT_realtimeSessionReconnecting,
+    realtimeSessionUnmute: LYRA_DEFAULT_realtimeSessionUnmute,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) state: RealtimeConnectionState = 'disconnected';
@@ -65,17 +91,55 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   showCapture = true;
   @property({ attribute: 'error-code' }) errorCode = '';
   @property() label = '';
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private transferActionFocus = false;
+  private statusAnnouncementSink?: AnnouncementSink;
+  private errorAnnouncementSink?: AnnouncementSink;
+  private suppressNextStateAnnouncement = true;
+
+  private syncAnnouncementSinks(): void {
+    if (!this.isConnected) return;
+    if (
+      this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
+      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument
+    ) return;
+    this.statusAnnouncementSink?.release();
+    this.errorAnnouncementSink?.release();
+    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSinks();
+    if (this.hasUpdated) {
+      // The state visible when a session reconnects is context, even if its write was queued while
+      // detached and Lit has not processed that update yet.
+      this.suppressNextStateAnnouncement = true;
+      this.requestUpdate();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.statusAnnouncementSink?.release();
+    this.errorAnnouncementSink?.release();
+    this.statusAnnouncementSink = undefined;
+    this.errorAnnouncementSink = undefined;
+    this.suppressNextStateAnnouncement = true;
+  }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (!changed.has('state')) return;
-    const focused = activeElementIn(
-      this.renderRoot instanceof ShadowRoot ? this.renderRoot : this.ownerDocument,
-    );
-    const focusedPart = focused instanceof HTMLElement ? focused.getAttribute('part') : null;
+    const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
+    const focusedPart = focused?.getAttribute('part') ?? null;
     this.transferActionFocus =
-      focused instanceof HTMLElement &&
+      focused !== null &&
       (focused.closest('[part="controls"]') !== null ||
         focusedPart === 'connect' ||
         focusedPart === 'disconnect' ||
@@ -85,16 +149,22 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   }
 
   protected override updated(changed: PropertyValues<this>): void {
-    if (!changed.has('state')) return;
-    if (changed.get('state') !== undefined) {
-      // The rendered error owns the transition as an assertive alert. Clear any queued polite
-      // status instead of announcing the same transition through two simultaneous live owners.
-      this.liveRegion?.announce(this.state === 'error' ? '' : this.stateLabel(), { force: true });
+    const stateChanged = changed.has('state');
+    if (stateChanged && !this.suppressNextStateAnnouncement) {
+      // A state supplied at mount is context. Later error transitions use only the assertive sink;
+      // ordinary connection lifecycle transitions use only the polite sink, so no change is spoken
+      // twice and no shadow-root live region is involved.
+      if (this.state === 'error') {
+        this.errorAnnouncementSink?.announce(this.localize('realtimeSessionConnectionFailed'));
+      } else {
+        this.statusAnnouncementSink?.announce(this.stateLabel());
+      }
     }
-    if (this.transferActionFocus) {
+    if (stateChanged && this.transferActionFocus) {
       this.transferActionFocus = false;
       (this.renderRoot.querySelector('[part="connect"], [part="disconnect"]') as HTMLElement | null)?.focus();
     }
+    this.suppressNextStateAnnouncement = false;
   }
 
   private stateLabel(): string {
@@ -137,13 +207,12 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           </div>
         </header>
         ${this.state === 'error'
-          ? html`<p part="error" role="alert">${this.localize('realtimeSessionConnectionFailed')}</p>`
+          ? html`<p part="error">${this.localize('realtimeSessionConnectionFailed')}</p>`
           : nothing}
         ${this.showCapture
           ? html`<lr-push-to-talk part="capture" .disabled=${!active || this.muted} level-events></lr-push-to-talk>`
           : nothing}
         <lr-transcript-feed part="transcript" .entries=${this.entries}></lr-transcript-feed>
-        <lr-live-region></lr-live-region>
       </section>
     `;
   }

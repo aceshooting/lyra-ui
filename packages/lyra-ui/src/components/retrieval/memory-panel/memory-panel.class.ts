@@ -10,6 +10,11 @@ import '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './memory-panel.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** A local, non-exported structural copy of `lr-provenance-panel`'s own (also un-exported)
  *  `NodeTypeStyle` shape, declared here rather than imported so this component has no build-time
@@ -168,6 +173,36 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @since 4.1.0
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
+    citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
+    citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
+    memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
+    memoryPanelConfirmAddHeading: LYRA_DEFAULT_memoryPanelConfirmAddHeading,
+    memoryPanelConfirmForgetBody: LYRA_DEFAULT_memoryPanelConfirmForgetBody,
+    memoryPanelConfirmForgetHeading: LYRA_DEFAULT_memoryPanelConfirmForgetHeading,
+    memoryPanelConfirmRemoveHeading: LYRA_DEFAULT_memoryPanelConfirmRemoveHeading,
+    memoryPanelForgetAll: LYRA_DEFAULT_memoryPanelForgetAll,
+    memoryPanelLabel: LYRA_DEFAULT_memoryPanelLabel,
+    memoryPanelLongTermHeading: LYRA_DEFAULT_memoryPanelLongTermHeading,
+    memoryPanelShortTermHeading: LYRA_DEFAULT_memoryPanelShortTermHeading,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+    showLess: LYRA_DEFAULT_showLess,
+    showMore: LYRA_DEFAULT_showMore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Ephemeral, working-context items. Controlled and never mutated by this component. */

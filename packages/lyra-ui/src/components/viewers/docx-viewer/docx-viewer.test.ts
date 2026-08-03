@@ -16,10 +16,14 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-function stubFetch(buffer: ArrayBuffer, ok = true): () => void {
-  const original = window.fetch;
-  window.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Server Error', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof window.fetch;
-  return () => { window.fetch = original; };
+function stubFetch(
+  buffer: ArrayBuffer,
+  ok = true,
+  view: Window & typeof globalThis = window,
+): () => void {
+  const original = view.fetch;
+  view.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Server Error', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof view.fetch;
+  return () => { view.fetch = original; };
 }
 
 function useLibrary(el: LyraDocxViewer, deps: unknown): void {
@@ -531,6 +535,46 @@ describe('scrollToAnchor (fragment)', () => {
     }
   });
 
+  it('resolves a selector-punctuation id after adoption without ambient or owner CSS.escape', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><h2>Section One</h2>');
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerWindow = iframe.contentWindow!;
+    const specialId = 'section" ] owner';
+    const heading = el.shadowRoot!.querySelector('#section-one') as HTMLElement;
+    heading.id = specialId;
+    const tree = (el as unknown as { headingTree: Array<{ id: string }> }).headingTree;
+    tree[1]!.id = specialId;
+    const originalParentEscape = window.CSS.escape;
+    const originalOwnerEscape = ownerWindow.CSS.escape;
+    const originalParentMatchMedia = window.matchMedia;
+    const originalOwnerMatchMedia = ownerWindow.matchMedia;
+    window.CSS.escape = () => {
+      throw new Error('ambient CSS.escape must not be used');
+    };
+    (ownerWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
+    window.matchMedia = (() => ({ matches: false })) as typeof window.matchMedia;
+    ownerWindow.matchMedia = (() => ({ matches: true })) as typeof ownerWindow.matchMedia;
+    let behavior: ScrollBehavior | undefined;
+    heading.scrollIntoView = (options) => {
+      behavior = typeof options === 'object' ? options.behavior : undefined;
+    };
+    try {
+      ownerDocument.adoptNode(el);
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: specialId })).to.be.true;
+      expect(behavior).to.equal('auto');
+    } finally {
+      el.remove();
+      window.CSS.escape = originalParentEscape;
+      ownerWindow.CSS.escape = originalOwnerEscape;
+      window.matchMedia = originalParentMatchMedia;
+      ownerWindow.matchMedia = originalOwnerMatchMedia;
+      iframe.remove();
+      restore();
+    }
+  });
+
   it('resolves false for an unknown fragment id', async () => {
     const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
@@ -873,21 +917,30 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
 
   it('emits lr-text-select with a text-quote anchor on selection', async () => {
     const { el, restore } = await loadWithMarkup('<p>The quick brown fox jumps over the lazy dog.</p>');
+    const originalGetSelection = window.getSelection;
     try {
       const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
       const textNode = paragraph.firstChild!;
       const range = document.createRange();
       range.setStart(textNode, 10);
       range.setEnd(textNode, 15);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof window.getSelection;
       const listener = oneEvent(el, 'lr-text-select');
       (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
       const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
       expect(event.detail.text).to.equal('brown');
-      selection.removeAllRanges();
     } finally {
+      window.getSelection = originalGetSelection;
       restore();
     }
   });
@@ -907,7 +960,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       },
       DOMPurify: { sanitize: (value: string) => value },
     });
-    const restore = stubFetch(BUFFER);
+    const restore = stubFetch(BUFFER, true, frameWindow);
     frameDocument.body.append(el);
     try {
       el.src = 'https://example.test/report.docx';
@@ -1002,6 +1055,87 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('stamps the fallback part when its adopted owner registry rejects CSS highlight registration', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerWindow = iframe.contentWindow!;
+    const ambientHighlight = Object.getOwnPropertyDescriptor(window, 'Highlight');
+    const ambientCss = Object.getOwnPropertyDescriptor(window, 'CSS');
+    const ownerHighlight = Object.getOwnPropertyDescriptor(ownerWindow, 'Highlight');
+    const ownerCss = Object.getOwnPropertyDescriptor(ownerWindow, 'CSS');
+    const ambientCssValue = window.CSS;
+    class AmbientHighlight extends Set<Range> {
+      priority = 0;
+    }
+    const cssWithHighlights = Object.create(ambientCssValue ?? null) as CSS & {
+      highlights: Map<string, AmbientHighlight>;
+    };
+    Object.defineProperty(cssWithHighlights, 'highlights', { value: new Map() });
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    el.remove();
+    let restoreFetch: (() => void) | undefined;
+
+    try {
+      Object.defineProperty(window, 'Highlight', {
+        configurable: true,
+        value: AmbientHighlight,
+      });
+      Object.defineProperty(window, 'CSS', {
+        configurable: true,
+        value: cssWithHighlights,
+      });
+      Object.defineProperty(ownerWindow, 'Highlight', {
+        configurable: true,
+        value: AmbientHighlight,
+      });
+      Object.defineProperty(ownerWindow, 'CSS', {
+        configurable: true,
+        value: {
+          highlights: {
+            set() {
+              throw new Error('owner registry rejected highlight registration');
+            },
+          },
+        },
+      });
+      expect(supportsCustomHighlights(document)).to.be.true;
+      expect(supportsCustomHighlights(ownerDocument)).to.be.true;
+
+      useLibrary(el, {
+        mammoth: {
+          convertToHtml: () => Promise.resolve({ value: '<p>Hello world</p>', messages: [] }),
+        },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      restoreFetch = stubFetch(BUFFER, true, ownerWindow);
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+
+      const mark = el.shadowRoot!.querySelector(
+        '[part="content"] mark[data-lr-highlight-tone="accent"]',
+      );
+      expect(supportsCustomHighlights(ownerDocument)).to.be.false;
+      expect(mark !== null).to.equal(true);
+      expect(mark!.getAttribute('part')).to.equal('highlight');
+    } finally {
+      el.remove();
+      restoreFetch?.();
+      if (ambientHighlight) Object.defineProperty(window, 'Highlight', ambientHighlight);
+      else Reflect.deleteProperty(window, 'Highlight');
+      if (ambientCss) Object.defineProperty(window, 'CSS', ambientCss);
+      else Reflect.deleteProperty(window, 'CSS');
+      if (ownerHighlight) Object.defineProperty(ownerWindow, 'Highlight', ownerHighlight);
+      else Reflect.deleteProperty(ownerWindow, 'Highlight');
+      if (ownerCss) Object.defineProperty(ownerWindow, 'CSS', ownerCss);
+      else Reflect.deleteProperty(ownerWindow, 'CSS');
+      iframe.remove();
+    }
+  });
+
   it('lets component-scoped properties theme fallback highlights and search states', async () => {
     const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
     (globalThis as { Highlight?: unknown }).Highlight = undefined;
@@ -1086,6 +1220,58 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
 });
 
 describe('search', () => {
+  it('creates search walkers, ranges, and marks in its owner document after adoption', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => Promise.resolve({
+          value: '<p>The quick brown fox.</p>',
+          messages: [],
+        }),
+      },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restoreFetch = stubFetch(BUFFER, true, frameWindow);
+    frameDocument.body.append(el);
+    const originalCreateTreeWalker = frameDocument.createTreeWalker;
+    const originalCreateRange = frameDocument.createRange;
+    let walkerCalls = 0;
+    let rangeCalls = 0;
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"] p') !== null);
+      frameDocument.createTreeWalker = ((
+        root: Node,
+        whatToShow?: number,
+        filter?: NodeFilter | null,
+      ) => {
+        walkerCalls++;
+        return originalCreateTreeWalker.call(frameDocument, root, whatToShow, filter);
+      }) as typeof frameDocument.createTreeWalker;
+      frameDocument.createRange = (() => {
+        rangeCalls++;
+        return originalCreateRange.call(frameDocument);
+      }) as typeof frameDocument.createRange;
+
+      expect(await el.search('brown')).to.equal(1);
+      expect(walkerCalls).to.be.greaterThan(0);
+      expect(rangeCalls).to.be.greaterThan(0);
+      const mark = el.shadowRoot!.querySelector<HTMLElement>('mark[part~="search-match"]');
+      expect(mark !== null).to.equal(true);
+      expect(mark!.ownerDocument === frameDocument).to.equal(true);
+    } finally {
+      frameDocument.createTreeWalker = originalCreateTreeWalker;
+      frameDocument.createRange = originalCreateRange;
+      el.remove();
+      iframe.remove();
+      restoreFetch();
+    }
+  });
+
   it('finds and counts matches, clearing state fully on src change', async () => {
     const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat, said the cat.</p>');
     try {

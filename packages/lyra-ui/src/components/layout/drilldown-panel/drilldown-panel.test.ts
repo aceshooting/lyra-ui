@@ -236,6 +236,48 @@ it('survives disconnect + reconnect and keeps tracking the runs slot afterward',
   expect(labels).to.include('Agent runs');
 });
 
+it('recreates its slot observer in the adopted owner realm and disconnects it on adoption', async () => {
+  const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
+  await el.updateComplete;
+  el.remove();
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    iframe.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+  const originalMutationObserver = frameWindow.MutationObserver;
+  let observations = 0;
+  let disconnects = 0;
+  class OwnerMutationObserver implements MutationObserver {
+    private observesPanel = false;
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node, options?: MutationObserverInit): void {
+      if (target === el && options?.attributeFilter?.includes('slot')) {
+        this.observesPanel = true;
+        observations += 1;
+      }
+    }
+    takeRecords(): MutationRecord[] { return []; }
+    disconnect(): void { if (this.observesPanel) disconnects += 1; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(observations, 'the destination window observes the panel').to.equal(1);
+    document.adoptNode(el);
+    expect(disconnects, 'adoption disconnects the previous observer').to.equal(1);
+  } finally {
+    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('can shrink to a 320px allocation with a multi-category tabbed node', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">

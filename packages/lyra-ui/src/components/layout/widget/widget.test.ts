@@ -228,6 +228,53 @@ describe("rich label/sublabel", () => {
     await el.updateComplete;
     expect(base.getAttribute("aria-label")).to.equal("Updated title");
   });
+
+  it("recreates its slotted-label observer in the adopted owner realm", async () => {
+    const el = (await fixture(html`
+      <lr-widget expandable><span slot="label">Owner label</span>content</lr-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    const label = el.querySelector('[slot="label"]')!;
+    el.remove();
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    const frameWindow = iframe.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      iframe.remove();
+      throw new Error("The iframe realm was unavailable.");
+    }
+    const originalMutationObserver = frameWindow.MutationObserver;
+    let labelObservations = 0;
+    let labelDisconnects = 0;
+    class OwnerMutationObserver implements MutationObserver {
+      private observesLabel = false;
+      constructor(_callback: MutationCallback) {}
+      observe(target: Node): void {
+        if (target === label) {
+          this.observesLabel = true;
+          labelObservations += 1;
+        }
+      }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void { if (this.observesLabel) labelDisconnects += 1; }
+    }
+    frameWindow.MutationObserver = OwnerMutationObserver;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(labelObservations, "the destination window observes the assigned label").to.be.greaterThan(0);
+      document.adoptNode(el);
+      expect(labelDisconnects, "adoption disconnects the old owner observer").to.be.greaterThan(0);
+    } finally {
+      frameWindow.MutationObserver = originalMutationObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
 });
 
 describe("views", () => {

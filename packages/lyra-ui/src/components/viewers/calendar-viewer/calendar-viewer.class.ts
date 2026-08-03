@@ -4,22 +4,34 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
 import {
   isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
   readResponseText,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { loadIcal } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_calendarViewerEmpty, LYRA_DEFAULT_calendarViewerLabel, LYRA_DEFAULT_calendarViewerMissingParser, LYRA_DEFAULT_calendarViewerNoSummary, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeCalendar, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
-export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
+}
 const MAX_CALENDAR_EVENTS = 10_000;
 
 function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
@@ -36,6 +48,15 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  *
  * @customElement lr-calendar-viewer
  * @event lr-render-error - Fired when fetching or parsing the calendar fails.
+ * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
+ *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
+ *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
+ *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
+ *   non-cancelable.
+ * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
+ *   rendered calendar. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
+ *   Bubbling, composed, and non-cancelable.
  * @csspart base - The root container.
  * @csspart body - The scrollable calendar body.
  * @csspart event-list - The event list.
@@ -52,6 +73,30 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    calendarViewerEmpty: LYRA_DEFAULT_calendarViewerEmpty,
+    calendarViewerLabel: LYRA_DEFAULT_calendarViewerLabel,
+    calendarViewerMissingParser: LYRA_DEFAULT_calendarViewerMissingParser,
+    calendarViewerNoSummary: LYRA_DEFAULT_calendarViewerNoSummary,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeCalendar: LYRA_DEFAULT_documentPreviewTypeCalendar,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
@@ -68,9 +113,11 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private generation = 0;
   private lastLoadSrc = '';
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
       if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
@@ -79,11 +126,21 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -92,8 +149,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -101,7 +158,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
@@ -147,8 +204,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return this.fetchState.events.length ? html`<ul part="event-list">${this.fetchState.events.map((event) => this.renderEvent(event))}</ul>` : html`<p class="empty-note">${this.localize('calendarViewerEmpty')}</p>`;
-      case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
-      case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeCalendar') })}</p>`;
     }
   }

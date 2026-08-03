@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './agent-trace.styles.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendType, LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from '../trace-tree/span.js';
 
@@ -89,6 +94,22 @@ export interface LyraAgentTraceEventMap {
  * @since 4.1.0
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    agentTraceFilterLabel: LYRA_DEFAULT_agentTraceFilterLabel,
+    handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
+    handoffToAgent: LYRA_DEFAULT_handoffToAgent,
+    spanKindAgent: LYRA_DEFAULT_spanKindAgent,
+    spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
+    spanKindLlm: LYRA_DEFAULT_spanKindLlm,
+    spanKindOther: LYRA_DEFAULT_spanKindOther,
+    spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
+    spanKindTool: LYRA_DEFAULT_spanKindTool,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled

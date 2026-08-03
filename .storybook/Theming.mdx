@@ -4,9 +4,9 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Theming
 
-Every visual value in the library resolves through a CSS custom property. There is no theme
-provider, no JavaScript configuration object and no build step — you set custom properties, and the
-components follow.
+Every visual value in the library resolves through a CSS custom property. No provider or build step
+is required: applications can set custom properties directly, while the optional production
+JavaScript runtime documented below applies and persists the same contract.
 
 The whole system is three layers deep, and **which layer you set decides how far your override
 reaches**. That is the one thing worth understanding before anything else on this page.
@@ -119,26 +119,52 @@ import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
 setLyraTheme({ mode: 'dark' });               // omitted fields keep their current value
 setLyraTheme({ accent: '#7c3aed' });          // mode stays 'dark'
 getLyraTheme();                               // → { mode: 'dark', accent: '#7c3aed' }
-setLyraTheme({ mode: 'auto', accent: null }); // clears the override and the accent
+setLyraTheme({ mode: 'auto' });               // follows the OS, including later changes
+setLyraTheme({ mode: 'unset', accent: null }); // removes Lyra's override and accent
 ```
 
 `setLyraTheme()` persists to `localStorage['lyra-theme']`, applies to `document.documentElement`,
 and dispatches `lr-theme-change` on `window`. It never throws: where `localStorage` is unavailable
 it degrades to apply-without-persist.
 
-Two things surprise people here:
+`mode: 'auto'` resolves `prefers-color-scheme` and keeps a media-query listener active;
+`mode: 'unset'` is the distinct no-override state for application-owned cascades. A valid absolute
+CSS `accent` is expanded into the complete brand fill/border/on-color and focus ramp. Generated
+foregrounds meet 4.5:1 contrast against their fills; normal/loud borders and the focus color meet
+3:1 against the shipped mode surface. If an application also replaces the surface input, it must
+recheck or override those paired ramp inputs. Malformed, CSS-wide, environment-relative, and
+unresolved `var()` colors fail closed to `accent: null` instead of leaving an inert hook behind.
 
-- **`mode: 'auto'` means "no override", not "follow the OS".** With `theme.css` imported, its
-  `:root` block sets the full light palette unconditionally, so `'auto'` renders light whatever the
-  OS says. To follow the OS, resolve `matchMedia('(prefers-color-scheme: dark)')` yourself and pass
-  a concrete `'light'` / `'dark'`.
-- **`accent` is a hook for your CSS, not a token the library reads.** It is written to
-  `--lr-theme-accent` on the root element; no component consumes it. Point the real inputs at it,
-  writing one rule per mode so each arm's fallback carries that mode's own value.
+Reusable application choices can use the first-class preset entry:
+
+```ts
+import {
+  applyLyraThemePreset,
+  defineLyraThemePreset,
+} from '@aceshooting/lyra-ui/theme/presets.js';
+
+applyLyraThemePreset('sapphire'); // system mode plus the built-in sapphire accent
+applyLyraThemePreset(defineLyraThemePreset({
+  id: 'application-ocean',
+  theme: { mode: 'dark', accent: '#22d3ee' },
+}));
+```
+
+Built-ins cover `system`, explicit `light`/`dark`, `unset`, and four contrast-checked gemstone accents.
+Applying one reflects its stable id to `data-lr-theme-preset` and emits
+`lr-theme-preset-change`; direct `setLyraTheme()` calls clear the marker.
+`defineLyraThemePreset()` validates the lowercase kebab-case id and field shapes, then freezes the
+preset; CSS color syntax is checked by the production runtime when it is applied.
 
 For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** meant to be inlined
 into a `<script>` in `<head>` before any stylesheet, so the persisted theme lands on the root
 element before first paint.
+
+`createLyraThemeBootstrap({ storageKey })` produces the same pre-paint script for an
+application-owned storage key. Generated option literals escape HTML script terminators; under a
+Content Security Policy, give the inline script the nonce or hash required by the application.
+An empty or malformed record receives the runtime's `auto`/no-accent default; blocked storage is a
+safe no-op.
 
 ### Invalidating canvas theme values
 

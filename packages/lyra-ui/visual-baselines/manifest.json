@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "axes": [
+    {
+      "name": "light",
+      "globals": { "theme": "light", "direction": "ltr" },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "dark",
+      "globals": { "theme": "dark", "direction": "ltr" },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "rtl",
+      "globals": { "theme": "light", "direction": "rtl" },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "forced-colors",
+      "globals": { "theme": "light", "direction": "ltr" },
+      "emulation": { "forcedColors": "active" },
+      "artifactPolicy": "evidence-only"
+    },
+    {
+      "name": "narrow",
+      "globals": { "theme": "light", "direction": "ltr" },
+      "viewport": { "width": 320, "height": 800 },
+      "artifactPolicy": "evidence-only"
+    }
+  ],
+  "coverageProfiles": {
+    "standard": {
+      "axes": ["light", "dark", "rtl"],
+      "exemptions": {
+        "forced-colors": "Targeted forced-colors coverage is assigned to intrinsic-color and chart fixtures.",
+        "narrow": "Targeted narrow-allocation coverage is assigned to a dedicated responsive fixture."
+      }
+    },
+    "forced-colors-intrinsic": {
+      "axes": ["light", "dark", "rtl", "forced-colors"],
+      "exemptions": {
+        "narrow": "This fixture covers intrinsic painted colors; narrow allocation is covered separately."
+      }
+    },
+    "forced-colors-chart": {
+      "axes": ["light", "dark", "rtl", "forced-colors"],
+      "exemptions": {
+        "narrow": "This fixture covers repeated-system-color chart encodings; narrow allocation is covered separately."
+      }
+    },
+    "narrow-responsive": {
+      "axes": ["light", "dark", "rtl", "narrow"],
+      "exemptions": {
+        "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
+      }
+    }
+  },
+  "stories": [
+    { "id": "checkbox--default", "profile": "standard" },
+    { "id": "input--default", "profile": "standard" },
+    { "id": "input-native-time-input--default", "profile": "standard" },
+    {
+      "id": "select--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "input-radio-group--default", "profile": "standard" },
+    { "id": "forms-radio-button--default", "profile": "standard" },
+    { "id": "switch--default", "profile": "standard" },
+    {
+      "id": "textarea--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "slider--default", "profile": "standard" },
+    {
+      "id": "combobox--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "forms-otp-input--appearances-and-sizes", "profile": "standard" },
+    { "id": "form-color-picker--open", "profile": "standard" },
+    {
+      "id": "form-color-picker--inline-compatibility",
+      "profile": "forced-colors-intrinsic",
+      "forcedColorsProbe": "intrinsic-color"
+    },
+    {
+      "id": "forms-phoneinput--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "form-rating--default", "profile": "standard" },
+    { "id": "dialog--open-initially", "profile": "standard" },
+    { "id": "drawer--end", "profile": "standard" },
+    { "id": "feedback-alert--variants", "profile": "standard" },
+    { "id": "feedback-callout--appearances", "profile": "standard" },
+    { "id": "overlay-dropdown--default", "profile": "standard" },
+    { "id": "overlay-popover--default", "profile": "standard" },
+    { "id": "overlay-tooltip--default", "profile": "standard" },
+    { "id": "overlays-popup--with-arrow", "profile": "standard" },
+    { "id": "toast--triggers", "profile": "standard" },
+    { "id": "toolapprovaldialog--open-initially", "profile": "standard" },
+    { "id": "menu--gear-menu", "profile": "standard" },
+    {
+      "id": "charts-litechart--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "charts-bar--default", "profile": "standard" },
+    { "id": "charts-line--default", "profile": "standard" },
+    {
+      "id": "gauge--radial",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "heatmap--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "data-sparkline--line",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "graph--default", "profile": "standard" },
+    { "id": "map--default", "profile": "standard" },
+    {
+      "id": "wordcloud--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "charts-chart--default",
+      "profile": "forced-colors-chart",
+      "forcedColorsProbe": "chart-encodings"
+    },
+    { "id": "charts-pie--default", "profile": "forced-colors-chart" },
+    { "id": "charts-doughnut--default", "profile": "standard" },
+    { "id": "charts-radar--default", "profile": "standard" },
+    { "id": "charts-scatter--default", "profile": "standard" },
+    { "id": "charts-polararea--default", "profile": "standard" },
+    { "id": "charts-bubble--default", "profile": "standard" },
+    { "id": "charts-histogram--default", "profile": "standard" },
+    { "id": "charts-boxplot--default", "profile": "standard" },
+    { "id": "qr-code--default", "profile": "standard" },
+    { "id": "audio-visualizer--idle", "profile": "standard" },
+    { "id": "animatedimage--default", "profile": "standard" },
+    { "id": "documentviewer-pdfviewer--default", "profile": "standard" },
+    { "id": "jsonviewer--default", "profile": "standard" },
+    { "id": "codeblock--default", "profile": "standard" },
+    { "id": "markdown--default", "profile": "standard" },
+    { "id": "documentviewer-csvviewer--quoted-fields", "profile": "standard" },
+    { "id": "docxviewer--default", "profile": "standard" },
+    { "id": "chunk-inspector--default", "profile": "standard" },
+    { "id": "ingestion-queue--default", "profile": "standard" },
+    { "id": "documentviewer-pagerail--mediated", "profile": "standard" },
+    { "id": "threadlist--default", "profile": "standard" },
+    { "id": "documentviewer-notebookviewer--default", "profile": "standard" },
+    { "id": "neighbor-list--default", "profile": "standard" },
+    { "id": "retrieval-results--default", "profile": "standard" },
+    { "id": "activityfeed--live-expanded", "profile": "standard" },
+    { "id": "documentviewer-datasetviewer--default", "profile": "standard" },
+    { "id": "archiveviewer--default", "profile": "standard" },
+    {
+      "id": "pagination--appearance",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "pagination--narrow-allocation",
+      "profile": "narrow-responsive",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "navigation-tree-node--declarative", "profile": "standard" },
+    { "id": "media-pan-zoom--slotted-content", "profile": "standard" },
+    { "id": "media-video--full-controls", "profile": "standard" },
+    { "id": "media-video-playlist--full-controls", "profile": "standard" },
+    { "id": "apprail--forced-icon-only", "profile": "standard" },
+    {
+      "id": "layout-menu-label--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "layout-page--desktop", "profile": "standard" },
+    { "id": "layout-page--mobile-drawer", "profile": "standard" },
+    { "id": "layout-split-panel--default", "profile": "standard" },
+    { "id": "responsivepanel--forced-overlay-bottom-sheet", "profile": "standard" },
+    {
+      "id": "split--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "tabs--default", "profile": "standard" },
+    { "id": "tabs--element-model", "profile": "standard" },
+    { "id": "card--outlined", "profile": "standard" },
+    {
+      "id": "table--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    { "id": "disclosure-accordion--default", "profile": "standard" },
+    { "id": "styles-native-and-utilities--layout-and-prose", "profile": "standard" },
+    { "id": "utility-visually-hidden--skip-link", "profile": "standard" }
+  ],
+  "tagCoverage": {
+    "lr-accordion": ["disclosure-accordion--default"],
+    "lr-activity-feed": ["activityfeed--live-expanded"],
+    "lr-alert": ["feedback-alert--variants"],
+    "lr-animated-image": ["animatedimage--default"],
+    "lr-app-rail": ["apprail--forced-icon-only"],
+    "lr-archive-viewer": ["archiveviewer--default"],
+    "lr-audio-visualizer": ["audio-visualizer--idle"],
+    "lr-bar-chart": ["charts-bar--default"],
+    "lr-box-plot": ["charts-boxplot--default"],
+    "lr-bubble-chart": ["charts-bubble--default"],
+    "lr-callout": ["feedback-callout--appearances"],
+    "lr-card": ["card--outlined"],
+    "lr-chart": ["charts-chart--default"],
+    "lr-checkbox": ["checkbox--default"],
+    "lr-chunk-inspector": ["chunk-inspector--default"],
+    "lr-code-block": ["codeblock--default"],
+    "lr-color-picker": ["form-color-picker--open", "form-color-picker--inline-compatibility"],
+    "lr-combobox": ["combobox--default"],
+    "lr-csv-viewer": ["documentviewer-csvviewer--quoted-fields"],
+    "lr-dataset-viewer": ["documentviewer-datasetviewer--default"],
+    "lr-dialog": ["dialog--open-initially"],
+    "lr-doughnut-chart": ["charts-doughnut--default"],
+    "lr-docx-viewer": ["docxviewer--default"],
+    "lr-drawer": ["drawer--end"],
+    "lr-dropdown": ["overlay-dropdown--default"],
+    "lr-gauge": ["gauge--radial"],
+    "lr-graph": ["graph--default"],
+    "lr-heatmap": ["heatmap--default"],
+    "lr-histogram": ["charts-histogram--default"],
+    "lr-ingestion-queue": ["ingestion-queue--default"],
+    "lr-input": ["input--default"],
+    "lr-json-viewer": ["jsonviewer--default"],
+    "lr-line-chart": ["charts-line--default"],
+    "lr-lite-chart": ["charts-litechart--default"],
+    "lr-map": ["map--default"],
+    "lr-markdown": ["markdown--default"],
+    "lr-menu": ["menu--gear-menu"],
+    "lr-menu-label": ["layout-menu-label--default"],
+    "lr-native-time-input": ["input-native-time-input--default"],
+    "lr-neighbor-list": ["neighbor-list--default"],
+    "lr-notebook-viewer": ["documentviewer-notebookviewer--default"],
+    "lr-otp-input": ["forms-otp-input--appearances-and-sizes"],
+    "lr-page": ["layout-page--desktop", "layout-page--mobile-drawer"],
+    "lr-page-rail": ["documentviewer-pagerail--mediated"],
+    "lr-pagination": ["pagination--appearance", "pagination--narrow-allocation"],
+    "lr-pan-zoom": ["media-pan-zoom--slotted-content"],
+    "lr-pdf-viewer": ["documentviewer-pdfviewer--default"],
+    "lr-phone-input": ["forms-phoneinput--default"],
+    "lr-pie-chart": ["charts-pie--default"],
+    "lr-polar-area-chart": ["charts-polararea--default"],
+    "lr-popover": ["overlay-popover--default"],
+    "lr-popup": ["overlays-popup--with-arrow"],
+    "lr-qr-code": ["qr-code--default"],
+    "lr-radar-chart": ["charts-radar--default"],
+    "lr-radio-button": ["forms-radio-button--default"],
+    "lr-radio-group": ["input-radio-group--default"],
+    "lr-rating": ["form-rating--default"],
+    "lr-responsive-panel": ["responsivepanel--forced-overlay-bottom-sheet"],
+    "lr-retrieval-results": ["retrieval-results--default"],
+    "lr-scatter-chart": ["charts-scatter--default"],
+    "lr-select": ["select--default"],
+    "lr-slider": ["slider--default"],
+    "lr-sparkline": ["data-sparkline--line"],
+    "lr-split": ["split--default"],
+    "lr-split-panel": ["layout-split-panel--default"],
+    "lr-switch": ["switch--default"],
+    "lr-tab-group": ["tabs--default", "tabs--element-model"],
+    "lr-table": ["table--default"],
+    "lr-textarea": ["textarea--default"],
+    "lr-thread-list": ["threadlist--default"],
+    "lr-toast": ["toast--triggers"],
+    "lr-tool-approval-dialog": ["toolapprovaldialog--open-initially"],
+    "lr-tooltip": ["overlay-tooltip--default"],
+    "lr-tree-item": ["navigation-tree-node--declarative"],
+    "lr-video": ["media-video--full-controls"],
+    "lr-video-playlist": ["media-video-playlist--full-controls"],
+    "lr-visually-hidden": ["utility-visually-hidden--skip-link"],
+    "lr-word-cloud": ["wordcloud--default"]
+  },
+  "untaggedStories": {
+    "styles-native-and-utilities--layout-and-prose": "This fixture exercises authored native-element and utility CSS, not a custom element."
+  },
+  "provenance": {
+    "generator": "packages/lyra-ui/scripts/visual-regression.mjs",
+    "generatedBy": "automated-coding-agent",
+    "generatedOn": "2026-08-02",
+    "artifactScope": "ephemeral-evidence",
+    "captureCommand": "pnpm --filter @aceshooting/lyra-ui test:visual -- --filter <story-id>",
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "provider": "playwright"
+    },
+    "platform": { "os": "linux", "arch": "x64" },
+    "sourceTree": {
+      "baseCommit": "f9998fd0a9180ca8f641ba9ca871b71d29d3f4fc",
+      "dirty": true
+    },
+    "humanVisualReview": false
+  },
+  "baselineReview": {
+    "status": "pending-human-review",
+    "reviewer": null,
+    "reviewedAt": null,
+    "knownLimitations": [
+      "The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.",
+      "Four forced-colors/narrow captures and 42 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
+      "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
+      "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
+    ]
+  }
+}

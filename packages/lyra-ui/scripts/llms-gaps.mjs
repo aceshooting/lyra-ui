@@ -5,6 +5,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { splitSections, readTagFacts, FAMILIES } from './build-llms.mjs';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 export const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -90,8 +91,10 @@ export function ownsToken(tag, token, allTags) {
  *   component's own section never mentions.
  */
 export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverride = null) {
-  const manifest = manifestOverride ?? JSON.parse(
-    readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'),
+  const manifest = expandManifestInheritance(
+    manifestOverride ?? JSON.parse(
+      readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'),
+    ),
   );
   const tagFacts = readTagFacts(manifest);
   const declFor = new Map();

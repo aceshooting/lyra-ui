@@ -2,7 +2,7 @@
 
 # `lr-document-compare`
 
-- **Import** `import '@aceshooting/lyra-ui/components/viewers/document-compare/document-compare.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-document-compare.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDocumentCompare`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-compare/document-compare.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`

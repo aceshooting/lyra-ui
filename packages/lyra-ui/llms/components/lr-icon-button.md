@@ -2,7 +2,7 @@
 
 # `lr-icon-button`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-icon-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

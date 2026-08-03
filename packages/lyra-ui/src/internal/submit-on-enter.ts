@@ -77,6 +77,23 @@ const BLOCKING_INPUT_TYPES: ReadonlySet<string> = new Set([
 /** `type` values that mark a custom element as a button rather than a field. */
 const BUTTON_TYPES: ReadonlySet<string> = new Set(['button', 'submit', 'reset']);
 
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
+
+type NativeButtonKind = 'button' | 'input';
+
+/**
+ * Native controls keep their creator-realm prototype after adoption, so neither the ambient nor
+ * the current owner document's constructors can classify them reliably. Their HTML namespace and
+ * fixed local names are the realm-neutral platform identity that survives both adoption and an
+ * owner document without a browsing context.
+ */
+function nativeButtonKind(element: Element): NativeButtonKind | undefined {
+  if (element.namespaceURI !== HTML_NAMESPACE) return undefined;
+  if (element.localName === 'button') return 'button';
+  if (element.localName === 'input') return 'input';
+  return undefined;
+}
+
 function customElementType(element: Element): string | undefined {
   const value = (element as { type?: unknown }).type;
   return typeof value === 'string' ? value : undefined;
@@ -94,10 +111,20 @@ function isInert(element: Element): boolean {
   }
 }
 
+/** Whether `element` is a native submitter accepted by `HTMLFormElement.requestSubmit()`. */
+export function isNativeSubmitter(
+  element: Element,
+): element is HTMLButtonElement | HTMLInputElement {
+  const kind = nativeButtonKind(element);
+  const type = customElementType(element);
+  if (kind === 'button') return type === 'submit';
+  if (kind === 'input') return type === 'submit' || type === 'image';
+  return false;
+}
+
 /** Whether `element` is a submit control — native or a `type="submit"` custom element. */
 function isSubmitControl(element: Element): boolean {
-  if (element instanceof HTMLButtonElement) return element.type === 'submit';
-  if (element instanceof HTMLInputElement) return element.type === 'submit' || element.type === 'image';
+  if (isNativeSubmitter(element)) return true;
   return element.localName.includes('-') && customElementType(element) === 'submit';
 }
 
@@ -110,7 +137,9 @@ function isSubmitControl(element: Element): boolean {
  * doing what it already does today.
  */
 function blocksImplicitSubmission(element: Element): boolean {
-  if (element instanceof HTMLInputElement) return BLOCKING_INPUT_TYPES.has(element.type);
+  if (nativeButtonKind(element) === 'input') {
+    return BLOCKING_INPUT_TYPES.has(customElementType(element) ?? '');
+  }
   if (!element.localName.includes('-')) return false;
   const type = customElementType(element);
   return type === undefined || !BUTTON_TYPES.has(type);
@@ -171,7 +200,7 @@ export function submitOnEnter(
   options.beforeSubmit?.();
   if (!submitter) {
     form.requestSubmit();
-  } else if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
+  } else if (isNativeSubmitter(submitter)) {
     form.requestSubmit(submitter);
   } else {
     // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform

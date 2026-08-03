@@ -2,7 +2,7 @@
 
 # `lr-empty`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/empty/empty.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-empty.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEmpty`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -54,8 +54,18 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 ```
 
 **Known gotchas:**
-- `[part="base"]` is `role="status" aria-live="polite"`, so a list/table transitioning to empty
-  does announce to screen readers — no extra wiring needed on the host's part.
+- Initial content and reconnect state—including property changes made while detached—stay silent.
+  Later meaningful heading and description changes are appended to Lyra's shared light-DOM polite
+  announcement sink. Default-slot illustrations, action-slot controls, nested hidden/inert/
+  `aria-hidden="true"` content, updates under a hidden/CSS-hidden composed ancestor, and mutations
+  that leave the accessible text unchanged are excluded;
+  a `visibility:hidden|collapse` wrapper suppresses its own text but not a descendant that restores
+  `visibility:visible`;
+  nested forwarding slots contribute their flattened assigned heading/description text instead of
+  fallback content, and later assignment plus assigned-node text/style/visibility changes are
+  observed without turning initial distribution into a live update;
+  a host `aria-label` names the host but does not replace that visible update text;
+  the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
   `lr-table` reuses this component for its own empty-rows state, and `lr-stat` (below) now uses

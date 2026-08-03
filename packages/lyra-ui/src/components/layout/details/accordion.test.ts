@@ -380,6 +380,44 @@ describe('<lr-accordion>', () => {
   });
 });
 
+it('recognizes foreign-realm accordion items in focus and keyboard event paths', async () => {
+  const accordion = (await fixture(html`<lr-accordion></lr-accordion>`)) as LyraAccordion;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const foreignDocument = iframe.contentDocument!;
+    const first = foreignDocument.createElement('lr-accordion-item') as unknown as LyraAccordionItem;
+    const second = foreignDocument.createElement('lr-accordion-item') as unknown as LyraAccordionItem;
+    Object.assign(first, { disabled: false, isTabbable: false });
+    Object.assign(second, { disabled: false, isTabbable: false });
+    let focused = false;
+    Object.defineProperty(second, 'focus', { configurable: true, value: () => { focused = true; } });
+
+    const access = accordion as unknown as {
+      panels: Set<LyraAccordionItem>;
+      handleFocusIn(event: FocusEvent): void;
+      handleKeyDown(event: KeyboardEvent): void;
+    };
+    access.panels.add(first);
+    access.panels.add(second);
+    access.handleFocusIn({ composedPath: () => [first] } as unknown as FocusEvent);
+    expect(first.isTabbable).to.equal(true);
+
+    let prevented = false;
+    access.handleKeyDown({
+      key: 'ArrowDown',
+      composedPath: () => [first],
+      preventDefault: () => { prevented = true; },
+      stopPropagation: () => undefined,
+    } as unknown as KeyboardEvent);
+    expect(prevented).to.equal(true);
+    expect(second.isTabbable).to.equal(true);
+    expect(focused).to.equal(true);
+  } finally {
+    iframe.remove();
+  }
+});
+
 describe('<lr-accordion-item>', () => {
   it('exposes the complete item surface and keeps Details aliases synchronized', async () => {
     const item = (await fixture(html`<lr-accordion-item

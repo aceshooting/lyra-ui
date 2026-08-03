@@ -2,7 +2,7 @@
 
 # `lr-lightbox`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/lightbox/lightbox.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-lightbox.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLightbox`, also available unregistered from `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -30,7 +30,10 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
-  The independent `[part="live-region"]` announcement remains active when the counter is hidden.
+  Spoken position updates remain active when the counter is hidden: the shadow
+  `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
+  shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor
+  is excluded from the accessibility tree.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
@@ -54,8 +57,10 @@ between the counter and the close button.
 
 **CSS parts:** `backdrop`, `panel` (`role="dialog"` + `aria-modal="true"` while open; fills the
 padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible localized "Image N of
-Total"), `live-region` (visually-hidden `role="status"` that announces position on *every* `index`
-change, including consumer-driven ones), `actions` (wrapper, `hidden` when nothing is slotted),
+Total"), `live-region` (an `aria-hidden` shadow text mirror; each post-mount `index` change,
+including a consumer-driven one, appends the localized position to the document's shared
+`[data-lr-live-region="polite"]` sink; initial mount and reconnect are silent), `actions` (wrapper,
+`hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
 embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its

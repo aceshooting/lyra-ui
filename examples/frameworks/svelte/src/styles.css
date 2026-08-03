@@ -1,0 +1,15 @@
+:root {
+  font-family: var(--lr-theme-font-family-body);
+  color: var(--lr-theme-color-text-normal);
+  background: var(--lr-theme-color-surface-default);
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-inline-size: 48rem;
+  margin-inline: auto;
+  padding: var(--lr-theme-space-2xl);
+}

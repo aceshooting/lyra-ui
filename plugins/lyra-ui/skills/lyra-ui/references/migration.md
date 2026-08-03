@@ -7,35 +7,36 @@ does not by itself prove API compatibility. The codemod changes only `exact` and
 mappings; `warning-required`, `conceptual-only`, `unsupported`, and unknown tags stay unchanged
 and receive location-aware warnings.
 
-```bash
-pnpm migrate-wa -- --dry-run --report=lyra-migration.json src
-```
-
-The same version-matched CLI ships with the package and can be run without a repository
-checkout. Replace `<version>` with the installed Lyra major/minor/patch you are targeting:
+The version-matched CLI ships with the package and runs without a repository checkout.
+Replace `<version>` with the installed Lyra major/minor/patch you are targeting:
 
 ```bash
-npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check src
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --check --report=lyra-migration.json src
 ```
 
 `--check` never writes source files and exits nonzero while rewrites or warnings remain, which
 makes it suitable for CI after an applied migration.
 
-The tool scans HTML, JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites
-inventory-declared tags, members, defaults, and supported side-effect registration imports.
+The supported upstream identities are `@awesome.me/webawesome` and `@awesome.me/webawesome-pro`
+for Web Awesome, plus `@shoelace-style/shoelace`. The tool scans HTML, standalone CSS,
+JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites inventory-declared
+tags, members, defaults, and supported side-effect registration imports.
 Imports with bindings remain manual because exported names cannot be inferred safely. An
 aliased component value that uses a rewritten member blocks that mapping across the scanned
 target set, preventing a registration import from changing while an old member remains. A root
-Web Awesome or Shoelace registration import changes only when that package identity has a
-proven-safe automatic component use and no manual component use anywhere in the scanned target
+Web Awesome or Shoelace registration import changes only when that package identity and tier
+prove the registration closure and no manual component use exists anywhere in the scanned target
 set. Root-included targets use `@aceshooting/lyra-ui/all.js`; root-excluded targets receive granular registration imports.
+An automatic-looking tag with no matching side-effect registration in the scanned target set
+stays unchanged with `REGISTRATION_CLOSURE_REQUIRED`; include the registration-owning entry file
+in the scan instead of accepting an inert `lr-*` result.
 Targets with optional runtime peers also emit an `OPTIONAL_PEER_REQUIRED` report entry naming
 each package that must be installed.
 Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are
 left alone.
 
 The JSON migration report records every rewrite and warning with its file, line, column,
-origin, tag/member, action, target, and warning code. Run without `--dry-run` only after inspecting
+origin, tag/member, action, target, and warning code. Run without `--check` only after inspecting
 that report and the target component reference in `llms/components/<tag>.md`.
 
 `dir` and `lang` are platform-global HTML passthrough attributes, not component-member drift.
@@ -50,7 +51,7 @@ Lyra 7 default. Boolean `true` is emitted as canonical attribute presence, inclu
 inverse `without-arrow` spelling.
 
 ```bash
-pnpm migrate-wa -- --origin=lyra-v7 --dry-run --report=lyra-v7-migration.json src
+npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check --report=lyra-v7-migration.json src
 ```
 
 Opaque framework spreads and DOM aliases block that component profile across the scanned target
@@ -66,9 +67,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 37 | 45 | 5 | 0 | 0 | 82 | 5 |
-| Shoelace | 18 | 37 | 3 | 0 | 0 | 55 | 3 |
-| **Total** | **55** | **82** | **8** | **0** | **0** | **137** | **8** |
+| Web Awesome | 37 | 43 | 7 | 0 | 0 | 80 | 7 |
+| Shoelace | 18 | 36 | 4 | 0 | 0 | 54 | 4 |
+| **Total** | **55** | **79** | **11** | **0** | **0** | **134** | **11** |
 
 ## Web Awesome (87)
 
@@ -76,7 +77,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 
 | From | Lyra target or candidate | Classification | Disposition |
 |---|---|---|---|
-| `<wa-accordion>` | `<lr-accordion>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand. |
+| `<wa-accordion>` | `<lr-accordion>` | `warning-required` | Manual: Lyra preserves legacy direct <lr-details> panels, so the event detail item is a union rather than only LyraAccordionItem; migrated handlers that rely on item-specific members require review. |
 | `<wa-accordion-item>` | `<lr-accordion-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-animated-image>` | `<lr-animated-image>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error; events: wa-load → lr-load. |
 | `<wa-animation>` | `<lr-animation>` | `rewritten` | Automatic: tag/import plus events: wa-cancel → lr-cancel; events: wa-finish → lr-finish; events: wa-start → lr-start. |
@@ -90,7 +91,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-callout>` | `<lr-callout>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-carousel>` | `<lr-carousel>` | `rewritten` | Automatic: tag/import plus attributes: currentSlide → current-slide; events: wa-slide-change → lr-slide-change. |
+| `<wa-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |
 | `<wa-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-chart>` | `<lr-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
@@ -136,7 +137,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Light-DOM candidate eligibility and selection behavior require an explicit compatibility review; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members. |
+| `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Light-DOM candidate eligibility and selection behavior require an explicit compatibility review. Lyra also applies reduced-motion autoplay suppression and renders a visible pause/resume control; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: wa-resize → lr-resize. |
@@ -180,7 +181,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-button>` | `<lr-button>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference. |
 | `<sl-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-carousel>` | `<lr-carousel>` | `rewritten` | Automatic: tag/import plus events: sl-slide-change → lr-slide-change. |
+| `<sl-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |
 | `<sl-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
@@ -189,7 +190,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-dialog>` | `<lr-dialog>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-initial-focus → lr-initial-focus; events: sl-request-close → lr-request-close; events: sl-show → lr-show. Equivalent surface representation: modal defaults new Modal(this) ≡ { activateExternal: () => { this.externalModalDepth++; if (this.externalModalDepth === 1) this.overlay?.suspend(); }, deactivateExternal: () => { if (this.externalModalDepth === 0) return; this.externalModalDepth--; if (this.externalModalDepth === 0 && this.open && this.modalSurface) { this.overlay?.resume(); queueMicrotask(() => this.focusInitial()); } }, }; no source rewrite. |
 | `<sl-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-drawer>` | `<lr-drawer>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-initial-focus → lr-initial-focus; events: sl-request-close → lr-request-close; events: sl-show → lr-show. Equivalent surface representation: modal defaults new Modal(this) ≡ { activateExternal: () => { this.externalModalDepth++; if (this.externalModalDepth === 1) this.overlay?.suspend(); }, deactivateExternal: () => { if (this.externalModalDepth === 0) return; this.externalModalDepth--; if (this.externalModalDepth === 0 && this.open && this.modalSurface) { this.overlay?.resume(); queueMicrotask(() => this.focusInitial()); } }, }; no source rewrite. |
-| `<sl-dropdown>` | `<lr-dropdown>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. Equivalent surface representation: containing-element is analyzer-inferred for property-only containingElement; no source rewrite. |
+| `<sl-dropdown>` | `<lr-dropdown>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
 | `<sl-format-bytes>` | `<lr-format-bytes>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-format-date>` | `<lr-format-date>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-format-number>` | `<lr-format-number>` | `exact` | Automatic: tag and supported side-effect registration import. |
@@ -203,18 +204,18 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-menu-label>` | `<lr-menu-label>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: sl-mutation → lr-mutation. |
 | `<sl-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. Equivalent surface representation: auto-size-boundary is analyzer-inferred for property-only autoSizeBoundary; flip-boundary is analyzer-inferred for property-only flipBoundary; popup is analyzer-inferred for property-only popup; shift-boundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
+| `<sl-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. Equivalent surface representation: autoSizeBoundary is analyzer-inferred for property-only autoSizeBoundary; flipBoundary is analyzer-inferred for property-only flipBoundary; shiftBoundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
 | `<sl-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-qr-code>` | `<lr-qr-code>` | `rewritten` | Automatic: tag/import plus insert background=white; insert fill=black. |
 | `<sl-radio>` | `<lr-radio>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-focus → lr-focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-button>` | `<lr-radio-button>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-focus → lr-focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert name=option. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
-| `<sl-range>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus attributes: default-value → value; events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert tooltip=top. Equivalent surface representation: form defaults  ≡ null; name defaults  ≡ null; tooltip-formatter is analyzer-inferred for property-only tooltipFormatter; no source rewrite. |
-| `<sl-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-hover → lr-hover. Equivalent surface representation: get-symbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
+| `<sl-range>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert tooltip=top. Equivalent surface representation: form defaults  ≡ null; name defaults  ≡ null; no source rewrite. |
+| `<sl-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-hover → lr-hover. Equivalent surface representation: getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<sl-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: sl-resize → lr-resize. |
-| `<sl-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → lr-focus; events: sl-hide → lr-hide; events: sl-input → lr-input; events: sl-invalid → lr-invalid; events: sl-show → lr-show. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; get-tag is analyzer-inferred for property-only getTag; no source rewrite. |
+| `<sl-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → lr-focus; events: sl-hide → lr-hide; events: sl-input → lr-input; events: sl-invalid → lr-invalid; events: sl-show → lr-show. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; getTag is analyzer-inferred for property-only getTag; no source rewrite. |
 | `<sl-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-split-panel>` | `<lr-split-panel>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. |

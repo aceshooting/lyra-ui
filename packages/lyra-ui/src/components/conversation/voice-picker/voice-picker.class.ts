@@ -25,6 +25,11 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
@@ -59,8 +64,8 @@ export interface LyraVoicePickerEventMap {
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
   'lr-preview-change': CustomEvent<{ voiceId: string | null }>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: Event;
+  change: Event;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -145,6 +150,25 @@ export interface LyraVoicePickerEventMap {
  * @since 4.0.0
  */
 export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noMatches: LYRA_DEFAULT_noMatches,
+    notInCatalog: LYRA_DEFAULT_notInCatalog,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    voice: LYRA_DEFAULT_voice,
+    voicePickerNoVoices: LYRA_DEFAULT_voicePickerNoVoices,
+    voicePickerPreview: LYRA_DEFAULT_voicePickerPreview,
+    voicePickerRequired: LYRA_DEFAULT_voicePickerRequired,
+    voicePickerStopPreview: LYRA_DEFAULT_voicePickerStopPreview,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -197,6 +221,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private listId = nextId('voice-picker-list');
   private controlId = nextId('voice-picker-control');
   private popupPosition = new AnchoredPopoverController();
+  private pointerListenerDocument?: Document;
+  private pointerListener?: (event: PointerEvent) => void;
   private audioEl?: HTMLAudioElement;
   private _value = '';
   private _fieldsetDisabled = false;
@@ -218,7 +244,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.internals.setFormValue('');
   }
 
@@ -285,20 +312,19 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+    if (this.hasUpdated && this.open) queueMicrotask(() => this.syncPopup());
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
       const switchingMode = renderedClosedMode !== this.closedMode;
-      const focused = activeElementIn(
-        this.renderRoot instanceof ShadowRoot ? this.renderRoot : this.ownerDocument,
-      );
+      const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
       this.suppressControlEvents = switchingMode;
       this.transferControlFocus =
         switchingMode &&
-        focused instanceof HTMLElement &&
-        focused.matches('[part="trigger"], [part="combobox-input"]');
+        focused?.nodeType === 1 &&
+        (focused as Element).matches('[part="trigger"], [part="combobox-input"]');
     }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
@@ -322,9 +348,15 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.popupPosition.disconnect();
-    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.unbindDocumentPointer();
     this.stopInternalPreview();
     this.open = false;
+  }
+
+  adoptedCallback(): void {
+    this.popupPosition.disconnect();
+    this.unbindDocumentPointer();
+    this.stopInternalPreview();
   }
 
   /** The current voice id (empty string when nothing is selected). */
@@ -539,20 +571,53 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
+  private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
+    this.unbindDocumentPointer();
+    const listener = (event: PointerEvent): void => {
+      if (
+        this.pointerListener !== listener ||
+        this.pointerListenerDocument !== ownerDocument ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.onDocPointer(event);
+    };
+    this.pointerListenerDocument = ownerDocument;
+    this.pointerListener = listener;
+    ownerDocument.addEventListener('pointerdown', listener);
+  }
+
+  private unbindDocumentPointer(): void {
+    if (this.pointerListenerDocument && this.pointerListener) {
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+    }
+    this.pointerListenerDocument = undefined;
+    this.pointerListener = undefined;
+  }
+
+  private syncPopup(): void {
+    this.popupPosition.disconnect();
+    if (!this.open || !this.isConnected) {
+      this.unbindDocumentPointer();
+      return;
+    }
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector(
+      this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
+    ) as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
+  }
+
   protected override updated(changed: PropertyValues): void {
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
-      this.popupPosition.disconnect();
-      if (this.open) {
-        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
-        const anchor = this.renderRoot.querySelector(
-          this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
-        ) as HTMLElement | null;
-        const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
-      } else {
-        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
-      }
+      this.syncPopup();
     }
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
@@ -631,7 +696,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const safe = safeMediaSrc(url);
     if (!safe) return;
     this.stopInternalPreview();
-    const audio = new Audio();
+    const audio = this.ownerDocument.createElement('audio');
     audio.src = safe;
     audio.addEventListener('ended', this.onAudioEnded);
     audio.addEventListener('error', this.onAudioLoadFailure);
@@ -657,12 +722,22 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    * or an explicit stop has since superseded this resource, so this is a no-op.
    */
   private onAudioLoadFailure = (eventOrAudio: Event | HTMLAudioElement): void => {
+    const direct = eventOrAudio as unknown as { localName?: string };
+    const candidate =
+      direct.localName === 'audio' ? eventOrAudio : (eventOrAudio as Event).currentTarget;
+    const audioLike = candidate as
+      | (EventTarget & {
+          localName?: string;
+          pause?: () => void;
+          removeEventListener?: typeof EventTarget.prototype.removeEventListener;
+        })
+      | null;
     const failedAudio =
-      eventOrAudio instanceof HTMLAudioElement
-        ? eventOrAudio
-        : eventOrAudio.currentTarget instanceof HTMLAudioElement
-          ? eventOrAudio.currentTarget
-          : undefined;
+      audioLike?.localName === 'audio' &&
+      typeof audioLike.pause === 'function' &&
+      typeof audioLike.removeEventListener === 'function'
+        ? (audioLike as HTMLAudioElement)
+        : undefined;
     if (!failedAudio) return;
     failedAudio.removeEventListener('ended', this.onAudioEnded);
     failedAudio.removeEventListener('error', this.onAudioLoadFailure);

@@ -4,16 +4,16 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
 import {
   isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { invalidateLyraLocaleCache } from '../../../internal/localization.js';
+import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
@@ -26,6 +26,12 @@ import type {
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 type FetchState =
   | { kind: 'idle' }
@@ -72,7 +78,8 @@ const MAX_DOCX_SEARCH_MATCHES = 1_000;
  *  it -- the corpus both `search()` (case-insensitive substring matching) and `paintSearchMatches()`
  *  (re-locating a stored `{ start, end }` match back into the live DOM) share. */
 function buildTextIndex(root: Element): { text: string; entries: DocxTextIndexEntry[] } {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const doc = root.ownerDocument;
+  const walker = doc.createTreeWalker(root, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
   const entries: DocxTextIndexEntry[] = [];
   let text = '';
   let node: Node | null;
@@ -99,8 +106,10 @@ function pointAtOffset(entries: DocxTextIndexEntry[], offset: number): { node: T
  *  text node the range only partially covers -- handles a match spanning an inline element
  *  boundary, not just a single text node. */
 function wrapRangeInSearchMarks(range: Range, part: string): HTMLElement[] {
-  const doc = range.startContainer.ownerDocument ?? document;
-  if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+  const doc = range.startContainer.ownerDocument;
+  if (!doc) return [];
+  const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
+  if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
     const textNode = range.startContainer as Text;
     let target = textNode;
     if (range.endOffset < target.data.length) target.splitText(range.endOffset);
@@ -113,8 +122,8 @@ function wrapRangeInSearchMarks(range: Range, part: string): HTMLElement[] {
     return [mark];
   }
   const ancestor = range.commonAncestorContainer;
-  const walkRoot = ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode! : ancestor;
-  const walker = doc.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT);
+  const walkRoot = ancestor.nodeType === textNodeType ? ancestor.parentNode! : ancestor;
+  const walker = doc.createTreeWalker(walkRoot, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
   const covered: Text[] = [];
   let node: Node | null;
   while ((node = walker.nextNode())) {
@@ -215,6 +224,30 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
+    docxViewerLabel: LYRA_DEFAULT_docxViewerLabel,
+    docxViewerMissingConverter: LYRA_DEFAULT_docxViewerMissingConverter,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and convert as a DOCX document. */
@@ -237,6 +270,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private generation = 0;
   private lastLoadSrc = '';
   private loadLibrary: () => Promise<DocxDeps> = loadDocxDeps;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   /** Document-ordered heading outline, cached on every successful load (see `getHeadingTree()`). */
   private headingTree: DocxHeadingItem[] = [];
@@ -257,6 +291,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -265,9 +300,14 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   override disconnectedCallback(): void {
     this.generation++;
     this.resetResolvedHighlightActions();
+    this.announcements.disconnect();
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -289,6 +329,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.fetchState.kind,
+      this.fetchState.kind === 'error' ? this.fetchState.message : this.localize('loadingDocument'),
+    );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('fetchState')) {
       // The content wrapper is a brand-new element every time fetchState transitions to 'loaded'
@@ -317,15 +362,15 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return;
     }
 
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
 
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const arrayBuffer = await readResponseArrayBuffer(response);
@@ -345,7 +390,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
       const converted = (await mammoth.convertToHtml({ arrayBuffer })) as { value: string; messages: unknown[] };
       if (!this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'loaded', markup: this.stampHeadings(DOMPurify.sanitize(converted.value)) };
+      this.fetchState = {
+        kind: 'loaded',
+        markup: this.stampHeadings(DOMPurify.sanitize(converted.value) as string),
+      };
       if (converted.messages.length > 0) this.emit('lr-render-error', { error: converted.messages });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -368,7 +416,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  `Slugger` per call, matching `<lr-markdown>`'s own per-parse instance, so re-loading a new
    *  document never carries duplicate-slug state from a previous one. */
   private stampHeadings(sanitizedHtml: string): string {
-    const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
+    const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
+    if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
+    const doc = new DOMParserCtor().parseFromString(sanitizedHtml, 'text/html');
     const slugger = new Slugger();
     const tree: DocxHeadingItem[] = [];
     doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((heading) => {
@@ -406,9 +456,14 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     if (!anchor.id) return false;
     const known = this.headingTree.some((h) => h.id === anchor.id);
     if (!known) return false;
-    const el = root.querySelector(`#${CSS.escape(anchor.id)}`) ?? this.findHeadingByComputedId(root, anchor.id);
+    // Fragment anchors are heading ids, so scan that fixed set and compare the raw attribute.
+    // This accepts selector punctuation and works in adopted/partial DOM realms with no
+    // `CSS.escape`, while the positional fallback below still covers sanitizer-stripped ids.
+    const el = [...root.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')]
+      .find((heading) => heading.getAttribute('id') === anchor.id) ??
+      this.findHeadingByComputedId(root, anchor.id);
     if (!el) return false;
-    el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    el.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'start' });
     return true;
   }
 
@@ -428,7 +483,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const range = resolveTextQuote(scopeFromElement(root), anchor, this.effectiveLocale);
     if (!range) return false;
     const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
-    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'center' });
     return true;
   }
 
@@ -479,7 +534,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     );
     for (const [tone, ranges] of rangesByTone) handle.setRanges(tone, ranges);
     handle.setActive(activeRange);
-    if (!supportsCustomHighlights()) {
+    if (!supportsCustomHighlights(this.ownerDocument)) {
       // The `<mark>`-wrap fallback creates real elements but carries no `part` of its own (the
       // module is shared by every adopting viewer, so it can't know this component's part naming)
       // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
@@ -670,7 +725,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private scrollToActiveSearchMatch(): void {
     const active = this.renderRoot.querySelector('mark[part~="search-match-active"]') as HTMLElement | null;
-    active?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    active?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'center' });
   }
 
   private clearSearchPaint(): void {
@@ -696,7 +751,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       const startPoint = pointAtOffset(entries, match.start);
       const endPoint = pointAtOffset(entries, match.end);
       if (!startPoint || !endPoint) continue;
-      const range = document.createRange();
+      const range = root.ownerDocument.createRange();
       range.setStart(startPoint.node, startPoint.offset);
       range.setEnd(endPoint.node, endPoint.offset);
       const part = i === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match';
@@ -719,9 +774,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           </div>
         `;
       case 'loading':
-        return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+        return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error':
-        return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
+        return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
       default:
         return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;

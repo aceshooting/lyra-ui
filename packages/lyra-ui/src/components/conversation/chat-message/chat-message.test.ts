@@ -641,7 +641,7 @@ describe('failure slot', () => {
     const el = (await fixture(html`
       <lr-chat-message><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
     `)) as LyraChatMessage;
-    expect(el.shadowRoot!.querySelector('slot[name="failure"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.be.true;
     // The status is "sent" -- the content sits inert in the light DOM, unslotted, exactly like any
     // other slot="..." content this component doesn't currently have a matching <slot> for.
     expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
@@ -750,6 +750,41 @@ describe('failure slot', () => {
       .not.exist;
     expect(document.activeElement, 'focus must not have silently reverted to <body>').to.not.equal(document.body);
     expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
+  });
+
+  it('rescues focus through the adopted owner document when iframe failure content is removed', async () => {
+    const el = (await fixture(html`
+      <lr-chat-message status="failed">
+        <div slot="failure" role="alert">
+          Send failed
+          <button type="button" id="custom-retry">Retry</button>
+        </div>
+      </lr-chat-message>
+    `)) as LyraChatMessage;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      const button = el.querySelector('#custom-retry') as HTMLButtonElement;
+      button.focus();
+      expect(frameDocument.activeElement?.id).to.equal('custom-retry');
+      expect(document.activeElement === iframe, 'the parent document sees only the iframe boundary').to.be.true;
+
+      el.status = 'sent';
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.be.true;
+      expect(frameDocument.activeElement?.localName, 'focus must stay inside the adopted message').to.equal(
+        'lr-chat-message',
+      );
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('bubble');
+    } finally {
+      el.remove();
+      iframe.remove();
+    }
   });
 
   it('leaves the default (no failure slot) status text, retry button, and live-region announcement byte-identical', async () => {

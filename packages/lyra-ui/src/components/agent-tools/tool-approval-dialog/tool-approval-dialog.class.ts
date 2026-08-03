@@ -3,12 +3,18 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
-import { resolveLocalizedParts } from '../../../internal/localization.js';
+import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_edit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
 
@@ -158,6 +164,26 @@ export interface LyraToolApprovalDialogEventMap {
  * @since 4.0.0
  */
 export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    approve: LYRA_DEFAULT_approve,
+    cancel: LYRA_DEFAULT_cancel,
+    collapse: LYRA_DEFAULT_collapse,
+    deny: LYRA_DEFAULT_deny,
+    details: LYRA_DEFAULT_details,
+    edit: LYRA_DEFAULT_edit,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    invalidJson: LYRA_DEFAULT_invalidJson,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
+    toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
+    toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
@@ -202,10 +228,23 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   @state() private draftError = '';
 
   private overlay?: OverlayHandle;
+  private errorAnnouncementSink?: AnnouncementSink;
+  private suppressNextErrorAnnouncement = true;
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
 
   protected override willUpdate(changed: PropertyValues): void {
+    if (
+      this.hasUpdated &&
+      !this.suppressNextErrorAnnouncement &&
+      changed.has('draftError') &&
+      this.draftError &&
+      !(changed.get('draftError') as string | undefined)
+    ) {
+      // Announce only the transition into an invalid edit. Further keystrokes that remain invalid
+      // keep the visible description current without repeatedly interrupting the user.
+      this.errorAnnouncementSink?.announce(this.draftError);
+    }
     if (changed.has('open')) {
       if (this.open) {
         this.activateOverlay();
@@ -237,6 +276,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // have already landed in the DOM before the focus calls below can rely on
   // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
+    this.suppressNextErrorAnnouncement = false;
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
       return;
@@ -261,6 +301,19 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
+      this.errorAnnouncementSink?.release();
+      this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+        document: this.ownerDocument,
+        source: this,
+      });
+    }
+    if (this.hasUpdated) {
+      // Treat an existing invalid draft as resting content after reconnect, including when its
+      // state write was queued during the detached interval.
+      this.suppressNextErrorAnnouncement = true;
+      this.requestUpdate();
+    }
     if (this.hasUpdated && this.open) {
       this.activateOverlay();
       queueMicrotask(() => this.overlay?.focusInitial());
@@ -270,6 +323,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.overlay?.suspend();
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    this.suppressNextErrorAnnouncement = true;
   }
 
   private activateOverlay(): void {
@@ -432,7 +488,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   @focus=${this.onEditorFocus}
                   @blur=${this.onEditorBlur}
                 ></textarea>
-                <p part="error" id=${this.errorId} role="alert" ?hidden=${!hasError}>${this.draftError}</p>
+                <p part="error" id=${this.errorId} ?hidden=${!hasError}>${this.draftError}</p>
               `
             : html`<lr-json-viewer part="args-view" .data=${this.args}></lr-json-viewer>`}
         </div>

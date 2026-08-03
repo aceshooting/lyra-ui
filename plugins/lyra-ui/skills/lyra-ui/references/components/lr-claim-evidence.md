@@ -2,7 +2,7 @@
 
 # `lr-claim-evidence`
 
-- **Import** `import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-claim-evidence.js';` (stable tag alias; registers the tag)
 - **Class** `LyraClaimEvidence`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`

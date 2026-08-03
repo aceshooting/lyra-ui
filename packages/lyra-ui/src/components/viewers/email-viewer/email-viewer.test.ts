@@ -672,6 +672,59 @@ describe('lr-email-viewer', () => {
   });
 
   describe('fold-quotes (html body)', () => {
+    it('parses folded HTML and quote searches in the adopted owner realm', async () => {
+      const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+      const frameDocument = frame.contentDocument!;
+      const frameWindow = frame.contentWindow!;
+      const ParentDOMParser = window.DOMParser;
+      const OwnerDOMParser = frameWindow.DOMParser;
+      let parentParses = 0;
+      let ownerParses = 0;
+
+      class ParentTrackedDOMParser {
+        parseFromString(source: string, type: DOMParserSupportedType): Document {
+          parentParses++;
+          return new ParentDOMParser().parseFromString(source, type);
+        }
+      }
+      class OwnerTrackedDOMParser {
+        parseFromString(source: string, type: DOMParserSupportedType): Document {
+          ownerParses++;
+          return new OwnerDOMParser().parseFromString(source, type);
+        }
+      }
+
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes></lr-email-viewer>`);
+      try {
+        window.DOMParser = ParentTrackedDOMParser as unknown as typeof DOMParser;
+        frameWindow.DOMParser = OwnerTrackedDOMParser as unknown as typeof DOMParser;
+        frameDocument.body.append(frameDocument.adoptNode(el));
+        (el as unknown as { fetchState: unknown }).fetchState = {
+          kind: 'loaded',
+          email: {
+            from: '',
+            to: '',
+            subject: '',
+            date: '',
+            bodyHtml: '<p>Current reply</p><div class="gmail_quote">Owner quote</div>',
+            bodyText: null,
+            attachments: [],
+          },
+        };
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')?.textContent).to.contain('Owner quote');
+        expect(await el.search('owner quote')).to.equal(1);
+        expect(parentParses, 'the ambient parser must never observe adopted content').to.equal(0);
+        expect(ownerParses).to.be.greaterThan(1);
+      } finally {
+        el.remove();
+        window.DOMParser = ParentDOMParser;
+        frameWindow.DOMParser = OwnerDOMParser;
+        frame.remove();
+      }
+    });
+
     it('folds a gmail_quote block behind a toggle', async () => {
       const restore = stubFetch(GMAIL_QUOTE_EML);
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
@@ -731,6 +784,54 @@ describe('lr-email-viewer', () => {
         expect(toggle.textContent).to.equal('Show quoted text');
       } finally {
         restore();
+      }
+    });
+
+    it('handles an iframe-realm quote-toggle target after adoption', async () => {
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+      const frameDocument = frame.contentDocument;
+      const frameWindow = frame.contentWindow;
+      if (!frameDocument || !frameWindow) {
+        restore();
+        frame.remove();
+        throw new Error('The iframe realm was unavailable.');
+      }
+      const el = await fixture<LyraEmailViewer>(html`
+        <lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>
+      `);
+      const internals = el as unknown as { load(): Promise<void> };
+      const originalLoad = internals.load;
+      try {
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        // Keep the already-rendered body stable across the reconnect. This regression is about
+        // delegated event-target identity; the ordinary reconnect reload contract has separate
+        // coverage above.
+        internals.load = async () => {};
+        frameDocument.adoptNode(el);
+        frameDocument.body.append(el);
+        await el.updateComplete;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="body-html"]') !== null
+            && el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null,
+        );
+
+        const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
+        const foreignToggle = frameDocument.createElement('button');
+        foreignToggle.setAttribute('data-quote-toggle', '0');
+        body.append(foreignToggle);
+        expect(foreignToggle instanceof window.HTMLElement).to.be.false;
+        foreignToggle.dispatchEvent(
+          new frameWindow.MouseEvent('click', { bubbles: true, composed: true }),
+        );
+        await el.updateComplete;
+
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
+      } finally {
+        internals.load = originalLoad;
+        el.remove();
+        restore();
+        frame.remove();
       }
     });
 

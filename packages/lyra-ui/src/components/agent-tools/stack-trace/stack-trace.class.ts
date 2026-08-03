@@ -8,6 +8,11 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
@@ -54,6 +59,18 @@ export interface LyraStackTraceEventMap {
  * @since 4.0.0
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    stackTraceHideFrames: LYRA_DEFAULT_stackTraceHideFrames,
+    stackTraceLabel: LYRA_DEFAULT_stackTraceLabel,
+    stackTraceShowFrames: LYRA_DEFAULT_stackTraceShowFrames,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The raw stack trace text to parse and render. */
@@ -85,12 +102,24 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @state() private expandedInternalRuns = new Set<string>();
   @state() private justCopied = false;
 
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimer?: { owner: Window; handle: number };
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTimeout(this.copyTimeoutId);
+    this.cancelCopyTimer();
     this.justCopied = false;
+  }
+
+  adoptedCallback(): void {
+    // A disconnected node can be adopted without another disconnect notification.
+    this.cancelCopyTimer();
+    this.justCopied = false;
+  }
+
+  private cancelCopyTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -101,17 +130,32 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   }
 
   private onCopy = (): void => {
+    const text = this.trace;
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     try {
-      void navigator.clipboard?.writeText(this.trace)?.catch(() => {});
+      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // best-effort -- lr-copy still fires with the intended text regardless
     }
-    this.emit('lr-copy', { text: this.trace });
+    this.emit('lr-copy', { text });
+    this.cancelCopyTimer();
+    if (!owner) {
+      this.justCopied = false;
+      return;
+    }
     this.justCopied = true;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = setTimeout(() => {
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.copyTimer?.owner !== owner
+        || this.copyTimer.handle !== handle
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.copyTimer = undefined;
       this.justCopied = false;
     }, COPY_CONFIRM_MS);
+    this.copyTimer = { owner, handle };
   };
 
   private onFrameClick(frame: StackFrame): void {

@@ -40,6 +40,8 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   @property({ attribute: false }) attributeFilter: string[] = [];
 
   private observer?: MutationObserver;
+  private observerDocument?: Document;
+  private observerGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -59,6 +61,10 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   override disconnectedCallback(): void {
     this.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.disconnect();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -83,12 +89,16 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
+    this.observerGeneration += 1;
     this.observer = disconnectObserver(this.observer);
+    this.observerDocument = undefined;
   }
 
   private observeTargets = (): void => {
     this.disconnect();
-    if (this.disabled || typeof MutationObserver === 'undefined') return;
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (this.disabled || !this.isConnected || !MutationObserverCtor) return;
     const targets = slottedElementTargets(this.renderRoot);
     const attr = this.attr?.trim() ?? null;
     const attrTokens = (attr ?? '').split(/\s+/).filter(Boolean);
@@ -113,11 +123,23 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     // mutation queued in the same microtask into a single callback invocation, so two targets
     // mutated synchronously in the same script produce one coalesced `lr-mutation` event instead
     // of one per target.
-    this.observer = new MutationObserver((records) => {
+    const generation = this.observerGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.observer !== observer ||
+        this.observerDocument !== ownerDocument ||
+        this.observerGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
       const mutationList = [...records];
       this.emit('lr-mutation', { records: mutationList, mutationList });
     });
-    for (const target of targets) this.observer.observe(target, options);
+    this.observer = observer;
+    this.observerDocument = ownerDocument;
+    for (const target of targets) observer.observe(target, options);
   };
 
   override render(): TemplateResult {

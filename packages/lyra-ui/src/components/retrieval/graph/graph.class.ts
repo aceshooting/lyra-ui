@@ -2,13 +2,22 @@ import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'li
 import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { isRtl } from '../../../internal/rtl.js';
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import { getScratchCtx } from '../../../internal/canvas.js';
 import { styles } from './graph.styles.js';
-import { loadD3, type D3Modules } from './graph-loader.js';
+import {
+  loadD3,
+  type D3ForceLink,
+  type D3ForceManyBody,
+  type D3Modules,
+  type D3Simulation,
+  type D3SimulationLinkDatum,
+  type D3SimulationNodeDatum,
+  type D3ZoomBehavior,
+  type D3ZoomTransform,
+} from './graph-loader.js';
 import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from './graph-hull.js';
 import { drawGraphScene, drawPickingScene, pickColorToIndex, type CanvasCamera, type CanvasScene } from './graph-canvas.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
@@ -17,12 +26,23 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import '../../overlays/skeleton/skeleton.class.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type GraphLayout = 'force' | 'layered';
 export type GraphRenderer = 'svg' | 'canvas';
 export type GraphSelectionMode = 'none' | 'single' | 'multiple';
 export type GraphPickKind = 'node' | 'link';
+
+type BrowserWindow = Window & typeof globalThis;
 
 export interface GraphNode {
   id: string;
@@ -102,11 +122,8 @@ export interface GraphLink {
 // SimNode/SimLink are themselves never exported (module-private, elided from the emitted
 // .d.ts entirely), this indirection doesn't reintroduce the barrel leak the inline
 // `import()` idiom elsewhere in this file exists to avoid.
-type SimulationNodeDatum = import('d3-force').SimulationNodeDatum;
-type SimulationLinkDatum<N extends SimulationNodeDatum> = import('d3-force').SimulationLinkDatum<N>;
-
-interface SimNode extends GraphNode, SimulationNodeDatum {}
-type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNode> & {
+interface SimNode extends GraphNode, D3SimulationNodeDatum {}
+type SimLink = Omit<GraphLink, 'source' | 'target'> & D3SimulationLinkDatum<SimNode> & {
   /** `true` when `target` couldn't be resolved to a real node -- `target` is then a synthetic,
    *  non-simulated position (kept in sync with `source` every tick), rendered as a short dead-end
    *  stub instead of a real edge, and excluded from `forceLink`'s own simulation input. */
@@ -292,11 +309,12 @@ export interface LyraGraphEventMap {
  * @csspart focus-halo - The persistent ring tracking `focusId`'s node.
  * @csspart hull - A community hull (behind links/nodes; role="button").
  * @csspart community-label - A hull's label text.
- * @csspart live-region - The current graph item announcement.
+ * @csspart live-region - The aria-hidden shadow mirror of the current graph item announcement;
+ *   assistive-technology announcements use a shared light-DOM sink.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
- * @csspart error - `role="alert"` message shown instead of the graph when the optional `d3` peer
- *   dependency is not installed.
+ * @csspart error - Static visible error shown instead of the graph when the optional `d3` peer
+ *   dependency is not installed; its transition is announced through a shared light-DOM alert.
  * @csspart canvas - The single canvas surface (`renderer="canvas"` only).
  * @csspart tooltip - The hover tooltip (`renderer="canvas"` only; the SVG `<title>` replacement).
  * @csspart cursor-items - The container of offscreen keyboard-roving items (`renderer="canvas"` only).
@@ -305,8 +323,8 @@ export interface LyraGraphEventMap {
  * @cssprop [--lr-link-color=var(--lr-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  * @cssprop [--lr-graph-cat-1..8] - Ordered categorical fallback palette for a typed node with no
  *   `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries).
- *   Declared centrally in `tokens.styles.ts` so `<lr-graph>` and any future `<lr-graph-legend>`-
- *   style component resolve the identical default.
+ *   Declared centrally in `specialist-tokens.styles.ts` so `<lr-graph>` and any future
+ *   `<lr-graph-legend>`-style component resolve the identical default.
  * @cssprop [--lr-graph-edge-label-halo=var(--lr-color-surface)] - Legibility halo (`stroke`)
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  * @cssprop [--lr-graph-focus-halo-color=var(--lr-color-brand)] - `focus-halo` stroke color.
@@ -323,7 +341,32 @@ export interface LyraGraphEventMap {
  * @since 4.0.0
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    graphCommunity: LYRA_DEFAULT_graphCommunity,
+    graphDataList: LYRA_DEFAULT_graphDataList,
+    graphDiagram: LYRA_DEFAULT_graphDiagram,
+    graphExpandableItem: LYRA_DEFAULT_graphExpandableItem,
+    graphItemAnnouncement: LYRA_DEFAULT_graphItemAnnouncement,
+    graphLink: LYRA_DEFAULT_graphLink,
+    graphMissingLibrary: LYRA_DEFAULT_graphMissingLibrary,
+    graphNode: LYRA_DEFAULT_graphNode,
+    graphNodeFocused: LYRA_DEFAULT_graphNodeFocused,
+    graphNodesHidden: LYRA_DEFAULT_graphNodesHidden,
+    graphSelectionCount: LYRA_DEFAULT_graphSelectionCount,
+    graphTypedNode: LYRA_DEFAULT_graphTypedNode,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    select: LYRA_DEFAULT_select,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
   @property({ attribute: false }) links: GraphLink[] = [];
@@ -410,7 +453,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /**
    * True once the optional `d3` peer failed to load (not installed) -- `render()` fails closed
-   * into `part="error" role="alert"` rather than leaving a permanently blank surface.
+   * into a visible `part="error"` and announces the transition through the document-level sink.
    */
   @state() private loadFailed = false;
 
@@ -438,6 +481,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
   @state() private activeGraphItem = 0;
   @state() private graphLiveText = '';
+  /** Shared document-level regions that carry announcements. The visually hidden shadow copy is
+   *  an inspection mirror only because shadow-root live regions are not consistently spoken. */
+  private politeAnnouncementSink?: AnnouncementSink;
+  private assertiveAnnouncementSink?: AnnouncementSink;
+  /** Becomes true only after the first successful, non-loading graph render. This suppresses both
+   *  the default first item and an initially configured hidden-node count. */
+  private graphAnnouncementsReady = false;
   /** Focus repair scheduled by `willUpdate()` after a structural graph change. A numeric value
    *  targets the surviving flat graph-item index; `'base'` targets the now-empty renderer. */
   private pendingGraphItemFocus: number | 'base' | undefined;
@@ -446,12 +496,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  mirrors `<lr-branch-picker>`'s identical `isMounting` gate. */
   private isMounting = true;
 
-  private simulation?: import('d3-force').Simulation<SimNode, SimLink>;
+  private simulation?: D3Simulation<SimNode, SimLink>;
   /** The live charge/link force objects, kept so chargeStrength/linkDistance
    *  changes can retune them in place (see updated()) instead of requiring a
    *  full rebuildSimulation(). */
-  private chargeForce?: import('d3-force').ForceManyBody<SimNode>;
-  private linkForce?: import('d3-force').ForceLink<SimNode, SimLink>;
+  private chargeForce?: D3ForceManyBody<SimNode>;
+  private linkForce?: D3ForceLink<SimNode, SimLink>;
   private d3?: D3Modules;
   /** The `<svg>` (or, in `renderer="canvas"` mode, the `<canvas>`) currently wired up with d3-zoom
    *  (guards a one-time bind per element). */
@@ -463,7 +513,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** The live zoom behavior, kept so minZoom/maxZoom changes can retune its
    *  scaleExtent in place (see applyInteractions()) instead of requiring the
    *  `<svg>` to be rebound. */
-  private zoomBehavior?: import('d3-zoom').ZoomBehavior<SVGSVGElement | HTMLCanvasElement, unknown>;
+  private zoomBehavior?: D3ZoomBehavior<SVGSVGElement | HTMLCanvasElement, unknown>;
   /** Node `<circle>`s already wired up with d3-drag; cleared on every simulation rebuild
    *  so DOM elements Lit reuses across a rebuild get rebound to their fresh datum. */
   private boundNodeEls = new WeakSet<Element>();
@@ -497,6 +547,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private canvasResizeObserver?: ResizeObserver;
   private canvasDprQuery?: MediaQueryList;
   private canvasDrawRafId?: number;
+  private canvasDrawRafOwner?: BrowserWindow;
   /** Gates `scheduleCanvasDraw()` -- an off-screen (scrolled away, hidden tab panel) canvas-mode
    *  instance would otherwise still pay the full redraw cost throughout its simulation settle and
    *  any drag, same problem `<lr-chart>`'s identical `visible`/`IntersectionObserver` pair
@@ -529,6 +580,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  pick-pixel readback, so hover resolution is coalesced to at most one per animation frame. */
   private pendingHover?: { x: number; y: number };
   private hoverRafId?: number;
+  private hoverRafOwner?: BrowserWindow;
   /** Cached world-space draw scene, reused for camera-only repaints (pan/zoom moves the camera,
    *  not the scene) -- building it costs a `getComputedStyle()` pass plus full per-node/per-link
    *  array rebuilds, so it's only invalidated (`markCanvasDirty()`) when data/selection/style
@@ -542,6 +594,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
    *  `'start'` handler). */
   private cameraTweenId?: number;
+  private cameraTweenFrameOwner?: BrowserWindow;
   /** The current tween's own `resolve`, so cancellation (a superseding tween, or a real user
    *  pan/zoom gesture) settles it with `false` instead of leaving the caller's `Promise` hanging
    *  forever -- `cancelAnimationFrame()` alone stops the rAF loop but never touches the Promise. */
@@ -557,6 +610,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `scheduleViewportChange()`. Only one is ever outstanding at a time regardless of how many
    *  zoom/tick callbacks request one within the same frame. */
   private viewportChangeRafId?: number;
+  private viewportChangeRafOwner?: BrowserWindow;
   private linkEls: SVGLineElement[] = [];
   private linkHitEls: SVGLineElement[] = [];
   private linkLabelEls: (SVGTextElement | null)[] = [];
@@ -568,6 +622,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `linkEls` (real, simulated links only) so onTick() can write their positions too; see
    *  onTick()'s own comment for why a stub needs this at all. */
   private danglingLinkEls: SVGLineElement[] = [];
+  private edgeLabelMeasureCanvas?: HTMLCanvasElement;
+  private edgeLabelMeasureCtx?: CanvasRenderingContext2D | null;
 
   constructor() {
     super();
@@ -576,12 +632,27 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     });
   }
 
+  private get ownerWindow(): BrowserWindow | undefined {
+    return (this.ownerDocument.defaultView as BrowserWindow | null) ?? undefined;
+  }
+
+  private computedStyle(element: Element = this): CSSStyleDeclaration {
+    const view = this.ownerWindow;
+    return view
+      ? view.getComputedStyle(element)
+      : 'style' in element
+        ? (element as HTMLElement).style
+        : this.style;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncAnnouncementSinks();
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
     // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
-    if (typeof IntersectionObserver !== 'undefined') {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
+    const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
+    if (IntersectionObserverCtor) {
+      this.intersectionObserver = new IntersectionObserverCtor((entries) => {
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
         if (this.visible && !wasVisible && this.canvasDrawPending) {
@@ -608,6 +679,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // holds), so re-arm them in place instead of waiting for a property-driven update that a bare
       // reparent never triggers.
       if (this.renderer === 'canvas' && this.canvasEl && this.canvasEl === this.zoomedEl) {
+        this.ensureCanvasOwnerRealm();
         this.watchCanvasResize();
         this.watchCanvasDpr();
         this.markCanvasDirty();
@@ -615,11 +687,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return;
     }
     const generation = ++this.loadGeneration;
-    void this.loadLibrary().then((mods) => {
+    void this.loadLibrary().then(async (mods) => {
+      // Keep the server-rendered loading branch stable through Lit's first browser update. A
+      // cached/fast d3 import may otherwise switch render() to SVG before declarative-shadow-DOM
+      // hydration has claimed its markers, producing a mismatch and replacing the whole shadow
+      // tree. Client-only mounts retain the skeleton for the same single initial update.
+      try {
+        await this.updateComplete;
+      } catch {
+        return;
+      }
       if (generation !== this.loadGeneration || !this.isConnected) return;
       this.loading = false;
-      // A null module means the optional `d3` peer isn't installed — fail closed into the
-      // role="alert" branch rather than leaving a permanently blank surface. Guarded on
+      // A null module means the optional `d3` peer isn't installed — fail closed into the visible
+      // error branch plus its light-DOM alert rather than leaving a blank surface. Guarded on
       // `mods` alone: a disconnect is not a load failure.
       if (!mods) {
         this.loadFailed = true;
@@ -636,6 +717,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseAnnouncementSinks();
     this.loadGeneration += 1;
     this.simulation?.stop();
     this.finishCanvasNodeDrag(undefined, true, false);
@@ -645,22 +727,59 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // pending Promise with `false` instead of leaving it hanging forever).
     this.cancelCameraTween();
     this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
     this.canvasResizeObserver?.disconnect();
+    this.canvasResizeObserver = undefined;
     this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
+    this.canvasDprQuery = undefined;
     if (this.canvasDrawRafId != null) {
-      cancelAnimationFrame(this.canvasDrawRafId);
+      this.canvasDrawRafOwner?.cancelAnimationFrame(this.canvasDrawRafId);
       this.canvasDrawRafId = undefined;
+      this.canvasDrawRafOwner = undefined;
     }
     if (this.hoverRafId != null) {
-      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafOwner?.cancelAnimationFrame(this.hoverRafId);
       this.hoverRafId = undefined;
+      this.hoverRafOwner = undefined;
     }
     this.pendingHover = undefined;
     this.pendingGraphItemFocus = undefined;
     if (this.viewportChangeRafId != null) {
-      cancelAnimationFrame(this.viewportChangeRafId);
+      this.viewportChangeRafOwner?.cancelAnimationFrame(this.viewportChangeRafId);
       this.viewportChangeRafId = undefined;
+      this.viewportChangeRafOwner = undefined;
     }
+  }
+
+  adoptedCallback(): void {
+    this.releaseAnnouncementSinks();
+    this.syncAnnouncementSinks();
+    this.ensureCanvasOwnerRealm();
+  }
+
+  /** Re-target the ref-counted regions after reconnect/adoption without replaying existing text. */
+  private syncAnnouncementSinks(): void {
+    if (!this.isConnected) return;
+    const heldInOwnerDocument =
+      this.politeAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
+      this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument;
+    if (heldInOwnerDocument) return;
+    this.releaseAnnouncementSinks();
+    this.politeAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.assertiveAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseAnnouncementSinks(): void {
+    this.politeAnnouncementSink?.release();
+    this.politeAnnouncementSink = undefined;
+    this.assertiveAnnouncementSink?.release();
+    this.assertiveAnnouncementSink = undefined;
   }
 
   /** Coalesces every pan/zoom/tick-driven `lr-viewport-change` emission into at most one per
@@ -668,8 +787,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  can fire far more often than once per frame (a wheel-zoom gesture, a settling simulation). */
   private scheduleViewportChange(): void {
     if (this.viewportChangeRafId != null) return;
-    this.viewportChangeRafId = requestAnimationFrame(() => {
+    const frameOwner = this.ownerWindow;
+    if (!frameOwner) return;
+    this.viewportChangeRafOwner = frameOwner;
+    this.viewportChangeRafId = frameOwner.requestAnimationFrame(() => {
       this.viewportChangeRafId = undefined;
+      this.viewportChangeRafOwner = undefined;
+      if (!this.isConnected || this.ownerWindow !== frameOwner) return;
       const transform =
         this.renderer === 'canvas' || !this.d3 || !this.zoomedEl
           ? this.canvasCamera
@@ -834,14 +958,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private cameraTransitionMs(): number {
-    const parsed = parseFloat(getComputedStyle(this).getPropertyValue('--lr-transition-base'));
+    const parsed = parseFloat(this.computedStyle().getPropertyValue('--lr-transition-base'));
     return Number.isFinite(parsed) ? parsed : 180;
   }
 
   private cancelCameraTween(): void {
     if (this.cameraTweenId != null) {
-      cancelAnimationFrame(this.cameraTweenId);
+      this.cameraTweenFrameOwner?.cancelAnimationFrame(this.cameraTweenId);
       this.cameraTweenId = undefined;
+      this.cameraTweenFrameOwner = undefined;
     }
     this.isCameraTweening = false;
     const resolve = this.cameraTweenResolve;
@@ -857,7 +982,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  gesture, so a camera tween's own per-frame write doesn't cancel itself. */
   private isApplyingZoomTransform = false;
 
-  private applyZoomTransform(transform: OptionalPeerApi): void {
+  private applyZoomTransform(transform: D3ZoomTransform): void {
     if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) return;
     this.isApplyingZoomTransform = true;
     try {
@@ -877,7 +1002,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  layout as after it's settled. `prefers-reduced-motion` jumps straight to one write of the
    *  then-current target. A concurrent call cancels the previous tween -- resolves `true` on
    *  genuine arrival, `false` if superseded or interrupted by a user gesture before completing. */
-  private tweenCamera(computeTarget: () => OptionalPeerApi): Promise<boolean> {
+  private tweenCamera(
+    computeTarget: () => D3ZoomTransform,
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) {
         resolve(false);
@@ -886,7 +1013,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.cancelCameraTween();
       this.cameraTweenResolve = resolve;
       this.isCameraTweening = true;
-      if (prefersReducedMotion()) {
+      const frameOwner = this.ownerWindow;
+      if (!frameOwner) {
+        this.isCameraTweening = false;
+        this.cameraTweenResolve = undefined;
+        resolve(false);
+        return;
+      }
+      if (prefersReducedMotion(frameOwner)) {
         this.applyZoomTransform(computeTarget());
         this.isCameraTweening = false;
         this.cameraTweenResolve = undefined;
@@ -895,11 +1029,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       const current = this.d3.zoomTransform(this.zoomedEl);
       const duration = this.cameraTransitionMs();
-      const start = performance.now();
+      const start = frameOwner.performance.now();
       const startK = current.k as number;
       const startX = current.x as number;
       const startY = current.y as number;
       const step = (now: number): void => {
+        if (this.cameraTweenResolve !== resolve) return;
+        if (!this.isConnected || this.ownerWindow !== frameOwner) {
+          this.cameraTweenId = undefined;
+          this.cameraTweenFrameOwner = undefined;
+          this.isCameraTweening = false;
+          this.cameraTweenResolve = undefined;
+          resolve(false);
+          return;
+        }
         const t = duration > 0 ? Math.min(1, (now - start) / duration) : 1;
         const target = computeTarget();
         const targetK = target.k as number;
@@ -911,22 +1054,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             .scale(startK + (targetK - startK) * t),
         );
         if (t < 1) {
-          this.cameraTweenId = requestAnimationFrame(step);
+          this.cameraTweenFrameOwner = frameOwner;
+          this.cameraTweenId = frameOwner.requestAnimationFrame(step);
         } else {
           this.cameraTweenId = undefined;
+          this.cameraTweenFrameOwner = undefined;
           this.isCameraTweening = false;
           this.cameraTweenResolve = undefined;
           resolve(true);
         }
       };
-      this.cameraTweenId = requestAnimationFrame(step);
+      this.cameraTweenFrameOwner = frameOwner;
+      this.cameraTweenId = frameOwner.requestAnimationFrame(step);
     });
   }
 
   /** Animates the camera so `id` centers in the viewport (the `width` x `height` viewBox), at
    *  `options.zoom` (clamped to `[minZoom, maxZoom]`) or the current scale when omitted. Resolves
    *  `true` on arrival; `false` for an id with no matching entry in `simNodes` -- there's nothing
-   *  to center on. Announces `graphNodeFocused` through the existing live region. Does not move DOM
+   *  to center on. Announces `graphNodeFocused` through the shared light-DOM sink. Does not move DOM
    *  focus -- this is a camera operation, not a roving-focus one. */
   async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
     const node = this.simNodes.find((n) => n.id === id);
@@ -1001,8 +1147,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private setUpCanvasSurface(): void {
     this.canvasCtx = this.canvasEl!.getContext('2d') ?? undefined;
-    this.pickCanvas = document.createElement('canvas');
-    this.pickCtx = this.pickCanvas.getContext('2d', { willReadFrequently: true });
+    this.ensureCanvasOwnerRealm();
     this.watchCanvasResize();
     this.watchCanvasDpr();
     this.canvasTooltipEl = (this.renderRoot.querySelector('[part="tooltip"]') as HTMLDivElement) ?? undefined;
@@ -1016,12 +1161,31 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.bindCanvasZoom();
   }
 
+  private ensureCanvasOwnerRealm(): void {
+    const ownerDocument = this.ownerDocument;
+    if (this.edgeLabelMeasureCanvas?.ownerDocument !== ownerDocument) {
+      this.edgeLabelMeasureCanvas = undefined;
+      this.edgeLabelMeasureCtx = undefined;
+      this.edgeLabelWidthCache.clear();
+    }
+    if (!this.pickCanvas && this.renderer !== 'canvas') return;
+    if (this.pickCanvas?.ownerDocument === ownerDocument) return;
+    this.pickCanvas = ownerDocument.createElement('canvas');
+    this.pickCtx = this.pickCanvas.getContext('2d', { willReadFrequently: true });
+    this.pickDirty = true;
+  }
+
   private watchCanvasResize(): void {
     // Re-arming replaces the observer instance -- disconnect the previous one first, or a
     // canvas -> svg -> canvas renderer round trip leaves an orphaned observer still watching the
     // host (disconnectedCallback only ever cleans up whichever instance is current).
     this.canvasResizeObserver?.disconnect();
-    this.canvasResizeObserver = new ResizeObserver(() => this.markCanvasDirty());
+    const ResizeObserverCtor = this.ownerWindow?.ResizeObserver;
+    if (!ResizeObserverCtor) {
+      this.canvasResizeObserver = undefined;
+      return;
+    }
+    this.canvasResizeObserver = new ResizeObserverCtor(() => this.markCanvasDirty());
     this.canvasResizeObserver.observe(this);
   }
 
@@ -1030,7 +1194,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // built for means building a fresh one for the new ratio -- remove the previous instance's
     // listener first, or it leaks (disconnectedCallback only ever cleans up whichever is current).
     this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
-    this.canvasDprQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    const view = this.ownerWindow;
+    if (!view?.matchMedia) {
+      this.canvasDprQuery = undefined;
+      return;
+    }
+    this.canvasDprQuery = view.matchMedia(`(resolution: ${view.devicePixelRatio}dppx)`);
     this.canvasDprQuery.addEventListener('change', this.onCanvasDprChange);
   }
 
@@ -1066,8 +1235,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return;
     }
     if (this.canvasDrawRafId != null) return;
-    this.canvasDrawRafId = requestAnimationFrame(() => {
+    const frameOwner = this.ownerWindow;
+    if (!frameOwner) return;
+    this.canvasDrawRafOwner = frameOwner;
+    this.canvasDrawRafId = frameOwner.requestAnimationFrame(() => {
       this.canvasDrawRafId = undefined;
+      this.canvasDrawRafOwner = undefined;
+      if (!this.isConnected || this.ownerWindow !== frameOwner) return;
       this.drawCanvas();
     });
   }
@@ -1192,7 +1366,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  always resizes its backing store on every draw -- only resizes conditionally. */
   private drawCanvas(): void {
     if (!this.canvasEl || !this.canvasCtx) return;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.ownerWindow?.devicePixelRatio || 1;
     const w = this.canvasEl.clientWidth || this.safeWidth;
     const h = this.canvasEl.clientHeight || this.safeHeight;
     const backingW = Math.round(w * dpr);
@@ -1214,7 +1388,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.canvasScene.showNodeLabels !== nodeLabelsVisible ||
       this.canvasSceneHasEdgeLabels !== edgeLabelsVisible
     ) {
-      this.canvasScene = this.buildCanvasScene(getComputedStyle(this));
+      this.canvasScene = this.buildCanvasScene(this.computedStyle());
       this.canvasSceneHasEdgeLabels = edgeLabelsVisible;
     }
     drawGraphScene(ctx, this.canvasCamera, this.canvasScene);
@@ -1239,7 +1413,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.pickCanvas.height = this.canvasEl.height;
     }
     this.rebuildPickItems();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.ownerWindow?.devicePixelRatio || 1;
     this.pickCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawPickingScene(this.pickCtx, this.canvasCamera, {
       hulls: this.pickItems
@@ -1267,7 +1441,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.canvasEl || !this.pickCtx) return undefined;
     if (this.pickDirty) this.redrawPickCanvas();
     const rect = this.canvasEl.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.ownerWindow?.devicePixelRatio || 1;
     const px = Math.round((clientX - rect.left) * dpr);
     const py = Math.round((clientY - rect.top) * dpr);
     if (px < 0 || py < 0 || px >= this.pickCtx.canvas.width || py >= this.pickCtx.canvas.height) return undefined;
@@ -1278,8 +1452,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private bindCanvasZoom(): void {
     if (!this.d3 || !this.canvasEl) return;
-    this.zoomBehavior = this.d3
-      .zoom()
+    const zoomBehavior = this.d3
+      .zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
       .on('start', () => {
         // Same self-triggered-echo guard as the svg zoom bind's own 'start' handler above (see its
@@ -1290,7 +1464,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.isPanning = true;
         this.cancelCameraTween();
       })
-      .on('zoom', (event: OptionalPeerApi) => {
+      .on('zoom', (event) => {
         this.canvasCamera = { k: event.transform.k, x: event.transform.x, y: event.transform.y };
         this.markCanvasCameraDirty();
         this.scheduleViewportChange();
@@ -1298,7 +1472,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       .on('end', () => {
         this.isPanning = false;
       });
-    this.d3.select(this.canvasEl).call(this.zoomBehavior);
+    this.zoomBehavior = zoomBehavior as unknown as typeof this.zoomBehavior;
+    this.d3.select<HTMLCanvasElement, unknown>(this.canvasEl).call(zoomBehavior);
   }
 
   private bindCanvasPointer(): void {
@@ -1341,8 +1516,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // by however many moves the browser delivers between paints.
     this.pendingHover = { x: e.clientX, y: e.clientY };
     if (this.hoverRafId != null) return;
-    this.hoverRafId = requestAnimationFrame(() => {
+    const frameOwner = this.ownerWindow;
+    if (!frameOwner) return;
+    this.hoverRafOwner = frameOwner;
+    this.hoverRafId = frameOwner.requestAnimationFrame(() => {
       this.hoverRafId = undefined;
+      this.hoverRafOwner = undefined;
+      if (!this.isConnected || this.ownerWindow !== frameOwner) return;
       const pending = this.pendingHover;
       this.pendingHover = undefined;
       if (!pending) return;
@@ -1441,8 +1621,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // already left would re-show the tooltip this handler is about to hide.
     this.pendingHover = undefined;
     if (this.hoverRafId != null) {
-      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafOwner?.cancelAnimationFrame(this.hoverRafId);
       this.hoverRafId = undefined;
+      this.hoverRafOwner = undefined;
     }
     this.updateCanvasTooltip(undefined, 0, 0);
   };
@@ -1496,10 +1677,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.canvasTooltipEl.style.top = `${top}px`;
     this.canvasTooltipEl.removeAttribute('hidden');
     const tooltipRect = this.canvasTooltipEl.getBoundingClientRect();
+    const view = this.ownerWindow;
+    if (!view) return;
     const minLeft = Math.max(0, rect.left);
-    const maxRight = Math.min(window.innerWidth, rect.right);
+    const maxRight = Math.min(view.innerWidth, rect.right);
     const minTop = Math.max(0, rect.top);
-    const maxBottom = Math.min(window.innerHeight, rect.bottom);
+    const maxBottom = Math.min(view.innerHeight, rect.bottom);
     if (tooltipRect.right > maxRight) left -= tooltipRect.right - maxRight;
     if (tooltipRect.left < minLeft) left += minLeft - tooltipRect.left;
     if (tooltipRect.bottom > maxBottom) top -= tooltipRect.bottom - maxBottom;
@@ -1619,6 +1802,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     super.updated(changed); // no-op today, but a future shared mixin under LyraElement must still run
     this.setAttribute('aria-busy', String(this.loading));
 
+    const announceGraphText =
+      this.graphAnnouncementsReady &&
+      changed.has('graphLiveText') &&
+      this.graphLiveText !== '';
+    if (!this.loading && !this.loadFailed) this.graphAnnouncementsReady = true;
+    if (announceGraphText) this.politeAnnouncementSink?.announce(this.graphLiveText);
+    if (
+      changed.has('loadFailed') &&
+      changed.get('loadFailed') !== undefined &&
+      this.loadFailed
+    ) {
+      this.assertiveAnnouncementSink?.announce(this.localize('graphMissingLibrary'));
+    }
+
     if (!this.d3) return;
     if (!changed.has('nodes') && !changed.has('links') && !changed.has('hiddenTypes')) {
       // These two branches are independent (not else-if): a consumer can set
@@ -1710,8 +1907,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // conditionally rendered.
       this.gEl = this.renderRoot.querySelector('g') as SVGGElement;
       this.focusHaloEl = this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement;
-      this.zoomBehavior = this.d3
-        .zoom()
+      const zoomBehavior = this.d3
+        .zoom<SVGSVGElement, unknown>()
         .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
         .on('start', () => {
           // A camera tween writes a transform on every frame via applyZoomTransform(), which
@@ -1721,7 +1918,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           this.isPanning = true;
           this.cancelCameraTween();
         })
-        .on('zoom', (event: OptionalPeerApi) => {
+        .on('zoom', (event) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
           this.updateHitAreaZoomScale(event.transform.k);
           this.updateEdgeLabelZoomGate(event.transform.k);
@@ -1730,7 +1927,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         .on('end', () => {
           this.isPanning = false;
         });
-      this.d3.select(svgEl).call(this.zoomBehavior);
+      this.zoomBehavior = zoomBehavior as unknown as typeof this.zoomBehavior;
+      this.d3.select<SVGSVGElement, unknown>(svgEl).call(zoomBehavior);
       // `.call(zoomBehavior)` does not synchronously fire the 'zoom' handler above (only a real
       // user gesture or an explicit `.transform()` call does, and nothing in this component ever
       // calls `.transform()`) -- so the initial transform right here is always d3-zoom's own
@@ -1792,9 +1990,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         for (const dragTarget of [el, this.nodeHitEls[i]]) {
           if (!dragTarget || this.boundNodeEls.has(dragTarget)) continue;
           this.boundNodeEls.add(dragTarget);
-          this.d3!.select<Element>(dragTarget).call(
-            this.d3!.drag()
-              .on('start', (event: OptionalPeerApi) => {
+          this.d3!.select<Element, SimNode>(dragTarget).call(
+            this.d3!.drag<Element, SimNode>()
+              .on('start', (event) => {
                 this.isDragging = true;
                 // Keep a node drag from also triggering the svg's own pan gesture.
                 (event.sourceEvent as Event | undefined)?.stopPropagation();
@@ -1802,11 +2000,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 n.fx = n.x;
                 n.fy = n.y;
               })
-              .on('drag', (event: OptionalPeerApi) => {
+              .on('drag', (event) => {
                 n.fx = event.x;
                 n.fy = event.y;
               })
-              .on('end', (event: OptionalPeerApi) => {
+              .on('end', (event) => {
                 this.isDragging = false;
                 if (!event.active) this.simulation?.alphaTarget(0);
                 n.fx = null;
@@ -2051,11 +2249,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
     }
 
-    this.linkForce = this.d3.forceLink<SimLink>(links).distance(this.safeLinkDistance);
-    this.chargeForce = this.d3.forceManyBody().strength(this.safeChargeStrength);
+    this.linkForce = this.d3.forceLink<SimNode, SimLink>(links).distance(this.safeLinkDistance);
+    this.chargeForce = this.d3.forceManyBody<SimNode>().strength(this.safeChargeStrength);
 
     const simulation = this.d3
-      .forceSimulation(nodes)
+      .forceSimulation<SimNode, SimLink>(nodes)
       .force('link', this.linkForce)
       .force('charge', this.chargeForce)
       .force('center', this.d3.forceCenter(this.safeWidth / 2, this.safeHeight / 2))
@@ -2066,7 +2264,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       .on('tick', () => this.onTick());
     this.simulation = simulation;
 
-    if (prefersReducedMotion() || this.safeSeed != null) {
+    if (prefersReducedMotion(this.ownerWindow) || this.safeSeed != null) {
       // Pin every node that already had a known position before this rebuild -- either carried
       // over directly (fx/fy, the same mechanism a user drag uses) or restored from
       // lastPositionById after being hidden by hiddenTypes -- so introducing a new node/link can't
@@ -2307,28 +2505,36 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private edgeLabelFontPx(): number {
-    const raw = getComputedStyle(this).getPropertyValue('--lr-font-size-2xs').trim();
+    const raw = this.computedStyle().getPropertyValue('--lr-font-size-2xs').trim();
     const parsed = parseFloat(raw);
     if (!Number.isFinite(parsed)) return 10;
     const unit = raw.toLowerCase();
     if (unit.endsWith('rem')) {
-      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const rootFontSize = parseFloat(this.computedStyle(this.ownerDocument.documentElement).fontSize);
       return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
     }
     if (unit.endsWith('em')) {
-      const ownFontSize = parseFloat(getComputedStyle(this).fontSize);
+      const ownFontSize = parseFloat(this.computedStyle().fontSize);
       return parsed * (Number.isFinite(ownFontSize) ? ownFontSize : 16);
     }
     return parsed;
   }
 
+  private edgeLabelContext(): CanvasRenderingContext2D | null {
+    if (this.edgeLabelMeasureCanvas?.ownerDocument !== this.ownerDocument) {
+      this.edgeLabelMeasureCanvas = this.ownerDocument.createElement('canvas');
+      this.edgeLabelMeasureCtx = this.edgeLabelMeasureCanvas.getContext('2d');
+    }
+    return this.edgeLabelMeasureCtx ?? null;
+  }
+
   private edgeLabelWidth(text: string): number {
     const cached = this.edgeLabelWidthCache.get(text);
     if (cached != null) return cached;
-    const ctx = getScratchCtx();
+    const ctx = this.edgeLabelContext();
     let width: number;
     if (ctx) {
-      const fontFamily = getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif';
+      const fontFamily = this.computedStyle().getPropertyValue('--lr-font').trim() || 'sans-serif';
       ctx.font = `${this.edgeLabelFontPx()}px ${fontFamily}`;
       width = ctx.measureText(text).width;
     } else {
@@ -2461,7 +2667,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.onGraphItemFocus(index);
       activate(e);
       if (index < this.simNodes.length) {
-        const now = performance.now();
+        const now = this.ownerWindow?.performance.now() ?? 0;
         if (this.lastKeyActivateIndex === index && now - this.lastKeyActivateTime <= EXPAND_KEY_INTERVAL_MS) {
           const node = this.simNodes[index];
           if (node) this.emit('lr-node-expand', { id: node.id });
@@ -2494,14 +2700,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         <div part="base">
           <lr-skeleton
             variant="rect"
+            .announce=${false}
             style=${`--lr-skeleton-w:${this.safeWidth}px;--lr-skeleton-h:${this.safeHeight}px`}
           ></lr-skeleton>
+          <span class="sr-only loading-label">${this.localize('loading')}</span>
         </div>
       `;
     }
     if (this.loadFailed) {
       return html`<div part="base">
-        <div part="error" role="alert">${this.localize('graphMissingLibrary')}</div>
+        <div part="error">${this.localize('graphMissingLibrary')}</div>
       </div>`;
     }
     if (!this.nodes.length) {
@@ -2521,7 +2729,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             tabindex=${this.graphItemCount() ? '-1' : '0'}
           ></canvas>
           <div part="tooltip" hidden></div>
-          <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          <div part="live-region" class="sr-only" aria-hidden="true">
             ${this.graphLiveText ||
             (this.normalizedGraphItem() >= 0 ? this.graphItemAnnouncement(this.normalizedGraphItem()) : '')}
           </div>
@@ -2809,7 +3017,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             <circle part="focus-halo" aria-hidden="true" hidden r="0" cx="0" cy="0"></circle>
           </g>
         </svg>
-        <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        <div part="live-region" class="sr-only" aria-hidden="true">
           ${this.graphLiveText ||
           (this.normalizedGraphItem() >= 0 ? this.graphItemAnnouncement(this.normalizedGraphItem()) : '')}
         </div>

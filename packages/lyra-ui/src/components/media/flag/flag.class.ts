@@ -3,9 +3,16 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type FlagVariant = 'compact' | 'standard' | 'detailed';
 export type FlagUrlResolver = (code: string, options?: { variant?: FlagVariant }) => Promise<string | undefined>;
@@ -95,8 +102,9 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * not bundled into lyra-ui itself, so importing the core library pulls zero flag
  * weight. Give it a `country` (ISO 3166-1 alpha-2) or a `language` tag (mapped to
  * a representative country). While that peer package's `flagUrl()` resolves,
- * the host carries `aria-busy="true"` and a skeleton placeholder renders in its
- * place. A missing or failed peer resolver fails closed with a localized alert;
+ * the host carries `aria-busy="true"`; a decorative skeleton and ordinary, non-live localized
+ * loading text render in its place. A missing or failed peer resolver fails closed with a localized visible error and a
+ * shared light-DOM assertive announcement;
  * an installed resolver returning no URL for an unknown code remains a valid
  * empty result.
  *
@@ -124,7 +132,9 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @example <lr-flag country="es" variant="compact"></lr-flag>
  * @example <lr-flag country="es" variant="detailed"></lr-flag>
  * @csspart image - The underlying <img>.
- * @csspart error - Localized alert rendered when the optional peer resolver is unavailable or fails.
+ * @csspart error - Ordinary localized visible error rendered when the optional peer resolver is
+ *   unavailable or fails; each fresh resolution failure appends the same localized message to the
+ *   shared light-DOM assertive announcement sink.
  * @cssprop [--lr-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
  * @cssprop [--lr-flag-object-fit=cover] - How the image fits its flag frame.
  * @cssprop --lr-flag-radius - Rectangular flag corner radius.
@@ -132,7 +142,19 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @since 4.0.0
  */
 export class LyraFlag extends LyraElement {
-  static override styles = [LyraElement.styles, styles];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    flagLoadError: LYRA_DEFAULT_flagLoadError,
+    loading: LYRA_DEFAULT_loading,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`. */
   @property() country?: string;
@@ -192,6 +214,7 @@ export class LyraFlag extends LyraElement {
   /** True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight. */
   @state() private loading = true;
   @state() private loadError = false;
+  private errorAnnouncementSink?: AnnouncementSink;
 
   /**
    * Bumped on every `willUpdate` pass; captured by each in-flight resolver
@@ -207,6 +230,40 @@ export class LyraFlag extends LyraElement {
     }
     if (this.language) return languageToCountry(this.language);
     return undefined;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncErrorAnnouncementSink();
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseErrorAnnouncementSink();
+    super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.releaseErrorAnnouncementSink();
+    this.syncErrorAnnouncementSink();
+  }
+
+  private syncErrorAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseErrorAnnouncementSink();
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseErrorAnnouncementSink(): void {
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+  }
+
+  private announceLoadError(): void {
+    this.errorAnnouncementSink?.announce(this.localize(FLAG_LOAD_ERROR_KEY));
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -252,6 +309,7 @@ export class LyraFlag extends LyraElement {
         if (!resolve) {
           this.loadError = true;
           this.loading = false;
+          this.announceLoadError();
           return;
         }
         const url = await resolve(code, variant === 'standard' ? undefined : { variant });
@@ -266,6 +324,7 @@ export class LyraFlag extends LyraElement {
         this.resolvedSrc = undefined;
         this.loadError = true;
         this.loading = false;
+        this.announceLoadError();
       });
   }
 
@@ -275,9 +334,14 @@ export class LyraFlag extends LyraElement {
   }
 
   override render(): TemplateResult {
-    if (this.loading) return html`<lr-skeleton variant="rect"></lr-skeleton>`;
+    if (this.loading) {
+      return html`
+        <span class="sr-only">${this.localize('loading')}</span>
+        <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+      `;
+    }
     if (this.loadError) {
-      return html`<span part="error" role="alert">${this.localize(FLAG_LOAD_ERROR_KEY)}</span>`;
+      return html`<span part="error">${this.localize(FLAG_LOAD_ERROR_KEY)}</span>`;
     }
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;

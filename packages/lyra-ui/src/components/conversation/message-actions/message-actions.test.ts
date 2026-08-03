@@ -312,3 +312,39 @@ it('is accessible with every built-in enabled', async () => {
   )) as LyraMessageActions;
   await expect(el).to.be.accessible();
 });
+
+it('includes foreign-realm slotted controls and awaits their update promises', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions .controls=${['regenerate']}></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const foreignWindow = iframe.contentWindow!;
+    const control = iframe.contentDocument!.createElement('button');
+    control.id = 'foreign-action';
+    el.append(control);
+    await el.updateComplete;
+
+    expect(control instanceof HTMLElement, 'fixture really crosses constructor realms').to.equal(false);
+    const access = el as unknown as {
+      focusableStops(): HTMLElement[];
+      reconcileStopsAfterChildren(): Promise<void>;
+    };
+    expect(access.focusableStops().map((stop) => stop.id)).to.include('foreign-action');
+
+    let release!: () => void;
+    const foreignUpdate = new foreignWindow.Promise<void>((resolve) => { release = resolve; });
+    Object.defineProperty(control, 'updateComplete', { configurable: true, value: foreignUpdate });
+    const reconciliation = access.reconcileStopsAfterChildren();
+    const first = await Promise.race([
+      reconciliation.then(() => 'complete'),
+      new Promise<'pending'>((resolve) => setTimeout(() => resolve('pending'), 0)),
+    ]);
+    expect(first).to.equal('pending');
+    release();
+    await reconciliation;
+  } finally {
+    iframe.remove();
+  }
+});

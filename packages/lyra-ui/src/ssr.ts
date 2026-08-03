@@ -15,7 +15,6 @@ export type LyraSsrClientRenderReasonCode =
   | 'document-focus'
   | 'layout-measurement'
   | 'mutation-observer'
-  | 'optional-peer'
   | 'shadow-dom-query';
 
 export interface LyraSsrClientRenderReason {
@@ -45,47 +44,24 @@ const reason = (
 ): Readonly<LyraSsrClientRenderReason> => Object.freeze({ code, detail });
 
 /**
- * `LyraChart` and its subclasses, plus `<lr-box-plot>`, all start at `loading = true` and render a
- * `<lr-skeleton>` until a lazily imported `chart.js` resolves; only then do they swap in the
- * `<canvas>` that Chart.js paints. That swap replaces the whole shadow tree, and the canvas itself
- * has no server-side representation at all — the same mechanism in every one of them, which is why
- * they share this sentence rather than each paraphrasing it.
- */
-const CHART_JS_PEER_RENDER =
-  'renders a skeleton until its lazily imported chart.js peer resolves in the browser and paints its canvas';
-
-/**
  * Evidence-backed exceptions to declarative-shadow-DOM rendering. Every entry names the browser
  * capability its first render currently requires; `pnpm test:ssr` rejects unknown, duplicate, or
  * unclassified inventory tags. Remove an entry as soon as the component no longer needs it.
  */
 export const LYRA_SSR_CLIENT_RENDER_REASONS = Object.freeze({
   [tag('app-rail')]: reason('layout-measurement', 'reads window dimensions while deriving its initial rail size'),
-  [tag('bar-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
-  [tag('box-plot')]: reason('optional-peer', CHART_JS_PEER_RENDER),
-  [tag('bubble-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
-  [tag('chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('date-input')]: reason('shadow-dom-query', 'coordinates a rendered slot listener during its first update'),
   [tag('dock-panel')]: reason('layout-measurement', 'reads window dimensions while deriving its initial panel size'),
-  [tag('doughnut-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('eval-dataset')]: reason('shadow-dom-query', 'queries a nested export menu during its initial render'),
   [tag('evaluation-run')]: reason('shadow-dom-query', 'derives progress text from rendered shadow content'),
   [tag('export-button')]: reason('shadow-dom-query', 'queries its rendered menu items during its first update'),
   [tag('file-tree')]: reason('document-focus', 'reads document focus while constructing its initial tree state'),
-  [tag('graph')]: reason('optional-peer', 'renders a skeleton until its lazily imported d3 peers resolve in the browser and lay its nodes out'),
-  [tag('histogram')]: reason('optional-peer', CHART_JS_PEER_RENDER),
-  [tag('line-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('mind-map')]: reason('computed-style', 'resolves live computed token units for its initial SVG geometry'),
   [tag('page-rail')]: reason('browser-constructor', 'checks rendered nodes against HTMLElement during its first update'),
-  [tag('pie-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
-  [tag('polar-area-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('progress-bar')]: reason('shadow-dom-query', 'derives its visible label from rendered shadow content'),
-  [tag('progress-ring')]: reason('shadow-dom-query', 'derives its visible label from rendered shadow content'),
-  [tag('radar-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('radio')]: reason('browser-constructor', 'resolves a composed radio-group ancestor in its constructor'),
   [tag('radio-button')]: reason('browser-constructor', 'resolves a composed radio-group ancestor in its constructor'),
   [tag('realtime-session')]: reason('browser-constructor', 'checks a rendered root against ShadowRoot during its first update'),
-  [tag('scatter-chart')]: reason('optional-peer', CHART_JS_PEER_RENDER),
   [tag('source-list')]: reason('mutation-observer', 'creates its slotted-source observer in the constructor'),
   [tag('source-picker')]: reason('shadow-dom-query', 'queries rendered source controls during its first update'),
   [tag('tree')]: reason('document-focus', 'reads document focus while constructing its initial tree state'),
@@ -276,11 +252,23 @@ export function lyraSsrElementRenderers<T extends LyraLitElementRendererConstruc
 export async function diagnoseLyraHydration(
   root?: ParentNode,
 ): Promise<readonly LyraHydrationDiagnostic[]> {
-  if (typeof document === 'undefined' || typeof customElements === 'undefined') return [];
+  const ambientDocument = typeof document === 'undefined' ? undefined : document;
+  const scope = root ?? ambientDocument;
+  if (!scope) return [];
+  const ownerDocument =
+    (scope as ParentNode & { ownerDocument?: Document | null }).ownerDocument ??
+    ((scope as ParentNode & { nodeType?: number }).nodeType === 9
+      ? (scope as Document)
+      : ambientDocument);
+  const registry =
+    ownerDocument?.defaultView?.customElements ??
+    (ownerDocument === ambientDocument && typeof customElements !== 'undefined'
+      ? customElements
+      : undefined);
 
-  const scope = root ?? document;
+  const rootLocalName = (scope as ParentNode & { localName?: unknown }).localName;
   const candidates = [
-    ...(typeof Element !== 'undefined' && scope instanceof Element ? [scope] : []),
+    ...(typeof rootLocalName === 'string' ? [scope as Element] : []),
     ...scope.querySelectorAll('*'),
   ].filter((element) => getLyraSsrMode(element.localName) !== undefined);
 
@@ -288,7 +276,7 @@ export async function diagnoseLyraHydration(
     candidates.map(async (element): Promise<LyraHydrationDiagnostic> => {
       const tagName = element.localName;
       const mode = getLyraSsrMode(tagName) ?? 'client-render';
-      if (!customElements.get(tagName)) {
+      if (!registry?.get(tagName)) {
         return { element, tag: tagName, mode, status: 'unregistered' };
       }
 

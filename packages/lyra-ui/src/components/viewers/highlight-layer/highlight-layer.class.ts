@@ -9,6 +9,11 @@ import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface HighlightLayerItem {
   id: string;
@@ -54,6 +59,17 @@ export interface LyraHighlightLayerEventMap {
  * @since 4.0.0
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    highlightLayerLabel: LYRA_DEFAULT_highlightLayerLabel,
+    highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    items: LYRA_DEFAULT_items,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) items: HighlightLayerItem[] = [];
@@ -64,7 +80,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   @state() private focusedItem: HighlightLayerItem | null = null;
   @state() private flashingItem: HighlightLayerItem | null = null;
-  private flashTimer?: ReturnType<typeof setTimeout>;
+  private flashTimer?: number;
+  private flashTimerWindow?: Window;
   private flashGeneration = 0;
   private pendingFocusItem: HighlightLayerItem | null = null;
 
@@ -109,6 +126,10 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.clearFlash();
   }
 
+  adoptedCallback(): void {
+    this.clearFlash();
+  }
+
   /** Applies a one-shot emphasis flash to the first item matching `id`. Its lifetime follows the
    *  rendered animation duration, including theme and reduced-motion overrides. */
   flash(id: string): void {
@@ -126,21 +147,31 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         this.flashingItem = null;
         return;
       }
-      const computed = getComputedStyle(rect);
+      const ownerWindow = rect.ownerDocument.defaultView;
+      if (!ownerWindow) {
+        this.flashingItem = null;
+        return;
+      }
+      const computed = ownerWindow.getComputedStyle(rect);
       const durationMs = maxPairedAnimationEndMs(
         computed.animationName,
         computed.animationDuration,
         computed.animationDelay,
       );
-      this.flashTimer = setTimeout(() => {
-        if (generation === this.flashGeneration) this.flashingItem = null;
+      this.flashTimerWindow = ownerWindow;
+      this.flashTimer = ownerWindow.setTimeout(() => {
+        if (generation !== this.flashGeneration || this.flashTimerWindow !== ownerWindow) return;
+        this.flashTimer = undefined;
+        this.flashTimerWindow = undefined;
+        this.flashingItem = null;
       }, durationMs);
     });
   }
 
   private clearFlash(): void {
-    clearTimeout(this.flashTimer);
+    if (this.flashTimer !== undefined) this.flashTimerWindow?.clearTimeout(this.flashTimer);
     this.flashTimer = undefined;
+    this.flashTimerWindow = undefined;
     this.flashGeneration += 1;
     this.flashingItem = null;
   }

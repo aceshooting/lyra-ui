@@ -18,6 +18,12 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { hasRealContent } from '../../../internal/a11y.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_radioRequired, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraRadioEventMap {
   'lr-invalid': CustomEvent<undefined>;
@@ -54,9 +60,12 @@ export type RadioAppearance = 'default' | 'button';
  * options composes it once on the owning `<lr-radio-group>` (which does carry `hint`/`errorText`),
  * the same way a native radio `<fieldset>`/`<legend>` pairs with one externally-owned error node
  * shared across all its `<input type="radio">` children rather than one per option.
+ * Flattened forwarding-slot changes keep the visual label wrapper synchronized; element-only and
+ * decorative `aria-hidden` visuals still count as visual content. A host `aria-label` retains
+ * accessible-name precedence by presence, including an explicitly empty value.
  *
  * @customElement lr-radio
- * @slot - Label text.
+ * @slot - Label content, including forwarded or element-only visuals.
  * @event input - A standalone radio was selected; native-style and composed.
  * @event lr-input - Standalone prefixed compatibility alias for `input`.
  *   `detail: { checked, value }`.
@@ -125,6 +134,19 @@ export type RadioAppearance = 'default' | 'button';
  * @since 4.0.0
  */
 export class LyraRadio extends LyraElement<LyraRadioEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    radioRequired: LYRA_DEFAULT_radioRequired,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, sizes, styles, appearanceStyles];
   static formAssociated = true;
 
@@ -169,6 +191,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   pill = false;
 
   @state() private hasLabel = false;
+  private labelObserver?: MutationObserver;
   /** Whether the user has acted on this radio yet, which is what gates the `user-valid`/
    *  `user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely
    *  invalid, but styling it as an error before the user has done anything is hostile, which is the
@@ -287,7 +310,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this,
       () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
     );
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.syncFormState();
   }
 
@@ -333,9 +357,25 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.hasLabel = Array.from(this.childNodes).some((node) => (node.textContent ?? '').trim().length > 0);
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.recomputeHasLabel();
+        })
+      : undefined;
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.bindLabelObserverTargets();
+    this.recomputeHasLabel();
     this.updateValidity();
     this.group();
+  }
+
+  override disconnectedCallback(): void {
+    this.removeEventListener('slotchange', this.onLabelSlotChange);
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
+    super.disconnectedCallback();
   }
 
   formResetCallback(): void {
@@ -572,10 +612,75 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
-  private onSlotChange = (event: Event): void => {
-    this.hasLabel = (event.target as HTMLSlotElement).assignedNodes({ flatten: true })
-      .some((node) => (node.textContent ?? '').trim().length > 0);
-  };
+  private isDefaultLabelNode(node: Node): boolean {
+    if (node.nodeType !== 1) return true;
+    const slotName = (node as Element).getAttribute('slot');
+    return slotName === null || slotName === '';
+  }
+
+  private labelForwardingSlots(): HTMLSlotElement[] {
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return top.parentNode === this && this.isDefaultLabelNode(top);
+    });
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    for (const slot of this.labelForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
+  }
+
+  private recomputeHasLabel(): void {
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    const nodes: Node[] = slot
+      ? slot.assignedNodes({ flatten: true })
+      : Array.from(this.childNodes)
+          .filter((node) => this.isDefaultLabelNode(node))
+          .flatMap((node) => {
+            if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
+            const forwardingSlot = node as HTMLSlotElement;
+            return forwardingSlot.assignedNodes().length > 0
+              ? forwardingSlot.assignedNodes({ flatten: true })
+              : Array.from(forwardingSlot.childNodes);
+          });
+    this.hasLabel = hasRealContent(nodes);
+  }
+
+  private handleLabelSlotChange(event: Event): void {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (
+      target.getRootNode() !== this.renderRoot &&
+      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+    ) return;
+    this.bindLabelObserverTargets();
+    this.recomputeHasLabel();
+  }
+
+  private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
+  private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
   override render(): TemplateResult {
     if (this.appearance === 'button') {
@@ -592,7 +697,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
           aria-checked=${this.checked ? 'true' : 'false'}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-required=${this.effectiveRequired ? 'true' : 'false'}
-          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-label=${this.getAttribute('aria-label') ?? nothing}
           @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
           <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>
         </span>
@@ -608,7 +713,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-label=${this.getAttribute('aria-label') ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>
         <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>

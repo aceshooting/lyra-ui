@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { LyraAnimation } from './animation.js';
 import { setAnimation, setDefaultAnimation } from '../../../utilities/animation-registry.js';
 import './animation.js';
@@ -8,8 +8,8 @@ import './animation.js';
  *  deterministic instead of depending on the ambient CI environment. Mirrors
  *  the identical helper in animated-image.test.ts. Restore via `.restore()`
  *  in a `finally` block. */
-function stubReducedMotion(initialMatches: boolean) {
-  const original = window.matchMedia;
+function stubReducedMotion(initialMatches: boolean, ownerWindow: Window = window) {
+  const original = ownerWindow.matchMedia;
   let matches = initialMatches;
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
   const fakeList = {
@@ -21,13 +21,14 @@ function stubReducedMotion(initialMatches: boolean) {
     removeEventListener: (_type: string, cb: (event: MediaQueryListEvent) => void) => listeners.delete(cb),
   } as unknown as MediaQueryList;
 
-  window.matchMedia = ((query: string) =>
+  ownerWindow.matchMedia = ((query: string) =>
     query === '(prefers-reduced-motion: reduce)' ? fakeList : original(query)) as typeof window.matchMedia;
 
   return {
     restore(): void {
-      window.matchMedia = original;
+      ownerWindow.matchMedia = original;
     },
+    listenerCount(): number { return listeners.size; },
     fire(nextMatches: boolean): void {
       matches = nextMatches;
       const event = { matches: nextMatches, media: fakeList.media } as MediaQueryListEvent;
@@ -48,8 +49,8 @@ interface FakeIntersectionObserverInstance {
  *  technique map.test.ts uses, since a real IntersectionObserver reports an
  *  on-screen fixture as intersecting almost immediately in the headless test
  *  page, making these scenarios impossible to reproduce deterministically. */
-function stubIntersectionObserver() {
-  const original = window.IntersectionObserver;
+function stubIntersectionObserver(ownerWindow: Window = window) {
+  const original = ownerWindow.IntersectionObserver;
   const observedTargets: Element[] = [];
   const instances: FakeIntersectionObserverInstance[] = [];
   class FakeIntersectionObserver implements FakeIntersectionObserverInstance {
@@ -72,16 +73,112 @@ function stubIntersectionObserver() {
       return [];
     }
   }
-  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+  (ownerWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
     FakeIntersectionObserver as unknown as typeof IntersectionObserver;
   return {
     instances,
     observedTargets,
     restore(): void {
-      (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = original;
+      (ownerWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = original;
     },
   };
 }
+
+it('rebinds animation, motion, styles, and visibility to the adopted realm and ignores stale observers', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const parentMotion = stubReducedMotion(false);
+  const frameMotion = stubReducedMotion(false, frameWindow);
+  const parentIo = stubIntersectionObserver();
+  const frameIo = stubIntersectionObserver(frameWindow);
+  const originalFrameGetComputedStyle = frameWindow.getComputedStyle;
+  let frameStyleReads = 0;
+  frameWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    frameStyleReads++;
+    return originalFrameGetComputedStyle.call(frameWindow, element, pseudo);
+  }) as typeof getComputedStyle;
+
+  const parentRoot = document.createElement('div');
+  const parentTarget = document.createElement('p');
+  parentTarget.textContent = 'Parent target';
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'fade-in';
+  el.iterations = 1;
+  el.timingPreset = 'base';
+  el.playOnVisible = true;
+  el.root = parentRoot;
+  el.append(parentTarget);
+  parentRoot.append(el);
+  document.body.append(parentRoot);
+
+  try {
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(parentMotion.listenerCount()).to.equal(1);
+    expect(parentIo.instances.length).to.be.greaterThan(0);
+    expect(parentTarget.getAnimations().length).to.equal(1);
+    const staleObserver = parentIo.instances.at(-1)!;
+
+    frameDocument.adoptNode(el);
+    const adoptedRoot = frameDocument.adoptNode(document.createElement('div'));
+    el.root = adoptedRoot;
+    adoptedRoot.append(el);
+    frameDocument.body.append(adoptedRoot);
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(parentMotion.listenerCount()).to.equal(0);
+    expect(frameMotion.listenerCount()).to.equal(1);
+    expect(staleObserver.disconnected).to.be.true;
+    expect(frameStyleReads).to.be.greaterThan(0);
+    expect(frameIo.instances.length).to.be.greaterThan(0);
+    expect(frameIo.observedTargets.length).to.be.greaterThan(0);
+    expect(frameIo.observedTargets.at(-1)?.ownerDocument === frameDocument).to.be.true;
+    expect(frameIo.instances.at(-1)?.options?.root === adoptedRoot).to.be.true;
+    expect(parentTarget.ownerDocument === frameDocument).to.be.true;
+    expect(parentTarget.getAnimations().length).to.equal(1);
+
+    const adoptedObserver = frameIo.instances.at(-1)!;
+    const frameRoot = frameDocument.createElement('div');
+    const frameTarget = frameDocument.createElement('p');
+    frameTarget.textContent = 'Frame target';
+    el.replaceChildren(frameTarget);
+    el.root = frameRoot;
+    frameRoot.append(el);
+    frameDocument.body.append(frameRoot);
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(adoptedObserver.disconnected).to.be.true;
+    expect(parentTarget.getAnimations().length).to.equal(0);
+    expect(frameIo.observedTargets.at(-1)?.ownerDocument === frameDocument).to.be.true;
+    expect(frameIo.instances.at(-1)?.options?.root === frameRoot).to.be.true;
+    expect(frameTarget.getAnimations().length).to.equal(1);
+
+    staleObserver.callback(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      staleObserver as unknown as IntersectionObserver,
+    );
+    await el.updateComplete;
+    expect(el.play).to.be.false;
+
+    const frameObserver = frameIo.instances.at(-1)!;
+    el.remove();
+    expect(frameObserver.disconnected).to.be.true;
+    expect(frameMotion.listenerCount()).to.equal(0);
+    expect(frameTarget.getAnimations().length).to.equal(0);
+  } finally {
+    el.remove();
+    parentRoot.remove();
+    frameWindow.getComputedStyle = originalFrameGetComputedStyle;
+    parentMotion.restore();
+    frameMotion.restore();
+    parentIo.restore();
+    frameIo.restore();
+    frame.remove();
+  }
+});
 
 it('is accessible with a slotted animation target', async () => {
   const el = await fixture(html`

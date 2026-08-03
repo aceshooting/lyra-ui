@@ -10,6 +10,11 @@ import type { LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { getToastRegion } from '../toast/toast-region.js';
 import { styles } from './alert.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Shoelace's physical countdown direction. */
 export type AlertCountdown = 'rtl' | 'ltr' | undefined;
@@ -27,8 +32,11 @@ export interface LyraAlertEventMap {
  * `<lr-alert>` — a closed-by-default inline alert that can also move into the shared toast stack.
  * It mirrors the public `<sl-alert>` contract under the `lr-` prefix. `lr-show`/`lr-hide` are
  * cancelable veto points, matching every other Lyra component that emits them; the settled
- * `lr-after-*` notifications are not. Initial `open` markup establishes state without announcing a
- * transition, so it is never vetoable.
+ * `lr-after-*` notifications are not. Initial `open` markup establishes state without emitting a
+ * transition event, so it is never vetoable. The light-DOM host owns `role="alert"`; its slotted
+ * message is therefore the one assertive semantic surface for both static and later-open alerts,
+ * without a duplicate shadow or shared live region. The optional icon wrapper is hidden from the
+ * accessibility tree as decorative chrome.
  *
  * @customElement lr-alert
  * @slot - The alert's main content.
@@ -49,6 +57,18 @@ export interface LyraAlertEventMap {
  * @since 8.0.0
  */
 export class LyraAlert extends LyraElement<LyraAlertEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    duration: LYRA_DEFAULT_duration,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, variants, styles];
 
   private _open = false;
@@ -66,8 +86,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     if (normalized === this._open) return;
     // The veto point sits in the setter, ahead of the state change, because every path -- `show()`,
     // `hide()`, `toast()`, the close button, the auto-hide timer, the reflected attribute -- funnels
-    // through here. Initial declarative `open` markup is state, not a transition, so it is neither
-    // announced nor vetoable, exactly as before.
+    // through here. Initial declarative `open` markup is state, not a transition, so it emits no
+    // lifecycle event and is not vetoable.
     if (this.hasUpdated) {
       if (this.emit(normalized ? 'lr-show' : 'lr-hide', undefined, { cancelable: true }).defaultPrevented) {
         // A veto that arrived through the reflected attribute would otherwise leave the attribute
@@ -106,6 +126,9 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   private hovering = false;
   private focused = false;
   private toastPromise?: Promise<void>;
+  private toastResolve?: () => void;
+  private toastAfterHide?: () => void;
+  private toastConnectionGeneration = 0;
 
   constructor() {
     super();
@@ -119,21 +142,41 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.toastConnectionGeneration += 1;
+    // Keep assertive semantics on the light-DOM owner of the slotted message. A role inside the
+    // shadow root would not reliably expose consumer-authored content to every accessibility tree.
+    this.setAttribute('role', 'alert');
     if (!this.hasUpdated || !this.open) return;
     this.removeAttribute('data-alert-showing');
     this.removeAttribute('data-alert-hiding');
-    queueMicrotask(() => {
-      if (this.isConnected && this.open) this.restartAutoHide();
+    const ownerDocument = this.ownerDocument;
+    ownerDocument.defaultView?.queueMicrotask(() => {
+      if (this.isConnected && this.ownerDocument === ownerDocument && this.open) {
+        this.restartAutoHide();
+      }
     });
   }
 
   override disconnectedCallback(): void {
+    const toastConnectionGeneration = ++this.toastConnectionGeneration;
     this.transitionToken++;
     this.clearAutoHide();
     this.removeAttribute('data-alert-showing');
     this.removeAttribute('data-alert-hiding');
     this.hovering = false;
     this.focused = false;
+    const settleLastingToastDisconnect = (): void => {
+      if (
+        toastConnectionGeneration === this.toastConnectionGeneration &&
+        !this.isConnected &&
+        this.toastPromise
+      ) {
+        this.finishToast();
+      }
+    };
+    const view = this.ownerDocument.defaultView;
+    if (view) view.queueMicrotask(settleLastingToastDisconnect);
+    else queueMicrotask(settleLastingToastDisconnect);
     super.disconnectedCallback();
   }
 
@@ -170,7 +213,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   /**
    * Move this alert into Lyra's singleton logical top-end toast region. The returned promise
-   * resolves after the alert hides and is removed; the same instance can be toasted again later.
+   * resolves after the alert hides and is removed, or after a lasting external disconnect; the
+   * same instance can be toasted again later.
    */
   toast() {
     if (this.toastPromise) return this.toastPromise;
@@ -180,23 +224,35 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       resolveCompletion = resolve;
     });
     this.toastPromise = completion;
+    this.toastResolve = resolveCompletion;
 
-    const region = getToastRegion();
+    const region = getToastRegion(undefined, this.ownerDocument);
     const onAfterHide = (): void => {
       if (this.parentElement === region) this.remove();
-      this.toastPromise = undefined;
-      resolveCompletion();
+      this.finishToast();
     };
+    this.toastAfterHide = onAfterHide;
     this.addEventListener('lr-after-hide', onAfterHide, { once: true });
     region.appendChild(this);
 
     void this.updateComplete.then(() => {
-      if (!this.isConnected) return;
+      if (!this.isConnected || this.toastPromise !== completion) return;
       if (this.open) this.restartAutoHide();
       else void this.show();
     });
 
     return completion;
+  }
+
+  private finishToast(): void {
+    if (this.toastAfterHide) {
+      this.removeEventListener('lr-after-hide', this.toastAfterHide);
+    }
+    const resolve = this.toastResolve;
+    this.toastAfterHide = undefined;
+    this.toastResolve = undefined;
+    this.toastPromise = undefined;
+    resolve?.();
   }
 
   private async runTransition(opening: boolean): Promise<void> {
@@ -244,13 +300,14 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   private nextFrame(): Promise<void> {
     const view = this.ownerDocument.defaultView;
-    if (!view || prefersReducedMotion()) return Promise.resolve();
+    if (!view || prefersReducedMotion(view)) return Promise.resolve();
     return new Promise((resolve) => view.requestAnimationFrame(() => resolve()));
   }
 
   private async waitForMotion(base: HTMLElement | null): Promise<void> {
-    if (!base || prefersReducedMotion()) return;
-    void getComputedStyle(base).opacity;
+    const view = this.ownerDocument.defaultView;
+    if (!base || !view || prefersReducedMotion(view)) return;
+    void view.getComputedStyle(base).opacity;
     const animations = base.getAnimations({ subtree: true });
     await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
   }
@@ -274,8 +331,17 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     const duration = this.safeDuration;
     if (duration === Infinity) return;
     if (duration <= 0) {
-      queueMicrotask(() => {
-        if (this.isConnected && this.open && !this.hovering && !this.focused) void this.hide();
+      const ownerDocument = this.ownerDocument;
+      ownerDocument.defaultView?.queueMicrotask(() => {
+        if (
+          this.isConnected &&
+          this.ownerDocument === ownerDocument &&
+          this.open &&
+          !this.hovering &&
+          !this.focused
+        ) {
+          void this.hide();
+        }
       });
       return;
     }
@@ -292,8 +358,9 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   private startCountdown(duration: number): void {
+    const view = this.ownerDocument.defaultView;
     if (
-      prefersReducedMotion() ||
+      prefersReducedMotion(view) ||
       (this.countdown !== 'ltr' && this.countdown !== 'rtl')
     ) {
       return;
@@ -323,7 +390,13 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   private onFocusOut = (event: FocusEvent): void => {
     const next = event.relatedTarget;
-    if (next instanceof Element && composedContains(this, next)) return;
+    if (
+      next !== null &&
+      (next as Node).nodeType === 1 &&
+      composedContains(this, next as Element)
+    ) {
+      return;
+    }
     this.focused = false;
     if (!this.hovering) this.restartAutoHide();
   };
@@ -338,9 +411,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     return html`
       <div
         part="base"
-        role="alert"
       >
-        <span part="icon" ?hidden=${!this.slotPresence.has('icon')}>
+        <span part="icon" aria-hidden="true" ?hidden=${!this.slotPresence.has('icon')}>
           <slot name="icon"></slot>
         </span>
         <div part="message"><slot></slot></div>

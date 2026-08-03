@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './json-viewer.js';
 import type { LyraJsonViewer } from './json-viewer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -690,6 +691,10 @@ describe('imperative search API', () => {
       const el = (await fixture(
         html`<lr-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lr-json-viewer>`,
       )) as LyraJsonViewer;
+      const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+      const sink = document.querySelector<HTMLElement>(sinkSelector)!;
+      expect(Boolean(sink), 'the sink exists before search navigation').to.be.true;
+      expect(sink.childElementCount).to.equal(0);
       await el.runSearch('name');
       const teamRow = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.row')].find(
         (row) => row.querySelector('[part="key"]')?.textContent === 'team',
@@ -706,10 +711,142 @@ describe('imperative search API', () => {
       expect(active?.getAttribute('aria-current')).to.equal('true');
       expect(teamToggle.getAttribute('aria-expanded')).to.equal('true');
       expect(el.shadowRoot!.querySelectorAll('[part="key"][data-match]').length).to.equal(2);
-      expect(el.shadowRoot!.querySelector('[role="status"]')?.textContent).to.equal('Match 2 of 2');
+      const mirror = el.shadowRoot!.querySelector<HTMLElement>('span.sr-only')!;
+      expect(mirror.textContent).to.equal('Match 2 of 2');
+      expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+      expect(mirror.hasAttribute('role')).to.be.false;
+      expect(mirror.hasAttribute('aria-live')).to.be.false;
+      expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+        'Match 1 of 2',
+        'Match 2 of 2',
+      ]);
       expect(scrolledPart).to.equal('key');
+
+      el.remove();
+      expect(document.querySelector(sinkSelector) === null).to.be.true;
+      document.body.append(el);
+      expect(document.querySelector<HTMLElement>(sinkSelector)?.childElementCount).to.equal(0);
+      el.remove();
     } finally {
       HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
+  it('keeps public search navigation silent while the viewer host is hidden', async () => {
+    const el = (await fixture(
+      html`<lr-json-viewer hidden .data=${SAMPLE}></lr-json-viewer>`,
+    )) as LyraJsonViewer;
+    await el.runSearch('name');
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+
+    expect(await el.searchNext()).to.be.true;
+    expect(sink.childElementCount, 'a hidden source must not speak through a document sink').to.equal(0);
+
+    el.hidden = false;
+    expect(await el.searchNext()).to.be.true;
+    expect(sink.lastElementChild?.textContent).to.equal('Match 2 of 2');
+  });
+
+  it('treats a detached cursor update that flushes after reconnect as the new silent baseline', async () => {
+    const el = (await fixture(
+      html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`,
+    )) as LyraJsonViewer;
+    await el.runSearch('name');
+    await el.searchNext();
+    el.remove();
+
+    const pendingMove = el.searchNext();
+    document.body.append(el);
+    await pendingMove;
+    await el.updateComplete;
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+    expect(sink.childElementCount, 'the detached cursor becomes reconnect state').to.equal(0);
+
+    await el.searchNext();
+    expect(sink.lastElementChild?.textContent).to.equal('Match 1 of 2');
+    el.remove();
+  });
+
+  it('uses the adopted document motion preference and clipboard', async () => {
+    const frame = document.createElement('iframe');
+    const loaded = oneEvent(frame, 'load');
+    frame.srcdoc = '<!doctype html><html><body></body></html>';
+    document.body.append(frame);
+    await loaded;
+
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const parentMatchMedia = window.matchMedia;
+    const frameMatchMedia = frameWindow.matchMedia;
+    const parentClipboard = Object.getOwnPropertyDescriptor(window.navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    let parentMediaQueries = 0;
+    let frameMediaQueries = 0;
+    const parentWrites: string[] = [];
+    const frameWrites: string[] = [];
+    const mediaResult = (query: string): MediaQueryList => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent: () => false,
+    });
+
+    window.matchMedia = ((query: string) => {
+      parentMediaQueries += 1;
+      return mediaResult(query);
+    }) as typeof window.matchMedia;
+    frameWindow.matchMedia = ((query: string) => {
+      frameMediaQueries += 1;
+      return mediaResult(query);
+    }) as typeof frameWindow.matchMedia;
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text: string) => { parentWrites.push(text); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text: string) => { frameWrites.push(text); } },
+    });
+
+    let el: LyraJsonViewer | undefined;
+    try {
+      el = (await fixture(html`
+        <lr-json-viewer copyable .data=${SAMPLE}></lr-json-viewer>
+      `)) as LyraJsonViewer;
+      await el.runSearch('name');
+      el.remove();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      await el.searchNext();
+      expect(frameMediaQueries > 0).to.be.true;
+      expect(parentMediaQueries).to.equal(0);
+
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!
+        .click();
+      await Promise.resolve();
+      expect(frameWrites).to.deep.equal([JSON.stringify(SAMPLE, null, 2)]);
+      expect(parentWrites).to.deep.equal([]);
+    } finally {
+      el?.remove();
+      window.matchMedia = parentMatchMedia;
+      frameWindow.matchMedia = frameMatchMedia;
+      if (parentClipboard) Object.defineProperty(window.navigator, 'clipboard', parentClipboard);
+      else delete (window.navigator as Navigator & { clipboard?: Clipboard }).clipboard;
+      if (frameClipboard) {
+        Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      } else {
+        delete (frameWindow.navigator as Navigator & { clipboard?: Clipboard }).clipboard;
+      }
+      frame.remove();
     }
   });
 

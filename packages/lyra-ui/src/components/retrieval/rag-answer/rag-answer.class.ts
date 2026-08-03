@@ -1,9 +1,15 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { Citation, CitationSelectEventDetail, DocumentRef, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 import { styles } from './rag-answer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraRagAnswerEventMap {
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
@@ -25,7 +31,9 @@ export interface LyraRagAnswerEventMap {
  * @csspart base - The root answer wrapper.
  * @csspart answer - The answer content wrapper.
  * @csspart loading - The loading indicator.
- * @csspart error - The caller-supplied error message.
+ * @csspart error - The neutral, visible caller-supplied error message. New non-empty errors are
+ *   announced through a shared assertive light-DOM region; initial and reconnect content is not
+ *   replayed.
  * @csspart retry - The retry button.
  * @csspart grounding - The grounding assessment.
  * @csspart citations - The citation section.
@@ -37,17 +45,61 @@ export interface LyraRagAnswerEventMap {
  * @since 6.2.0
  */
 export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    ragAnswerCitations: LYRA_DEFAULT_ragAnswerCitations,
+    ragAnswerLabel: LYRA_DEFAULT_ragAnswerLabel,
+    ragAnswerRetry: LYRA_DEFAULT_ragAnswerRetry,
+    ragAnswerSources: LYRA_DEFAULT_ragAnswerSources,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   @property() answer = '';
   @property({ attribute: false }) citations: Citation[] = [];
   @property({ attribute: false }) sources: DocumentRef[] = [];
   @property({ attribute: false }) assessment: GroundingAssessment | null = null;
   @property({ type: Boolean, reflect: true }) loading = false;
+  /** Caller-supplied error text. The visible message is deliberately not a shadow live region;
+   *  new non-empty values are announced through a shared assertive light-DOM region. Content
+   *  present on the initial render or reconnect is not replayed. */
   @property() error = '';
   @property({ type: Boolean, attribute: 'show-sources', reflect: true, converter: trueDefaultBooleanConverter }) showSources = true;
   @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter }) showClaims = true;
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  private isMounting = true;
+  private errorAnnouncementSink?: AnnouncementSink;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.isMounting = true;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (!wasMounting && changed.has('error') && this.error !== '' && this.isConnected) {
+      this.errorAnnouncementSink?.announce(this.error);
+    }
+  }
 
   private hasSlot(name: string): boolean { return Array.from(this.children).some((element) => element.getAttribute('slot') === name); }
   private onCitationActivate = (event: CustomEvent<{ index: number }>): void => {
@@ -71,7 +123,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     const label = this.accessibleLabel || this.label || this.localize('ragAnswerLabel');
     if (this.loading && !this.answer && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
     return html`<article part="base" aria-label=${label}>
-      ${this.error ? html`<div part="error" role="alert">${this.error}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
+      ${this.error ? html`<div part="error">${this.error}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
       ${this.answer || this.hasSlot('answer') ? html`<div part="answer"><slot name="answer"><lr-markdown .content=${this.answer}></lr-markdown></slot></div>` : nothing}
       ${this.assessment ? html`<lr-grounding-summary part="grounding" .assessment=${this.assessment} .citations=${this.citations} .showClaims=${this.showClaims}></lr-grounding-summary>` : nothing}
       ${this.citations.length ? html`<section part="citations" aria-label=${this.localize('ragAnswerCitations')}><h3 part="section-heading">${this.localize('ragAnswerCitations')}</h3><div part="citation-list">${this.citations.map((citation, index) => html`<lr-citation-badge .index=${index + 1} .sourceId=${citation.sourceId ?? ''} .label=${citation.label ?? ''} @lr-citation-activate=${this.onCitationActivate}></lr-citation-badge>`)}</div></section>` : nothing}

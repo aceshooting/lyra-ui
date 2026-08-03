@@ -2,7 +2,7 @@
 
 # `lr-switch`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/switch/switch.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-switch.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSwitch`, also available unregistered from `@aceshooting/lyra-ui/components/forms/switch/switch.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -76,7 +76,9 @@ restores the current default before making the control pristine again.
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
-  control still has an accessible name.
+  control still has an accessible name. Flattened forwarding-slot assignment and later mutations
+  keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
+  it. A host `aria-label` wins by presence, including an explicitly empty value.
 - `hint` — custom hint content.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.

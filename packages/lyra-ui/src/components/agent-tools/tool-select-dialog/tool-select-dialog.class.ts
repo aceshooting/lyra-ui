@@ -7,7 +7,12 @@ import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_open, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_restore, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** One selectable agent tool. `category` groups the row; tools with no
  *  `category` (or an empty one) fall into the trailing localized "Other" bucket. A literal caller
@@ -59,9 +64,10 @@ const MAX_RENDERED_TOOLS = 200;
 
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
 function defaultFilter(tool: ToolSelectDialogTool, query: string, locale: string): boolean {
+  const intlLocale = resolveIntlLocale(locale);
   return (
-    tool.name.toLocaleLowerCase(locale).includes(query) ||
-    (tool.description ?? '').toLocaleLowerCase(locale).includes(query)
+    tool.name.toLocaleLowerCase(intlLocale).includes(query) ||
+    (tool.description ?? '').toLocaleLowerCase(intlLocale).includes(query)
   );
 }
 
@@ -138,6 +144,27 @@ interface ToolGroup {
  * @since 4.0.0
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
+    open: LYRA_DEFAULT_open,
+    otherCategory: LYRA_DEFAULT_otherCategory,
+    restore: LYRA_DEFAULT_restore,
+    searchToolsPlaceholder: LYRA_DEFAULT_searchToolsPlaceholder,
+    selectTools: LYRA_DEFAULT_selectTools,
+    toolCount: LYRA_DEFAULT_toolCount,
+    toolSelectCustomizeHint: LYRA_DEFAULT_toolSelectCustomizeHint,
+    toolSelectNoneAvailable: LYRA_DEFAULT_toolSelectNoneAvailable,
+    toolSelectSummary: LYRA_DEFAULT_toolSelectSummary,
+    useDefaultTools: LYRA_DEFAULT_useDefaultTools,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */

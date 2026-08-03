@@ -2,7 +2,7 @@
 
 # `lr-number-input`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/input/number-input.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-number-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraNumberInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/number-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

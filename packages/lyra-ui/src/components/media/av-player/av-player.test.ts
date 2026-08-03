@@ -5,9 +5,17 @@ import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
 import { styles } from './av-player.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 const CUES: LyraAvCue[] = [
   { id: 'c1', start: 0, end: 10, text: 'Welcome to the show', speaker: 'Host' },
@@ -777,6 +785,64 @@ describe('waveform', () => {
     expect(redraws, 'the resize listener should be re-attached on reconnect').to.equal(1);
   });
 
+  it('moves resize, DPR, and computed-style work to the adopted owner window', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalDpr = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
+    const originalGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
+    const originalGetComputedStyleDescriptor = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'getComputedStyle',
+    );
+    let ownerStyleReads = 0;
+    Object.defineProperty(frameWindow, 'devicePixelRatio', { value: 2, configurable: true });
+    Object.defineProperty(frameWindow, 'getComputedStyle', {
+      configurable: true,
+      value: (element: Element, pseudo?: string | null) => {
+        ownerStyleReads += 1;
+        return originalGetComputedStyle(element, pseudo);
+      },
+    });
+
+    const el = document.createElement('lr-av-player') as LyraAvPlayer;
+    el.src = MP3_SRC;
+    el.peaks = [0.25, 0.75];
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      Object.defineProperty(canvas, 'clientWidth', { value: 12, configurable: true });
+      Object.defineProperty(canvas, 'clientHeight', { value: 6, configurable: true });
+      canvas.width = 1;
+      ownerStyleReads = 0;
+
+      frameWindow.dispatchEvent(new frameWindow.Event('resize'));
+      expect(canvas.width).to.equal(24);
+      expect(canvas.height).to.equal(12);
+      expect(ownerStyleReads).to.be.greaterThan(0);
+
+      canvas.width = 5;
+      window.dispatchEvent(new Event('resize'));
+      expect(canvas.width, 'the original window listener should have been removed').to.equal(5);
+    } finally {
+      el.remove();
+      if (originalDpr) Object.defineProperty(frameWindow, 'devicePixelRatio', originalDpr);
+      else delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+      if (originalGetComputedStyleDescriptor) {
+        Object.defineProperty(frameWindow, 'getComputedStyle', originalGetComputedStyleDescriptor);
+      } else {
+        delete (frameWindow as unknown as { getComputedStyle?: typeof getComputedStyle })
+          .getComputedStyle;
+      }
+      iframe.remove();
+    }
+  });
+
   it('falls back to devicePixelRatio 1 and 1px dimensions when those signals are unavailable', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6]}></lr-av-player>`)) as LyraAvPlayer;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1027,12 +1093,21 @@ describe('i18n', () => {
 });
 
 describe('render error', () => {
-  it('fires lr-render-error on a native media error event', async () => {
-    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+  it('fires lr-render-error and appends each localized failure to the light-DOM sink', async () => {
+    const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
-    const eventPromise = oneEvent(el, 'lr-render-error');
-    media.dispatchEvent(new Event('error'));
-    await eventPromise;
+    for (const count of [1, 2]) {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      media.dispatchEvent(new Event('error'));
+      await eventPromise;
+      await el.updateComplete;
+      expect(assertiveAnnouncements()).to.deep.equal(
+        Array.from({ length: count }, () => 'The media failed to load.'),
+      );
+    }
+    const error = el.shadowRoot!.querySelector('[part="error"]')!;
+    expect(error.getAttribute('role')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
   });
 });
 
@@ -1041,6 +1116,15 @@ describe('render branches', () => {
     const el = (await fixture(html`<lr-av-player src="javascript:alert(1)"></lr-av-player>`)) as LyraAvPlayer;
     expect(el.shadowRoot!.querySelector('audio, video')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal(null);
+    expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
+  });
+
+  it('announces a post-mount transition to an unsafe source', async () => {
+    const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+    el.src = 'javascript:alert(1)';
+    await el.updateComplete;
+    expect(assertiveAnnouncements()).to.deep.equal(['The media failed to load.']);
   });
 
   it('omits the src attribute entirely when kind is forced to audio with no src set', async () => {

@@ -1,8 +1,18 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseSync } from 'oxc-parser';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.dirname(scriptsDir);
@@ -185,6 +195,15 @@ function typeText(value) {
   return normalizeType(value?.text ?? value ?? 'unknown');
 }
 
+function eventCancelability(event) {
+  if (event.cancelable === true || event.cancelable === 'always') return true;
+  if (event.cancelable === false || event.cancelable === 'never') return false;
+  const description = String(event.description ?? '');
+  if (/\b(?:(?:not|never)\s+cancelable|non[- ]?cancelable)\b/i.test(description)) return false;
+  if (/\bcancelable\b/i.test(description)) return true;
+  return undefined;
+}
+
 function addEntry(entries, id, surface, semantic, value, label = id) {
   if (entries.has(id)) {
     throw new Error(`Duplicate normalized public API entry: ${id}`);
@@ -340,7 +359,17 @@ function normalizeManifest(manifest, entries) {
       for (const member of declaration.members ?? []) {
         if (member.privacy === 'private') continue;
         const kind = member.kind ?? 'field';
-        const memberBase = `${elementBase}:member:${kind}:${member.name}`;
+        const normalizedParameters = (member.parameters ?? []).map((parameter) => ({
+          name: parameter.name,
+          type: typeText(parameter.type),
+          optional: Boolean(parameter.optional || parameter.default !== undefined),
+          default: normalizeDefault(parameter.default),
+        }));
+        const signature = kind === 'method'
+          ? `(${normalizedParameters.map((parameter) =>
+            `${parameter.name}:${parameter.optional ? '?' : ''}${parameter.type}`).join(',')})`
+          : '';
+        const memberBase = `${elementBase}:member:${kind}:${member.name}${signature}`;
         addPresence(entries, memberBase, 'cem', `${tagName}.${member.name}`);
         addEntry(entries, `${memberBase}:type`, 'cem', 'type', typeText(member.type), memberBase);
         addEntry(
@@ -397,12 +426,7 @@ function normalizeManifest(manifest, entries) {
             `${memberBase}:parameters`,
             'cem',
             'parameters',
-            (member.parameters ?? []).map((parameter) => ({
-              name: parameter.name,
-              type: typeText(parameter.type),
-              optional: Boolean(parameter.optional || parameter.default !== undefined),
-              default: normalizeDefault(parameter.default),
-            })),
+            normalizedParameters,
             memberBase,
           );
           addEntry(
@@ -435,12 +459,24 @@ function normalizeManifest(manifest, entries) {
         const base = `${elementBase}:event:${event.name}`;
         addPresence(entries, base, 'cem', `${tagName} ${event.name}`);
         addEntry(entries, `${base}:type`, 'cem', 'type', typeText(event.type), base);
+        const cancelable = eventCancelability(event);
+        if (cancelable !== undefined) {
+          addEntry(
+            entries,
+            `${base}:cancelable`,
+            'cem',
+            'cancelable',
+            cancelable,
+            base,
+          );
+        }
       }
 
       for (const [collection, segment] of [
         ['slots', 'slot'],
         ['cssParts', 'css-part'],
         ['cssProperties', 'css-property'],
+        ['cssStates', 'css-state'],
       ]) {
         for (const item of declaration[collection] ?? []) {
           const publicName = item.name === '' ? '(default)' : item.name;
@@ -462,18 +498,51 @@ function normalizeManifest(manifest, entries) {
   }
 }
 
-function normalizeExports(exportsValue, entries) {
+function normalizeExports(exportsValue, entries, packageFiles = []) {
+  const normalizedPackageFiles = [...new Set(packageFiles)]
+    .map((file) => `./${String(file).replace(/^\.\//, '').replaceAll(path.sep, '/')}`)
+    .sort();
+  const wildcardExpansions = [];
+
+  const addTarget = (specifier, condition, value, label = `${specifier} (${condition})`) => {
+    const id = `package-export:${specifier}:${condition}`;
+    if (!entries.has(id)) {
+      addEntry(entries, id, 'package-export', 'target', value, label);
+    }
+  };
+
+  const expandWildcard = (specifier, condition, target) => {
+    if (!specifier.includes('*') || !target.includes('*')) return;
+    const [targetPrefix, targetSuffix] = target.split('*');
+    for (const packageFile of normalizedPackageFiles) {
+      if (!packageFile.startsWith(targetPrefix) || !packageFile.endsWith(targetSuffix)) continue;
+      const captured = packageFile.slice(
+        targetPrefix.length,
+        packageFile.length - targetSuffix.length || undefined,
+      );
+      const publicSpecifier = specifier.replace('*', captured);
+      const publicTarget = target.replace('*', captured);
+      wildcardExpansions.push({
+        publicSpecifier,
+        condition,
+        publicTarget,
+        specificity: specifier.length,
+      });
+    }
+  };
+
+  const addWildcardExpansions = () => {
+    wildcardExpansions
+      .sort((left, right) => right.specificity - left.specificity)
+      .forEach(({ publicSpecifier, condition, publicTarget }) =>
+        addTarget(publicSpecifier, condition, publicTarget));
+  };
+
   const walk = (specifier, value, conditions = []) => {
     if (typeof value === 'string' || value === null) {
       const condition = conditions.length > 0 ? conditions.join('.') : 'default';
-      addEntry(
-        entries,
-        `package-export:${specifier}:${condition}`,
-        'package-export',
-        'target',
-        value,
-        `${specifier} (${condition})`,
-      );
+      addTarget(specifier, condition, value);
+      if (typeof value === 'string') expandWildcard(specifier, condition, value);
       return;
     }
     if (Array.isArray(value)) {
@@ -489,221 +558,599 @@ function normalizeExports(exportsValue, entries) {
 
   if (typeof exportsValue === 'string' || Array.isArray(exportsValue)) {
     walk('.', exportsValue);
+    addWildcardExpansions();
     return;
   }
   for (const specifier of Object.keys(exportsValue ?? {}).sort()) {
     walk(specifier, exportsValue[specifier]);
   }
+  addWildcardExpansions();
 }
 
-function moduleNameText(name, sourceFile) {
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text;
-  return sourceText(name, sourceFile);
+function normalizedFileKey(file) {
+  return String(file).replace(/^\.\//, '').replaceAll('\\', '/');
 }
 
-function declarationIsPublic(statement, nested) {
-  return nested || hasModifier(statement, ts.SyntaxKind.ExportKeyword);
+function nodeText(module, node) {
+  return node && Number.isInteger(node.start) && Number.isInteger(node.end)
+    ? module.source.slice(node.start, node.end)
+    : '';
 }
 
-function normalizeFrameworkDeclarations(framework, text, entries) {
-  const sourceFile = ts.createSourceFile(
-    `${framework}.d.ts`,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+function propertyName(node, module) {
+  if (!node) return undefined;
+  if (node.type === 'Identifier' || node.type === 'PrivateIdentifier') return node.name;
+  if (node.type === 'Literal') return String(node.value);
+  const text = nodeText(module, node);
+  return text ? normalizeWhitespace(text) : undefined;
+}
 
-  const visit = (statements, namespace = '', nested = false) => {
-    for (const statement of statements) {
-      if (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) continue;
-      if (ts.isModuleDeclaration(statement)) {
-        const moduleName = moduleNameText(statement.name, sourceFile);
-        const nextNamespace = namespace ? `${namespace}.${moduleName}` : moduleName;
-        let body = statement.body;
-        while (body && ts.isModuleDeclaration(body)) body = body.body;
-        if (body && ts.isModuleBlock(body)) visit(body.statements, nextNamespace, true);
-        continue;
-      }
-      if (!declarationIsPublic(statement, nested)) continue;
+function declarationName(node, module) {
+  if (!node) return undefined;
+  if (node.type === 'VariableDeclarator') return propertyName(node.id, module);
+  return propertyName(node.id, module);
+}
 
-      const prefix = `framework:${framework}:${namespace ? `${namespace}:` : ''}`;
-      if (ts.isInterfaceDeclaration(statement)) {
-        const base = `${prefix}interface:${statement.name.text}`;
-        addPresence(entries, base, `framework:${framework}`, statement.name.text);
-        addEntry(
-          entries,
-          `${base}:extends`,
-          `framework:${framework}`,
-          'heritage',
-          (statement.heritageClauses ?? [])
-            .flatMap((clause) => clause.types.map((type) => sourceText(type, sourceFile)))
-            .sort(),
-          statement.name.text,
-        );
-        for (const member of statement.members) {
-          const name = propertyNameText(member.name, sourceFile) || 'call';
-          const kind = ts.isMethodSignature(member)
-            ? 'method'
-            : ts.isIndexSignatureDeclaration(member)
-              ? 'index'
-              : ts.isCallSignatureDeclaration(member)
-                ? 'call'
-                : 'property';
-          const memberBase = `${base}:${kind}:${name}`;
-          addPresence(entries, memberBase, `framework:${framework}`, `${statement.name.text}.${name}`);
-          if ('questionToken' in member) {
-            addEntry(
-              entries,
-              `${memberBase}:optional`,
-              `framework:${framework}`,
-              'optional',
-              Boolean(member.questionToken),
-              memberBase,
-            );
-          }
-          addEntry(
-            entries,
-            `${memberBase}:readonly`,
-            `framework:${framework}`,
-            'readonly',
-            hasModifier(member, ts.SyntaxKind.ReadonlyKeyword),
-            memberBase,
-          );
-          if ('parameters' in member && member.parameters) {
-            addEntry(
-              entries,
-              `${memberBase}:parameters`,
-              `framework:${framework}`,
-              'parameters',
-              member.parameters.map((parameter) => normalizeParameter(parameter, sourceFile)),
-              memberBase,
-            );
-          }
-          addTypeSurface(
-            entries,
-            memberBase,
-            `framework:${framework}`,
-            member.type,
-            sourceFile,
-            memberBase,
-          );
-        }
-        continue;
-      }
+function declarationKind(node) {
+  if (node?.type === 'TSInterfaceDeclaration' || node?.type === 'TSTypeAliasDeclaration') {
+    return 'type';
+  }
+  return 'value';
+}
 
-      if (ts.isTypeAliasDeclaration(statement)) {
-        const base = `${prefix}type:${statement.name.text}`;
-        addPresence(entries, base, `framework:${framework}`, statement.name.text);
-        addTypeSurface(
-          entries,
-          base,
-          `framework:${framework}`,
-          statement.type,
-          sourceFile,
-          statement.name.text,
-        );
-        continue;
-      }
+function declarationRecords(node, module) {
+  if (!node) return [];
+  if (node.type === 'VariableDeclaration') {
+    return (node.declarations ?? [])
+      .map((declaration) => ({ node: declaration, name: declarationName(declaration, module) }))
+      .filter((record) => record.name);
+  }
+  const name = declarationName(node, module);
+  return name ? [{ node, name }] : [];
+}
 
-      if (ts.isFunctionDeclaration(statement) && statement.name) {
-        const base = `${prefix}function:${statement.name.text}`;
-        addPresence(entries, base, `framework:${framework}`, statement.name.text);
-        addEntry(
-          entries,
-          `${base}:parameters`,
-          `framework:${framework}`,
-          'parameters',
-          statement.parameters.map((parameter) => normalizeParameter(parameter, sourceFile)),
-          base,
-        );
-        addTypeSurface(
-          entries,
-          base,
-          `framework:${framework}`,
-          statement.type,
-          sourceFile,
-          base,
-        );
-        continue;
-      }
-
-      if (ts.isVariableStatement(statement)) {
-        for (const declaration of statement.declarationList.declarations) {
-          const name = propertyNameText(declaration.name, sourceFile);
-          const base = `${prefix}variable:${name}`;
-          addPresence(entries, base, `framework:${framework}`, name);
-          addTypeSurface(
-            entries,
-            base,
-            `framework:${framework}`,
-            declaration.type,
-            sourceFile,
-            name,
-          );
-        }
-      }
-    }
+function parseDeclarationModule(file, source) {
+  const parsed = parseSync(file, source, { lang: 'ts', sourceType: 'module' });
+  if (parsed.errors.length > 0) {
+    const details = parsed.errors.map((error) => error.message ?? String(error)).join('\n');
+    throw new SyntaxError(`${file} could not be parsed:\n${details}`);
+  }
+  const module = {
+    file,
+    source,
+    body: parsed.program.body,
+    declarations: new Map(),
+    directExports: new Map(),
+    exportStars: [],
+    imports: new Map(),
+  };
+  const rememberDeclaration = (record) => {
+    const records = module.declarations.get(record.name) ?? [];
+    records.push(record);
+    module.declarations.set(record.name, records);
   };
 
-  visit(sourceFile.statements);
-}
-
-function normalizeNamedExports(text, entries) {
-  const sourceFile = ts.createSourceFile(
-    'named-exports.d.ts',
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
-  for (const statement of sourceFile.statements) {
-    if (ts.isExportDeclaration(statement)) {
-      const from = statement.moduleSpecifier
-        ? ts.isStringLiteral(statement.moduleSpecifier)
-          ? statement.moduleSpecifier.text
-          : sourceText(statement.moduleSpecifier, sourceFile)
-        : null;
-      if (!statement.exportClause) {
-        addEntry(
-          entries,
-          `named-export:*:${from ?? '(local)'}`,
-          'named-export',
-          'export',
-          { kind: statement.isTypeOnly ? 'type' : 'value', from },
-          `export * from ${from}`,
-        );
-        continue;
-      }
-      if (ts.isNamedExports(statement.exportClause)) {
-        for (const specifier of statement.exportClause.elements) {
-          const exported = specifier.name.text;
-          addEntry(
-            entries,
-            `named-export:${exported}`,
-            'named-export',
-            'export',
-            {
-              kind: statement.isTypeOnly || specifier.isTypeOnly ? 'type' : 'value',
-              imported: specifier.propertyName?.text ?? exported,
-              from,
-            },
-            exported,
-          );
-        }
+  for (const statement of module.body) {
+    if (statement.type === 'ImportDeclaration') {
+      for (const specifier of statement.specifiers ?? []) {
+        const local = propertyName(specifier.local, module);
+        if (!local) continue;
+        const imported = specifier.type === 'ImportDefaultSpecifier'
+          ? 'default'
+          : specifier.type === 'ImportNamespaceSpecifier'
+            ? '*'
+            : propertyName(specifier.imported, module);
+        module.imports.set(local, { imported, source: statement.source.value });
       }
       continue;
     }
-    if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword) || !statement.name) continue;
-    const name = propertyNameText(statement.name, sourceFile);
+
+    const wrapper = statement.type === 'ExportNamedDeclaration' ? statement : undefined;
+    const declaration = wrapper?.declaration ?? statement;
+    for (const record of declarationRecords(declaration, module)) {
+      rememberDeclaration(record);
+      if (wrapper) {
+        module.directExports.set(record.name, {
+          local: record.name,
+          source: null,
+          kind: wrapper.exportKind === 'type' ? 'type' : declarationKind(record.node),
+        });
+      }
+    }
+
+    if (statement.type === 'ExportNamedDeclaration' && !statement.declaration) {
+      for (const specifier of statement.specifiers ?? []) {
+        const exported = propertyName(specifier.exported, module);
+        const local = propertyName(specifier.local, module);
+        if (!exported || !local) continue;
+        module.directExports.set(exported, {
+          local,
+          source: statement.source?.value ?? null,
+          kind:
+            statement.exportKind === 'type' || specifier.exportKind === 'type'
+              ? 'type'
+              : 'value',
+        });
+      }
+    } else if (statement.type === 'ExportAllDeclaration') {
+      if (statement.exported) {
+        const exported = propertyName(statement.exported, module);
+        if (exported) {
+          module.directExports.set(exported, {
+            local: '*',
+            source: statement.source.value,
+            kind: statement.exportKind === 'type' ? 'type' : 'value',
+          });
+        }
+      } else {
+        module.exportStars.push({
+          source: statement.source.value,
+          kind: statement.exportKind === 'type' ? 'type' : 'value',
+        });
+      }
+    }
+  }
+  return module;
+}
+
+function resolveDeclarationFile(files, fromFile, specifier) {
+  if (typeof specifier !== 'string' || !specifier.startsWith('.')) return undefined;
+  const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), specifier));
+  const candidates = [base];
+  if (/\.mjs$/.test(base)) candidates.push(base.replace(/\.mjs$/, '.d.mts'));
+  if (/\.cjs$/.test(base)) candidates.push(base.replace(/\.cjs$/, '.d.cts'));
+  if (/\.js$/.test(base)) candidates.push(base.replace(/\.js$/, '.d.ts'));
+  if (!/\.(?:d\.)?[cm]?[jt]s$/.test(base)) {
+    candidates.push(`${base}.d.ts`, path.posix.join(base, 'index.d.ts'));
+  }
+  return candidates.find((candidate) => files.has(normalizedFileKey(candidate)));
+}
+
+function declarationGraph(filesValue) {
+  const files = new Map(
+    Object.entries(filesValue ?? {}).map(([file, source]) => [normalizedFileKey(file), source]),
+  );
+  const moduleCache = new Map();
+  const exportCache = new Map();
+  const getModule = (file) => {
+    const key = normalizedFileKey(file);
+    if (!files.has(key)) return undefined;
+    if (!moduleCache.has(key)) {
+      moduleCache.set(key, parseDeclarationModule(key, files.get(key)));
+    }
+    return moduleCache.get(key);
+  };
+  const getExports = (file, ancestry = new Set()) => {
+    const key = normalizedFileKey(file);
+    if (exportCache.has(key)) return exportCache.get(key);
+    if (ancestry.has(key)) return new Map();
+    const module = getModule(key);
+    if (!module) return new Map();
+    const table = new Map(module.directExports);
+    exportCache.set(key, table);
+    const nextAncestry = new Set(ancestry).add(key);
+    for (const star of module.exportStars) {
+      const target = resolveDeclarationFile(files, key, star.source);
+      if (!target) continue;
+      for (const [name, binding] of getExports(target, nextAncestry)) {
+        if (name === 'default' || table.has(name)) continue;
+        table.set(name, {
+          local: name,
+          source: star.source,
+          kind: star.kind === 'type' ? 'type' : binding.kind,
+        });
+      }
+    }
+    return table;
+  };
+  return { files, getModule, getExports };
+}
+
+function resolveExportDeclaration(graph, file, exportedName, seen = new Set()) {
+  const key = `${normalizedFileKey(file)}#${exportedName}`;
+  if (seen.has(key)) return undefined;
+  seen.add(key);
+  const module = graph.getModule(file);
+  const binding = graph.getExports(file).get(exportedName);
+  if (!module || !binding) return undefined;
+
+  if (binding.source) {
+    const target = resolveDeclarationFile(graph.files, module.file, binding.source);
+    return target
+      ? resolveExportDeclaration(graph, target, binding.local, seen)
+      : undefined;
+  }
+  const records = module.declarations.get(binding.local);
+  if (records?.length) return { module, records };
+  const imported = module.imports.get(binding.local);
+  if (!imported || imported.imported === '*') return undefined;
+  const target = resolveDeclarationFile(graph.files, module.file, imported.source);
+  return target
+    ? resolveExportDeclaration(graph, target, imported.imported, seen)
+    : undefined;
+}
+
+function unwrapTypeAnnotation(node) {
+  return node?.type === 'TSTypeAnnotation' ? node.typeAnnotation : node;
+}
+
+function typeNodeText(module, node) {
+  const text = nodeText(module, unwrapTypeAnnotation(node));
+  return text || 'unknown';
+}
+
+function normalizeTypeParameters(module, node) {
+  return (node?.typeParameters?.params ?? []).map((parameter) => ({
+    name: propertyName(parameter.name, module) ?? 'T',
+    constraint: parameter.constraint
+      ? normalizeType(nodeText(module, parameter.constraint))
+      : null,
+    default: parameter.default
+      ? normalizeType(nodeText(module, parameter.default))
+      : null,
+    in: Boolean(parameter.in),
+    out: Boolean(parameter.out),
+    const: Boolean(parameter.const),
+  }));
+}
+
+function typeParameterSignature(parameters) {
+  if (parameters.length === 0) return '';
+  return `<${parameters.map((parameter) => [
+    parameter.in ? 'in' : '',
+    parameter.out ? 'out' : '',
+    parameter.const ? 'const' : '',
+    parameter.name,
+    parameter.constraint ? `extends:${parameter.constraint}` : '',
+    parameter.default ? `default:${parameter.default}` : '',
+  ].filter(Boolean).join(':')).join(',')}>`;
+}
+
+function normalizeParameterNode(module, parameter) {
+  return normalizeParameterText(nodeText(module, parameter) || 'value: unknown');
+}
+
+function memberDescriptor(module, member) {
+  const methodNode = member.value && typeof member.value === 'object' ? member.value : member;
+  let kind = 'property';
+  if (member.type === 'TSMethodSignature' || member.type === 'MethodDefinition') kind = 'method';
+  else if (member.type === 'TSCallSignatureDeclaration') kind = 'call';
+  else if (member.type === 'TSConstructSignatureDeclaration') kind = 'construct';
+  else if (member.type === 'TSIndexSignature') kind = 'index';
+  else if (member.kind === 'constructor') kind = 'constructor';
+  const parameters = methodNode.params ?? member.parameters;
+  const name = kind === 'call' || kind === 'construct' || kind === 'index'
+    ? kind
+    : propertyName(member.key, module) ?? member.kind ?? 'member';
+  const normalizedParameters = parameters?.map((parameter) => normalizeParameterNode(module, parameter));
+  const typeParameters = normalizeTypeParameters(module, methodNode);
+  const genericSignature = typeParameterSignature(typeParameters);
+  const signature = normalizedParameters ? `(${normalizedParameters.join(',')})` : '';
+  return {
+    member,
+    kind,
+    name,
+    idName: `${name}${genericSignature}${signature}`,
+    parameters: normalizedParameters,
+    typeParameters,
+    optional: Boolean(member.optional),
+    readonly: Boolean(member.readonly),
+    static: Boolean(member.static),
+    accessibility: member.accessibility ?? 'public',
+    type: typeNodeText(
+      module,
+      methodNode.returnType ?? member.returnType ?? member.typeAnnotation ?? member.key?.typeAnnotation,
+    ),
+    sortKey: normalizeWhitespace(nodeText(module, member)),
+  };
+}
+
+function addMemberSurfaces(entries, base, surface, label, module, members) {
+  const descriptors = members
+    .map((member) => memberDescriptor(module, member))
+    .filter(({ member, accessibility }) =>
+      member.key?.type !== 'PrivateIdentifier' && accessibility !== 'private')
+    .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
+  for (const descriptor of descriptors) {
+    const memberBase = `${base}:${descriptor.kind}:${descriptor.idName}`;
+    addPresence(entries, memberBase, surface, `${label}.${descriptor.name}`);
+    addEntry(entries, `${memberBase}:optional`, surface, 'optional', descriptor.optional, memberBase);
+    addEntry(entries, `${memberBase}:readonly`, surface, 'readonly', descriptor.readonly, memberBase);
+    addEntry(entries, `${memberBase}:static`, surface, 'static', descriptor.static, memberBase);
     addEntry(
       entries,
-      `named-export:${name}`,
-      'named-export',
-      'export',
-      { kind: ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement) ? 'type' : 'value', from: null },
-      name,
+      `${memberBase}:accessibility`,
+      surface,
+      'privacy',
+      descriptor.accessibility,
+      memberBase,
     );
+    if (descriptor.parameters) {
+      addEntry(
+        entries,
+        `${memberBase}:parameters`,
+        surface,
+        'parameters',
+        descriptor.parameters,
+        memberBase,
+      );
+    }
+    if (descriptor.parameters || descriptor.typeParameters.length > 0) {
+      addEntry(
+        entries,
+        `${memberBase}:type-parameters`,
+        surface,
+        'parameters',
+        descriptor.typeParameters,
+        memberBase,
+      );
+    }
+    addTypeSurface(entries, memberBase, surface, descriptor.type, memberBase);
+  }
+}
+
+function addDeclarationSurface(entries, base, surface, label, resolved) {
+  const { module, records } = resolved;
+  const nodes = records.map((record) => record.node);
+  const primary = nodes[0];
+  if (!primary) return;
+  const kind = primary.type === 'TSInterfaceDeclaration'
+    ? 'interface'
+    : primary.type === 'TSTypeAliasDeclaration'
+      ? 'type'
+      : primary.type === 'ClassDeclaration'
+        ? 'class'
+        : primary.type === 'VariableDeclarator'
+          ? 'variable'
+          : primary.type === 'TSDeclareFunction' || primary.type === 'FunctionDeclaration'
+            ? 'function'
+            : primary.type;
+  addEntry(entries, `${base}:declaration-kind`, surface, 'shape', kind, label);
+
+  if (kind === 'interface') {
+    addEntry(
+      entries,
+      `${base}:type-parameters`,
+      surface,
+      'parameters',
+      normalizeTypeParameters(module, primary),
+      label,
+    );
+    const heritage = nodes
+      .flatMap((node) => node.extends ?? [])
+      .map((item) => normalizeType(nodeText(module, item)))
+      .sort();
+    addEntry(entries, `${base}:extends`, surface, 'heritage', heritage, label);
+    addMemberSurfaces(
+      entries,
+      base,
+      surface,
+      label,
+      module,
+      nodes.flatMap((node) => node.body?.body ?? []),
+    );
+    return;
+  }
+  if (kind === 'type') {
+    addEntry(
+      entries,
+      `${base}:type-parameters`,
+      surface,
+      'parameters',
+      normalizeTypeParameters(module, primary),
+      label,
+    );
+    addTypeSurface(entries, base, surface, typeNodeText(module, primary.typeAnnotation), label);
+    return;
+  }
+  if (kind === 'class') {
+    addEntry(
+      entries,
+      `${base}:type-parameters`,
+      surface,
+      'parameters',
+      normalizeTypeParameters(module, primary),
+      label,
+    );
+    const heritage = primary.superClass
+      ? [
+        normalizeType(
+          `${nodeText(module, primary.superClass)}${nodeText(module, primary.superTypeArguments)}`,
+        ),
+      ]
+      : [];
+    addEntry(entries, `${base}:extends`, surface, 'heritage', heritage, label);
+    addMemberSurfaces(entries, base, surface, label, module, primary.body?.body ?? []);
+    return;
+  }
+  if (kind === 'function') {
+    for (const node of [...nodes].sort((left, right) =>
+      nodeText(module, left).localeCompare(nodeText(module, right)))) {
+      const parameters = (node.params ?? []).map((parameter) =>
+        normalizeParameterNode(module, parameter));
+      const typeParameters = normalizeTypeParameters(module, node);
+      const overloadBase = `${base}:overload:${typeParameterSignature(typeParameters)}(${parameters.join(',')})`;
+      addPresence(entries, overloadBase, surface, label);
+      addEntry(entries, `${overloadBase}:parameters`, surface, 'parameters', parameters, label);
+      addEntry(
+        entries,
+        `${overloadBase}:type-parameters`,
+        surface,
+        'parameters',
+        typeParameters,
+        label,
+      );
+      addTypeSurface(
+        entries,
+        overloadBase,
+        surface,
+        typeNodeText(module, node.returnType),
+        label,
+      );
+    }
+    return;
+  }
+  if (kind === 'variable') {
+    addTypeSurface(entries, base, surface, typeNodeText(module, primary.id?.typeAnnotation), label);
+  }
+}
+
+function normalizeFrameworkDeclarations(framework, text, entries) {
+  const module = parseDeclarationModule(`${framework}.d.ts`, text);
+  const groups = new Map();
+  const visit = (statements, namespace = '', nested = false) => {
+    for (const statement of statements) {
+      const exported = statement.type === 'ExportNamedDeclaration';
+      const declaration = exported ? statement.declaration : statement;
+      if (!declaration) continue;
+      if (declaration.type === 'TSModuleDeclaration') {
+        const moduleName = propertyName(declaration.id, module) ?? 'module';
+        const nextNamespace = namespace ? `${namespace}.${moduleName}` : moduleName;
+        let body = declaration.body;
+        while (body?.type === 'TSModuleDeclaration') body = body.body;
+        if (body?.type === 'TSModuleBlock') visit(body.body, nextNamespace, true);
+        continue;
+      }
+      if (!nested && !exported) continue;
+      for (const record of declarationRecords(declaration, module)) {
+        const prefix = `framework:${framework}:${namespace ? `${namespace}:` : ''}`;
+        const key = `${prefix}${record.name}`;
+        const group = groups.get(key) ?? { base: key, label: record.name, module, records: [] };
+        group.records.push(record);
+        groups.set(key, group);
+      }
+    }
+  };
+  visit(module.body);
+  for (const group of [...groups.values()].sort((left, right) =>
+    left.base.localeCompare(right.base))) {
+    addPresence(entries, group.base, `framework:${framework}`, group.label);
+    addDeclarationSurface(
+      entries,
+      group.base,
+      `framework:${framework}`,
+      group.label,
+      group,
+    );
+  }
+}
+
+function leftmostTypeName(node) {
+  if (!node) return undefined;
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'TSQualifiedName') return leftmostTypeName(node.left);
+  return undefined;
+}
+
+function referencedTypeNames(records) {
+  const names = new Set();
+  const seen = new Set();
+  const visit = (value) => {
+    if (!value || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    if (value.type === 'TSTypeReference') {
+      const name = leftmostTypeName(value.typeName);
+      if (name) names.add(name);
+    } else if (value.type === 'TSInterfaceHeritage') {
+      const name = leftmostTypeName(value.expression);
+      if (name) names.add(name);
+    } else if (value.type === 'TSTypeQuery') {
+      const name = leftmostTypeName(value.exprName);
+      if (name) names.add(name);
+    } else if (value.type === 'ClassDeclaration') {
+      const name = leftmostTypeName(value.superClass);
+      if (name) names.add(name);
+      visit(value.typeParameters);
+      visit(value.superTypeArguments);
+      (value.implements ?? []).forEach(visit);
+      for (const member of value.body?.body ?? []) {
+        if (member.accessibility === 'private' || member.key?.type === 'PrivateIdentifier') continue;
+        visit(member);
+      }
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'type' || key === 'start' || key === 'end') continue;
+      if (Array.isArray(child)) child.forEach(visit);
+      else visit(child);
+    }
+  };
+  records.forEach(({ node }) => visit(node));
+  return [...names].sort();
+}
+
+function resolveTypeDependency(graph, module, localName) {
+  const records = module.declarations.get(localName);
+  if (records?.length) return { module, records };
+  const imported = module.imports.get(localName);
+  if (!imported || imported.imported === '*') return undefined;
+  const target = resolveDeclarationFile(graph.files, module.file, imported.source);
+  return target
+    ? resolveExportDeclaration(graph, target, imported.imported)
+    : undefined;
+}
+
+function declarationIdentity(resolved) {
+  return `${resolved.module.file}#${resolved.records
+    .map(({ node }) => `${node.start}:${node.end}`)
+    .sort()
+    .join(',')}`;
+}
+
+function addReachableTypeSurfaces(
+  entries,
+  base,
+  surface,
+  graph,
+  resolved,
+  ancestry = new Set([declarationIdentity(resolved)]),
+) {
+  for (const localName of referencedTypeNames(resolved.records)) {
+    const dependency = resolveTypeDependency(graph, resolved.module, localName);
+    if (!dependency) continue;
+    const identity = declarationIdentity(dependency);
+    if (ancestry.has(identity)) continue;
+    const dependencyBase = `${base}:dependency:${localName}`;
+    addPresence(entries, dependencyBase, surface, `${localName} (reachable from ${base})`);
+    addDeclarationSurface(
+      entries,
+      dependencyBase,
+      surface,
+      localName,
+      dependency,
+    );
+    addReachableTypeSurfaces(
+      entries,
+      dependencyBase,
+      surface,
+      graph,
+      dependency,
+      new Set(ancestry).add(identity),
+    );
+  }
+}
+
+function normalizeNamedExports(declarations, entries) {
+  const filesValue = { ...(declarations.files ?? {}) };
+  const entryFile = normalizedFileKey(declarations.namedEntry ?? 'dist/lyra.d.ts');
+  if (typeof declarations.named === 'string') filesValue[entryFile] = declarations.named;
+  if (!filesValue[entryFile]) return;
+  const graph = declarationGraph(filesValue);
+  const exportTable = graph.getExports(entryFile);
+  for (const [name, binding] of [...exportTable].sort(([left], [right]) =>
+    left.localeCompare(right))) {
+    if (name === 'default') continue;
+    const resolved = resolveExportDeclaration(graph, entryFile, name);
+    const resolvedKind = resolved?.records.every(({ node }) => declarationKind(node) === 'type')
+      ? 'type'
+      : 'value';
+    const kind = binding.kind === 'type' || resolvedKind === 'type' ? 'type' : 'value';
+    const base = `named-export:${name}`;
+    addEntry(entries, base, 'named-export', 'export', { kind }, name);
+    if (resolved) {
+      addDeclarationSurface(entries, base, 'named-export', name, resolved);
+      addReachableTypeSurfaces(entries, base, 'named-export', graph, resolved);
+    }
   }
 }
 
@@ -712,9 +1159,14 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
     throw new Error('Public API input requires packageJson.name and packageJson.version.');
   }
   const entries = new Map();
-  normalizeExports(packageJson.exports, entries);
-  normalizeManifest(manifest, entries);
-  if (typeof declarations.named === 'string') normalizeNamedExports(declarations.named, entries);
+  normalizeExports(packageJson.exports, entries, declarations.packageFiles);
+  // Published manifests before v8 flattened standard superclass surfaces into every subclass,
+  // while the compact v8 representation stores them once on the resolvable base declaration.
+  // Compare effective public surfaces, not those two byte-level encodings; expansion is
+  // idempotent for an already-flattened manifest because subclass entries override inherited
+  // entries by public name.
+  normalizeManifest(expandManifestInheritance(manifest), entries);
+  normalizeNamedExports(declarations, entries);
   for (const framework of ['react', 'vue', 'svelte']) {
     if (typeof declarations[framework] === 'string') {
       normalizeFrameworkDeclarations(framework, declarations[framework], entries);
@@ -801,11 +1253,15 @@ function maxBump(...bumps) {
 }
 
 export function minimumRequiredBump(changes) {
-  return maxBump('none', ...changes.map((change) => change.bump));
+  let required = 'none';
+  for (const change of changes) required = maxBump(required, change.bump);
+  return required;
 }
 
 function parseVersion(version, label) {
-  const match = String(version).match(/^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$/);
+  const match = String(version).match(
+    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+  );
   if (!match) throw new Error(`${label} must be a semver version; received ${version}.`);
   return match.slice(1).map(Number);
 }
@@ -918,6 +1374,113 @@ function readJson(file) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
+export function parseNpmPackOutput(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(String(text));
+  } catch (error) {
+    throw new Error(
+      `npm pack did not return valid JSON: ${error instanceof Error ? error.message : error}`,
+    );
+  }
+  if (
+    !Array.isArray(parsed) ||
+    parsed.length !== 1 ||
+    typeof parsed[0]?.filename !== 'string' ||
+    !parsed[0].filename.endsWith('.tgz')
+  ) {
+    throw new Error('npm pack must produce exactly one tarball filename.');
+  }
+  return parsed[0].filename;
+}
+
+export function validateTarEntries(entries) {
+  for (const rawEntry of entries) {
+    const entry = String(rawEntry).replace(/\/$/, '');
+    const segments = entry.split('/');
+    if (
+      entry === '' ||
+      entry.startsWith('/') ||
+      entry.includes('\\') ||
+      entry.includes('\0') ||
+      segments.some((segment) => segment === '..' || segment === '.') ||
+      (entry !== 'package' && !entry.startsWith('package/'))
+    ) {
+      throw new Error(`Refusing unsafe archive entry in published baseline: ${rawEntry}`);
+    }
+  }
+}
+
+export function validateTarEntryTypes(verboseEntries) {
+  for (const entry of verboseEntries) {
+    const type = String(entry)[0];
+    if (type !== '-' && type !== 'd') {
+      throw new Error(
+        `Refusing link or special-file entry in published baseline: ${entry}`,
+      );
+    }
+  }
+}
+
+export function acquirePublishedBaseline(
+  packageName,
+  { run = execFileSync, temporaryDirectory = tmpdir() } = {},
+) {
+  const workingDirectory = mkdtempSync(path.join(temporaryDirectory, 'lyra-public-api-'));
+  const execute = (command, args) =>
+    run(command, args, {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  try {
+    const versionValue = JSON.parse(
+      execute('npm', ['view', `${packageName}@latest`, 'version', '--json']),
+    );
+    const version = Array.isArray(versionValue) ? versionValue.at(-1) : versionValue;
+    parseVersion(version, 'published package version');
+    const packOutput = execute('npm', [
+      'pack',
+      `${packageName}@${version}`,
+      '--json',
+      '--ignore-scripts',
+      '--pack-destination',
+      workingDirectory,
+    ]);
+    const filename = parseNpmPackOutput(packOutput);
+    const tarball = path.join(workingDirectory, path.basename(filename));
+    if (!existsSync(tarball)) throw new Error(`npm pack did not create ${tarball}.`);
+    const entries = execute('tar', ['-tzf', tarball])
+      .split(/\r?\n/)
+      .filter(Boolean);
+    validateTarEntries(entries);
+    const verboseEntries = execute('tar', ['-tvzf', tarball, '--numeric-owner'])
+      .split(/\r?\n/)
+      .filter(Boolean);
+    validateTarEntryTypes(verboseEntries);
+    execute('tar', [
+      '-xzf',
+      tarball,
+      '-C',
+      workingDirectory,
+      '--no-same-owner',
+      '--no-same-permissions',
+    ]);
+    const root = path.join(workingDirectory, 'package');
+    if (!existsSync(path.join(root, 'package.json'))) {
+      throw new Error('Published baseline tarball does not contain package/package.json.');
+    }
+    return {
+      root,
+      version,
+      cleanup: () => rmSync(workingDirectory, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    rmSync(workingDirectory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 const DECLARATION_FILES = Object.freeze({
   named: 'dist/lyra.d.ts',
   react: 'dist/custom-elements-jsx.d.ts',
@@ -928,13 +1491,36 @@ const DECLARATION_FILES = Object.freeze({
 export function readPackageApi(root) {
   const packageJsonFile = path.join(root, 'package.json');
   const manifestFile = path.join(root, 'custom-elements.json');
+  const namedDeclarationsFile = path.join(root, DECLARATION_FILES.named);
   if (!existsSync(packageJsonFile)) throw new Error(`Missing public API package metadata: ${packageJsonFile}`);
   if (!existsSync(manifestFile)) throw new Error(`Missing custom-elements manifest: ${manifestFile}`);
-  const declarations = {};
+  if (!existsSync(namedDeclarationsFile)) {
+    throw new Error(
+      `Missing built public declarations: ${namedDeclarationsFile}. Run the package build before the public API gate.`,
+    );
+  }
+  const declarations = { files: {}, packageFiles: [] };
+  const collectFiles = (directory, relativeDirectory) => {
+    if (!existsSync(directory)) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.posix.join(relativeDirectory, entry.name);
+      if (entry.isDirectory()) collectFiles(absolute, relative);
+      else if (entry.isFile()) {
+        declarations.packageFiles.push(relative);
+        if (/\.d\.[cm]?ts$/.test(entry.name)) {
+          declarations.files[relative] = readFileSync(absolute, 'utf8');
+        }
+      }
+    }
+  };
+  collectFiles(path.join(root, 'dist'), 'dist');
+  declarations.packageFiles.sort();
   for (const [name, relativeFile] of Object.entries(DECLARATION_FILES)) {
     const file = path.join(root, relativeFile);
     if (existsSync(file)) declarations[name] = readFileSync(file, 'utf8');
   }
+  declarations.namedEntry = DECLARATION_FILES.named;
   return { packageJson: readJson(packageJsonFile), manifest: readJson(manifestFile), declarations };
 }
 
@@ -970,11 +1556,6 @@ function parseArgs(argv) {
     options[argument.slice(2)] = path.resolve(value);
     index += 1;
   }
-  if (!options.baseline) {
-    throw new Error(
-      'Missing --baseline <unpacked-package-dir>. Fetch the last published tarball separately and pass its package directory.',
-    );
-  }
   return options;
 }
 
@@ -987,10 +1568,11 @@ function reportResult(result, json) {
     `Public API semver gate: ${result.packageName} ${result.baselineVersion} -> ${result.currentVersion}`,
   );
   console.log(`Required bump: ${result.gate.required}; declared bump: ${result.gate.declared}`);
-  const counts = { major: 0, minor: 0, patch: 0 };
+  const counts = { major: 0, minor: 0, patch: 0, none: 0 };
   for (const change of result.changes) counts[change.bump] += 1;
   console.log(
-    `Normalized changes: ${counts.major} major, ${counts.minor} minor, ${counts.patch} reviewed patch`,
+    `Normalized changes: ${counts.major} major, ${counts.minor} minor, ` +
+      `${counts.patch} reviewed patch, ${counts.none} reviewed no-release`,
   );
   for (const change of result.changes.slice(0, 100)) {
     const reviewed = change.exception ? ` (reviewed: ${change.exception.reason})` : '';
@@ -1002,30 +1584,40 @@ function reportResult(result, json) {
 
 export function runCli(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  const baseline = normalizePublicApi(readPackageApi(options.baseline));
-  const current = normalizePublicApi(readPackageApi(options.current));
-  let changes = diffPublicApi(baseline, current);
-  const exceptionConfig = existsSync(options.exceptions)
-    ? readJson(options.exceptions)
-    : { exceptions: [] };
-  changes = applyReviewedExceptions(changes, exceptionConfig);
-  const changesetBump = readChangesetBump(options.changesets, current.packageName);
-  const gate = evaluateSemverGate({
-    changes,
-    baselineVersion: baseline.version,
-    currentVersion: current.version,
-    changesetBump,
-  });
-  const result = {
-    packageName: current.packageName,
-    baselineVersion: baseline.version,
-    currentVersion: current.version,
-    changesetBump,
-    gate,
-    changes,
-  };
-  reportResult(result, options.json);
-  return gate.passes ? 0 : 1;
+  const currentInput = readPackageApi(options.current);
+  const published = options.baseline
+    ? undefined
+    : acquirePublishedBaseline(currentInput.packageJson.name);
+  try {
+    const baselineRoot = options.baseline ?? published.root;
+    const baseline = normalizePublicApi(readPackageApi(baselineRoot));
+    const current = normalizePublicApi(currentInput);
+    let changes = diffPublicApi(baseline, current);
+    const exceptionConfig = existsSync(options.exceptions)
+      ? readJson(options.exceptions)
+      : { exceptions: [] };
+    changes = applyReviewedExceptions(changes, exceptionConfig);
+    const changesetBump = readChangesetBump(options.changesets, current.packageName);
+    const gate = evaluateSemverGate({
+      changes,
+      baselineVersion: baseline.version,
+      currentVersion: current.version,
+      changesetBump,
+    });
+    const result = {
+      packageName: current.packageName,
+      baselineVersion: baseline.version,
+      currentVersion: current.version,
+      baselineSource: options.baseline ?? `${current.packageName}@${published.version}`,
+      changesetBump,
+      gate,
+      changes,
+    };
+    reportResult(result, options.json);
+    return gate.passes ? 0 : 1;
+  } finally {
+    published?.cleanup();
+  }
 }
 
 const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;

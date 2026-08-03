@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import type { Citation } from '../../../ai/types.js';
 import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-meter/context-meter.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -16,6 +17,11 @@ import '../../utility/export-button/export-button.class.js';
 import '../../retrieval/citation-badge/citation-badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './context-inspector.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * One redacted character range within a `ContextInspectorSegment.text`. `start`/`end` are plain
@@ -86,7 +92,7 @@ function normalizeRedactions(redactions: ContextInspectorRedaction[] | undefined
 }
 
 function formatCount(n: number, locale: string): string {
-  return Math.round(finiteCount(n)).toLocaleString(locale);
+  return Math.round(finiteCount(n)).toLocaleString(resolveIntlLocale(locale));
 }
 
 export interface LyraContextInspectorEventMap
@@ -140,6 +146,25 @@ export interface LyraContextInspectorEventMap
  * @since 4.1.0
  */
 export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    contextInspectorCopyLabel: LYRA_DEFAULT_contextInspectorCopyLabel,
+    contextInspectorEmpty: LYRA_DEFAULT_contextInspectorEmpty,
+    contextInspectorLabel: LYRA_DEFAULT_contextInspectorLabel,
+    contextInspectorRedacted: LYRA_DEFAULT_contextInspectorRedacted,
+    contextInspectorSegmentTokens: LYRA_DEFAULT_contextInspectorSegmentTokens,
+    contextInspectorTruncated: LYRA_DEFAULT_contextInspectorTruncated,
+    contextInspectorTruncatedCount: LYRA_DEFAULT_contextInspectorTruncatedCount,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn, ...). */

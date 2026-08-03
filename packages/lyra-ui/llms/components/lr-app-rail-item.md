@@ -2,7 +2,7 @@
 
 # `lr-app-rail-item`
 
-- **Import** `import '@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-app-rail-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

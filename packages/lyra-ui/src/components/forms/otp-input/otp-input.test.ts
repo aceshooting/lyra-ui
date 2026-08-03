@@ -486,6 +486,43 @@ it('defers sanitization and public editing events while IME composition is in pr
   expect(completions).to.have.lengthOf(0);
 });
 
+it('defers a genuinely foreign composing InputEvent after adoption', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const el = await fixture<LyraOtpInput>(html`
+    <lr-otp-input label="Code" type="alphanumeric" case="upper"></lr-otp-input>
+  `);
+
+  try {
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const control = controlOf(el);
+    const publicInputs: InputEvent[] = [];
+    el.addEventListener('input', (event) => publicInputs.push(event as InputEvent));
+    const composing = new frameWindow.InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: 'あ',
+      inputType: 'insertCompositionText',
+      isComposing: true,
+    });
+    expect(composing instanceof InputEvent, 'the composition event is not ambient-branded').to.be.false;
+
+    control.value = 'あ';
+    control.dispatchEvent(composing);
+
+    expect(el.value, 'composition text is not sanitized into the public value early').to.equal('');
+    expect(control.value, 'the native editor retains its composition text').to.equal('あ');
+    expect(publicInputs.length, 'no public edit is published before composition ends').to.equal(0);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
+
 it('re-sanitizes an existing value when type narrows', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" type="alphanumeric"></lr-otp-input>`);
   await type(el, 'a1b2');
@@ -841,6 +878,42 @@ it('autosubmits through the resolved default button rather than behind it', asyn
   await type(el, '123');
   await aTimeout(0);
   expect(submitterId).to.equal('go');
+});
+
+it('passes a foreign native autosubmit button to requestSubmit instead of clicking it', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="1" autosubmit></lr-otp-input></form>
+  `);
+  const button = frameDocument.createElement('button');
+  button.type = 'submit';
+  form.append(button);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  const requested: Array<HTMLElement | undefined> = [];
+  let clicks = 0;
+  form.requestSubmit = ((submitter?: HTMLElement) => requested.push(submitter)) as typeof form.requestSubmit;
+  button.click = (() => { clicks += 1; }) as typeof button.click;
+
+  try {
+    expect(button instanceof HTMLButtonElement, 'the submitter is genuinely foreign').to.be.false;
+    const control = controlOf(el);
+    control.value = '7';
+    control.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: '7',
+      inputType: 'insertText',
+    }));
+    await aTimeout(0);
+
+    expect(requested.length).to.equal(1);
+    expect(requested[0] === button).to.be.true;
+    expect(clicks, 'native submitters do not take the FACE activation branch').to.equal(0);
+  } finally {
+    iframe.remove();
+  }
 });
 
 it('lets a listener that vetoes lr-complete asynchronously suppress the autosubmission', async () => {

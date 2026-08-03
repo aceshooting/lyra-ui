@@ -7,7 +7,13 @@ import {
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+  nextId,
+  resolveAccessibleTrigger,
+} from '../../../internal/a11y.js';
 import {
   describeElement,
   undescribeElement,
@@ -24,6 +30,11 @@ import { activateOverlay, composedContains, type OverlayHandle } from '../../../
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import { tooltipStyles } from './overlay.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Default delay (ms) before an interaction opens the tooltip. */
 const DEFAULT_SHOW_DELAY = 150;
@@ -48,6 +59,16 @@ type TooltipVirtualRect = {
   width?: number;
   height?: number;
   contextElement?: Element;
+};
+
+type TooltipContentSnapshot = {
+  actionable: boolean;
+  awaitingShadowRoot: boolean;
+  text: string;
+  externalRoots: Set<Node>;
+  shadowRoots: Set<ShadowRoot>;
+  forwardingSlots: Set<HTMLSlotElement>;
+  composedAncestors: Set<Element>;
 };
 
 const ACTIONABLE_SELECTOR =
@@ -83,12 +104,18 @@ export interface LyraTooltipEventMap {
  * dialog and remains open while pointer or focus is inside so its controls can be reached. Escape
  * from popup content closes it and restores focus to the trigger. Prefer `<lr-popover>` when
  * click-to-open ownership is desired.
+ * Forwarding slots are followed through their live composed assignments: reassignment, descendant
+ * text/actionability changes, and restoration of a forwarding slot's fallback all update the
+ * description and popup role. A host `aria-label` wins by attribute presence, so an explicit empty
+ * label suppresses both derived content text and the localized actionable-popup fallback.
  *
  * `trigger` is a space-separated list of `hover`, `focus`, `click` and `manual`, defaulting to
  * `"hover focus"`. `manual` (in the list, or the standalone `manual` boolean) means only
  * `show()`/`hide()`/`open` move it. `show-delay` and `hide-delay` are independent, so a tooltip
  * can linger after the pointer leaves without also being slow to appear.
  * Motion resolves through `tooltip.show`/`tooltip.hide` in the public animation registry.
+ * Content/trigger observers and delayed transitions bind to the current owner window; disconnect
+ * and cross-document adoption cancel the old realm before reconnect creates replacements.
  *
  * While open, the trigger's `aria-describedby` targets a hidden text proxy in this component's
  * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly.
@@ -134,6 +161,17 @@ export interface LyraTooltipEventMap {
  * @since 4.0.0
  */
 export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, tooltipStyles];
   private _open = false;
   /** Whether the tooltip is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle;
@@ -224,7 +262,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    *  `showAt()`'s doc comment and `activateTooltipOverlay()`'s `onEscape` callback. */
   private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
-  private timer?: ReturnType<typeof setTimeout>;
+  private timer?: number;
+  private timerView?: Window;
   private pendingDirection?: 'show' | 'hide';
   private restoreFocusOnClose = false;
   /** Focus restoration after Escape is synchronous. Suppress only that focus event so returning
@@ -237,6 +276,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private readonly descriptionId = nextId('tooltip-description');
   private descriptionProxy?: HTMLSpanElement;
   private contentObserver?: MutationObserver;
+  private readonly contentSlotListeners = new Set<HTMLSlotElement>();
   /** While an open tooltip contains a rootless custom element, rescan for a bounded initialization
    * grace period. Later observable content mutations start a fresh grace period. */
   private shadowContentScanFrame?: number;
@@ -355,10 +395,14 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.ensureDescriptionProxy();
-    this.contentObserver ??= new MutationObserver(() => {
-      this.syncNamedTriggerMode();
-      this.updateInteractiveContent();
-    });
+    this.contentObserver?.disconnect();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.contentObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.syncNamedTriggerMode();
+          this.updateInteractiveContent();
+        })
+      : undefined;
     this.updateInteractiveContent();
     if (this.triggerElement && !this.triggerDescription) {
       this.snapshotTriggerDescription(this.triggerElement);
@@ -390,12 +434,27 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.restoreTriggerDescription();
     }
     this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+    this.clearContentSlotListeners();
     this.cancelShadowContentScan();
     // A pending after-event must not announce a transition the detached element left behind.
     this.transitionToken++;
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    // Every asynchronous primitive is paired with the Window that created it. Adoption normally
+    // brackets this callback with disconnect/connect, but clearing the old realm here as well
+    // keeps an explicitly adopted, still-detached instance from retaining observers or timers.
+    this.cancelPendingTransition();
+    this.cancelShadowContentScan();
+    this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+    this.clearContentSlotListeners();
+    this.triggerDescriptionObserver?.disconnect();
+    this.triggerDescriptionObserver = undefined;
   }
   /** Registers a virtual-anchor or actionable tooltip with the shared overlay manager
    *  (`internal/overlay-manager.ts`) so Escape is routed only to the topmost overlay in the stack,
@@ -625,12 +684,21 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       return;
     }
     this.pendingDirection = next ? 'show' : 'hide';
-    this.timer = setTimeout(() => {
+    const view = this.ownerDocument.defaultView;
+    if (!view) {
+      this.pendingDirection = undefined;
+      return;
+    }
+    this.timerView = view;
+    const timer = view.setTimeout(() => {
+      if (this.timerView !== view || this.timer !== timer) return;
       this.timer = undefined;
+      this.timerView = undefined;
       this.pendingDirection = undefined;
       if (next) this.show();
       else this.hide();
     }, delay);
+    this.timer = timer;
   }
   private interactionDelay(showing: boolean): number {
     const value = showing ? this.showDelay : this.hideDelay;
@@ -646,8 +714,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     return finiteDuration(milliseconds, fallback);
   }
   private cancelPendingTransition(): void {
-    clearTimeout(this.timer);
+    if (this.timer !== undefined) this.timerView?.clearTimeout(this.timer);
     this.timer = undefined;
+    this.timerView = undefined;
     this.pendingDirection = undefined;
   }
   private bindTrigger(trigger: HTMLElement): void {
@@ -671,18 +740,22 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       had: trigger.hasAttribute('aria-describedby'),
       value: trigger.getAttribute('aria-describedby'),
     };
-    this.triggerDescriptionObserver ??= new MutationObserver(() => {
-      if (!this.triggerElement || !this.triggerDescription) return;
-      const current = this.triggerElement.getAttribute('aria-describedby');
-      const descriptions = new Set((this.triggerDescription.value ?? '').split(/\s+/).filter(Boolean));
-      if (this.open) descriptions.add(this.descriptionId);
-      const generated = descriptions.size > 0 ? [...descriptions].join(' ') : null;
-      if (current === generated) return;
-      this.triggerDescription.had = this.triggerElement.hasAttribute('aria-describedby');
-      this.triggerDescription.value = current;
-      this.syncTriggerA11y();
-    });
-    this.triggerDescriptionObserver.observe(trigger, {
+    this.triggerDescriptionObserver?.disconnect();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.triggerDescriptionObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          if (!this.triggerElement || !this.triggerDescription) return;
+          const current = this.triggerElement.getAttribute('aria-describedby');
+          const descriptions = new Set((this.triggerDescription.value ?? '').split(/\s+/).filter(Boolean));
+          if (this.open) descriptions.add(this.descriptionId);
+          const generated = descriptions.size > 0 ? [...descriptions].join(' ') : null;
+          if (current === generated) return;
+          this.triggerDescription.had = this.triggerElement.hasAttribute('aria-describedby');
+          this.triggerDescription.value = current;
+          this.syncTriggerA11y();
+        })
+      : undefined;
+    this.triggerDescriptionObserver?.observe(trigger, {
       attributes: true,
       attributeFilter: ['aria-describedby'],
     });
@@ -692,8 +765,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       undescribeElement(this.accessibleTriggerDescription);
       this.accessibleTriggerDescription = undefined;
     }
-    if (!this.triggerElement || !this.triggerDescription) return;
     this.triggerDescriptionObserver?.disconnect();
+    this.triggerDescriptionObserver = undefined;
+    if (!this.triggerElement || !this.triggerDescription) return;
     if (this.triggerDescription.had) {
       this.triggerElement.setAttribute('aria-describedby', this.triggerDescription.value ?? '');
     } else {
@@ -759,43 +833,227 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private onPopupLeave = (event: Event): void => {
     if (!this.interactiveContent || this.isManual) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
-    if (next instanceof Node && (this.triggerElement?.contains(next) || this.isPopupTarget(next))) return;
+    if (
+      next !== null
+      && (next as Node).nodeType !== undefined
+      && (this.triggerElement?.contains(next as Node) || this.isPopupTarget(next))
+    ) return;
     this.requestTransition(false);
   };
   private isPopupTarget(target: EventTarget | null): boolean {
-    if (!(target instanceof Element)) return false;
+    if (target === null || (target as Node).nodeType !== 1) return false;
+    const element = target as Element;
     const slot = this.activeContentSlot;
     return (
-      this.renderRoot.querySelector<HTMLElement>('[part~="popup"]')?.contains(target) === true ||
-      slot?.assignedElements({ flatten: true }).some((element) => composedContains(element, target)) === true
+      this.renderRoot.querySelector<HTMLElement>('[part~="popup"]')?.contains(element) === true ||
+      slot?.assignedElements({ flatten: true }).some((root) => composedContains(root, element)) === true
     );
   }
+
+  private onContentSlotChange = (event: Event): void => {
+    if ((event.target as Element | null)?.localName !== 'slot') return;
+    this.updateInteractiveContent();
+  };
+
+  private clearContentSlotListeners(): void {
+    for (const slot of this.contentSlotListeners) {
+      slot.removeEventListener('slotchange', this.onContentSlotChange);
+    }
+    this.contentSlotListeners.clear();
+  }
+
+  private syncContentSlotListeners(slots: ReadonlySet<HTMLSlotElement>): void {
+    const activeSlot = this.activeContentSlot;
+    for (const slot of this.contentSlotListeners) {
+      if (slots.has(slot) && slot !== activeSlot) continue;
+      slot.removeEventListener('slotchange', this.onContentSlotChange);
+      this.contentSlotListeners.delete(slot);
+    }
+    for (const slot of slots) {
+      if (slot === activeSlot || this.contentSlotListeners.has(slot)) continue;
+      slot.addEventListener('slotchange', this.onContentSlotChange);
+      this.contentSlotListeners.add(slot);
+    }
+  }
+
+  private collectContentAncestors(node: Node, ancestors: Set<Element>): void {
+    const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
+    let ancestor =
+      node.nodeType === 1
+        ? composedParentElement(node as Element)
+        : slottable.assignedSlot ?? node.parentElement;
+    while (ancestor) {
+      if (ancestor !== this) ancestors.add(ancestor);
+      ancestor = composedParentElement(ancestor);
+    }
+  }
+
+  /** Consumer-owned composed ancestors can prune a forwarded branch even though they are not DOM
+   * ancestors of the tooltip's slot. Internal popup visibility is deliberately ignored: content
+   * must be classified while the tooltip is closed so focus/hover can open the right role. */
+  private hasExcludedContentAncestor(node: Node): boolean {
+    const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
+    let ancestor =
+      node.nodeType === 1
+        ? composedParentElement(node as Element)
+        : slottable.assignedSlot ?? node.parentElement;
+    while (ancestor) {
+      const root = ancestor.getRootNode();
+      if (root !== this.renderRoot && isAccessibilitySubtreeExcluded(ancestor)) {
+        return true;
+      }
+      ancestor = composedParentElement(ancestor);
+    }
+    return false;
+  }
+
+  private inspectContent(): TooltipContentSnapshot {
+    const snapshot: TooltipContentSnapshot = {
+      actionable: false,
+      awaitingShadowRoot: false,
+      text: '',
+      externalRoots: new Set<Node>(),
+      shadowRoots: new Set<ShadowRoot>(),
+      forwardingSlots: new Set<HTMLSlotElement>(),
+      composedAncestors: new Set<Element>(),
+    };
+    const activeSlot = this.activeContentSlot;
+    if (!activeSlot) return snapshot;
+
+    const text: string[] = [];
+    const inspectNode = (node: Node, textVisible = true, includeText = true): void => {
+      if (node.nodeType === 3) {
+        if (textVisible && includeText) text.push(node.textContent ?? '');
+        return;
+      }
+      if (node.nodeType !== 1 && node.nodeType !== 11) return;
+      if (node.nodeType === 11) {
+        for (const child of node.childNodes) inspectNode(child, textVisible, includeText);
+        return;
+      }
+
+      const element = node as Element;
+      if (isAccessibilitySubtreeExcluded(element)) return;
+      const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+      if (ownTextVisible && element.matches(ACTIONABLE_SELECTOR)) snapshot.actionable = true;
+      const accessibleLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : undefined;
+      const labelReplacesChildren = includeText && Boolean(accessibleLabel);
+      if (labelReplacesChildren) text.push(accessibleLabel ?? '');
+      const includeChildText = includeText && !labelReplacesChildren;
+
+      if (
+        element.localName === 'slot'
+        && typeof (element as HTMLSlotElement).assignedNodes === 'function'
+      ) {
+        const slot = element as HTMLSlotElement;
+        snapshot.forwardingSlots.add(slot);
+        const assigned = slot.assignedNodes();
+        const children = assigned.length > 0 ? assigned : Array.from(slot.childNodes);
+        for (const child of children) {
+          if (assigned.length > 0) {
+            snapshot.externalRoots.add(child);
+            this.collectContentAncestors(child, snapshot.composedAncestors);
+            if (this.hasExcludedContentAncestor(child)) continue;
+          }
+          inspectNode(child, ownTextVisible, includeChildText);
+        }
+        return;
+      }
+
+      if (element.shadowRoot) {
+        snapshot.shadowRoots.add(element.shadowRoot);
+        for (const child of element.shadowRoot.childNodes) {
+          inspectNode(child, ownTextVisible, includeChildText);
+        }
+        return;
+      }
+      if (element.localName.includes('-')) snapshot.awaitingShadowRoot = true;
+      for (const child of element.childNodes) inspectNode(child, ownTextVisible, includeChildText);
+    };
+
+    // The popup hides itself with `visibility: hidden` while closed. Visibility inherits through
+    // slots, so reading consumer content in that state would otherwise classify every closed
+    // tooltip as empty/non-actionable. Temporarily replace only that internal visibility with the
+    // host's inherited value; consumer-authored hidden/visibility rules on the content or its
+    // outer composed ancestors still participate in each getComputedStyle() call below.
+    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    const bypassClosedVisibility = popup?.hasAttribute('data-hidden') === true;
+    const previousVisibility = popup?.style.getPropertyValue('visibility') ?? '';
+    const previousVisibilityPriority = popup?.style.getPropertyPriority('visibility') ?? '';
+    if (popup && bypassClosedVisibility) {
+      const hostVisibility = this.ownerDocument.defaultView?.getComputedStyle(this).visibility ?? 'visible';
+      popup.style.setProperty('visibility', hostVisibility);
+    }
+    try {
+      inspectNode(activeSlot);
+    } finally {
+      if (popup && bypassClosedVisibility) {
+        if (previousVisibility) {
+          popup.style.setProperty('visibility', previousVisibility, previousVisibilityPriority);
+        } else {
+          popup.style.removeProperty('visibility');
+        }
+      }
+    }
+    snapshot.text = text.join(' ').replace(/\s+/g, ' ').trim();
+    return snapshot;
+  }
+
+  private observeContentNode(node: Node): void {
+    if (!this.contentObserver) return;
+    if (node.nodeType === 3) {
+      this.contentObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1 && node.nodeType !== 11) return;
+    this.contentObserver.observe(node, {
+      attributes: true,
+      attributeFilter: [
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'contenteditable',
+        'hidden',
+        'href',
+        'inert',
+        'role',
+        'slot',
+        'style',
+        'tabindex',
+      ],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindContentObservation(snapshot: TooltipContentSnapshot): void {
+    if (!this.contentObserver) return;
+    this.contentObserver.disconnect();
+    for (const ancestor of snapshot.composedAncestors) {
+      if (
+        ancestor === this
+        || ancestor.getRootNode() === this.renderRoot
+        || snapshot.externalRoots.has(ancestor)
+      ) continue;
+      this.contentObserver.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+      });
+    }
+    this.observeContentNode(this);
+    for (const root of snapshot.externalRoots) this.observeContentNode(root);
+    for (const root of snapshot.shadowRoots) this.observeContentNode(root);
+  }
+
   private updateInteractiveContent(fromShadowContentScan = false): void {
     if (!fromShadowContentScan) this.shadowContentScanAttempts = 0;
-    const slot = this.activeContentSlot;
-    if (!slot) return;
-    const observedShadowRoots = new Set<ShadowRoot>();
-    let awaitingShadowRoot = false;
-    let actionable = false;
-    const inspect = (element: Element): void => {
-      if (element.matches(ACTIONABLE_SELECTOR)) actionable = true;
-      if (element.shadowRoot) {
-        observedShadowRoots.add(element.shadowRoot);
-        for (const child of element.shadowRoot.children) inspect(child);
-      } else if (element.localName.includes('-')) {
-        awaitingShadowRoot = true;
-      }
-      for (const child of element.children) inspect(child);
-    };
-    for (const element of slot.assignedElements({ flatten: true })) inspect(element);
-    this.interactiveContent = actionable;
-    this.contentObserver?.disconnect();
-    this.contentObserver?.observe(this, { childList: true, subtree: true, attributes: true });
-    for (const root of observedShadowRoots) {
-      this.contentObserver?.observe(root, { childList: true, subtree: true, attributes: true });
-    }
-    this.scheduleShadowContentScan(awaitingShadowRoot);
-    this.updateDescriptionProxy();
+    const snapshot = this.inspectContent();
+    this.interactiveContent = snapshot.actionable;
+    this.syncContentSlotListeners(snapshot.forwardingSlots);
+    this.bindContentObservation(snapshot);
+    this.scheduleShadowContentScan(snapshot.awaitingShadowRoot);
+    this.updateDescriptionProxy(snapshot.text);
   }
   private scheduleShadowContentScan(awaitingShadowRoot: boolean): void {
     this.cancelShadowContentScan(false);
@@ -834,17 +1092,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.descriptionProxy.parentElement !== this) this.append(this.descriptionProxy);
     this.updateDescriptionProxy();
   }
-  private updateDescriptionProxy(): void {
+  private updateDescriptionProxy(contentText?: string): void {
     if (!this.descriptionProxy) return;
-    const slot = this.activeContentSlot;
-    const assignedText =
-      slot
-        ?.assignedNodes({ flatten: true })
-        .map((node) => node.textContent ?? '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim() ?? '';
-    const description = (this.accessibleLabel || assignedText || this.content).trim();
+    const hostLabel = this.getAttribute('aria-label');
+    const visibleContent = contentText ?? this.inspectContent().text;
+    const description = hostLabel !== null
+      ? hostLabel.trim()
+      : (this.accessibleLabel || visibleContent || this.content).trim();
     if (this.descriptionProxy.textContent !== description) this.descriptionProxy.textContent = description;
   }
   private onTriggerKeyDown = (event: KeyboardEvent): void => {
@@ -857,7 +1111,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.hide();
   };
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.accessibleLabel;
+    const hostLabel = this.getAttribute('aria-label');
+    const propertyLabel = this.accessibleLabel ?? '';
+    const hasExplicitLabel = hostLabel !== null || propertyLabel.length > 0;
+    const label = hostLabel !== null ? hostLabel : propertyLabel;
+    const popupLabel = this.interactiveContent
+      ? hasExplicitLabel ? label : this.localize('popover')
+      : hasExplicitLabel ? label : nothing;
     return html`
       <span part="trigger">
         ${this.namedTriggerMode
@@ -866,14 +1126,14 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       </span>
       <slot name="__lr-tooltip-description" hidden></slot>
       <div id=${this.tooltipId} part="popup base tooltip base__popup" role=${this.interactiveContent ? 'dialog' : 'tooltip'}
-        aria-label=${this.interactiveContent ? label || this.localize('popover') : label || nothing}
+        aria-label=${popupLabel}
         ?data-hidden=${!this.open}
         @mouseenter=${this.onPopupEnter} @mouseleave=${this.onPopupLeave}
         @focusin=${this.onPopupEnter} @focusout=${this.onPopupLeave}>
         <span part="body">
           ${this.namedTriggerMode
-            ? html`<slot @slotchange=${this.updateInteractiveContent}>${this.content}</slot>`
-            : html`<slot name="content" @slotchange=${this.updateInteractiveContent}>${this.content}</slot>`}
+            ? html`<slot @slotchange=${this.onContentSlotChange}>${this.content}</slot>`
+            : html`<slot name="content" @slotchange=${this.onContentSlotChange}>${this.content}</slot>`}
         </span>
         ${this.rendersArrow
           ? html`<span part="arrow base__arrow arrow-${this.resolvedSide}"></span>`

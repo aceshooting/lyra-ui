@@ -10,6 +10,11 @@ import {
 } from '../../../internal/safe-url.js';
 import { styles } from './media-card.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type MediaCardKind = 'image' | 'video' | 'file';
 
@@ -142,6 +147,20 @@ function detectKind(mimeType: string): MediaCardKind {
  * @since 4.0.0
  */
 export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    mediaCardImageAttachment: LYRA_DEFAULT_mediaCardImageAttachment,
+    mediaCardOpenFileAttachment: LYRA_DEFAULT_mediaCardOpenFileAttachment,
+    mediaCardOpenImageAttachment: LYRA_DEFAULT_mediaCardOpenImageAttachment,
+    mediaCardOpenName: LYRA_DEFAULT_mediaCardOpenName,
+    mediaCardOpenVideoAttachment: LYRA_DEFAULT_mediaCardOpenVideoAttachment,
+    mediaCardUntitledFile: LYRA_DEFAULT_mediaCardUntitledFile,
+    mediaCardVideoAttachment: LYRA_DEFAULT_mediaCardVideoAttachment,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** The media URL. Always re-validated against a safe-scheme allowlist

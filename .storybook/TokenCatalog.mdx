@@ -1,0 +1,51 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { LYRA_TOKEN_PREVIEW_GROUPS } from './token-preview.generated.js';
+
+<Meta title="Guides/Design token catalog" />
+
+# Design token catalog
+
+This preview is generated from `packages/lyra-ui/tokens/canonical-tokens.json`, the same authored
+source that produces the CSS fixture, editor/docs inputs, and DTCG interchange file. It does not
+parse component TypeScript or maintain a second list of token names.
+
+Consumers can import the interchange document from
+`@aceshooting/lyra-ui/design-tokens.json`. The generated
+`@aceshooting/lyra-ui/design-tokens.css` entry exposes explicit `.lr-token-light` /
+`[data-lr-design-token-mode="light"]` and dark fixture selectors for previews and design-tool
+validation; use `@aceshooting/lyra-ui/theme.css` for the production theme.
+
+The values below are machine-generated reference data, not a human visual-approval record. Use the
+light/dark toolbar and component stories for rendered behavior; human baseline review remains a
+separate qualification state.
+
+<p>
+  <strong>{LYRA_TOKEN_PREVIEW_GROUPS.reduce((count, entry) => count + entry.tokens.length, 0)}</strong>{' '}
+  canonical tokens in <strong>{LYRA_TOKEN_PREVIEW_GROUPS.length}</strong> groups.
+</p>
+
+{LYRA_TOKEN_PREVIEW_GROUPS.map(({ group, tokens }) => (
+  <details key={group} className="my-3">
+    <summary>
+      <strong>{group}</strong> ({tokens.length})
+    </summary>
+    <div className="overflow-x-auto">
+      <table>
+        <thead>
+          <tr><th>CSS custom property</th><th>Type</th><th>Scope</th><th>Light/default</th><th>Dark</th></tr>
+        </thead>
+        <tbody>
+          {tokens.map((token) => (
+            <tr key={token.name}>
+              <td><code>{token.name}</code></td>
+              <td>{token.type}</td>
+              <td>{token.scope}</td>
+              <td><code>{token.values.light ?? '—'}</code></td>
+              <td><code>{token.values.dark ?? token.values.light ?? '—'}</code></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </details>
+))}

@@ -15,6 +15,11 @@ import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './tool-result-dialog.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_maximize, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Same status vocabulary as `<lr-tool-call-chip>`. */
 export type ToolResultStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
@@ -245,6 +250,27 @@ function formatDuration(ms: number): {
  * @since 4.0.0
  */
 export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    maximize: LYRA_DEFAULT_maximize,
+    open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    toolCall: LYRA_DEFAULT_toolCall,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /**

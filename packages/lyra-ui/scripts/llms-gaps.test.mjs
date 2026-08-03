@@ -167,6 +167,52 @@ test('gap collection honors the exact Native Time inheritance declaration for in
   );
 });
 
+test('gap collection cannot false-pass an inherited event omitted by a compact manifest', () => {
+  const manifest = {
+    schemaVersion: '1.0.0',
+    modules: [
+      {
+        path: 'src/components/forms/radio/radio.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraRadio',
+            customElement: true,
+            tagName: 'lr-radio',
+            events: [{ name: 'lr-inherited-fixture' }],
+          },
+        ],
+      },
+      {
+        path: 'src/components/forms/radio/radio-button.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraRadioButton',
+            customElement: true,
+            tagName: 'lr-radio-button',
+            superclass: {
+              name: 'LyraRadio',
+              module: '/src/components/forms/radio/radio.class.js',
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  assert.equal(
+    collectGaps(['forms'], manifest).some(
+      ({ tag, kind, names }) =>
+        tag === 'lr-radio-button' &&
+        kind === 'event' &&
+        names.includes('lr-inherited-fixture'),
+    ),
+    true,
+    'the child section must be checked against its effective inherited event surface',
+  );
+});
+
 if (failures > 0) {
   console.error(`${failures} llms-gaps test(s) failed.`);
   process.exitCode = 1;

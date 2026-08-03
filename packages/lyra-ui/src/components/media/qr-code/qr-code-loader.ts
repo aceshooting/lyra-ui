@@ -1,8 +1,19 @@
-import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 /** Opaque `qrcode` (soldair/node-qrcode) surface kept optional for core-package consumers --
  *  narrowed by an application that installs the peer to that peer's own types. */
-export type QrCodeApi = OptionalPeerApi;
+export interface QrCodeApi {
+  create(value: string, options?: Record<string, unknown>): unknown;
+}
+
+function isQrCodeApi(value: unknown): value is QrCodeApi {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'create' in value &&
+    typeof value.create === 'function'
+  );
+}
 
 let cached: Promise<QrCodeApi | null> | undefined;
 
@@ -11,12 +22,11 @@ let cached: Promise<QrCodeApi | null> | undefined;
  *  dual-shape tolerance (`qrcode`, like `papaparse`, is a CJS package resolved differently by
  *  different bundlers/test harnesses). */
 export async function loadQrCode(
-  importQrCode: () => Promise<QrCodeApi | { default: QrCodeApi }> = () => import('qrcode'),
+  importQrCode: () => Promise<unknown> = () => import('qrcode'),
 ): Promise<QrCodeApi | null> {
   try {
     const module = await importQrCode();
-    const candidate = (module as { default?: QrCodeApi }).default;
-    return candidate && typeof candidate.create === 'function' ? candidate : (module as QrCodeApi);
+    return resolveOptionalPeerCapability(module, isQrCodeApi);
   } catch (error) {
     console.warn(
       '<lr-qr-code> needs the optional peer dependency `qrcode` to render QR codes — install it with `pnpm add qrcode`:',

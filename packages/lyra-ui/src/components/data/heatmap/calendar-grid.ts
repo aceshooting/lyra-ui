@@ -1,4 +1,5 @@
 import { minMax } from './heatmap-scale.js';
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 
 export interface CalendarDay {
   /** ISO `yyyy-mm-dd` date string. */
@@ -124,7 +125,7 @@ export function buildCalendarGrid(
       week: cell.week,
       label:
         monthLabelText?.(cellDate.getUTCMonth(), cellDate.getUTCFullYear()) ??
-        cellDate.toLocaleString(locale || undefined, { month: 'short', timeZone: 'UTC' }),
+        cellDate.toLocaleString(resolveIntlLocale(locale), { month: 'short', timeZone: 'UTC' }),
     });
   }
 

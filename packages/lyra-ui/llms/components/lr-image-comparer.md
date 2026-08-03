@@ -2,7 +2,7 @@
 
 # `lr-image-comparer`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/image-comparer/image-comparer.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-image-comparer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraImageComparer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-comparer/image-comparer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -25,8 +25,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
 **Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
-native bubbling/composed `change` when that range gesture commits; plus composed `focus` and
-`blur` events from the internal range input.
+`lr-change` and native bubbling/composed `change` when that range gesture commits; plus composed
+`focus` and `blur` events from the internal range input.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 

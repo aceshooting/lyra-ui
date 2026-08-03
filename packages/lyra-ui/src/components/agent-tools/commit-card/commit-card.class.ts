@@ -8,6 +8,11 @@ import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Visual chrome for `<lr-commit-card>`'s root — the library's shared container-frame vocabulary. */
 export type CommitCardAppearance = LyraFrame;
@@ -89,6 +94,27 @@ export interface LyraCommitCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    commitCardCopyHash: LYRA_DEFAULT_commitCardCopyHash,
+    commitCardDiffSummary: LYRA_DEFAULT_commitCardDiffSummary,
+    commitCardHideFiles: LYRA_DEFAULT_commitCardHideFiles,
+    commitCardLabel: LYRA_DEFAULT_commitCardLabel,
+    commitCardShowFiles: LYRA_DEFAULT_commitCardShowFiles,
+    copied: LYRA_DEFAULT_copied,
+    copy: LYRA_DEFAULT_copy,
+    gitStatusAdded: LYRA_DEFAULT_gitStatusAdded,
+    gitStatusConflicted: LYRA_DEFAULT_gitStatusConflicted,
+    gitStatusDeleted: LYRA_DEFAULT_gitStatusDeleted,
+    gitStatusIgnored: LYRA_DEFAULT_gitStatusIgnored,
+    gitStatusModified: LYRA_DEFAULT_gitStatusModified,
+    gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
+    gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   @property() hash = '';
@@ -114,13 +140,25 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private justCopied = false;
-  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+  private copyTimer?: { owner: Window; handle: number };
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = undefined;
+    this.cancelCopyTimer();
     this.justCopied = false;
+  }
+
+  adoptedCallback(): void {
+    // Adoption can occur while already disconnected, so retire the exact window that owns the
+    // timer even when no further disconnected callback is delivered.
+    this.cancelCopyTimer();
+    this.justCopied = false;
+  }
+
+  private cancelCopyTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
   private get subject(): string {
@@ -155,20 +193,35 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   }
 
   private onCopy = (): void => {
+    const text = this.hash;
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
       // throw synchronously rather than rejecting -- either way this is best-effort; lr-copy
       // still fires with the intended text regardless.
-      void navigator.clipboard?.writeText(this.hash)?.catch(() => {});
+      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
     }
-    this.emit('lr-copy', { text: this.hash });
+    this.emit('lr-copy', { text });
+    this.cancelCopyTimer();
+    if (!owner) {
+      this.justCopied = false;
+      return;
+    }
     this.justCopied = true;
-    clearTimeout(this.copyTimeoutId);
-    this.copyTimeoutId = setTimeout(() => {
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.copyTimer?.owner !== owner
+        || this.copyTimer.handle !== handle
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.copyTimer = undefined;
       this.justCopied = false;
     }, 1500);
+    this.copyTimer = { owner, handle };
   };
 
   private toggleFiles = (): void => {

@@ -2,7 +2,7 @@
 
 # `lr-flag`
 
-- **Import** `import '@aceshooting/lyra-ui/components/media/flag/flag.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-flag.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlag`, also available unregistered from `@aceshooting/lyra-ui/components/media/flag/flag.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -48,16 +48,18 @@ rewrite it rather than leaving it in place.
 **Slots:** none.
 
 **CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
-(the localized `role="alert"` rendered instead when the peer resolver is unavailable or rejects)
+(ordinary localized visible text rendered instead when the peer resolver is unavailable or rejects)
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
-image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
+image when `country` or `language` is used. Import
+`@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, the component fails closed with a localized `[part="error"]` alert (see gotchas).
+installed, the component fails closed with localized visible `[part="error"]` text and a shared
+light-DOM assertive announcement (see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -74,7 +76,8 @@ tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throw
 those rather than falling back, and a language picker should degrade to showing the raw tag rather
 than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
 
-**Locale picker recipe.** `<lr-locale-picker>` (`components/forms/locale-picker/`) is the built-in
+**Locale picker recipe.** `<lr-locale-picker>`
+(`@aceshooting/lyra-ui/components/lr-locale-picker.js`) is the built-in
 locale switcher — a closed-list dropdown over the locale registry or an explicit catalog, with
 `lr-flag`/`localeNativeName()` rows and full form association out of the box. The manual
 composition below remains available for an app that wants different chrome (its own dismiss
@@ -122,12 +125,17 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 **Known gotchas:**
-- `country`/`language` resolution is opt-in through `components/flag/flag-peer.js`; the root barrel
+- `country`/`language` resolution is opt-in through
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
-  `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
-  the host) while resolving, then **fails closed** into a localized `<span part="error" role="alert">`
-  (the `flagLoadError` message key, `"Flag unavailable"` by default) plus a one-time `console.warn`
+  decorative `<lr-skeleton variant="rect" announce="false">` placeholder while resolving. The
+  host exposes `aria-busy="true"`, and ordinary sr-only text preserves the localized `loading`
+  label without creating a shadow live region. Resolution failure then **fails closed** into ordinary localized
+  `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
+  Each fresh failure appends that same localized message to the document's pre-mounted
+  `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
+  retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
   page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
@@ -167,6 +175,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 
 **Additional API surface:**
 
-- `part="error"` — Localized alert rendered when the optional peer resolver is unavailable or fails.
+- `part="error"` — Ordinary localized visible text rendered when the optional peer resolver is
+  unavailable or fails; the fresh transition is announced by the shared light-DOM assertive sink.
 
 ---

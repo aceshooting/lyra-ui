@@ -1,6 +1,6 @@
 import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/viewers/document-viewer/anchors.js';
-import { getSegmenter } from './intl-cache.js';
+import { getSegmenter, resolveIntlLocale } from './intl-cache.js';
 
 const SOFT_HYPHEN = '­';
 // ECMAScript's `\s` already covers every Unicode Space_Separator code point plus NBSP and
@@ -158,12 +158,7 @@ function caseFold(value: string, locale?: string): string {
   if (!locale) {
     lowered = value.toLowerCase();
   } else {
-    try {
-      lowered = value.toLocaleLowerCase(locale);
-    } catch (error) {
-      if (!(error instanceof RangeError)) throw error;
-      lowered = value.toLowerCase();
-    }
+    lowered = value.toLocaleLowerCase(resolveIntlLocale(locale));
   }
   // Locale lower-casing preserves an already-lowercase final sigma (`ς`) while a standalone
   // uppercase/medial sigma query becomes `σ`. Unicode caseless matching treats both as equivalent.

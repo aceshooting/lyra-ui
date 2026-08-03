@@ -1,11 +1,55 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
 
+class CalloutLiveTextForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const callout = document.createElement('lr-callout');
+
+    const headingWrapper = document.createElement('span');
+    headingWrapper.slot = 'heading';
+    const headingSlot = document.createElement('slot');
+    headingSlot.name = 'heading';
+    headingSlot.textContent = 'Fallback heading';
+    headingWrapper.append(headingSlot);
+
+    const messageWrapper = document.createElement('span');
+    const messageSlot = document.createElement('slot');
+    messageSlot.name = 'message';
+    messageSlot.textContent = 'Fallback message';
+    messageWrapper.append(messageSlot);
+
+    callout.append(headingWrapper, messageWrapper);
+    root.append(callout);
+  }
+}
+if (!customElements.get('callout-live-text-forward-wrapper')) {
+  customElements.define('callout-live-text-forward-wrapper', CalloutLiveTextForwardWrapper);
+}
+
+afterEach(() => {
+  document.querySelectorAll('lr-callout').forEach((callout) => callout.remove());
+});
+
 async function settleLiveRegion(el: LyraCallout): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  const view = el.ownerDocument.defaultView;
+  if (view) {
+    await new Promise<void>((resolve) =>
+      view.requestAnimationFrame(() => view.requestAnimationFrame(() => resolve())),
+    );
+  } else {
+    await Promise.resolve();
+  }
   await el.updateComplete;
+}
+
+async function flushMutations(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 it('renders status content and a localized close action', async () => {
@@ -15,8 +59,17 @@ it('renders status content and a localized close action', async () => {
   expect(el.hasAttribute('variant')).to.equal(false);
   expect(el.getAttribute('open')).to.equal('');
   expect(button.getAttribute('aria-label')).to.equal('Close');
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('role')).to.equal('status');
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('role')).to.equal(null);
   await expect(el).to.be.accessible();
+});
+
+it('lets per-instance close strings reach the rendered action', async () => {
+  const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
+  el.strings = { close: 'Dismiss callout' };
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="close-button"]')?.getAttribute('aria-label'),
+  ).to.equal('Dismiss callout');
 });
 
 it('exposes the reflected appearance vocabulary without changing the unset treatment', async () => {
@@ -54,45 +107,353 @@ it('exposes the reflected appearance vocabulary without changing the unset treat
   }
 });
 
-it('renders initial content with live announcements off, then arms the region before the first later mutation', async () => {
+it('keeps initial content silent, then announces later mutations through light DOM', async () => {
   const el = document.createElement('lr-callout') as LyraCallout;
   el.textContent = 'Historical status';
   document.body.append(el);
   const firstUpdate = el.updateComplete;
   await firstUpdate;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.getAttribute('aria-live')).to.equal('off');
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(base.hasAttribute('role')).to.be.false;
+  expect(base.hasAttribute('aria-live')).to.be.false;
+  expect(polite.childElementCount).to.equal(0);
   await settleLiveRegion(el);
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  expect(polite.childElementCount).to.equal(0);
 
   el.firstChild!.textContent = 'Fresh status';
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  await Promise.resolve();
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal(['Fresh status']);
   el.remove();
 });
 
-it('keeps danger assertive and ordinary variants polite after the initial paint', async () => {
+it('announces direct child additions, removals, text changes, and heading property changes', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.heading = 'Initial heading';
+  const initialMessage = document.createElement('span');
+  initialMessage.textContent = 'Initial message';
+  el.append(initialMessage);
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([]);
+
+  const added = document.createTextNode('  Added   detail  ');
+  el.append(added);
+  await flushMutations();
+  initialMessage.remove();
+  await flushMutations();
+  added.textContent = 'Updated detail';
+  await flushMutations();
+  el.heading = 'New heading';
+  await el.updateComplete;
+
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([
+    'Initial heading Initial message Added detail',
+    'Initial heading Added detail',
+    'Initial heading Updated detail',
+    'New heading Updated detail',
+  ]);
+  el.remove();
+});
+
+it('extracts and observes assigned text behind nested forwarding slots without mount noise', async () => {
+  const wrapper = (await fixture(html`
+    <callout-live-text-forward-wrapper>
+      <strong id="forwarded-heading" slot="heading">Forwarded heading</strong>
+      <span id="forwarded-message" slot="message">Initial forwarded message</span>
+    </callout-live-text-forward-wrapper>
+  `)) as CalloutLiveTextForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-callout') as LyraCallout;
+  await settleLiveRegion(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(sink.childElementCount, 'initial forwarded content stays silent').to.equal(0);
+
+  const message = wrapper.querySelector('#forwarded-message')!;
+  message.textContent = 'Updated forwarded message';
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded message',
+  );
+  expect(sink.textContent).to.not.include('Fallback');
+
+  (message as HTMLElement).hidden = true;
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal('Forwarded heading');
+  (message as HTMLElement).hidden = false;
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded message',
+  );
+
+  const forwardingSlot = el.querySelector<HTMLSlotElement>('slot[name="message"]')!;
+  const slotChanged = oneEvent(forwardingSlot, 'slotchange');
+  const detail = document.createElement('span');
+  detail.slot = 'message';
+  detail.textContent = 'Added forwarded detail';
+  wrapper.append(detail);
+  await slotChanged;
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Forwarded heading Updated forwarded message Added forwarded detail',
+  );
+  expect(sink.textContent).to.not.include('Fallback');
+});
+
+it('announces only the rendered shadow branch and closed details summary', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.heading = 'Initial heading';
+  const shadowHost = document.createElement('div');
+  const shadow = shadowHost.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<span>Rendered callout shadow</span><slot></slot>';
+  const assigned = document.createElement('span');
+  assigned.textContent = 'Rendered callout assignment';
+  const unassigned = document.createElement('span');
+  unassigned.slot = 'missing';
+  unassigned.textContent = 'Unassigned callout leak';
+  shadowHost.append(assigned, unassigned);
+  const details = document.createElement('details');
+  details.innerHTML = '<summary>Collapsed callout summary</summary><span>Collapsed callout body leak</span>';
+  el.append(shadowHost, details);
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.heading = 'Updated heading';
+  await el.updateComplete;
+
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Updated heading Rendered callout shadow Rendered callout assignment Collapsed callout summary',
+  );
+
+  details.open = true;
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Updated heading Rendered callout shadow Rendered callout assignment Collapsed callout summary Collapsed callout body leak',
+  );
+  el.remove();
+});
+
+it('extracts only rendered accessible message text and dedupes irrelevant mutations', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.closable = true;
+  el.innerHTML = `
+    <span slot="icon">ICON CHROME</span>
+    <span id="message">
+      Visible message
+      <span id="aria-hidden" aria-hidden="true"><span aria-label="Hidden label">Hidden text</span></span>
+      <span hidden>Hidden attribute text</span>
+      <span inert>Inert text</span>
+      <span style="display: none">CSS-hidden text</span>
+      <span style="visibility: hidden">Hidden visibility text <span style="visibility: visible">Visible override</span></span>
+      <span style="visibility: collapse">Collapsed visibility text <span style="visibility: visible">Collapsed override</span></span>
+      <span id="named" aria-label="Named control"><b>Leaked descendant</b></span>
+      <span aria-label="   ">Fallback child</span>
+      <span id="hidden-parent" hidden><span aria-label="Revealed label">Hidden descendant</span></span>
+      <span id="inert-parent" inert><span>Nested inert text</span></span>
+    </span>
+  `;
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  const message = el.querySelector('#message')!;
+  const firstText = message.firstChild!;
+  firstText.textContent = '  Updated    message  ';
+  await flushMutations();
+
+  expect(polite.lastElementChild?.textContent).to.equal(
+    'Updated message Visible override Collapsed override Named control Fallback child',
+  );
+  expect(polite.childElementCount).to.equal(1);
+  expect(polite.textContent).to.not.include('ICON CHROME');
+  expect(polite.textContent).to.not.include('×');
+  expect(polite.textContent).to.not.include('Hidden');
+  expect(polite.textContent).to.not.include('Inert');
+  expect(polite.textContent).to.not.include('CSS-hidden');
+  expect(polite.textContent).to.not.include('Hidden visibility text');
+  expect(polite.textContent).to.not.include('Collapsed visibility text');
+  expect(polite.textContent).to.not.include('Leaked descendant');
+
+  el.querySelector('#aria-hidden')!.textContent = 'Changed hidden text';
+  el.querySelector('#named b')!.textContent = 'Changed leaked descendant';
+  firstText.textContent = 'Updated message';
+  el.querySelector('#inert-parent span')!.textContent = 'Changed nested inert text';
+  await flushMutations();
+  expect(
+    polite.childElementCount,
+    'mutations that preserve normalized accessible output stay silent',
+  ).to.equal(1);
+
+  el.querySelector('#named')!.setAttribute('aria-label', 'Renamed control');
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal(
+    'Updated message Visible override Collapsed override Renamed control Fallback child',
+  );
+  expect(polite.childElementCount).to.equal(2);
+
+  el.querySelector('#hidden-parent')!.removeAttribute('hidden');
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal(
+    'Updated message Visible override Collapsed override Renamed control Fallback child Revealed label',
+  );
+  expect(polite.childElementCount).to.equal(3);
+  el.remove();
+});
+
+it('does not announce updates while the host or a composed ancestor is hidden', async () => {
+  const wrapper = await fixture(html`
+    <section><lr-callout>Initial callout</lr-callout></section>
+  `);
+  const el = wrapper.querySelector('lr-callout') as LyraCallout;
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.hidden = true;
+  el.firstChild!.textContent = 'Hidden host update';
+  await flushMutations();
+  expect(polite.childElementCount, 'a hidden host is not a live update').to.equal(0);
+
+  el.hidden = false;
+  await flushMutations();
+  const afterHostReveal = polite.childElementCount;
+  wrapper.style.display = 'none';
+  el.firstChild!.textContent = 'CSS-hidden ancestor update';
+  await flushMutations();
+  expect(polite.childElementCount).to.equal(afterHostReveal);
+
+  wrapper.style.display = '';
+  wrapper.setAttribute('inert', '');
+  el.firstChild!.textContent = 'Inert ancestor update';
+  await flushMutations();
+  expect(polite.childElementCount).to.equal(afterHostReveal);
+
+  wrapper.removeAttribute('inert');
+  el.firstChild!.textContent = 'Visible callout update';
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal('Visible callout update');
+});
+
+it('routes danger mutations assertively and ordinary mutations politely', async () => {
   const el = (await fixture(html`<lr-callout variant="danger">Historical status</lr-callout>`)) as LyraCallout;
   await settleLiveRegion(el);
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.getAttribute('aria-live')).to.equal('assertive');
+  const assertive = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  el.firstChild!.textContent = 'Danger update';
+  await Promise.resolve();
+  expect(assertive.textContent).to.equal('Danger update');
+  expect(polite.childElementCount).to.equal(0);
+
   el.variant = 'success';
   await el.updateComplete;
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  el.firstChild!.textContent = 'Ordinary update';
+  await Promise.resolve();
+  expect(polite.textContent).to.equal('Ordinary update');
 });
 
-it('treats reconnected content as an initial render instead of announcing it as a live update', async () => {
+it('keeps queued and detached changes silent across reconnect staging', async () => {
   const el = (await fixture(html`<lr-callout>Historical status</lr-callout>`)) as LyraCallout;
   await settleLiveRegion(el);
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('polite');
+  const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+  expect(document.querySelector<HTMLElement>(selector)?.childElementCount).to.equal(0);
 
+  el.firstChild!.textContent = 'Queued before detach';
   el.remove();
+  expect(document.querySelector(selector) === null).to.be.true;
+  el.firstChild!.textContent = 'Detached status';
+  el.heading = 'Detached heading';
+  const detachedAddition = document.createElement('span');
+  detachedAddition.textContent = 'Detached addition';
+  el.append(detachedAddition);
   document.body.append(el);
+  detachedAddition.textContent = 'Reattached during staging';
   const reconnectedInitialUpdate = el.updateComplete;
   await reconnectedInitialUpdate;
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('off');
+  expect(document.querySelector<HTMLElement>(selector)?.childElementCount).to.equal(0);
   await settleLiveRegion(el);
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-live')).to.equal('polite');
+  expect(document.querySelector<HTMLElement>(selector)?.childElementCount).to.equal(0);
+  detachedAddition.textContent = 'After reconnect';
+  await flushMutations();
+  expect(document.querySelector<HTMLElement>(selector)?.textContent).to.equal(
+    'Detached heading Detached status After reconnect',
+  );
   el.remove();
+});
+
+it('rebinds mutation observation and announcement sinks after iframe adoption', async () => {
+  const frame = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    frame.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(frame);
+  await loaded;
+
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const OriginalFrameObserver = frameWindow.MutationObserver;
+  let frameObserverConstructions = 0;
+  frameWindow.MutationObserver = function (
+    callback: MutationCallback,
+  ): MutationObserver {
+    frameObserverConstructions += 1;
+    return new OriginalFrameObserver(callback);
+  } as unknown as typeof MutationObserver;
+  let el: LyraCallout | undefined;
+
+  try {
+    el = document.createElement('lr-callout') as LyraCallout;
+    el.textContent = 'Main document state';
+    document.body.append(el);
+    await settleLiveRegion(el);
+
+    frameDocument.body.append(el);
+    const frameMessage = frameDocument.createElement('span');
+    frameMessage.textContent = 'Iframe initial state';
+    el.replaceChildren(frameMessage);
+    await settleLiveRegion(el);
+
+    expect(
+      frameObserverConstructions,
+      'both Lyra context and callout content observers use the adopted realm',
+    ).to.be.at.least(2);
+    expect(
+      frameDocument.querySelector(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+      ) !== null,
+      'the adopted document owns the live sink',
+    ).to.be.true;
+    const frameSink = frameDocument.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    )!;
+    expect(frameSink.childElementCount, 'adoption and staged content stay silent').to.equal(0);
+
+    const addition = frameDocument.createElement('span');
+    addition.textContent = 'Iframe update';
+    el.append(addition);
+    await flushMutations();
+    expect(frameSink.lastElementChild?.textContent).to.equal(
+      'Iframe initial state Iframe update',
+    );
+  } finally {
+    el?.remove();
+    frameWindow.MutationObserver = OriginalFrameObserver;
+    frame.remove();
+  }
 });
 
 it('distributes an initial slotted heading while announcements are still off', async () => {
@@ -106,10 +467,13 @@ it('distributes an initial slotted heading while announcements are still off', a
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
   expect(heading.hidden).to.equal(false);
-  expect(base.getAttribute('aria-live')).to.equal('off');
+  expect(base.hasAttribute('role')).to.be.false;
+  expect(base.hasAttribute('aria-live')).to.be.false;
 
   await settleLiveRegion(el);
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  expect(document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )?.childElementCount).to.equal(0);
   el.remove();
 });
 
@@ -146,14 +510,59 @@ it('allows close to be vetoed and otherwise hides', async () => {
 
 it('forwards a host-level aria-label to the base region when accessible-label is unset', async () => {
   const el = (await fixture(html`<lr-callout aria-label="Storage warning">Disk is nearly full</lr-callout>`)) as LyraCallout;
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Storage warning');
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Storage warning');
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.hasAttribute('aria-live')).to.be.false;
 });
 
 it('lets a host-level aria-label take precedence over accessible-label on the status owner', async () => {
   const el = (await fixture(
     html`<lr-callout accessible-label="Explicit label" aria-label="Host label">Message</lr-callout>`
   )) as LyraCallout;
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Host label');
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Host label');
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.hasAttribute('aria-live')).to.be.false;
+});
+
+it('lets an explicitly empty host aria-label suppress accessible-label semantics but preserves visible announcements', async () => {
+  const el = (await fixture(html`
+    <lr-callout aria-label="" accessible-label="Fallback label">Message</lr-callout>
+  `)) as LyraCallout;
+  await settleLiveRegion(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(base.getAttribute('role')).to.equal(null);
+  expect(base.getAttribute('aria-label')).to.equal(null);
+
+  el.firstChild!.textContent = 'Updated message';
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal('Updated message');
+});
+
+it('uses a nonempty host label as announcement context without replacing visible status text', async () => {
+  const el = (await fixture(html`
+    <lr-callout aria-label="Storage warning" accessible-label="Fallback label">
+      Initial message
+    </lr-callout>
+  `)) as LyraCallout;
+  await settleLiveRegion(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.firstChild!.textContent = 'Disk is nearly full';
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal(
+    'Storage warning: Disk is nearly full',
+  );
+
+  el.setAttribute('aria-label', 'Disk is nearly full');
+  await flushMutations();
+  expect(sink.lastElementChild?.textContent).to.equal('Disk is nearly full');
 });
 
 it('gives the close button the shared minimum hit area in both the default and inline variants, shrinking only the visible glyph', async () => {

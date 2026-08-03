@@ -2,15 +2,16 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
-import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
-import { safeFetchUrl } from '../../../internal/safe-url.js';
+import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import {
   isAbortError,
   isResourceLimitError,
   readResponseText,
   LyraResourceLimitError,
   LyraUserFacingError,
+  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -18,6 +19,12 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_NODES = 50_000;
 const MAX_DEPTH = 256;
@@ -121,6 +128,7 @@ export interface LyraXmlViewerEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 // Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
@@ -153,6 +161,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   query, matchCount, activeIndex }`.
  * @event lr-render-error - Fired when fetching or parsing the document fails, including a
  *   parse error or exceeding the node cap. `detail: { error }`.
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ *   call is applied. Non-cancelable. `detail: { found }`.
  * @csspart base - The root scroll container.
  * @csspart toolbar - The whole-document copy button row (only when `copyable`).
  * @csspart copy-button - A copy-to-clipboard button -- the whole-document one (in `toolbar`) or a
@@ -188,7 +198,36 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
-  static override styles = [LyraElement.styles, styles, srOnly];
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    loading: LYRA_DEFAULT_loading,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    open: LYRA_DEFAULT_open,
+    xmlViewerChildCount: LYRA_DEFAULT_xmlViewerChildCount,
+    xmlViewerCollapseNode: LYRA_DEFAULT_xmlViewerCollapseNode,
+    xmlViewerCopyDocument: LYRA_DEFAULT_xmlViewerCopyDocument,
+    xmlViewerCopyNode: LYRA_DEFAULT_xmlViewerCopyNode,
+    xmlViewerExpandNode: LYRA_DEFAULT_xmlViewerExpandNode,
+    xmlViewerLabel: LYRA_DEFAULT_xmlViewerLabel,
+    xmlViewerParseError: LYRA_DEFAULT_xmlViewerParseError,
+    xmlViewerTooManyNodes: LYRA_DEFAULT_xmlViewerTooManyNodes,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
@@ -239,6 +278,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private searchState: SearchState = EMPTY_SEARCH;
   private lastSearchLocale = '';
   private generation = 0;
+  private readonly announcements = new ViewerAnnouncementController(this);
 
   /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
@@ -263,6 +303,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.announcements.transition(
+      'load',
+      this.xmlState.kind,
+      this.xmlState.kind === 'error' ? this.xmlState.message : this.localize('loadingDocument'),
+    );
     if ((changed.has('src') || changed.has('xml')) && this._xml === undefined) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
@@ -272,6 +317,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.announcements.connect();
     if (this.hasUpdated && this.src && this._xml === undefined) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
@@ -283,13 +329,20 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.generation++;
     this.beginAbortableLoad();
     if (this._xml === undefined) this.xmlState = { kind: 'idle' };
+    this.announcements.disconnect();
     super.disconnectedCallback();
+  }
+
+  adoptedCallback(): void {
+    this.announcements.adopted();
   }
 
   private parseInline(raw: string): void {
     const generation = ++this.generation;
     try {
-      const doc = new DOMParser().parseFromString(raw, 'application/xml');
+      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
+      if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
+      const doc = new DOMParserCtor().parseFromString(raw, 'application/xml');
       this.setDoc(doc, generation);
     } catch (error) {
       this.xmlState = { kind: 'error', message: this.localize('xmlViewerParseError') };
@@ -309,8 +362,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.xmlState = { kind: 'idle' };
       return;
     }
-    const url = safeFetchUrl(this.src);
-    if (!url) {
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.xmlState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
@@ -318,12 +371,14 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     }
     this.xmlState = { kind: 'loading' };
     try {
-      const response = await fetch(url, signal ? { signal } : undefined);
+      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
-      this.setDoc(new DOMParser().parseFromString(text, 'application/xml'), generation);
+      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
+      if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
+      this.setDoc(new DOMParserCtor().parseFromString(text, 'application/xml'), generation);
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.xmlState = {
@@ -338,7 +393,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (generation !== this.generation) return;
     const parseError = findParserError(doc);
     if (parseError) {
-      // The rendered role="alert" text is always this component's own stable, localized
+      // The visible error text and document-level assertive announcement are always this component's own stable, localized
       // message -- never the browser engine's raw <parsererror> diagnostic (Chrome/Firefox/
       // Safari each word it completely differently, and always in English regardless of the
       // page's locale). The raw diagnostic is preserved only in the emitted event's `error`
@@ -511,11 +566,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   private writeClipboard(text: string): void {
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    if (!owner) return;
     try {
       // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
       // throw synchronously rather than rejecting -- either way this is best-effort; copyText()
       // below always emits lr-copy regardless of whether the OS clipboard was actually reached.
-      void navigator.clipboard?.writeText(text)?.catch(() => {});
+      void owner.navigator.clipboard?.writeText(text)?.catch(() => {});
     } catch {
       // see above
     }
@@ -526,7 +583,19 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.emit('lr-copy', { text });
   }
 
-  private renderCopyButton(getText: () => string, name: string): TemplateResult | typeof nothing {
+  private serializeXml(node: Node): string | null {
+    const XMLSerializerCtor = this.isConnected
+      ? this.ownerDocument.defaultView?.XMLSerializer
+      : undefined;
+    return XMLSerializerCtor ? new XMLSerializerCtor().serializeToString(node) : null;
+  }
+
+  private copySerializedXml(node: Node): void {
+    const text = this.serializeXml(node);
+    if (text !== null) this.copyText(text);
+  }
+
+  private renderCopyButton(getNode: () => Node, name: string): TemplateResult | typeof nothing {
     if (!this.copyable) return nothing;
     return html`
       <button
@@ -535,7 +604,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         aria-label=${this.localize('xmlViewerCopyNode', undefined, { name })}
         @click=${(e: Event) => {
           e.stopPropagation();
-          this.copyText(getText());
+          this.copySerializedXml(getNode());
         }}
       >
         ${this.localize('copy')}
@@ -603,7 +672,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
                 children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
             })}</span>`
           : nothing}
-        ${this.renderCopyButton(() => new XMLSerializer().serializeToString(el), toggleLabel)}
+        ${this.renderCopyButton(() => el, toggleLabel)}
       </div>
       ${expanded
         ? html`
@@ -641,7 +710,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
                   part="copy-button"
                   type="button"
                   aria-label=${this.localize('xmlViewerCopyDocument')}
-                  @click=${() => this.copyText(new XMLSerializer().serializeToString(state.doc))}
+                  @click=${() => this.copySerializedXml(state.doc)}
                 >
                   ${this.localize('copy')}
                 </button>
@@ -651,9 +720,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         ${state.kind === 'loaded' && state.doc.documentElement
           ? html`<div part="tree">${this.renderNode(state.doc.documentElement, [], 0)}</div>`
           : state.kind === 'loading'
-            ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
+            ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
             : state.kind === 'error'
-              ? html`<div part="error" role="alert">${state.message}</div>`
+              ? html`<div part="error">${state.message}</div>`
               : html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
         ${this.renderAnchorLiveRegion()}
       </div>

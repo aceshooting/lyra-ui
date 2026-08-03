@@ -14,6 +14,11 @@ import {
   type RegisteredAnimationSpec,
 } from '../../../internal/registered-animation.js';
 import { styles } from './dialog.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
@@ -187,6 +192,18 @@ export interface LyraDialogEventMap {
  * @since 4.0.0
  */
 export class LyraDialog extends LyraElement<LyraDialogEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   private _open = false;
@@ -261,6 +278,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   private overlay?: OverlayHandle;
   private headingObserver?: MutationObserver;
+  private headingObserverDocument?: Document;
+  private headingObserverGeneration = 0;
   /** Invalidates any in-flight `lr-after-show`/`lr-after-hide` wait, so a lifecycle interrupted by
    *  the opposite transition (or by a disconnect) never announces a completion that never
    *  happened. */
@@ -317,8 +336,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.headingObserver ??= new MutationObserver(() => this.detectLightDomChrome());
-    this.headingObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    this.armHeadingObserver();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
@@ -337,7 +355,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.headingObserver?.disconnect();
+    this.resetHeadingObserver();
     super.disconnectedCallback();
     this.overlay?.suspend();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
@@ -359,15 +377,65 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       // `lr-dialog-close`, so e.g. confirm()'s returned promise hangs forever.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
+          // Dialog removal cannot be vetoed because the element is already gone. A mapped drawer,
+          // however, promises an always-cancelable hide request; vetoing that request keeps its
+          // open state ready for a later reconnect and suppresses the settled close lifecycle.
+          const hide = this.emit(
+            'lr-hide',
+            { source: this },
+            { cancelable: this.disconnectHideCancelable },
+          );
+          if (hide.defaultPrevented) {
+            this.syncOpenAttribute();
+            return;
+          }
           this.applyOpenState(false);
-          // Removal cannot be vetoed -- the element is already gone -- so none of these three is
-          // cancelable here, and there is no exit animation left to wait on.
-          this.emit('lr-hide', { source: this });
           this.emit('lr-dialog-close', 'unmount');
           this.emit('lr-after-hide');
         }
       });
     }
+  }
+
+  adoptedCallback(): void {
+    this.resetHeadingObserver();
+  }
+
+  private armHeadingObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.isConnected) return;
+    if (this.headingObserver && this.headingObserverDocument === ownerDocument) return;
+    this.resetHeadingObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.headingObserverGeneration;
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.headingObserver !== observer ||
+        this.headingObserverDocument !== ownerDocument ||
+        this.headingObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.detectLightDomChrome();
+    });
+    this.headingObserver = observer;
+    this.headingObserverDocument = ownerDocument;
+    observer.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  private resetHeadingObserver(): void {
+    this.headingObserverGeneration += 1;
+    this.headingObserver?.disconnect();
+    this.headingObserver = undefined;
+    this.headingObserverDocument = undefined;
+  }
+
+  /** Whether an external-removal hide request can preserve open state for a later reconnect. */
+  protected get disconnectHideCancelable(): boolean {
+    return false;
   }
 
   private onDefaultSlotChange = (): void => {

@@ -13,12 +13,12 @@ const POSTER_GOLD =
 const meta: Meta = {
   title: 'Media/Video Playlist',
   component: 'lr-video-playlist',
-  tags: ['autodocs'],
+  tags: ['autodocs', 'experimental'],
   parameters: {
     docs: {
       description: {
         component:
-          'Direct-child video playlist with full/standard/none control forwarding, safe current-video switching, automatic advancement, repeat modes, immutable change metadata, and an accessible roving item list.',
+          'Experimental direct-child video playlist with full/standard/none control forwarding, safe current-video switching, automatic advancement, repeat modes, immutable change metadata, and an accessible roving item list.',
       },
     },
   },

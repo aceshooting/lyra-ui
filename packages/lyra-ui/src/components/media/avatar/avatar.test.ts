@@ -71,7 +71,7 @@ describe('lr-avatar', () => {
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement | null;
     if (img) {
       expect(img.getAttribute('alt')).to.equal('A. Bee');
-      expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="initials"]') === null).to.be.true;
     }
   });
 
@@ -183,6 +183,32 @@ describe('lr-avatar', () => {
     await el.updateComplete;
     expect(icon.hasAttribute('hidden')).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+  });
+
+  it('recognizes a default-slot element created in its adopted iframe realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const el = (await fixture(html`<lr-avatar initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+      const slot = icon.querySelector('slot:not([name])') as HTMLSlotElement;
+      const slotChanged = oneEvent(slot, 'slotchange');
+      const glyph = frameDocument.createElement('span');
+      glyph.textContent = '★';
+      el.append(glyph);
+      await slotChanged;
+      await el.updateComplete;
+
+      expect(icon.hidden).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="initials"]') === null).to.be.true;
+    } finally {
+      el.remove();
+      frame.remove();
+    }
   });
 
   it('exposes alt as an accessible name via role="img" when showing icon-only content', async () => {

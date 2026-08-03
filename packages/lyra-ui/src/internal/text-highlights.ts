@@ -4,8 +4,7 @@ const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
 
 /** Minimal shape of the CSS Custom Highlight API's `Highlight` this module needs -- declared locally
- *  (not as a global augmentation) since this toolchain's DOM lib typings don't yet include it; every
- *  access goes through `globalThis` casts so the module degrades safely wherever the API is missing. */
+ *  (not as a global augmentation) since this toolchain's DOM lib typings don't yet include it. */
 interface CustomHighlightLike {
   priority: number;
   add(range: Range): void;
@@ -15,53 +14,90 @@ interface HighlightRegistryLike {
   set(name: string, highlight: CustomHighlightLike): void;
 }
 
-function getHighlightCtor(): (new () => CustomHighlightLike) | undefined {
-  return (globalThis as unknown as { Highlight?: new () => CustomHighlightLike }).Highlight;
+interface HighlightRealm {
+  ctor: new () => CustomHighlightLike;
+  registry: HighlightRegistryLike;
 }
 
-function getHighlightRegistry(): HighlightRegistryLike | undefined {
-  return (globalThis as unknown as { CSS?: { highlights?: HighlightRegistryLike } }).CSS?.highlights;
+interface HighlightDocumentState extends HighlightRealm {
+  highlightObjects: Map<string, CustomHighlightLike>;
+  ownersByName: Map<string, Map<object, Set<Range>>>;
 }
 
-/** Whether the CSS Custom Highlight API (`Highlight` + `CSS.highlights`) is available. */
-export function supportsCustomHighlights(): boolean {
-  return getHighlightCtor() !== undefined && getHighlightRegistry() !== undefined;
+const documentStates = new WeakMap<Document, HighlightDocumentState>();
+const failedDocumentRealms = new WeakMap<Document, HighlightRealm>();
+
+function defaultDocument(): Document | null {
+  return typeof document === 'undefined' ? null : document;
+}
+
+function highlightRealm(doc: Document | null): HighlightRealm | null {
+  const view = doc?.defaultView;
+  if (!view) return null;
+  const globals = view as unknown as {
+    Highlight?: new () => CustomHighlightLike;
+    CSS?: { highlights?: HighlightRegistryLike };
+  };
+  const ctor = globals.Highlight;
+  const registry = globals.CSS?.highlights;
+  return typeof ctor === 'function' && registry && typeof registry.set === 'function'
+    ? { ctor, registry }
+    : null;
+}
+
+function matchesRealm(left: HighlightRealm | undefined, right: HighlightRealm): boolean {
+  return left?.ctor === right.ctor && left.registry === right.registry;
+}
+
+/** Whether the CSS Custom Highlight API (`Highlight` + `CSS.highlights`) is available in `doc`.
+ * Passing a document is owner-realm exact; omitting it retains the ambient convenience check used
+ * by existing callers and returns `false` during SSR. */
+export function supportsCustomHighlights(doc: Document | null = defaultDocument()): boolean {
+  const realm = highlightRealm(doc);
+  return realm !== null && (!doc || !matchesRealm(failedDocumentRealms.get(doc), realm));
 }
 
 function highlightName(tone: LyraHighlightTone): string {
   return `lr-highlight-${tone}`;
 }
 
-let registered = false;
-const highlightObjects = new Map<string, CustomHighlightLike>();
-const ownersByName = new Map<string, Map<object, Set<Range>>>();
-
 /** Creates and registers every document-global `Highlight` object this module owns
  *  (`lr-highlight-accent|success|warning|danger|neutral`, `lr-highlight-active`,
- *  `lr-highlight-flash`) exactly once, lazily inside the first `acquireHighlightHandle()` call --
- *  never at module evaluation, so importing an adopting viewer's class module stays SSR/node-safe. */
-function ensureRegistered(): void {
-  if (registered || !supportsCustomHighlights()) return;
-  registered = true;
-  const Ctor = getHighlightCtor()!;
-  const registry = getHighlightRegistry()!;
+ *  `lr-highlight-flash`) once per owner document, lazily inside the first
+ *  `acquireHighlightHandle()` call -- never at module evaluation, so importing an adopting
+ *  viewer's class module stays SSR/node-safe. */
+function stateForDocument(doc: Document, realm: HighlightRealm): HighlightDocumentState {
+  const existing = documentStates.get(doc);
+  if (existing?.ctor === realm.ctor && existing.registry === realm.registry) return existing;
+  const state: HighlightDocumentState = {
+    ...realm,
+    highlightObjects: new Map(),
+    ownersByName: new Map(),
+  };
   const entries: [string, number][] = [
     ...TONE_NAMES.map((tone): [string, number] => [highlightName(tone), 0]),
     ['lr-highlight-active', 1],
     ['lr-highlight-flash', 2],
   ];
   for (const [name, priority] of entries) {
-    const highlight = new Ctor();
+    const highlight = new realm.ctor();
     highlight.priority = priority;
-    highlightObjects.set(name, highlight);
-    ownersByName.set(name, new Map());
-    registry.set(name, highlight);
+    state.highlightObjects.set(name, highlight);
+    state.ownersByName.set(name, new Map());
+    realm.registry.set(name, highlight);
   }
+  documentStates.set(doc, state);
+  return state;
 }
 
-function replaceCssOwned(name: string, owner: object, ranges: Range[]): void {
-  const highlight = highlightObjects.get(name);
-  const owners = ownersByName.get(name);
+function replaceCssOwned(
+  state: HighlightDocumentState,
+  name: string,
+  owner: object,
+  ranges: Range[],
+): void {
+  const highlight = state.highlightObjects.get(name);
+  const owners = state.ownersByName.get(name);
   if (!highlight || !owners) return;
   const previous = owners.get(owner);
   if (previous) for (const r of previous) highlight.delete(r);
@@ -104,8 +140,11 @@ function splitTextNodeAtRange(range: Range, textNode: Text): Text {
  *  `data-lr-highlight-tone` is kept alongside it so tone-based selection still works. */
 function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, doc: Document): HTMLElement[] {
   const ancestor = range.commonAncestorContainer;
-  const walkRoot = ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode! : ancestor;
-  const walker = doc.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT);
+  const view = doc.defaultView;
+  const textNodeType = view?.Node.TEXT_NODE ?? 3;
+  const showText = view?.NodeFilter.SHOW_TEXT ?? 4;
+  const walkRoot = ancestor.nodeType === textNodeType ? ancestor.parentNode! : ancestor;
+  const walker = doc.createTreeWalker(walkRoot, showText);
   const covered: Text[] = [];
   let node: Node | null;
   while ((node = walker.nextNode())) {
@@ -136,6 +175,7 @@ function unwrapMark(mark: HTMLElement): void {
 
 function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
   const marksByName = new Map<string, HTMLElement[]>();
+  const view = doc.defaultView;
 
   function clear(name: string): void {
     for (const mark of marksByName.get(name) ?? []) unwrapMark(mark);
@@ -149,7 +189,14 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
     marksByName.set(name, marks);
   }
 
-  let flashTimer: ReturnType<typeof setTimeout> | undefined;
+  let flashTimer: number | undefined;
+  let flashGeneration = 0;
+
+  function cancelFlashTimer(): void {
+    flashGeneration += 1;
+    if (flashTimer !== undefined) view?.clearTimeout(flashTimer);
+    flashTimer = undefined;
+  }
 
   return {
     setRanges(tone, ranges) {
@@ -159,42 +206,95 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
       paint('lr-highlight-active', 'accent', range ? [range] : []);
     },
     flash(range, durationMs = DEFAULT_FLASH_MS) {
-      clearTimeout(flashTimer);
+      cancelFlashTimer();
       paint('lr-highlight-flash', 'accent', [range]);
-      flashTimer = setTimeout(() => clear('lr-highlight-flash'), durationMs);
+      if (!view) return;
+      const generation = flashGeneration;
+      let handle = 0;
+      handle = view.setTimeout(() => {
+        if (generation !== flashGeneration || flashTimer !== handle) return;
+        flashTimer = undefined;
+        clear('lr-highlight-flash');
+      }, durationMs);
+      flashTimer = handle;
     },
     release() {
-      clearTimeout(flashTimer);
+      cancelFlashTimer();
       for (const name of marksByName.keys()) clear(name);
     },
   };
 }
 
-function acquireCssHandle(owner: object): HighlightHandle {
-  ensureRegistered();
-  let flashTimer: ReturnType<typeof setTimeout> | undefined;
+function acquireCssHandle(
+  owner: object,
+  state: HighlightDocumentState,
+  view: Window,
+): HighlightHandle {
+  let flashTimer: number | undefined;
+  let flashGeneration = 0;
+
+  function cancelFlashTimer(): void {
+    flashGeneration += 1;
+    if (flashTimer !== undefined) view.clearTimeout(flashTimer);
+    flashTimer = undefined;
+  }
+
   return {
     setRanges(tone, ranges) {
-      replaceCssOwned(highlightName(tone), owner, ranges);
+      replaceCssOwned(state, highlightName(tone), owner, ranges);
     },
     setActive(range) {
-      replaceCssOwned('lr-highlight-active', owner, range ? [range] : []);
+      replaceCssOwned(state, 'lr-highlight-active', owner, range ? [range] : []);
     },
     flash(range, durationMs = DEFAULT_FLASH_MS) {
-      clearTimeout(flashTimer);
-      replaceCssOwned('lr-highlight-flash', owner, [range]);
-      flashTimer = setTimeout(() => replaceCssOwned('lr-highlight-flash', owner, []), durationMs);
+      cancelFlashTimer();
+      replaceCssOwned(state, 'lr-highlight-flash', owner, [range]);
+      const generation = flashGeneration;
+      let handle = 0;
+      handle = view.setTimeout(() => {
+        if (generation !== flashGeneration || flashTimer !== handle) return;
+        flashTimer = undefined;
+        replaceCssOwned(state, 'lr-highlight-flash', owner, []);
+      }, durationMs);
+      flashTimer = handle;
     },
     release() {
-      clearTimeout(flashTimer);
-      for (const name of highlightObjects.keys()) replaceCssOwned(name, owner, []);
+      cancelFlashTimer();
+      for (const name of state.highlightObjects.keys()) replaceCssOwned(state, name, owner, []);
     },
   };
 }
 
+function inertHighlightHandle(): HighlightHandle {
+  return {
+    setRanges: () => undefined,
+    setActive: () => undefined,
+    flash: () => undefined,
+    release: () => undefined,
+  };
+}
+
 /** Acquires a paint handle for one owner. Transparently uses the CSS Custom Highlight API when
- *  available, falling back to `<mark>`-wrapping otherwise -- callers never branch on
- *  `supportsCustomHighlights()` themselves, only this module does. */
-export function acquireHighlightHandle(owner: object, doc: Document = document): HighlightHandle {
-  return supportsCustomHighlights() ? acquireCssHandle(owner) : acquireFallbackHandle(owner, doc);
+ *  available, falling back to `<mark>`-wrapping otherwise. Painting callers do not need to branch;
+ *  a component may still query its exact owner document to decorate fallback marks with its own
+ *  public parts. */
+export function acquireHighlightHandle(
+  owner: object,
+  doc: Document | null = defaultDocument(),
+): HighlightHandle {
+  if (!doc) return inertHighlightHandle();
+  const realm = highlightRealm(doc);
+  if (realm && doc.defaultView && !matchesRealm(failedDocumentRealms.get(doc), realm)) {
+    try {
+      const handle = acquireCssHandle(owner, stateForDocument(doc, realm), doc.defaultView);
+      failedDocumentRealms.delete(doc);
+      return handle;
+    } catch {
+      failedDocumentRealms.set(doc, realm);
+      // A partial/polyfilled registry can expose the right shape but still reject construction or
+      // registration. Fall back to owned DOM marks rather than leaking unsurfaced ranges or using
+      // another document's globals.
+    }
+  }
+  return acquireFallbackHandle(owner, doc);
 }

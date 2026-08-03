@@ -83,6 +83,33 @@ it('defaults to slotted mode (empty threads) and only fires lr-filter-change in 
   expect(el.querySelector('lr-conversation-item')).to.exist;
 });
 
+it('leaves row navigation untouched for a foreign-realm group-toggle descendant', async () => {
+  const el = (await fixture(html`<lr-thread-list></lr-thread-list>`)) as LyraThreadList;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  try {
+    const toggle = iframe.contentDocument!.createElement('button');
+    toggle.setAttribute('part', 'group-toggle');
+    const icon = iframe.contentDocument!.createElement('span');
+    toggle.append(icon);
+    expect(icon instanceof Element, 'fixture really crosses constructor realms').to.equal(false);
+
+    const access = el as unknown as {
+      focusTaskGeneration: number;
+      onListKeyDown(event: KeyboardEvent): void;
+    };
+    const before = access.focusTaskGeneration;
+    access.onListKeyDown({
+      key: 'ArrowDown',
+      composedPath: () => [icon, toggle],
+      preventDefault: () => undefined,
+    } as unknown as KeyboardEvent);
+    expect(access.focusTaskGeneration).to.equal(before);
+  } finally {
+    iframe.remove();
+  }
+});
+
 it('applies the host accessible name to the element that owns the list role', async () => {
   const el = (await fixture(html`
     <lr-thread-list aria-label="Saved chats">

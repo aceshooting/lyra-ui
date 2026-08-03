@@ -2,7 +2,7 @@
 
 # `lr-conversation-item`
 
-- **Import** `import '@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-conversation-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraConversationItem`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

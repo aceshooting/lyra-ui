@@ -337,6 +337,63 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-flash]').length).to.equal(0);
   });
 
+  it('resolves and cancels flash timing through the adopted owner window', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    el.remove();
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      frame.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const originalGetComputedStyle = frameWindow.getComputedStyle;
+    const originalSetTimeout = frameWindow.setTimeout;
+    const originalClearTimeout = frameWindow.clearTimeout;
+    const callbacks = new Map<number, TimerHandler>();
+    const clears: number[] = [];
+    let styleReads = 0;
+
+    frameWindow.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+      styleReads += 1;
+      return originalGetComputedStyle.call(frameWindow, target, pseudo);
+    }) as typeof frameWindow.getComputedStyle;
+    frameWindow.setTimeout = ((handler: TimerHandler) => {
+      callbacks.set(71, handler);
+      return 71;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) {
+        clears.push(handle);
+        callbacks.delete(handle);
+      }
+    }) as typeof frameWindow.clearTimeout;
+
+    try {
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      el.flash('a');
+      await el.updateComplete;
+      await Promise.resolve();
+
+      expect(styleReads).to.be.greaterThan(0);
+      expect(callbacks.has(71)).to.be.true;
+
+      document.adoptNode(el);
+      expect(clears).to.deep.equal([71]);
+      expect(callbacks.size).to.equal(0);
+    } finally {
+      el.remove();
+      frameWindow.getComputedStyle = originalGetComputedStyle;
+      frameWindow.setTimeout = originalSetTimeout;
+      frameWindow.clearTimeout = originalClearTimeout;
+      frame.remove();
+    }
+  });
+
   it('adds a transparent minimum pointer area around small percentage rects', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="position:relative; width:200px; height:200px">

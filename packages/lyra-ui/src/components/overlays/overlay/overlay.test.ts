@@ -1192,6 +1192,57 @@ describe('overlay semantic and lifecycle regressions', () => {
     }
   });
 
+  it('recreates popover host and trigger observers in the adopted owner realm', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button')!;
+    el.remove();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    const frameWindow = iframe.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      iframe.remove();
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const originalMutationObserver = frameWindow.MutationObserver;
+    let hostObservations = 0;
+    let triggerObservations = 0;
+    let relevantDisconnects = 0;
+    class OwnerMutationObserver implements MutationObserver {
+      private relevant = false;
+      constructor(_callback: MutationCallback) {}
+      observe(target: Node, options?: MutationObserverInit): void {
+        if (target === el && options?.attributeFilter?.includes('id')) {
+          this.relevant = true;
+          hostObservations += 1;
+        }
+        if (target === trigger && options?.attributeFilter?.includes('aria-expanded')) {
+          this.relevant = true;
+          triggerObservations += 1;
+        }
+      }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void { if (this.relevant) relevantDisconnects += 1; }
+    }
+    frameWindow.MutationObserver = OwnerMutationObserver;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      expect(hostObservations, 'the destination window observes host id changes').to.equal(1);
+      expect(triggerObservations, 'the destination window observes trigger ARIA changes').to.equal(1);
+      document.adoptNode(el);
+      expect(relevantDisconnects, 'adoption disconnects both owner observers').to.be.at.least(2);
+    } finally {
+      frameWindow.MutationObserver = originalMutationObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
+
   it('keeps the generated host id and trigger controls synchronized after live id edits', async () => {
     const el = (await fixture(
       html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,

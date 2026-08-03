@@ -3,10 +3,21 @@ import { getPptxRenderer, loadPptxRenderer, __setPptxRendererForTesting } from '
 
 afterEach(() => __setPptxRendererForTesting(undefined));
 
+function zipLimits(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    maxEntries: 4_000,
+    maxEntryUncompressedBytes: 32 * 1024 * 1024,
+    maxTotalUncompressedBytes: 256 * 1024 * 1024,
+    maxMediaBytes: 192 * 1024 * 1024,
+    maxConcurrency: 8,
+    ...overrides,
+  };
+}
+
 describe('pptx loader', () => {
   it('normalizes named, default-wrapped, and mixed module shapes capability-first', async () => {
-    const named = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'named' } };
-    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'default' } };
+    const named = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits({ source: 'named' }) };
+    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits({ source: 'default' }) };
 
     expect(await loadPptxRenderer(async () => named as never)).to.equal(named);
     expect(
@@ -18,7 +29,7 @@ describe('pptx loader', () => {
   });
 
   it('falls back from a malformed named capability and fails closed when neither shape can open', async () => {
-    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'default' } };
+    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits({ source: 'default' }) };
     expect(
       await loadPptxRenderer(async () => ({ PptxViewer: undefined, default: fallback }) as never),
     ).to.equal(fallback);
@@ -28,6 +39,44 @@ describe('pptx loader', () => {
         default: { PptxViewer: {} },
       }) as never),
     ).to.be.null;
+  });
+
+  it('fails closed when ZIP limits are missing, malformed, or more permissive than Lyra permits', async () => {
+    const open = () => {};
+    const malformedLimits = [
+      undefined,
+      null,
+      {},
+      zipLimits({ maxEntries: '4000' }),
+      zipLimits({ maxEntryUncompressedBytes: Number.POSITIVE_INFINITY }),
+      zipLimits({ maxTotalUncompressedBytes: 0 }),
+      zipLimits({ maxMediaBytes: -1 }),
+      zipLimits({ maxConcurrency: 1.5 }),
+      zipLimits({ maxEntries: 4_001 }),
+      zipLimits({ maxEntryUncompressedBytes: (32 * 1024 * 1024) + 1 }),
+      zipLimits({ maxTotalUncompressedBytes: (256 * 1024 * 1024) + 1 }),
+      zipLimits({ maxMediaBytes: (192 * 1024 * 1024) + 1 }),
+      zipLimits({ maxConcurrency: 9 }),
+    ];
+
+    for (const limits of malformedLimits) {
+      expect(
+        await loadPptxRenderer(async () => ({
+          PptxViewer: { open },
+          RECOMMENDED_ZIP_LIMITS: limits,
+        }) as never),
+      ).to.be.null;
+    }
+  });
+
+  it('uses a safe default export when the named renderer omits required ZIP limits', async () => {
+    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits() };
+    expect(
+      await loadPptxRenderer(async () => ({
+        PptxViewer: { open() {} },
+        default: fallback,
+      }) as never),
+    ).to.equal(fallback);
   });
 
   it('loads the installed renderer module', async function () {
@@ -75,4 +124,5 @@ describe('pptx loader', () => {
       container.remove();
     }
   });
+
 });

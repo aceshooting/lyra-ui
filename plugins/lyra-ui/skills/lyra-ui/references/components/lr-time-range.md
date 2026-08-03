@@ -2,7 +2,7 @@
 
 # `lr-time-range`
 
-- **Import** `import '@aceshooting/lyra-ui/components/forms/time-range/time-range.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-time-range.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -20,6 +20,9 @@ onto `[min, max]`). Form-associated (`static formAssociated = true`, via `Elemen
 ancestor `<fieldset disabled>` disables both handles and every preset button through an internal
 `effectiveDisabled` getter, the same way it would a native `<input>`, without ever mutating the
 consumer-facing `disabled` property/attribute itself.
+The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
+names the two-handle aggregate, while `startLabel` and `endLabel` continue to name the individual
+sliders.
 
 **Properties:**
 - `min: number = 0`
@@ -98,7 +101,8 @@ autofill or back/forward restore.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
+**CSS parts:** `base` (the aggregate `role="group"`), `track`, `range`, `handle-start`, `handle-end`,
+`presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
 `--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`

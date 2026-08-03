@@ -67,12 +67,31 @@ describe('lr-rag-answer', () => {
     await expect((await fixture(html`<lr-rag-answer loading></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
     await expect((await fixture(html`<lr-rag-answer answer="Answer"></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
   });
+  it('announces only new errors through an assertive light-DOM sink', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer error="Initial failure"></lr-rag-answer>`,
+    )) as LyraRagAnswer;
+    const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
+    const visibleError = el.shadowRoot!.querySelector('[part="error"]')!;
+    expect(visibleError.getAttribute('role'), 'the visible error is not a shadow live region').to.be.null;
+    expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
+
+    el.error = 'A newer failure';
+    await el.updateComplete;
+    expect(sink().lastElementChild?.textContent).to.equal('A newer failure');
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(sink().children.length, 'reconnect does not replay the current error').to.equal(0);
+  });
   it('forwards late host aria-label changes and removal to the loading spinner semantic owner', async () => {
     const el = (await fixture(
       html`<lr-rag-answer loading label="Grounded response"></lr-rag-answer>`,
     )) as LyraRagAnswer;
     const spinnerLabel = () =>
-      el.shadowRoot!.querySelector('lr-spinner')!.shadowRoot!.querySelector('[role="status"]')!.getAttribute('aria-label');
+      el.shadowRoot!.querySelector('lr-spinner')!.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label');
 
     expect(spinnerLabel()).to.equal('Grounded response');
     el.setAttribute('aria-label', 'Loading quarterly evidence');

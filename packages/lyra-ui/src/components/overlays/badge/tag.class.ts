@@ -1,11 +1,21 @@
 import { html, nothing, type PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
+import {
+  composedParentElement,
+  isAccessibilitySubtreeExcluded,
+  isAccessibilityVisibilityHidden,
+} from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { LyraBadge, type BadgeVariant } from './badge.class.js';
 import { styles as badgeStyles } from './badge.styles.js';
 import { styles as tagStyles } from './tag.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraTagEventMap {
   'lr-remove': CustomEvent<undefined>;
@@ -21,7 +31,8 @@ export interface LyraTagEventMap {
  * own state instead.
  *
  * @customElement lr-tag
- * @slot - Tag content.
+ * @slot - Tag content. A removable tag keeps its action name synchronized with visible accessible
+ * label text through forwarding slots.
  * @slot start - Content placed before the label, typically an icon.
  * @slot end - Content placed after the label, typically an icon.
  * @event lr-remove - The remove button was activated (click, or Enter/Space while focused —
@@ -43,6 +54,18 @@ export interface LyraTagEventMap {
  * @since 4.0.0
  */
 export class LyraTag extends LyraBadge<LyraTagEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+    remove: LYRA_DEFAULT_remove,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, variants, badgeStyles, tagStyles];
 
   private upstreamTextVariant = false;
@@ -79,26 +102,81 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
   // the button and the name would go stale. Only wired while the button exists, so a bulk list of
   // plain tags pays nothing for it. Mirrors `<lr-chip>`'s identical label observer.
   private labelObserver?: MutationObserver;
+  // A server renderer cannot inspect projected light DOM. Cache the browser-derived label so a
+  // hydrating mount can reproduce the server's bare remove name first, then add context without
+  // replacing the action node on the corrective update.
+  @state() private labelText = '';
+  private readonly onLabelSlotChange = (event: Event): void => {
+    const target = event.target as Element | null;
+    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    this.bindLabelObserverTargets();
+    if (this.withRemove) this.recomputeLabelText();
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('slotchange', this.onLabelSlotChange);
     this.syncLabelObserver();
+    if (this.hasUpdated) {
+      if (this.withRemove) this.recomputeLabelText();
+    } else {
+      this.seedFirstRenderState(() => this.recomputeLabelText());
+    }
   }
 
   override disconnectedCallback(): void {
+    this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
     super.disconnectedCallback();
   }
 
   private syncLabelObserver(): void {
-    if (!this.withRemove || !this.isConnected || typeof MutationObserver === 'undefined') {
+    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
+      ?.MutationObserver;
+    if (!this.withRemove || !this.isConnected || !MutationObserverCtor) {
       this.labelObserver?.disconnect();
       this.labelObserver = undefined;
       return;
     }
-    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
-    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    this.labelObserver ??= new MutationObserverCtor(() => {
+      this.bindLabelObserverTargets();
+      this.recomputeLabelText();
+    });
+    this.bindLabelObserverTargets();
+  }
+
+  private observeLabelNode(node: Node): void {
+    if (!this.labelObserver) return;
+    if (node.nodeType === 3) {
+      this.labelObserver.observe(node, { characterData: true });
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    this.labelObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  private bindLabelObserverTargets(): void {
+    if (!this.labelObserver) return;
+    this.labelObserver.disconnect();
+    this.observeLabelNode(this);
+    let ancestor = composedParentElement(this);
+    while (ancestor) {
+      this.labelObserver.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+      });
+      ancestor = composedParentElement(ancestor);
+    }
+    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
   }
 
   // Only the default slot's own content names the remove button -- text living in the decorative
@@ -106,22 +184,44 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
   // also excludes Comment nodes: when a consumer interpolates the label through a lit-html
   // expression rather than a static string, lit-html inserts a marker comment alongside the text
   // node, and that comment's own data is internal bookkeeping, not label content.
-  private get labelText(): string {
-    return Array.from(this.childNodes)
-      .filter((node): node is Text | Element => {
-        if (node.nodeType === Node.TEXT_NODE) return true;
-        if (!(node instanceof Element)) return false;
-        const slot = node.getAttribute('slot');
-        return slot !== 'start' && slot !== 'end';
-      })
-      .map((node) => node.textContent ?? '')
-      .join('')
+  private accessibleLabelText(node: Node): string {
+    if (node.nodeType === 3) return node.textContent ?? '';
+    if (node.nodeType !== 1) return '';
+    const element = node as Element;
+    if (isAccessibilitySubtreeExcluded(element)) return '';
+    const visibilityHidden = isAccessibilityVisibilityHidden(element);
+    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
+    if (accessibleLabel?.trim()) return accessibleLabel;
+    const childNodes =
+      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : element.childNodes;
+    return Array.from(childNodes, (child) =>
+      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleLabelText(child),
+    ).join(' ');
+  }
+
+  private recomputeLabelText(): void {
+    const renderRoot = (this as unknown as { renderRoot?: ParentNode }).renderRoot;
+    const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+    const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    const nodes = slot
+      ? slot.assignedNodes({ flatten: true })
+      : Array.from(lightDomNodes ?? []).filter((node) => {
+          if (node.nodeType !== 1) return true;
+          const slotName = (node as Element).getAttribute('slot');
+          return slotName !== 'start' && slotName !== 'end';
+        });
+    this.labelText = nodes
+      .map((node) => this.accessibleLabelText(node))
+      .join(' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
   private get accessibleRemoveLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel) return hostLabel;
+    if (hostLabel !== null) return hostLabel;
     const text = this.labelText;
     return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }
@@ -134,7 +234,10 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.toggleAttribute('data-upstream-text-variant', this.upstreamTextVariant);
-    if (changed.has('withRemove')) this.syncLabelObserver();
+    if (changed.has('withRemove')) {
+      this.syncLabelObserver();
+      if (this.withRemove && this.hasUpdated) this.recomputeLabelText();
+    }
   }
 
   protected override renderTrailing(): unknown {

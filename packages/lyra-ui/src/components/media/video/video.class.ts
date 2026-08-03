@@ -14,9 +14,14 @@ import {
   safeNativeMediaSource,
 } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { readResponseText } from '../../../internal/resource-loader.js';
-import { safeFetchUrl, safeMediaSrc } from '../../../internal/safe-url.js';
+import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_duration, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
 export type LyraVideoPreload = 'auto' | 'metadata' | 'none';
@@ -83,14 +88,18 @@ function parseVttTime(source: string): number | null {
   return seconds >= 0 ? seconds : null;
 }
 
-function parseThumbnailUrl(source: string, baseUrl: string): Omit<ThumbnailCue, 'start' | 'end'> | null {
+function parseThumbnailUrl(
+  source: string,
+  baseUrl: string,
+  URLCtor: typeof URL,
+): Omit<ThumbnailCue, 'start' | 'end'> | null {
   const trimmed = source.trim();
   if (!trimmed) return null;
   try {
-    const resolved = new URL(trimmed, baseUrl);
+    const resolved = new URLCtor(trimmed, baseUrl);
     const sprite = /^#xywh=(\d+),(\d+),(\d+),(\d+)$/u.exec(resolved.hash);
     resolved.hash = '';
-    const src = safeMediaSrc(resolved.href);
+    const src = safeMediaSrc(resolved.href, URLCtor);
     if (!src) return null;
     if (!sprite) return { src };
     const [x, y, width, height] = sprite.slice(1).map(Number);
@@ -110,7 +119,7 @@ function parseThumbnailUrl(source: string, baseUrl: string): Omit<ThumbnailCue, 
   }
 }
 
-function parseThumbnailVtt(source: string, sourceUrl: string): ThumbnailCue[] {
+function parseThumbnailVtt(source: string, sourceUrl: string, URLCtor: typeof URL): ThumbnailCue[] {
   const cues: ThumbnailCue[] = [];
   const normalized = source.replace(/^\uFEFF/u, '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   for (const block of normalized.split(/\n{2,}/u)) {
@@ -122,7 +131,7 @@ function parseThumbnailVtt(source: string, sourceUrl: string): ThumbnailCue[] {
     if (!match) continue;
     const start = parseVttTime(match[1]!);
     const end = parseVttTime(match[2]!);
-    const thumbnail = parseThumbnailUrl(lines[timingIndex + 1]!, sourceUrl);
+    const thumbnail = parseThumbnailUrl(lines[timingIndex + 1]!, sourceUrl, URLCtor);
     if (start === null || end === null || end <= start || !thumbnail) continue;
     cues.push({ start, end, ...thumbnail });
   }
@@ -208,11 +217,40 @@ function unsupportedPromise(message: string): Promise<never> {
  * @cssprop [--controls-color=var(--lr-color-text)] - Custom-control foreground color.
  * @cssprop [--poster-play-button-background=var(--lr-color-surface-overlay)] - Poster play-button
  *   background.
- * @status stable
+ * @status experimental
  * @since 8.0.0
  */
 export class LyraVideo extends LyraElement<LyraVideoEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    duration: LYRA_DEFAULT_duration,
+    pause: LYRA_DEFAULT_pause,
+    play: LYRA_DEFAULT_play,
+    playbackPosition: LYRA_DEFAULT_playbackPosition,
+    videoCaptions: LYRA_DEFAULT_videoCaptions,
+    videoCaptionsOff: LYRA_DEFAULT_videoCaptionsOff,
+    videoEnterFullscreen: LYRA_DEFAULT_videoEnterFullscreen,
+    videoExitFullscreen: LYRA_DEFAULT_videoExitFullscreen,
+    videoExitPictureInPicture: LYRA_DEFAULT_videoExitPictureInPicture,
+    videoMute: LYRA_DEFAULT_videoMute,
+    videoPictureInPicture: LYRA_DEFAULT_videoPictureInPicture,
+    videoPlaybackSpeed: LYRA_DEFAULT_videoPlaybackSpeed,
+    videoPlayerLabel: LYRA_DEFAULT_videoPlayerLabel,
+    videoUnmute: LYRA_DEFAULT_videoUnmute,
+    videoVolume: LYRA_DEFAULT_videoVolume,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
+
+  static override get observedAttributes(): string[] {
+    // The pinned public manifest spells this attribute `currentTime`. HTML normalizes authored
+    // attribute names to lowercase, while Lyra's earlier kebab-case spelling remains supported as
+    // a compatibility alias. Lit still owns every other observed attribute normally.
+    return [...new Set([...super.observedAttributes, 'currenttime', 'current-time'])];
+  }
 
   /** Starts playback as soon as the browser's autoplay policy allows. */
   @property({ type: Boolean }) autoplay = false;
@@ -223,7 +261,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Custom controls: none, standard, or standard plus rate and picture-in-picture. */
   @property({ reflect: true }) controls: LyraVideoControls = 'standard';
   /** Current playback position in seconds. Assignments are finite and clamped to duration. */
-  @property({ type: Number, attribute: 'current-time' }) currentTime = 0;
+  @property({ type: Number, attribute: 'currentTime' }) currentTime = 0;
   /** Current finite media duration. Read-only in normal use. */
   @property({ type: Number }) duration = 0;
   /** Icon library handed to every control fallback `<lr-icon>`. */
@@ -268,6 +306,14 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private visibilityPaused = false;
   private captionListeners: Array<{ track: TextTrack; listener: EventListener }> = [];
   private lastSourceSignature?: string;
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    if (name === 'currenttime' || name === 'current-time') {
+      if (oldValue !== newValue) this.currentTime = finiteRange(Number(newValue ?? 0), 0, 0);
+      return;
+    }
+    super.attributeChangedCallback(name, oldValue, newValue);
+  }
 
   private get videoEl(): HTMLVideoElement | undefined {
     const media = this.mediaController.element;
@@ -362,7 +408,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private mediaRef = (element?: Element): void => {
-    const video = element instanceof HTMLVideoElement ? element : undefined;
+    const video = element?.localName === 'video' ? element as HTMLVideoElement : undefined;
     this.mediaController.attach(video);
     if (!video) return;
     this.mediaController.volume = finiteRange(this.volume, 1, 0, 1);
@@ -571,8 +617,19 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     this.visibilityPaused = false;
-    if (!this.autoplayOnVisible || typeof IntersectionObserver !== 'function') return;
-    this.intersectionObserver = new IntersectionObserver((entries) => {
+    const ownerWindow = this.ownerDocument.defaultView;
+    const IntersectionObserverCtor = ownerWindow?.IntersectionObserver;
+    if (!this.autoplayOnVisible || !IntersectionObserverCtor) return;
+    let observer: IntersectionObserver | undefined;
+    observer = new IntersectionObserverCtor((entries) => {
+      if (
+        !observer ||
+        !this.isConnected ||
+        this.intersectionObserver !== observer ||
+        this.ownerDocument.defaultView !== ownerWindow
+      ) {
+        return;
+      }
       const visible = entries[0]?.isIntersecting ?? true;
       const video = this.videoEl;
       if (!video) return;
@@ -588,7 +645,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         void this.play().catch(() => undefined);
       }
     });
-    this.intersectionObserver.observe(this);
+    this.intersectionObserver = observer;
+    observer.observe(this);
   }
 
   private unbindCaptionTracks(): void {
@@ -642,18 +700,26 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.thumbnailAbort = undefined;
     if (this.thumbnailCues.length) this.thumbnailCues = [];
     if (this.activeThumbnail) this.activeThumbnail = undefined;
-    const source = safeFetchUrl(this.thumbnails);
-    if (!source || !this.isConnected) return;
-    const controller = new AbortController();
+    const fetchTarget = resolveOwnerFetchTarget(this, this.thumbnails);
+    const AbortControllerCtor = fetchTarget?.view.AbortController;
+    if (!fetchTarget || !AbortControllerCtor) return;
+    const controller = new AbortControllerCtor();
     this.thumbnailAbort = controller;
     try {
-      const response = await fetch(source, { signal: controller.signal });
-      if (generation !== this.thumbnailGeneration || !this.isConnected) return;
+      const response = await fetchTarget.view.fetch(fetchTarget.url, { signal: controller.signal });
+      if (
+        generation !== this.thumbnailGeneration ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== fetchTarget.view
+      ) return;
       if (!response.ok) return;
       const text = await readResponseText(response, MAX_THUMBNAIL_BYTES);
-      if (generation !== this.thumbnailGeneration || !this.isConnected) return;
-      const sourceUrl = new URL(source, this.ownerDocument.baseURI).href;
-      this.thumbnailCues = parseThumbnailVtt(text, sourceUrl);
+      if (
+        generation !== this.thumbnailGeneration ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== fetchTarget.view
+      ) return;
+      this.thumbnailCues = parseThumbnailVtt(text, fetchTarget.url, fetchTarget.view.URL);
     } catch {
       if (generation !== this.thumbnailGeneration || !this.isConnected) return;
       this.thumbnailCues = [];

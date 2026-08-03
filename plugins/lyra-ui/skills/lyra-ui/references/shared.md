@@ -37,29 +37,33 @@ rule for when a `@supports` fallback may be dropped:
 
 ## Importing and registering components
 
-Every component is a side-effect entry point that registers its own tag. The path always carries
-the source family segment — `components/<family>/<dir>/<file>.js`, **never** `components/<tag>/`:
+Every component has a stable, tag-shaped side-effect entry point that registers its own tag. Use
+`components/<tag>.js`; this public boundary stays unchanged if the internal family folders move:
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js'; // registers <lr-combobox>
-import '@aceshooting/lyra-ui/components/data/table/table.js';        // registers <lr-table>
+import '@aceshooting/lyra-ui/components/lr-combobox.js'; // registers <lr-combobox>
+import '@aceshooting/lyra-ui/components/lr-table.js';    // registers <lr-table>
 ```
+
+The older family-shaped registration paths remain supported for compatibility. Class-only
+`.class.js` entries still use their owning family path because they intentionally expose source
+organization and do not register a tag.
 
 Principal v8 and compatibility registrations use the same exact shape:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
-import '@aceshooting/lyra-ui/components/media/video/video.js';
-import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js';
-import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
-import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
+import '@aceshooting/lyra-ui/components/lr-video.js';
+import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
+import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
+import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
+import '@aceshooting/lyra-ui/components/lr-split-panel.js';
+import '@aceshooting/lyra-ui/components/lr-alert.js';
 ```
 
-`llms/index.md` lists the exact path for every tag. A wrong or missing family segment is a hard
-module-resolution failure, not a silent no-op — `exports` maps `./components/*` straight onto
-`./dist/components/*`.
+`llms/index.md` lists every tag and its owning implementation module. The stable tag-shaped alias
+and the family-shaped compatibility path both resolve through the package's `./components/*`
+export.
 
 **Breaking in 8.0.0 — the package root no longer registers anything.** Through 7.x, importing the
 bare `@aceshooting/lyra-ui` root had the side effect of defining every non-optional-peer tag, so a
@@ -185,12 +189,13 @@ and both are safe to import in plain Node.
 
 ## Events
 
-Public events are `lr-`-prefixed `CustomEvent`s (`lr-change`, `lr-input`, `lr-select`, …), dispatched
-through `LyraElement`'s `protected emit<T>(name, detail?, options?)`: **bubbling, composed, and
-non-cancelable by default**, with the payload on `event.detail`. A component that offers a genuine
-veto point opts into `{ cancelable: true }` and checks `defaultPrevented` before acting (as
-`lr-export` does) — that is called out per component. Native-like `input`/`change` events follow the
-same non-cancelable default.
+Lyra-specific events are `lr-`-prefixed `CustomEvent`s (`lr-change`, `lr-input`, `lr-select`, …),
+dispatched through `LyraElement`'s `protected emit<T>(name, detail?, options?)`: **bubbling,
+composed, and non-cancelable by default**, with the payload on `event.detail`. A component that
+offers a genuine veto point opts into `{ cancelable: true }` and checks `defaultPrevented` before
+acting (as `lr-export` does) — that is called out per component. Native wrappers may additionally
+relay unprefixed `Event`, `InputEvent`, or `FocusEvent` instances; each component section documents
+the exact native names, constructors, bubbling, and cancelability it supports.
 
 Never assume a native DOM event name works: a component mirrors a native contract only where its own
 section says so. `preventDefault()` on a non-cancelable event does nothing.
@@ -288,6 +293,21 @@ Every form-associated control exposes element-valued reads from `form` and `getF
 setter accepts an owner id, an identified `HTMLFormElement`, or `null`; it reflects/removes the
 host's `form` attribute while subsequent reads still return the browser-resolved form element.
 Methods include `checkValidity()`, `reportValidity()`, and `setCustomValidity()`.
+
+Native external labels work across the shadow boundary for every form-associated Lyra control:
+
+```html
+<label for="display-name">Display name</label>
+<lr-input id="display-name" name="displayName"></lr-input>
+```
+
+The label text names the internal role owner, and clicking the label focuses text/select-like
+controls or activates toggle/button-like controls exactly once. The relationship stays live when
+labels are inserted, removed, retargeted, or edited. A host `aria-label` always wins. Compound
+controls such as `lr-tool-param-form`, `lr-rubric-form`, and `lr-time-range` put that aggregate name
+on an internal `role="group"` while retaining the more specific names of their fields/handles.
+Disabled controls, including controls disabled by an ancestor `<fieldset disabled>`, ignore label
+activation.
 
 - **Read `effectiveDisabled`, not `disabled`, for the merged state.** `effectiveDisabled` is own
   `disabled` OR an ancestor `<fieldset disabled>`'s cascaded state.
@@ -865,7 +885,8 @@ import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
 setLyraTheme({ mode: 'dark' });                  // unspecified fields keep their current value
 setLyraTheme({ accent: '#7c3aed' });             // mode stays 'dark'
 getLyraTheme();                                  // → { mode: 'dark', accent: '#7c3aed' }
-setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the accent
+setLyraTheme({ mode: 'auto' });                  // follows the OS, including later changes
+setLyraTheme({ mode: 'unset', accent: null });   // removes Lyra's override and accent
 ```
 
 - **`setLyraTheme({ mode?, accent? })`** persists to `localStorage['lyra-theme']`, applies to
@@ -880,44 +901,49 @@ setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the 
   in-memory cache — so a value written by another tab or a previous session is picked up cold.
   Where storage is unreadable or unwritable it reports the theme last applied, so the return value
   always describes what the document is actually showing and a toggle UI bound to it stays in sync.
-- **`mode`** is `'light' | 'dark' | 'auto'`. `'light'`/`'dark'` set **both `data-lr-theme`** (the
+- **`mode`** is `'light' | 'dark' | 'auto' | 'unset'`. `'light'`/`'dark'` set **both
+  `data-lr-theme`** (the
   attribute `theme.css` actually keys its palette blocks on) **and `data-theme`** (the generic
   attribute canvas-rendered components watch, so `lr-chart`/`lr-heatmap`/`lr-qr-code` repaint on
   the switch rather than keeping stale colors — see `llms/components/lr-chart.md`). `'auto'`
-  removes both, which means **no override — not "follow the OS"**:
-  - **With `theme.css` imported** (the setup this section is nested under), its `:root` block sets
-    the full light palette unconditionally and that file ships no `prefers-color-scheme` block, so
-    `'auto'` renders **light** whatever the OS is set to.
-  - **Without `theme.css`**, no real `--lr-theme-*` value is set, so the token layer's
-    `prefers-color-scheme: dark` fallback described above does apply and bare components follow
-    the OS.
+  resolves `prefers-color-scheme` immediately and keeps following changes. `'unset'` removes both
+  attributes; use it when the application owns mode selection through another cascade.
+- **`accent`** accepts an absolute CSS color. Lyra keeps `--lr-theme-accent` as a compatibility
+  value and derives the complete brand quiet/normal/loud fill, border, paired on-color, and focus
+  token ramp as inline `--lr-theme-*` inputs. Each paired foreground is selected for at least
+  4.5:1 contrast against its fill; normal/loud borders and focus are adjusted to at least 3:1
+  against the shipped mode surface. If an application also replaces that surface input, it must
+  recheck or override the paired ramp inputs. Malformed values, CSS-wide keywords, `currentColor`,
+  system colors, relative-color syntax, and unresolved `var()` expressions fail closed to
+  `accent: null`. Pass `null` to restore the palette supplied by `theme.css`.
 
-  To follow the OS *alongside* `theme.css`, resolve the preference yourself and pass a concrete
-  mode — `setLyraTheme` deliberately does no `matchMedia` work of its own:
-  ```ts
-  const os = matchMedia('(prefers-color-scheme: dark)');
-  const sync = () => setLyraTheme({ mode: os.matches ? 'dark' : 'light' });
-  sync();
-  os.addEventListener('change', sync);
-  ```
-- **`accent`** is written to `--lr-theme-accent` as an inline custom property on the root element.
-  This is a **hook for your CSS, not a token the library reads** — no lyra-ui component consumes
-  `--lr-theme-accent`. Point the real inputs at it to make it retint anything, **writing one rule
-  per mode**:
-  ```css
-  :root { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #035ec6); }
-  .lr-dark,
-  [data-lr-theme='dark'] { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #5b9eff); }
-  ```
-  **Each arm's fallback must carry that mode's own value.** A single `:root` rule flattens both
-  modes to one color whenever the accent is unset (`accent: null`, the default): `:root` and
-  `[data-lr-theme='dark']` both match `<html>` — the element `setLyraTheme` writes `data-lr-theme`
-  onto — and your unlayered rule outranks `theme.css`'s layered dark block regardless of source
-  order (see "Cascade layers"), so one `:root` rule pins the light-mode blue in dark mode. Copy each
-  fallback from the matching palette block in `theme.css` (`#035ec6` light / `#5b9eff` dark here).
+  These are `--lr-theme-*` inputs, so they reach every nested shadow root — see "Where an override
+  actually reaches" above for why setting a `--lr-*` token instead would not.
 
-  Because that is a `--lr-theme-*` input, it reaches every nested shadow root — see "Where an
-  override actually reaches" above for why setting a `--lr-*` token instead would not.
+**Theme presets.** `@aceshooting/lyra-ui/theme/presets.js` exports
+`LYRA_THEME_PRESETS`, `defineLyraThemePreset()` and `applyLyraThemePreset()`. Built-in keys are
+`system`, `light`, `dark`, `unset`, `emerald`, `ruby`, `amethyst`, and `sapphire`; the gemstone
+presets use system-following mode plus the named accent. Application presets use a stable lowercase
+kebab-case `id` and a `theme: { mode?, accent? }` record. `defineLyraThemePreset()` validates the
+id and field shapes, freezes both records, and leaves CSS color-syntax validation to the production
+runtime when the preset is applied:
+
+```ts
+import {
+  applyLyraThemePreset,
+  defineLyraThemePreset,
+} from '@aceshooting/lyra-ui/theme/presets.js';
+
+applyLyraThemePreset('sapphire');
+applyLyraThemePreset(defineLyraThemePreset({
+  id: 'application-ocean',
+  theme: { mode: 'dark', accent: '#22d3ee' },
+}));
+```
+
+Applying a preset uses the production runtime, reflects the id to `data-lr-theme-preset`, and emits
+`lr-theme-preset-change` on `window` with `{ id, theme }`. A direct `setLyraTheme()` call removes
+the preset marker because the resulting state is no longer exactly that named preset.
 
 **No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
 meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
@@ -926,7 +952,9 @@ is on the root element before first paint. It reads `localStorage['lyra-theme']`
 key, so an existing persistence layer can reuse the pre-paint half independently of
 `setLyraTheme()`/`getLyraTheme()`. Calling the factory with no options returns the same string as
 `lyraThemeBootstrap`. The result is a string precisely so this can happen in an unbundled
-`<script>` context without shipping or parsing the module:
+`<script>` context without shipping or parsing the module. Custom keys are escaped against HTML
+script termination and JavaScript line separators. Under a Content Security Policy, give the
+inline script the nonce or hash required by the application:
 
 ```html
 <head>
@@ -935,13 +963,10 @@ key, so an existing persistence layer can reuse the pre-paint half independently
 </head>
 ```
 
-Both variants expect a stored `{ mode, accent }` record, apply the same two attributes and
-`--lr-theme-accent`, and swallow any error — malformed storage or a blocked `localStorage` leaves
-the document untouched rather than throwing before your app loads.
-
-**This runtime does no color math.** It stores and applies whatever accent string you give it; it
-does not validate the value, compute a palette from it, or check contrast against any surface.
-Verifying that an accent meets WCAG contrast against the light *and* dark palettes is yours.
+Both variants read a stored `{ mode, accent }` record, resolve `auto`, and apply the same two
+attributes and derived brand ramp as the runtime. A missing or malformed record receives the
+runtime's `{ mode: 'auto', accent: null }` default; blocked `localStorage` leaves the document
+untouched rather than throwing before your app loads.
 
 ### Invalidating canvas theme values
 
@@ -1083,8 +1108,8 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
-surface for compatibility, but it also registers the non-peer-gated component graph; use the
-dedicated entry when the application only needs locale setup.
+surface for compatibility and remains registration-free in v8; use the dedicated entry when the
+application only needs locale setup and the narrower import graph.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
@@ -1451,13 +1476,14 @@ A family barrel is **side-effectful by design**: importing it registers every ta
 same way `all.js` registers all of them (the package root itself registers nothing as of 8.0.0 — see
 "Importing and registering components"). Reach for one when you genuinely use most of a family
 and want a single import; reach for the granular
-`@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path — which is what every example in
-these docs uses — when you do not, because a barrel cannot be tree-shaken down to the two elements
-you actually render.
+`@aceshooting/lyra-ui/components/<tag>.js` path when you do not, because a barrel cannot be
+tree-shaken down to the two elements you actually render. The tag-shaped path remains stable if a
+component moves between Lyra's internal family folders; existing family-shaped registration paths
+remain supported.
 
 ```js
 import '@aceshooting/lyra-ui/components/forms';        // every form control
-import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-input>
+import '@aceshooting/lyra-ui/components/lr-input.js';  // just <lr-input>
 ```
 
 ---
@@ -1485,7 +1511,8 @@ import { place } from '@aceshooting/lyra-ui/utilities/positioner.js';
 ```
 
 If you were importing something from `internal/` that is not listed below, it was never a supported
-entry point — open an issue and it can be promoted deliberately.
+entry point. After getting the user's explicit agreement, submit a capability request through the
+feature-request API described in "When no component fits" so it can be promoted deliberately.
 
 - **`LyraElement`** — the base class. `static styles = [tokens]`;
   subclasses prepend `LyraElement.styles` to their own `static styles`. Supplies `emit()` (see
@@ -1606,9 +1633,6 @@ entry point — open an issue and it can be promoted deliberately.
 **Known gotchas:**
 - `formResetCallback()` restores the *content attribute* default, so `el.value = 'x'` never redefines
   what `form.reset()` restores to (native `defaultValue`/`defaultSelected` semantics).
-- There is no shared label/input association helper; `lr-combobox` and `lr-date-input` each pair
-  their own `<label part="form-control-label" for=…>` with a matching input `id`, so clicking the
-  label focuses the field.
 
 ## Packaging
 
@@ -1669,8 +1693,10 @@ it often answers the gap outright) and an `id`; status is readable later at
 generically — no source code, no client or product names, no file paths, no credentials. If the
 need cannot be described without such details, do not file it.
 
-Use the API even when you are working inside the lyra-ui repo itself. It is the only intake path —
-do not write the request into a local file instead, where nothing will pick it up.
+Use the API even when you are working inside the lyra-ui repo itself. It is the only supported
+automated intake path for an assistant acting on a user's behalf — do not write the request into a
+local file instead, where nothing will pick it up, and do not silently open a GitHub issue. A person
+filing their own report can use the human-facing routes in `SUPPORT.md`.
 
 Keep the report short and concrete:
 

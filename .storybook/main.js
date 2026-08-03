@@ -93,7 +93,7 @@ const config = {
     // a story that never renders `lr-map`/`lr-chart`/`lr-graph` never
     // has to load MapLibre/Chart.js/d3 as part of whatever shared chunk it
     // does need.
-    // `preview.js` imports the whole `lyra.js` barrel so every story can rely on every element
+    // `preview.js` imports the `all.js` registration entry so every story can rely on every element
     // being defined, which otherwise parks the entire library inside Storybook's own `iframe`
     // entry chunk. Splitting it out measurably wins on both axes (verified by building both
     // ways): the largest chunk drops 6072 KB -> 4293 KB, and total emitted JS gets *smaller*
@@ -115,7 +115,7 @@ const config = {
         return 'vendor-d3';
       }
     };
-    // `lyra.js` is the "define every element" barrel, so everything it re-exports is in the static
+    // `all.js` is the "define every root-included element" entry, so everything it imports is in the static
     // graph by construction. That makes the deliberate lazy `import()` in a viewer's
     // `*-register.js` (and `phone-input`'s deferred `lr-flag` registration) ineffective *in this
     // build specifically* -- not a defect in those modules. The published package is unbundled, so

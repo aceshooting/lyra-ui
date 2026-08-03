@@ -179,14 +179,30 @@ it('shows a lr-skeleton while an async load() is pending, then renders its resol
   registerToolRenderer('slow_tool', { load: () => loadPromise });
 
   const el = (await fixture(html`
-    <lr-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lr-tool-result-view>
+    <lr-tool-result-view
+      tool-name="slow_tool"
+      .result=${{ a: 1 }}
+      .strings=${{ loading: 'Chargement du résultat…' }}
+    ></lr-tool-result-view>
   `)) as LyraToolResultView;
 
-  expect(base(el).querySelector('lr-skeleton')).to.exist;
+  const skeleton = base(el).querySelector('lr-skeleton') as HTMLElement & {
+    announce: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  expect(base(el).querySelectorAll('lr-skeleton').length).to.equal(1);
+  await skeleton.updateComplete;
+  const activeLiveSelector = '[role="status"], [role="alert"], [aria-live]:not([aria-live="off"])';
+  expect(base(el).getAttribute('aria-busy')).to.equal('true');
+  expect(skeleton.announce, 'the parent owns busy state; the visual skeleton is decorative').to.be.false;
+  expect(base(el).querySelector('.sr-only')?.textContent?.trim()).to.equal('Chargement du résultat…');
+  expect(el.shadowRoot!.querySelectorAll(activeLiveSelector).length).to.equal(0);
+  expect(skeleton.shadowRoot!.querySelectorAll(activeLiveSelector).length).to.equal(0);
 
   resolveLoad({ default: { render: (result) => litHtml`<span class="loaded">${(result as { a: number }).a}</span>` } });
   await waitUntil(() => base(el).querySelector('lr-skeleton') === null);
 
+  expect(base(el).getAttribute('aria-busy')).to.equal('false');
   expect(base(el).querySelector('.loaded')!.textContent).to.equal('1');
 });
 

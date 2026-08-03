@@ -8,6 +8,11 @@ import '../../utility/live-region/live-region.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraBranchPickerEventMap {
   'lr-branch-change': CustomEvent<{ index: number }>;
@@ -36,6 +41,20 @@ export interface LyraBranchPickerEventMap {
  * @since 4.0.0
  */
 export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    branchNext: LYRA_DEFAULT_branchNext,
+    branchPickerLabel: LYRA_DEFAULT_branchPickerLabel,
+    branchPosition: LYRA_DEFAULT_branchPosition,
+    branchPrevious: LYRA_DEFAULT_branchPrevious,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** 0-based current branch, rendered 1-based ("2 / 5"). Controlled -- this component never writes

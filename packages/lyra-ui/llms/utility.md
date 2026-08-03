@@ -34,7 +34,8 @@ substitute your own server-generated download instead of the built-in client-sid
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
-throw into consumer code), `lr-show`, `lr-hide` (format-menu visibility transitions)
+throw into consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions;
+self-imposed closes caused by disablement, loading, or an unusable format list emit neither event)
 
 **Slots:** none.
 
@@ -89,7 +90,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
-downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
+downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 
 **Known gotchas:**
@@ -370,6 +371,13 @@ clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); 
 `copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
 budget truncates rendering or search — absent entirely for any document within budget)
 
+Active-match position changes are appended to Lyra's shared light-DOM polite announcement sink.
+The shadow tree keeps only an `aria-hidden` text mirror, so the same result is not announced twice;
+initial connection and reconnection—including a detached cursor update whose render settles during
+reattachment—do not replay the current cursor. Search navigation while the viewer or a composed
+ancestor is accessibility-hidden also stays silent. After cross-document adoption, smooth-scroll
+motion preferences and best-effort clipboard writes use the viewer's current owner window.
+
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
@@ -458,7 +466,10 @@ within `throttleMs` of the _first_ call in that burst down to a single trailing-
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
-  `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void }`.
+  `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void;
+  timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
+  `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
+  timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
   queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
@@ -466,6 +477,9 @@ latest text: superseded intermediate text is dropped outright, never queued or c
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
   never swallowed mid-burst.
 - `cancel()` — drops any pending (not yet flushed) text without invoking `onFlush`.
+- `setTimerHost(timerHost: AnnouncerTimerHost)` — rebinds scheduling and cancellation, for example
+  after a component is adopted into another document. A pending burst is canceled on the previous
+  host and rescheduled on the new one without losing its latest text.
 - `pendingText: string | undefined` — the latest text awaiting flush, if a burst is in progress.
 - `isPending: boolean` — whether a flush is currently scheduled.
 - `throttleMs` — a plain public field, safe to change between bursts; a flush already scheduled
@@ -479,7 +493,16 @@ this library makes goes into a visually hidden element in the *host document's* 
 
 - `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
   where `AnnouncementPoliteness = 'polite' | 'assertive'` and
-  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; messageTtlMs?: number /* = 5000 */ }`.
+  `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; source?: Element;
+  messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
+  prevents a document-level region from speaking while that source or a composed ancestor is
+  `hidden`, `inert`, `aria-hidden`, CSS-hidden, or in a closed `<details>` content branch;
+  standalone consumers can do the same. A box-generating source also stays silent while skipped by
+  `content-visibility:auto`. Browsers report every `display:contents` source as false from
+  `checkVisibility()` whether its semantics are exposed or not, so the helper uses the explicit
+  authored/CSS/closed-details gates for that boxless case and cannot distinguish an auto-skipped
+  subtree; bind `source` to a semantic box when that exact distinction matters. A source adopted
+  away from the acquired `document` also fails closed until its owner reacquires a sink.
   Returns an `AnnouncementSink` handle: `element`, `politeness`, a writable `messageTtlMs`,
   `announce(text: string): void` and `release(): void`.
 - One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
@@ -490,7 +513,9 @@ this library makes goes into a visually hidden element in the *host document's* 
   than rewriting one text node. That is what makes an identical repeat announce a second time — no
   clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
   `messageTtlMs`, so returning focus to the page never finds stale text to re-read. Empty text is
-  ignored; `announce()` after `release()` is a no-op; `release()` is idempotent and removes that
+  ignored. Sweep and release cancellation use the selected document's `defaultView` timer realm,
+  so an iframe-owned sink does not leave parent-window timers retaining its messages. `announce()`
+  after `release()` is a no-op; `release()` is idempotent and removes that
   handle's own not-yet-swept nodes.
 - The region carries `data-lr-live-region="<politeness>"` (exported as
   `ANNOUNCEMENT_SINK_ATTRIBUTE`) so a consumer's DOM diffing, snapshot testing or `MutationObserver`
@@ -967,9 +992,11 @@ source tree.
 
 - `svg` — the rendered SVG, whether built-in or fetched.
 - `use` — every `<use>` in the rendered SVG.
-- `error` — the visually hidden `role="alert"` shown when a remote icon fails. It carries a
+- `error` — the visually hidden, `aria-hidden` shadow mirror shown when a remote icon fails. The
   localized message (`iconLoadError`, `iconTooLarge`, or `iconSanitizerMissing`), never the raw
-  platform error, and re-localizes when the locale changes.
+  platform error, is appended to Lyra's shared assertive light-DOM announcement sink. The sink
+  stays silent while the icon or a composed ancestor is hidden, inert, `aria-hidden`, or hidden by
+  rendered CSS.
 - `empty` — the `aria-hidden` marker rendered when a remote icon resolved to an empty but valid
   document.
 
@@ -1302,7 +1329,20 @@ compatibility alias), `fields` / `form-control-input` (aliases on the flex row),
 block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
 `field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
-small per-field text label), `hint`, `error` (`role="alert"`).
+small per-field text label), `hint`, `error` (visible non-live validation text and the fields'
+`aria-describedby` target).
+
+Once initial rendering and slot distribution settle, a newly visible or changed validation error
+is appended exactly once to Lyra's shared assertive light-DOM announcement sink. Identical renders
+are deduplicated, while clearing and later re-showing the same error announces it again. Initial
+connection and reconnection do not replay an existing error. Hidden, inert, CSS-hidden, and
+`aria-hidden` slotted error content is excluded; revealing meaningful error text is the change that
+announces it. Within that error content, `display:none` and `content-visibility:hidden` prune a
+branch; a `visibility:hidden|collapse` wrapper suppresses its own text while a descendant that
+restores `visibility:visible` remains exposed. Updates also stay silent while the control or a
+composed ancestor is hidden, then the current error announces if it becomes newly visible. This
+tracking follows nested forwarding slots as well: mutations and reassignment of their flattened
+assigned nodes update the announcement without requiring the wrapper component to re-render.
 
 The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
 `form-control-label`. Both names remain on the same node during the compatibility window; use
@@ -1405,20 +1445,32 @@ children; nothing is moved or cloned.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
 **Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
-`hidden`/`aria-hidden`, emits `lr-content-change`, and returns the elements now shown. Does **not**
-reset or restart the autoplay timer.
+`hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
+polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
+Does **not** reset or restart the autoplay timer.
 
 **Events:** `lr-content-change` (`detail: { items: HTMLElement[] }` — the exact elements now shown,
 in display order). Fires on first render, on `randomize()`, on a real slot-content change, and on
 each autoplay tick; never when the eligible pool is empty.
 
-**Slots:** default — the candidate pool. Only direct **element** children are eligible.
+**Slots:** default — the candidate pool. Direct **element** children are eligible. When a wrapper
+places a forwarding `<slot>` directly in the pool, its flattened projected elements become the
+candidates; an arbitrary nested custom-element subtree remains one opaque direct candidate.
 
-**CSS parts:** `base` — the wrapper around the default slot; carries `role="status"`,
-`aria-atomic="true"`, and `aria-live="polite"`, downgraded to `aria-live="off"` while `autoplay` is
-on (a self-rotating region announcing on every tick would be spam). A host `aria-label` attribute is
-forwarded onto it. `pause-button` — the localized autoplay pause/resume action, rendered only while
-`autoplay` is enabled and exposed as a toggle with `aria-pressed`.
+**CSS parts:** `base` — the ordinary wrapper around the default slot; a host `aria-label` gives it
+a non-live `role="group"` and is included as announcement context. Selection changes after mount
+are appended to Lyra's shared light-DOM polite announcement sink; nested `hidden`, `inert`,
+`aria-hidden="true"`, `display:none`, and `content-visibility:hidden` branches are omitted. A
+`visibility:hidden|collapse` wrapper suppresses its own text but not a descendant that restores
+`visibility:visible`. Timer-driven autoplay ticks stay silent to avoid spam,
+but a direct `randomize()` call still announces while `autoplay` is enabled. Initial connection and
+reconnection are also silent, including a detached reactive selection change whose update settles
+during reattachment; changes while the component or a composed ancestor is accessibility-hidden
+stay silent too. A nested forwarding slot contributes flattened assigned content rather than its
+fallback; later assignment and assigned-node text/style/visibility changes announce only when they
+change the currently exposed selection, while initial distribution remains silent. `pause-button`
+— the localized autoplay pause/resume action, rendered
+only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
 `--animation-easing` (default `ease`), and `--animation-translate` (default
@@ -1426,6 +1478,11 @@ forwarded onto it. `pause-button` — the localized autoplay pause/resume action
 `--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
 `--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
 `--lr-random-content-animation-translate` names remain fallbacks.
+
+**Web Awesome migration note:** this mapping requires manual review rather than a mechanical tag
+rename. Candidate eligibility and selection semantics differ, and Lyra additionally suppresses
+autoplay under `prefers-reduced-motion: reduce` and renders a visible localized pause/resume
+control. Review all four behaviors before replacing `<wa-random-content>`.
 
 **Known gotchas:**
 

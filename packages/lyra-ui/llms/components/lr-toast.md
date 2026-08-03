@@ -2,7 +2,7 @@
 
 # `lr-toast`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/toast/toast.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-toast.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToast`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -131,7 +131,10 @@ at another, since `placement` is a per-call option rather than a single global r
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
   switch-access user needs to tell their close buttons apart without activating one first. Rich
   non-interactive message markup contributes its text, named-slot/icon and actionable content do
-  not, and live message text mutations update the name.
+  not, and live message text mutations or reassignment update the name through nested forwarding
+  slots. Hidden, inert, CSS-hidden and `aria-hidden` message branches are excluded. Observation,
+  animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the item's owner
+  window after iframe adoption and cancel through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`

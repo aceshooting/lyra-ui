@@ -5,10 +5,18 @@ import './flag-peer.js';
 import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
 import type { LyraFlag } from './flag.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 const TEST_FLAG_SRC_REPLACEMENT =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1"%3E%3C/circle%3E%3C/svg%3E';
+
+function assertiveAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // Resolving a flag now involves two sequential dynamic imports on a cold start (the
@@ -22,9 +30,32 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
 }
 
 it('shows a loading skeleton and aria-busy while the flag package loads, and ignores a stale resolution once the code is cleared first', async () => {
-  const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+  const el = (await fixture(
+    html`<lr-flag
+      country="fr"
+      .strings=${{ loading: 'Chargement du drapeau…' }}
+    ></lr-flag>`,
+  )) as LyraFlag;
   expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
+  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+  expect(skeleton !== null).to.be.true;
+  const updatedSkeleton = skeleton as HTMLElement & {
+    announce: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  await updatedSkeleton.updateComplete;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(updatedSkeleton.announce).to.be.false;
+  expect(
+    el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length,
+  ).to.equal(0);
+  expect(
+    updatedSkeleton.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]')
+      .length,
+  ).to.equal(0);
+  expect(el.shadowRoot!.querySelector('.sr-only')?.textContent?.trim()).to.equal(
+    'Chargement du drapeau…',
+  );
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
 
   // Clear the code while the (real, unstubbed) first-ever peer-package
@@ -379,7 +410,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   });
 
-  it('fails closed with a localized alert when the resolver rejects', async () => {
+  it('fails closed visibly and appends each localized resolver failure to the light-DOM sink', async () => {
     __setFlagUrlResolverForTesting(
       Promise.resolve(async () => {
         throw new Error('network failure');
@@ -396,12 +427,19 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
         ></lr-flag>
       `)) as LyraFlag;
       await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+      el.country = 'de';
+      await el.updateComplete;
+      await waitUntil(() => assertiveAnnouncements().length === 2);
     } finally {
       console.warn = originalWarn;
     }
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('Impossible de charger le drapeau.');
+    expect(assertiveAnnouncements()).to.deep.equal([
+      'Impossible de charger le drapeau.',
+      'Impossible de charger le drapeau.',
+    ]);
   });
 
   it('renders a real English sentence, not the raw key name, when no locale is registered', async () => {

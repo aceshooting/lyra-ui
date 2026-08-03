@@ -1,6 +1,17 @@
-import type { OptionalPeerApi } from './optional-peer-types.js';
+import { resolveOptionalPeerCapability } from './optional-peer-capabilities.js';
 
-export type PapaParseApi = OptionalPeerApi;
+export interface PapaParseApi {
+  parse(input: string, options?: Record<string, unknown>): unknown;
+}
+
+function isPapaParseApi(value: unknown): value is PapaParseApi {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'parse' in value &&
+    typeof value.parse === 'function'
+  );
+}
 
 let cached: Promise<PapaParseApi | null> | undefined;
 
@@ -9,12 +20,11 @@ let cached: Promise<PapaParseApi | null> | undefined;
  *  either a `{ default }` ESM interop shape or the module itself already being the API, so it works
  *  regardless of how a given bundler/test harness resolves the CJS `papaparse` package. */
 export async function loadPapaParse(
-  importPapaParse: () => Promise<PapaParseApi | { default: PapaParseApi }> = () => import('papaparse'),
+  importPapaParse: () => Promise<unknown> = () => import('papaparse'),
 ): Promise<PapaParseApi | null> {
   try {
     const module = await importPapaParse();
-    const candidate = (module as { default?: PapaParseApi }).default;
-    return candidate && typeof candidate.parse === 'function' ? candidate : (module as PapaParseApi);
+    return resolveOptionalPeerCapability(module, isPapaParseApi);
   } catch (error) {
     console.warn(
       'A lyra-ui component needs the optional peer dependency `papaparse` to parse delimited text — install it with `pnpm add papaparse`:',

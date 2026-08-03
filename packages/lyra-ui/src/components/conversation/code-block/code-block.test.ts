@@ -38,7 +38,15 @@ const jsSample = 'const x = 1;';
  * load is *provably* still pending here. Capturing the state once and asserting it below keeps the
  * contract covered without depending on test ordering or on shiki's load time.
  */
-let coldLoad: { ariaBusy: string | null; hasSkeleton: boolean; hasHighlighted: boolean };
+let coldLoad: {
+  ariaBusy: string | null;
+  bodyRole: string | null;
+  bodyLabel: string | null;
+  hasSkeleton: boolean;
+  skeletonAnnounces: boolean | null;
+  activeLiveRegions: number;
+  hasHighlighted: boolean;
+};
 
 before(async () => {
   const el = document.createElement('lr-code-block') as LyraCodeBlock;
@@ -47,9 +55,21 @@ before(async () => {
   document.body.append(el);
   try {
     await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton') as
+      | (HTMLElement & { announce: boolean; updateComplete: Promise<boolean> })
+      | null;
+    await skeleton?.updateComplete;
+    const liveSelector = '[role="status"], [role="alert"], [aria-live]:not([aria-live="off"])';
     coldLoad = {
       ariaBusy: el.getAttribute('aria-busy'),
-      hasSkeleton: el.shadowRoot!.querySelector('lr-skeleton') !== null,
+      bodyRole: body.getAttribute('role'),
+      bodyLabel: body.getAttribute('aria-label'),
+      hasSkeleton: skeleton !== null,
+      skeletonAnnounces: skeleton?.announce ?? null,
+      activeLiveRegions:
+        el.shadowRoot!.querySelectorAll(liveSelector).length +
+        (skeleton?.shadowRoot?.querySelectorAll(liveSelector).length ?? 0),
       // `.shiki` (not `[part="pre"] span`) -- renderPlainCode()'s own per-line `.line` spans also
       // match a bare `span` selector, so only shiki's own root class unambiguously signals real
       // highlighted output rather than the plain-text fallback.
@@ -130,7 +150,14 @@ describe('shiki highlighting (real peer)', () => {
     // Captured against a provably-cold singleton -- see the root-level before() at the top of this
     // file for why this cannot be observed from inside the test itself.
     expect(coldLoad.ariaBusy, 'aria-busy while the shared shiki load is pending').to.equal('true');
+    expect(coldLoad.bodyRole, 'the loading code surface remains a named group').to.equal('group');
+    expect(coldLoad.bodyLabel, 'the loading code surface has an accessible name')
+      .to.be.a('string')
+      .and.not.be.empty;
     expect(coldLoad.hasSkeleton, 'skeleton while the shared shiki load is pending').to.be.true;
+    expect(coldLoad.skeletonAnnounces, 'the nested loading placeholder is decorative').to.be.false;
+    expect(coldLoad.activeLiveRegions, 'the loading state does not create a nested live region')
+      .to.equal(0);
     expect(coldLoad.hasHighlighted, 'no highlighted output before the load resolves').to.be.false;
 
     const el = (await fixture(
@@ -417,6 +444,77 @@ describe('copy button', () => {
       expect(writes).to.deep.equal([jsSample]);
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+    }
+  });
+
+  it('uses and cancels the exact adopted owner clipboard and confirmation timer', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
+    const nativeSetTimeout = frameWindow.setTimeout.bind(frameWindow);
+    const nativeClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
+    let mainWrites = 0;
+    const frameWrites: string[] = [];
+    let confirmationHandle: number | undefined;
+    let confirmationCallback: (() => void) | undefined;
+    const cancelled: number[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+    });
+    Object.defineProperty(frameWindow.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+    });
+    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      const handle = nativeSetTimeout(handler, timeout, ...args);
+      if (timeout === 1500) {
+        confirmationHandle = handle;
+        if (typeof handler === 'function') confirmationCallback = handler;
+      }
+      return handle;
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) cancelled.push(handle);
+      nativeClearTimeout(handle);
+    }) as typeof frameWindow.clearTimeout;
+    const el = (await fixture(html`<lr-code-block .code=${jsSample}></lr-code-block>`)) as LyraCodeBlock;
+
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      expect(mainWrites).to.equal(0);
+      expect(frameWrites).to.deep.equal([jsSample]);
+      expect(confirmationHandle).to.be.a('number');
+
+      document.body.append(document.adoptNode(el));
+      expect(cancelled).to.include(confirmationHandle!);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      confirmationCallback?.();
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim(),
+        'the retired iframe callback cannot clear the new owner state',
+      ).to.equal('Copied!');
+    } finally {
+      if (confirmationHandle !== undefined) nativeClearTimeout(confirmationHandle);
+      el.remove();
+      frameWindow.setTimeout = nativeSetTimeout;
+      frameWindow.clearTimeout = nativeClearTimeout;
+      if (mainClipboard) Object.defineProperty(navigator, 'clipboard', mainClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
+      frame.remove();
     }
   });
 
@@ -768,11 +866,37 @@ describe('text selection (lr-text-select)', () => {
     const selection = shadowSelection ?? window.getSelection()!;
     selection.removeAllRanges();
     selection.addRange(range);
-    const listener = oneEvent(el, 'lr-text-select');
-    body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
-    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
-    expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
-    expect(event.detail.text.length).to.be.greaterThan(0);
+    // WebKit rejects a programmatic Selection whose endpoints live in a shadow tree. Its native
+    // drag selection is exposed through getComposedRanges(), so provide that same range shape when
+    // the setup was rejected and restore the browser global in finally.
+    const needsSelectionFacade = selection.rangeCount === 0 || selection.isCollapsed;
+    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+    if (needsSelectionFacade) {
+      const composedRange = {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      } as StaticRange;
+      const facade = { getComposedRanges: () => [composedRange] } as unknown as Selection;
+      Object.defineProperty(window, 'getSelection', { configurable: true, value: () => facade });
+    }
+    try {
+      const listener = oneEvent(el, 'lr-text-select');
+      body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+      const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+      expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
+      expect(event.detail.text.length).to.be.greaterThan(0);
+    } finally {
+      selection.removeAllRanges();
+      if (needsSelectionFacade) {
+        if (ownGetSelectionDescriptor) {
+          Object.defineProperty(window, 'getSelection', ownGetSelectionDescriptor);
+        } else {
+          Reflect.deleteProperty(window, 'getSelection');
+        }
+      }
+    }
   });
 
   it('does not emit lr-text-select when there is no active selection on mouseup', async () => {

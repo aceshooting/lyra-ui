@@ -2,7 +2,7 @@
 
 # `lr-dialog`
 
-- **Import** `import '@aceshooting/lyra-ui/components/overlays/dialog/dialog.js';` (registers the tag; side-effect import)
+- **Import** `import '@aceshooting/lyra-ui/components/lr-dialog.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDialog`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`

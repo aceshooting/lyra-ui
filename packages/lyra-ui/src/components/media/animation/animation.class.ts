@@ -10,6 +10,11 @@ import {
 } from '../../../utilities/animation-registry.js';
 import { styles } from './animation.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_duration, LYRA_DEFAULT_play } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Curated preset catalog for the `name` property. `slide-in-start`/`slide-in-end`/
  * `slide-out-start`/`slide-out-end` are resolved separately (see `slidePreset()`)
@@ -108,6 +113,25 @@ function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rt
 const DIRECTIONAL_SLIDE_NAMES = new Set<string>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
 const PLAYBACK_DIRECTIONS = new Set<string>(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 const FILL_MODES = new Set<string>(['none', 'forwards', 'backwards', 'both', 'auto']);
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
+
+function isElementOwnedBy(value: unknown, ownerDocument: Document): value is Element {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as Partial<Element> & { nodeType?: number };
+  if (
+    candidate.nodeType !== 1
+    || candidate.ownerDocument !== ownerDocument
+    || typeof candidate.localName !== 'string'
+    || typeof candidate.getAttribute !== 'function'
+  ) return false;
+  const ElementCtor = ownerDocument.defaultView?.Element;
+  if (ElementCtor && value instanceof ElementCtor) return true;
+  return typeof candidate.matches === 'function' && typeof candidate.getRootNode === 'function';
+}
+
+function isHtmlElementOwnedBy(value: unknown, ownerDocument: Document): value is HTMLElement {
+  return isElementOwnedBy(value, ownerDocument) && value.namespaceURI === HTML_NAMESPACE;
+}
 
 /** Reads and decomposes a compound `--lr-transition-*` token (e.g. `"180ms ease-out"`)
  * into the plain numeric `duration`/string `easing` pair the Web Animations API needs --
@@ -115,7 +139,10 @@ const FILL_MODES = new Set<string>(['none', 'forwards', 'backwards', 'both', 'au
  * string can. Resolves against fully computed style, so a theme override that itself uses
  * `var()` internally never leaks unresolved text into `easing`. */
 function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'): { duration: number; easing: string } {
-  const raw = getComputedStyle(el).getPropertyValue(`--lr-transition-${preset}`).trim();
+  const raw = el.ownerDocument.defaultView
+    ?.getComputedStyle(el)
+    .getPropertyValue(`--lr-transition-${preset}`)
+    .trim() ?? '';
   const match = /^((?:\d+(?:\.\d*)?)|(?:\.\d+))(ms|s)\s+(.+)$/.exec(raw);
   if (!match) return { duration: 1000, easing: 'linear' };
   // safe: all three capture groups are non-optional, so a successful match fills them.
@@ -124,7 +151,10 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
   const easing = match[3]!;
   const duration = (unit === 's' ? 1000 : 1) * Number(num);
   const resolvedEasing = easing.trim();
-  if (!Number.isFinite(duration) || !CSS.supports('animation-timing-function', resolvedEasing)) {
+  if (
+    !Number.isFinite(duration)
+    || !el.ownerDocument.defaultView?.CSS?.supports('animation-timing-function', resolvedEasing)
+  ) {
     return { duration: 1000, easing: 'linear' };
   }
   return { duration, easing: resolvedEasing };
@@ -183,6 +213,16 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * @since 4.0.0
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    cancel: LYRA_DEFAULT_cancel,
+    duration: LYRA_DEFAULT_duration,
+    play: LYRA_DEFAULT_play,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
@@ -216,6 +256,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private hasStarted = false;
   private visibilityObserver?: IntersectionObserver;
   private motionQuery?: MediaQueryList;
+  private motionQueryListener?: () => void;
   private lastTextDirection?: 'ltr' | 'rtl';
 
   // `delay`/`duration`/`endDelay`/`iterations`/`iterationStart`/`playbackRate` all ultimately reach
@@ -262,13 +303,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     return FILL_MODES.has(this.fill) ? this.fill : 'auto';
   }
   private safeEasing(value: string): string {
-    return CSS.supports('animation-timing-function', value) ? value : 'linear';
+    return this.ownerDocument.defaultView?.CSS?.supports('animation-timing-function', value)
+      ? value
+      : 'linear';
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
-    this.motionQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    this.bindMotionPreference();
     this.scheduleAfterUpdate(() => {
       this.createAnimation();
       this.syncVisibilityObserver();
@@ -277,17 +319,46 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
   override disconnectedCallback(): void {
     this.destroyAnimation();
-    this.visibilityObserver?.disconnect();
-    this.visibilityObserver = undefined;
-    this.motionQuery?.removeEventListener('change', this.onMotionPreferenceChange);
-    this.motionQuery = undefined;
+    this.disconnectVisibilityObserver();
+    this.unbindMotionPreference();
     super.disconnectedCallback();
   }
 
-  // A live external event (the OS/browser toggling its reduced-motion
-  // setting), not a construction-order concern -- rebuild directly rather
-  // than routing through scheduleAfterUpdate.
-  private onMotionPreferenceChange = (): void => this.createAnimation();
+  adoptedCallback(): void {
+    // Adoption normally brackets this hook with disconnect/connect callbacks. Repeat the teardown
+    // here as a defensive boundary so no old-realm callback can survive an unusual adoption path.
+    this.destroyAnimation();
+    this.disconnectVisibilityObserver();
+    this.unbindMotionPreference();
+    if (!this.isConnected) return;
+    this.bindMotionPreference();
+    this.scheduleAfterUpdate(() => {
+      this.createAnimation();
+      this.syncVisibilityObserver();
+    });
+  }
+
+  private bindMotionPreference(): void {
+    this.unbindMotionPreference();
+    const owner = this.ownerDocument.defaultView;
+    const query = owner?.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!owner || !query) return;
+    const listener = (): void => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner || this.motionQuery !== query) return;
+      this.createAnimation();
+    };
+    this.motionQuery = query;
+    this.motionQueryListener = listener;
+    query.addEventListener('change', listener);
+  }
+
+  private unbindMotionPreference(): void {
+    if (this.motionQuery && this.motionQueryListener) {
+      this.motionQuery.removeEventListener('change', this.motionQueryListener);
+    }
+    this.motionQuery = undefined;
+    this.motionQueryListener = undefined;
+  }
 
   protected override updated(changed: PropertyValues): void {
     const rebuildKeys = [
@@ -323,7 +394,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private currentTarget(): HTMLElement | undefined {
     const slot = this.renderRoot.querySelector('slot');
     const [first] = slot?.assignedElements({ flatten: true }) ?? [];
-    return first instanceof HTMLElement ? first : undefined;
+    return isHtmlElementOwnedBy(first, this.ownerDocument) ? first : undefined;
   }
 
   private resolveAnimation(): ResolvedElementAnimation | undefined {
@@ -352,41 +423,65 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   private syncVisibilityObserver = (): void => {
-    this.visibilityObserver?.disconnect();
-    this.visibilityObserver = undefined;
-    if (!this.playOnVisible) return;
+    this.disconnectVisibilityObserver();
+    if (!this.isConnected || !this.playOnVisible) return;
     const target = this.currentTarget();
     if (!target) return;
-    if (typeof IntersectionObserver === 'undefined') {
+    const owner = this.ownerDocument.defaultView;
+    const Observer = owner?.IntersectionObserver;
+    if (!owner || !Observer) {
       // No observer support in this environment -- fail open and just play.
       this.play = true;
       return;
     }
+    let observer: IntersectionObserver | undefined;
     const callback: IntersectionObserverCallback = (entries) => {
+      if (
+        !observer
+        || this.visibilityObserver !== observer
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
       const entry = entries[entries.length - 1];
       if (!entry) return;
       if (entry.isIntersecting) {
         this.play = true;
         if (!this.playOnVisibleRepeat) {
-          this.visibilityObserver?.disconnect();
-          this.visibilityObserver = undefined;
+          observer.disconnect();
+          if (this.visibilityObserver === observer) this.visibilityObserver = undefined;
         }
       } else if (this.playOnVisibleRepeat) {
         this.play = false;
       }
     };
-    const root = this.root instanceof Element ? this.root : null;
+    const root = isElementOwnedBy(this.root, this.ownerDocument) ? this.root : null;
     try {
-      this.visibilityObserver = new IntersectionObserver(callback, {
+      observer = new Observer(callback, {
         root,
         rootMargin: this.rootMargin,
         threshold: this.threshold,
       });
     } catch {
-      this.visibilityObserver = new IntersectionObserver(callback, { root, rootMargin: '0px', threshold: 0 });
+      try {
+        observer = new Observer(callback, { root, rootMargin: '0px', threshold: 0 });
+      } catch {
+        this.play = true;
+        return;
+      }
     }
-    this.visibilityObserver.observe(target);
+    this.visibilityObserver = observer;
+    try {
+      observer.observe(target);
+    } catch {
+      this.disconnectVisibilityObserver();
+      this.play = true;
+    }
   };
+
+  private disconnectVisibilityObserver(): void {
+    this.visibilityObserver?.disconnect();
+    this.visibilityObserver = undefined;
+  }
 
   // Listeners are removed before `.cancel()` is called, not after. This
   // method runs at the top of every createAnimation() rebuild (e.g. the
@@ -408,12 +503,13 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
   private createAnimation = (): void => {
     this.destroyAnimation();
+    if (!this.isConnected) return;
     const target = this.currentTarget();
     const registered = this.resolveAnimation();
     if (!target || !registered) return;
     const disabled = registered.keyframes.length === 0;
     const keyframes = disabled ? [{}, {}] : registered.keyframes;
-    const reduced = this.respectReducedMotion && prefersReducedMotion();
+    const reduced = this.respectReducedMotion && prefersReducedMotion(this.ownerDocument.defaultView);
     const { duration, easing } =
       this.timingPreset === 'custom'
         ? { duration: this.safeDuration, easing: this.safeEasing(this.easing) }

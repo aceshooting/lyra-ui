@@ -15,6 +15,26 @@ async function fixtureInMenu(item: import('lit').TemplateResult): Promise<LyraMe
   return wrapper.querySelector('lr-menu-item') as LyraMenuItem;
 }
 
+class MenuItemLabelForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item id="item" value="share">
+          <slot>Forwarded fallback</slot>
+          <lr-menu id="panel" slot="submenu">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `;
+  }
+}
+if (!customElements.get('menu-item-label-forward-wrapper')) {
+  customElements.define('menu-item-label-forward-wrapper', MenuItemLabelForwardWrapper);
+}
+
 it('defaults to value="", disabled=false, destructive=false, type="normal", checked=false', async () => {
   const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
   expect(el.value).to.equal('');
@@ -81,6 +101,58 @@ it('keeps loading opt-in and exposes the visible text through getTextLabel()', a
   expect(el.getAttribute('aria-disabled')).to.equal('false');
   expect(el.shadowRoot!.querySelector('[part~="spinner"]')).to.equal(null);
   expect(el.getTextLabel()).to.equal('Rename');
+});
+
+it('constructs native-state and label observers in the adopted owner document realm', async () => {
+  const frame = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) =>
+    frame.addEventListener('load', () => resolve(), { once: true }),
+  );
+  document.body.append(frame);
+  await loaded;
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const OriginalFrameObserver = frameWindow.MutationObserver;
+  let frameObserverConstructions = 0;
+  frameWindow.MutationObserver = function (callback: MutationCallback): MutationObserver {
+    frameObserverConstructions += 1;
+    return new OriginalFrameObserver(callback);
+  } as unknown as typeof MutationObserver;
+  let el: LyraMenuItem | undefined;
+  let mainMenu: HTMLElement | undefined;
+
+  try {
+    el = document.createElement('lr-menu-item') as LyraMenuItem;
+    const label = document.createElement('span');
+    label.textContent = 'Before adoption';
+    el.append(label);
+    mainMenu = document.createElement('div');
+    mainMenu.setAttribute('role', 'menu');
+    mainMenu.setAttribute('aria-label', 'Actions');
+    mainMenu.append(el);
+    document.body.append(mainMenu);
+    await el.updateComplete;
+
+    const menu = frameDocument.createElement('div');
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Actions');
+    frameDocument.body.append(menu);
+    menu.append(el);
+    await el.updateComplete;
+    await Promise.resolve();
+
+    label.textContent = 'After adoption';
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(frameObserverConstructions, 'both observers use the iframe constructor').to.be.at.least(2);
+    expect(el.getTextLabel()).to.equal('After adoption');
+  } finally {
+    el?.remove();
+    mainMenu?.remove();
+    frameWindow.MutationObserver = OriginalFrameObserver;
+    frame.remove();
+  }
 });
 
 it('renders aria-disabled="false" when enabled', async () => {
@@ -356,6 +428,11 @@ describe('submenu parent', () => {
   const popupOf = (item: LyraMenuItem): HTMLElement =>
     panelOf(item).shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
 
+  const settleLabel = async (item: LyraMenuItem): Promise<void> => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await item.updateComplete;
+  };
+
   const waitForPlacedPopup = async (popup: HTMLElement): Promise<HTMLElement> => {
     for (let frame = 0; frame < 120 && popup.style.left === ''; frame += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -538,6 +615,147 @@ describe('submenu parent', () => {
     expect(panelOf(item).getAttribute('aria-label')).to.equal('Share');
   });
 
+  it('keeps its typeahead, host name, and submenu name synchronized with an in-place label edit', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item value="share" id="share">
+          <span id="label">Share</span>
+          <lr-menu slot="submenu" id="panel">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    const panel = wrapper.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+
+    wrapper.querySelector('#label')!.textContent = 'Distribute';
+    await Promise.resolve();
+    await item.updateComplete;
+
+    expect(item.getTextLabel()).to.equal('Distribute');
+    expect(item.getAttribute('aria-label')).to.equal('Distribute');
+    expect(panel.getAttribute('aria-label')).to.equal('Distribute');
+  });
+
+  it('excludes accessibility-hidden label branches while retaining restored-visibility descendants', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions" id="wrapper">
+        <lr-menu-item value="share" id="share">
+          <span id="decorative" aria-hidden=" TRUE ">Decorative</span>
+          <span id="hidden" hidden>Hidden</span>
+          <span id="css-hidden" style="display: none">CSS hidden</span>
+          <span style="visibility: hidden">Invisible <span style="visibility: visible">Exposed</span></span>
+          <span id="label">Share</span>
+          <lr-menu slot="submenu" id="panel">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    const panel = wrapper.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+
+    expect(item.getTextLabel()).to.equal('Exposed Share');
+    expect(item.getAttribute('aria-label')).to.equal('Exposed Share');
+    expect(panel.getAttribute('aria-label')).to.equal('Exposed Share');
+
+    wrapper.querySelector('#label')!.setAttribute('aria-hidden', 'true');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Exposed');
+    expect(item.getAttribute('aria-label')).to.equal('Exposed');
+    expect(panel.getAttribute('aria-label')).to.equal('Exposed');
+
+    wrapper.querySelector('#hidden')!.removeAttribute('hidden');
+    wrapper.querySelector<HTMLElement>('#css-hidden')!.style.removeProperty('display');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Hidden CSS hidden Exposed');
+    expect(item.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+    expect(panel.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+
+    wrapper.style.display = 'none';
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('');
+    expect(item.getAttribute('aria-label')).to.equal('');
+    expect(panel.getAttribute('aria-label')).to.equal('');
+
+    wrapper.style.removeProperty('display');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Hidden CSS hidden Exposed');
+    expect(item.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+    expect(panel.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+  });
+
+  it('observes flattened label text projected through a forwarding slot', async () => {
+    const wrapper = (await fixture(html`
+      <menu-item-label-forward-wrapper>
+        <span id="label">Share</span>
+      </menu-item-label-forward-wrapper>
+    `)) as MenuItemLabelForwardWrapper;
+    const item = wrapper.shadowRoot!.querySelector('#item') as LyraMenuItem;
+    const panel = wrapper.shadowRoot!.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+    await Promise.resolve();
+
+    expect(item.getTextLabel()).to.equal('Share');
+    expect(item.getAttribute('aria-label')).to.equal('Share');
+    expect(panel.getAttribute('aria-label')).to.equal('Share');
+
+    wrapper.querySelector('#label')!.textContent = 'Send';
+    await Promise.resolve();
+    await item.updateComplete;
+
+    expect(item.getTextLabel()).to.equal('Send');
+    expect(item.getAttribute('aria-label')).to.equal('Send');
+    expect(panel.getAttribute('aria-label')).to.equal('Send');
+
+    const replacement = document.createElement('span');
+    replacement.textContent = 'Distribute';
+    wrapper.querySelector('#label')!.replaceWith(replacement);
+    await Promise.resolve();
+    await item.updateComplete;
+
+    expect(item.getTextLabel()).to.equal('Distribute');
+    expect(item.getAttribute('aria-label')).to.equal('Distribute');
+    expect(panel.getAttribute('aria-label')).to.equal('Distribute');
+
+    replacement.setAttribute('aria-hidden', ' TRUE ');
+    await settleLabel(item);
+    expect(item.getTextLabel(), 'a hidden assignment does not expose the forwarding fallback').to.equal('');
+    expect(item.getAttribute('aria-label')).to.equal('');
+    expect(panel.getAttribute('aria-label')).to.equal('');
+
+    replacement.removeAttribute('aria-hidden');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Distribute');
+
+    const forwardingSlot = item.querySelector('slot')!;
+    forwardingSlot.setAttribute('aria-hidden', 'true');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('');
+    expect(item.getAttribute('aria-label')).to.equal('');
+    expect(panel.getAttribute('aria-label')).to.equal('');
+
+    forwardingSlot.removeAttribute('aria-hidden');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Distribute');
+
+    wrapper.style.display = 'none';
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('');
+    wrapper.style.removeProperty('display');
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Distribute');
+
+    wrapper.replaceChildren();
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Forwarded fallback');
+    expect(item.getAttribute('aria-label')).to.equal('Forwarded fallback');
+    expect(panel.getAttribute('aria-label')).to.equal('Forwarded fallback');
+  });
+
   it('lets a consumer-supplied aria-label win over the computed one', async () => {
     const wrapper = (await fixture(html`
       <div role="menu" aria-label="Actions">
@@ -550,6 +768,94 @@ describe('submenu parent', () => {
     const item = wrapper.querySelector('#share') as LyraMenuItem;
     await item.updateComplete;
     expect(item.getAttribute('aria-label')).to.equal('Share with someone');
+  });
+
+  it('hands live computed-name ownership to later consumer item and panel labels', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item value="share" id="share">
+          <span id="label">Share</span>
+          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    const panel = wrapper.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+
+    item.setAttribute('aria-label', 'Share with someone');
+    panel.setAttribute('aria-label', 'Sharing actions');
+    await settleLabel(item);
+    wrapper.querySelector('#label')!.textContent = 'Send';
+    await settleLabel(item);
+
+    expect(item.getTextLabel()).to.equal('Send');
+    expect(item.getAttribute('aria-label')).to.equal('Share with someone');
+    expect(panel.getAttribute('aria-label')).to.equal('Sharing actions');
+
+    item.removeAttribute('aria-label');
+    panel.removeAttribute('aria-label');
+    await settleLabel(item);
+    expect(item.getAttribute('aria-label')).to.equal('Send');
+    expect(panel.getAttribute('aria-label')).to.equal('Send');
+
+    panel.setAttribute('label', 'Nested sharing actions');
+    await settleLabel(item);
+    expect(panel.hasAttribute('aria-label')).to.equal(false);
+    wrapper.querySelector('#label')!.textContent = 'Distribute';
+    await settleLabel(item);
+    expect(panel.hasAttribute('aria-label')).to.equal(false);
+
+    panel.removeAttribute('label');
+    await settleLabel(item);
+    expect(panel.getAttribute('aria-label')).to.equal('Distribute');
+  });
+
+  it('preserves an explicitly empty consumer aria-label while the visible label changes', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item value="share" id="share" aria-label="">
+          <span id="label">Share</span>
+          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    const panel = wrapper.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+    expect(item.getAttribute('aria-label')).to.equal('');
+
+    wrapper.querySelector('#label')!.textContent = 'Send';
+    await Promise.resolve();
+    await item.updateComplete;
+
+    expect(item.getAttribute('aria-label')).to.equal('');
+    expect(item.getTextLabel()).to.equal('Send');
+    expect(panel.getAttribute('aria-label')).to.equal('Send');
+  });
+
+  it('preserves an explicitly empty consumer submenu aria-label while the visible label changes', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item value="share" id="share">
+          <span id="label">Share</span>
+          <lr-menu slot="submenu" id="panel" aria-label="">
+            <lr-menu-item value="email">Email</lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    const panel = wrapper.querySelector('#panel') as HTMLElement;
+    await item.updateComplete;
+
+    wrapper.querySelector('#label')!.textContent = 'Send';
+    await Promise.resolve();
+    await item.updateComplete;
+
+    expect(item.getTextLabel()).to.equal('Send');
+    expect(item.getAttribute('aria-label')).to.equal('Send');
+    expect(panel.getAttribute('aria-label')).to.equal('');
   });
 
   it("honours the menu's own focus vocabulary: 'none' opens without taking focus, 'first' takes it", async () => {

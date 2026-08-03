@@ -516,6 +516,87 @@ it("ArrowRight steps past an inert tab, which never holds the roving tabindex", 
   expect(el.active).to.equal("settings");
 });
 
+it("recognizes an inert tab created in an adopted owner realm", async () => {
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument!;
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <div slot="first" label="First">First panel</div>
+      <div slot="last" label="Last">Last panel</div>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  const inert = frameDocument.createElement("div");
+  inert.slot = "inert";
+  inert.setAttribute("label", "Inert");
+  inert.textContent = "Inert panel";
+  inert.inert = true;
+
+  try {
+    el.insertBefore(inert, el.querySelector('[slot="last"]'));
+    expect(inert instanceof HTMLElement).to.be.false;
+    await nextFrames();
+    await el.updateComplete;
+    const buttons = tabButtons(el);
+    expect(buttons.map((button) => button.inert)).to.deep.equal([false, true, false]);
+    press(buttons[0]!, "ArrowRight");
+    await el.updateComplete;
+    expect(el.active).to.equal("last");
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it("binds its child observer to the adopted owner and rejects the retired callback", async () => {
+  interface ObserverRecord {
+    callback: MutationCallback;
+    disconnects: number;
+    instance: MutationObserver;
+  }
+  const el = (await fixture(basic())) as LyraTabGroup;
+  await el.updateComplete;
+  el.remove();
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const originalObserver = frameWindow.MutationObserver;
+  const records: ObserverRecord[] = [];
+  class OwnerMutationObserver implements MutationObserver {
+    private readonly record: ObserverRecord;
+    constructor(callback: MutationCallback) {
+      this.record = { callback, disconnects: 0, instance: this };
+      records.push(this.record);
+    }
+    observe(): void {}
+    disconnect(): void { this.record.disconnects += 1; }
+    takeRecords(): MutationRecord[] { return []; }
+  }
+  frameWindow.MutationObserver = OwnerMutationObserver;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    const ownedInstance = (el as unknown as { mutationObserver?: MutationObserver }).mutationObserver;
+    const adoptedObserver = records.find((record) => record.instance === ownedInstance);
+    expect(adoptedObserver !== undefined, "the destination window constructs the child observer").to.equal(true);
+    let staleSyncs = 0;
+    (el as unknown as { syncTabs: () => void }).syncTabs = () => { staleSyncs += 1; };
+
+    el.remove();
+    expect(adoptedObserver!.disconnects, "disconnect retires the destination observer").to.equal(1);
+    adoptedObserver!.callback(
+      [{ type: "childList", target: el } as MutationRecord],
+      {} as MutationObserver,
+    );
+    expect(staleSyncs, "a retired owner callback cannot resync while detached").to.equal(0);
+  } finally {
+    el.remove();
+    frameWindow.MutationObserver = originalObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    frame.remove();
+  }
+});
+
 it("never activates an inert tab, and skips it when resolving the default active tab", async () => {
   const el = (await fixture(html`
     <lr-tab-group>
@@ -1074,6 +1155,32 @@ it("scrolls the tablist toward its inline end, then back, in LTR", async () => {
   const backward = await recordScroll(el, "start");
   expect(backward).to.have.lengthOf(1);
   expect(backward[0]!.left).to.be.lessThan(0);
+});
+
+it("scrolls an internal tablist from a foreign owner realm", async () => {
+  const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = frame.contentDocument!;
+  const el = (await fixture(basic())) as LyraTabGroup;
+  const foreignTablist = frameDocument.createElement("div");
+  Object.defineProperty(foreignTablist, "clientWidth", { configurable: true, value: 100 });
+  const calls: ScrollToOptions[] = [];
+  foreignTablist.scrollBy = ((options: ScrollToOptions) => calls.push(options)) as typeof foreignTablist.scrollBy;
+  const renderRoot = el.shadowRoot!;
+  const querySelector = renderRoot.querySelector;
+  renderRoot.querySelector = ((selectors: string) =>
+    selectors === '[part~="tablist"]'
+      ? foreignTablist
+      : querySelector.call(renderRoot, selectors)) as typeof renderRoot.querySelector;
+
+  try {
+    expect(foreignTablist instanceof HTMLElement).to.be.false;
+    (el as unknown as { scrollTabs(edge: "start" | "end"): void }).scrollTabs("end");
+    expect(calls).to.have.lengthOf(1);
+    expect(calls[0]!.left).to.be.greaterThan(0);
+  } finally {
+    renderRoot.querySelector = querySelector;
+    frame.remove();
+  }
 });
 
 it("scrolls by a viewport-sized step rather than a fixed pixel amount", async () => {

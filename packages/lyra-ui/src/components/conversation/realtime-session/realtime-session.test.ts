@@ -1,6 +1,16 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './realtime-session.js';
 import type { LyraRealtimeSession } from './realtime-session.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
+  return Array.from(
+    doc.querySelectorAll<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"] > div`,
+    ),
+    (node) => node.textContent ?? '',
+  );
+}
 
 it('composes connection status, voice activity, transcript, and capture controls', async () => {
   const el = (await fixture(
@@ -58,15 +68,12 @@ it('announces connection transitions after mount without announcing the initial 
       .strings=${{ realtimeSessionConnected: 'SESSION READY' }}
     ></lr-realtime-session>
   `)) as LyraRealtimeSession;
-  const region = el.shadowRoot!
-    .querySelector('lr-live-region')!
-    .shadowRoot!.querySelector('[part="region"]')!;
-  expect(region.textContent).to.equal('');
+  expect(sinkTexts('polite')).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('lr-live-region').length).to.equal(0);
 
   el.state = 'connected';
   await el.updateComplete;
-  await aTimeout(0);
-  expect(region.textContent).to.equal('SESSION READY');
+  expect(sinkTexts('polite')).to.deep.equal(['SESSION READY']);
 });
 
 it('moves focus to the replacement connection action when state changes', async () => {
@@ -97,7 +104,13 @@ it('moves focus from a nested capture control when the connected controls are re
     updateComplete: Promise<unknown>;
   };
   await capture.updateComplete;
-  (capture.shadowRoot!.querySelector('button') as HTMLButtonElement).focus();
+  const trigger = capture.shadowRoot!.querySelector('button') as HTMLButtonElement;
+  // This test owns only the parent's nested-focus restoration contract. WebKit's test context has
+  // no MediaRecorder, so the child correctly starts unsupported/disabled; make the native target
+  // focusable without pretending that microphone capture itself is available.
+  trigger.disabled = false;
+  trigger.focus();
+  expect(capture.shadowRoot!.activeElement === trigger).to.be.true;
 
   el.state = 'error';
   await el.updateComplete;
@@ -105,18 +118,103 @@ it('moves focus from a nested capture control when the connected controls are re
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
 });
 
+it('preserves action focus from a genuinely foreign descendant after adoption', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected" .showCapture=${false}></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+
+  try {
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+    const foreignAction = frameDocument.createElement('button');
+    controls.append(foreignAction);
+    foreignAction.focus();
+    expect(foreignAction instanceof HTMLElement, 'the active action is not ambient-branded').to.be.false;
+    expect(el.shadowRoot!.activeElement === foreignAction).to.be.true;
+
+    el.state = 'error';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('preserves action focus without consulting the ambient ShadowRoot constructor', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'ShadowRoot')!;
+  const AmbientShadowRoot = class {};
+
+  try {
+    Object.defineProperty(globalThis, 'ShadowRoot', {
+      configurable: true,
+      writable: true,
+      value: AmbientShadowRoot,
+    });
+    (el.shadowRoot!.querySelector('[part="connect"]') as HTMLButtonElement).focus();
+    el.state = 'connecting';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
+  } finally {
+    Object.defineProperty(globalThis, 'ShadowRoot', descriptor);
+  }
+});
+
 it('uses only the assertive error owner when transitioning to error', async () => {
   const el = (await fixture(
     html`<lr-realtime-session state="connected"></lr-realtime-session>`,
   )) as LyraRealtimeSession;
-  const region = el.shadowRoot!
-    .querySelector('lr-live-region')!
-    .shadowRoot!.querySelector('[part="region"]')!;
 
   el.state = 'error';
   await el.updateComplete;
-  await aTimeout(0);
 
-  expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal('alert');
-  expect(region.textContent).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal(null);
+  expect(sinkTexts('polite')).to.deep.equal([]);
+  expect(sinkTexts('assertive')).to.deep.equal(['The realtime connection failed.']);
+});
+
+it('re-targets both connection announcement sinks when adopted into another document', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+
+  try {
+    frameDocument.body.append(el);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    el.state = 'error';
+    await el.updateComplete;
+
+    expect(sinkTexts('assertive'), 'the old document receives no adopted announcements').to.deep.equal([]);
+    expect(sinkTexts('assertive', frameDocument)).to.deep.equal(['The realtime connection failed.']);
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('treats a state write queued while detached as a silent reconnect baseline', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  const parent = el.parentNode!;
+
+  el.remove();
+  el.state = 'error';
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(sinkTexts('assertive'), 'the detached error state is resting content on reconnect').to.deep.equal([]);
+  expect(sinkTexts('polite')).to.deep.equal([]);
+
+  el.state = 'connected';
+  await el.updateComplete;
+  expect(sinkTexts('polite'), 'the next connected transition still announces').to.deep.equal(['Connected']);
 });

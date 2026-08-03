@@ -12,9 +12,14 @@ import type { LyraConversationItem } from '../conversation-item/conversation-ite
 import type { LyraVirtualList, VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './thread-list.styles.js';
-import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_date, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface ChatThread {
   id: string;
@@ -100,9 +105,10 @@ function trashIcon(): SVGTemplateResult {
 }
 
 function defaultFilter(thread: ChatThread, query: string, locale: string): boolean {
+  const intlLocale = resolveIntlLocale(locale);
   return (
-    thread.title.toLocaleLowerCase(locale).includes(query) ||
-    (thread.excerpt ?? '').toLocaleLowerCase(locale).includes(query)
+    thread.title.toLocaleLowerCase(intlLocale).includes(query) ||
+    (thread.excerpt ?? '').toLocaleLowerCase(intlLocale).includes(query)
   );
 }
 
@@ -206,6 +212,32 @@ function defaultFilter(thread: ChatThread, query: string, locale: string): boole
  * @since 4.0.0
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    archiveConversation: LYRA_DEFAULT_archiveConversation,
+    date: LYRA_DEFAULT_date,
+    deleteConversation: LYRA_DEFAULT_deleteConversation,
+    noMatches: LYRA_DEFAULT_noMatches,
+    pinConversation: LYRA_DEFAULT_pinConversation,
+    searchThreads: LYRA_DEFAULT_searchThreads,
+    threadGroupArchived: LYRA_DEFAULT_threadGroupArchived,
+    threadGroupCollapse: LYRA_DEFAULT_threadGroupCollapse,
+    threadGroupExpand: LYRA_DEFAULT_threadGroupExpand,
+    threadGroupPinned: LYRA_DEFAULT_threadGroupPinned,
+    threadGroupPrevious30Days: LYRA_DEFAULT_threadGroupPrevious30Days,
+    threadGroupPrevious7Days: LYRA_DEFAULT_threadGroupPrevious7Days,
+    threadGroupToday: LYRA_DEFAULT_threadGroupToday,
+    threadGroupYesterday: LYRA_DEFAULT_threadGroupYesterday,
+    threadListEmpty: LYRA_DEFAULT_threadListEmpty,
+    threadListLabel: LYRA_DEFAULT_threadListLabel,
+    threadListMatchAnnounce: LYRA_DEFAULT_threadListMatchAnnounce,
+    unarchiveConversation: LYRA_DEFAULT_unarchiveConversation,
+    unpinConversation: LYRA_DEFAULT_unpinConversation,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
@@ -634,7 +666,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private onListKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
     const origin = e.composedPath()[0];
-    if (origin instanceof Element && origin.closest('[part="group-toggle"]')) return;
+    if (
+      (origin as Partial<Node> | undefined)?.nodeType === 1 &&
+      (origin as Element).closest('[part="group-toggle"]')
+    ) return;
     const focusGeneration = ++this.focusTaskGeneration;
     const rows = this.rowElements();
     if (rows.length === 0) return;

@@ -1,22 +1,29 @@
-import { tag } from '../../../internal/prefix.js';
+import { defineElement, tag } from '../../../internal/prefix.js';
 import { registerWidgetType } from './registry.js';
-// Import each mapped component's own *registering* side-effect entry (`<name>.js`, which calls
-// `defineElement()`) -- not `<name>.class.js` (a side-effect-free class export that, on its own,
-// never actually registers the custom element; see `<name>.ts` for the file that does).
-import '../../layout/card/card.js';
-import '../../overlays/badge/badge.js';
-import '../../forms/button/button.js';
-import '../../data/stat/stat.js';
-import '../../agent-tools/result-card/result-card.js';
-import '../../agent-tools/result-card/result-field.js';
-import '../markdown/markdown.js';
-import '../../media/media-card/media-card.js';
+import { LyraCard } from '../../layout/card/card.class.js';
+import { LyraBadge } from '../../overlays/badge/badge.class.js';
+import { LyraButton } from '../../forms/button/button.class.js';
+import { LyraStat } from '../../data/stat/stat.class.js';
+import { LyraResultCard } from '../../agent-tools/result-card/result-card.class.js';
+import { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
+import { LyraMarkdown } from '../markdown/markdown.class.js';
+import { LyraMediaCard } from '../../media/media-card/media-card.class.js';
 
 /** Populates the default widget-type registry with the library's built-in mappings. Called once
  *  by the side-effect entry `widget-renderer.ts`; a host wanting a leaner dependency graph can
  *  register its own registry (via the `registry` property) and import only the components it
  *  maps, instead of this module. */
 export function registerDefaultWidgetTypes(): void {
+  // `src/lyra.ts` re-exports this function. Keep those root imports pure by loading class modules
+  // above and installing the mapped elements only when the registry is explicitly populated.
+  defineElement('card', LyraCard);
+  defineElement('badge', LyraBadge);
+  defineElement('button', LyraButton);
+  defineElement('stat', LyraStat);
+  defineElement('result-card', LyraResultCard);
+  defineElement('result-field', LyraResultField);
+  defineElement('markdown', LyraMarkdown);
+  defineElement('media-card', LyraMediaCard);
   registerWidgetType('card', { tag: tag('card'), props: { appearance: 'string' } });
   registerWidgetType('badge', { tag: tag('badge'), props: { variant: 'string' } });
   registerWidgetType('button', {

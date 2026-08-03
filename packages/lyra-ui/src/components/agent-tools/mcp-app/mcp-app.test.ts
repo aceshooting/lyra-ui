@@ -1,6 +1,29 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mcp-app.js';
 import type { LyraMcpApp } from './mcp-app.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"] > div`,
+    ),
+    (node) => node.textContent ?? '',
+  );
+}
+
+/** Firefox does not accept a sandboxed iframe's cross-origin WindowProxy through the
+ * `MessageEventInit.source` Web IDL conversion. Define the readonly test-event property directly
+ * so every engine exercises the component's real source-window identity check. */
+function frameMessage(
+  source: MessageEventSource | null,
+  data: unknown,
+  origin = '',
+): MessageEvent {
+  const event = new MessageEvent('message', { data, origin });
+  Object.defineProperty(event, 'source', { configurable: true, value: source });
+  return event;
+}
 
 it('renders executable app HTML only inside a uniquely-origin sandbox with CSP metadata', async () => {
   const el = (await fixture(html`<lr-mcp-app
@@ -26,7 +49,45 @@ it('rejects executable frame URLs instead of navigating them', async () => {
     .resource=${{ uri: 'ui://unsafe', src: 'javascript:alert(1)' }}
   ></lr-mcp-app>`)) as LyraMcpApp;
   expect(el.shadowRoot!.querySelectorAll('iframe')).to.have.lengthOf(0);
-  expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.getAttribute('role')).to.equal(null);
+});
+
+it('routes fresh loading and unavailable states through pre-mounted light-DOM sinks', async () => {
+  const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
+  expect(sinkTexts('polite'), 'the initial unavailable state stays silent').to.deep.equal([]);
+  expect(sinkTexts('assertive'), 'the initial unavailable state stays silent').to.deep.equal([]);
+
+  el.resource = { uri: 'ui://weather/current', html: '<p>Weather</p>' };
+  await el.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal(['Loading interactive app…']);
+  expect(el.shadowRoot!.querySelector('[part="loading"]')?.getAttribute('role')).to.equal(null);
+
+  el.resource = null;
+  await el.updateComplete;
+  expect(sinkTexts('assertive')).to.deep.equal(['This interactive app could not be loaded.']);
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.getAttribute('role')).to.equal(null);
+
+  el.remove();
+  expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}]`).length).to.equal(0);
+});
+
+it('treats a resource write queued while detached as a silent reconnect baseline', async () => {
+  const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
+  const parent = el.parentNode!;
+
+  el.remove();
+  el.resource = { uri: 'ui://weather/current', html: '<p>Weather</p>' };
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(sinkTexts('polite'), 'the detached resource is resting content on reconnect').to.deep.equal([]);
+  expect(sinkTexts('assertive')).to.deep.equal([]);
+
+  el.resource = null;
+  await el.updateComplete;
+  expect(sinkTexts('assertive'), 'the next connected transition still announces').to.deep.equal([
+    'This interactive app could not be loaded.',
+  ]);
 });
 
 it('accepts messages only from its own frame and clamps resize requests', async () => {
@@ -36,10 +97,9 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   ></lr-mcp-app>`)) as LyraMcpApp;
   const iframe = el.shadowRoot!.querySelector('iframe')!;
   const toolCall = oneEvent(el, 'lr-mcp-tool-call');
-  window.dispatchEvent(new MessageEvent('message', {
-    source: iframe.contentWindow,
-    origin: 'null',
-    data: {
+  window.dispatchEvent(frameMessage(
+    iframe.contentWindow,
+    {
       channel: 'lyra-mcp-app',
       version: 1,
       type: 'tool-call',
@@ -47,15 +107,16 @@ it('accepts messages only from its own frame and clamps resize requests', async 
       name: 'refresh_weather',
       args: { city: 'Luxembourg' },
     },
-  }));
+    'null',
+  ));
   const event = await toolCall as CustomEvent<{ requestId: string; name: string; args: unknown }>;
   expect(event.detail.name).to.equal('refresh_weather');
 
-  window.dispatchEvent(new MessageEvent('message', {
-    source: iframe.contentWindow,
-    origin: 'null',
-    data: { channel: 'lyra-mcp-app', version: 1, type: 'resize', height: 50_000 },
-  }));
+  window.dispatchEvent(frameMessage(
+    iframe.contentWindow,
+    { channel: 'lyra-mcp-app', version: 1, type: 'resize', height: 50_000 },
+    'null',
+  ));
   await el.updateComplete;
   expect(iframe.style.height).to.equal('500px');
 
@@ -63,10 +124,10 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   el.addEventListener('lr-mcp-tool-call', () => {
     leaked = true;
   });
-  window.dispatchEvent(new MessageEvent('message', {
-    source: window,
-    data: { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'bad', args: {} },
-  }));
+  window.dispatchEvent(frameMessage(
+    window,
+    { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'bad', args: {} },
+  ));
   expect(leaked).to.be.false;
 });
 
@@ -76,11 +137,11 @@ it('forwards typed message, link, and log requests while rejecting malformed lin
   ></lr-mcp-app>`)) as LyraMcpApp;
   const iframe = el.shadowRoot!.querySelector('iframe')!;
   const dispatch = (data: Record<string, unknown>) => {
-    window.dispatchEvent(new MessageEvent('message', {
-      source: iframe.contentWindow,
-      origin: 'null',
-      data: { channel: 'lyra-mcp-app', version: 1, ...data },
-    }));
+    window.dispatchEvent(frameMessage(
+      iframe.contentWindow,
+      { channel: 'lyra-mcp-app', version: 1, ...data },
+      'null',
+    ));
   };
 
   const sendMessage = oneEvent(el, 'lr-mcp-send-message');
@@ -157,26 +218,107 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
   el.addEventListener('lr-mcp-tool-call', () => calls++);
   const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'weather', args: {} };
 
-  window.dispatchEvent(new MessageEvent('message', {
-    source: iframe.contentWindow,
-    origin: 'https://apps.example.test',
-    data,
-  }));
+  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'https://apps.example.test'));
   expect(calls).to.equal(0);
 
-  window.dispatchEvent(new MessageEvent('message', {
-    source: window,
-    origin: 'null',
-    data,
-  }));
+  window.dispatchEvent(frameMessage(window, data, 'null'));
   expect(calls).to.equal(0);
 
-  window.dispatchEvent(new MessageEvent('message', {
-    source: iframe.contentWindow,
-    origin: 'null',
-    data,
-  }));
+  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'null'));
   expect(calls).to.equal(1);
+});
+
+it('retargets authenticated frame messages to the adopted owner window and cleans up reconnects', async () => {
+  const ownerFrame = document.createElement('iframe');
+  document.body.append(ownerFrame);
+  const ownerDocument = ownerFrame.contentDocument!;
+  const ownerWindow = ownerFrame.contentWindow!;
+  const originalAddDescriptor = Object.getOwnPropertyDescriptor(ownerWindow, 'addEventListener');
+  const originalRemoveDescriptor = Object.getOwnPropertyDescriptor(
+    ownerWindow,
+    'removeEventListener',
+  );
+  const originalAdd = ownerWindow.addEventListener.bind(ownerWindow);
+  const originalRemove = ownerWindow.removeEventListener.bind(ownerWindow);
+  let messageListenerAdds = 0;
+  let messageListenerRemoves = 0;
+  Object.defineProperty(ownerWindow, 'addEventListener', {
+    configurable: true,
+    value: (
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions,
+    ) => {
+      if (type === 'message') messageListenerAdds += 1;
+      originalAdd(type, listener, options);
+    },
+  });
+  Object.defineProperty(ownerWindow, 'removeEventListener', {
+    configurable: true,
+    value: (
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | EventListenerOptions,
+    ) => {
+      if (type === 'message') messageListenerRemoves += 1;
+      originalRemove(type, listener, options);
+    },
+  });
+
+  const el = document.createElement('lr-mcp-app') as LyraMcpApp;
+  el.resource = { uri: 'ui://adopted/app', html: '<p>Adopted app</p>' };
+  let calls = 0;
+  el.addEventListener('lr-mcp-tool-call', () => calls++);
+  const data = {
+    channel: 'lyra-mcp-app',
+    version: 1,
+    type: 'tool-call',
+    name: 'owner_bound_tool',
+    args: {},
+  };
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    ownerDocument.adoptNode(el);
+    ownerDocument.body.append(el);
+    await el.updateComplete;
+    const sandboxWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
+
+    window.dispatchEvent(frameMessage(sandboxWindow, data, 'null'));
+    expect(calls, 'the prior parent window must no longer reach the component').to.equal(0);
+
+    ownerWindow.dispatchEvent(frameMessage(ownerWindow, data, 'null'));
+    expect(calls, 'another window in the right realm is still the wrong source').to.equal(0);
+
+    ownerWindow.dispatchEvent(frameMessage(sandboxWindow, data, 'null'));
+    expect(calls).to.equal(1);
+
+    el.remove();
+    ownerDocument.body.append(el);
+    await el.updateComplete;
+    const reconnectedSandboxWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
+    ownerWindow.dispatchEvent(frameMessage(reconnectedSandboxWindow, data, 'null'));
+    expect(calls).to.equal(2);
+  } finally {
+    el.remove();
+    if (originalAddDescriptor) {
+      Object.defineProperty(ownerWindow, 'addEventListener', originalAddDescriptor);
+    } else {
+      delete (ownerWindow as unknown as { addEventListener?: typeof addEventListener })
+        .addEventListener;
+    }
+    if (originalRemoveDescriptor) {
+      Object.defineProperty(ownerWindow, 'removeEventListener', originalRemoveDescriptor);
+    } else {
+      delete (ownerWindow as unknown as { removeEventListener?: typeof removeEventListener })
+        .removeEventListener;
+    }
+    ownerFrame.remove();
+  }
+
+  expect(messageListenerAdds).to.equal(2);
+  expect(messageListenerRemoves).to.equal(2);
 });
 
 it('replaces the iframe window across resource navigation so the previous opaque document cannot message the host', async () => {
@@ -193,9 +335,9 @@ it('replaces the iframe window across resource navigation so the previous opaque
   let calls = 0;
   el.addEventListener('lr-mcp-tool-call', () => calls++);
   const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'stale', args: {} };
-  window.dispatchEvent(new MessageEvent('message', { source: oldWindow, origin: 'null', data }));
+  window.dispatchEvent(frameMessage(oldWindow, data, 'null'));
   expect(calls).to.equal(0);
-  window.dispatchEvent(new MessageEvent('message', { source: newFrame.contentWindow, origin: 'null', data }));
+  window.dispatchEvent(frameMessage(newFrame.contentWindow, data, 'null'));
   expect(calls).to.equal(1);
 });
 
@@ -235,7 +377,7 @@ it('applies per-instance strings to the unavailable state', async () => {
       .strings=${{ mcpAppUnavailable: 'Application interactive indisponible.' }}
     ></lr-mcp-app>`,
   )) as LyraMcpApp;
-  expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent?.trim()).to.equal(
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim()).to.equal(
     'Application interactive indisponible.',
   );
 });
