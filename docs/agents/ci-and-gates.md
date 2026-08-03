@@ -127,18 +127,23 @@ at most one; an ordinary unsharded local run still exercises all 253 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
 Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Every leg sets
-`npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, installs its
-playwright artifact, sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1`, then runs `pnpm --filter
-@aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as Chromium-channel
-jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses `channel: msedge`).
-Firefox Node 22 is split into eight deterministic round-robin shards (`WTR_SHARD_TOTAL=8`) so each CI
-leg stays under the same long-test budget; Chromium Node 22 is split into four shards (`WTR_SHARD_TOTAL=4`);
-Chrome and Edge each run two shards (`WTR_SHARD_TOTAL=2`) on Chromium-channel `chrome`/`msedge`;
-Safari on Node 22 runs two shards while Node 20 Safari and Node 20 Firefox remain single-shard.
-Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22 uses
-`package.json#packageManager` (`pnpm@11.18.0`). The package's supported engine remains `node >=20`; this
-expanded matrix uses 20 legs total (18 on Node 22, 2 on Node 20) and is capped at 13-way parallelism
-inside GitHub Actions so the whole workflow stays near the public-repo 20-job throughput limit.
+`npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, restores a
+`~/.cache/ms-playwright` cache keyed on browser + OS + `pnpm-lock.yaml` hash (system deps still
+install unconditionally via `playwright install-deps`, since that's apt-level and the cache only
+covers the downloaded browser binary), sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1`, then runs
+`pnpm --filter @aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as
+Chromium-channel jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses
+`channel: msedge`). Firefox Node 22 is split into four deterministic round-robin shards
+(`WTR_SHARD_TOTAL=4`); Chromium Node 22 into two (`WTR_SHARD_TOTAL=2`); Chrome, Edge, and Safari
+Node 22 each run single-shard, as do Node 20 Firefox and Safari. Shard counts were tuned from
+measured per-leg wall time: the prior 20-leg matrix (8-way Firefox, 4-way Chromium, 2-way
+everything else) had most Node 22 legs finishing in 50-110s, of which roughly half was fixed
+per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
+`test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
+gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
+uses `package.json#packageManager` (`pnpm@11.18.0`). The package's supported engine remains `node
+>=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
+20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
 
 ## Scheduled full Firefox/WebKit suite
 

@@ -146,7 +146,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
       - uses: actions/download-artifact@v4
         with:
           name: lyra-ui-dist
@@ -168,7 +178,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
       - uses: actions/download-artifact@v4
         with:
           name: lyra-ui-dist
@@ -189,7 +209,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
       - uses: actions/download-artifact@v4
         with:
           name: lyra-ui-dist
@@ -321,7 +351,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
       # CODECOV_TOKEN is what arms the Codecov bundle-analysis plugin in .storybook/main.js;
       # without it the storybook build runs exactly as before and uploads nothing. Only this job's
       # docs:build carries the token -- the visual-regression job also runs docs:build (it needs
@@ -366,7 +406,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
       - run: pnpm docs:build
       - name: Visual regression
         run: pnpm --filter @aceshooting/lyra-ui test:visual
@@ -402,10 +452,14 @@ jobs:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }} / shard ${{ matrix.shard_index }}/${{ matrix.shard_total }}
     strategy:
       fail-fast: false
-      # Keep matrix concurrency aligned with GitHub's free-tier public runner budget (20 total
-      # active jobs). In a normal push, six non-matrix jobs are already active while this matrix
-      # runs, so 14 parallel platform legs keeps this workflow near the 20-runner cap.
-      max-parallel: 14
+      # 11 legs total (down from 20 -- see docs/agents/ci-and-gates.md). Measured per-leg wall
+      # time on the prior 20-leg matrix showed most Node 22 shards spending roughly half their
+      # ~50-110s runtime on fixed per-job overhead (checkout/install/browser setup) rather than
+      # test execution, since the 26-file test:platform suite was split too finely. Halving
+      # chromium/firefox and collapsing chrome/edge/safari-Node22 to one shard each keeps every
+      # leg's worst case comfortably under the workflow's other long poles while cutting total
+      # billed runner-minutes; max-parallel no longer needs to chase the 20-runner cap.
+      max-parallel: 11
       matrix:
         include:
           - browser: firefox
@@ -416,82 +470,42 @@ jobs:
           - browser: chromium
             node-version: 22
             shard_index: 1
-            shard_total: 4
+            shard_total: 2
             install_browser: chromium
           - browser: chromium
             node-version: 22
             shard_index: 2
-            shard_total: 4
-            install_browser: chromium
-          - browser: chromium
-            node-version: 22
-            shard_index: 3
-            shard_total: 4
-            install_browser: chromium
-          - browser: chromium
-            node-version: 22
-            shard_index: 4
-            shard_total: 4
+            shard_total: 2
             install_browser: chromium
           - browser: chrome
             node-version: 22
             shard_index: 1
-            shard_total: 2
-            install_browser: chrome
-          - browser: chrome
-            node-version: 22
-            shard_index: 2
-            shard_total: 2
+            shard_total: 1
             install_browser: chrome
           - browser: edge
             node-version: 22
             shard_index: 1
-            shard_total: 2
-            install_browser: msedge
-          - browser: edge
-            node-version: 22
-            shard_index: 2
-            shard_total: 2
+            shard_total: 1
             install_browser: msedge
           - browser: firefox
             node-version: 22
             shard_index: 1
-            shard_total: 8
+            shard_total: 4
             install_browser: firefox
           - browser: firefox
             node-version: 22
             shard_index: 2
-            shard_total: 8
+            shard_total: 4
             install_browser: firefox
           - browser: firefox
             node-version: 22
             shard_index: 3
-            shard_total: 8
+            shard_total: 4
             install_browser: firefox
           - browser: firefox
             node-version: 22
             shard_index: 4
-            shard_total: 8
-            install_browser: firefox
-          - browser: firefox
-            node-version: 22
-            shard_index: 5
-            shard_total: 8
-            install_browser: firefox
-          - browser: firefox
-            node-version: 22
-            shard_index: 6
-            shard_total: 8
-            install_browser: firefox
-          - browser: firefox
-            node-version: 22
-            shard_index: 7
-            shard_total: 8
-            install_browser: firefox
-          - browser: firefox
-            node-version: 22
-            shard_index: 8
-            shard_total: 8
+            shard_total: 4
             install_browser: firefox
           - browser: safari
             node-version: 20
@@ -501,12 +515,7 @@ jobs:
           - browser: safari
             node-version: 22
             shard_index: 1
-            shard_total: 2
-            install_browser: webkit
-          - browser: safari
-            node-version: 22
-            shard_index: 2
-            shard_total: 2
+            shard_total: 1
             install_browser: webkit
     runs-on: ubuntu-latest
     env:
@@ -547,7 +556,15 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.install_browser }}
+      - name: Restore Playwright browser cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ matrix.install_browser }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps ${{ matrix.install_browser }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.install_browser }}
       - name: Run platform contract suite
         env:
           WTR_BROWSER: ${{ matrix.browser }}

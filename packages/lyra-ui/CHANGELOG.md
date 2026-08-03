@@ -1,5 +1,19 @@
 # Changelog
 
+## 8.0.1
+
+### Patch Changes
+
+- Fix three bugs surfaced by the full Chromium/Firefox/WebKit browser-engine suite:
+
+  - `lr-page-rail`: a `thumbWidth` change scheduled its thumbnail-state invalidation from a
+    post-render hook, forcing an extra Lit update cycle instead of reflecting the new width in the
+    same pass.
+  - `lr-graph`: a pointer-capture call on canvas pointerdown was unguarded against browsers
+    rejecting capture for a synthetic (non-driver) pointer id, unlike its sibling release call.
+  - `lr-map`: a GeoJSON-view WebGL2 load-failure flag could stay set across a re-entrant load
+    triggered while the real availability check was still racing a test override.
+
 ## 8.0.0
 
 ### Major Changes
@@ -69,13 +83,13 @@
   surfaces register from these exact paths:
 
   ```js
-  import '@aceshooting/lyra-ui/components/lr-page.js';
-  import '@aceshooting/lyra-ui/components/lr-video.js';
-  import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
-  import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
-  import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
-  import '@aceshooting/lyra-ui/components/lr-split-panel.js';
-  import '@aceshooting/lyra-ui/components/lr-alert.js';
+  import "@aceshooting/lyra-ui/components/lr-page.js";
+  import "@aceshooting/lyra-ui/components/lr-video.js";
+  import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
+  import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
+  import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
+  import "@aceshooting/lyra-ui/components/lr-split-panel.js";
+  import "@aceshooting/lyra-ui/components/lr-alert.js";
   ```
 
   The component-family references contain the exact surface and the 7.x migration notes for

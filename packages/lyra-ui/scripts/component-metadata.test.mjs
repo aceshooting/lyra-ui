@@ -264,6 +264,11 @@ test('component metadata fails closed in a shallow clone', () => {
 test('a post-tag component remains unreleased until the package version advances', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
+  // Isolate this synthetic scenario from whatever real historical releases the checked-in
+  // fixture happens to carry -- otherwise a component that has genuinely shipped before (like
+  // the 'lr-page' this test strips from the synthetic taggedCurrent) still resolves a since
+  // version from history.releases, defeating the "unreleased" assertion below.
+  metadata.history.releases = [];
   metadata.history.taggedCurrent = {
     tag: `lyra-ui@${state.packageJson.version}`,
     version: state.packageJson.version,
@@ -538,7 +543,7 @@ test('CEM projection reports drift and gives a new assigned tag the current pack
     packageVersion: state.packageJson.version,
   });
   assert.equal(resolved.get('lr-new-component').status, 'experimental');
-  assert.equal(resolved.get('lr-new-component').since, '8.0.0');
+  assert.equal(resolved.get('lr-new-component').since, state.packageJson.version);
 
   const manifest = structuredClone(state.manifest);
   applyComponentMetadataToManifest(state.metadata, manifest, {

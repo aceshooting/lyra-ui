@@ -10,12 +10,12 @@ const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 const REQUIRED_PLATFORM_JOB_MATRIX = Object.freeze([
   { browser: 'firefox', nodeVersion: 20, shards: [[1, 1]] },
-  { browser: 'chromium', nodeVersion: 22, shards: [[1, 4], [2, 4], [3, 4], [4, 4]] },
-  { browser: 'chrome', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
-  { browser: 'edge', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
-  { browser: 'firefox', nodeVersion: 22, shards: [[1, 8], [2, 8], [3, 8], [4, 8], [5, 8], [6, 8], [7, 8], [8, 8]] },
+  { browser: 'chromium', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
+  { browser: 'chrome', nodeVersion: 22, shards: [[1, 1]] },
+  { browser: 'edge', nodeVersion: 22, shards: [[1, 1]] },
+  { browser: 'firefox', nodeVersion: 22, shards: [[1, 4], [2, 4], [3, 4], [4, 4]] },
   { browser: 'safari', nodeVersion: 20, shards: [[1, 1]] },
-  { browser: 'safari', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
+  { browser: 'safari', nodeVersion: 22, shards: [[1, 1]] },
 ]);
 
 const REQUIRED_PLATFORM_CI_JOBS = Object.freeze(
