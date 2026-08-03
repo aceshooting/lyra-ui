@@ -46408,44 +46408,44 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 499,
-              "test": "is accessible",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 915,
+              "file": "src/components/data/tree/tree-badges.test.ts",
+              "line": 105,
               "test": "is accessible with badges and the legacy badge both present",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 1011,
-              "test": "renders a structured icon and secondary description without adding another interactive row",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 1329,
-              "test": "is accessible in the populated reorderable state",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 1685,
+              "file": "src/components/data/tree/tree-declarative.test.ts",
+              "line": 333,
               "test": "is accessible when written declaratively",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 2004,
+              "file": "src/components/data/tree/tree-presentation-rich-content.test.ts",
+              "line": 19,
+              "test": "renders a structured icon and secondary description without adding another interactive row",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/tree/tree-reorderable.test.ts",
+              "line": 283,
+              "test": "is accessible in the populated reorderable state",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/tree/tree-selection-lazy.test.ts",
+              "line": 318,
               "test": "is accessible when expanded, lazy-capable, and multiply selected",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/tree/tree.test.ts",
+              "line": 501,
+              "test": "is accessible",
               "target": "el",
               "state": "populated"
             }
@@ -46457,8 +46457,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 243,
+              "file": "src/components/data/tree/tree-declarative.test.ts",
+              "line": 21,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -46468,8 +46468,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 104,
+              "file": "src/components/data/tree/tree-navigation.test.ts",
+              "line": 148,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46584,7 +46584,25 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/tree/tree-badges.test.ts",
+          "src/components/data/tree/tree-declarative.test.ts",
+          "src/components/data/tree/tree-dynamic-state.test.ts",
+          "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
+          "src/components/data/tree/tree-navigation.test.ts",
+          "src/components/data/tree/tree-presentation-accessible-label.test.ts",
+          "src/components/data/tree/tree-presentation-aria-position.test.ts",
+          "src/components/data/tree/tree-presentation-badge-contrast.test.ts",
+          "src/components/data/tree/tree-presentation-group-role.test.ts",
+          "src/components/data/tree/tree-presentation-label-overflow.test.ts",
+          "src/components/data/tree/tree-presentation-rich-content.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-expanded.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-hit-area.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-icon.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-placeholder.test.ts",
+          "src/components/data/tree/tree-presentation-zero-badge.test.ts",
+          "src/components/data/tree/tree-reorderable.test.ts",
+          "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -46612,6 +46630,13 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/tree/tree-declarative.test.ts",
+              "line": 333,
+              "test": "is accessible when written declaratively",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/tree/tree-item.test.ts",
               "line": 531,
               "test": "is accessible as a declarative branch inside a tree",
@@ -46626,15 +46651,8 @@
               "state": "populated"
             },
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 1685,
-              "test": "is accessible when written declaratively",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 2004,
+              "file": "src/components/data/tree/tree-selection-lazy.test.ts",
+              "line": 318,
               "test": "is accessible when expanded, lazy-capable, and multiply selected",
               "target": "el",
               "state": "populated"
@@ -46647,8 +46665,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 243,
+              "file": "src/components/data/tree/tree-declarative.test.ts",
+              "line": 21,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -46658,8 +46676,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree.test.ts",
-              "line": 104,
+              "file": "src/components/data/tree/tree-navigation.test.ts",
+              "line": 148,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46785,7 +46803,25 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/tree/tree-badges.test.ts",
+          "src/components/data/tree/tree-declarative.test.ts",
+          "src/components/data/tree/tree-dynamic-state.test.ts",
+          "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
+          "src/components/data/tree/tree-navigation.test.ts",
+          "src/components/data/tree/tree-presentation-accessible-label.test.ts",
+          "src/components/data/tree/tree-presentation-aria-position.test.ts",
+          "src/components/data/tree/tree-presentation-badge-contrast.test.ts",
+          "src/components/data/tree/tree-presentation-group-role.test.ts",
+          "src/components/data/tree/tree-presentation-label-overflow.test.ts",
+          "src/components/data/tree/tree-presentation-rich-content.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-expanded.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-hit-area.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-icon.test.ts",
+          "src/components/data/tree/tree-presentation-toggle-placeholder.test.ts",
+          "src/components/data/tree/tree-presentation-zero-badge.test.ts",
+          "src/components/data/tree/tree-reorderable.test.ts",
+          "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

@@ -294,9 +294,13 @@ jobs:
       # "manage package manager versions" self-enforcement: any pnpm binary
       # run from this repo root notices the packageManager mismatch and
       # silently re-execs itself as the packageManager-pinned pnpm 11,
-      # reintroducing the crash. Disable
-      # that self-management for this job (harmless on the Node 22 leg, where
-      # the installed version already matches packageManager).
+      # reintroducing the crash. This config disables that self-management,
+      # but it only covers simple invocations -- `pnpm -r`/`pnpm pack`
+      # (workspace-graph-resolving commands, used by `pnpm build` and by
+      # check:packed-consumer's internal `pnpm pack`) re-exec into pnpm 11
+      # and crash regardless of this setting. Kept as defense in depth
+      # (harmless on the Node 22 leg); the step below removes the mismatch
+      # itself, which is what actually protects those commands.
       npm_config_manage_package_manager_versions: 'false'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -311,6 +315,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
+      - name: Match packageManager to the installed Node-20-compatible pnpm
+        if: ${{ matrix.node-version == 20 }}
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.packageManager = JSON.parse(fs.readFileSync('.github/ci-pnpm10.json', 'utf8')).packageManager;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.browser }}
       - name: Run platform contract suite

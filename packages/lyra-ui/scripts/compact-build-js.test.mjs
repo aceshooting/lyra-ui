@@ -24,4 +24,19 @@ try {
   await rm(fixture, { recursive: true, force: true });
 }
 
+// A type-only source file (all `import type`/`export type`) compiles to a bare `export {};`
+// module marker -- no runtime statements survive emission. esbuild's printer drops that empty
+// export clause entirely when asked to minify whitespace, since it exports nothing; left alone,
+// that silently turns a real ES module into a 0-byte non-module file. Consumers importing it
+// (e.g. `import type {} from '@aceshooting/lyra-ui/custom-elements-jsx'`) still need a module.
+const markerFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-js-marker-'));
+try {
+  await writeFile(path.join(markerFixture, 'types-only.js'), 'export {};\n');
+  await compactBuildJavaScript(markerFixture);
+  const output = await readFile(path.join(markerFixture, 'types-only.js'), 'utf8');
+  assert.equal(output, 'export {};\n');
+} finally {
+  await rm(markerFixture, { recursive: true, force: true });
+}
+
 console.log('published JavaScript compaction test passed.');

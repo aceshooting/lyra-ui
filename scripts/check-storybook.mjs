@@ -494,18 +494,17 @@ async function main() {
         checkboxColor: checkboxLabel ? getComputedStyle(checkboxLabel).color : '',
       };
     });
-    // The heading is Storybook's own React chrome, so its colour is pinned exactly. The checkbox
-    // label is a shipped component reading the production theme, and since 8.0.0 Storybook renders
-    // that theme instead of a hand-maintained preview palette -- so the two are no longer the same
-    // colour by construction (#f2f2f2 from theme.css vs Storybook's #f0f6fc), and pinning them to
-    // each other would only re-assert the palette that was deliberately removed. What this check is
-    // named for is legibility, so measure that: the component's text must actually carry WCAG AA
-    // contrast against the surface it is drawn on.
+    // The heading is Storybook's own React chrome, so its colour is pinned exactly. Since 8.0.0
+    // Storybook's chrome reads the same production theme tokens as the checkbox label (see
+    // .storybook/theme-contract.js), so the two currently resolve to the same colour -- but that's
+    // an implementation detail of the checkbox's own token wiring, not something this check should
+    // assume. What this check is named for is legibility, so measure that directly: the component's
+    // text must actually carry WCAG AA contrast against the surface it is drawn on.
     const checkboxContrast = contrastRatio(darkDocsTheme.checkboxColor, darkDocsTheme.wrapperBackground);
     if (
       darkDocsTheme.dataset !== 'dark' ||
-      darkDocsTheme.wrapperBackground !== 'rgb(13, 17, 23)' ||
-      darkDocsTheme.headingColor !== 'rgb(240, 246, 252)' ||
+      darkDocsTheme.wrapperBackground !== 'rgb(26, 26, 26)' ||
+      darkDocsTheme.headingColor !== 'rgb(242, 242, 242)' ||
       !(checkboxContrast >= 4.5)
     ) {
       throw new Error(

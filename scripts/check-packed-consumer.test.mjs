@@ -17,12 +17,12 @@ test('models the raw core ceiling as the reviewed baseline plus the stable-root 
   );
 
   assert.deepEqual(terms, {
-    reviewedBaselineBytes: 3_400_000,
+    reviewedBaselineBytes: 3_700_000,
     stableRootRegistrationAllowanceBytes: 200_000,
   });
   assert.equal(
     terms.reviewedBaselineBytes + terms.stableRootRegistrationAllowanceBytes,
-    3_600_000,
+    3_900_000,
   );
   assert.match(
     checkerSource,

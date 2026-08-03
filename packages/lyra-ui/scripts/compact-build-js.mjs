@@ -41,8 +41,14 @@ export async function compactBuildJavaScript(directory) {
       target: 'es2022',
     });
     if (result.map) throw new Error(`${file}: JavaScript compaction unexpectedly produced a map`);
-    afterBytes += Buffer.byteLength(result.code);
-    await writeFile(file, result.code);
+    // A type-only source file (all `import type`/`export type`) compiles to a bare `export {};`
+    // module marker with no runtime statements. esbuild's printer drops that empty export clause
+    // entirely once asked to minify whitespace, since it exports nothing -- silently turning a
+    // real (if inert) ES module into a 0-byte non-module file. Restore the marker whenever a
+    // non-empty source would otherwise compact to nothing.
+    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : result.code;
+    afterBytes += Buffer.byteLength(code);
+    await writeFile(file, code);
   }));
   return { files: files.length, beforeBytes, afterBytes };
 }
