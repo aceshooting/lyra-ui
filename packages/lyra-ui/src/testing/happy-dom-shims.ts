@@ -10,6 +10,9 @@
  * as a no-op -- `AnchoredValidityController` (the shared validity-refresh controller every
  * form-associated component uses) calls `internals.setValidity()` on every update, which would
  * otherwise throw the moment any of those components' `value` changes, not just at construction.
+ * `states` is a real `Set` -- several controls (e.g. `lr-input`) call
+ * `internals.states.add('blank')`/`.delete('blank')` on every update to drive a custom-state
+ * pseudo-class, which would otherwise throw on `add` of `undefined`.
  *
  * `attachInternals()` is specified on the `HTMLElement` interface (not `Element`), and every
  * `lr-*` component is an `HTMLElement` subclass (via `LitElement`), so this patches
@@ -31,6 +34,7 @@ interface StubValidityState {
 interface StubElementInternals {
   form: HTMLFormElement | null;
   labels: NodeList;
+  states: Set<string>;
   validity: StubValidityState;
   validationMessage: string;
   willValidate: boolean;
@@ -44,6 +48,9 @@ function createStubInternals(): StubElementInternals {
   return {
     form: null,
     labels: document.createDocumentFragment().querySelectorAll('label'),
+    // `CustomStateSet` is Set-like (add/delete/has), which is the entire surface this library's
+    // form-associated components call -- a real Set covers it without reimplementing the DOM type.
+    states: new Set<string>(),
     validity: { valid: true },
     validationMessage: '',
     willValidate: true,

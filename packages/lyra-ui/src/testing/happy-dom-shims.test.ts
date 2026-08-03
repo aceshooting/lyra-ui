@@ -48,4 +48,13 @@ describe('installHappyDomFormAssociatedShims', () => {
     expect(() => stub.setValidity({ customError: true }, 'message')).to.not.throw();
     expect(() => stub.setValidity({ customError: true }, 'message', div)).to.not.throw();
   });
+
+  it('installs a stub whose states supports the CustomStateSet calls form-associated components make', () => {
+    const div = document.createElement('div');
+    const stub = installStubInternalsForTest(div);
+    expect(() => stub.states.add('blank')).to.not.throw();
+    expect(stub.states.has('blank')).to.be.true;
+    expect(() => stub.states.delete('blank')).to.not.throw();
+    expect(stub.states.has('blank')).to.be.false;
+  });
 });
