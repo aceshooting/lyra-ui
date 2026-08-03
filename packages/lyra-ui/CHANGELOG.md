@@ -174,6 +174,8 @@
   | `<lr-tabs>`                       | `<lr-tab-group>`    | plus `lr-tabs-change` → `lr-tab-show`/`lr-tab-hide`, and `--lr-tabs-*` → `--lr-tab-group-*` |
   | `<lr-tree-node>`                  | `<lr-tree-item>`    |                                                                                             |
   | `<lr-slider>` `fill` part         | `indicator` part    |                                                                                             |
+  | `<lr-callout variant="danger">` `[part="base"]` `role="alert"` | shared live-region sink | announcements now flow through the shared light-DOM live-region sink instead; `[part="base"]` carries `role="group"` (only when the host has an accessible label) or no role at all |
+  | `<lr-spinner>` `part="base"`      | `part="base spinner"` | an exact-match `[part="base"]` attribute selector no longer matches; `::part(base)` is unaffected. Also gained `role="progressbar"` |
 
   The JavaScript-only string property `.autoCorrect` on `lr-input`, `lr-textarea`, and
   `lr-combobox` is now the upstream-compatible `.autocorrect` IDL, which always reads as boolean.
