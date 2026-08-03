@@ -12688,49 +12688,49 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 553,
+              "line": 619,
               "test": "is accessible with only a host aria-label attribute set (no label/heading props)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 652,
+              "line": 718,
               "test": "is accessible while open with a label prop and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 663,
+              "line": 729,
               "test": "is accessible while open with a slotted heading",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 671,
+              "line": 737,
               "test": "is accessible while open with a heading, closable close button, and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1274,
+              "line": 1340,
               "test": "is accessible with the label and header-actions slots populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1289,
+              "line": 1355,
               "test": "keeps accessible-only naming separate from the visible label",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 647,
+              "line": 713,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -12761,7 +12761,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1153,
+              "line": 1219,
               "kind": "reduced-motion test signal"
             }
           ]
