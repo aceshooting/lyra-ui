@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './dialog.js';
+import '../../forms/input/input.js';
 import type { LyraDialog } from './dialog.js';
 import { styles } from './dialog.styles.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
@@ -9,6 +10,71 @@ it('includes safe-area insets in the fixed dialog frame', () => {
   expect(styles.cssText).to.include('var(--lr-safe-area-bottom)');
   expect(styles.cssText).to.include('var(--lr-safe-area-inline-start)');
   expect(styles.cssText).to.include('var(--lr-safe-area-inline-end)');
+});
+
+it('never schedules a post-update reschedule on a disabled+required lr-input inside an autofocus-opened dialog', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: a lyra-admin report claimed that opening a
+  // real <lr-dialog> whose content includes a disabled+required <lr-input> (e.g. a username field
+  // locked once a record exists) logs a dev-mode-only Lit warning -- "Element lr-input scheduled
+  // an update ... after an update completed" (https://lit.dev/msg/change-in-update) -- meaning
+  // some code path would write a reactive property on lr-input from inside/after its own
+  // updated()/hostUpdated() during the dialog's autofocus/overlay-activation sequence.
+  //
+  // Investigation (see the task write-up) could not reproduce this: Lit only issues this warning
+  // when requestUpdate() is called SYNCHRONOUSLY from within the same element's own controllers'
+  // hostUpdated() or its updated() (checked immediately after those return, inside
+  // ReactiveElement._$didUpdate() -- ../../../../node_modules/@lit/reactive-element's
+  // development build). Every write in lr-input's own updated()/hostUpdated() chain
+  // (LyraInput.updated(), FormAssociatedElement.updated(), AnchoredValidityController.hostUpdated
+  // (deferred via queueMicrotask), SlotPresenceController.hostUpdated, ExternalLabelController's
+  // hostUpdated) either touches `internals`/custom states/native DOM only, or is explicitly
+  // deferred past the synchronous window -- none calls `this.requestUpdate()` (or sets a plain
+  // reactive property) synchronously while barred/disabled. A scenario matrix (open-from-markup,
+  // async show(), disabled+required toggled dynamically from an `lr-show` listener, a real
+  // <fieldset disabled> ancestor, readonly combined, multiple sibling inputs, a light-DOM heading,
+  // footer buttons) reproduced nothing on Chromium, Firefox, or WebKit, and instrumenting
+  // ReactiveElement's own requestUpdate/_$didUpdate confirmed zero reentrant calls in any of them.
+  // Kept as a permanent regression guard for this specific shape in case a future change
+  // reintroduces a synchronous write into that chain.
+  const warnings: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+  let el: LyraDialog | undefined;
+  try {
+    el = (await fixture(html`
+      <lr-dialog label="Edit user" open>
+        <lr-input
+          label="Username"
+          value="ada"
+          disabled
+          required
+          autofocus
+        ></lr-input>
+      </lr-dialog>
+    `)) as LyraDialog;
+    await el.updateComplete;
+    // Flush the queued microtasks/frames the overlay manager and AnchoredValidityController use
+    // for deferred focus/anchor/registration work, so any reschedule triggered by them has had a
+    // chance to fire before the assertion below.
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  } finally {
+    console.warn = originalWarn;
+    el?.close('api');
+  }
+
+  const scheduledUpdateWarnings = warnings.filter((args) =>
+    args.some((arg) => typeof arg === 'string' && arg.includes('scheduled an update')),
+  );
+  expect(
+    scheduledUpdateWarnings,
+    `expected no "scheduled an update after an update completed" warning, got: ${JSON.stringify(scheduledUpdateWarnings)}`,
+  ).to.have.lengthOf(0);
 });
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
