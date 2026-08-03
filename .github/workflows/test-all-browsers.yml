@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       browsers:
-        description: Comma-separated browser names (default: chromium,firefox,chrome,edge,safari)
+        description: "Comma-separated browser names (default: chromium,firefox,chrome,edge,safari)"
         required: false
         default: chromium,firefox,chrome,edge,safari
         type: string
