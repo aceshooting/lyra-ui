@@ -139,8 +139,17 @@ const mouseCommandPlugin = {
   },
 };
 
-const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
-if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
+const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
+const browserLaunchers = {
+  chromium: { product: 'chromium' },
+  chrome: { product: 'chromium', launchOptions: { channel: 'chrome' } },
+  edge: { product: 'chromium', launchOptions: { channel: 'msedge' } },
+  safari: { product: 'webkit' },
+  firefox: { product: 'firefox' },
+  webkit: { product: 'webkit' },
+};
+const launcherConfig = browserLaunchers[browserProduct];
+if (!launcherConfig) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
 }
 
@@ -171,7 +180,7 @@ const testRunnerHtml = (testRunnerImport) => `
 export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
-  browsers: [playwrightLauncher({ product: browserProduct })],
+  browsers: [playwrightLauncher(launcherConfig)],
   // The runner otherwise opens half the host's reported CPU count in browser pages. Coverage
   // instrumentation makes each page import most of the source graph, so high-core hosts can
   // exhaust Chromium's request/process resources before tests start. Keep ordinary and platform

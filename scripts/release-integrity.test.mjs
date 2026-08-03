@@ -78,10 +78,11 @@ test('requires one successful CI workflow run for the exact release commit and e
     message: `CI run 42 passed all ${REQUIRED_CI_JOBS.length} required jobs for ${sha}.`,
   });
 
-  const missingWebKit = successfulJobs().filter((job) => job.name !== 'webkit / Node 22');
-  assert.deepEqual(evaluateCiRun({ run, jobs: missingWebKit, sha }), {
+  const requiredSampleJob = REQUIRED_CI_JOBS[REQUIRED_CI_JOBS.length - 1];
+  const missingRequiredJob = successfulJobs().filter((job) => job.name !== requiredSampleJob);
+  assert.deepEqual(evaluateCiRun({ run, jobs: missingRequiredJob, sha }), {
     state: 'failed',
-    message: "CI run 42 is missing required job 'webkit / Node 22'.",
+    message: `CI run 42 is missing required job '${requiredSampleJob}'.`,
   });
   assert.equal(
     evaluateCiRun({ run: { ...run, head_sha: 'f'.repeat(40) }, jobs: successfulJobs(), sha }).state,

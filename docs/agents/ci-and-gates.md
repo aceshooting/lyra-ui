@@ -73,17 +73,26 @@ the PR checks list tells you which of these to reproduce locally:
    generated plugin references and both tracked skill archives; `pnpm skill:check`
    (plugin/marketplace manifest consistency, not archive freshness); `pnpm
    storybook:check-theme`.
-3. **`build-and-coverage`** — the longest job; coverage instrumentation runs one browser file at a
-   time to stay deterministic on high-core hosts. It remains one job because everything in it is
-   sequentially dist-dependent. After install and Playwright
-   Chromium setup, its exact command order is: `pnpm build`; the built component-quality evidence
-   check; `pnpm --filter @aceshooting/lyra-ui test:ssr`; `pnpm --filter @aceshooting/lyra-ui
-   test:hydration`; `pnpm --filter @aceshooting/lyra-ui check:bundle-size`; non-fatal `pnpm --filter
-   @aceshooting/lyra-ui codecov:bundle`; `pnpm --filter @aceshooting/lyra-ui test:coverage`;
-   `pnpm --filter @aceshooting/lyra-ui check:coverage-floors`; non-fatal Codecov coverage and
-   test-result upload actions. This is the one time lyra-ui's own Chromium suite runs; a separate
-   `pnpm test` would repeat the same files without coverage. Its `pnpm build` step also runs
-   `check:build-artifacts`, which is chained inside the package's `build` script.
+3. **`build-and-coverage`** — this is still the critical gate, but it is now a split matrix of
+   four dependent lanes plus a final aggregator:
+   - `build_and_coverage_build` (`pnpm build`) uploads `packages/lyra-ui/dist/` as artifact.
+   - `build_and_coverage_quality` (`pnpm --filter @aceshooting/lyra-ui check:component-quality:built`,
+     `pnpm --filter @aceshooting/lyra-ui check:bundle-size`, `pnpm --filter
+     @aceshooting/lyra-ui codecov:bundle`) consumes the shared dist.
+   - `build_and_coverage_ssr` (`pnpm --filter @aceshooting/lyra-ui test:ssr`) consumes the shared
+     dist.
+   - `build_and_coverage_hydration` (`pnpm --filter @aceshooting/lyra-ui test:hydration`) consumes
+     the shared dist.
+   - `build_and_coverage_coverage` (`pnpm --filter @aceshooting/lyra-ui test:coverage`,
+     `pnpm --filter @aceshooting/lyra-ui check:coverage-floors`, non-fatal Codecov uploads)
+     consumes the shared dist.
+
+   Coverage instrumentation still runs one browser file at a time for determinism on high-core hosts.
+   This remains the coverage behavior that gates `check:coverage-floors`; only the scheduling changed to
+   free the long path from unrelated dist-dependent work. This is the one time lyra-ui's own Chromium
+   suite runs; a separate `pnpm test` would repeat the same files without coverage. `build_and_coverage_build`'s
+   `pnpm build` step still runs `check:build-artifacts`, which is chained inside the package's
+   `build` script.
 4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
    else `build-and-coverage` needs, so it gets its own `pnpm build` rather than waiting on that
    job. It then runs `pnpm --filter @aceshooting/lyra-ui pack --dry-run`, verifies
@@ -116,14 +125,20 @@ Sharding happens after an optional `--filter` and at capture-axis granularity, n
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
 at most one; an ordinary unsharded local run still exercises all 253 captures.
 
-A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`)
-against Firefox and WebKit on Node 20 and Node 22. Every leg sets
-`npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, installs
-its browser, sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1`, then runs `pnpm --filter
-@aceshooting/lyra-ui test:platform`. Node 20 uses the pnpm version pinned in
-`.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22 uses `package.json#packageManager`
-(`pnpm@11.18.0`). The package's supported engine remains `node >=20`; the primary six jobs use
-Node 22, while this matrix proves the Node 20 browser contract explicitly.
+A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
+Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Every leg sets
+`npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, installs its
+playwright artifact, sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1`, then runs `pnpm --filter
+@aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as Chromium-channel
+jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses `channel: msedge`).
+Firefox Node 22 is split into eight deterministic round-robin shards (`WTR_SHARD_TOTAL=8`) so each CI
+leg stays under the same long-test budget; Chromium Node 22 is split into four shards (`WTR_SHARD_TOTAL=4`);
+Chrome and Edge each run two shards (`WTR_SHARD_TOTAL=2`) on Chromium-channel `chrome`/`msedge`;
+Safari on Node 22 runs two shards while Node 20 Safari and Node 20 Firefox remain single-shard.
+Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22 uses
+`package.json#packageManager` (`pnpm@11.18.0`). The package's supported engine remains `node >=20`; this
+expanded matrix uses 20 legs total (18 on Node 22, 2 on Node 20) and is capped at 13-way parallelism
+inside GitHub Actions so the whole workflow stays near the public-repo 20-job throughput limit.
 
 ## Scheduled full Firefox/WebKit suite
 

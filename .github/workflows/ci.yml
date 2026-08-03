@@ -75,12 +75,14 @@ jobs:
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 
-  # The one time lyra-ui's own Chromium suite actually runs (a separate `pnpm test` step would
-  # just re-run the identical file set with coverage instrumentation off). This is the longest
-  # single job; coverage runs one instrumented browser file at a time to avoid exhausting
-  # high-core runners. Everything it needs (build, bundle-size, coverage) is sequential and
-  # dist-dependent, so it stays one job rather than splitting further.
-  build-and-coverage:
+  # Lyra's own Chromium suite and associated dist checks are now split into independent,
+  # dependency-aware jobs to saturate GitHub-hosted runner parallelism:
+  # - build publishes dist once for all other phases
+  # - component-quality, ssr, hydration, and coverage all consume that dist independently
+  # - a final aggregator reports a single `build-and-coverage` check status
+  #   for branch protection while preserving all current coverage gating behavior.
+  build_and_coverage_build:
+    name: build-and-coverage / build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,18 +92,34 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
       # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
       - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
+          retention-days: 1
+
+  build_and_coverage_quality:
+    name: build-and-coverage / quality
+    runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
       # Recompute the inventory's per-component standalone gzip evidence from this exact build.
       - run: pnpm --filter @aceshooting/lyra-ui check:component-quality:built
-      # Proves root + every granular import under plain Node, renders the complete declared SSR
-      # matrix, then loads a real DSD response in Chromium and rejects hydration warnings,
-      # replaced server nodes, or broken client-render fallbacks.
-      - run: pnpm --filter @aceshooting/lyra-ui test:ssr
-      - run: pnpm --filter @aceshooting/lyra-ui test:hydration
-      # Needs dist/ from the build step above: measures the library's own esbuild-bundled gzip
+      # Needs dist/ from the build job above: measures the library's own esbuild-bundled gzip
       # weight (optional peers externalized) against the budgets in
       # packages/lyra-ui/scripts/bundle-budgets.json, and re-measures every per-component entry so
       # the sizes the README badges publish from packages/lyra-ui/scripts/bundle-stats.json cannot
@@ -115,6 +133,68 @@ jobs:
         run: pnpm --filter @aceshooting/lyra-ui codecov:bundle
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build_and_coverage_ssr:
+    name: build-and-coverage / ssr
+    runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
+      # Proves root + every granular import under plain Node, renders the complete declared SSR
+      # matrix, then loads a real DSD response in Chromium and rejects hydration warnings,
+      # replaced server nodes, or broken client-render fallbacks.
+      - run: pnpm --filter @aceshooting/lyra-ui test:ssr
+
+  build_and_coverage_hydration:
+    name: build-and-coverage / hydration
+    runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
+      # Proves hydration behavior with the same built artifacts and strict Node/browser
+      # matrix assumptions as `test:ssr`.
+      - run: pnpm --filter @aceshooting/lyra-ui test:hydration
+
+  build_and_coverage_coverage:
+    name: build-and-coverage / coverage
+    runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
+      # Keep coverage + floor + report uploads in one runner to preserve current gate semantics.
+      # Coverage uses a complete browser sweep over the same file list as today.
       - run: pnpm --filter @aceshooting/lyra-ui test:coverage
       # The per-metric floors in packages/lyra-ui/scripts/coverage-floors.json are what
       # web-test-runner.config.js enforces on the run above. They only gate anything while they
@@ -146,6 +226,44 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build-and-coverage:
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - build_and_coverage_build
+      - build_and_coverage_quality
+      - build_and_coverage_ssr
+      - build_and_coverage_hydration
+      - build_and_coverage_coverage
+    steps:
+      - name: Aggregate build-and-coverage lanes
+        run: |
+          set -euo pipefail
+          failed=0
+          if [[ "${{ needs.build_and_coverage_build.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_build failed with status: ${{ needs.build_and_coverage_build.result }}"
+            failed=1
+          fi
+          if [[ "${{ needs.build_and_coverage_quality.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_quality failed with status: ${{ needs.build_and_coverage_quality.result }}"
+            failed=1
+          fi
+          if [[ "${{ needs.build_and_coverage_ssr.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_ssr failed with status: ${{ needs.build_and_coverage_ssr.result }}"
+            failed=1
+          fi
+          if [[ "${{ needs.build_and_coverage_hydration.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_hydration failed with status: ${{ needs.build_and_coverage_hydration.result }}"
+            failed=1
+          fi
+          if [[ "${{ needs.build_and_coverage_coverage.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_coverage failed with status: ${{ needs.build_and_coverage_coverage.result }}"
+            failed=1
+          fi
+          if [[ "$failed" -ne 0 ]]; then
+            exit 1
+          fi
 
   # Needs dist/ (the tarball's `files` list includes it) but not the Chromium test suite or the
   # docs build -- independent of build-and-coverage other than both running `pnpm build`.
@@ -280,12 +398,115 @@ jobs:
           fi
 
   platform-contracts:
-    name: ${{ matrix.browser }} / Node ${{ matrix.node-version }}
+    name: ${{ matrix.browser }} / Node ${{ matrix.node-version }} / shard ${{ matrix.shard_index }}/${{ matrix.shard_total }}
     strategy:
       fail-fast: false
+      # Keep matrix concurrency aligned with GitHub's free-tier public runner budget (20 total
+      # active jobs). In a normal push, six non-matrix jobs are already active while this matrix
+      # runs, so 14 parallel platform legs keeps this workflow near the 20-runner cap.
+      max-parallel: 14
       matrix:
-        browser: [firefox, webkit]
-        node-version: [20, 22]
+        include:
+          - browser: firefox
+            node-version: 20
+            shard_index: 1
+            shard_total: 1
+            install_browser: firefox
+          - browser: chromium
+            node-version: 22
+            shard_index: 1
+            shard_total: 4
+            install_browser: chromium
+          - browser: chromium
+            node-version: 22
+            shard_index: 2
+            shard_total: 4
+            install_browser: chromium
+          - browser: chromium
+            node-version: 22
+            shard_index: 3
+            shard_total: 4
+            install_browser: chromium
+          - browser: chromium
+            node-version: 22
+            shard_index: 4
+            shard_total: 4
+            install_browser: chromium
+          - browser: chrome
+            node-version: 22
+            shard_index: 1
+            shard_total: 2
+            install_browser: chrome
+          - browser: chrome
+            node-version: 22
+            shard_index: 2
+            shard_total: 2
+            install_browser: chrome
+          - browser: edge
+            node-version: 22
+            shard_index: 1
+            shard_total: 2
+            install_browser: msedge
+          - browser: edge
+            node-version: 22
+            shard_index: 2
+            shard_total: 2
+            install_browser: msedge
+          - browser: firefox
+            node-version: 22
+            shard_index: 1
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 2
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 3
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 4
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 5
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 6
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 7
+            shard_total: 8
+            install_browser: firefox
+          - browser: firefox
+            node-version: 22
+            shard_index: 8
+            shard_total: 8
+            install_browser: firefox
+          - browser: safari
+            node-version: 20
+            shard_index: 1
+            shard_total: 1
+            install_browser: webkit
+          - browser: safari
+            node-version: 22
+            shard_index: 1
+            shard_total: 2
+            install_browser: webkit
+          - browser: safari
+            node-version: 22
+            shard_index: 2
+            shard_total: 2
+            install_browser: webkit
     runs-on: ubuntu-latest
     env:
       # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
@@ -325,14 +546,17 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.browser }}
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.install_browser }}
       - name: Run platform contract suite
         env:
           WTR_BROWSER: ${{ matrix.browser }}
+          WTR_TEST_SUITE: platform
+          WTR_SHARD_INDEX: ${{ matrix.shard_index }}
+          WTR_SHARD_TOTAL: ${{ matrix.shard_total }}
           WTR_STRICT_CONSOLE: '1'
-        run: pnpm --filter @aceshooting/lyra-ui test:platform
+        run: pnpm --filter @aceshooting/lyra-ui test:platform-shard
       # The package supports Node 20. Exercise the real tarball/install/import/type/style bundle
       # matrix once at that floor; the dedicated packed-consumer job covers Node 22.
       - name: Run packed consumer at the supported Node floor
-        if: ${{ matrix.browser == 'firefox' && matrix.node-version == 20 }}
+        if: ${{ matrix.browser == 'firefox' && matrix.node-version == 20 && matrix.shard_index == 1 }}
         run: pnpm build && pnpm check:packed-consumer

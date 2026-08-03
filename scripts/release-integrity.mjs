@@ -8,6 +8,22 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
+const REQUIRED_PLATFORM_JOB_MATRIX = Object.freeze([
+  { browser: 'firefox', nodeVersion: 20, shards: [[1, 1]] },
+  { browser: 'chromium', nodeVersion: 22, shards: [[1, 4], [2, 4], [3, 4], [4, 4]] },
+  { browser: 'chrome', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
+  { browser: 'edge', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
+  { browser: 'firefox', nodeVersion: 22, shards: [[1, 8], [2, 8], [3, 8], [4, 8], [5, 8], [6, 8], [7, 8], [8, 8]] },
+  { browser: 'safari', nodeVersion: 20, shards: [[1, 1]] },
+  { browser: 'safari', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
+]);
+
+const REQUIRED_PLATFORM_CI_JOBS = Object.freeze(
+  REQUIRED_PLATFORM_JOB_MATRIX.flatMap(({ browser, nodeVersion, shards }) =>
+    shards.map(([index, total]) => `${browser} / Node ${nodeVersion} / shard ${index}/${total}`),
+  ),
+);
+
 export const REQUIRED_CI_JOBS = Object.freeze([
   'lint',
   'static-checks',
@@ -15,10 +31,7 @@ export const REQUIRED_CI_JOBS = Object.freeze([
   'packed-consumer',
   'docs-and-storybook',
   'visual-regression',
-  'firefox / Node 20',
-  'firefox / Node 22',
-  'webkit / Node 20',
-  'webkit / Node 22',
+  ...REQUIRED_PLATFORM_CI_JOBS,
 ]);
 
 export const REQUIRED_FULL_ENGINE_JOBS = Object.freeze(

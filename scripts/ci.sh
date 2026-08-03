@@ -7,9 +7,9 @@
 #   ./scripts/ci.sh                 # aggregate the six primary Node 22/Chromium CI jobs
 #   CI_SH_SKIP_INSTALL=1 ./scripts/ci.sh   # skip primary install + Chromium download
 #                                          # (platform modes still install their own engines)
-#   ./scripts/ci.sh --platform      # ALSO run the platform-contracts suite locally
-#                                   # (firefox + webkit; browsers are downloaded on demand)
-#   ./scripts/ci.sh --platform-matrix # primary jobs plus CI's Node 20/22 x Firefox/WebKit matrix
+#   ./scripts/ci.sh --platform      # ALSO run the platform-contracts subset locally
+#                                   # (firefox + chromium + chrome + edge + safari; browsers downloaded on demand)
+#   ./scripts/ci.sh --platform-matrix # primary jobs plus CI's Node 20/22 browser matrix
 #                                   # requires Node 20/22 and pnpm 10/11 locally
 #   ./scripts/ci.sh --all           # alias for --platform-matrix
 #   ./scripts/ci.sh --keep-going    # (-k) don't abort at the first STALE GENERATED ARTIFACT;
@@ -186,12 +186,17 @@ run_platform_matrix_leg() {
   local node_bin="$2"
   local pnpm_bin="$3"
   local browser="$4"
-  step "platform contracts: Node $node_version / $browser"
+  local shard_index="$5"
+  local shard_total="$6"
+  local install_browser="$7"
+  step "platform contracts: Node $node_version / $browser / shard $shard_index/$shard_total"
   run_with_toolchain "$node_bin" "$pnpm_bin" install --frozen-lockfile || return
-  run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser" || return
-  WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
-    run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform || return
-  if [[ "$node_version" == "20" && "$browser" == "firefox" ]]; then
+  run_with_toolchain "$node_bin" "$pnpm_bin" \
+    --filter @aceshooting/lyra-ui exec playwright install --with-deps "$install_browser" || return
+  WTR_BROWSER="$browser" WTR_TEST_SUITE=platform WTR_SHARD_INDEX="$shard_index" WTR_SHARD_TOTAL="$shard_total" \
+    WTR_STRICT_CONSOLE=1 \
+    run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform-shard || return
+  if [[ "$node_version" == "20" && "$browser" == "firefox" && "$shard_index" == "1" && "$shard_total" == "1" ]]; then
     step "packed consumer: Node 20"
     run_with_toolchain "$node_bin" "$pnpm_bin" build || return
     run_with_toolchain "$node_bin" "$pnpm_bin" check:packed-consumer || return
@@ -331,10 +336,15 @@ step "public API semver gate"
 pnpm --filter @aceshooting/lyra-ui check:public-api
 
 if [[ "$RUN_PLATFORM" == "1" ]]; then
-  for browser in firefox webkit; do
+  for browser in firefox chromium chrome edge safari; do
+    install_browser="$browser"
+    case "$browser" in
+      edge) install_browser=msedge ;;
+      safari) install_browser=webkit ;;
+    esac
     step "platform contracts: $browser"
-    pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps "$browser"
-    WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 pnpm --filter @aceshooting/lyra-ui test:platform
+    pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps "$install_browser"
+    WTR_BROWSER="$browser" WTR_TEST_SUITE=platform WTR_STRICT_CONSOLE=1 pnpm --filter @aceshooting/lyra-ui test:platform
   done
 fi
 
@@ -361,11 +371,46 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
       exit 1
     fi
 
-    for browser in firefox webkit; do
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" "$browser"; then
+    if [[ "$node_version" == "20" ]]; then
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox 1 1 firefox; then
         platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s\033[0m\n' "$node_version" "$browser" >&2
+        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "firefox" >&2
       fi
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari 1 1 webkit; then
+        platform_failures=$((platform_failures + 1))
+        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "safari" >&2
+      fi
+    else
+      for shard in 1 2 3 4; do
+        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chromium "$shard" 4 chromium; then
+          platform_failures=$((platform_failures + 1))
+          printf '\033[31mFAILED: Node %s / %s / shard %s/4\033[0m\n' "$node_version" "chromium" "$shard" >&2
+        fi
+      done
+      for shard in 1 2; do
+        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chrome "$shard" 2 chrome; then
+          platform_failures=$((platform_failures + 1))
+          printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "chrome" "$shard" >&2
+        fi
+      done
+      for shard in 1 2; do
+        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" edge "$shard" 2 msedge; then
+          platform_failures=$((platform_failures + 1))
+          printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "edge" "$shard" >&2
+        fi
+      done
+      for shard in 1 2 3 4 5 6 7 8; do
+        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox "$shard" 8 firefox; then
+          platform_failures=$((platform_failures + 1))
+          printf '\033[31mFAILED: Node %s / %s / shard %s/8\033[0m\n' "$node_version" "firefox" "$shard" >&2
+        fi
+      done
+      for shard in 1 2; do
+        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari "$shard" 2 webkit; then
+          platform_failures=$((platform_failures + 1))
+          printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "safari" "$shard" >&2
+        fi
+      done
     done
   done
   if ((platform_failures > 0)); then

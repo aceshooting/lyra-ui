@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -25,6 +25,53 @@ async function collectTestFiles(directory, root, files) {
       files.push(toPosixPath(relative(root, absolutePath)));
     }
   }
+}
+
+function parseTestFileList(environment) {
+  const source = environment.WTR_TEST_FILES;
+  if (!source) {
+    return null;
+  }
+  const normalized = String(source).trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(normalized);
+    if (Array.isArray(parsed)) {
+      return parsed.map((entry) => String(entry).trim()).filter(Boolean);
+    }
+  } catch {
+    // Fallback to whitespace-delimited test file paths.
+  }
+  return normalized.split(/\s+/).filter(Boolean);
+}
+
+async function collectPlatformTestFiles(root = packageDirectory) {
+  const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+  const platformScript = packageJson?.scripts?.['test:platform'];
+  if (typeof platformScript !== 'string') {
+    throw new Error('No test:platform script found in package.json');
+  }
+  const normalized = platformScript.trim().replace(/^\s*wtr\s+/, '').trim();
+  if (!normalized) {
+    return [];
+  }
+  return normalized.split(/\s+/).filter(Boolean);
+}
+
+async function collectTestFilesForShard(root = packageDirectory, environment = process.env) {
+  const explicit = parseTestFileList(environment);
+  if (explicit) {
+    return explicit;
+  }
+
+  const suite = String(environment.WTR_TEST_SUITE ?? '').trim().toLowerCase();
+  if (suite === 'platform') {
+    return collectPlatformTestFiles(root);
+  }
+
+  return discoverTestFiles(root);
 }
 
 /** Returns every TypeScript test below src/ in deterministic lexical order. */
@@ -74,16 +121,16 @@ export function shardTestFiles(testFiles, shardIndex, shardTotal) {
 export function runShard(testFiles, { shardIndex, shardTotal }, environment = process.env) {
   const selectedFiles = shardTestFiles(testFiles, shardIndex, shardTotal);
   if (testFiles.length === 0) {
-    throw new Error('No src/**/*.test.ts files were discovered.');
+    throw new Error('No test files were discovered.');
   }
   if (selectedFiles.length === 0) {
     throw new Error(
-      `Full-engine shard ${shardIndex}/${shardTotal} is empty for ${testFiles.length} test files.`,
+      `Test shard ${shardIndex}/${shardTotal} is empty for ${testFiles.length} test files.`,
     );
   }
 
   console.log(
-    `Full-engine shard ${shardIndex}/${shardTotal}: ` +
+    `Test shard ${shardIndex}/${shardTotal}: ` +
       `${selectedFiles.length} of ${testFiles.length} sorted test files.`,
   );
   for (const file of selectedFiles) console.log(`  ${file}`);
@@ -103,7 +150,7 @@ export function runShard(testFiles, { shardIndex, shardTotal }, environment = pr
 
 async function main() {
   const configuration = readShardConfiguration();
-  const testFiles = await discoverTestFiles();
+  const testFiles = await collectTestFilesForShard();
   process.exitCode = runShard(testFiles, configuration);
 }
 
