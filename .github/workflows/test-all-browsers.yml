@@ -8,10 +8,16 @@ on:
         required: false
         default: chromium,firefox,chrome,edge,safari
         type: string
+      # Defaults to true: this job runs on ONE ubuntu-latest runner (no matrix, unlike
+      # full-engine.yml's per-browser/per-shard jobs), and all 5 browsers' full test suites
+      # running their own dev servers concurrently on a single small VM collide on ports
+      # (EADDRINUSE) and starve each other into spurious 30-120s timeouts. Serial keeps each
+      # lane's dev server and browser process alone on the runner; only override to false if
+      # invoking with a runner known to have the headroom for true parallelism.
       serial:
         description: Run browser lanes one-by-one inside the script
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
