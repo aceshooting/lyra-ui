@@ -138,14 +138,29 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       const span = list.shadowRoot!.querySelector('[part="text-layer"] span') as HTMLElement;
       const range = document.createRange();
       range.selectNodeContents(span);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
-      const eventPromise = oneEvent(el, 'lr-text-select');
-      el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-      const detail = (await eventPromise).detail;
-      expect(detail.anchor?.kind).to.equal('text-quote');
-      selection.removeAllRanges();
+      // WebKit silently drops a real `Selection.addRange()` for a range inside a shadow tree
+      // (`rangeCount` stays 0), so this stubs `window.getSelection()` instead -- the same pattern
+      // `pdf-viewer.test.ts`'s own text-selection tests already use for this exact reason.
+      const originalGetSelection = window.getSelection;
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof window.getSelection;
+      try {
+        const eventPromise = oneEvent(el, 'lr-text-select');
+        el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        const detail = (await eventPromise).detail;
+        expect(detail.anchor?.kind).to.equal('text-quote');
+      } finally {
+        window.getSelection = originalGetSelection;
+      }
     } finally {
       window.fetch = originalFetch;
     }

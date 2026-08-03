@@ -8,8 +8,15 @@ function part(root: ShadowRoot, name: string): HTMLElement {
   return root.querySelector(`[part~="${name}"]`) as HTMLElement;
 }
 
+// `forced-color-adjust` is a Windows Forced Colors Mode integration point; this WebKit build
+// doesn't implement it at all (`CSS.supports('forced-color-adjust', 'none')` is false), so the
+// property is absent from every computed style rather than reflecting the CSS the components
+// set. Skip rather than fail, matching the `supportsCustomStates` pattern elsewhere.
+const supportsForcedColorAdjust = CSS.supports('forced-color-adjust', 'none');
+
 describe('intrinsic color surfaces in forced colors', () => {
-  it('preserves color-picker pixels without opting surrounding chrome out of system colors', async () => {
+  it('preserves color-picker pixels without opting surrounding chrome out of system colors', async function () {
+    if (!supportsForcedColorAdjust) this.skip();
     const el = await fixture<LyraColorPicker>(html`
       <lr-color-picker
         inline
@@ -36,7 +43,8 @@ describe('intrinsic color surfaces in forced colors', () => {
     );
   });
 
-  it('preserves swatch fills while its interactive button remains system-controlled', async () => {
+  it('preserves swatch fills while its interactive button remains system-controlled', async function () {
+    if (!supportsForcedColorAdjust) this.skip();
     const el = await fixture<LyraSwatchPicker>(html`
       <lr-swatch-picker
         .options=${[

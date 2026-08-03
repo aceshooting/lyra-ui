@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { tag } from './prefix.js';
@@ -71,7 +71,13 @@ it('defers light-DOM state to the update after a server-rendered first render', 
   expect(el.renders).to.equal(1);
   expect(el.shadowRoot?.textContent).to.contain('empty');
 
-  await el.updateComplete;
+  // The deferred seed's `requestUpdate()` runs inside a `.then()` chained off this same
+  // `updateComplete` promise -- it and this line are both consumers of that one already-settled
+  // promise, so re-reading `el.updateComplete` here resolves immediately without reflecting the
+  // new pending update, and how many further microtask ticks it needs before the second render is
+  // observable differs by engine (Firefox needs more than Chromium/WebKit). Wait on the actual
+  // condition instead of a fixed tick count.
+  await waitUntil(() => el.renders === 2);
   expect(el.renders).to.equal(2);
   expect(el.seeds).to.equal(1);
   expect(el.shadowRoot?.textContent).to.contain('slotted');
@@ -135,7 +141,9 @@ it('renders lr-thread-list data mode first and adopts slotted rows after hydrati
   await el.updateComplete;
   expect(el.shadowRoot?.querySelector('[part="base"]')?.getAttribute('role')).to.equal('region');
 
-  await el.updateComplete;
+  // See the equivalent wait above: the deferred hydration update can need more microtask ticks on
+  // some engines than others before it's actually observable, so wait on the actual DOM condition.
+  await waitUntil(() => !el.shadowRoot?.querySelector('[part="base"]')?.hasAttribute('role'));
   expect(el.shadowRoot?.querySelector('[part="base"]')?.hasAttribute('role')).to.be.false;
   expect(el.shadowRoot?.querySelector('[part="list"]')?.getAttribute('role')).to.equal('list');
 });
