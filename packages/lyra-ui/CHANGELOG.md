@@ -1,5 +1,160 @@
 # Changelog
 
+## 8.1.0
+
+### Minor Changes
+
+- 968d39c: Fix `<lr-locale-picker>`'s trigger button never rendering a flag for the currently selected
+  locale — `showFlags` only ever affected the open listbox's rows, so a consumer relying on the
+  default `show-flags` still saw a text-only trigger (e.g. "English") with no flag until the
+  dropdown was opened. The trigger now renders the same `<lr-flag>` (new `trigger-flag` part,
+  honoring a `country` catalog override exactly like the row does) that the matching row shows.
+
+### Patch Changes
+
+- b8028f8: Fix `DocumentAnchorTarget` (the shared mixin behind every viewer's `.scrollToAnchor()`) so a
+  throwing `applyAnchor()` reliably degrades to a resolved `false` and still emits
+  `lr-anchor-result:{found:false}`, instead of leaving the promise rejected and the documented
+  "always reports a definite result" contract broken. A previous attempt at this (a blanket
+  try/catch) was reverted because it made `lr-ebook-viewer`'s own override's localized
+  rendition-failure alert unreachable; `scrollToAnchor()` is now split into a thin public wrapper
+  carrying the safety net and a `performScrollToAnchor()` the mixin's own subclasses (currently only
+  `lr-ebook-viewer`) can call directly to bypass it and keep full control of their own catch.
+- a260188: `lr-archive-viewer` no longer binds an untrusted ZIP entry name as a DOM `id` (`renderEntry()` set
+  `id=${entry.name}`, a classic DOM-clobbering primitive — a crafted archive entry named e.g.
+  `"body"` or `"documentElement"` could shadow a global DOM property lookup for code elsewhere in the
+  page). Fragment-anchor resolution (`scrollToAnchor()`'s `'fragment'` kind) now matches the target
+  row by its rendered `textContent` instead of by `id`, and no longer delegates to the shared
+  `TextViewerTarget` base's generic `id`-based fragment resolution for this component.
+- 21ff77f: Harden three more components against untrusted values reaching a CSS sink unvalidated (same class
+  of fix as the earlier ANSI-color/`align`/`open-link` hardening):
+
+  - `lr-selection-toolbar` computed its floating position directly from a caller-supplied `rect`
+    (`DOMRectReadOnly | null`, but nothing enforces that shape at runtime) into a `styleMap()`-bound
+    custom property. A non-finite or non-numeric `left`/`top`/`width`/`bottom` could produce `NaNpx`
+    or, since `styleMap()`'s first commit serializes the whole `style` value as one string, break out
+    of the declaration. Both `coordinates()` and `updateToolbarPosition()` now coerce `rect` through a
+    shared `safeRect()` helper before use.
+  - `lr-data-grid`'s `columnStyle()` wrote a column's `width` into a `--column-authored-width` custom
+    property with no numeric guard, unlike the sibling `gridTemplate` getter's own `Number.isFinite`
+    check for the same field — inconsistent, and reachable by the same first-commit `styleMap()`
+    string-injection class of bug above.
+  - `lr-entity-card`'s data-driven type-badge color only rejected `;`/`{`/`}` structural characters,
+    not `url(...)`, unlike every other color sink in this library. Now routed through the shared
+    `sanitizeCssColor()` helper.
+
+- 38d4511: Fix `<lr-flow-minimap>` not respecting a paired `<lr-flow-canvas>`'s `locked` state. Click-to-center,
+  wheel-zoom, viewport-rectangle drag, and the viewport rectangle's keyboard controls now check the
+  linked canvas's `locked` property before calling `setViewport()`/`zoomIn()`/`zoomOut()`/`fit()`,
+  mirroring the same guard `<lr-flow-canvas>` already applies to each of its own gesture handlers.
+  Previously the minimap relied entirely on the paired canvas separately gating those calls itself;
+  a locked canvas now stays locked even if a `FlowCanvasLike` companion does not also guard its own
+  methods. The `FlowCanvasLike` structural interface gained a read-only `locked` accessor to support
+  this.
+- fbcf0ef: Fix `installHappyDomFormAssociatedShims()`'s stub `ElementInternals` missing a `states`
+  (`CustomStateSet`) property. Any form-associated component that calls
+  `this.internals.states.add()`/`.delete()`/`.has()` (added in 8.0's custom-state work, e.g.
+  `lr-input`'s `blank` state) threw on its very first update under the documented happy-dom test
+  setup.
+- 867f68c: `lr-icon` and `lr-icon-button` clone slotted custom SVG content into a real SVG namespace so it
+  paints reliably (Chromium doesn't reliably paint slotted SVG geometry). That clone copied every
+  source attribute verbatim, including event handlers (`onload`, `onclick`, ...) and `href`/
+  `xlink:href`, with no sanitizer in the loop — unlike a fetched `src` document, which is already
+  sanitized through DOMPurify. Both clone paths now drop event-handler and `href`/`xlink:href`
+  attributes (a new shared `isUnsafeSvgCloneAttribute()` helper); every other presentational
+  attribute (`d`, `fill`, `stroke`, `viewBox`, `transform`, gradient stops, ...) is unaffected.
+- 21e6f07: Fix `<lr-knowledge-graph-explorer>`'s `[part="search-empty"]` "no matches" message rendering as a
+  direct child of the `role="list"` `[part="search-results"]` container without `role="listitem"` --
+  invalid ARIA, since every child of a list role must itself be `listitem` (or one of a small allowed
+  set), unlike the real `[part="search-result"]` match rows which already carry it. It now carries
+  `role="listitem"` too.
+- 2e0d525: Fix `custom-elements.json` under-reporting `cssParts` for components that extend another
+  component's class (e.g. `<lr-number-input>` extending `<lr-input>`, `<lr-dropdown>` extending
+  `<lr-popover>`). The manifest-compaction step pruned any inherited-and-resolvable entry — including
+  CSS parts — off a subclass's own declaration, on the assumption that a consumer would walk the JS
+  `extends` chain to see the full contract, the same way it does for members/attributes. Unlike those,
+  `::part()` has no such chain for its consumers (docs generators, editor tooling, `::part()` usage
+  checks), which read a tag's `cssParts` list directly, per tag — exactly how `cssStates` already
+  behaved. `<lr-number-input>` now declares `form-control`, `form-control-label`, `input-wrapper`, and
+  `input` (inherited from `<lr-input>`) in addition to its own parts, and `<lr-dropdown>` now declares
+  `trigger`, `popup`, `dialog`, `popup__popup`, `content`, `body`, `arrow`, and `popup__arrow`
+  (inherited from `<lr-popover>`). 15 other components with the same inheritance shape (the icon
+  charts, `<lr-native-time-input>`, `<lr-radio-button>`, `<lr-accordion-item>`, `<lr-dropdown-item>`,
+  `<lr-tag>`, `<lr-drawer>`) gained the same correction. Generated docs (`llms/components/*.md`) and
+  other manifest consumers were already unaffected, since they already read parts through
+  `expandManifestInheritance()`; only the checked-in compact manifest itself was missing them.
+- 6313c1b: `lr-avatar`'s `image`, `lr-attachment-chip`'s `thumbnail-src` and file-object preview URL, and
+  `lr-flag`'s pre-resolved `src` are now validated through the shared `safeMediaSrc()` helper before
+  reaching an `<img src>` sink, rejecting `javascript:`/other unsafe schemes. Each falls back to its
+  existing placeholder state (initials, the generic file glyph, or an empty render) instead of
+  rendering an unsafe URL.
+- ad5a464: Fix partial child-event stopping in three components whose nested `<lr-virtual-list>`/child
+  controls only had some of their bubbling events stopped at the host boundary:
+
+  - `<lr-notebook-viewer>` and `<lr-page-rail>` each already stopped the nested `<lr-virtual-list>`'s
+    `lr-visible-range-changed` event from leaking past the host, but left its `lr-scroll` event (and,
+    for `<lr-page-rail>`, its `lr-load-more` event too) undocumented and free to bubble straight
+    through. Both are now stopped the same way, mirroring the existing `lr-visible-range-changed`
+    handling.
+  - `<lr-query-builder>`'s add/remove condition buttons called `addCondition()`/`removeCondition()`
+    directly from their `@click` handlers, bypassing the `consumeChildEvent()` helper every other
+    handler in the component consistently uses to stop the raw composed child event before emitting
+    the component's own wrapper event. The two buttons now route through `consumeChildEvent()` like
+    the rest of the file.
+
+  `retrieval-results.class.ts` and `tool-select-dialog.class.ts` were also audited for the same
+  inconsistent-stopping pattern; both already stop every child event consistently, so neither needed
+  a change.
+
+- d53cec6: `lr-spreadsheet-viewer` now validates that the optional `xlsx` peer's parsed `workbook.SheetNames`
+  is actually an array of strings before using it, instead of trusting an unchecked type assertion.
+  A malformed shape (a real risk here, since the workbook is parsed from consumer-supplied,
+  untrusted `src` content) now surfaces the standard localized load-failure state instead of silently
+  producing corrupted sheet tabs.
+- d84fca9: Harden three components against untrusted values reaching CSS/URL sinks unvalidated:
+
+  - `lr-terminal` and `lr-notebook-viewer`'s shared ANSI-segment styling (`segmentStyle()`) wrote a
+    parsed stream's `fg`/`bg` color tokens directly into an inline `style` declaration; a
+    crafted ANSI color escape could inject CSS syntax. Both now validate through
+    `sanitizeCssColor()` before the value reaches `styleMap()`.
+  - `lr-widget-renderer`'s agent-authored widget tree wrote an arbitrary `align` prop string
+    directly into `align-items` with no allowlist. Now normalized through a bounded value map;
+    an unrecognized value renders as unset rather than reaching the declaration list.
+  - `lr-mcp-app`'s `open-link` message handler forwarded a `postMessage`-supplied `href` to
+    consumers verbatim as long as it was a string, with no scheme validation. Now validated through
+    `safeLinkHref()` (rejects `javascript:`/other unsafe schemes) before the `lr-mcp-open-link`
+    event fires.
+
+- 0e6d53e: Fix `lr-switch`'s thumb miscentering when a consumer styles the `track` part with a `border`.
+  `box-sizing: border-box` (the library-wide default) let an added border eat into the padding box
+  the thumb is absolutely positioned against, while the thumb's own size/travel math stayed derived
+  from the track's declared (border-box) dimensions -- breaking symmetric clearance on the far edge
+  in both the unchecked and checked states. The track part now uses `box-sizing: content-box`, so an
+  added border grows the track's outer footprint instead of shrinking the space the thumb positions
+  within, keeping clearance symmetric regardless of border width.
+- 7f37a42: `<lr-table>`'s `TableColumn.cellStyle` hook now sanitizes every property/value pair before it
+  reaches `styleMap()`: the property name must match a safe CSS-identifier shape, the value must
+  contain no `;`/`{`/`}` structural characters or a `url(...)` function, and the browser must accept
+  the property/value pair via `CSS.supports()` (falling back to a permissive regex where
+  `CSS.supports` is unavailable). A custom property (`--foo`) is exempted from the `CSS.supports`
+  check, since arbitrary custom-property values are always valid CSS.
+- 7987719: Fix `lr-table` rows and `lr-tree-item` where hovering an already-selected row/item had no visible
+  effect. The `:hover` rule and the selected-state resting rule both resolved to the same
+  `--lr-color-brand-quiet` fallback at equal CSS specificity (and, for `lr-tree-item`, the
+  `:host([aria-selected='true'])`-scoped selected rule outranked a bare `[part='row']:hover`
+  outright), so the selected rule always won and hovering produced no change. Mirrors the fix already
+  applied to these same files' `:active`-while-selected rules: the hover rule now also matches through
+  the same specificity-matching selector arm (source order deciding the tie), and its resting fill is
+  a distinct `color-mix()` step (using `--lr-color-mix-hover`) instead of the plain `brand-quiet`
+  fallback, so hovering a selected row/item is visually distinguishable from its resting state.
+- 4392216: Fix `<lr-tree>`'s `expandAll()` bypassing lazy-loading. It used to set `expanded = true` directly
+  on every node, skipping `<lr-tree-item>`'s own `expand()` -- the only code path that emits
+  `lr-lazy-load` and calls `beginLazyLoad()` for a `lazy` node whose children have not been fetched
+  yet. A tree containing lazy nodes would render them visually expanded but empty after
+  `expandAll()`, with their content never actually requested. `expandAll()` now calls each node's
+  `expand()` directly, so a lazy node triggers the same load request whether it was expanded by a
+  click or by `expandAll()`.
+
 ## 8.0.1
 
 ### Patch Changes
@@ -164,18 +319,18 @@
 
   Every one of these is a find-and-replace. Where the default flips, the behaviour is the upstream one.
 
-  | 7.x                               | 8.0.0               | Note                                                                                        |
-  | --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------- |
-  | `no-light-dismiss`                | `light-dismiss`     | polarity un-inverted; default flips to off                                                  |
-  | `hide-summary`                    | `with-summary`      | polarity un-inverted; default flips to off                                                  |
-  | `total-items`                     | `total`             |                                                                                             |
-  | `<lr-avatar src>`                 | `<lr-avatar image>` |                                                                                             |
-  | `<lr-drawer>` default `placement` | `start` → `end`     | matches the upstream default                                                                |
-  | `<lr-tabs>`                       | `<lr-tab-group>`    | plus `lr-tabs-change` → `lr-tab-show`/`lr-tab-hide`, and `--lr-tabs-*` → `--lr-tab-group-*` |
-  | `<lr-tree-node>`                  | `<lr-tree-item>`    |                                                                                             |
-  | `<lr-slider>` `fill` part         | `indicator` part    |                                                                                             |
+  | 7.x                                                            | 8.0.0                   | Note                                                                                                                                                                                |
+  | -------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `no-light-dismiss`                                             | `light-dismiss`         | polarity un-inverted; default flips to off                                                                                                                                          |
+  | `hide-summary`                                                 | `with-summary`          | polarity un-inverted; default flips to off                                                                                                                                          |
+  | `total-items`                                                  | `total`                 |                                                                                                                                                                                     |
+  | `<lr-avatar src>`                                              | `<lr-avatar image>`     |                                                                                                                                                                                     |
+  | `<lr-drawer>` default `placement`                              | `start` → `end`         | matches the upstream default                                                                                                                                                        |
+  | `<lr-tabs>`                                                    | `<lr-tab-group>`        | plus `lr-tabs-change` → `lr-tab-show`/`lr-tab-hide`, and `--lr-tabs-*` → `--lr-tab-group-*`                                                                                         |
+  | `<lr-tree-node>`                                               | `<lr-tree-item>`        |                                                                                                                                                                                     |
+  | `<lr-slider>` `fill` part                                      | `indicator` part        |                                                                                                                                                                                     |
   | `<lr-callout variant="danger">` `[part="base"]` `role="alert"` | shared live-region sink | announcements now flow through the shared light-DOM live-region sink instead; `[part="base"]` carries `role="group"` (only when the host has an accessible label) or no role at all |
-  | `<lr-spinner>` `part="base"`      | `part="base spinner"` | an exact-match `[part="base"]` attribute selector no longer matches; `::part(base)` is unaffected. Also gained `role="progressbar"` |
+  | `<lr-spinner>` `part="base"`                                   | `part="base spinner"`   | an exact-match `[part="base"]` attribute selector no longer matches; `::part(base)` is unaffected. Also gained `role="progressbar"`                                                 |
 
   The JavaScript-only string property `.autoCorrect` on `lr-input`, `lr-textarea`, and
   `lr-combobox` is now the upstream-compatible `.autocorrect` IDL, which always reads as boolean.
