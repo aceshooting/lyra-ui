@@ -6021,9 +6021,11 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
-`option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
-secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+**CSS parts:** `form-control`, `form-control-label`, `trigger`,
+`trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
+`showFlags` is on), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
+`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag), `expand-icon`,
+`hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"

@@ -2296,7 +2296,7 @@
             },
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
-              "line": 1127,
+              "line": 1147,
               "test": "is accessible with entries listed",
               "target": "el",
               "state": "populated"
@@ -2638,14 +2638,14 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 978,
+              "line": 987,
               "test": "is accessible in a populated uploading state with numeric progress",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 992,
+              "line": 1001,
               "test": "is accessible in a populated error state with a retry button",
               "target": "el",
               "state": "populated"
@@ -2671,7 +2671,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 373,
+              "line": 382,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -3307,42 +3307,42 @@
           "evidence": [
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 137,
+              "line": 145,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 243,
+              "line": 251,
               "test": "is accessible with icon-only content and an alt label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 303,
+              "line": 311,
               "test": "lets a consumer override --lr-avatar-font-size at any tier",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 312,
+              "line": 320,
               "test": "is accessible at every tier with initials rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 392,
+              "line": 400,
               "test": "is accessible in the rounded shape",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 522,
+              "line": 530,
               "test": "names the icon-slot fallback through alt",
               "target": "el",
               "state": "populated"
@@ -17909,7 +17909,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 335,
+              "line": 341,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -18394,7 +18394,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-minimap/flow-minimap.test.ts",
-              "line": 682,
+              "line": 766,
               "test": "is accessible with a resolved canvas",
               "target": "minimap",
               "state": "populated"
@@ -21489,7 +21489,7 @@
             },
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 734,
+              "line": 752,
               "test": "names a fetched icon through label and stays hidden without one",
               "target": "el",
               "state": "populated"
@@ -21515,7 +21515,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 951,
+              "line": 969,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -21578,7 +21578,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 486,
+              "line": 504,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -21659,28 +21659,28 @@
           "evidence": [
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 472,
+              "line": 486,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 522,
+              "line": 536,
               "test": "is accessible with slotted content instead of a named glyph",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 576,
+              "line": 590,
               "test": "renders safe href/target/download as a real anchor with a derived safe rel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 595,
+              "line": 609,
               "test": "makes disabled link mode inert and restores its href when re-enabled",
               "target": "el",
               "state": "populated"
@@ -23478,14 +23478,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 733,
+              "line": 761,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 759,
+              "line": 787,
               "test": "is accessible with search results, a pinned node, a path, and an open details popover",
               "target": "el",
               "state": "populated"
@@ -23499,7 +23499,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 689,
+              "line": 717,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23510,7 +23510,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 733,
+              "line": 761,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23527,7 +23527,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 745,
+              "line": 773,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24521,14 +24521,14 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 393,
+              "line": 418,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 386,
+              "line": 411,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -24542,7 +24542,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 320,
+              "line": 345,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24553,7 +24553,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 403,
+              "line": 428,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25236,7 +25236,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 385,
+              "line": 387,
               "test": "is accessible with an app loaded",
               "target": "el",
               "state": "populated"
@@ -28188,7 +28188,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 913,
+              "line": 925,
               "test": "is accessible with a rendered notebook",
               "target": "el",
               "state": "populated"
@@ -28220,7 +28220,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 937,
+              "line": 949,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29100,14 +29100,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 864,
+              "line": 888,
               "test": "is accessible in mediated mode with highlights present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1111,
+              "line": 1135,
               "test": "is accessible in the current-page state with the prop themed",
               "target": "el",
               "state": "populated"
@@ -29121,7 +29121,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 261,
+              "line": 285,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29144,7 +29144,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 928,
+              "line": 952,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32895,7 +32895,7 @@
           "evidence": [
             {
               "file": "src/components/data/query-builder/query-builder.test.ts",
-              "line": 864,
+              "line": 888,
               "test": "is accessible with populated rows spanning every field type, including a unary and a multi operator",
               "target": "el",
               "state": "populated"
@@ -32915,7 +32915,7 @@
           "evidence": [
             {
               "file": "src/components/data/query-builder/query-builder.test.ts",
-              "line": 527,
+              "line": 551,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32932,7 +32932,7 @@
           "evidence": [
             {
               "file": "src/components/data/query-builder/query-builder.test.ts",
-              "line": 544,
+              "line": 568,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37613,7 +37613,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 330,
+              "line": 343,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39567,7 +39567,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 896,
+              "line": 919,
               "test": "is accessible with a highlighted cell rendered",
               "target": "el",
               "state": "populated"
@@ -39581,7 +39581,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 539,
+              "line": 562,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41990,35 +41990,35 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3355,
+              "line": 3391,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3724,
+              "line": 3782,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4117,
+              "line": 4175,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4545,
+              "line": 4603,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4652,
+              "line": 4710,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -46450,7 +46450,7 @@
             },
             {
               "file": "src/components/data/tree/tree.test.ts",
-              "line": 501,
+              "line": 517,
               "test": "is accessible",
               "target": "el",
               "state": "populated"

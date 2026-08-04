@@ -60682,6 +60682,10 @@
           {
             "name": "trigger",
             "deprecated": null
+          },
+          {
+            "name": "trigger-flag",
+            "deprecated": null
           }
         ],
         "cssProperties": [
