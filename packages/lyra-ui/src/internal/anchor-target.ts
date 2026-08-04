@@ -202,13 +202,54 @@ export function DocumentAnchorTarget(
       }
     }
 
+    /**
+     * Public entry point. Delegates to `performScrollToAnchor()` and adds ONE thing on top: a
+     * throwing `applyAnchor()` (a per-viewer bug, a synchronous DOM exception, an unhandled peer-
+     * library rejection, ...) still degrades to a resolved `false` and still emits
+     * `lr-anchor-result:{found:false}`, instead of leaving this method's documented "always
+     * reports a definite result" contract broken by an unhandled rejection.
+     *
+     * This safety net deliberately lives HERE and not inside `performScrollToAnchor()` (or deeper,
+     * around the `applyAnchor()` call site itself): `lr-ebook-viewer` overrides this method and
+     * calls `super.performScrollToAnchor()` -- not `super.scrollToAnchor()` -- specifically so its
+     * own override's own catch (which reports a localized rendition-failure alert) keeps first and
+     * only refusal of its own `applyAnchor()`'s throw. A catch anywhere inside
+     * `performScrollToAnchor()` would run before that override's `super` call ever returns,
+     * making its own catch unreachable again -- the exact regression commit `df4dac87` introduced
+     * and `5565cfc6` reverted. See `performScrollToAnchor()`'s own doc comment.
+     */
     async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+      const generation = ++this.anchorGeneration;
+      try {
+        return await this.performScrollToAnchor(target, generation);
+      } catch {
+        if (generation !== this.anchorGeneration) return false;
+        this.announceAnchorResult(undefined, false);
+        this.emit('lr-anchor-result', { found: false });
+        return false;
+      }
+    }
+
+    /**
+     * The real `scrollToAnchor()` body, split out so a subclass that overrides the public method
+     * (currently only `lr-ebook-viewer`) can invoke this directly via
+     * `super.performScrollToAnchor()` and keep its OWN catch in full control of a throwing
+     * `applyAnchor()` -- entirely bypassing `scrollToAnchor()`'s safety-net catch above. Only
+     * `scrollToAnchor()` calls this with an explicit `generation` (already bumped there, before any
+     * `await`); an overriding subclass's call omits it and gets a freshly bumped one here instead,
+     * matching this method's pre-split behavior exactly -- `lr-ebook-viewer`'s own override is
+     * therefore unaffected in every other respect (retry timing, generation-guard semantics,
+     * announcements, event emission all still happen exactly as before).
+     */
+    protected async performScrollToAnchor(
+      target: LyraAnchor | string,
+      generation: number = ++this.anchorGeneration,
+    ): Promise<boolean> {
       // Bump the generation *before* cancelling the previous retry wait -- cancellation resolves
       // a suspended `resolveWithRetry()` loop's pending Promise from a superseded call, scheduling
       // that loop's continuation (a microtask) to re-check the generation next. Bumping first
       // guarantees that check always sees the new value: it can only run after this call's own
       // synchronous statements finish, by which point the bump has already happened either way.
-      const generation = ++this.anchorGeneration;
       this.cancelAnchorRetry();
       await this.updateComplete;
       if (generation !== this.anchorGeneration) return false;

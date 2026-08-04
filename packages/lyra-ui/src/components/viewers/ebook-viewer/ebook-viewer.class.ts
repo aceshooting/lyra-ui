@@ -449,7 +449,26 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     const operation = ++this.anchorOperationGeneration;
     try {
-      return await super.scrollToAnchor(target);
+      // Deliberately the mixin's `performScrollToAnchor()`, not `super.scrollToAnchor()`: the
+      // mixin's own `scrollToAnchor()` now wraps a throwing `applyAnchor()` in its OWN safety net
+      // (see `anchor-target.ts`'s doc comments on that split), which would otherwise catch this
+      // call's throw before it ever reaches the catch block below -- making this component's own
+      // localized rendition-failure alert unreachable (the exact regression `df4dac87` introduced
+      // and `5565cfc6` reverted). `performScrollToAnchor()` is the same retry/generation logic
+      // with no safety net of its own, so this override's behavior is otherwise unchanged.
+      //
+      // TypeScript cannot spell `super.performScrollToAnchor(target)` here: the mixin's exported
+      // return type is deliberately narrowed to `LyraAnchorTarget`'s public surface (plus
+      // `renderAnchorLiveRegion()`), so `performScrollToAnchor` -- a `protected` mixin member not
+      // part of that public contract -- is invisible through `super`, even though it's the real
+      // immediate-base implementation at runtime (mirrors `archive-viewer.class.ts`'s identical
+      // `applyAnchor` workaround for the same narrowed-type limitation).
+      const performScrollToAnchor = (
+        Object.getPrototypeOf(LyraEbookViewer.prototype) as unknown as {
+          performScrollToAnchor(anchorTarget: LyraAnchor | string): Promise<boolean>;
+        }
+      ).performScrollToAnchor;
+      return await performScrollToAnchor.call(this, target);
     } catch (error) {
       if (operation !== this.anchorOperationGeneration) return false;
       const rendition = this.rendition;

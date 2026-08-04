@@ -29,8 +29,18 @@ class DecliningStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBas
   }
 }
 
+/** No override of `scrollToAnchor()` itself (unlike `lr-ebook-viewer`) -- exercises the mixin's
+ *  OWN default safety net for a throwing `applyAnchor()`, per `anchor-target.ts`'s
+ *  `scrollToAnchor()`/`performScrollToAnchor()` split. */
+class ThrowingStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {
+  protected async applyAnchor(_anchor: LyraAnchor): Promise<boolean> {
+    throw new Error('applyAnchor boom');
+  }
+}
+
 defineElement('anchor-target-test-stub', StubAnchorTarget);
 defineElement('anchor-target-test-declining', DecliningStubAnchorTarget);
+defineElement('anchor-target-test-throwing', ThrowingStubAnchorTarget);
 
 function installComposedSelection(range: Range, shadowRoot: ShadowRoot): () => void {
   const view = shadowRoot.ownerDocument.defaultView!;
@@ -66,6 +76,7 @@ declare global {
   interface HTMLElementTagNameMap {
     'lr-anchor-target-test-stub': StubAnchorTarget;
     'lr-anchor-target-test-declining': DecliningStubAnchorTarget;
+    'lr-anchor-target-test-throwing': ThrowingStubAnchorTarget;
   }
 }
 
@@ -105,6 +116,20 @@ describe('DocumentAnchorTarget mixin', () => {
     expect(
       document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent,
     ).to.contain('Passage not found in this document.');
+  });
+
+  it('scrollToAnchor degrades a throwing applyAnchor to a resolved false and still emits lr-anchor-result', async () => {
+    // Regression for the mixin's default scrollToAnchor()/performScrollToAnchor() safety net
+    // (finding 7, docs/superpowers/plans/2026-08-04-full-sweep-remediation-plan.md): a throwing
+    // applyAnchor() must not leave scrollToAnchor()'s documented "always reports a definite
+    // result" contract broken by rejecting instead of resolving.
+    const el = await fixture<ThrowingStubAnchorTarget>(
+      litHtml`<lr-anchor-target-test-throwing></lr-anchor-target-test-throwing>`,
+    );
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
+    const result = await el.scrollToAnchor({ kind: 'page', page: 1 });
+    expect(result).to.be.false;
+    expect((await eventPromise).detail).to.deep.equal({ found: false });
   });
 
   it('pre-mounts a light-DOM sink, appends repeated results, and releases it on disconnect', async () => {

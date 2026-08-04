@@ -1107,6 +1107,53 @@ describe('scrollToAnchor (ebook)', () => {
     }
   });
 
+  it('keeps its own catch/localized-alert path in control (not the mixin generic safety net) when applyAnchor throws directly', async () => {
+    // Regression for finding 7 (docs/superpowers/plans/2026-08-04-full-sweep-remediation-plan.md):
+    // anchor-target.ts's default scrollToAnchor() now degrades a throwing applyAnchor() to a
+    // resolved `false` for the ~13 adopters that don't override scrollToAnchor() themselves (see
+    // anchor-target-throw-safety.contract.test.ts). lr-ebook-viewer's own scrollToAnchor()
+    // override calls `super.performScrollToAnchor()` (not `super.scrollToAnchor()`) precisely so
+    // it never reaches that generic safety net -- this proves its own catch (reportRenditionFailure
+    // + the localized [part="error"] alert) still runs, exactly once, when THIS component's own
+    // applyAnchor throws directly rather than by an awaited rejected rendition.display() call.
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: 'Localized ebook failure.' }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      const proto = Object.getPrototypeOf(el) as {
+        applyAnchor: (anchor: { kind: string }) => Promise<boolean>;
+      };
+      const originalApplyAnchor = proto.applyAnchor;
+      proto.applyAnchor = async () => {
+        throw new Error('applyAnchor boom');
+      };
+      let resultCount = 0;
+      let found: boolean | undefined;
+      el.addEventListener('lr-anchor-result', (event) => {
+        resultCount++;
+        found = (event as CustomEvent<{ found: boolean }>).detail.found;
+      });
+      try {
+        expect(await el.scrollToAnchor({ kind: 'cfi', cfi: 'epubcfi(/6/8!)' })).to.be.false;
+        await el.updateComplete;
+        expect(resultCount, 'lr-anchor-result should fire exactly once, from the override\'s own catch').to.equal(1);
+        expect(found).to.be.false;
+        expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Localized ebook failure.');
+      } finally {
+        proto.applyAnchor = originalApplyAnchor;
+      }
+    } finally {
+      restore();
+    }
+  });
+
   it('resolves false for a text-quote absent from every section', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
     __setEpubJsForTesting(fake.factory as never);
