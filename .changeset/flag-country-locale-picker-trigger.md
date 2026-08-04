@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 Fix `<lr-locale-picker>`'s trigger button never rendering a flag for the currently selected
