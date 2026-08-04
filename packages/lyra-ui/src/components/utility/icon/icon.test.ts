@@ -68,6 +68,24 @@ it('does not clone hyphenated light-DOM custom elements into the SVG namespace',
   expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
 });
 
+it('strips event-handler and href attributes when cloning slotted custom SVG content (defense in depth)', async () => {
+  // Unlike a fetched `src` document (sanitized via DOMPurify -- see the "strips scripting from
+  // fetched SVG markup" test below), slotted custom content is cloned directly with no sanitizer
+  // in the loop. Many apps feed dynamic/CMS-sourced markup into an icon's default slot, so this
+  // clone step is its own trust boundary.
+  const el = (await fixture(html`
+    <lr-icon>
+      <circle cx="12" cy="12" r="5" onload="window.__lrIconSlotXss = 'onload'"></circle>
+      <a href="javascript:window.__lrIconSlotXss = 'href'"><rect width="4" height="4"></rect></a>
+    </lr-icon>
+  `)) as LyraIcon;
+  await el.updateComplete;
+  const circle = el.shadowRoot!.querySelector('svg > circle')!;
+  expect(circle.hasAttribute('onload')).to.be.false;
+  const anchor = el.shadowRoot!.querySelector('svg a');
+  expect(anchor === null || !anchor.hasAttribute('href')).to.be.true;
+});
+
 it('tracks assigned SVG attribute and descendant mutations only while connected', async () => {
   const el = (await fixture(html`
     <lr-icon><g><path d="M1 1"></path></g></lr-icon>

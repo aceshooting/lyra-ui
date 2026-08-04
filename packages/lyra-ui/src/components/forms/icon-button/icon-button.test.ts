@@ -161,6 +161,20 @@ it('lets a slotted node with its own fill/stroke override the fallback svg defau
   expect(clonedCircle.getAttribute('stroke')).to.equal('blue');
 });
 
+it('strips event-handler and href attributes when cloning slotted bare-geometry SVG content (defense in depth)', async () => {
+  const el = await fixture(html`
+    <lr-icon-button aria-label="Star">
+      <circle cx="12" cy="12" r="5" onload="window.__lrIconButtonSlotXss = 'onload'"></circle>
+      <use xlink:href="javascript:window.__lrIconButtonSlotXss = 'href'"></use>
+    </lr-icon-button>
+  `);
+  const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement;
+  const clonedCircle = fallback.querySelector('circle')!;
+  expect(clonedCircle.hasAttribute('onload')).to.be.false;
+  const clonedUse = fallback.querySelector('use');
+  expect(clonedUse === null || !clonedUse.hasAttribute('xlink:href')).to.be.true;
+});
+
 it('never runs a slotted custom element through the bare-geometry clone path', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Français">

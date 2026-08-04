@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
+import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
 import { isAbortError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
@@ -337,6 +338,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       element.localName,
     );
     for (const attribute of element.attributes) {
+      if (isUnsafeSvgCloneAttribute(attribute.name)) continue;
       copy.setAttribute(attribute.name, attribute.value);
     }
     for (const child of element.childNodes) {

@@ -14,6 +14,7 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
+import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
 import {
   EXTERNAL_LABEL_ACTIVATION,
   type ExternalLabelActivation,
@@ -54,7 +55,10 @@ function needsSvgNamespaceFallback(node: Element): boolean {
 function cloneToSvgNamespace(node: Element): SVGElement | null {
   if (node.localName.includes('-')) return null;
   const copy = node.ownerDocument.createElementNS(SVG_NAMESPACE, node.localName);
-  for (const attribute of node.attributes) copy.setAttribute(attribute.name, attribute.value);
+  for (const attribute of node.attributes) {
+    if (isUnsafeSvgCloneAttribute(attribute.name)) continue;
+    copy.setAttribute(attribute.name, attribute.value);
+  }
   for (const child of node.childNodes) {
     if (child.nodeType === 3) {
       copy.append(child.cloneNode(true));
