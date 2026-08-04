@@ -63,6 +63,12 @@ lyra-ui/                          (repo root — this file lives here)
                                    archive freshness by rerunning that script and diffing the result
 ```
 
+`./package.sh` regenerates `packages/lyra-ui/llms/` itself before packaging — it never trusts that
+directory to already be fresh. After a doc-affecting change, run `./package.sh` directly rather
+than `pnpm run llms` followed by a separate `./package.sh` call: `pnpm lint`'s freshness checks
+cover `llms/` but not the packaged copy under `plugins/`, so the second step going unrun is easy to
+miss locally and only surfaces days later in CI's `docs-and-storybook` job.
+
 ## Dev commands and gates
 
 Run from repo root unless noted; package-local equivalents exist from `packages/lyra-ui/`
