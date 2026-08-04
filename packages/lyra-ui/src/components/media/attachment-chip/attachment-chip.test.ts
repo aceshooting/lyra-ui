@@ -205,6 +205,15 @@ describe('independent name/bytes/mime-type props', () => {
     expect(img.getAttribute('src')).to.equal('https://example.test/thumb.png');
   });
 
+  it('does not render a thumbnail for an unsafe thumbnail-src URL', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip name="pic.png" thumbnail-src="javascript:alert(1)"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
+    expect(thumb.querySelector('img')).to.not.exist;
+    expect(thumb.querySelector('svg')).to.exist;
+  });
+
   it('renders a generic file glyph (no img) when neither file nor thumbnail-src is set', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;

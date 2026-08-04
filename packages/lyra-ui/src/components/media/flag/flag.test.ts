@@ -268,6 +268,12 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
     expect(image!.getAttribute('alt')).to.equal('Custom');
   });
 
+  it('does not render an image for an unsafe pre-resolved src URL', async () => {
+    const el = (await fixture(html`<lr-flag src="javascript:alert(1)"></lr-flag>`)) as LyraFlag;
+    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+  });
+
   it('falls back to country/language resolution once src is cleared', async () => {
     const el = (await fixture(html`<lr-flag src=${TEST_FLAG_SRC} country="fr"></lr-flag>`)) as LyraFlag;
     expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(TEST_FLAG_SRC);

@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
@@ -343,7 +344,7 @@ export class LyraFlag extends LyraElement {
     if (this.loadError) {
       return html`<span part="error">${this.localize(FLAG_LOAD_ERROR_KEY)}</span>`;
     }
-    const url = this.src ?? this.resolvedSrc;
+    const url = safeMediaSrc(this.src ?? this.resolvedSrc);
     if (!url) return html``;
     const code = this.code;
     const alt = this.accessibleLabel ?? this.label ?? (code ? displayNameFor(code, this.effectiveLocale) : '');

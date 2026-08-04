@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './avatar.styles.js';
 
@@ -155,7 +156,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
   };
 
   override render(): TemplateResult {
-    const showImage = !this.hasIcon && !!this.image && this.image !== this.failedSrc;
+    const safeImage = safeMediaSrc(this.image);
+    const showImage = !this.hasIcon && !!safeImage && safeImage !== this.failedSrc;
     const showIconSlot = !this.hasIcon && !showImage && this.hasIconSlot;
     const showGlyph = this.hasIcon || showIconSlot;
     const showInitials = !showGlyph && !showImage;
@@ -182,7 +184,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
         ${showImage
           ? html`<img
               part="image"
-              src=${this.image!}
+              src=${safeImage!}
               alt=${accessibleName}
               loading=${this.loading}
               @error=${this.onImageError}

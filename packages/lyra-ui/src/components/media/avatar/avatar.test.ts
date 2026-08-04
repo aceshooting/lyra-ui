@@ -33,6 +33,14 @@ describe('lr-avatar', () => {
     expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
   });
 
+  it('does not render an image for an unsafe URL in `image`', async () => {
+    const el = (await fixture(
+      html`<lr-avatar image="javascript:alert(1)" initials="AB"></lr-avatar>`,
+    )) as LyraAvatar;
+    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
+  });
+
   it('treats default-slotted text and emoji nodes as glyph content', async () => {
     const el = (await fixture(html`<lr-avatar initials="AI" alt="Assistant">🤖</lr-avatar>`)) as LyraAvatar;
     await el.updateComplete;

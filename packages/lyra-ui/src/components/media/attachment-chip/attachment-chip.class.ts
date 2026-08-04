@@ -5,6 +5,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './attachment-chip.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -413,19 +414,21 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private renderThumbnail(): TemplateResult {
     if (this.file) {
+      const fileImageSrc = this.objectUrl ? safeMediaSrc(this.objectUrl) : null;
       return this.effectiveMimeType.startsWith('image/')
         // `nothing`, never `''`: an empty `src` is a valid URL that resolves against the
         // document, so the browser would re-request the page itself as an image. The
         // object URL is always populated before this renders, so this is a guard rather
         // than a live path -- but `''` is the wrong guard to leave in place.
-        ? html`<img src=${this.objectUrl ?? nothing} alt="" />`
+        ? (fileImageSrc ? html`<img src=${fileImageSrc} alt="" />` : html`${fileIcon()}`)
         : html`${fileIcon()}`;
     }
     // No `file`: `thumbnail-src` is used whenever present, regardless of
     // `mime-type` -- a server-generated preview thumbnail (e.g. a rendered
     // first page of a PDF) is itself always an image, independent of the
     // *source* file's own MIME type.
-    return this.thumbnailSrc ? html`<img src=${this.thumbnailSrc} alt="" />` : html`${fileIcon()}`;
+    const thumbnailSrc = safeMediaSrc(this.thumbnailSrc);
+    return thumbnailSrc ? html`<img src=${thumbnailSrc} alt="" />` : html`${fileIcon()}`;
   }
 
   override render(): TemplateResult {
