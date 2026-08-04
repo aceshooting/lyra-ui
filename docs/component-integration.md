@@ -283,7 +283,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41117 bytes; bundle SHA-256 `9f3844e161d17336359f6d16387b6c99cdf165a717a61b9a3c20b771ec543853`)
+- Standalone gzip: 40.1 KiB (41108 bytes; bundle SHA-256 `e4a75124c68f828cc652ad5de5df2487c5bd530c4db35adc6233ab2aa8b487d7`)
 
 </details>
 
@@ -355,7 +355,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41115 bytes; bundle SHA-256 `c62b4a2726b3f4b2cade440bb017d3cfd5241b4b6b43515135b2e95f308b063a`)
+- Standalone gzip: 40.1 KiB (41107 bytes; bundle SHA-256 `7088cf2073c9ce36ac14ea34e87bc885793ce67b7dbf98096636b7eba5399449`)
 
 </details>
 
@@ -463,7 +463,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.1 KiB (41065 bytes; bundle SHA-256 `3906bf188b3d5c2ad9e61a98796b3b72852f134637c2196691245e2e5230b501`)
+- Standalone gzip: 40.1 KiB (41071 bytes; bundle SHA-256 `95c108d6dfc6c6f4f89ebc165eec18cbe1a8a4297c257ce0a17ef3741bdc6ab5`)
 
 </details>
 
@@ -523,7 +523,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.2 KiB (25802 bytes; bundle SHA-256 `ed2038a83224bd55da5cebb679947dcdea151d147177481c0ac8a845c6075499`)
+- Standalone gzip: 25.2 KiB (25833 bytes; bundle SHA-256 `2ccbb3a171cc435416026244e9793bb84bce12e031e67267516b893ca501311a`)
 
 </details>
 
@@ -991,7 +991,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41114 bytes; bundle SHA-256 `36ca2474e16587dc3d3ecc32be5e190f35157399def3dabb808be5f0d0fe6065`)
+- Standalone gzip: 40.1 KiB (41106 bytes; bundle SHA-256 `94f76556da4d7a7713d5386fba99f206f2370ffde854c9c10e237dd0175509af`)
 
 </details>
 
@@ -1171,7 +1171,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-diff-view`, `lr-rubric-form`, `lr-table`
 - Transitive Lyra dependencies: `lr-checkbox`, `lr-checkbox-group`, `lr-empty`, `lr-option`, `lr-pagination`, `lr-segmented`, `lr-select`, `lr-skeleton`, `lr-slider`, `lr-spinner`, `lr-textarea`
-- Standalone gzip: 105.5 KiB (108015 bytes; bundle SHA-256 `4f2959b12f6e8f0d1ff4127e50b8cdd7a773f9097b44e707455e44eb9c973db6`)
+- Standalone gzip: 105.5 KiB (108047 bytes; bundle SHA-256 `c37d556c27588571cd23f9884889038712479fcac2a27d27d4635afd65979875`)
 
 </details>
 
@@ -1423,7 +1423,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 64 KiB (65522 bytes; bundle SHA-256 `a1003827a17d7fec4737319732b3d9c91545fc3daf6e0dc53cb6ca8d6b81ff17`)
+- Standalone gzip: 64.1 KiB (65588 bytes; bundle SHA-256 `300f6062dcbd30deea955c9f18af5c1d410387eb781ba1f14cd425123efde14e`)
 
 </details>
 
@@ -1483,7 +1483,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.2 KiB (42184 bytes; bundle SHA-256 `1fea28ac51b5d31e88494764af8786b185cb24ba008b1760a7d947ab93fc89ab`)
+- Standalone gzip: 41.2 KiB (42189 bytes; bundle SHA-256 `da63c4e9953b32922cdc8b3ba620cbdf2f24f5905ecdc9e99fb27b0416a80106`)
 
 </details>
 
@@ -1687,7 +1687,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.1 KiB (41113 bytes; bundle SHA-256 `acd738508b1badc10e8d04286d0f9d3754f43f6e4bcf52195a0c573e5216187a`)
+- Standalone gzip: 40.1 KiB (41105 bytes; bundle SHA-256 `4142283ae01b14e1810aa7d7d6f8b8d78585fb4df64fe93173cfaf8ed14a4f84`)
 
 </details>
 
@@ -2107,7 +2107,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41114 bytes; bundle SHA-256 `986e2528040fea46e2fcb0462c4abe89a58c8940902fc88a17d33d815dcca673`)
+- Standalone gzip: 40.1 KiB (41105 bytes; bundle SHA-256 `0aa3d978ed31ccf94da5dde77263e9cb021ae3753cbfec548c94c42dc0a80708`)
 
 </details>
 
@@ -2131,7 +2131,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41117 bytes; bundle SHA-256 `64743588156a29e8bfecd3de0aacd05846e033d0fa6ce2cb811c00b06e22a622`)
+- Standalone gzip: 40.1 KiB (41109 bytes; bundle SHA-256 `37a9fc1ced9fa5baffbd9eef89c788e02259e5cdcc9b4d70683a03d14d30d4fb`)
 
 </details>
 
@@ -2311,7 +2311,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41114 bytes; bundle SHA-256 `cc1b65e73b59631d862110fddf9756d77dad461c2bf93588d5f2e274c3345294`)
+- Standalone gzip: 40.1 KiB (41106 bytes; bundle SHA-256 `e3247609f22e5bdc95bda50b562d2ef0be517a0a1c0eae44c3401063b4d3d3b1`)
 
 </details>
 
@@ -2347,7 +2347,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.5 KiB (26107 bytes; bundle SHA-256 `02dc3486db2520b8d9921761335524dbaa57f93ed9d47435a22d186f5f5730db`)
+- Standalone gzip: 25.5 KiB (26137 bytes; bundle SHA-256 `7b30bb9927fe54d65a6d01c39b9043259c9953dd45e5b3d4364b299043544bca`)
 
 </details>
 
@@ -2551,7 +2551,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-checkbox-group`, `lr-option`, `lr-segmented`, `lr-select`, `lr-slider`, `lr-textarea`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 75.5 KiB (77324 bytes; bundle SHA-256 `a04b9336c38da93061e10aec4566f0b5c9b3e691df8dde7f8176717b6aed39bb`)
+- Standalone gzip: 75.5 KiB (77355 bytes; bundle SHA-256 `e71746c613c9c9aab4c6986f70d6a648ac3e39fee933aaa30e2adde88586b91f`)
 
 </details>
 
@@ -2563,7 +2563,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.2 KiB (41115 bytes; bundle SHA-256 `73a0aace68fa0258b307a7b04aee33da1e8c21ee284fd8c6f27a03bc29c184e1`)
+- Standalone gzip: 40.1 KiB (41107 bytes; bundle SHA-256 `a85b11bb8aab1c8fdcb843e8bb1882a483c113c852a577c9c5ed578a3b466b26`)
 
 </details>
 
@@ -3139,7 +3139,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 55 KiB (56346 bytes; bundle SHA-256 `6b9b2e033b2edaa6542d4ec2afd17f11633df4ed898e86ac933a5dfffae1f52b`)
+- Standalone gzip: 55.1 KiB (56391 bytes; bundle SHA-256 `f835e7294b2f5aa45d57c82c263d1d88b01519e868b8c619a05c4100d6d24de1`)
 
 </details>
 

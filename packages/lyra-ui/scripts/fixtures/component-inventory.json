@@ -19398,6 +19398,15 @@
             ]
           },
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -19479,7 +19488,9 @@
             "change",
             "input"
           ],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },
@@ -49454,6 +49465,15 @@
             ]
           },
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -49531,7 +49551,9 @@
         },
         "native": {
           "forwardedEvents": [],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },
@@ -84535,6 +84557,15 @@
             ]
           },
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "focus",
             "overloads": [
               {
@@ -84644,6 +84675,7 @@
             "input"
           ],
           "delegatedMethods": [
+            "click",
             "focus"
           ]
         }
@@ -89282,6 +89314,15 @@
             ]
           },
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -89359,7 +89400,9 @@
         },
         "native": {
           "forwardedEvents": [],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },
@@ -109781,6 +109824,15 @@
             ]
           },
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -109861,7 +109913,9 @@
             "blur",
             "focus"
           ],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },

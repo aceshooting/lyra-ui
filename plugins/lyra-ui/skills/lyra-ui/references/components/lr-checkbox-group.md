@@ -40,6 +40,8 @@ goes back to `valueMissing`. It survives every child toggle, slot change and for
 Session restore uses a `FormData` state containing the repeated selected strings; it is independent
 of the control's current `name`, preserves duplicate-value cardinality, waits for early-arriving
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
+`click()` forwards focus to the first enabled checkbox, so the host behaves like a single control
+rather than a no-op under a `<label>`-driven or programmatic click.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
 **The required marker.** `required` with a non-empty group `label` paints the library's shared

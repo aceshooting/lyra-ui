@@ -46,6 +46,8 @@ express ("this item was already annotated by someone else"): a non-empty message
 required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
 the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
 here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
+`click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
+so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation

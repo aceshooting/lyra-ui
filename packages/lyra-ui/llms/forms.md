@@ -3516,7 +3516,9 @@ options and its messages, scaled by `size` through the shared control ladder.
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
 `resetValidity()` restore the group's computed validity, including `valueMissing` when a required
-group has no selected radio.
+group has no selected radio. `focus()` moves focus to the selected (or first enabled) radio;
+`click()` mirrors it by activating that same radio, so the group behaves like a single control
+under both APIs rather than leaving `click()` a no-op.
 
 ## `lr-checkbox-group`
 
@@ -3545,6 +3547,8 @@ goes back to `valueMissing`. It survives every child toggle, slot change and for
 Session restore uses a `FormData` state containing the repeated selected strings; it is independent
 of the control's current `name`, preserves duplicate-value cardinality, waits for early-arriving
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
+`click()` forwards focus to the first enabled checkbox, so the host behaves like a single control
+rather than a no-op under a `<label>`-driven or programmatic click.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
 **The required marker.** `required` with a non-empty group `label` paints the library's shared
@@ -4171,6 +4175,8 @@ express ("this item was already annotated by someone else"): a non-empty message
 required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
 the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
 here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
+`click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
+so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `field` (one key's wrapper), `label`, `description`,
 `scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation

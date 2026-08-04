@@ -911,6 +911,9 @@ and makes the form invalid instead of being silently accepted.
   re-runs the validity sync) and a `form.reset()`, matching a native control. The message is
   whole-control state, so it is deliberately absent from `errors`, which is keyed by schema
   property; it is caller-supplied content and is used verbatim, never localized.
+- `click(): void` — forwards a host click to the first generated field's control, so the form
+  behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
+  while `disabled`.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`

@@ -71,4 +71,6 @@ options and its messages, scaled by `size` through the shared control ladder.
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
 `resetValidity()` restore the group's computed validity, including `valueMissing` when a required
-group has no selected radio.
+group has no selected radio. `focus()` moves focus to the selected (or first enabled) radio;
+`click()` mirrors it by activating that same radio, so the group behaves like a single control
+under both APIs rather than leaving `click()` a no-op.

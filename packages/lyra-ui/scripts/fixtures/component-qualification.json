@@ -9374,35 +9374,35 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 412,
+              "line": 421,
               "test": "is accessible",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 420,
+              "line": 430,
               "test": "is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1374,
+              "line": 1385,
               "test": "is accessible while showing the loading state (async source pending)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1437,
+              "line": 1449,
               "test": "is accessible while showing the empty state (no matching rows)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2665,
+              "line": 2678,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -9427,7 +9427,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2636,
+              "line": 2649,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9438,7 +9438,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 704,
+              "line": 715,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -11250,21 +11250,21 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 504,
+              "line": 516,
               "test": "forwards a host aria-label to the internal semantic button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 642,
+              "line": 654,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 862,
+              "line": 874,
               "test": "signals the error with more than colour, and stays accessible",
               "target": "el",
               "state": "populated"
@@ -15014,7 +15014,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2187,
+              "line": 2193,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -24553,7 +24553,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 428,
+              "line": 434,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25901,7 +25901,7 @@
             },
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 1769,
+              "line": 1775,
               "test": "is accessible with a header input and a footer button — content role=\"menu\" could not legally hold",
               "target": "el",
               "state": "open"
@@ -25943,7 +25943,7 @@
             },
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2293,
+              "line": 2299,
               "test": "is accessible with a submenu open",
               "target": "el",
               "state": "populated"
@@ -25979,7 +25979,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2187,
+              "line": 2193,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -26127,7 +26127,7 @@
             },
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 1769,
+              "line": 1775,
               "test": "is accessible with a header input and a footer button — content role=\"menu\" could not legally hold",
               "target": "el",
               "state": "open"
@@ -26197,7 +26197,7 @@
             },
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2293,
+              "line": 2299,
               "test": "is accessible with a submenu open",
               "target": "el",
               "state": "populated"
@@ -26233,7 +26233,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2187,
+              "line": 2193,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -26398,7 +26398,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu.test.ts",
-              "line": 2187,
+              "line": 2193,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -27204,14 +27204,14 @@
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 976,
+              "line": 982,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 976,
+              "line": 982,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
@@ -28532,21 +28532,21 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 412,
+              "line": 421,
               "test": "is accessible",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 420,
+              "line": 430,
               "test": "is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2665,
+              "line": 2678,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -28578,7 +28578,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2636,
+              "line": 2649,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28589,7 +28589,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 704,
+              "line": 715,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -37310,7 +37310,7 @@
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2558,
+              "line": 2564,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
@@ -37324,21 +37324,21 @@
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1467,
+              "line": 1473,
               "test": "is accessible with a single enabled option",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2759,
+              "line": 2768,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2883,
+              "line": 2892,
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
@@ -37363,7 +37363,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2739,
+              "line": 2748,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37380,7 +37380,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1638,
+              "line": 1644,
               "kind": "320px allocation test signal"
             }
           ]
@@ -44092,7 +44092,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 814,
+              "line": 821,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -44270,7 +44270,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 814,
+              "line": 821,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -45924,7 +45924,7 @@
             },
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 1377,
+              "line": 1385,
               "test": "is accessible with showProgress disabled and a hidden Previous control",
               "target": "tour",
               "state": "open"
@@ -45971,7 +45971,7 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 1393,
+              "line": 1404,
               "kind": "320px allocation test signal"
             }
           ]

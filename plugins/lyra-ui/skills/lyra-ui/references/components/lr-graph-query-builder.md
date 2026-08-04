@@ -33,7 +33,9 @@ restores the control's own computed validity rather than forcing it valid — a 
 field edit) and `form.reset()`, exactly like a native control, where only another
 `setCustomValidity('')` clears it. The message is caller-supplied and is used verbatim, never
 localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
-csspart of the field a message belongs to.
+csspart of the field a message belongs to. `click()` forwards focus to the first rendered field
+(start/end/hop-limit/direction/save-name, in that order), so the host behaves like a single
+control rather than a no-op under a `<label>`-driven or programmatic click.
 
 **Events:** `lr-input`, `lr-validity-change`, `lr-invalid` (no detail; one bubbling/composed alias
 when the complete builder fails a native validity check),
