@@ -1,25 +1,19 @@
 // Every interactive part that reacts to :hover must also react to :active.
-//
 // A control that lights up under the pointer and then does nothing at all when pressed reads as
 // broken — the user cannot tell the click registered until whatever it triggers finishes, which on
 // a slow action is the difference between "it's working" and "click it again". The library had 176
 // stylesheets carrying :hover and, before 8.0.0, essentially no pressed treatment; two components
 // declared an :active rule byte-identical to their :hover one, which is the same defect wearing a
 // costume.
-//
 // Scope, deliberately narrow: a rule whose selector both targets a `[part=...]`/`::part()` and
 // carries `:hover`. A `:hover` on an internal, non-parted node is a decoration (a row tint, a
 // scrollbar thumb); demanding a pressed state there would be noise, and noise is how a gate gets
 // suppressed wholesale.
-//
 // A part that genuinely should not have one records that with a marker comment on or immediately
 // above the rule:
-//
 //     /* no-pressed-state: the row is a hover affordance for the checkbox inside it, not a target */
-//
 // which is the same bargain the rest of this repo strikes — a deliberate omission is a sentence,
 // never a silence.
-//
 // Run: node scripts/check-interaction-states.mjs
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -143,3 +137,4 @@ if (process.argv[1] && process.argv[1].endsWith('check-interaction-states.mjs'))
     console.log(`Interaction-state contract passed: ${checked} hovered part(s) across ${files.length} stylesheets all have a pressed state.`);
   }
 }
+

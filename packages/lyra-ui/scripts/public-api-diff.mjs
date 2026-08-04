@@ -1383,15 +1383,22 @@ export function parseNpmPackOutput(text) {
       `npm pack did not return valid JSON: ${error instanceof Error ? error.message : error}`,
     );
   }
+  // Some npm versions (observed: 12.0.2) report `npm pack --json` as an object keyed by package
+  // name rather than an array of one entry -- normalize both shapes the same way
+  // scripts/check-package-size.mjs's readPackedMetrics() does.
+  const entries = Array.isArray(parsed)
+    ? parsed
+    : typeof parsed === 'object' && parsed !== null
+      ? Object.values(parsed)
+      : [];
   if (
-    !Array.isArray(parsed) ||
-    parsed.length !== 1 ||
-    typeof parsed[0]?.filename !== 'string' ||
-    !parsed[0].filename.endsWith('.tgz')
+    entries.length !== 1 ||
+    typeof entries[0]?.filename !== 'string' ||
+    !entries[0].filename.endsWith('.tgz')
   ) {
     throw new Error('npm pack must produce exactly one tarball filename.');
   }
-  return parsed[0].filename;
+  return entries[0].filename;
 }
 
 export function validateTarEntries(entries) {

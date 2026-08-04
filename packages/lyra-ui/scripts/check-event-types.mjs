@@ -3,11 +3,9 @@
 // Freshness gate for the generated global typed-event surface (`src/events.ts`), matching the
 // discipline already applied to `custom-elements.json` (check-manifest.mjs) and the agent-facing
 // docs (check-llms-artifacts.mjs): regenerate in memory, then diff against what is committed.
-//
 // The file is generated rather than authored precisely because it cannot be allowed to drift from
 // the per-component `Lyra*EventMap` interfaces — a stale global map types a consumer's listener
 // against a detail shape the component no longer emits, which is worse than no typing at all.
-//
 // Also asserts the two properties the output has to keep to stay gate-able and free:
 //   * types only — no runtime statement can appear in a module a consumer imports for typing;
 //   * side-effect free — it must not be listed in `package.json#sideEffects`, or every bundler
@@ -86,3 +84,4 @@ const mapCount = text.match(/^import type \{/gm)?.length ?? 0;
 console.log(
   `Typed-event surface is in sync: ${eventCount} events typed from ${mapCount} component event maps.`,
 );
+

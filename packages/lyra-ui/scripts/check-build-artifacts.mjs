@@ -1,23 +1,19 @@
 #!/usr/bin/env node
 // Emitted-artifact gate: `dist/` must contain no source maps and no map references.
-//
 // package.json#files publishes `dist` and NOT `src`, so every `.js.map` / `.d.ts.map` tsc used to
 // emit pointed at a `../../../../src/**/*.ts` path that does not exist in an install and carried no
 // `sourcesContent`. That was 2070 files and ~13 MB of the tarball (32M -> 19M `dist`) which no
 // consumer could ever use, and `declarationMap` was actively harmful: it routes an editor's
 // Go-to-Definition at the missing `.ts` and fails there instead of falling back to the readable
 // `.d.ts` beside it.
-//
 // `tsconfig.build.json` turns both flags off, but a config file is easy to lose: a future
 // `extends` reshuffle, a `--sourceMap` on some other build path, or `scripts/build.mjs` reverting
 // to `tsconfig.json` would silently regrow all of it, and nothing else in the repository looks at
 // what tsc actually emitted. This does, on the emitted bytes rather than on the config that
 // produced them, so the assertion survives any change in how the build is spelled.
-//
 // Two independent signals, because either can appear without the other: a stray `*.map` file
 // (emit turned back on), and a `sourceMappingURL` comment inside an emitted file (a map that was
 // referenced but pruned afterwards, which leaves consumers' devtools chasing a 404).
-//
 // Runs as the second half of `pnpm run build` — the only point where `dist/` is guaranteed to be
 // both present and current — which also covers `prepack` and therefore every published tarball.
 // Run it standalone with `pnpm run check:build-artifacts` after any build.
@@ -102,3 +98,4 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) run();
 
 export { run };
+

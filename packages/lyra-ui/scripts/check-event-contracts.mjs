@@ -5,11 +5,9 @@
 //   * the class JSDoc that feeds the manifest,
 //   * custom-elements.json,
 //   * and the authored llms/<family>.md Events contract.
-//
 // Event names/details are also gated by the type system: `LyraElement.emit()` is keyed by the
 // component EventMap. Cancelability cannot be expressed there, so this checker derives it from
 // every statically resolvable `this.emit()` call and compares that runtime truth with JSDoc/CEM.
-//
 // Interface inheritance is intentionally asymmetric. Events declared directly by a component's
 // own EventMap must be advertised by that component. Inherited mixin events may instead be
 // documented once as a shared contract, but any event a component does advertise still has to be
@@ -2161,3 +2159,4 @@ async function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await main();
 }
+

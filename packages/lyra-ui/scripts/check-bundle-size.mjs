@@ -5,12 +5,10 @@
 // consumer would import, gzips the result, and compares against the budgets checked in at
 // scripts/bundle-budgets.json. Run after `pnpm build` (it measures dist/, the actual published
 // form). The checked-in ceilings are reviewed release limits, not generated snapshots.
-//
 // It doubles as the source of the size numbers this project publishes: the same pass measures every
 // per-component entry and records the average, alongside the whole-barrel total, in
 // scripts/bundle-stats.json, which the README badges and the lyra-ui.com hero render. Those are
 // claims made to users, so the check fails when the live build no longer matches them.
-//
 // The optional peer packages (chart.js, pdfjs-dist, shiki, ...) are externalized: the library only
 // ever reaches them through dynamic `import()` in the src/internal loader modules, consumers
 // install them opt-in, and their weight is not this library's to budget. The list is derived from
@@ -317,3 +315,4 @@ if (missingEntries.length) {
       );
     }
 }
+

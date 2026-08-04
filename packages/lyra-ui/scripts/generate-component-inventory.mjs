@@ -2238,7 +2238,6 @@ const LYRA_MODAL_CONTROLLER_DEFAULT =
 // pairs are semantic aliases/absence representations, and Shoelace's `get-tag` is an analyzer-
 // inferred attribute for the documented property-only getTag callback. They affect comparison
 // only and are never executable codemod rewrites.
-//
 // Type tuples are `[member kind, exact upstream members, exact upstream type, exact Lyra CEM
 // type]`. They enumerate target aliases whose source declarations were reviewed to accept the
 // complete upstream type. Keeping both strings and every member explicit makes analyzer or API
@@ -3718,3 +3717,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.exitCode = 1;
   }
 }
+

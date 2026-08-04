@@ -403,7 +403,14 @@ test('validates npm pack output and rejects unsafe published-package archives', 
     parseNpmPackOutput('[{"filename":"aceshooting-lyra-ui-7.8.1.tgz"}]'),
     'aceshooting-lyra-ui-7.8.1.tgz',
   );
+  // Some npm versions (observed: 12.0.2) report `npm pack --json` as an object keyed by package
+  // name rather than an array -- `Object.values()` normalizes it to the same single-element shape.
+  assert.equal(
+    parseNpmPackOutput('{"@aceshooting/lyra-ui":{"filename":"aceshooting-lyra-ui-7.8.1.tgz"}}'),
+    'aceshooting-lyra-ui-7.8.1.tgz',
+  );
   assert.throws(() => parseNpmPackOutput('[]'), /exactly one tarball/);
+  assert.throws(() => parseNpmPackOutput('{}'), /exactly one tarball/);
   assert.doesNotThrow(() =>
     validateTarEntries(['package/package.json', 'package/dist/lyra.js']),
   );

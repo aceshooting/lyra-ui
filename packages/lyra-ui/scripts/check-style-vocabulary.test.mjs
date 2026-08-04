@@ -1,7 +1,6 @@
 // Self-test for check-style-vocabulary.mjs. A gate that parses source can start matching nothing and
 // pass vacuously, which is worse than failing -- so the parser is exercised directly against the
 // shapes it is supposed to catch and the shapes it must leave alone.
-//
 // Run: node scripts/check-style-vocabulary.test.mjs
 
 import assert from 'node:assert/strict';
@@ -55,3 +54,4 @@ check('a renamed copy of the same members still collides', () => {
 });
 
 console.log(`Style-vocabulary checker self-test passed (${passed} cases).`);
+

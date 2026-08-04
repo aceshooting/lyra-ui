@@ -1,6 +1,5 @@
 // Maintains scripts/coverage-floors.json -- the per-metric coverage floors that
 // web-test-runner.config.js hands to `wtr`'s blocking threshold check.
-//
 // Why a generated data file instead of literals in the runner config: floors
 // written by hand drift silently. They were last hand-edited to
 // statements 75 / branches 65 / functions 65 / lines 75 while the suite was
@@ -8,14 +7,12 @@
 // could have gone uncovered without the gate firing. A floor is only a gate if
 // it sits just under the measurement, and only stays there if refreshing it is a
 // mechanical command producing a reviewable diff.
-//
 // Usage (from packages/lyra-ui, after a coverage run has written coverage/):
 //   node scripts/write-coverage-floors.mjs                 # check stored floors against measured coverage
 //   node scripts/write-coverage-floors.mjs --write-floors  # raise floors to floor(measured - margin)
 //   node scripts/write-coverage-floors.mjs --write-floors --allow-lower
 //                                                          # ALSO lower floors (explicit, reviewable)
 //   ... --margin 2   # override the default 1.5-point slack
-//
 // `--write-floors` never lowers a floor without `--allow-lower`: a coverage
 // regression must be an explicit, visible decision in the diff, not a silent
 // re-baseline by whoever last ran the command.
@@ -225,3 +222,4 @@ function main() {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main();
 }
+

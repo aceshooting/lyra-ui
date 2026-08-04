@@ -2,13 +2,11 @@
 // Reports every component-scoped `--lr-<component>-*` custom property a component's own stylesheet
 // reads, every consumer hook a shared stylesheet it composes reads on its behalf, and every
 // `part="…"` its template renders, that `custom-elements.json` does not declare.
-//
 // The manifest is generated from JSDoc, so an undeclared token or part is invisible to
 // `vscode-css-data.json`, `web-types.json`, every manifest-driven editor integration, and to
 // `check-llms-freshness.mjs` — which is how 60 custom properties and 15 parts came to be documented
 // nowhere at all. `scripts/llms-gap-report.mjs` compensates by scanning stylesheets directly; this
 // check exists so the manifest itself stops being the weak link.
-//
 // Run: `node scripts/check-manifest-coverage.mjs [--list]`
 //   --list  print the worklist and exit 0 (authoring aid); default exits 1 on any finding.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -93,7 +91,6 @@ for (const mod of manifest.modules ?? []) {
     const declaredParts = new Set((decl.cssParts ?? []).map((p) => p.name));
 
     // Own-namespace tokens only: `--lr-table-*` belongs to `lr-table`, `--lr-color-brand` does not.
-    //
     // Scope the scan to the declaration's *own* stylesheet where one exists. Two components sharing
     // a directory share a token namespace prefix — `--lr-timeline-item-*` starts with
     // `--lr-timeline-`, and `--lr-tree-depth` with `--lr-tree-` — so a directory-wide scan makes the
@@ -118,7 +115,6 @@ for (const mod of manifest.modules ?? []) {
     // Shared sheets composed into those entry sheets contribute their own consumer hooks — see
     // `resolveSheetGraph`/`sharedSheetHooks`. The own-namespace prefix cannot apply here: a shared
     // hook is shared precisely because it is not named after any one component.
-    //
     // Only sheets from *outside* the component's directory count. A same-directory import is a
     // component's own stylesheet under another name (`histogram.styles.ts` is one line re-exporting
     // `chart.styles.ts`), still governed by the own-namespace prefix above; treating it as shared
@@ -132,7 +128,6 @@ for (const mod of manifest.modules ?? []) {
 
     // Parts rendered from a static `part="…"` attribute in the class module. Dynamic/computed part
     // names are out of scope here (check-manifest.mjs already covers the exportparts contract).
-    //
     // Two sources of false positives have to be excluded, both of which name *another* component's
     // parts rather than declaring one of this component's own:
     //   - JSDoc/line comments describing a collaborator's contract in prose;
@@ -182,3 +177,4 @@ if (!listOnly) {
   out('\nAdd the missing @cssprop/@csspart JSDoc lines, then re-run `pnpm manifest`.');
   process.exit(1);
 }
+

@@ -2,15 +2,12 @@
 // Component-dependency checker: every `<lr-*>` element a component renders into its own shadow
 // root must be *registered* by that component's registration entry, reachable through the entry's
 // own transitive imports.
-//
 // The bug this catches, in the exact shape it shipped in (`tool-result-view`, 8.0.0):
-//
 //   tool-result-view.class.ts   import '../../utility/copy-button/copy-button.class.js';  // pure
 //                               ... html`<lr-copy-button part="fallback-copy">`
 //   tool-result-view.ts         import '../../utility/json-viewer/json-viewer.js';
 //                               import '../../overlays/skeleton/skeleton.js';
 //                               // <- no copy-button.js
-//
 // The class module deliberately imports the side-effect-FREE `*.class.js` (that split is what
 // makes the package tree-shakeable), so nothing in the graph ever calls `defineElement('copy-
 // button', ...)`. A consumer taking the granular import path the package actively recommends --
@@ -19,32 +16,26 @@
 // renders as an empty inline box. The root barrel (`lyra.js`) imports every registration entry, so
 // it hides the defect completely -- including from a colocated `*.test.ts` that imports only its
 // own `./<name>.js` and asserts on `[part]` attributes rather than on upgrade.
-//
 // Why not Shoelace's `static dependencies = []`: that pattern requires every class module to
 // reference its dependencies' *registration* side effects, which is precisely what this package's
 // side-effect-free class/registration split exists to avoid. The explicit
 // `import '<dep>/<dep>.js'` line in the registration entry is the intended model; this gate makes
 // its absence loud instead of silent.
-//
 // What counts as "rendered": an `<lr-*>` start tag inside an `html` / `staticHtml` / `svg` tagged
 // template literal, plus the `unsafeStatic(tag('name'))` indirection used for the generated
 // submenu panel (`menu-item`, `dropdown`). Comments and plain string literals are excluded, so a
 // tag named in JSDoc or in a `localName === '<lr-x>'` comparison never counts. Names assembled at
 // runtime and elements created through `document.createElement()` are not known to this check.
-//
 // What counts as "registered": the registration entry's transitive import closure -- static
 // imports, `export ... from` re-exports, AND lazy `import()` calls (`phone-input` registers
 // `<lr-flag>` that way on purpose; the rendered element upgrades in place when it resolves).
-//
 // Which renders are attributed to an entry: the class module of every tag the entry registers,
 // plus that class module's non-component helper modules, plus any superclass class module it
 // `extends` (`dropdown-item` inherits `menu-item`'s generated `<lr-menu>` submenu).
-//
 // Suppression, for the rare pair that cannot import each other:
 //   policy-allow(component-dependency: lr-menu): specific reason
 // in the registration entry. A reason is mandatory, and a suppression that no longer silences a
 // finding is itself reported, so the list cannot rot.
-//
 // Run directly: `node scripts/check-component-dependencies.mjs`. Wired into
 // `pnpm run contract-policy`.
 import fs from 'node:fs';
@@ -489,3 +480,4 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) run();
 
 export { run };
+

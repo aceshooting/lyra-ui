@@ -2,7 +2,6 @@
 // Standalone test for scripts/check-part-reachability.mjs -- plain `node:assert`, not wired into
 // the wtr suite (this checker reads source text, it does not render components). Run directly:
 // `node scripts/check-part-reachability.test.mjs`.
-//
 // Every fixture below is a reduced copy of a real shape from src/components: the bug this checker
 // exists to catch, and -- just as importantly -- the correct dual-path and header-row shapes that
 // must NOT be flagged.
@@ -276,3 +275,4 @@ if (failures > 0) {
 } else {
   console.log(`Part reachability checker self-test passed (${passes} cases).`);
 }
+

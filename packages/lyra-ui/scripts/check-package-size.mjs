@@ -103,8 +103,13 @@ function readPackedMetrics() {
     throw new Error(`npm pack --dry-run failed:\n${packed.stderr || packed.stdout}`);
   }
   const result = JSON.parse(packed.stdout);
-  assert.equal(result.length, 1, 'npm pack must report exactly one package');
-  return metricsFromPackResult(result[0]);
+  const packedMetrics = Array.isArray(result)
+    ? result
+    : typeof result === 'object' && result !== null
+      ? Object.values(result)
+      : [];
+  assert.equal(packedMetrics.length, 1, 'npm pack must report exactly one package');
+  return metricsFromPackResult(packedMetrics[0]);
 }
 
 function main() {

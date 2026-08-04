@@ -2,7 +2,6 @@
 // CSS which parses fine, ships fine, and never matches anything. Both classes of bug are invisible
 // to tsc, to the style policy, and to any test that inspects stylesheet *text* rather than the
 // rendered result.
-//
 //   cross-root-part   A component whose template mounts `<lr-virtual-list>` and hands it a
 //                     `renderItem`/`renderGroup` callback emits its row markup into
 //                     *lr-virtual-list's own shadow root* (lit commits the callback's return value
@@ -16,7 +15,6 @@
 //                     `::part(a) .descendant` therefore parse but never match --
 //                     `CSS.supports('selector(x::part(a)[data-b])')` is false. `::part(a):hover`,
 //                     `::part(a)::selection` and the part-list form `::part(a b)` are all fine.
-//
 // Deliberately conservative -- a false positive costs a contributor a noisy suppression, which is
 // worse than slightly narrow coverage:
 //   * cross-root-part only fires when the styles file has *no* `::part(<name>)` rule for that name
@@ -30,14 +28,11 @@
 //     this check. It would rather miss one than invent a name a stylesheet coincidentally mentions.
 //   * part-compound scans `*.styles.ts` only -- the stylesheet corpus. It is exact and needs no
 //     allowlist, because the pattern is never correct.
-//
 // Fixtures for both rules, including the shapes that must NOT be flagged, live in
 // scripts/check-part-reachability.test.mjs (run by the same chain).
-//
 // Suppression (cross-root-part only): a comment on the flagged line, or in the contiguous comment
 // block immediately above it, of the form
 //   policy-allow(cross-root-part): specific reason
-//
 // Run directly: `node scripts/check-part-reachability.mjs`. Wired into `pnpm run contract-policy`.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -468,3 +463,4 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) run();
 
 export { run, stripJsComments };
+

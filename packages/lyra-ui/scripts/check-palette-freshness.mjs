@@ -3,7 +3,6 @@
 // blocks inside otherwise hand-authored files. Nothing re-ran or diffed all of them, so a hand edit
 // to a generated block could survive indefinitely -- and, because the generators enforce contrast
 // and CVD-separation floors, that is a silent accessibility regression.
-//
 // Deliberately a content round-trip rather than `git diff --exit-code`: comparing against the
 // working tree catches a hand edit that was already committed, and it cannot fail spuriously
 // because of unrelated uncommitted work in the same files. The originals are restored on failure,
@@ -69,3 +68,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     );
   }
 }
+

@@ -2,7 +2,6 @@
 
 // Guards the shipped translation catalogs (`src/translations/<tag>.ts`) against the four ways a
 // catalog silently rots, none of which any other gate or the type system can see:
-//
 //   1. A KEY GOES MISSING. `LyraLocaleStrings` is `Partial<...>` by design -- a per-instance
 //      `.strings` override is meant to carry two keys, not twelve hundred -- so a catalog that
 //      forgot 300 keys type-checks perfectly and just renders English in the middle of a German
@@ -21,11 +20,9 @@
 //      from `Intl.PluralRules(tag).resolvedOptions().pluralCategories`, so it tracks the runtime's
 //      CLDR data rather than a hand-copied table. (If a future ICU adds a category to a locale
 //      this check goes red -- that is a genuine translation gap surfacing, not a false positive.)
-//
 // Key ORDER is enforced too: catalogs are mechanically comparable only if they enumerate keys in
 // the same order as `DEFAULT_STRINGS`, and a review that cannot diff two catalogs side by side is
 // a review that will not spot 1 and 2 either.
-//
 // Finally, a catalog is a side-effect-only module -- a consumer writes a bare
 // `import '@aceshooting/lyra-ui/translations/de';` and reads nothing from it -- so an undeclared
 // one is dropped outright by any bundler honoring `package.json#sideEffects`, exactly as
@@ -482,3 +479,4 @@ async function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await main();
 }
+

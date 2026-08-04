@@ -1,24 +1,20 @@
 // Visual-regression harness: screenshots the machine-readable Storybook matrix in
 // visual-baselines/manifest.json and diffs each capture against a committed baseline PNG.
-//
 // *** See packages/lyra-ui/visual-baselines/README.md for what a mismatch does and doesn't prove
 // before trusting a baseline. This is a blocking CI gate (packages/lyra-ui/visual-baselines/README.md
 // documents the determinism work that made that safe) -- a mismatch here fails the CI job. ***
-//
 // Mirrors the existing scripts/check-storybook.mjs pattern one directory up (a local static
 // server for storybook-static/ + Playwright Chromium driving iframe.html directly with
 // Storybook's `globals` URL param for theme/direction) rather than introducing a second test
 // framework (e.g. @storybook/test-runner, which would require Jest -- this repo's stack is
 // @web/test-runner for unit tests and plain Playwright scripts for Storybook-driven checks; see
 // AGENTS.md's Testing conventions section).
-//
 // Usage (from packages/lyra-ui/, or via `pnpm --filter @aceshooting/lyra-ui test:visual`):
 //   node scripts/visual-regression.mjs                     # capture + diff against baselines
 //   node scripts/visual-regression.mjs --update-snapshots   # promote human-reviewed captures
 //   node scripts/visual-regression.mjs --filter checkbox    # limit to matching story ids
 //   VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 node scripts/visual-regression.mjs
 //                                                        # run one deterministic capture shard
-//
 // Requires `storybook-static/` to already exist (`pnpm docs:build` from the repo root) and the
 // Playwright Chromium browser to be installed (`pnpm --filter @aceshooting/lyra-ui exec
 // playwright install --with-deps chromium`), same preconditions as check-storybook.mjs.
@@ -857,3 +853,4 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
+

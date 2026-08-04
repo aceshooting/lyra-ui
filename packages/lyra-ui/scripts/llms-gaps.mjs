@@ -176,7 +176,6 @@ export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverrid
         );
         // Component-scoped tokens only — the shared --lr-color-*/--lr-space-* layer lives in
         // llms/tokens.md and is deliberately not restated per component.
-        //
         // Ownership is by the LONGEST matching tag, not merely a prefix match: sibling components
         // sharing a directory can have tags that prefix one another (`lr-tab` / `lr-tab-group`),
         // and a plain `startsWith` would bill `--lr-tab-group-hover-color` to `lr-tab` as well,
@@ -197,3 +196,4 @@ function tagFactsFor() {
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
   return readTagFacts(manifest);
 }
+

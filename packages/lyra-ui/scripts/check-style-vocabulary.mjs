@@ -1,15 +1,12 @@
 // Fails when a component re-declares a union the shared styling vocabulary already owns.
-//
 // Before 8.0.0 the library shipped ten byte-identical copies of
 // `'neutral' | 'brand' | 'success' | 'warning' | 'danger'` under ten different names, spelled across
 // three different property names (`variant`, `tone`, `kind`). The cost was not the duplication --
 // it was that a consumer could not learn the vocabulary once, and that adding a sixth tone meant
 // finding ten files. `src/internal/variants.ts` now owns each of these; a local copy is a drift
 // vector, so it fails here rather than at review time.
-//
 // The check is on the MEMBER SET, not the name or the order: renaming the alias or reordering the
 // members is exactly how the copies diverged in the first place.
-//
 // Run: node scripts/check-style-vocabulary.mjs
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -79,3 +76,4 @@ if (process.argv[1] && process.argv[1].endsWith('check-style-vocabulary.mjs')) {
     console.log(`Style-vocabulary contract passed: ${sharedByKey.size} shared unions, no component-local duplicates.`);
   }
 }
+

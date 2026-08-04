@@ -2,7 +2,6 @@
 // Standalone test for scripts/check-component-dependencies.mjs -- plain `node:assert`, not wired
 // into the wtr suite (this checker reads source text, it does not render components). Run
 // directly: `node scripts/check-component-dependencies.test.mjs`.
-//
 // Every fixture below is a reduced copy of a real shape from src/components: the bug this checker
 // exists to catch (`tool-result-view` renders `<lr-copy-button>` from a class module that imports
 // only the side-effect-FREE `copy-button.class.js`, while its registration entry never imports
@@ -419,3 +418,4 @@ if (failures > 0) {
 } else {
   console.log(`check-component-dependencies self-test passed: ${passes} case(s).`);
 }
+

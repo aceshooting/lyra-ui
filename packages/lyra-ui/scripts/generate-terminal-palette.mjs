@@ -1,43 +1,34 @@
 // Regenerates `<lr-terminal>`'s ANSI/SGR palette in `src/theme.css` AND the mirrored opt-in
 // fallbacks in `src/internal/specialist-tokens.styles.ts`, for BOTH modes, between the
 // `terminal ramp` markers.
-//
 // Two token sets are generated, because SGR gives the sixteen names two different jobs:
-//
 //   --lr-terminal-color-<name>   foreground (CSI 30-37 / 90-97), drawn ON the terminal panel
 //   --lr-terminal-bg-<name>      background (CSI 40-47 / 100-107), drawn UNDER the terminal's text
-//
 // They used to be the same sixteen tokens, which is what every native terminal does — but a native
 // terminal's palette is tuned for its own background, and Lyra's is solved against the panel. Once
 // the foregrounds were solved to clear 4.5:1 against a LIGHT panel they all became dark, so
 // `ESC[41m` painted a near-black red behind the panel's near-black default text: 1.5:1, i.e.
 // unreadable. Backgrounds therefore get their own set, solved from the opposite side.
-//
 // The guarantees, both enforced by `scripts/check-contrast.mjs` in both modes:
-//
 //   1. every `--lr-terminal-color-*` clears WCAG 1.4.3's 4.5:1 against `--lr-color-surface-raised`
 //      (the panel `<lr-terminal>` paints for itself — measuring against the page would be checking
 //      the palette against a background it is never drawn on)
 //   2. every `--lr-terminal-bg-*` clears 4.5:1 against the panel's DEFAULT TEXT colour, which is the
 //      foreground actually in effect whenever a program sets a background and no explicit colour
-//
 // An explicit foreground+background pair (`ESC[30;47m`) is the emitting program's choice and is not
 // guaranteed here, exactly as in a native terminal: sixteen foregrounds against sixteen backgrounds
 // is 256 combinations, several of which are degenerate by construction (red on red). What IS
 // guaranteed is the two cases a program cannot avoid — any foreground on the panel, and the default
 // foreground on any background.
-//
 // The consequence, stated rather than buried: on a LIGHT panel every background is a light tint, so
 // `ESC[40m` ("black background") renders as the darkest tint that still leaves the default text
 // legible rather than as literal black. That is the only reading of "accessible" available — a
 // literal black background under near-black default text is text nobody can read.
-//
 // Each colour keeps its canonical ANSI HUE — a terminal's red has to look like red, or escape
 // sequences stop meaning what every other terminal makes them mean. Only lightness is solved for.
 // The four achromatic entries (black / bright-black / white / bright-white) are RANK-SEPARATED
 // rather than all solved to the same target: solving them identically is why `white` and `black`
 // used to resolve to the same hex, so `ESC[30;47m` rendered invisible text on its own colour.
-//
 // Run: node scripts/generate-terminal-palette.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -259,3 +250,4 @@ for (const mode of ['light', 'dark']) {
 
 writeFileSync(themePath, themeOut, 'utf8');
 writeFileSync(specialistTokensPath, specialistTokensOut, 'utf8');
+

@@ -53,7 +53,6 @@ if (duplicates.length) {
 }
 
 // --- Step 2: resolve the real export graph reachable from src/lyra.ts. ---
-//
 // A TS module specifier like './components/foo/foo.js' points at the *source*
 // file 'foo.ts' on disk (this repo imports with `.js` extensions per NodeNext
 // resolution, but nothing is compiled yet when this script runs). We resolve
@@ -143,7 +142,6 @@ for (const entry of declaredEventMaps) {
 for (const message of unresolvableSpecs) errors.push(message);
 
 // --- Sanity cross-check against the optional-peer allowlist. ---
-//
 // Components in ROOT_BARREL_OPTIONAL_PEER_TAGS (chart/map/graph/geojson-view
 // and friends) are deliberately NOT side-effect-imported/registered by the
 // root barrel so importing it stays free of optional peer dependencies -- but
@@ -171,3 +169,4 @@ if (errors.length) {
 } else {
   console.log(`Lyra event-barrel reachability check passed: ${declaredNames.size} EventMap types all reachable from src/lyra.ts.`);
 }
+

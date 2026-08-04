@@ -2,7 +2,6 @@
 // Fails when the authored `llms/<family>.md` sources have drifted from custom-elements.json: any
 // public property, attribute, event, slot, CSS part, or themeable custom property that exists but
 // is never mentioned in its component's own section.
-//
 // Historically this only checked properties, only against `llms-full.txt`, and used last-wins
 // lookup on duplicate headings — so a duplicated, prose-only section could satisfy it while events,
 // slots and CSS parts went undocumented library-wide. It now shares its gap computation with
@@ -37,3 +36,4 @@ console.log(
   'llms/ is fresh: every public property, attribute, event, slot, CSS part and themeable custom' +
     ' property of every custom element is documented.',
 );
+

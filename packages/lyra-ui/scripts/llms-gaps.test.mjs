@@ -2,7 +2,6 @@
 // Standalone tests for scripts/llms-gaps.mjs -- plain `node:assert`, not wired into
 // the wtr suite (this checker reads markdown text, it does not render components). Run directly:
 // `node scripts/llms-gaps.test.mjs`.
-//
 // `mentionsName` replaced a plain `section.text.includes(n)` substring check that produced a
 // confirmed false pass: `lr-graph-query-builder`'s `label`/`hint`/`error` CSS *parts* were reported
 // as "documented" purely because those exact words already occurred elsewhere in the section as
@@ -219,3 +218,4 @@ if (failures > 0) {
 } else {
   console.log(`llms-gaps self-test passed (${passes} cases).`);
 }
+

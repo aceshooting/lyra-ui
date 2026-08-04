@@ -2,7 +2,6 @@
 //   - vscode-html-data.json  (VS Code's `html.customData` format -- tag names, attributes, slots)
 //   - vscode-css-data.json   (VS Code's `css.customData` format -- every `--lr-*` custom property)
 //   - web-types.json         (JetBrains' web-types format -- same coverage, for WebStorm/IntelliJ)
-//
 // TypeScript consumers already get tag/attribute completion via the generated
 // `HTMLElementTagNameMap` (produced by `tsc` alongside `dist/*.d.ts`). Plain HTML, Vue templates,
 // and Angular templates never go through that type graph, so editors need these small JSON data
@@ -13,14 +12,12 @@
 // no enumerated values at all -- meaning no editor could offer `variant="…"` completion for any of
 // them, which is most of the library's closed string sets. `readTypeAliases()` below resolves those
 // names by scanning the source for their declarations, so the value lists are real.
-//
 // A regex, not the TypeScript API: this repo pins TypeScript 7's native compiler, which ships no
 // JavaScript compiler API at all (`ts.createProgram` and friends are simply absent), so every
 // AST-based tool is unavailable. That is workable here only because the contributor contract
 // forbids `enum` and requires these sets to be exported literal unions or unambiguous chains of
 // those aliases -- a narrow, uniform graph a small parser reads reliably. A declaration it cannot
 // parse, a cycle, or an ambiguous name is skipped, never guessed at.
-//
 // Wired into `prepack`, right after `manifest`, so these never drift from a freshly regenerated
 // custom-elements.json before publish. Also runnable directly: `node
 // scripts/generate-editor-data.mjs` (or `pnpm run generate-editor-data`) from `packages/lyra-ui/`
@@ -303,3 +300,4 @@ writeFileSync(webTypesPath, `${JSON.stringify(webTypes, null, 2)}\n`);
 console.log(
   `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, and both to web-types.json`,
 );
+

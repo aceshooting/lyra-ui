@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // Verifies the generated agent-facing artifacts against their authored sources:
-//
 //  1. `llms-full.txt` and everything under `llms/` (index, components/, tokens, peers, migration)
 //     are byte-identical to a fresh `scripts/build-llms.mjs` run — the same generated-file
 //     discipline already applied to `custom-elements.json`.
@@ -112,3 +111,4 @@ if (problems.length > 0) {
 console.log(
   `llms artifacts are in sync: llms-full.txt + ${expected.size - 1} files under llms/, ${seenPaths.size} documented import paths resolve.`,
 );
+

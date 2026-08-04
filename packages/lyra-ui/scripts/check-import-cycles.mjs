@@ -3,7 +3,6 @@
 // registration order this library depends on (see check-registration-architecture.mjs /
 // check-side-effects.mjs), so the gate is zero-tolerance -- consistent with the other bespoke
 // contract checks, and with no third-party dependency of its own.
-//
 // Both static value imports AND `import type` edges count: `import type` is erased at runtime by
 // verbatimModuleSyntax so a type-only cycle is harmless at execution time, but it is still a
 // design smell and trivially avoided by extracting the shared type into its own leaf module (see
@@ -116,3 +115,4 @@ if (cycles.length > 0) {
 }
 
 console.log(`Import-cycle check passed: ${files.length} shipped modules, 0 circular imports.`);
+

@@ -4,14 +4,11 @@
 // `src/internal/numbers.ts` (`finiteNumber`/`finiteRange`/`finiteInteger`/`finiteCount`/
 // `finiteDuration`). That layer was built specifically to make this class of bug impossible; a
 // new numeric property that never calls into it can silently reintroduce it.
-//
 // This is a *heuristic*, textual check, not a dataflow analysis -- deliberately, to match the
 // pragmatic style of scripts/check-style-policy.mjs's own regex-based checks. It cannot know
 // whether a given numeric property genuinely needs bounds (an opaque pass-through id, or a value
 // already validated by a native HTML input type, doesn't). For those, add an inline
-//
 //   // numeric-guard-exempt: <short reason>
-//
 // comment directly above the property declaration (or, for a `static properties = { ... }`
 // entry, directly above that entry's key). A property with neither guard-helper usage nor an
 // exemption comment hard-fails; one with an exemption comment is reported but does not fail --
@@ -264,3 +261,4 @@ if (flagged.length > 0) {
 } else {
   console.log('\nNumeric guard check passed.');
 }
+

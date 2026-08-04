@@ -3,18 +3,15 @@
 // Emits a translation catalog SKELETON for one locale: every `DEFAULT_STRINGS` key, in
 // `DEFAULT_STRINGS` order, with the English text as the starting value, and every count-bearing
 // message expanded to exactly the CLDR plural categories that locale actually has.
-//
 // The point is that the three things a human translator cannot be trusted to get right by hand are
 // made structural instead. `scripts/check-translations.mjs` fails a catalog that is missing a key,
 // invents one, reorders them, drops a plural category, or renames a `{placeholder}` -- and every
 // one of those is a mistake you make by TYPING a 1200-entry object, not by translating. Generating
 // the shape leaves only the translation to do.
-//
 // The emitted values are English on purpose. A sentinel like 'TODO' would be worse: it makes an
 // untranslated catalog render garbage rather than fall back to a language the reader at least has a
 // chance with, and the gate cannot tell a sentinel from a legitimately identical string ("OK",
 // "JSON", "PDF") anyway. Untranslated coverage is reported by `--report` instead.
-//
 // `registerLyraLocale()`'s third argument -- the locale METADATA -- is preserved, not regenerated.
 // It is the one thing in a catalog that is neither a key nor a translation, and it is load-bearing:
 // `getLyraLocaleDirection()` answers from a registered `dir` first and only then from `Intl.Locale`'s
@@ -23,7 +20,6 @@
 // application asking the library which direction a locale needs. So: an existing file's meta
 // argument is carried across verbatim, and a brand-new RTL catalog is scaffolded WITH one rather
 // than leaving the direction to a runtime that may not know it.
-//
 // Run: node scripts/scaffold-translation.mjs <tag> [--force]
 //      node scripts/scaffold-translation.mjs --report
 
@@ -170,13 +166,11 @@ function emit(tag, entries, meta) {
       ].join('\n')
     : `\nregisterLyraLocale('${tag}', strings);`;
   return `// ${tag} translation catalog for @aceshooting/lyra-ui.
-//
 // A side-effect-only module: a consumer writes a bare
 // \`import '@aceshooting/lyra-ui/translations/${tag}';\` and reads nothing from it. Keep the keys in
 // DEFAULT_STRINGS order -- \`scripts/check-translations.mjs\` enforces coverage, order, placeholder
 // names and the plural-category set for this locale, and a catalog that cannot be diffed against
 // another line-for-line is a catalog nobody will review.
-//
 // Regenerate the SHAPE (never the translations) with:
 //   node scripts/scaffold-translation.mjs ${tag} --force
 import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localization.js';
@@ -248,3 +242,4 @@ console.log(
     `[${new Intl.PluralRules(tag).resolvedOptions().pluralCategories.join(', ')}]` +
     (meta ? `, meta ${meta}` : ''),
 );
+

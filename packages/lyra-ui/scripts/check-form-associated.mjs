@@ -3,7 +3,6 @@
 // `internal/form-associated.ts`) that doesn't follow the hardened pattern established for this
 // package (see checkbox.class.ts/switch.class.ts/model-select.class.ts/tool-param-form.class.ts
 // for the reference shape):
-//
 //   (a) a component that builds its OWN fieldset-inheritance state (a private
 //       `_fieldsetDisabled` field and/or a public `effectiveDisabled` getter, declared outside the
 //       shared mixin) must also implement `formDisabledCallback()` to populate that state --
@@ -11,14 +10,12 @@
 //       (checkbox-group's `formDisabledCallback` once mutated children's own `disabled` directly
 //       instead of populating this kind of state; radio once had `_fieldsetDisabled`/
 //       `effectiveDisabled` with no `formDisabledCallback` at all -- this rule catches both shapes.)
-//
 //   (b) `name`/`required`/`disabled` specifically must not be plain `@property(...)`-reflected
 //       fields on a form-associated component -- they need a `noAccessor: true` reactive-property
 //       declaration paired with a hand-written `get`/`set` pair, so the host attribute and
 //       `ElementInternals` validity/value are recomputed synchronously on assignment, not only on
 //       Lit's async update cycle. (token-input once declared all three as plain
 //       `@property({reflect: true})` fields.)
-//
 //   (c) a component that carries a form VALUE (a `value` property, or any `setFormValue()` call)
 //       must expose `setCustomValidity(message)` -- the standard channel for an error no
 //       client-side constraint can express (a server-side rejection). Without it a consumer can
@@ -33,7 +30,6 @@
 //       thing. Note also that a raw-source scan would have reported the opposite of the truth, since
 //       every hardened control's `@cssstate valid` JSDoc names the method in prose; see
 //       `stripComments` below.)
-//
 //   (d) a component that accepts `required` AND renders a `form-control-label` part must actually
 //       render a required marker, so the same field reads the same way in every form. The marker
 //       lives in `src/internal/form-control.styles.ts` (`formControlRequiredMarker`); a
@@ -42,7 +38,6 @@
 //       three declarations were copy-pasted into fourteen stylesheets, spelled a second way as a
 //       template `<span>` in three more, and simply missing from several controls that accept
 //       `required` and render the part.
-//
 //   (e) a component that carries state a form reset has to undo -- a form VALUE, or an interaction
 //       flag gating the `user-valid`/`user-invalid` custom states -- must implement
 //       `formResetCallback()`. Without it, `form.reset()` restores every native control around it
@@ -55,12 +50,10 @@
 //       of scope. The rule deliberately stops at `formResetCallback`: `formStateRestoreCallback`
 //       restores a value the browser previously serialised, so it has no meaning for a control
 //       that never calls `setFormValue()`.
-//
 //   (f) a component that drives `ElementInternals` by hand instead of extending the shared
 //       `FormAssociated` mixin must be listed in `HAND_ROLLED_FORM_VALUE`. The list is the
 //       migration backlog, it is shrink-only, and the runner fails on a stale entry -- so no NEW
 //       hand-rolled copy of the dance can be added, and migrating one forces deleting its entry.
-//
 //       This rule could not exist before `src/internal/form-associated.ts` became generic over its
 //       value type. Until then "my value isn't a string" was a true and unanswerable objection: the
 //       mixin declared `private _value = ''` and asked `this._value === ''` for `valueMissing`, so a
@@ -68,18 +61,14 @@
 //       setFormValue, validity, dirty/default tracking, reset and state restoration itself. Gating
 //       on it then would have demanded a fix that did not exist. It does now
 //       (`FormAssociated(Base, adapter)`), which is what turns a census into a rule.
-//
 //       The duplication is not cosmetic: dirty-default tracking was copy-pasted four different
 //       ways, the user-interaction signal was re-invented eighteen times, and `formResetCallback`
 //       was simply missing from `<lr-time-range>` -- each fixed one file at a time, none of which
 //       could have happened in the shared implementation.
-//
 //       The rule is off unless the caller passes a `handRolledAllowlist`, because the allowlist is
 //       a repo-wide census and is meaningless for an isolated source fixture; `main()` passes it.
-//
 // A component that extends the shared `FormAssociated` mixin directly and never redeclares
 // name/required/disabled gets all of the above for free and is not flagged.
-//
 // Self-test: `node scripts/check-form-associated.test.mjs`.
 import { readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
@@ -758,3 +747,4 @@ export function main() {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('check-form-associated.mjs')) main();
+

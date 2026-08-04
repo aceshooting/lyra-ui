@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 // Builds every generated agent-facing reference artifact from the authored sources in `llms/`.
-//
 // Authored (edit these):
 //   llms/00-preamble.md       intro paragraphs of llms-full.txt
 //   llms/shared.md            foundation + cross-cutting notes (apply to the whole library)
 //   llms/<family>.md          one file per src/components/<family>/ directory
-//
 // Generated (never edit; `pnpm run llms` rewrites them, CI diffs them):
 //   llms-full.txt             concatenation, the single-file reference published since v1
 //   llms/index.md             tag -> family/import/one-line-purpose routing table
@@ -13,7 +11,6 @@
 //   llms/tokens.md            direct --lr-theme-* mappings plus derived/fixed --lr-* tokens
 //   llms/peers.md             component -> optional peer dependency map
 //   llms/migration.md         wa-*/sl-* classification and codemod table
-//
 // A component section is assigned to a family by the src/components/<family>/ directory its tag is
 // declared in, so the docs can never drift from the source tree's own grouping.
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync } from 'node:fs';
@@ -805,3 +802,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     `Built llms-full.txt + ${artifacts.size - 1} files under llms/ (${[...artifacts.values()].reduce((a, t) => a + t.length, 0)} bytes).`,
   );
 }
+

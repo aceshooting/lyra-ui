@@ -3,7 +3,6 @@
 // every upstream tag has exactly one exact/rewritten/warning/conceptual/unsupported decision, and
 // only the first two classifications are automatic migration inputs. README mirror rows remain
 // documentation relationships and must agree with that inventory; they are not a rename allowlist.
-//
 // Run: node scripts/check-migration-coverage.mjs
 
 import fs from 'node:fs';
@@ -320,3 +319,4 @@ function run() {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = run();
 }
+

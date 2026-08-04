@@ -1,24 +1,19 @@
 // Regenerates the 8-series categorical chart ramp in `src/theme.css`, in place, between the
 // `chart ramp: generated` markers.
-//
 // The old ramp failed twice over, and `scripts/check-contrast.mjs` now measures both:
-//
 //   1. SC 1.4.11. A chart series is a non-text graphical object conveying data, so it needs 3:1
 //      against the surface it is drawn on. Four of the eight light-mode series were below that, the
 //      worst (`chart-8`, a pale grey) at 1.54:1 — effectively invisible on white.
-//
 //   2. Colour-vision deficiency. Series 5-8 were literally lighter tints of series 1-4, i.e. the
 //      same four hues twice. Under dichromacy that is worse than it sounds: hue is exactly the
 //      channel that collapses, so pairs which merely differ in hue become identical. 20 of 28 dark
 //      pairs and 7 of 28 light pairs were indistinguishable.
-//
 // THE FIX IS STRUCTURAL, not a nudge. A categorical ramp that survives dichromacy cannot rely on
 // hue alone: it has to separate on LIGHTNESS too, because lightness is the one channel every form
 // of colour blindness preserves. The ramp is therefore selected by greedy farthest-point search
 // over a candidate pool that already clears the contrast floor, maximising worst-case separation
 // under all three dichromacies. That is also why the result is not a "prettier" version of the old
 // ramp: an evenly-lit categorical ramp cannot satisfy the constraint at all.
-//
 // Run: node scripts/generate-chart-palette.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -270,3 +265,4 @@ for (const [mode, hexes] of Object.entries(ramps)) {
       `worst CVD separation ${worstSeparation(hexes).toFixed(3)} (floor ${CVD_MIN_DISTANCE})`,
   );
 }
+

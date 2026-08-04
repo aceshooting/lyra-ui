@@ -1,22 +1,17 @@
 // Fails on a `var(--lr-…)` that names a token nothing ever declares AND supplies no fallback.
-//
 // This is invisible to every other tool in the repo. The CSS parses, the manifest is happy, the
 // type checker has nothing to say — but at computed-value time the whole declaration is dropped and
 // the property silently keeps whatever it inherited. Two components shipped a `color:` that never
 // applied because the token was `--lr-color-text-muted` and the real name is `--lr-color-text-quiet`.
-//
 // A reference WITH a fallback (`var(--lr-x, 1rem)`) is fine by construction: that is the documented
 // way a component publishes a consumer-settable knob it also gives a default for.
-//
 // A reference with no fallback is fine only when something declares the name. That includes
 // declarations the component makes at runtime for a per-instance computed value — via
 // `style.setProperty('--lr-x', …)`, a Lit `styleMap({ '--lr-x': … })`, or a documented
 // `@cssprop [--lr-x]` the component sets inline itself. All three count, so the scan covers `.ts`
 // sources as well as stylesheets.
-//
 // Test files are scanned for declarations but never reported against: a test legitimately probes
 // an undeclared token to prove exactly this failure mode.
-//
 // Run: node scripts/check-token-references.mjs
 
 import fs from 'node:fs';
@@ -70,3 +65,4 @@ if (findings.length) {
 } else {
   console.log(`Token-reference contract passed: every no-fallback var() resolves (${declared.size} declared tokens).`);
 }
+

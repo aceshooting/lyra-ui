@@ -1,7 +1,6 @@
 // Source policy checker: fast, dependency-free static rules over src/components (plus
 // src/internal where noted) that guard the library's i18n/RTL invariants and two frozen
 // test-coverage baselines. Rules:
-//
 //   localize-fallback       `this.localize(key, fallback)` with a *defined* fallback wins over
 //                           `registerLyraLocale()` registrations (see resolveLyraString(): a
 //                           defined fallback short-circuits the registered-locale lookup), so a
@@ -37,11 +36,9 @@
 //                           margin-inline-*, text-align: start/end, ...) instead of physical
 //                           left/right ones, except inside `:dir()` rules, in rule blocks that
 //                           pin `direction: ltr`, or at explicitly suppressed declarations.
-//
 // Suppressions (pointercancel-pairing / rtl-arrow-keys / physical-css only): a comment on the
 // flagged line, or in the contiguous comment block immediately above it, of the form
 //   policy-allow(rule-id): specific reason
-//
 // Ratchets (frozen baselines in scripts/source-policy-baselines.json; new code must comply):
 //   keyboard-test-coverage  A component class handles keydown but its colocated test never
 //                           simulates keyboard input (sendKeys / KeyboardEvent / keydown).
@@ -909,3 +906,4 @@ export function runSourcePolicy() {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) runSourcePolicy();
+

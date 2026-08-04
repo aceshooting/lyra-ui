@@ -6,14 +6,12 @@
 // through the shared token. <lr-swatch-picker>'s `[part="swatch"]` (24px)
 // and <lr-emoji-picker>'s `[part="emoji"]` (32px) shipped without that
 // floor -- this script catches that class of gap in future components.
-//
 // Runtime-sensitive SVG/canvas geometry and the WCAG spacing exception
 // cannot be inferred soundly from stylesheet text. targetHitAreaContract()
 // therefore carries the exact state boundary for those targets, and
 // check-hit-area.test.mjs exercises both its included and excluded fixtures.
 // Component behavior tests remain responsible for measuring rendered boxes
 // and camera/allocation-dependent pick geometry.
-//
 // This is a heuristic, text-based check (like check-manifest.mjs's own
 // part="..." extraction, which it reuses the same balanced-scanning style
 // from) -- it cannot resolve arbitrary `calc()`, run a real layout engine, or
@@ -962,3 +960,4 @@ function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }
+

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Reports, per family, every documentable name that custom-elements.json (or a component's own
 // stylesheet) knows about but the component's llms/<family>.md section never mentions.
-//
 // This is the authoring aid behind `check-llms-freshness.mjs`: both consume `collectGaps()`, so the
 // worklist printed here is exactly the set CI enforces. Run `node scripts/llms-gap-report.mjs
 // [family...]`.
@@ -32,3 +31,4 @@ for (const family of families) {
 }
 
 console.log(`\n${gaps.length} gap lines total.`);
+

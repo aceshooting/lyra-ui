@@ -6,7 +6,6 @@
 // gate reported "no violations", because the rule did not exist and every hardened control mentions
 // `setCustomValidity()` in its `@cssstate valid` JSDoc prose anyway. So each rule is exercised here
 // against both a shape it must flag and a shape it must leave alone.
-//
 // Run: node scripts/check-form-associated.test.mjs
 
 import assert from 'node:assert/strict';
@@ -550,3 +549,4 @@ check('the backlog is a real, non-empty census of shipped paths', () => {
 });
 
 console.log(`Form-associated checker self-tests passed (${passed} checks).`);
+

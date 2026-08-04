@@ -1,6 +1,5 @@
 // Uploads a Codecov bundle-analysis report for the *published library*, complementing the
 // `lyra-ui-docs` bundle that .storybook/main.js reports for the docs site.
-//
 // Why this exists rather than a bundler plugin: `pnpm build` is plain `tsc`, so dist/ is ~800
 // unbundled ES modules with no bundler in the loop at all. Codecov's vite/rollup/webpack plugins
 // have nothing to hook into here. scripts/check-bundle-size.mjs already esbuild-bundles the
@@ -11,7 +10,6 @@
 // them. The numbers therefore match the gzip budgets in scripts/bundle-budgets.json by
 // construction -- same esbuild invocation, same externals -- with Codecov adding the per-PR delta
 // reporting that a pass/fail budget check can't give you.
-//
 // Without CODECOV_TOKEN this is a no-op, so contributors and forked-PR builds are unaffected.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -59,3 +57,4 @@ try {
   // is the blocking gate on bundle weight, and it has already run by this point.
   console.error(`codecov-bundle: upload failed (non-fatal): ${error?.message ?? error}`);
 }
+

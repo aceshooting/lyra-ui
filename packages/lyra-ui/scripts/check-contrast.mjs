@@ -1,24 +1,20 @@
 // Asserts the contrast guarantees the semantic grid claims, so a regenerated palette can never
 // quietly ship a WCAG failure.
-//
 // The grid's whole promise is that a component can pair `--lr-color-<v>-on-<e>` with
 // `--lr-color-<v>-fill-<e>` and not have to think about it. That promise is only worth anything if
 // something checks it — and nothing did: colour values lived as hand-picked hexes across 280 tokens
 // with no automated contrast coverage at all, which is how a chart ramp shipped at 1.54:1 on the
 // page surface.
-//
 // Checked here, in BOTH modes:
 //   1. every `on-<e>` clears WCAG 1.4.3 AA (4.5:1) against its paired `fill-<e>`
 //   2. every `border-normal` and `border-loud` clears SC 1.4.11 non-text contrast (3:1) against the
 //      page surface, since those are the tokens a control's visible bounds are drawn with
-//
 // `border-quiet` is deliberately EXEMPT, and that is a design decision rather than an oversight: it
 // exists for decoration that is not load-bearing -- a rule between table rows, a hairline inside an
 // already-bounded card. SC 1.4.11 governs a boundary "required to identify" a component; a token
 // held to 3:1 would not be quiet, and forcing it there would leave the library with no subtle rule
 // at all. The rule is therefore enforced on the tokens that DO identify a control, and the exemption
 // is documented so nobody reaches for `border-quiet` as a control's only boundary.
-//
 // Run: node scripts/check-contrast.mjs
 
 import { readFileSync } from 'node:fs';
@@ -280,7 +276,6 @@ for (const [mode, grid] of [
 }
 
 // --- the chart component's own JS fallback ------------------------------------------------------
-//
 // `chart-colors.ts` carries a literal copy of the light ramp for the case where the tokens cannot
 // be resolved at all. It is shipped, so it is subject to the same two guarantees -- but it lives in
 // a .ts file, so every check below read straight past it. Hand-maintained, it went on shipping the
@@ -329,14 +324,11 @@ for (const [mode, ramp] of [['light', chart.light], ['dark', chart.dark]]) {
 }
 
 // --- the ANSI palette, in both roles and from both sources ---------------------------------------
-//
 // Terminal output is text: 4.5:1 in both modes, for both of the palette's two jobs.
-//
 //   foreground (`--lr-terminal-color-*`, SGR 30-37/90-97) against `--lr-color-surface-raised` --
 //     the panel `<lr-terminal>` paints for itself, not the page surface, which it is never drawn on
 //   background (`--lr-terminal-bg-*`, SGR 40-47/100-107) against the DEFAULT TEXT colour, which is
 //     the foreground actually in effect whenever a program sets a background and no explicit colour
-//
 // Checked from BOTH sources: `theme.css` (what a themed page gets) and the opt-in
 // `specialist-tokens.styles.ts` fallbacks (what an unstyled terminal gets). Surface/text references
 // remain in the base token sheet. Keeping those sources explicit prevents a future token split from
@@ -432,3 +424,4 @@ if (findings.length) {
 } else {
   console.log(`Contrast contract passed: ${checks} pairs checked across light and dark.`);
 }
+

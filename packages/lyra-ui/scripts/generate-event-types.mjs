@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
 // Generates `src/events.ts` — the package's global typed-event surface.
-//
 // Why generated rather than authored: the library dispatches hundreds of events across ~200
 // components, and a hand-maintained global map would drift on the first component that renamed a
 // detail field. Everything here is derived from two artifacts that already exist and are already
 // gated:
-//
 //   * the per-component `export interface Lyra*EventMap` declarations (checked for reachability by
 //     `check-event-barrel.mjs` and for parity with the JSDoc/manifest/docs by
 //     `check-event-contracts.mjs`) — these carry the real TypeScript detail types, so they stay
@@ -15,7 +13,6 @@
 //   * `custom-elements.json` — the tag inventory. It supplies the `<lr-*>` names quoted in the
 //     generated doc comments and acts as the completeness cross-check: every element event the
 //     manifest advertises must be typed here, or generation fails.
-//
 // The output is deterministic (stable sort order, no timestamps, no absolute paths) so
 // `check-event-types.mjs` can regenerate it in memory and diff.
 
@@ -366,3 +363,4 @@ function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }
+
