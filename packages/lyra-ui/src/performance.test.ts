@@ -86,10 +86,17 @@ const BUDGETS = {
   // (observed ~30,000 nodes for 5,000 graph nodes / 10,000 links). Budget only guards against a
   // further multiplication of that (e.g. duplicated cursor-items).
   graphMaxDomNodes: 40_000,
-  // Observed median across several local runs: ~80-125ms (pushCardPropsAll() indexes the 1,000
-  // light-DOM children once, then forwards the changed decoration properties to each card).
-  // ~3x headroom over the high end.
-  flowCanvasMs: 350,
+  // Chromium median across several local runs: ~80-125ms (pushCardPropsAll() indexes the 1,000
+  // light-DOM children once, then forwards the changed decoration properties to each card). This
+  // whole file's budgets are Chromium-tuned (see the block comment above), but this one is the
+  // sole exception with a real cross-engine measurement behind it: `test-all-browsers.yml`'s
+  // per-browser matrix (added 2026-08-04) was the first CI path to ever run this benchmark against
+  // a real Firefox engine late in an unsharded, single-process 456-file run -- the same "many prior
+  // tests already ran in this process" context `test:coverage` already exercises on Chromium every
+  // push without issue, so this reflects genuine Firefox GC/scheduling overhead under sustained
+  // load, not CI noise (two runs measured the identical 376ms). 500 keeps proportionally similar
+  // headroom over that measurement to what the Chromium budget keeps over its own high end.
+  flowCanvasMs: 500,
   // Observed median across several local runs: ~4-7ms (closed-form radial arithmetic, no physics
   // simulation) -- generous ~20x headroom, matching heatmap's own tolerance for an inherently fast
   // operation, since CI variance can dominate a sub-10ms measurement more than the real cost does.
