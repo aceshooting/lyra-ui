@@ -8,25 +8,34 @@ on:
         required: false
         default: chromium,firefox,chrome,edge,safari
         type: string
-      # Defaults to true: this job runs on ONE ubuntu-latest runner (no matrix, unlike
-      # full-engine.yml's per-browser/per-shard jobs), and all 5 browsers' full test suites
-      # running their own dev servers concurrently on a single small VM collide on ports
-      # (EADDRINUSE) and starve each other into spurious 30-120s timeouts. Serial keeps each
-      # lane's dev server and browser process alone on the runner; only override to false if
-      # invoking with a runner known to have the headroom for true parallelism.
-      serial:
-        description: Run browser lanes one-by-one inside the script
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  # Turns the comma-separated `browsers` input into a JSON array so the `test` job's matrix can
+  # consume it via fromJSON() -- workflow_dispatch inputs are always plain strings, matrices need
+  # a real array.
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    outputs:
+      browsers: ${{ steps.split.outputs.browsers }}
+    steps:
+      - id: split
+        run: |
+          IFS=',' read -r -a browsers <<< "${{ inputs.browsers }}"
+          json=$(printf '%s\n' "${browsers[@]}" | jq -R 'gsub("^\\s+|\\s+$";"")' | jq -sc .)
+          echo "browsers=$json" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: plan
+    name: ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJSON(needs.plan.outputs.browsers) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -35,10 +44,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run all-browser test sweep
-        run: |
-          if [[ "${{ inputs.serial }}" == "true" ]]; then
-            ./scripts/test_all_browsers.sh --serial --browsers "${{ inputs.browsers }}"
-          else
-            ./scripts/test_all_browsers.sh --browsers "${{ inputs.browsers }}"
-          fi
+      # One browser per matrix job -- each gets its own isolated runner VM, unlike the previous
+      # single-runner design where all 5 browsers' dev servers and browser processes competed for
+      # the same ports and CPU/RAM, causing EADDRINUSE collisions and spurious 30-120s timeouts.
+      # Reuses test_all_browsers.sh's existing per-browser install-name mapping (edge -> msedge,
+      # safari -> webkit) and build/run logic rather than duplicating it inline.
+      - name: Run browser test sweep
+        run: ./scripts/test_all_browsers.sh --browsers "${{ matrix.browser }}"
