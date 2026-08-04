@@ -25,6 +25,11 @@ interface FlowCanvasLike extends HTMLElement {
   zoomIn(): void;
   zoomOut(): void;
   fit(options?: { padding?: number }): void;
+  /** When `true`, this companion must not call `setViewport()`/`zoomIn()`/`zoomOut()`/`fit()` --
+   *  mirrors every gesture handler `LyraFlowCanvas` itself gates on its own `locked` property, so
+   *  a locked canvas stays locked even against a `FlowCanvasLike` implementation that (unlike
+   *  `LyraFlowCanvas`) does not also guard those methods internally. */
+  readonly locked: boolean;
 }
 
 /**
@@ -246,14 +251,14 @@ export class LyraFlowMinimap extends LyraElement {
       this.justDraggedViewport = false;
       return;
     }
-    if (!this.canvasEl || !this.snapshot) return;
+    if (!this.canvasEl || !this.snapshot || this.canvasEl.locked) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
     const { zoom, width, height } = this.snapshot.viewport;
     this.canvasEl.setViewport({ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom });
   };
 
   private onMapWheel = (e: WheelEvent): void => {
-    if (!this.canvasEl) return;
+    if (!this.canvasEl || this.canvasEl.locked) return;
     e.preventDefault();
     if (e.deltaY < 0) this.canvasEl.zoomIn();
     else this.canvasEl.zoomOut();
@@ -261,7 +266,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   private onViewportPointerDown = (e: PointerEvent): void => {
     const dragEventWindow = this.ownerDocument.defaultView;
-    if (!this.canvasEl || !this.snapshot || !dragEventWindow) return;
+    if (!this.canvasEl || !this.snapshot || !dragEventWindow || this.canvasEl.locked) return;
     e.stopPropagation();
     this.detachViewportDragListeners();
     this.dragState = { pointerId: e.pointerId, startClientX: e.clientX, startClientY: e.clientY, startViewport: { ...this.snapshot.viewport } };
@@ -278,7 +283,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || e.pointerId !== drag.pointerId || !this.canvasEl) return;
+    if (!drag || e.pointerId !== drag.pointerId || !this.canvasEl || this.canvasEl.locked) return;
     this.justDraggedViewport = true;
     const svgEl = this.renderRoot.querySelector('[part="map"]') as SVGSVGElement | null;
     const ctm = svgEl?.getScreenCTM();
@@ -310,7 +315,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
-    if (!this.canvasEl || !this.snapshot) return;
+    if (!this.canvasEl || !this.snapshot || this.canvasEl.locked) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       this.announceNextSnapshot = true;

@@ -425,6 +425,90 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
   expect(wrapper.viewport).to.deep.equal(before);
 });
 
+// `LyraFlowCanvas`'s own setViewport/zoomIn/zoomOut/fit already early-return when `locked` --
+// asserting only `wrapper.viewport` stays put would pass even if the minimap never checked
+// `locked` itself, because the canvas's own guard would still absorb the call. These tests stub
+// out that canvas-side guard (so the calls would visibly go through if made) to prove the minimap
+// itself never makes the call while paired with a locked canvas -- the actual contract this task
+// is about (`FlowCanvasLike` callers must not rely solely on the far end being well-behaved).
+function stubUnguardedCanvasMethods(wrapper: LyraFlowCanvas): { setViewportCalls: number; zoomInCalls: number; zoomOutCalls: number } {
+  const calls = { setViewportCalls: 0, zoomInCalls: 0, zoomOutCalls: 0 };
+  (wrapper as unknown as { setViewport: LyraFlowCanvas['setViewport'] }).setViewport = () => {
+    calls.setViewportCalls += 1;
+  };
+  (wrapper as unknown as { zoomIn: LyraFlowCanvas['zoomIn'] }).zoomIn = () => {
+    calls.zoomInCalls += 1;
+  };
+  (wrapper as unknown as { zoomOut: LyraFlowCanvas['zoomOut'] }).zoomOut = () => {
+    calls.zoomOutCalls += 1;
+  };
+  return calls;
+}
+
+it('cannot click-to-center a locked canvas through the minimap map', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  wrapper.locked = true;
+  const calls = stubUnguardedCanvasMethods(wrapper);
+
+  map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
+
+  expect(calls.setViewportCalls).to.equal(0);
+});
+
+it('cannot zoom a locked canvas by wheeling over the minimap map', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  wrapper.locked = true;
+  const calls = stubUnguardedCanvasMethods(wrapper);
+
+  map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }));
+
+  expect(calls.zoomInCalls).to.equal(0);
+  expect(calls.zoomOutCalls).to.equal(0);
+});
+
+it('cannot drag the viewport rectangle to pan a locked canvas', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
+  wrapper.locked = true;
+  const calls = stubUnguardedCanvasMethods(wrapper);
+
+  rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 60, clientY: 60 }));
+
+  expect(calls.setViewportCalls).to.equal(0);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 60, clientY: 60 }));
+});
+
 it('tracks an adopted iframe viewport drag on its owner window and releases it symmetrically', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
