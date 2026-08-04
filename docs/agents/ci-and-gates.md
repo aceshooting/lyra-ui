@@ -99,20 +99,25 @@ the PR checks list tells you which of these to reproduce locally:
    `dist/ssr-loader.js`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required
    `llms/` index/shared/tokens/peers/migration/component files, then runs `pnpm
    check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
-5. **`docs-and-storybook`** — `docs:build` only needs the already-committed
-   `custom-elements.json` (via its internal `manifest:check`), not `dist/`, so this is independent
-   of the two build jobs above; `storybook:check` drives Chromium against the built
-   `storybook-static/`, so this job still installs Playwright. After install and Chromium setup,
-   its exact order is: `pnpm docs:build` (with `CODECOV_TOKEN`); targeted sitemap diff; `pnpm
-   docs:check`; `pnpm storybook:check`; `pnpm docs:check-show-code`.
+5. **`docs-and-storybook`** — `docs_build` (`docs:build` only needs the already-committed
+   `custom-elements.json` via its internal `manifest:check`, not `dist/`, so it's independent of
+   the two build jobs above) runs `pnpm docs:build` once (with `CODECOV_TOKEN`) and uploads
+   `storybook-static/` as an artifact, the same "build once, fan out" shape
+   `build_and_coverage_build`/`dist` already uses. `docs-and-storybook` itself and every
+   `visual-regression` shard (point 6) both depend on `docs_build` and download that artifact
+   instead of independently rebuilding Storybook from source — three fewer redundant rebuilds per
+   run than the previous design. `docs-and-storybook`'s own steps (after installing Playwright and
+   downloading the artifact) are: targeted sitemap diff; `pnpm docs:check`; `pnpm
+   storybook:check`; `pnpm docs:check-show-code` (drives Chromium against the downloaded
+   `storybook-static/`, hence still installing Playwright here too).
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
    `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
    and round-robin partitioned across a three-leg matrix (85/84/84 captures), so the historical
-   ~3.5min sweep no longer sits on one runner's critical path. Each leg installs Chromium, builds
-   docs **without** `CODECOV_TOKEN`, runs `test:visual` with its one-based shard coordinates, and
-   unconditionally uploads a uniquely named diff artifact. A lightweight `visual-regression`
-   aggregate preserves the stable branch-protection/release-check name and fails unless all three
-   legs succeed.
+   ~3.5min sweep no longer sits on one runner's critical path. Each leg installs Chromium,
+   downloads the `storybook-static/` artifact `docs_build` (point 5) already built, runs
+   `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
+   named diff artifact. A lightweight `visual-regression` aggregate preserves the stable
+   branch-protection/release-check name and fails unless all three legs succeed.
 
 To reproduce one visual shard after building docs and installing Chromium:
 

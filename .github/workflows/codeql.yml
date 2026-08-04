@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "23 4 * * 1"
 
+# A new push to the same branch/PR supersedes the previous run's analysis entirely.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Job below narrows this further (security-events: write, packages: read) -- this top-level
 # block is what Scorecard's Token-Permissions check wants declared explicitly either way.
 permissions:

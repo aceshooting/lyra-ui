@@ -18,6 +18,15 @@
 [![types](https://img.shields.io/npm/types/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
 [![license](https://img.shields.io/npm/l/%40aceshooting%2Flyra-ui)](./LICENSE)
 
+Tested on every modern engine — see [Browser & Node support](#browser--node-support) for what CI
+actually proves for each:
+
+[![Chrome](https://img.shields.io/badge/Chrome-tested-4285F4?logo=googlechrome&logoColor=white)](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)
+[![Firefox](https://img.shields.io/badge/Firefox-tested-FF7139?logo=firefoxbrowser&logoColor=white)](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml)
+[![Safari](https://img.shields.io/badge/Safari-tested-000000?logo=safari&logoColor=white)](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml)
+[![Edge](https://img.shields.io/badge/Edge-tested-0078D7?logo=microsoftedge&logoColor=white)](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)
+[![Chromium](https://img.shields.io/badge/Chromium-tested-4285F4?logo=chromium&logoColor=white)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
+
 <p align="center">
   <a href="https://www.lyra-ui.com/">
     <img src=".github/readme/lyra-mark.svg" width="112" height="112" alt="Lyra UI constellation logo" />
@@ -237,8 +246,14 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 - **Node** ≥ 20 to build/test this repo and to run the supported SSR imports (`engines.node`);
   browser-only capabilities start after hydration.
 - **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
-  Firefox, Safari). CI runs the full test suite against Chromium plus a separate platform-contract
-  suite against Firefox and WebKit, on Node 20 and 22.
+  Firefox, Safari). Every push runs the complete suite against Chromium plus a platform-contract
+  suite (a curated fast subset) against Chrome, Edge, Firefox, and Safari (WebKit) on Node 20 and
+  22. The two engines that only get the fast subset per-push (Firefox, Safari/WebKit) get the
+  *complete* suite weekly and before every release via
+  [`full-engine.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml).
+  [`test-all-browsers.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)
+  runs the complete suite against all five browsers (Chromium, Chrome, Edge, Firefox, Safari) on
+  demand — the tool of record for "does everything actually pass everywhere right now."
 - Not tested against Internet Explorer or other browsers without native custom-element support.
 - **Exact version floors** (Chromium 120+, Gecko 121+, WebKit 16.4+), how they were derived, the CI
   matrix behind them, assistive-technology status, and the policy for engines outside the window:

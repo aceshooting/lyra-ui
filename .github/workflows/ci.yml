@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+# A new push to the same branch/PR supersedes the previous run's results entirely -- cancel it
+# instead of burning runner-minutes (and Codecov/Scorecard-style upload slots) on output nobody
+# will read. `github.ref` alone would let concurrent PRs targeting different branches collide.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # No job pushes, comments, or otherwise writes to the repo -- checkout and
 # artifact upload/download both work fine under read-only contents access.
 permissions:
@@ -17,6 +24,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # contract-policy's component-metadata gate reproduces immutable release-tag evidence and
       # intentionally fails closed in shallow clones.
@@ -37,6 +45,7 @@ jobs:
   # public manifests, and either validate or regenerate-and-diff them.
   static-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -84,6 +93,7 @@ jobs:
   build_and_coverage_build:
     name: build-and-coverage / build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -105,6 +115,7 @@ jobs:
     name: build-and-coverage / quality
     runs-on: ubuntu-latest
     needs: build_and_coverage_build
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -138,6 +149,7 @@ jobs:
     name: build-and-coverage / ssr
     runs-on: ubuntu-latest
     needs: build_and_coverage_build
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -170,6 +182,7 @@ jobs:
     name: build-and-coverage / hydration
     runs-on: ubuntu-latest
     needs: build_and_coverage_build
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -201,6 +214,7 @@ jobs:
     name: build-and-coverage / coverage
     runs-on: ubuntu-latest
     needs: build_and_coverage_build
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -261,6 +275,7 @@ jobs:
   build-and-coverage:
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - build_and_coverage_build
       - build_and_coverage_quality
@@ -300,6 +315,7 @@ jobs:
   # docs build -- independent of build-and-coverage other than both running `pnpm build`.
   packed-consumer:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -338,11 +354,40 @@ jobs:
       # run in static-checks; this is the networked release gate.
       - run: pnpm --filter @aceshooting/lyra-ui check:public-api
 
-  # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
-  # dist/ -- independent of build-and-coverage/packed-consumer. storybook:check drives Chromium
-  # against the built storybook-static/, so this job still needs Playwright.
+  # Builds storybook-static/ exactly once and shares it via artifact with every downstream
+  # consumer (docs-and-storybook's own checks below, all 3 visual-regression shards) instead of
+  # each rebuilding it independently from source -- the same "build once, fan out" pattern
+  # build_and_coverage_build/dist already uses. CODECOV_TOKEN lives here since this is now the
+  # only docs:build invocation in the whole workflow, so the bundle-analysis upload fires exactly
+  # once by construction (no more need to deliberately omit the token from a second call site).
+  docs_build:
+    name: docs-and-storybook / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
+      # dist/ -- independent of build-and-coverage/packed-consumer.
+      - run: pnpm docs:build
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: git diff --exit-code -- .storybook/sitemap.xml
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storybook-static
+          path: storybook-static
+          retention-days: 1
+
   docs-and-storybook:
     runs-on: ubuntu-latest
+    needs: docs_build
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -362,23 +407,16 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
-      # CODECOV_TOKEN is what arms the Codecov bundle-analysis plugin in .storybook/main.js;
-      # without it the storybook build runs exactly as before and uploads nothing. Only this job's
-      # docs:build carries the token -- the visual-regression job also runs docs:build (it needs
-      # storybook-static/ too) and deliberately omits it, so the bundle-analysis upload doesn't fire
-      # twice for the same commit.
-      - run: pnpm docs:build
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - run: git diff --exit-code -- .storybook/sitemap.xml
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: storybook-static
+          path: storybook-static
       - run: pnpm docs:check
       - run: pnpm storybook:check
       # Clicks every `Show code` control across every `type: "docs"` entry in the built Storybook
       # and fails on navigation/click/unexpanded-control regressions, console errors, page errors,
       # or failed requests. It used to run only at release time (driven by hand from the /publish
-      # flow), so a broken `Show code` could sit on main until someone cut a release. Cheap to add
-      # here specifically: this job already installs Playwright and already has storybook-static/
-      # from the docs:build above, so the incremental cost is just the sweep itself.
+      # flow), so a broken `Show code` could sit on main until someone cut a release.
       - run: pnpm docs:check-show-code
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
@@ -390,11 +428,13 @@ jobs:
   # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
     name: visual-regression / shard ${{ matrix.shard }}/3
+    needs: docs_build
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       VISUAL_SHARD_INDEX: ${{ matrix.shard }}
       VISUAL_SHARD_TOTAL: '3'
@@ -417,7 +457,10 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps chromium
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @aceshooting/lyra-ui exec playwright install chromium
-      - run: pnpm docs:build
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: storybook-static
+          path: storybook-static
       - name: Visual regression
         run: pnpm --filter @aceshooting/lyra-ui test:visual
       - name: Upload visual regression diff artifacts
@@ -438,6 +481,7 @@ jobs:
     if: ${{ always() }}
     needs: visual-regression
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Verify all visual-regression shards
         env:
@@ -518,6 +562,7 @@ jobs:
             shard_total: 1
             install_browser: webkit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
       # (imports node:sqlite) under Node 20. The Node 20 leg below installs a

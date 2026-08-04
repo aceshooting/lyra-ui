@@ -26,7 +26,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.browser }}
+      # Same cache key scheme ci.yml's platform-contracts job already populates for these exact
+      # browsers -- GitHub Actions cache is repo-scoped, not workflow-scoped, so this reuses
+      # entries ci.yml wrote instead of downloading the ~100MB+ browser binary from scratch here.
+      - name: Restore Playwright browser cache
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ matrix.browser }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
+      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps ${{ matrix.browser }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.browser }}
       # package-entrypoints.test.ts imports dist package targets, so every
       # shard needs the same build-first contract as the primary CI suite.
       - run: pnpm build
