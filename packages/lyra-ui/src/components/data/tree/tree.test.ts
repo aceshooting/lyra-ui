@@ -428,6 +428,22 @@ it('resolves an awaited expandAll() only once every descendant at every depth ha
   expect(grandchild, 'the second-level grandchild should already be rendered').to.exist;
 });
 
+it('expandAll() routes a lazy node through the same lazy-load path expand() uses, instead of marking it expanded with nothing ever requested', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [{ id: 'lazy', label: 'Lazy', lazy: true }];
+  await el.updateComplete;
+  const lazy = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  const requested = oneEvent(el, 'lr-lazy-load');
+
+  await el.expandAll();
+  const request = await requested;
+
+  expect(request.detail.item).to.equal(lazy);
+  expect(lazy.loading, 'expandAll() must trigger beginLazyLoad() exactly like a click-driven expand() does').to.be
+    .true;
+  expect(lazy.expanded, 'a lazy node must not report expanded until its children actually arrive').to.be.false;
+});
+
 it('collapseAll() leaves exactly one node with a roving tabindex of 0 after the active item was a nested descendant', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;

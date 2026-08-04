@@ -922,6 +922,17 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * this method's own counterpart, `collapseAll()`) refuse to act on a node
    * that's `!hasChildren`, which would otherwise leave the leaf permanently
    * stuck with a reflected `expanded` attribute nothing can clear.
+   *
+   * Goes through each node's own `expand()` (rather than assigning `expanded`
+   * directly) so a not-yet-loaded `lazy` node is routed through
+   * `beginLazyLoad()` exactly as a click would -- `expand()` is the only code
+   * path that emits `lr-lazy-load` and waits for children, so assigning
+   * `expanded` directly here left a lazy node visually expanded with its
+   * content never actually requested. It also keeps `expandAll()`'s
+   * `lr-expand`/`lr-node-toggle` emits consistent with `collapseAll()`'s own
+   * `collapse()` calls below. A lazy node whose children have not arrived yet
+   * has none to recurse into, so `childrenOf(n)` naturally stops the walk
+   * there without this method ever waiting on the external response.
    */
   async expandAll(): Promise<void> {
     const setAll = async (nodes: LyraTreeItem[]): Promise<void> => {
@@ -932,7 +943,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
             await n.updateComplete;
             return;
           }
-          if (n.hasChildren) n.expanded = true;
+          if (n.hasChildren) n.expand();
           await n.updateComplete;
           await setAll(this.childrenOf(n));
         }),
