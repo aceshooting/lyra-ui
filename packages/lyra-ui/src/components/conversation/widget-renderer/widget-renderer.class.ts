@@ -24,6 +24,24 @@ const JUSTIFY_VALUE: Record<string, string> = {
   end: 'flex-end',
   between: 'space-between',
 };
+const ALIGN_VALUE: Record<string, string> = {
+  start: 'flex-start',
+  'flex-start': 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  'flex-end': 'flex-end',
+  stretch: 'stretch',
+  baseline: 'baseline',
+  'self-start': 'self-start',
+  'self-end': 'self-end',
+  'first baseline': 'first baseline',
+  'last baseline': 'last baseline',
+  normal: 'normal',
+};
+
+function sanitizeAlignValue(value: string): string | undefined {
+  return ALIGN_VALUE[value.trim().toLowerCase()];
+}
 
 interface ActionHandlerState {
   event: string;
@@ -146,7 +164,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   private builtinStyle(node: ResolvedElement): Record<string, string> {
     const gap = typeof node.props['gap'] === 'string' ? GAP_TOKEN[node.props['gap']] : undefined;
-    const align = typeof node.props['align'] === 'string' ? node.props['align'] : undefined;
+    const align = typeof node.props['align'] === 'string' ? sanitizeAlignValue(node.props['align']) : undefined;
     const justifyRaw = typeof node.props['justify'] === 'string' ? node.props['justify'] : undefined;
     const justify = justifyRaw ? JUSTIFY_VALUE[justifyRaw] : undefined;
     return {

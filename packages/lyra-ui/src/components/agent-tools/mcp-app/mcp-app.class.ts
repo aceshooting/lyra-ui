@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -303,7 +303,10 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         this.emit('lr-mcp-send-message', { message: message['message'] });
         break;
       case 'open-link':
-        if (typeof message['href'] === 'string') this.emit('lr-mcp-open-link', { href: message['href'] });
+        {
+          const href = safeLinkHref(message['href']);
+          if (href) this.emit('lr-mcp-open-link', { href });
+        }
         break;
       case 'log':
         this.emit('lr-mcp-log', {

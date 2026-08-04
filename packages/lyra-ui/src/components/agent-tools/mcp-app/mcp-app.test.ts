@@ -156,6 +156,8 @@ it('forwards typed message, link, and log requests while rejecting malformed lin
   el.addEventListener('lr-mcp-open-link', () => linkCount++);
   dispatch({ type: 'open-link', href: 42 });
   expect(linkCount).to.equal(0);
+  dispatch({ type: 'open-link', href: 'javascript:alert(1)' });
+  expect(linkCount).to.equal(0);
 
   const defaultLog = oneEvent(el, 'lr-mcp-log');
   dispatch({ type: 'log', value: { status: 'ready' } });

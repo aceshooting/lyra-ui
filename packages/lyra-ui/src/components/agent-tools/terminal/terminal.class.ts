@@ -12,6 +12,7 @@ import {
 import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../internal/ansi.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -750,8 +751,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   };
 
   private segmentStyle(s: AnsiStyles): Record<string, string> {
-    const fg = s.fg ?? 'var(--lr-color-text)';
-    const bg = s.bg ?? 'transparent';
+    const fg = sanitizeCssColor(s.fg) ?? 'var(--lr-color-text)';
+    const bg = sanitizeCssColor(s.bg) ?? 'transparent';
     return {
       'font-weight': s.bold ? 'bold' : 'normal',
       opacity: s.dim ? '0.7' : '1',
