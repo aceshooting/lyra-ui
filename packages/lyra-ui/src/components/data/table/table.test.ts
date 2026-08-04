@@ -2786,6 +2786,42 @@ describe('heat-tint mode', () => {
     expect(cells.every((c) => !c.hasAttribute('style'))).to.be.true;
   });
 
+  it('sanitizes user-supplied cellStyle entries before styleMap assignment', async () => {
+    const sanitizedColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      {
+        key: 'score',
+        label: 'Score',
+        cell: (r) => r.score,
+        cellStyle: () => ({
+          background: 'rgb(1, 2, 3)',
+          color: 'url(javascript:alert(1))',
+          border: '1px;position:fixed',
+          'background-image': 'url(javascript:alert(1))',
+          'font-size': '16px',
+          '--lr-table-cell-note': 'teal',
+          '--lr-table;bad': 'should-drop',
+        }),
+      },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = sanitizedColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    expect(cell.style.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(cell.style.fontSize).to.equal('16px');
+    expect(cell.style.color).to.equal('');
+    expect(cell.style.border).to.equal('');
+    // Not '': setting the `background` shorthand alongside a rejected `background-image` makes
+    // Chromium serialize the untouched longhand back as the literal CSS-wide keyword "initial" --
+    // still proof the injected url() never reached the declaration, just not an empty string.
+    expect(cell.style.backgroundImage).to.equal('initial');
+    expect(cell.style.getPropertyValue('--lr-table-cell-note')).to.equal('teal');
+    expect(cell.style.getPropertyValue('--lr-table;bad')).to.equal('');
+  });
+
   it('computes --lr-table-heat-t from the auto-derived min/max across all heatValue columns', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = heatColumns;

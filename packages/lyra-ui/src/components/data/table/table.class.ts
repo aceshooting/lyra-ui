@@ -48,6 +48,11 @@ const DEFAULT_SKELETON_ROWS = 3;
  *  `skeletonRows` is honored verbatim and is not capped. */
 const MAX_DERIVED_SKELETON_ROWS = 20;
 
+const UNSAFE_CSS_STRUCTURE = /[;{}]/;
+const URL_FUNCTION = /url\s*\(/i;
+const SAFE_STYLE_PROPERTY =
+  /^-?[_a-zA-Z][\w-]*$|^--[a-zA-Z0-9_-]+$/;
+
 interface OwnedAnimationFrame {
   owner: Window;
   handle: number;
@@ -242,6 +247,46 @@ function stickyDirection(sticky: boolean | TableEdgeAlign | undefined): TableEdg
   if (sticky === true) return 'start';
   if (sticky === 'start' || sticky === 'end') return sticky;
   return undefined;
+}
+
+function sanitizeCellStyle(cellStyle: Record<string, unknown> | undefined): Record<string, string> {
+  if (cellStyle === undefined) return {};
+  const safe: Record<string, string> = {};
+  for (const [rawProperty, rawValue] of Object.entries(cellStyle)) {
+    const property = sanitizeCellStyleProperty(rawProperty);
+    const value = sanitizeCellStyleValue(rawValue);
+    if (property === undefined || value === undefined) continue;
+    const normalizedProperty = normalizeStyleProperty(property);
+    if (normalizedProperty.startsWith('--') || cssSupports(normalizedProperty, value)) {
+      safe[normalizedProperty] = value;
+    }
+  }
+  return safe;
+}
+
+function sanitizeCellStyleProperty(property: string): string | undefined {
+  const normalized = property.trim();
+  if (!normalized || !SAFE_STYLE_PROPERTY.test(normalized)) return undefined;
+  return normalized;
+}
+
+function normalizeStyleProperty(property: string): string {
+  if (property.startsWith('--')) return property;
+  return property.replace(/[A-Z]/g, '-$&').toLowerCase();
+}
+
+function sanitizeCellStyleValue(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  if (!normalized || UNSAFE_CSS_STRUCTURE.test(normalized) || URL_FUNCTION.test(normalized)) {
+    return undefined;
+  }
+  return normalized;
+}
+
+function cssSupports(property: string, value: string): boolean {
+  if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return true;
+  return CSS.supports(property, value);
 }
 
 /** Normalizes TableColumn.editable's legacy boolean form (`true` == open an
@@ -2343,7 +2388,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                       ${this.columns.map((col) => {
                         const heatShare = this.heatShare(col, row, heatDomain);
                         const cellStyle = {
-                          ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
+                          ...sanitizeCellStyle(col.cellStyle ? col.cellStyle(row) ?? {} : undefined),
                           ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
                         };
                         // An `'always'` column renders its editor unconditionally, from first
