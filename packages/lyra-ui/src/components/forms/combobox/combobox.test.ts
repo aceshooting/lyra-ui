@@ -409,11 +409,21 @@ it('participates in a form (single + multiple)', async () => {
   expect(new FormData(form).getAll('fruit')).to.deep.equal(['a', 'b']);
 });
 
+/** `[part='listbox']`'s opacity transition (gated by :host([open])) is still running right after
+ *  `open` is set and the update settles. Left running, axe's color-contrast check factors in the
+ *  listbox's current (transitional) opacity, so sampling mid-fade blends its text and background
+ *  toward each other and reports a false "serious" violation. Finishing it outright matches the
+ *  idiom overlay.test.ts already uses for this same kind of reveal animation. */
+const finishListboxAnimation = (el: LyraCombobox): void => {
+  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
+};
+
 it('is accessible', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.label = 'Fruit';
   el.open = true;
   await el.updateComplete;
+  finishListboxAnimation(el);
   await expect(el).to.be.accessible();
 });
 
@@ -433,6 +443,7 @@ it('is accessible with the listbox open, a keyboard-active option, and selected 
   expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
   expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]') !== null).to.be.true;
   expect(input.getAttribute('aria-activedescendant')).to.not.be.empty;
+  finishListboxAnimation(el);
   await expect(el).to.be.accessible();
 });
 
@@ -1382,6 +1393,7 @@ it('is accessible while showing the loading state (async source pending)', async
     'loading state was not rendered before the accessibility check',
     { timeout: 2000 },
   );
+  finishListboxAnimation(el);
   await expect(el).to.be.accessible();
 });
 
@@ -1440,6 +1452,7 @@ it('is accessible while showing the empty state (no matching rows)', async () =>
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('.empty') !== null).to.be.true;
+  finishListboxAnimation(el);
   await expect(el).to.be.accessible();
 });
 

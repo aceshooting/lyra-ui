@@ -612,6 +612,17 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
     this.requestUpdate();
   }
+
+  private focusFirstControl(): void {
+    const first = this.boxes.find((box) => !box.effectiveDisabled);
+    first?.focus();
+  }
+
+  /** Forwards host clicks to the first enabled checkbox in the group. */
+  override click(): void {
+    this.focusFirstControl();
+  }
+
   formResetCallback(): void { this.boxes.forEach((box) => box.resetFromGroup()); this.touched = false; this.hasInteracted = false; this.sync(); }
   formStateRestoreCallback(
     state: string | File | FormData | null,

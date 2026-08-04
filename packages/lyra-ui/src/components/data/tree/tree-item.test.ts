@@ -654,6 +654,14 @@ it('is accessible with a realistic, expanded, badged item', async () => {
   const node = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
   await node.updateComplete;
   expect(node.getAttribute('role')).to.equal('treeitem');
+  // Rendering pre-expanded starts `[part='children']`'s lr-tree-show fade-in (see
+  // tree-item.styles.ts) right away. Left running, axe's color-contrast check factors in the
+  // element's current (transitional) opacity, so sampling the DOM mid-fade blends "Child A"'s
+  // text and background toward each other and reports a false "serious" violation -- exactly
+  // what intermittently failed WebKit's full-engine shard. Finishing the animation outright
+  // matches the idiom overlay.test.ts already uses for this same kind of reveal animation.
+  const children = node.shadowRoot!.querySelector('[part="children"]');
+  children?.getAnimations().forEach((animation) => animation.finish());
   await expect(node).to.be.accessible();
 });
 

@@ -500,7 +500,14 @@ it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-toast-item variant="brand" duration="0">hello</lr-toast-item>`,
   )) as LyraToastItem;
+  // `lr-show` only confirms the show sequence started (it fires synchronously before the
+  // [part='toast-item'] opacity transition begins from data-visible), not that the transition
+  // finished. Left running, axe's color-contrast check factors in the toast's current
+  // (transitional) opacity, so sampling mid-fade blends its text and background toward each other
+  // and reports a false "serious" violation. Finishing it outright matches the idiom
+  // overlay.test.ts already uses for this same kind of reveal animation.
   await oneEvent(el, 'lr-show');
+  el.shadowRoot!.querySelector('[part="toast-item"]')?.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 

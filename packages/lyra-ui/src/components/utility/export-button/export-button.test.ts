@@ -814,6 +814,12 @@ it('is accessible with a multi-format menu open, including its accessible name',
   await el.updateComplete;
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
   expect(menu.getAttribute('aria-label')).to.equal('Export format');
+  // `[part='menu']`'s opacity transition (gated by :host([open])) is still running right after
+  // `open` is set and the update settles. Left running, axe's color-contrast check factors in the
+  // menu's current (transitional) opacity, so sampling mid-fade blends its text and background
+  // toward each other and reports a false "serious" violation. Finishing it outright matches the
+  // idiom overlay.test.ts already uses for this same kind of reveal animation.
+  menu.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 

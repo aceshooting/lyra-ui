@@ -800,10 +800,18 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
     const circle = graphNodeEls(el)[0]!;
     circle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(0);
+    // `open` becoming true only starts the popover's own WAAPI fade (animateRegistered() on its
+    // internal `[part~="popup"]`); neither `waitUntil` nor the settling `aTimeout(0)` waits for it
+    // to finish. Left running, axe's color-contrast check factors in the popup's current
+    // (transitional) opacity, so sampling mid-fade blends its text and background toward each
+    // other and reports a false "serious" violation. Finishing it outright matches the idiom
+    // overlay.test.ts already uses for this same kind of reveal animation.
+    popover.shadowRoot?.querySelector('[part~="popup"]')?.getAnimations().forEach((animation) => animation.finish());
     await expect(el).to.be.accessible();
   });
 

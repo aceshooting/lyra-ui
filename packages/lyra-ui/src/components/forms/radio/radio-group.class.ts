@@ -585,6 +585,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);
   }
 
+  /** Activates the selected/first enabled option, matching host click semantics on the internal
+   *  radio collection rather than leaving `<lr-radio-group>` a no-op. */
+  override click(): void {
+    if (this.effectiveDisabled) return;
+    const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
+    (enabled.find((radio) => radio.checked) ?? enabled[0])?.click();
+  }
+
   /** @internal Native validation is anchored to the owned radiogroup, not an individual option. */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.renderRoot?.querySelector('[part~="base"]') ?? null;

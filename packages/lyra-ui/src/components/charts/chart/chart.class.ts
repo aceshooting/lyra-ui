@@ -524,7 +524,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) datasets: Series[] = [];
   /** Positive compatibility alias for the visible legend. */
-  @property({ type: Boolean }) legend = true;
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) legend = true;
   /** Accessible chart description. */
   @property() description: string | null = null;
   /** Controls which cartesian grid axes are drawn. */

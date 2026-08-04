@@ -1763,6 +1763,12 @@ it("is accessible while open", async () => {
   const el = (await fixture(basic())) as LyraMenu;
   el.open = true;
   await el.updateComplete;
+  // `[part='popup']`'s opacity transition (gated by :host([open])) is still running right after
+  // `open` is set and the update settles -- the same race the neighboring "is accessible with a
+  // submenu open" test below already guards against (see its comment): axe folds a mid-transition
+  // opacity into its contrast maths and reports a false "serious" violation. Finishing it outright
+  // matches the idiom overlay.test.ts uses for this same kind of reveal animation.
+  el.shadowRoot!.querySelector('[part="popup"]')?.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 

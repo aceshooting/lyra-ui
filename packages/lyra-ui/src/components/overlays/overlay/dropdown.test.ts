@@ -386,5 +386,12 @@ it('is accessible populated and open with mapped items', async () => {
   await expect(el).to.be.accessible();
   trigger(el).click();
   await el.updateComplete;
+  // LyraDropdown extends LyraPopover, so opening it starts the inherited WAAPI fade
+  // (animateRegistered() on its own `[part~="popup"]`), still running right after the click
+  // settles. Left running, axe's color-contrast check factors in the popup's current
+  // (transitional) opacity, so sampling mid-fade blends its text and background toward each other
+  // and reports a false "serious" violation. Finishing it outright matches the idiom
+  // overlay.test.ts already uses for this same kind of reveal animation.
+  el.shadowRoot!.querySelector('[part~="popup"]')?.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });

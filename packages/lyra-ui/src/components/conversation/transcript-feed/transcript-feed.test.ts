@@ -303,6 +303,14 @@ it('is accessible with a mix of final and interim entries', async () => {
     { id: '2', speaker: 'You', text: 'partial', interim: true },
   ];
   await el.updateComplete;
+  // Every `[part='entry']` plays lr-transcript-fade-in as it's rendered. Left running, axe's
+  // color-contrast check factors in each entry's current (transitional) opacity, so sampling
+  // mid-fade blends its text and background toward each other and reports a false "serious"
+  // violation. Finishing the animations outright matches the idiom overlay.test.ts already uses
+  // for this same kind of reveal animation.
+  el.shadowRoot!.querySelectorAll('[part="entry"]').forEach((entry) => {
+    entry.getAnimations().forEach((animation) => animation.finish());
+  });
   await expect(el).to.be.accessible();
 });
 

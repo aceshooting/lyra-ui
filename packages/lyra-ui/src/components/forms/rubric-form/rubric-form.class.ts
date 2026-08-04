@@ -583,6 +583,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
   }
 
+  /** Forwards host clicks to the first rendered field, so programmatic and `<label>`-driven
+   *  interactions target the active rubric field. */
+  override click(): void {
+    if (this.effectiveDisabled) return;
+    this.focusFirstControl();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('value') || changed.has('keys') || changed.has('_errors')) {

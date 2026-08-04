@@ -13,9 +13,21 @@ function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
 }
 
 /** The clipboard write is awaited before any feedback state is applied, so a click needs one
- *  macrotask (which drains every pending microtask first) plus the Lit update it schedules. */
+ *  macrotask (which drains every pending microtask first) plus the Lit update it schedules.
+ *
+ *  A status change also opens the internal lr-tooltip, whose popup fades in through a WAAPI
+ *  animation (tooltip.class.ts's settleTransition()) rather than settling synchronously. Left
+ *  alone, a caller asserting accessibility right after settle() samples the DOM mid-fade: axe's
+ *  color-contrast check factors in the popup's current (transitional) opacity, so a
+ *  partially-shown popup blends its text and background toward each other and reports a false
+ *  "serious" violation -- exactly what intermittently failed WebKit's full-engine shard. Finishing
+ *  the animation outright (rather than awaiting it) matches the idiom overlay.test.ts already uses
+ *  for this same kind of popup animation. */
 const settle = async (el: LyraCopyButton): Promise<void> => {
   await aTimeout(0);
+  await el.updateComplete;
+  const popup = tooltip(el).shadowRoot?.querySelector('[part~="popup"]');
+  popup?.getAnimations().forEach((animation) => animation.finish());
   await el.updateComplete;
 };
 

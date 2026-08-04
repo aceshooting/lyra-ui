@@ -374,6 +374,25 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return undefined;
   }
 
+  private focusFirstControl(): void {
+    if (!this.renderRoot) return;
+    const firstField = this.renderRoot.querySelector<HTMLElement>('[part="field"]');
+    if (!firstField) return;
+    const control =
+      firstField.querySelector<HTMLElement>('input.control') ||
+      firstField.querySelector<HTMLElement>('lr-select') ||
+      firstField.querySelector<HTMLElement>('lr-checkbox');
+    control?.focus();
+  }
+
+  /** Forwards host clicks to the first rendered form field so the component behaves like a regular
+   *  control from caller code and event re-dispatch paths.
+   */
+  override click(): void {
+    if (this.effectiveDisabled) return;
+    this.focusFirstControl();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {

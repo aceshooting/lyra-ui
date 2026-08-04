@@ -1371,6 +1371,14 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
+    // `[part='popover']`'s lr-tour-popover-in plays from first paint regardless of `open` already
+    // being set in the fixture (it's a CSS @keyframes animation, not a transition, so there is no
+    // "already at rest" starting state to skip). Left running, axe's color-contrast check factors
+    // in the popover's current (transitional) opacity, so sampling mid-fade blends its text and
+    // background toward each other and reports a false "serious" violation. Finishing the
+    // animation outright matches the idiom overlay.test.ts already uses for this same kind of
+    // reveal animation.
+    tour.shadowRoot!.querySelector('[part="popover"]')?.getAnimations().forEach((animation) => animation.finish());
     await expect(tour).to.be.accessible();
   });
 
@@ -1387,6 +1395,9 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
+    // See the identical comment above -- `[part='popover']`'s reveal keyframes play from first
+    // paint even though `open` is already set in the fixture.
+    tour.shadowRoot!.querySelector('[part="popover"]')?.getAnimations().forEach((animation) => animation.finish());
     await expect(tour).to.be.accessible();
   });
 

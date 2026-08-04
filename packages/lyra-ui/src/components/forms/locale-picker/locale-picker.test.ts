@@ -421,6 +421,12 @@ it('is accessible while open', async () => {
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
+  // `[part='listbox']`'s opacity transition (gated by :host([open])) is still running right after
+  // `open` is set and the update settles. Left running, axe's color-contrast check factors in the
+  // listbox's current (transitional) opacity, so sampling mid-fade blends its text and background
+  // toward each other and reports a false "serious" violation. Finishing it outright matches the
+  // idiom overlay.test.ts already uses for this same kind of reveal animation.
+  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 

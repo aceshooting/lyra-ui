@@ -200,6 +200,13 @@ describe('lr-time-input popup and actions', () => {
     key(segment(el, 'hour'), 'ArrowDown', { altKey: true });
     await el.updateComplete;
     expect(el.open).to.equal(true);
+    // `[part='popup']`'s opacity transition (via [data-hidden] removal) is still running right
+    // after `open` becomes true and the update settles. Left running, axe's color-contrast check
+    // factors in the popup's current (transitional) opacity, so sampling mid-fade blends its text
+    // and background toward each other and reports a false "serious" violation. Finishing it
+    // outright matches the idiom overlay.test.ts already uses for this same kind of reveal
+    // animation.
+    el.shadowRoot!.querySelector('[part="popup"]')?.getAnimations().forEach((animation) => animation.finish());
     await expect(el).to.be.accessible();
     const hourNine = el.shadowRoot!.querySelector('[data-column="hour"][data-value="9"]') as HTMLButtonElement;
     hourNine.click();

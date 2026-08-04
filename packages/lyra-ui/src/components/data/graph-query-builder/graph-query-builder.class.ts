@@ -568,6 +568,24 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.requestUpdate();
   }
 
+  private focusFirstControl(): void {
+    if (!this.renderRoot || this.effectiveDisabled) return;
+    const control =
+      this.renderRoot.querySelector<HTMLElement>('[part="start-input"]') ||
+      this.renderRoot.querySelector<HTMLElement>('[part="end-input"]') ||
+      this.renderRoot.querySelector<HTMLElement>('[part="min-hops"]') ||
+      this.renderRoot.querySelector<HTMLElement>('[part="max-hops"]') ||
+      this.renderRoot.querySelector<HTMLElement>('[part="direction"]') ||
+      this.renderRoot.querySelector<HTMLElement>('[part="save-name-input"]');
+    control?.focus();
+  }
+
+  /** Forwards host clicks to the first rendered control so callers can interact with this wrapper
+   *  as if it exposed a single root control. */
+  override click(): void {
+    this.focusFirstControl();
+  }
+
   private setValue(next: GraphQuery): void {
     if (this.effectiveDisabled) return;
     // Set before the `value` assignment, whose setter republishes the custom states.
