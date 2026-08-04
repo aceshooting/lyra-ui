@@ -10,6 +10,7 @@ import {
   annotateComponentSource,
   applyComponentMetadataToManifest,
   applyMaturityToInventory,
+  buildReleaseHistory,
   compareVersions,
   componentMetadataByTag,
   deriveSinceByTag,
@@ -18,6 +19,7 @@ import {
   partitionReleaseHistoryAtCurrent,
   reconcileCurrentReleaseHistory,
   requireCompleteGitHistory,
+  sha256,
   UNRELEASED_VERSION,
   validateComponentMetadata,
   validateManifestMetadataProjection,
@@ -256,6 +258,32 @@ test('component metadata fails closed in a shallow clone', () => {
       /requires a non-shallow clone with release tags/,
     );
     assert.doesNotThrow(() => requireCompleteGitHistory(source));
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('buildReleaseHistory hashes the exact committed manifest bytes, trailing newline included', () => {
+  // custom-elements.json is always committed with a trailing newline (see writeJson in
+  // generate-component-metadata.mjs). buildReleaseHistory must hash that file exactly as
+  // committed -- not a version with the trailing newline stripped -- or its manifestSha256 can
+  // never match history.current.manifestSha256, which is always hashed from the untrimmed bytes.
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-release-history-'));
+  try {
+    execFileSync('git', ['init', '--quiet'], { cwd: temp });
+    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: temp });
+    execFileSync('git', ['config', 'user.name', 'Lyra Test'], { cwd: temp });
+    const manifestRelativePath = 'custom-elements.json';
+    const manifestContent = '{"schemaVersion":"1.0.0","modules":[]}\n';
+    fs.writeFileSync(path.join(temp, manifestRelativePath), manifestContent);
+    execFileSync('git', ['add', manifestRelativePath], { cwd: temp });
+    execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: temp });
+    execFileSync('git', ['tag', 'lyra-ui@9.9.9'], { cwd: temp });
+
+    const [release] = buildReleaseHistory(temp, manifestRelativePath);
+    assert.equal(release.tag, 'lyra-ui@9.9.9');
+    assert.equal(release.manifestPresent, true);
+    assert.equal(release.manifestSha256, sha256(manifestContent));
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }
@@ -534,7 +562,7 @@ test('Storybook presentation exposes central maturity and structured deprecation
   assert.equal(componentMetadataPresentation({ status: 'stable' }), null);
 });
 
-test('CEM projection reports drift and gives a new assigned tag the current package version', () => {
+test('CEM projection reports drift and marks a new assigned tag unreleased once current is tagged', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
   metadata.assignments['new-component-experimental'].push('lr-new-component');
@@ -543,7 +571,11 @@ test('CEM projection reports drift and gives a new assigned tag the current pack
     packageVersion: state.packageJson.version,
   });
   assert.equal(resolved.get('lr-new-component').status, 'experimental');
-  assert.equal(resolved.get('lr-new-component').since, state.packageJson.version);
+  // The checked-in fixture's history.taggedCurrent is the persisted immutable snapshot of what
+  // actually shipped at the current package version's release tag. A brand-new tag that isn't
+  // part of that snapshot hasn't shipped yet -- it's unreleased until the next version bump, not
+  // retroactively "since" a version that already went out without it.
+  assert.equal(resolved.get('lr-new-component').since, UNRELEASED_VERSION);
 
   const manifest = structuredClone(state.manifest);
   applyComponentMetadataToManifest(state.metadata, manifest, {

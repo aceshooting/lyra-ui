@@ -62,14 +62,20 @@ function releaseTagVersion(tag) {
   return parseVersion(tag) ? tag : null;
 }
 
-function git(repoRoot, args, { allowFailure = false } = {}) {
+// `trim` must stay false for any call reading multi-line file content (e.g. `git show
+// <tag>:<path>`) that gets hashed downstream -- trimming silently drops a real trailing
+// newline and produces a manifestSha256 that can never match history.current.manifestSha256,
+// which is always hashed from the untrimmed file bytes. Single-token commands (rev-parse,
+// rev-list, tag --list) legitimately want the trailing newline stripped.
+function git(repoRoot, args, { allowFailure = false, trim = true } = {}) {
   try {
-    return execFileSync('git', args, {
+    const output = execFileSync('git', args, {
       cwd: repoRoot,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
       stdio: ['ignore', 'pipe', allowFailure ? 'ignore' : 'pipe'],
-    }).trim();
+    });
+    return trim ? output.trim() : output;
   } catch (error) {
     if (allowFailure) return null;
     throw error;
@@ -105,7 +111,10 @@ export function buildReleaseHistory(repoRoot, manifestPath = 'packages/lyra-ui/c
 
   return releaseTags.map(({ tag, version }) => {
     const sourceCommit = git(repoRoot, ['rev-list', '-n', '1', tag]);
-    const rawManifest = git(repoRoot, ['show', `${tag}:${manifestPath}`], { allowFailure: true });
+    const rawManifest = git(repoRoot, ['show', `${tag}:${manifestPath}`], {
+      allowFailure: true,
+      trim: false,
+    });
     if (rawManifest === null) {
       return {
         tag,
