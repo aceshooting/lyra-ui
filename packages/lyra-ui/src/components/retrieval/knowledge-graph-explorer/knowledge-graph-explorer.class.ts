@@ -756,7 +756,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           ? html`
               <div part="search-results" role="list" aria-label=${this.localize('graphExplorerSearchResultsLabel')}>
                 ${matches.length === 0
-                  ? html`<div part="search-empty">${this.localize('viewerSearchNoMatches')}</div>`
+                  ? html`<div part="search-empty" role="listitem">${this.localize('viewerSearchNoMatches')}</div>`
                   : matches.map(
                       (n) => html`
                         <div part="search-result" role="listitem">

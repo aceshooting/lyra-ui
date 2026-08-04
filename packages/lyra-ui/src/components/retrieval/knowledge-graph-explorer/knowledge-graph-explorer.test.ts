@@ -130,9 +130,37 @@ describe('lr-knowledge-graph-explorer', () => {
     native.value = 'nonexistent';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="search-empty"]')).to.exist;
+    const emptyEl = el.shadowRoot!.querySelector('[part="search-empty"]');
+    expect(emptyEl).to.exist;
+    // `[part="search-empty"]` is a direct child of the `role="list"` `[part="search-results"]`
+    // container, same as the real `[part="search-result"]` match rows -- every child of a list
+    // role must itself carry role="listitem" (or a small allowed set) or the ARIA is invalid.
+    expect(emptyEl!.getAttribute('role')).to.equal('listitem');
     expect(graph.dimmedNodeIds).to.deep.equal(['marie', 'pierre', 'polonium']);
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
+  });
+
+  it('announces the very first search (empty query -> first non-empty query) to the live-region sink', async () => {
+    // Regression guard for a suspected mounting-order/throttle gap: `syncAnnouncementSink()` runs
+    // in `connectedCallback()` (before first render) and `willUpdate()`'s announce-on-searchQuery-
+    // change branch is guarded by `changed.has('searchQuery')` -- neither should suppress the very
+    // first transition from the default empty `searchQuery` to a real one. Asserts on the actual
+    // DOM text content the sink appends, not merely that a method was invoked.
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const before = sinkTexts().length;
+
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    native.value = 'curie';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    const after = sinkTexts();
+    expect(after.length, 'exactly one new message should have been appended to the sink').to.equal(before + 1);
+    expect(after.at(-1)).to.equal('2 matches');
   });
 
   it('excludes hidden nodes from search and neighbor activation surfaces', async () => {
