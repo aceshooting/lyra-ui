@@ -404,6 +404,29 @@ describe('lr-spreadsheet-viewer', () => {
     await run(['One'], Array.from({ length: 1_001 }, () => Array(1_000).fill('x')));
   });
 
+  it('surfaces the standard load-failure state when the xlsx peer returns a SheetNames array with non-string entries', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    // `workbook.SheetNames` is trusted third-party-peer output parsed from consumer-supplied,
+    // untrusted `src` content -- a malformed/hostile file (or a buggy peer version) could hand
+    // back a real, iterable array whose entries still aren't strings (unlike an outright
+    // non-array value, this shape iterates fine and would otherwise reach `workbook.Sheets[name]`
+    // and the rendered sheet tabs unvalidated), same threat model every other viewer here
+    // validates parsed-library output against.
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      read: () => ({ SheetNames: [{ toString: () => 'evil' }, 'Real Sheet'], Sheets: { 'Real Sheet': {} } }),
+      utils: { sheet_to_json: () => [] },
+    });
+    const restore = fetchBuffer(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]).buffer);
+    try {
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/book.xlsx';
+      await event;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+    } finally {
+      restore();
+    }
+  });
+
   it('a src change while awaiting the sheetjs library import supersedes the earlier load (stale generation)', async () => {
     const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     const lib = deferred<unknown>();

@@ -248,7 +248,10 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
       if (!this.isConnected || generation !== this.generation) return;
       const workbook = library.read(source, { type: 'array' });
       if (!this.isConnected || generation !== this.generation) return;
-      const sheetNames = workbook.SheetNames as string[];
+      const sheetNames = workbook.SheetNames;
+      if (!Array.isArray(sheetNames) || !sheetNames.every((name) => typeof name === 'string')) {
+        throw new Error('The xlsx peer returned a malformed workbook.');
+      }
       if (sheetNames.length > MAX_SPREADSHEET_SHEETS) {
         throw new LyraResourceLimitError('The spreadsheet contains too many sheets.');
       }
