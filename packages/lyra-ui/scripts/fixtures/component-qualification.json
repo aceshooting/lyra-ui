@@ -41990,35 +41990,35 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3391,
+              "line": 3393,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3782,
+              "line": 3784,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4175,
+              "line": 4177,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4603,
+              "line": 4605,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4710,
+              "line": 4712,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"

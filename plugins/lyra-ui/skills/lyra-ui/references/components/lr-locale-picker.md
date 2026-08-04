@@ -8,7 +8,7 @@
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -85,9 +85,11 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`,
-`option-flag` (present only while `showFlags` is on), `option-label`, `option-tag` (the row's
-secondary line — the raw BCP-47 tag), `expand-icon`, `hint`, `error`.
+**CSS parts:** `form-control`, `form-control-label`, `trigger`,
+`trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
+`showFlags` is on), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
+`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag), `expand-icon`,
+`hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
