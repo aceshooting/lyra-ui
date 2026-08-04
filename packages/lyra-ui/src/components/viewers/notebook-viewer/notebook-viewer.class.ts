@@ -14,7 +14,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
-import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -556,8 +556,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   private segmentStyle(s: AnsiStyles): Record<string, string> {
-    const fg = s.fg ?? 'var(--lr-color-text)';
-    const bg = s.bg ?? 'transparent';
+    const fg = sanitizeCssColor(s.fg) ?? 'var(--lr-color-text)';
+    const bg = sanitizeCssColor(s.bg) ?? 'transparent';
     return {
       'font-weight': s.bold ? 'bold' : 'normal',
       opacity: s.dim ? '0.7' : '1',
