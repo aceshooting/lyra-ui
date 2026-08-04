@@ -705,11 +705,10 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
       expect(await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! })).to.be.true;
       await waitUntil(
         () => Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
-          .some((node) => node.id === names[targetIndex]),
+          .some((node) => node.textContent === names[targetIndex]),
       );
       const target = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
-        .find((node) => node.id === names[targetIndex])!;
-      expect(target.id).to.equal(names[targetIndex]);
+        .find((node) => node.textContent === names[targetIndex])!;
       expect(target.closest('[data-row-index]')?.getAttribute('data-row-index')).to.equal(String(targetIndex));
     } finally {
       restore();
@@ -730,9 +729,30 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
         prefix: 'reports/2026/',
       })).to.be.true;
       const target = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
-        .find((node) => node.id === names[targetIndex])!;
-      expect(target.id).to.equal(names[targetIndex]);
+        .find((node) => node.textContent === names[targetIndex])!;
       expect(target.closest('[data-row-index]')?.getAttribute('data-row-index')).to.equal(String(targetIndex));
+    } finally {
+      restore();
+    }
+  });
+
+  it('never binds an untrusted archive entry name as a DOM id (DOM-clobbering hazard)', async () => {
+    // Regression test: entry.name comes straight out of a fetched ZIP's central directory --
+    // fully attacker-controlled. Binding it as a literal `id` is the canonical DOM-clobbering
+    // primitive (an `id`/`name` colliding with a `document`/global property). Nothing in this
+    // component or lr-virtual-list ever looked an entry up by DOM id (anchor resolution matches
+    // entry.name against the DATA, see resolveArchiveAnchor above), so the attribute served no
+    // purpose and is now never rendered at all.
+    const dangerousNames = ['baseURI', 'body', 'title', 'documentElement'];
+    const { list, restore } = await listingWithEntries(dangerousNames);
+    try {
+      list.rowHeight = '40';
+      await list.updateComplete;
+      const nameEls = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'));
+      expect(nameEls).to.have.length.greaterThan(0);
+      for (const el of nameEls) {
+        expect(el.hasAttribute('id'), `unexpected id on entry "${el.textContent}"`).to.be.false;
+      }
     } finally {
       restore();
     }

@@ -284,8 +284,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (this.fetchState.kind !== 'loaded') return false;
     let index = -1;
+    let resolvedName: string | undefined;
     if (anchor.kind === 'fragment') {
       index = this.fetchState.entries.findIndex((entry) => entry.name === anchor.id);
+      resolvedName = this.fetchState.entries[index]?.name;
     } else if (anchor.kind === 'text-quote') {
       const probe = this.ownerDocument.createElement('span');
       index = this.fetchState.entries.findIndex((entry) => {
@@ -300,6 +302,21 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (!await this.waitForArchiveRow(list, index)) return false;
     this.requestUpdate();
     await this.updateComplete;
+    if (anchor.kind === 'fragment') {
+      // Resolved entirely here rather than delegating to the shared base's own fragment handling:
+      // that generic path finds its target by DOM `id === anchor.id`, and `anchor.id` is this
+      // same attacker-controlled entry.name -- entry rows deliberately carry no `id` attribute
+      // (DOM-clobbering hazard; see renderEntry's own comment), so match the already
+      // data-resolved entry by its rendered text content instead, scoped to the row this method
+      // already confirmed is mounted.
+      const root = this.textContentRoot();
+      const target = root
+        ? Array.from(root.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+          .find((el) => el.textContent === resolvedName)
+        : null;
+      target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
+      return true;
+    }
     // TextViewerTarget's deliberately narrowed exported mixin type omits its protected hooks, so
     // TypeScript cannot spell `super.applyAnchor(anchor)` here even though that method is the real
     // immediate-base implementation at runtime. Referencing the named base prototype directly
@@ -394,7 +411,11 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private renderEntry = (item: unknown): TemplateResult => {
     const entry = item as ArchiveEntry;
     const kind = this.localize(entry.dir ? 'archiveViewerFolder' : 'archiveViewerFile');
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span id=${entry.name} part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
+    // entry.name is an attacker-controlled ZIP central-directory filename -- never bind it as a
+    // DOM id (the canonical DOM-clobbering primitive). applyAnchor() resolves a fragment anchor
+    // by matching entry.name against the loaded DATA and then, for the exact scroll target,
+    // against rendered text content -- never against a DOM id -- so no id was ever needed here.
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
       entry.size,
       (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
       (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
