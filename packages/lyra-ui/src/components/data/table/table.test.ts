@@ -2814,10 +2814,12 @@ describe('heat-tint mode', () => {
     expect(cell.style.fontSize).to.equal('16px');
     expect(cell.style.color).to.equal('');
     expect(cell.style.border).to.equal('');
-    // Not '': setting the `background` shorthand alongside a rejected `background-image` makes
-    // Chromium serialize the untouched longhand back as the literal CSS-wide keyword "initial" --
-    // still proof the injected url() never reached the declaration, just not an empty string.
-    expect(cell.style.backgroundImage).to.equal('initial');
+    // Not necessarily '': setting the `background` shorthand alongside a rejected
+    // `background-image` makes engines serialize the untouched longhand differently -- Chromium
+    // reports the literal CSS-wide keyword "initial", Firefox reports the resolved initial value
+    // "none". Either is proof the injected url() never reached the declaration; assert on that
+    // instead of a specific engine's serialization choice.
+    expect(cell.style.backgroundImage).to.not.include('url(');
     expect(cell.style.getPropertyValue('--lr-table-cell-note')).to.equal('teal');
     expect(cell.style.getPropertyValue('--lr-table;bad')).to.equal('');
   });
