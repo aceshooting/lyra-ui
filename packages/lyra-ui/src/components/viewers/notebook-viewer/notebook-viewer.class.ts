@@ -771,6 +771,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeId=${this.activeCellIndex ?? ''}
             @lr-visible-range-changed=${this.stopVirtualListEvent}
+            @lr-scroll=${this.stopVirtualListEvent}
           ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
           ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`

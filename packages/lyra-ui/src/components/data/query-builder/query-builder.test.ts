@@ -498,6 +498,30 @@ describe('lr-query-builder', () => {
     expect(wrapperInputs).to.equal(2);
   });
 
+  it('consumes the raw composed click event from the add/remove condition buttons before emitting its wrapper event', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const parent = await fixture(html`<div><lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder></div>`);
+    const el = parent.querySelector('lr-query-builder') as LyraQueryBuilder;
+    await el.updateComplete;
+    let rawClicks = 0;
+    parent.addEventListener('click', () => rawClicks++);
+
+    const removeButton = conditionRow(el, 0).querySelector('[part="remove-button"]') as HTMLElement;
+    removeButton.click();
+    await el.updateComplete;
+    expect(rawClicks).to.equal(0);
+    expect(el.value.conditions).to.have.length(0);
+
+    const addButton = el.shadowRoot!.querySelector('[part="add-button"]') as HTMLElement;
+    addButton.click();
+    await el.updateComplete;
+    expect(rawClicks).to.equal(0);
+    expect(el.value.conditions).to.have.length(1);
+  });
+
   it('disabled propagates to field/operator selects, value controls, and the add/remove buttons', async () => {
     const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }] };
     const el = (await fixture(html`<lr-query-builder disabled .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;

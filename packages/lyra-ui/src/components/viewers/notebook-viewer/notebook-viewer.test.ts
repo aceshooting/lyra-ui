@@ -664,6 +664,18 @@ describe('event boundaries', () => {
     ));
     expect(leaked).to.equal(0);
   });
+
+  it('does not expose the internal virtual-list scroll event', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    let leaked = 0;
+    el.addEventListener('lr-scroll', () => leaked++);
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(
+      'lr-scroll',
+      { detail: { scrollTop: 0, viewportHeight: 100 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
 });
 
 describe('output collapsing', () => {

@@ -61,6 +61,30 @@ describe('lr-page-rail', () => {
     expect(leaked).to.equal(0);
   });
 
+  it('does not expose the internal virtual-list scroll event', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    let leaked = 0;
+    el.addEventListener('lr-scroll', () => leaked++);
+    list.dispatchEvent(new CustomEvent(
+      'lr-scroll',
+      { detail: { scrollTop: 0, viewportHeight: 100 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
+
+  it('does not expose the internal virtual-list load-more event', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    let leaked = 0;
+    el.addEventListener('lr-load-more', () => leaked++);
+    list.dispatchEvent(new CustomEvent(
+      'lr-load-more',
+      { bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
+
   it('wired mode: tracks pageCount from the viewer\'s lr-load event', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);

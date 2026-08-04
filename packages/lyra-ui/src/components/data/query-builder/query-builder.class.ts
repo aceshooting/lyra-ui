@@ -595,7 +595,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           icon="trash"
           aria-label=${this.localize('queryBuilderRemoveCondition', undefined, { index: this.formatCount(index + 1) })}
           ?disabled=${this.disabled}
-          @click=${() => this.removeCondition(condition.id)}
+          @click=${(event: Event) => this.consumeChildEvent(event, () => this.removeCondition(condition.id))}
         ></lr-icon-button>
       </div>
     `;
@@ -618,7 +618,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
                 appearance="outlined"
                 size="s"
                 ?disabled=${this.disabled}
-                @click=${() => this.addCondition()}
+                @click=${(event: Event) => this.consumeChildEvent(event, () => this.addCondition())}
               >
                 ${this.localize('queryBuilderAddCondition')}
               </lr-button>

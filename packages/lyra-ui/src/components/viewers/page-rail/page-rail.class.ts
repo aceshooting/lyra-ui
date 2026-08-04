@@ -548,6 +548,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           .keyFunction=${(item: unknown) => item as number}
           .activeId=${this.safePage}
           @lr-visible-range-changed=${this.stopVirtualListEvent}
+          @lr-scroll=${this.stopVirtualListEvent}
+          @lr-load-more=${this.stopVirtualListEvent}
         ></lr-virtual-list>
       </div>
     `;
