@@ -56,6 +56,50 @@ it('exposes namespaced geometry custom properties', async () => {
   expect(computed.getPropertyValue('--thumb-offset').trim()).to.equal('');
 });
 
+it('keeps the thumb clearance symmetric when a consumer adds a border to the track part', async () => {
+  // Regression test for fr_uzXHxNgnJ2EEdOMKPxv3jQ: box-sizing: border-box (the library-wide
+  // default) makes an author-added ::part(track) border eat into the padding box the thumb is
+  // absolutely positioned against, but the thumb's own size/travel math is derived from the
+  // track's DECLARED (border-box) dimensions -- so a border shrank the padding box the thumb sits
+  // in without the thumb shrinking to match, breaking symmetric clearance on the far edge in both
+  // the unchecked and checked states.
+  function clearancesFor(track: HTMLElement, thumb: HTMLElement) {
+    const trackRect = track.getBoundingClientRect();
+    const thumbRect = thumb.getBoundingClientRect();
+    return {
+      top: thumbRect.top - trackRect.top,
+      bottom: trackRect.bottom - thumbRect.bottom,
+      start: thumbRect.left - trackRect.left,
+      end: trackRect.right - thumbRect.right,
+    };
+  }
+
+  const frame = (await fixture(html`
+    <div>
+      <style>lr-switch::part(track) { border: 1px solid black; }</style>
+      <lr-switch style="--lr-transition-fast: 0s">Enable</lr-switch>
+    </div>
+  `)) as HTMLElement;
+  const el = frame.querySelector('lr-switch') as LyraSwitch;
+  const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+
+  // Vertical: the thumb never moves, so top/bottom clearance must match in both states.
+  const unchecked = clearancesFor(track, thumb);
+  expect(unchecked.top, 'unchecked top').to.be.closeTo(unchecked.bottom, 0.5);
+
+  el.checked = true;
+  await el.updateComplete;
+  const checked = clearancesFor(track, thumb);
+  expect(checked.top, 'checked top').to.be.closeTo(checked.bottom, 0.5);
+
+  // Horizontal: the thumb travels from a resting clearance on the start edge to the same
+  // clearance on the end edge -- with border added consistently on all four sides, the two
+  // should still match each other (a border-box bug would only widen the far edge, not the near
+  // one, so this only holds once both sides are measured against the padding box the same way).
+  expect(checked.end, 'checked end vs unchecked start').to.be.closeTo(unchecked.start, 0.5);
+});
+
 it('gives the switch track hover and press feedback matching the keyboard focus-visible cue', async () => {
   // Rendered results, not stylesheet text. This shipped as a filter: brightness() lift on
   // [part~='base'] -- which faded the LABEL along with the track, because a filter applies to the

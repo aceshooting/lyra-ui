@@ -53,6 +53,15 @@ export const styles = css`
   [part~='track'] {
     position: relative;
     flex: 0 0 auto;
+    /* content-box, not the library-wide border-box default: the thumb is absolutely positioned
+       against this element's padding box, and its own size/travel math (below) is derived from
+       these same declared dimensions. Under border-box, a consumer-added ::part(track) border
+       would eat into the padding box without the thumb shrinking to match, breaking clearance
+       symmetry on the far edge. content-box keeps the padding box exactly this declared size
+       regardless of any border width, so an added border grows the track's outer footprint
+       instead -- the same "sits outside, doesn't touch the fill" effect the docs already point
+       consumers wanting a rim toward via outline. */
+    box-sizing: content-box;
     inline-size: var(--width, var(--lr-switch-track-inline-size));
     block-size: var(--height, var(--lr-switch-track-block-size));
     border-radius: var(--lr-radius-pill);
