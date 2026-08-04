@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -47,15 +48,11 @@ export interface LyraEntityCardEventMap {
   'lr-entity-activate': CustomEvent<{ id: string }>;
 }
 
-function sanitizeTypeColor(color: string | undefined): string | undefined {
-  return color != null && !/[;{}]/.test(color) ? color : undefined;
-}
-
 /** Derives themeable `--lr-badge-*` overrides from a data-driven type color -- the same "type
  *  color is data-driven by design" exception `lr-graph`'s `nodeTypes` colors already have,
  *  applied here to the type badge only; every other color in this component comes from tokens. */
 function typeBadgeStyle(color: string | undefined): Record<string, string> {
-  const safe = sanitizeTypeColor(color);
+  const safe = color != null ? sanitizeCssColor(color) : undefined;
   if (!safe) return {};
   return {
     '--lr-badge-color': safe,

@@ -2778,6 +2778,25 @@ it('drops the authored-width custom property once a column has an explicit resiz
   expect(cellAfter.style.getPropertyValue('--column-authored-width')).to.equal('');
 });
 
+it('never lets a non-finite column.width reach the styleMap-bound authored-width custom property', async () => {
+  // `width` is typed `number`, but TS cannot enforce that across a caller-supplied columns array
+  // at runtime -- mirrors the existing `Number.isFinite` guard the sibling `gridTemplate` getter
+  // already has for this same field. A truthy-but-unsafe string (unlike `NaN`, which JS treats as
+  // falsy and so never even reaches the ternary's true branch) is what actually proves the gap:
+  // `styleMap()`'s first commit serializes the whole `style` value as one string, so an
+  // unvalidated `;` here could break out of the custom-property declaration.
+  const badColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', width: '1;background:red' as unknown as number },
+    ...columns.slice(1),
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${badColumns} .data=${rows}></lr-data-grid>
+  `);
+  const cell = dataCells(element)[0]!;
+  expect(cell.style.getPropertyValue('--column-authored-width')).to.equal('');
+  expect(cell.style.background).to.equal('');
+});
+
 it('returns a zero pin offset for a column id that is not currently visible', async () => {
   const element = await dataGrid(html`
     <lr-data-grid label="People" pinnable .columns=${columns} .data=${rows}></lr-data-grid>

@@ -379,6 +379,18 @@ it('uses owner-window geometry and observers, and retires an adopted positioning
   }
 });
 
+it('never lets a non-finite rect reach the styleMap-bound coordinates (CSS injection/NaN hardening)', async () => {
+  const el = (await fixture(html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  // `rect` is typed `DOMRectReadOnly`, but a caller passing a plain object (or a Range computed
+  // over a collapsed/detached selection) can hand this a non-finite value at runtime; TS cannot
+  // enforce the type across the property boundary.
+  el.rect = { left: NaN, top: Infinity, width: -Infinity, height: 0, bottom: NaN } as unknown as DOMRectReadOnly;
+  await el.updateComplete;
+  const coordinates = (el as unknown as { coordinates(): Record<string, string> }).coordinates();
+  expect(coordinates['--lr-selection-toolbar-inline-start']).to.match(/^-?\d+(\.\d+)?px$/);
+  expect(coordinates['--lr-selection-toolbar-block-start']).to.match(/^-?\d+(\.\d+)?px$/);
+});
+
 it('computes ownerless coordinates without consulting ambient viewport geometry', async () => {
   const inertDocument = document.implementation.createHTMLDocument('ownerless toolbar');
   const innerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');

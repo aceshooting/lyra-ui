@@ -238,3 +238,14 @@ it('formats numeric properties and degree with the effective locale', async () =
   expect(property.value).to.equal('١٬٨٦٧');
   expect(degree.value).to.equal('١٬٢٣٤');
 });
+
+it('rejects a non-color type badge color (url() CSS-injection hardening)', async () => {
+  const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
+  el.entity = entity;
+  el.types = [{ id: 'person', label: 'Person', color: 'url(https://evil.example/exfil.png)' }];
+  await el.updateComplete;
+  const badge = el.shadowRoot!.querySelector('[part="type-badge"]') as HTMLElement;
+  expect(badge.style.getPropertyValue('--lr-badge-color')).to.equal('');
+  expect(badge.style.getPropertyValue('--lr-badge-background')).to.equal('');
+  expect(badge.style.getPropertyValue('--lr-badge-border')).to.equal('');
+});

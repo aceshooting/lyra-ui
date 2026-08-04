@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteNumber } from '../../../internal/numbers.js';
 import {
   activateOverlay,
   type OverlayHandle,
@@ -272,10 +273,24 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     return parts.join(' ');
   }
 
+  /** Coerces a caller-supplied `rect` to finite geometry before it reaches any style sink --
+   *  `rect` is typed `DOMRectReadOnly`, but TS cannot enforce that across the property boundary,
+   *  and `coordinates()` feeds a `styleMap()` whose first commit serializes the whole `style`
+   *  value as one string (see `sanitizeSwatchColor`'s doc comment for why that matters). */
+  private safeRect(rect: DOMRectReadOnly): { left: number; top: number; width: number; bottom: number } {
+    return {
+      left: finiteNumber(rect.left, 0),
+      top: finiteNumber(rect.top, 0),
+      width: finiteNumber(rect.width, 0),
+      bottom: finiteNumber(rect.bottom, 0),
+    };
+  }
+
   private coordinates(): Record<string, string> {
     const viewportWidth = this.ownerDocument.defaultView?.innerWidth ?? 0;
-    const desiredInline = this.rect ? this.rect.left + this.rect.width / 2 : viewportWidth / 2;
-    const block = this.rect?.top ?? 0;
+    const rect = this.rect ? this.safeRect(this.rect) : undefined;
+    const desiredInline = rect ? rect.left + rect.width / 2 : viewportWidth / 2;
+    const block = rect?.top ?? 0;
     return {
       '--lr-selection-toolbar-inline-start': `${this.effectiveDirection === 'rtl'
         ? viewportWidth - desiredInline
@@ -290,9 +305,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (!toolbar || !view) return;
     const edge = 8;
     const gap = 8;
-    const rect =
-      this.rect ??
-      new view.DOMRect(view.innerWidth / 2, 0, 0, 0);
+    const rect = this.safeRect(this.rect ?? new view.DOMRect(view.innerWidth / 2, 0, 0, 0));
     const width = toolbar.offsetWidth;
     const height = toolbar.offsetHeight;
     const desiredInline = rect.left + rect.width / 2;

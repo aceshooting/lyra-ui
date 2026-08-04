@@ -1326,7 +1326,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<Lyr
     const pinOffset = side ? this.pinOffset(id, side) : 0;
     return {
       ...(side ? { '--pin-offset': `${pinOffset}px` } : {}),
-      ...(column.width && !this.columnWidths.has(id) ? { '--column-authored-width': `${column.width}px` } : {}),
+      ...(Number.isFinite(column.width) && (column.width ?? 0) > 0 && !this.columnWidths.has(id)
+        ? { '--column-authored-width': `${column.width}px` }
+        : {}),
     };
   }
 
