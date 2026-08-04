@@ -1011,6 +1011,211 @@ test('manual mappings report one tag warning and every optional peer requirement
   );
 });
 
+test('the checked-in inventory rewrites free-tier icon imports from both ecosystems with their dompurify peer requirement', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+
+  const waInput = [
+    "import '@awesome.me/webawesome/dist/components/icon/icon.js';",
+    '<wa-icon></wa-icon>',
+    '',
+  ].join('\n');
+  const waResult = migrateText(waInput, checkedContract, { file: 'wa-icon.html' });
+  assert.equal(
+    waResult.content,
+    [
+      "import '@aceshooting/lyra-ui/components/utility/icon/icon.js';",
+      '<lr-icon></lr-icon>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    waResult.warnings.map((entry) => [entry.warningCode, entry.target]),
+    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+  );
+
+  const slInput = [
+    "import '@shoelace-style/shoelace/dist/components/icon/icon.js';",
+    '<sl-icon></sl-icon>',
+    '',
+  ].join('\n');
+  const slResult = migrateText(slInput, checkedContract, { file: 'sl-icon.html' });
+  assert.equal(
+    slResult.content,
+    [
+      "import '@aceshooting/lyra-ui/components/utility/icon/icon.js';",
+      '<lr-icon></lr-icon>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    slResult.warnings.map((entry) => [entry.warningCode, entry.target]),
+    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+  );
+});
+
+test('the checked-in inventory rewrites the free-tier icon-button deep import with no peer requirement', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    "import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';",
+    '<sl-icon-button></sl-icon-button>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'icon-button.html' });
+  assert.equal(
+    result.content,
+    [
+      "import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';",
+      '<lr-icon-button></lr-icon-button>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(result.warnings, []);
+});
+
+test('the checked-in inventory rewrites the Pro-tier date-picker deep import with no peer requirement', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    "import '@awesome.me/webawesome-pro/dist/components/date-picker/date-picker.js';",
+    '<wa-date-picker></wa-date-picker>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'date-picker.html' });
+  assert.equal(
+    result.content,
+    [
+      "import '@aceshooting/lyra-ui/components/forms/date-picker/date-picker.js';",
+      '<lr-date-picker></lr-date-picker>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(result.warnings, []);
+});
+
+test('the checked-in inventory rewrites free-tier QR code imports from both ecosystems with their qrcode peer requirement', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+
+  const slInput = [
+    "import '@shoelace-style/shoelace/dist/components/qr-code/qr-code.js';",
+    '<sl-qr-code></sl-qr-code>',
+    '',
+  ].join('\n');
+  const slResult = migrateText(slInput, checkedContract, { file: 'sl-qr-code.html' });
+  assert.equal(
+    slResult.content,
+    [
+      "import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';",
+      '<lr-qr-code background="white" fill="black"></lr-qr-code>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    slResult.warnings.map((entry) => [entry.warningCode, entry.target]),
+    [['OPTIONAL_PEER_REQUIRED', 'qrcode']],
+  );
+
+  const waInput = [
+    "import '@awesome.me/webawesome/dist/components/qr-code/qr-code.js';",
+    '<wa-qr-code></wa-qr-code>',
+    '',
+  ].join('\n');
+  const waResult = migrateText(waInput, checkedContract, { file: 'wa-qr-code.html' });
+  assert.equal(
+    waResult.content,
+    [
+      "import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';",
+      '<lr-qr-code></lr-qr-code>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    waResult.warnings.map((entry) => [entry.warningCode, entry.target]),
+    [['OPTIONAL_PEER_REQUIRED', 'qrcode']],
+  );
+});
+
+test('the checked-in inventory reports a warning-required tag and no peer requirements for random-content', () => {
+  const randomContent = checkedInventory.mappings.find(
+    (mapping) => mapping.upstreamTag === 'wa-random-content',
+  );
+  assert.deepEqual(randomContent?.parity.runtime.optionalPeers, []);
+  const input = '<wa-random-content></wa-random-content>\n';
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'random-content.html',
+  });
+  assert.equal(result.content, input);
+  assert.equal(
+    result.warnings.filter((entry) => entry.warningCode === 'WARNING_REQUIRED').length,
+    1,
+  );
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.warningCode === 'OPTIONAL_PEER_REQUIRED'),
+    [],
+  );
+});
+
+test('the checked-in inventory rewrites a Pro chart deep import with its granular registration and peer requirements', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    "import '@awesome.me/webawesome-pro/dist/components/line-chart/line-chart.js';",
+    '<wa-line-chart></wa-line-chart>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'line-chart.html' });
+  assert.equal(
+    result.content,
+    [
+      "import '@aceshooting/lyra-ui/components/charts/chart/line-chart.js';",
+      '<lr-line-chart></lr-line-chart>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    new Set(result.warnings.map((entry) => `${entry.warningCode}|${entry.target}`)),
+    new Set([
+      'OPTIONAL_PEER_REQUIRED|chart.js',
+      'OPTIONAL_PEER_REQUIRED|chartjs-plugin-datalabels',
+      'OPTIONAL_PEER_REQUIRED|chartjs-plugin-zoom',
+    ]),
+  );
+});
+
+test('the checked-in inventory grants a Pro chart target its granular registration closure alongside a rootIncluded free target', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-chart-closure-v8-'));
+  try {
+    const source = path.join(scratch, 'charts.ts');
+    const input = [
+      "import '@awesome.me/webawesome-pro';",
+      "document.body.innerHTML = '<wa-icon></wa-icon><wa-bar-chart></wa-bar-chart>';",
+      '',
+    ].join('\n');
+    fs.writeFileSync(source, input);
+
+    const report = migrateFiles({ files: [source], inventory: checkedInventory, cwd: scratch });
+    assert.equal(report.filesChanged, 1);
+    assert.equal(
+      fs.readFileSync(source, 'utf8'),
+      [
+        "import '@aceshooting/lyra-ui/all.js';",
+        "import '@aceshooting/lyra-ui/components/charts/chart/bar-chart.js';",
+        "document.body.innerHTML = '<lr-icon></lr-icon><lr-bar-chart></lr-bar-chart>';",
+        '',
+      ].join('\n'),
+    );
+    assert.deepEqual(
+      new Set(report.warnings.map((entry) => `${entry.warningCode}|${entry.target}`)),
+      new Set([
+        'OPTIONAL_PEER_REQUIRED|dompurify',
+        'OPTIONAL_PEER_REQUIRED|chart.js',
+        'OPTIONAL_PEER_REQUIRED|chartjs-plugin-datalabels',
+        'OPTIONAL_PEER_REQUIRED|chartjs-plugin-zoom',
+      ]),
+    );
+    assert.ok(report.changes.some((entry) => entry.action === 'insert-registration'));
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test('the lyra-v7 profile inserts only absent defaults with canonical boolean presence syntax', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [
