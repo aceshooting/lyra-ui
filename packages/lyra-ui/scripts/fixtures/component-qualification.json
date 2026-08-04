@@ -41212,28 +41212,28 @@
           "evidence": [
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 346,
+              "line": 390,
               "test": "exports wrapper/control and help-text aliases without replacing Lyra part names",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1006,
+              "line": 1050,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1013,
+              "line": 1057,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1191,
+              "line": 1235,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -41247,7 +41247,7 @@
           "evidence": [
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 228,
+              "line": 272,
               "kind": "component keyboard assertion signal"
             }
           ]
