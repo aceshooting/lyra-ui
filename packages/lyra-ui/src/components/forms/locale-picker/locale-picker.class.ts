@@ -170,6 +170,8 @@ export interface LyraLocalePickerEventMap {
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to
  *   the accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (positioning anchor).
+ * @csspart trigger-flag - The trigger's leading `<lr-flag>` for the current value (present only
+ *   while `showFlags` is on).
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
  * @csspart option-flag - The row's leading `<lr-flag>` (present only while `showFlags` is on).
@@ -605,8 +607,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this._value || this.effectiveLocale;
   }
 
+  private entryFor(tag: string): NormalizedLocaleEntry | undefined {
+    return this.normalizedEntries.find((e) => e.tag === tag);
+  }
+
   private labelFor(tag: string): string {
-    return this.normalizedEntries.find((e) => e.tag === tag)?.label ?? localeNativeName(tag);
+    return this.entryFor(tag)?.label ?? localeNativeName(tag);
   }
 
   private show(): void {
@@ -869,6 +875,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   override render(): TemplateResult {
     const rows = this.normalizedEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
+    const previewTag = this.previewTag;
+    const previewEntry = this.entryFor(previewTag);
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
@@ -899,7 +907,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           @focus=${this.onTriggerFocus}
           @blur=${this.onTriggerBlur}
         >
-          <span class="trigger-label">${this.labelFor(this.previewTag)}</span>
+          ${this.showFlags
+            ? previewEntry?.country
+              ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} variant="compact" aria-hidden="true"></lr-flag>`
+              : html`<lr-flag part="trigger-flag" language=${previewTag} variant="compact" aria-hidden="true"></lr-flag>`
+            : ''}
+          <span class="trigger-label">${this.labelFor(previewTag)}</span>
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
         <div

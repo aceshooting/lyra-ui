@@ -106,6 +106,10 @@ export const styles = css`
     cursor: not-allowed;
   }
 
+  [part='trigger-flag'] {
+    flex: 0 0 auto;
+  }
+
   .trigger-label {
     flex: 1 1 auto;
     min-inline-size: 0;

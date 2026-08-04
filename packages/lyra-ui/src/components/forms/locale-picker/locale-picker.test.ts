@@ -235,6 +235,31 @@ it('a plain string[] locales catalog never emits a country attribute', async () 
   expect(flag.hasAttribute('country')).to.be.false;
 });
 
+it('shows the current value\'s flag in the trigger, not just in the open listbox', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const flag = trigger(el).querySelector('lr-flag') as HTMLElement;
+  expect(flag).to.exist;
+  expect(flag.getAttribute('language')).to.equal('fr');
+});
+
+it('trigger flag honors a locales entry\'s country override, same as the row does', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker value="ar" .locales=${[{ tag: 'ar', country: 'lb' }]}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const flag = trigger(el).querySelector('lr-flag') as HTMLElement;
+  expect(flag.getAttribute('country')).to.equal('lb');
+  expect(flag.hasAttribute('language')).to.be.false;
+});
+
+it('showFlags=false omits the trigger flag too, not just the row flags', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker value="fr" .locales=${['fr']} .showFlags=${false}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  expect(trigger(el).querySelectorAll('lr-flag').length).to.equal(0);
+});
+
 // Obligation 6: selecting a row commits value, fires lr-change, and applies setLyraLocale().
 it('selecting a row updates value, fires lr-change with {value, previousValue}, and calls setLyraLocale', async () => {
   setLyraLocale('en');
