@@ -216,9 +216,6 @@ export const styles = css`
   [part='row'][data-stripe] {
     background: var(--lr-table-row-stripe-bg, transparent);
   }
-  [part='row']:hover {
-    background: var(--lr-color-brand-quiet);
-  }
   /* Inline var() fallback rather than a :host declaration -- a :host-declared custom property is
      re-declared on every instance and shadows any ancestor value, which would defeat the whole
      point of the override hook. Needed because Shadow Parts forbids an attribute selector after
@@ -226,6 +223,14 @@ export const styles = css`
      hijack the library-wide --lr-color-brand-quiet token to recolor the selected row. */
   [part='row'][aria-selected='true'] {
     background: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
+  }
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
+     and the selected row is the one a user is most likely to hover next -- put this before and the
+     single most common hover in a selectable table would be the one hover with no feedback. Also a
+     distinct color-mix step rather than the plain brand-quiet fallback used elsewhere, since the
+     selected row's own resting fill already resolves to that same token by default. */
+  [part='row']:hover {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
      and the selected row is the one a user presses to DEselect -- put this first and the single

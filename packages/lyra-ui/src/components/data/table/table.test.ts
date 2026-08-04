@@ -3473,6 +3473,28 @@ describe('--lr-table-row-selected-bg', () => {
       await resetMouse();
     }
   });
+
+  // [part='row']:hover and [part='row'][aria-selected='true'] are both (0,2,0), so only source
+  // order decides which one wins -- and until now that was the selected rule, making a hover on an
+  // already-selected row a visual no-op. Rendered assertion only: the selector is exactly the kind
+  // of thing that reads correct and matches nothing.
+  it('shows a hover fill on an already-selected row, distinct from the resting selected fill', async () => {
+    const el = await selectionFixture();
+    const selected = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
+    selected.scrollIntoView();
+    const resting = getComputedStyle(selected).backgroundColor;
+    const rect = selected.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: 'move', position });
+      expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+    } finally {
+      await resetMouse();
+    }
+  });
 });
 
 describe('--lr-table-row-stripe-bg', () => {

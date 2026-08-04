@@ -697,3 +697,32 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async (
   const disabled = await press(disabledItem!);
   expect(disabled.pressed, 'a disabled row must stay inert under the pointer').to.equal(disabled.resting);
 });
+
+// `:host([aria-selected='true']) [part='row']` is (0,3,0), which a bare `[part='row']:hover`
+// ((0,2,0)) cannot reach -- the same specificity gap the pressed-fill fix above already solves for
+// :active. Without a matching :host()-matched arm on the hover rule, hovering an already-selected
+// item is a visual no-op. Rendered assertion only: the selector is exactly the kind of thing that
+// reads correct and matches nothing.
+it('shows a hover fill on a selected row, distinct from the resting selected fill', async () => {
+  const wrapper = await fixture(
+    html`<div role="tree">
+      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${1} .posInSet=${1}></lr-tree-item>
+    </div>`,
+  );
+  const [selectedItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  await selectedItem!.updateComplete;
+
+  const row = selectedItem!.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  row.scrollIntoView();
+  const resting = getComputedStyle(row).backgroundColor;
+  const rect = row.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(row).backgroundColor).to.not.equal(resting);
+  } finally {
+    await resetMouse();
+  }
+});

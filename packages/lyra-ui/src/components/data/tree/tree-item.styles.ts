@@ -28,12 +28,20 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
-  [part='row']:hover {
-    background: var(--lr-color-brand-quiet);
-  }
   :host([aria-selected='true']) [part='row'] {
     color: var(--lr-tree-selected-color, var(--lr-color-brand));
     background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
+  }
+  /* MUST stay after the selected-row rule above, and the second arm exists so it can: a selected
+     row is matched at (0,3,0) there, which a bare [part='row']:hover ((0,2,0)) cannot reach, and the
+     already-selected item is exactly the row a user is most likely to hover next. Matching it
+     through :host() lands both arms at the same specificity as that rule, so source order decides --
+     and the :where() keeps the state qualifier itself out of the count. Also a distinct color-mix
+     step rather than the plain brand-quiet fallback used elsewhere, since the selected row's own
+     resting fill already resolves to that same token by default. */
+  [part='row']:hover,
+  :host(:where([aria-selected='true'])) [part='row']:hover {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   /* MUST stay after the selected-row rule above, and the second arm exists so it can: a selected
      row is matched at (0,3,0) there, which a bare [part='row']:active ((0,2,0)) cannot reach, and
