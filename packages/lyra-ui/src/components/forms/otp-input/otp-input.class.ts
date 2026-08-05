@@ -627,7 +627,10 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
   private onBlur = (event: FocusEvent): void => {
     this.focused = false;
-    this.touched = true;
+    // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+    // behaviour (nothing custom-element-specific) — that forced blur is not a real user
+    // interaction and must not flip `touched`, which could reenter an in-flight Lit update.
+    if (!this.effectiveDisabled) this.touched = true;
     this.flushPendingChange();
     relayNativeEvent(this, event);
     this.emit('lr-blur');

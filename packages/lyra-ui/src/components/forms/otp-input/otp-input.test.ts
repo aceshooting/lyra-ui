@@ -1360,6 +1360,34 @@ it('relays one native focus/blur pair and one prefixed alias pair from the real 
   expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+  // behaviour, not a real user interaction — that forced blur must not flip `touched`.
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+  controlOf(el).focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === controlOf(el), 'precondition: the real input is focused').to.equal(true);
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a platform-forced blur from becoming disabled must not count as user interaction',
+  ).to.equal(false);
+});
+
+it('still marks touched from a real blur while enabled', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
+  controlOf(el).focus();
+  await el.updateComplete;
+
+  controlOf(el).blur();
+  await el.updateComplete;
+
+  expect((el as unknown as { touched: boolean }).touched).to.equal(true);
+});
+
 it('select() forwards to the real input and selects the complete code', async () => {
   const el = await fixture<LyraOtpInput>(html`
     <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
