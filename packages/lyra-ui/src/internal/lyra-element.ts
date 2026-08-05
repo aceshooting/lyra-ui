@@ -7,6 +7,8 @@ import { resolveIntlLocale } from './intl-cache.js';
 import {
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
+  peekLyraDirection,
+  peekLyraLocale,
   resolveLyraDirection,
   resolveLyraString,
   resolveLyraLocale,
@@ -61,6 +63,16 @@ function composedParentElement(element: Element): Element | null {
     typeof (candidate as Element).getAttribute === 'function'
     ? candidate as Element
     : null;
+}
+
+const STYLE_DIRECTION_PATTERN = /(?:^|[;\s])direction\s*:\s*([^;]+)/i;
+
+/** Extracts the declared `direction:` value from a raw inline `style` attribute string, or
+ *  `undefined` if it doesn't declare one -- used to tell whether a `style` mutation actually
+ *  touched `direction` (added, removed, or changed its value) rather than merely happening to
+ *  co-occur with an unrelated declaration that already mentions the word. */
+function styleDirectionDeclaration(styleText: string): string | undefined {
+  return STYLE_DIRECTION_PATTERN.exec(styleText)?.[1]?.trim();
 }
 
 /**
@@ -218,21 +230,80 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.inheritedContextObserver?.disconnect();
     const Observer = this.ownerDocument?.defaultView?.MutationObserver;
     if (!Observer) return;
-    let lastLocale = resolveLyraLocale(this);
-    let lastDirection = resolveLyraDirection(this);
-    const observer = new Observer(() => {
+    let lastLocale: string | undefined;
+    let lastDirection: 'ltr' | 'rtl' | undefined;
+    let checkQueued = false;
+    let recheckDirection = false;
+    const check = () => {
+      checkQueued = false;
+      const resolveDirection = recheckDirection;
+      recheckDirection = false;
+      // Catch up on whatever the host's own last render already resolved (a free cache read, no
+      // `getComputedStyle()`) before this check runs its own — a `willUpdate()`/render pass that
+      // reads `effectiveLocale`/`effectiveDirection` populates the same memo `resolveLyraLocale()`/
+      // `resolveLyraDirection()` below consult, so this is nearly always already warm by the time
+      // an ancestor mutation fires. A host that never reads either getter leaves the memo (and so
+      // `last*` here) permanently unset, which is fine: nothing in its own output depends on
+      // direction/locale, so there is nothing for a `requestUpdate()` to correct.
+      lastLocale ??= peekLyraLocale(this);
+      if (resolveDirection) lastDirection ??= peekLyraDirection(this);
+      const priorLocale = lastLocale;
+      const priorDirection = lastDirection;
       invalidateLyraLocaleCache(this);
       const locale = resolveLyraLocale(this);
-      const direction = resolveLyraDirection(this);
-      if (locale === lastLocale && direction === lastDirection) return;
       lastLocale = locale;
-      lastDirection = direction;
-      this.requestUpdate();
+      const localeChanged = priorLocale !== undefined && locale !== priorLocale;
+      // `resolveLyraDirection()` forces a synchronous `getComputedStyle()` read (see
+      // `inheritedDirection()`), which is far more than a cheap ancestor-attribute walk: reading
+      // computed style on ANY element forces the browser to flush pending style work for the whole
+      // document, including custom-property inheritance that a Lit host's own in-flight update (an
+      // unrelated `style.setProperty()` write, say) hasn't committed the *consuming* markup for
+      // yet. Observed in practice: a sibling's forced read here made Chromium permanently drop a
+      // `<lr-chip-group>`'s own `--lr-chip-group-overflow-expanded-color` cssprop resolution for
+      // its `[part="overflow-indicator"]`, reproducing 100% of the time. Only pay for that flush
+      // when the mutation could plausibly have changed direction at all: an explicit `dir`
+      // attribute, a `class` change (opaque -- may match any stylesheet rule), or a `style` change
+      // whose *declared* `direction` value actually differs (see `styleDirectionDeclaration()` --
+      // not a raw substring check, which would false-positive on every unrelated write to an
+      // ancestor that also happens to declare `direction`). A locale-only/unrelated-property style
+      // mutation skips it entirely, keeping `lastDirection` as the last known-good value.
+      let directionChanged = false;
+      if (resolveDirection) {
+        const direction = resolveLyraDirection(this);
+        directionChanged = priorDirection !== undefined && direction !== priorDirection;
+        lastDirection = direction;
+      }
+      if (localeChanged || directionChanged) this.requestUpdate();
+    };
+    const observer = new Observer((records) => {
+      for (const record of records) {
+        if (record.attributeName === 'dir' || record.attributeName === 'class') {
+          recheckDirection = true;
+          break;
+        }
+        if (record.attributeName === 'style') {
+          const target = record.target as Element;
+          const before = record.oldValue ?? '';
+          const after = target.getAttribute('style') ?? '';
+          // Compare the *declared* `direction` value, not raw substring presence: an ancestor that
+          // already declares `direction: ltr` alongside an unrelated property write (a sibling's
+          // own cssprop, say) would otherwise always look "changed" merely because both the old and
+          // new style text happen to contain the word "direction".
+          if (styleDirectionDeclaration(before) !== styleDirectionDeclaration(after)) {
+            recheckDirection = true;
+            break;
+          }
+        }
+      }
+      if (checkQueued) return;
+      checkQueued = true;
+      queueMicrotask(check);
     });
     let ancestor = composedParentElement(this);
     while (ancestor) {
       observer.observe(ancestor, {
         attributes: true,
+        attributeOldValue: true,
         attributeFilter: [...INHERITED_CONTEXT_ATTRIBUTES],
       });
       ancestor = composedParentElement(ancestor);

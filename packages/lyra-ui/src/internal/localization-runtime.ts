@@ -305,6 +305,25 @@ export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
 }
 
 /**
+ * Reads a host's already-memoized locale/direction without resolving anything -- in particular,
+ * without `resolveLyraDirection()`'s `getComputedStyle()` call. `undefined` when the host was
+ * never opted into caching, or opted in but never actually read `effectiveLocale`/
+ * `effectiveDirection` (so its own render never populated the memo). Lets a caller establish a
+ * "what's currently rendered" baseline for free, piggybacking on whatever the host's own last
+ * render already computed, instead of forcing a fresh (potentially expensive or, for
+ * `getComputedStyle()` specifically, disruptive -- see `observeInheritedContext()`) resolution
+ * purely to seed a comparison.
+ */
+export function peekLyraLocale(host: Element): string | undefined {
+  return resolvedLocaleCache.get(host);
+}
+
+/** @see peekLyraLocale */
+export function peekLyraDirection(host: Element): 'ltr' | 'rtl' | undefined {
+  return resolvedDirectionCache.get(host);
+}
+
+/**
  * Where each plural category looks when a catalog does not author it, always
  * terminating at the mandatory `other`.
  *

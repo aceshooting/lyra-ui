@@ -373,6 +373,60 @@ it('does not request an update for an ancestor class/style mutation that leaves 
   expect(el.exposedDirection).to.equal('rtl');
 });
 
+it('does not force a getComputedStyle() read for an ancestor style mutation unrelated to direction', async () => {
+  // Regression test: `resolveLyraDirection()` (unlike `resolveLyraLocale()`) resolves via
+  // `getComputedStyle()`, which forces the browser to flush pending style work for the WHOLE
+  // document -- not just the queried element. Calling it from the ancestor-mutation observer on
+  // every `class`/`style` write (even ones with nothing to do with direction, like a sibling
+  // custom element's own unrelated cssprop) was observed to permanently break a completely
+  // unrelated host's own shadow-DOM custom-property resolution in Chromium (see
+  // `chip-group.test.ts`'s "--lr-chip-group-overflow-expanded-color cssprop" regression test,
+  // which reproduced 100% of the time before this fix). The observer must skip the
+  // `getComputedStyle()` call entirely unless the mutation could plausibly affect direction (an
+  // explicit `dir`/`class` change, or a `style` change that actually mentions `direction`).
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div style="direction: ltr"><lr-demo-locale></lr-demo-locale></div>`,
+  );
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
+  await el.updateComplete;
+
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const ownerDescriptor = Object.getOwnPropertyDescriptor(foreignWindow, 'getComputedStyle');
+  const ownerGetComputedStyle = foreignWindow.getComputedStyle.bind(foreignWindow);
+  let calls = 0;
+  Object.defineProperty(foreignWindow, 'getComputedStyle', {
+    configurable: true,
+    value(target: Element, pseudo?: string | null) {
+      calls += 1;
+      return ownerGetComputedStyle(target, pseudo);
+    },
+  });
+
+  try {
+    // Moving `wrapper` (carrying `el`) into the iframe's document re-triggers `el`'s
+    // connectedCallback -- and so `observeInheritedContext()` -- against `foreignWindow`, the
+    // window whose `getComputedStyle` is now instrumented.
+    iframe.contentDocument!.body.append(wrapper);
+    await el.updateComplete;
+
+    calls = 0;
+    wrapper.style.setProperty('--some-unrelated-token', '1000');
+    await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+    expect(calls, 'an unrelated style mutation must not force a computed-style read').to.equal(0);
+
+    wrapper.style.direction = 'rtl';
+    await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+    expect(calls, 'a mutation that actually mentions direction must still be checked').to.be.greaterThan(0);
+  } finally {
+    if (ownerDescriptor) Object.defineProperty(foreignWindow, 'getComputedStyle', ownerDescriptor);
+    if (wrapper.ownerDocument !== document) document.adoptNode(wrapper);
+    wrapper.remove();
+    iframe.remove();
+  }
+});
+
 it('keeps a synthetic message locale raw while exposing a safe effective locale', async () => {
   const locale = `x_synthetic_${Date.now().toString(36)}`;
   const el = await fixture<DemoLocale>(html`<lr-demo-locale locale=${locale}></lr-demo-locale>`);
