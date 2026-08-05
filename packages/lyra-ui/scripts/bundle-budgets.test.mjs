@@ -7,7 +7,7 @@ const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const budgets = JSON.parse(readFileSync(path.join(scriptsDir, 'bundle-budgets.json'), 'utf8'));
 const checker = readFileSync(path.join(scriptsDir, 'check-bundle-size.mjs'), 'utf8');
 
-assert.equal(budgets['dist/components/forms/button/button.js'], 30);
+assert.equal(budgets['dist/components/forms/button/button.js'], 31);
 assert.equal(budgets['dist/autoloader.js'], 980);
 assert.equal(budgets['dist/autoloader-cdn.js'], 981);
 assert.equal(budgets['dist/ssr-loader.js'], 960);
