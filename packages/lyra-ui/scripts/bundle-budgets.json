@@ -22,7 +22,7 @@
   "dist/components/retrieval/index.js": 270,
   "dist/components/utility/index.js": 110,
   "dist/components/viewers/index.js": 185,
-  "dist/components/forms/button/button.js": 30,
+  "dist/components/forms/button/button.js": 31,
   "dist/components/forms/select/select.js": 63,
   "dist/components/data/gauge/gauge.js": 39,
   "dist/components/viewers/pdf-viewer/pdf-viewer.js": 64,
