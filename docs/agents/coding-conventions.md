@@ -64,7 +64,14 @@
   no error. Any canvas path deriving a color from a `--lr-*` property, a consumer callback, or a
   `color-mix()`/`var()` expression round-trips it through `getComputedStyle` into a concrete
   color first — `heatmap.class.ts`'s `resolveRgb()` and `graph.class.ts`'s
-  `resolveCssColorValue()` are the patterns.
+  `resolveCssColorValue()` are the patterns. `chart.class.ts`'s `themeColors()` is a third
+  instance for Chart.js specifically: Chart.js also renders to `<canvas>` and cannot read a
+  `var()` color option at all — it silently falls back to its own default (e.g.
+  `rgba(0,0,0,0.1)`), invisible in dark mode — so every `--lr-chart-*` token needs the same
+  `getComputedStyle` resolution first. Contrast `lr-lite-chart`, which renders to SVG/CSS and
+  *can* hand the DOM a raw `var(--lr-chart-color-N)` string resolved at paint time — don't copy
+  that approach into a canvas-based component. A series with no explicit color should default to
+  the categorical `--lr-color-chart-1..8` ramp keyed by dataset index.
 - **Resolve token units live; never hardcode `rem = 16px`.** A helper that reads a `--lr-*` size
   token via `getComputedStyle(...).getPropertyValue(...)` for layout or canvas math resolves the
   live pixel value for whatever unit the token carries —
@@ -72,7 +79,18 @@
   `getComputedStyle(this).fontSize` for `em`. A hardcoded `* 16` gives systematically wrong
   geometry under a non-16px root font size, a common accessibility setting. `table.class.ts`'s
   `minimumResizeWidth()` is the reference; `mind-map.class.ts`'s `ringGapPx()` the
-  counter-example.
+  counter-example. Related but distinct: `rem` means something different in `@media` vs.
+  `@container` at the CSS level — `@media` resolves `rem` against the browser's *initial* font
+  size and ignores `html { font-size }` entirely, while `@container` follows the root's
+  *computed* size. Any feature offering a "viewport" vs. "container" breakpoint basis must pick
+  its `rem`-resolution path to match — this shipped backwards in three places before being
+  corrected (`4ddf1fbd`).
+- **A `var()` fallback chain is not a live formula across a shadow boundary.** CSS inheritance
+  passes a descendant's `:host`-level custom property the ancestor's already-*resolved* value,
+  not a formula it re-evaluates per instance — so a per-element override meant to win only when
+  unset (e.g. "use `backdropInset` if set, else `fullscreenInset`") can be invisible through a
+  pure `var(--a, var(--b))` chain. Resolve the precedence in JS instead (`this.a || this.b`) and
+  verify with a real browser assertion, not by reading the CSS.
 - **Never re-namespace a custom element while cloning DOM.** Code walking slotted nodes into a
   different namespace (SVG-clone helpers, sanitizer round-trips) checks
   `node.localName.includes('-')` — or `customElements.get(...)` — before calling
@@ -191,7 +209,18 @@
   (`cssParts`, `events`, description all go missing) with no build error. This has already hit 42
   of 86 classes library-wide, including a repeat in newly-shipped components — check the
   generated `custom-elements.json` entry actually has content after adding a component; don't
-  just trust that `tsc`/`pnpm manifest` stayed green.
+  just trust that `tsc`/`pnpm manifest` stayed green. A related, separate trap: **`@internal` on
+  a class's own JSDoc, alongside `@customElement`, also silently empties its manifest
+  declaration** — not a missing field, the whole entry vanishes, again with no build error. This
+  is specific to co-presence on the *class* doc; `@internal` on individual members is fine. Don't
+  tag a still-registered (even if undocumented) component's class `@internal` for this reason.
+  Separately, `check-manifest.mjs`'s dynamic-`part=` detection is regex-based, not real
+  type-flow analysis, and has known blind spots: `exportparts="inner:outer"` forwarding, a local
+  `const part = <ternary>` variable or typed `part: 'a' | 'b'` parameter applied via
+  `part=${part}`/`setAttribute`, and a static `part="prefix ...${identifier}"` with exactly one
+  interpolation. All three are handled today, but a "documented CSS part is not rendered
+  statically" false positive on a new legitimate pattern means extending the checker, not
+  assuming the component is wrong.
 - **Lean/full split.** A component with a meaningfully size-costly full feature set may ship as a
   pair: a bundle-size-lean default (`x.class.ts`) and a full variant (`x-core.class.ts`), e.g.
   `code-block`/`code-block-core` and `markdown`/`markdown-core`. Private render/helper logic

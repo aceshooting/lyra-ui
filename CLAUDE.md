@@ -284,8 +284,10 @@ Release blockers for new components, bugs in existing ones. Full rules:
   that keep value/validity in sync, and specify the event contract before implementation.
 - Every `:focus-visible` / `cursor: pointer` part has a matching `:hover` rule (the
   most-repeated defect in this library's history).
-- Wrap internal state qualifiers in `:where()` so consumer `::part()` rules can win; target the
-  node that actually receives the pseudo-class state.
+- Wrap internal state qualifiers in `:where()` for within-tree specificity, not cross-shadow
+  overrides — an outer `::part()` rule already always beats an inner rule regardless of
+  specificity (CSS Cascade 5 sorts by encapsulation context first); only `!important` reverses it.
+  Target the node that actually receives the pseudo-class state.
 - Respond to allocation, not viewport: container queries (with `container-type` in the same
   stylesheet), 320px + long-content coverage; dark mode keys off tokens/`data-*`, with
   `prefers-color-scheme` demoted to a fallback.

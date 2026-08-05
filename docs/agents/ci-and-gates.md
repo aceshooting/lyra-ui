@@ -16,6 +16,15 @@ autoloader/registration/side-effect architecture, form/event/cycle/interaction/t
 translation contracts, and every associated tooling self-test. When adding, removing, or moving a
 gate, edit that package script first; `pnpm lint` and the CI `lint` job pick it up automatically.
 
+**Toolchain constraint: `typescript@7` is the native Go port and exposes no JS compiler API.**
+`ts.version` works, but `ts.SyntaxKind` and `ts.createProgram` are `undefined` — any tool that
+imports `typescript` and drives the compiler API crashes on load (confirmed for `type-coverage`;
+the same failure is certain for `typescript-eslint` type-aware rules, `ts-morph` codemods, and
+`@stryker-mutator/typescript-checker`). When proposing a new lint/coverage tool here, reach for
+TS-API-free options instead: `tsc`'s own strict flags, bespoke `check-*.mjs` AST-free scanners,
+`secretlint`, `knip`, `cspell`. `tsc --noEmit` itself is unaffected — that's the native compiler
+doing its own job, not a caller walking its AST.
+
 `check:component-dependencies` (`scripts/check-component-dependencies.mjs`, with a colocated
 `check-component-dependencies.test.mjs` chained beside it) is the newest member and the one whose
 failure mode is least obvious. It parses every `<lr-*>` start tag out of each component's `html` /
@@ -73,6 +82,13 @@ the PR checks list tells you which of these to reproduce locally:
    generated plugin references and both tracked skill archives; `pnpm skill:check`
    (plugin/marketplace manifest consistency, not archive freshness); `pnpm
    storybook:check-theme`.
+
+   `pnpm readme:check` covers two intentionally different files: root `README.md` (monorepo
+   overview) and `packages/lyra-ui/README.md` (what npm actually renders on the registry page).
+   Keep both READMEs' badge rows in sync by hand; don't add a second hand-maintained "N
+   components" figure alongside the tag count — only a single count derived from
+   `custom-elements.json` (e.g. "N custom elements") is self-verifying, a separately hand-bumped
+   "components" number silently drifts every release.
 3. **`build-and-coverage`** — this is still the critical gate, but it is now a split matrix of
    four dependent lanes plus a final aggregator:
    - `build_and_coverage_build` (`pnpm build`) uploads `packages/lyra-ui/dist/` as artifact.
@@ -99,6 +115,15 @@ the PR checks list tells you which of these to reproduce locally:
    `dist/ssr-loader.js`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required
    `llms/` index/shared/tokens/peers/migration/component files, then runs `pnpm
    check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
+
+   `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true` — a declaration whose JSDoc
+   carries `@internal` is erased from the emitted `.d.ts` even if a *public* property's type
+   alias points at it (e.g. a type living in `src/internal/` but referenced by a public
+   `@property`). `pnpm lint`/`build`/`test`/`manifest` all compile the source tree directly and
+   stay green regardless; only this job compiles a real consumer against the packed tarball and
+   surfaces `TS2305: has no exported member`. The tag also matches anywhere in the JSDoc block,
+   including prose — a comment describing "deliberately not tagged internal" re-triggers the
+   strip.
 5. **`docs-and-storybook`** — `docs_build` (`docs:build` only needs the already-committed
    `custom-elements.json` via its internal `manifest:check`, not `dist/`, so it's independent of
    the two build jobs above) runs `pnpm docs:build` once (with `CODECOV_TOKEN`) and uploads
@@ -345,6 +370,12 @@ alongside the floors.
   source tree could have gone uncovered without the gate firing. A floor is only a gate while it
   sits just under the measurement, and it only stays there if refreshing it is one mechanical
   command producing a reviewable diff.
+- **The mirror-image failure is a threshold set *tighter* than measurement from day one** — an
+  "aspirational" budget that's red the moment it lands, which trains everyone to ignore that gate
+  entirely rather than fix it. This has recurred independently in the package-size budget
+  (`check:package-size`'s minimum-reduction figure) and the qualification axe scanner's evidence
+  requirements — both are now measurement-derived, matching the floors approach above. Any new
+  budget/threshold should start from a measured baseline, not a target number picked in advance.
 - It prefers `coverage/coverage-summary.json` (exact statement totals) and falls back to
   `coverage/lcov.info`, which carries no statement records — in that mode the statements figure
   reuses the line figure, and the script says so.

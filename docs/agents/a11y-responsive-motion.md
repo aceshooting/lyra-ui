@@ -122,11 +122,16 @@ component and a release blocker for a new one.
   interactive part, run
   `for f in $(grep -l ':focus-visible' src/components/*/*/*.styles.ts); do grep -q ':hover' "$f" || echo "$f"; done`
   and treat a hit on your own component as a blocker.
-- **Keep internal state rules low-specificity so consumers can still override them.** Wrap class
-  and attribute qualifiers in `:where(...)` — `:where(.trigger):hover:where(:not(:disabled))` —
-  so the internal rule never out-specifies a consumer's `::part(x):hover`. A bare
-  `[part='x']:hover:not(:disabled)` is specificity (0,3,0) and beats `::part(x):hover` at
-  (0,1,1), forcing consumers to reach for `!important`, which is not this library's house style.
+- **Keep internal state rules low-specificity for within-tree consistency — not because of
+  cross-shadow overrides.** Wrap class and attribute qualifiers in `:where(...)` —
+  `:where(.trigger):hover:where(:not(:disabled))` — so sibling internal rules stay easy to
+  override *within the same stylesheet*. This does **not** protect a consumer's `::part()` rule:
+  CSS Cascade 5 sorts by encapsulation context before specificity, so for normal declarations an
+  outer `::part()` rule always beats an inner rule regardless of specificity — verified
+  empirically (an outer `el::part(target){color}` at (0,1,0) beat an inner
+  `[part='wrap'] button.target.extra` at (0,3,1) in Chromium). Only `!important` reverses it
+  (inner tree wins). Don't cite "so consumer `::part()` rules can win" as the reason for
+  `:where()` — it's already true regardless, for an unrelated reason.
 - **A pseudo-class rule must target the node that actually receives the state.** A
   `th:focus-visible` rule is dead if focus always lands on a nested `<button>`; a
   `[part='nav'] button` selector matches only one of a prev/next pair if `part="nav"` sits on the

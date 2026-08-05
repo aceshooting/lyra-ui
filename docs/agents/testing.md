@@ -10,6 +10,11 @@
 - Test files are colocated siblings: `components/<name>/<name>.test.ts`. Run via `pnpm test` from
   repo root (fans out to every package) or `packages/lyra-ui/` for just this package;
   `pnpm test:watch` for iteration.
+- **Scoping `wtr` to specific files needs the flag repeated, not comma-joined.** `pnpm test
+  --files "a.test.ts,b.test.ts"` and `pnpm test -- --files "..."` both silently report "Could not
+  find any test files." Working forms: repeat `--files` once per file (`pnpm test --files
+  "a.test.ts" --files "b.test.ts"`), or bare positional args (`pnpm test -- a.test.ts
+  b.test.ts`, matching `test:platform`'s own convention).
 - Calling `oneEvent()` *after* a synchronous `dispatchEvent()` races and hangs — always set up
   the `oneEvent()` listener *before* triggering the dispatch (a pitfall that recurred across
   multiple plan docs' own sample code, always fixed the same way).
@@ -52,6 +57,18 @@
   `retries` in `web-test-runner.config.js`), so a failure that reaches the report already failed
   twice in a row. Flaky tests get fixed, or explicitly quarantined with a tracked reason — never
   re-run until green and shrugged at.
+- **Reproducing a CI-only timing flake:** `taskset -c 0,1 <command>` (or similar CPU-count
+  pinning) approximates GitHub Actions' constrained runners on a full-core dev machine — useful
+  when two subsystems only race under CPU pressure. Separately, if a fix's own CI run fails on a
+  *different* error than the one it targeted, check whether the job simply progressed further and
+  hit the next unrelated pre-existing bug (`gh run view <id> --log-failed`, and `gh run list`
+  against commits predating the fix) before assuming the fix itself was wrong.
+- **`noUnusedLocals`/`noUnusedParameters` can't see a field only read by a test.**
+  `tsconfig.json` excludes `src/**/*.test.ts` from the strict-flags program, so a class field that
+  looks write-only to `tsc` may be a colocated test's only observability seam. Before deleting a
+  flagged field, grep the sibling `*.test.ts` for the same identifier — assert on observable
+  output (or a shared cache/loader) instead of deleting the field and silently breaking the
+  test's only assertion.
 - For a role/control inside shadow DOM, assert accessible-name/state attributes on the actual
   semantic descendant as well as running axe. Include the false state for stateful ARIA and prove
   that any public host naming path reaches that descendant.
@@ -89,6 +106,18 @@
   *host* of a further-nested shadow tree, never the real focused descendant inside it — only
   `document.activeElement` walked all the way down, or a component's own shadow-piercing
   `getActiveElement()`-style helper, sees the true target).
+- **WebKit silently drops a programmatic `window.getSelection().addRange(range)`** when the
+  range's boundary nodes live inside a shadow tree — `rangeCount` stays `0`, no error. Chromium
+  and Firefox both accept it, and `ShadowRoot.getSelection()` is Chromium-only, so there's no
+  WebKit-side workaround; only real drag-selection works there. Grep `getComposedRanges\|addRange`
+  under `src --include=*.test.ts` for files building a selection this way — guard each with `if
+  (selection.rangeCount === 0) this.skip()` (see `archive-viewer.test.ts`) before adding any of
+  them to `test:platform`'s file list, or the Firefox/WebKit CI job reddens immediately.
+- **WebKit implements `enterkeyhint`/`inputmode` as HTML attributes but leaves the matching IDL
+  properties (`el.enterKeyHint`, `el.inputMode`) undefined.** A test that reads the JS property to
+  confirm forwarding passes on Chromium/Firefox and silently proves nothing on WebKit — assert the
+  rendered *attribute*, not the IDL property, when testing native-attribute forwarding across
+  engines.
 - **A `?bool-attr=${false}` (or a literal `bool-attr="false"`) binding can never set a reactive
   boolean property back to `false` once that property's own default is `true`** — Lit's
   boolean-attribute binding only *toggles the attribute's presence*, and removing an attribute
@@ -118,6 +147,18 @@
   restore in `afterEach`). A leaked stub bleeds into later, unrelated tests and produces
   state-dependent failures — this bit `lr-push-to-talk`'s
   `MediaRecorder`/`getUserMedia`/`AudioContext` stubs during the voice-component work.
+- **`pnpm test:coverage`'s printed `Code coverage: X %` line is the mean of the four metrics**
+  (statements/branches/functions/lines), not a weighted or headline figure — verified in
+  `@web/test-runner`'s own `getCodeCoverage.js`. Because functions are a much smaller population
+  than branches library-wide, one newly-covered function moves that mean roughly 5x more than one
+  covered branch arm — sweep uncovered functions first when asked to raise "coverage." Some gaps
+  are uncoverable by design (e.g. `ElementInternals` shim methods a component only attaches for
+  the `<fieldset disabled>` cascade and never calls, or `toAttribute` converters on properties
+  without `reflect: true`, which Lit never invokes) — don't chase those.
+- **A test fixture with a missing required field can pass under `wtr` while failing `tsc`.**
+  `wtr`'s esbuild pipeline strips TypeScript types at transform time, so an incomplete DTO fixture
+  (e.g. missing a required `mimeType`) can run and pass the test while still failing `pnpm lint`'s
+  `tsc --noEmit`. Type-check a batch of new test fixtures before committing, not just run them.
 - **A failing coverage run points at `scripts/coverage-floors.json`.** `pnpm test:coverage`
   (`WTR_COVERAGE=1 wtr …`) runs the suite with istanbul instrumentation and hands `wtr`'s blocking
   `coverageConfig.threshold` the four per-metric floors read out of that file —

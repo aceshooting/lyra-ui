@@ -103,6 +103,16 @@ while doing something else. The vocabulary rules apply to every component, mirro
   `scripts/check-provenance.mjs` catches the forbidden patterns but cannot detect a copied
   implementation, so the clean-room posture is enforced by you, not by a gate. No `wa-`/`sl-` prefix
   and no upstream branding, ever.
+- `scripts/generate-component-inventory.mjs` requires **both** `--webawesome-manifest` and
+  `--shoelace-manifest` (it throws otherwise) — the upstream sections are always rebuilt from the
+  two passed-in published `custom-elements.json` files, never carried over from the existing
+  inventory. A fresh clone of either upstream has no manifest until built at the pinned commit
+  (`upstream-tags.json`'s `commit` field) — verify with `git rev-parse HEAD` before trusting the
+  output. Two tripwires that fire during regeneration are deliberate, not bugs: `DECISION_OVERRIDES`'s
+  `expectedDrift` throws when a documented upstream/lyra divergence's real drift changes, forcing an
+  explicit acknowledgment rather than a silent pass; and `cancelabilityEquivalences`/
+  `cancelabilityPathAdditions` in `REVIEWED_MAPPING_NORMALIZATIONS` only neutralize the safe
+  direction (upstream not-cancelable → lyra cancelable) — a narrowing still fails the check.
 
 - **Accessibility behavior is reviewed data, not a conclusion inferred from matching members.**
   `scripts/fixtures/component-inventory.json` carries a structured `accessibilityProfiles` catalog
