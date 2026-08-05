@@ -764,9 +764,32 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
 
   private onBlur = (event: FocusEvent): void => {
-    this.touched = true;
-    this.hasInteracted = true;
-    this.reflectInvalid();
+    // This control has no native disableable form control to force-blur (its focus target is a
+    // plain `role="checkbox"` span whose own `tabindex` alone would not do it), but the HOST is a
+    // form-associated custom element (`static formAssociated = true` + `attachInternals()`), and
+    // the browser applies its own "actually disabled" concept to those automatically -- confirmed
+    // empirically: setting the host's `disabled` content attribute, *and* an ancestor `<fieldset>`
+    // disabling it (even through an intermediate, itself-enabled fieldset), both force-blur a
+    // focused descendant inside the shadow tree, exactly like a native disableable control
+    // force-blurs itself (fr_asxOgk4UhNB07xevCWwFVQ, originally found in `<lr-input>`'s onBlur).
+    // That blur is a platform reaction, not a user interaction, and would otherwise leave the
+    // control primed to show as touched/user-invalid the instant it is re-enabled, or -- depending
+    // on exactly when in an in-flight update it lands -- risk reentering that update and tripping
+    // Lit's dev-mode "scheduled an update after an update completed" warning, all for a state flip
+    // nothing observable needed since a disabled control is barred from validation regardless.
+    //
+    // `effectiveDisabled` alone is not a reliable enough guard here: for the fieldset path the
+    // browser force-blurs the focused descendant BEFORE calling `formDisabledCallback()`
+    // (confirmed empirically), so `_fieldsetDisabled` -- and therefore `effectiveDisabled` --
+    // still reads stale/false at this exact instant. `:disabled` CSS matching for a
+    // form-associated custom element tracks the platform's own "actually disabled" concept
+    // directly (the same concept that triggers the forced blur in the first place) and is already
+    // correct by this point for both paths, so it is checked as well.
+    if (!this.effectiveDisabled && !this.matches(':disabled')) {
+      this.touched = true;
+      this.hasInteracted = true;
+      this.reflectInvalid();
+    }
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };

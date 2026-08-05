@@ -684,6 +684,73 @@ it('temporarily disables through a fieldset without overwriting the author disab
   expect(new FormData(form).get('always-disabled')).to.equal(null);
 });
 
+it('does not mark touched/hasInteracted from a blur caused by the control itself becoming disabled', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ, the same root cause already fixed in
+  // <lr-input>'s onBlur, reached here by a different path: <lr-checkbox> has no NATIVE
+  // disableable form control to force-blur -- its focus target is a plain `role="checkbox"` span
+  // whose own `tabindex` alone would not cause a forced blur (confirmed: a bare `<span tabindex>`
+  // does not fire `blur` when its tabindex merely drops from 0 to -1). What DOES force the blur
+  // here, confirmed empirically against a minimal reproduction rather than assumed, is that the
+  // HOST is a form-associated custom element (`static formAssociated = true` +
+  // `attachInternals()`): the browser applies its own "actually disabled" concept to those
+  // automatically, independent of whatever is focused inside the shadow tree, and force-blurs a
+  // focused descendant the instant the host becomes actually disabled -- exactly like a native
+  // disableable control force-blurs itself. That is not a user interaction: onBlur()
+  // unconditionally marking `touched`/`hasInteracted` for it was, depending on exactly when in the
+  // update cycle the blur landed, capable of reentering an in-flight update and tripping Lit's
+  // dev-mode "scheduled an update after an update completed" warning, and would otherwise leave
+  // the control primed to read as touched/user-invalid the instant it is re-enabled -- for a state
+  // flip nothing observable needed in that instant (a disabled control is barred from validation
+  // regardless).
+  const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+  const hasInteracted = () => (el as unknown as { hasInteracted: boolean }).hasInteracted;
+
+  base.focus();
+  expect(el.shadowRoot!.activeElement, 'precondition: the control is focused').to.equal(base);
+
+  el.disabled = true;
+  // The platform's forced blur (confirmed above) fires synchronously inside this property write,
+  // so both flags must already read false right here -- before any render/microtask runs.
+  expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+  expect(hasInteracted(), 'a disable-forced blur must not mark hasInteracted').to.be.false;
+  await el.updateComplete;
+  el.disabled = false;
+  await el.updateComplete;
+  expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+  expect(hasInteracted(), 'still not interacted after re-enabling').to.be.false;
+
+  // A genuine user-driven blur (not caused by disablement) still marks both flags, unchanged.
+  base.dispatchEvent(new FocusEvent('blur'));
+  expect(isTouched(), 'a real blur still marks touched').to.be.true;
+  expect(hasInteracted(), 'a real blur still marks hasInteracted').to.be.true;
+});
+
+it('force-blurs a focused control when an ancestor fieldset disables it, same as the control disabling itself', async () => {
+  // Companion to the test above: the platform's "actually disabled" force-blur for a
+  // form-associated custom element is not limited to the element's own `disabled` attribute --
+  // confirmed empirically that an ancestor `<fieldset disabled>` triggers the identical forced
+  // blur, even though `effectiveDisabled` here comes from `formDisabledCallback()`
+  // (`_fieldsetDisabled`), and the host's own `disabled` content attribute is never set
+  // (see the "temporarily disables through a fieldset" test above).
+  const form = (await fixture(html`
+    <form><fieldset><lr-checkbox required>Agree</lr-checkbox></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-checkbox') as LyraCheckbox;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+
+  base.focus();
+  expect(el.shadowRoot!.activeElement, 'precondition: the control is focused').to.equal(base);
+
+  fieldset.disabled = true;
+  expect(el.hasAttribute('disabled'), 'fieldset disabling never sets the host attribute').to.be.false;
+  expect(isTouched(), 'a fieldset-disable-forced blur must not mark touched').to.be.false;
+  expect(el.shadowRoot!.activeElement, 'the platform blurs the focused descendant').to.not.equal(base);
+});
+
 describe('validity styling', () => {
   it('does not reflect aria-invalid/data-invalid before the control has been touched', async () => {
     const el = (await fixture(html`<lr-checkbox required>Agree</lr-checkbox>`)) as LyraCheckbox;
