@@ -555,6 +555,36 @@ describe('native focus/blur bridging', () => {
   });
 });
 
+describe('touched vs. platform-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', () => {
+  it('does not mark touched from a blur caused by the search input itself becoming disabled', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    input.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(input);
+
+    // The browser itself force-blurs a focused native control the instant it becomes `disabled`
+    // -- plain platform behavior, not a user interaction -- so this must NOT count as "touched".
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect(input.disabled, 'sanity: the disable actually reached the native input').to.be.true;
+    expect(el.shadowRoot!.activeElement === input, 'sanity: the platform actually force-blurred it').to.be.false;
+    expect((el as unknown as { touched: boolean }).touched).to.be.false;
+  });
+
+  it('still marks touched from a real user blur', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  });
+});
+
 describe('label/hint/error chrome', () => {
   it('renders no chrome by default', async () => {
     const el = await connectEmojiPicker();

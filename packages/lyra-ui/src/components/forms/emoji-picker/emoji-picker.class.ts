@@ -527,13 +527,21 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host-level @focus/@blur
   // listener on <lr-emoji-picker> would never fire without this bridge -- mirrors
-  // <lr-input>'s/<lr-select>'s identical onFocus/onBlur pair.
+  // <lr-input>'s/<lr-select>'s onFocus/onBlur pair (including the disabled-blur guard below).
   private onSearchFocus = (): void => {
     this.emit('focus');
   };
 
   private onSearchBlur = (): void => {
-    this.touched = true;
+    // This element's own `disabled` becoming true force-blurs the search input if it currently
+    // holds focus -- plain native HTML behavior (disabling a focused control blurs it), not a user
+    // interaction. That blur can land synchronously nested inside the very property write that
+    // disabled this control, before `effectiveDisabled` was even read for this render, so it
+    // already reads true here whenever this is that case. Marking `touched` for it was, depending
+    // on timing, capable of reentering that same in-flight update and tripping Lit's dev-mode
+    // "scheduled an update after an update completed" warning for a state flip nothing observable
+    // needed -- a disabled control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.emit('blur');
   };
 
