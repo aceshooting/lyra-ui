@@ -532,6 +532,34 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     await el.updateComplete;
     expect(el.reportValidity()).to.equal(true);
   });
+
+  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it (plain platform
+  // behavior, nothing custom-element-specific) -- here that's the active segment losing its
+  // tabindex="0" while the browser still counts it as the focused element. That blur is not a
+  // real user interaction and must not mark the field touched.
+  it('does not mark touched from a blur caused by the segment itself becoming disabled', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
+    const hourSegment = segment(el, 'hour');
+    hourSegment.focus();
+    expect(el.shadowRoot!.activeElement, 'focused before disable').to.equal(hourSegment);
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect((el as unknown as { touched: boolean }).touched, 'touched after a disable-forced blur').to.equal(false);
+  });
+
+  it('still marks touched on a real blur (focus moving elsewhere)', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
+    const hourSegment = segment(el, 'hour');
+    hourSegment.focus();
+    expect(el.shadowRoot!.activeElement, 'focused before blur').to.equal(hourSegment);
+
+    hourSegment.blur();
+    await el.updateComplete;
+
+    expect((el as unknown as { touched: boolean }).touched, 'touched after a real blur').to.equal(true);
+  });
 });
 
 // A control barred from constraint validation is neither :valid nor :invalid natively -- a real
