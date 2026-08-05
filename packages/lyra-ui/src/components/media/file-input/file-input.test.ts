@@ -447,6 +447,33 @@ it('bridges focus and blur from the dropzone a user actually tabs to, not the hi
   await blurPromise;
 });
 
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  base.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(base);
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  // Disabling the control force-blurred the focused base button -- a platform reaction, not a
+  // user interaction, so `touched` must stay exactly as it started.
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el as unknown as { touched: boolean }).touched).to.equal(false);
+});
+
+it('still marks touched from a genuine blur while enabled', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  base.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(base);
+  base.blur();
+
+  expect((el as unknown as { touched: boolean }).touched).to.equal(true);
+});
+
 it('never focuses the hidden native input (aria-hidden, tabindex=-1), so it cannot be the focus/blur source', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;

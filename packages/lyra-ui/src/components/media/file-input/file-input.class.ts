@@ -858,7 +858,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     relayNativeEvent(this, event);
   };
   private onBlur = (event: FocusEvent): void => {
-    this.touched = true;
+    // The dropzone `[part="base"]` button becoming disabled while it holds focus force-blurs it --
+    // a platform reaction to the very `?disabled=${effectiveDisabled}` render that turned it on, not
+    // a user interaction. That blur can land synchronously nested inside the update this handler is
+    // itself part of (Lit committing the button's `disabled` attribute), before `effectiveDisabled`
+    // could read anything but `true` here. Marking `touched` for it was, depending on timing, capable
+    // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
+    // after an update completed" warning for a state flip nothing observable needed -- a disabled
+    // control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.publishCustomStates();
     relayNativeEvent(this, event);
   };
