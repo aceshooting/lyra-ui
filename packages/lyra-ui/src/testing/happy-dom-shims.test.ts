@@ -41,6 +41,34 @@ describe('installHappyDomFormAssociatedShims', () => {
     expect(stub.willValidate).to.be.true;
   });
 
+  it('resolves `form` to the host\'s owning <form>, live -- not snapshotted at attach time', () => {
+    // A form-associated component calls attachInternals() from its own constructor, which the
+    // platform always runs BEFORE the element is inserted anywhere -- host.closest('form') at
+    // that instant can only ever see null, even when the element is later appended into a real
+    // <form>. A `form` value captured once at stub-creation time would therefore always be null,
+    // exactly like a plain `<lr-button>` resolving its submit target through `this.internals.form`
+    // instead of `closest('form')`: it would silently find no form owner under this shim,
+    // regardless of the real DOM. Reading `form` must re-resolve against the host's current
+    // position every time, the same way the platform's own ElementInternals.form getter does.
+    const host = document.createElement('div');
+    const stub = installStubInternalsForTest(host); // "attachInternals()", host not yet inserted
+    expect(stub.form, 'not yet inserted anywhere').to.be.null;
+
+    const form = document.createElement('form');
+    form.appendChild(host);
+    document.body.appendChild(form);
+    try {
+      // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a
+      // plain boolean instead.
+      expect(stub.form === form, 'now a descendant of a real <form>').to.be.true;
+    } finally {
+      form.remove();
+    }
+
+    host.remove();
+    expect(stub.form, 'removed from the form again').to.be.null;
+  });
+
   it('installs a stub whose setValidity accepts every call shape AnchoredValidityController uses without throwing', () => {
     const div = document.createElement('div');
     const stub = installStubInternalsForTest(div);

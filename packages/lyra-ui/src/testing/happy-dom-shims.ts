@@ -44,9 +44,19 @@ interface StubElementInternals {
   setValidity(flags?: Partial<ValidityStateFlags>, message?: string, anchor?: HTMLElement): void;
 }
 
-function createStubInternals(): StubElementInternals {
+function createStubInternals(host: Element): StubElementInternals {
   return {
-    form: null,
+    // A live getter, not a value captured once here: a form-associated component calls
+    // attachInternals() from its own constructor, which the platform always runs BEFORE the
+    // element is inserted anywhere -- host.closest('form') at that instant can only ever see
+    // null, even when the element is later appended into a real <form>. Snapshotting it here
+    // would leave every such component's `internals.form` permanently null under this shim
+    // regardless of where it actually ends up in the DOM -- silently breaking anything (like
+    // `<lr-button>`) that resolves its submit target through `internals.form` rather than
+    // `closest('form')`.
+    get form(): HTMLFormElement | null {
+      return host.closest('form');
+    },
     labels: document.createDocumentFragment().querySelectorAll('label'),
     // `CustomStateSet` is Set-like (add/delete/has), which is the entire surface this library's
     // form-associated components call -- a real Set covers it without reimplementing the DOM type.
@@ -73,13 +83,13 @@ export function installHappyDomFormAssociatedShims(): void {
   if (typeof HTMLElement === 'undefined') return;
   if (typeof HTMLElement.prototype.attachInternals === 'function') return;
   HTMLElement.prototype.attachInternals = function attachInternals(): ElementInternals {
-    return createStubInternals() as unknown as ElementInternals;
+    return createStubInternals(this) as unknown as ElementInternals;
   };
 }
 
 /** Test-only: returns a fresh stub `ElementInternals`-shaped object, independent of whether
  *  `attachInternals` already exists natively -- exists purely so this module's own test can
  *  verify the stub's call-shape coverage without needing to run under happy-dom itself. */
-export function installStubInternalsForTest(_host: Element): StubElementInternals {
-  return createStubInternals();
+export function installStubInternalsForTest(host: Element): StubElementInternals {
+  return createStubInternals(host);
 }
