@@ -1108,6 +1108,38 @@ it('bridges exactly one native trigger focus/blur pair plus typed aliases', asyn
   expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
 });
 
+it('marks touched from a real user blur of the trigger', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  trigger(el).focus();
+  await el.updateComplete;
+  expect((el as unknown as { touched: boolean }).touched, 'not yet blurred').to.be.false;
+
+  trigger(el).blur();
+  await el.updateComplete;
+  expect((el as unknown as { touched: boolean }).touched, 'a real blur marks touched').to.be.true;
+});
+
+// See fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control (input/select/
+// textarea/button) is plain platform behavior that forces a blur -- nothing to do with custom
+// elements specifically. That forced blur is not a real user interaction and must not mark the
+// field touched, since (depending on exact timing) it could reenter an in-flight Lit update and
+// trip Lit's dev-mode "scheduled an update after an update completed" warning.
+it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  trigger(el).focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement, 'trigger holds focus before disabling').to.equal(trigger(el));
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement, 'the platform force-blurred the now-disabled trigger').to.equal(null);
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a disable-forced blur must not mark the field touched',
+  ).to.be.false;
+});
+
 it('reflects an invalid state only after the field has been interacted with once', async () => {
   const el = (await fixture(html`
     <lr-select required>

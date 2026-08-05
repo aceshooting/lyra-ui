@@ -1327,9 +1327,17 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   private onTriggerBlur = (event: FocusEvent): void => {
-    this.touched = true;
-    this.hasInteracted = true;
-    this.reflectValidityStates();
+    // A disable-forced blur (the platform blurring a focused native control the instant it
+    // becomes disabled -- plain HTML behavior, not specific to custom elements) is not a real
+    // user interaction and must not mark the field touched: depending on exact timing, doing so
+    // could reenter an in-flight Lit update and trip Lit's dev-mode "scheduled an update after an
+    // update completed" warning. See fr_asxOgk4UhNB07xevCWwFVQ (same fix as `<lr-input>`'s
+    // `onBlur`).
+    if (!this.effectiveDisabled) {
+      this.touched = true;
+      this.hasInteracted = true;
+      this.reflectValidityStates();
+    }
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
