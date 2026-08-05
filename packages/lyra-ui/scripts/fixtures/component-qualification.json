@@ -6720,14 +6720,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 901,
+              "line": 931,
               "test": "is accessible in a populated, busy, chip-laden state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1097,
+              "line": 1127,
               "test": "is accessible under frame=\"plain\" with the textarea focused",
               "target": "el",
               "state": "populated"
@@ -6758,7 +6758,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1083,
+              "line": 1113,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -7238,21 +7238,21 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1001,
+              "line": 1068,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1008,
+              "line": 1075,
               "test": "is accessible in an indeterminate, labeled state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1148,
+              "line": 1215,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -9388,21 +9388,21 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1385,
+              "line": 1411,
               "test": "is accessible while showing the loading state (async source pending)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1449,
+              "line": 1475,
               "test": "is accessible while showing the empty state (no matching rows)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2678,
+              "line": 2704,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -9427,7 +9427,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2649,
+              "line": 2675,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12142,7 +12142,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2303,
+              "line": 2338,
               "test": "exposes validationTarget/resetValidity and is accessible while open and populated",
               "target": "el",
               "state": "open"
@@ -12156,14 +12156,14 @@
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1415,
+              "line": 1450,
               "test": "is accessible with adornments slotted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1531,
+              "line": 1566,
               "test": "stays accessible with a pinned exact control height",
               "target": "el",
               "state": "populated"
@@ -12188,7 +12188,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1402,
+              "line": 1437,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12363,7 +12363,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1402,
+              "line": 1437,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12688,49 +12688,49 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 619,
+              "line": 630,
               "test": "is accessible with only a host aria-label attribute set (no label/heading props)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 718,
+              "line": 729,
               "test": "is accessible while open with a label prop and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 729,
+              "line": 740,
               "test": "is accessible while open with a slotted heading",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 737,
+              "line": 748,
               "test": "is accessible while open with a heading, closable close button, and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1340,
+              "line": 1351,
               "test": "is accessible with the label and header-actions slots populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1355,
+              "line": 1366,
               "test": "keeps accessible-only naming separate from the visible label",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 713,
+              "line": 724,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -12761,7 +12761,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1219,
+              "line": 1230,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -15649,14 +15649,14 @@
           "evidence": [
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 608,
+              "line": 638,
               "test": "is accessible with the label/hint/error chrome populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 682,
+              "line": 712,
               "test": "is accessible with groups populated",
               "target": "el",
               "state": "populated"
@@ -17416,21 +17416,21 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 815,
+              "line": 842,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 874,
+              "line": 901,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 879,
+              "line": 906,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
               "target": "el",
               "state": "populated"
@@ -22486,7 +22486,7 @@
             },
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 741,
+              "line": 771,
               "test": "is accessible as type=\"password\" with the toggle rendered",
               "target": "el",
               "state": "populated"
@@ -22507,7 +22507,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1147,
+              "line": 1177,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23653,7 +23653,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 1096,
+              "line": 1126,
               "test": "is accessible when touched and invalid with a rendered error message",
               "target": "el",
               "state": "populated"
@@ -23695,7 +23695,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 1209,
+              "line": 1239,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27190,35 +27190,35 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 965,
+              "line": 1022,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 965,
+              "line": 1022,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 982,
+              "line": 1039,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 982,
+              "line": 1039,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 956,
+              "line": 1013,
               "test": "is accessible with a visible label set",
               "target": "el",
               "state": "populated"
@@ -27701,7 +27701,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1147,
+              "line": 1177,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28383,7 +28383,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1147,
+              "line": 1177,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28546,7 +28546,7 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2678,
+              "line": 2704,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -28578,7 +28578,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2649,
+              "line": 2675,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28723,14 +28723,14 @@
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1383,
+              "line": 1411,
               "test": "applies label/hint attribute precedence and error-slot precedence without concatenating sources",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1413,
+              "line": 1441,
               "test": "uses populated label, hint, and error slots as the accessible chrome when attributes are empty",
               "target": "el",
               "state": "populated"
@@ -30025,14 +30025,14 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 625,
+              "line": 667,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1170,
+              "line": 1212,
               "test": "is accessible with flags enabled",
               "target": "el",
               "state": "populated"
@@ -30046,7 +30046,7 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1226,
+              "line": 1268,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -37303,42 +37303,42 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1251,
+              "line": 1283,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2564,
+              "line": 2596,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1244,
+              "line": 1276,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1473,
+              "line": 1505,
               "test": "is accessible with a single enabled option",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2768,
+              "line": 2800,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2892,
+              "line": 2924,
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
@@ -37363,7 +37363,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2748,
+              "line": 2780,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37380,7 +37380,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1644,
+              "line": 1676,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41219,21 +41219,21 @@
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1050,
+              "line": 1091,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1057,
+              "line": 1098,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1235,
+              "line": 1276,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -42854,14 +42854,14 @@
             },
             {
               "file": "src/components/forms/textarea/textarea.test.ts",
-              "line": 961,
+              "line": 988,
               "test": "is accessible with the count rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/textarea/textarea.test.ts",
-              "line": 1203,
+              "line": 1230,
               "test": "is accessible with the pill treatment applied",
               "target": "el",
               "state": "populated"
@@ -43403,7 +43403,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1147,
+              "line": 1177,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -44404,7 +44404,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 1081,
+              "line": 1105,
               "test": "is accessible with an open token editor",
               "target": "el",
               "state": "populated"
@@ -44429,7 +44429,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 917,
+              "line": 941,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44446,7 +44446,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 354,
+              "line": 378,
               "kind": "320px allocation test signal"
             }
           ]
