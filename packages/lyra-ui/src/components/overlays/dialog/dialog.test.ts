@@ -12,30 +12,26 @@ it('includes safe-area insets in the fixed dialog frame', () => {
   expect(styles.cssText).to.include('var(--lr-safe-area-inline-end)');
 });
 
-it('never schedules a post-update reschedule on a disabled+required lr-input inside an autofocus-opened dialog', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: a lyra-admin report claimed that opening a
-  // real <lr-dialog> whose content includes a disabled+required <lr-input> (e.g. a username field
-  // locked once a record exists) logs a dev-mode-only Lit warning -- "Element lr-input scheduled
-  // an update ... after an update completed" (https://lit.dev/msg/change-in-update) -- meaning
-  // some code path would write a reactive property on lr-input from inside/after its own
-  // updated()/hostUpdated() during the dialog's autofocus/overlay-activation sequence.
+it('never schedules a post-update reschedule when a dialog autofocuses a control that a sibling render then disables', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. Original report: opening a real <lr-dialog>
+  // whose content includes a disabled+required <lr-input> (e.g. a username field locked once a
+  // record exists) logs a dev-mode-only Lit warning -- "Element lr-input scheduled an update ...
+  // after an update completed" (https://lit.dev/msg/change-in-update).
   //
-  // Investigation (see the task write-up) could not reproduce this: Lit only issues this warning
-  // when requestUpdate() is called SYNCHRONOUSLY from within the same element's own controllers'
-  // hostUpdated() or its updated() (checked immediately after those return, inside
-  // ReactiveElement._$didUpdate() -- ../../../../node_modules/@lit/reactive-element's
-  // development build). Every write in lr-input's own updated()/hostUpdated() chain
-  // (LyraInput.updated(), FormAssociatedElement.updated(), AnchoredValidityController.hostUpdated
-  // (deferred via queueMicrotask), SlotPresenceController.hostUpdated, ExternalLabelController's
-  // hostUpdated) either touches `internals`/custom states/native DOM only, or is explicitly
-  // deferred past the synchronous window -- none calls `this.requestUpdate()` (or sets a plain
-  // reactive property) synchronously while barred/disabled. A scenario matrix (open-from-markup,
-  // async show(), disabled+required toggled dynamically from an `lr-show` listener, a real
-  // <fieldset disabled> ancestor, readonly combined, multiple sibling inputs, a light-DOM heading,
-  // footer buttons) reproduced nothing on Chromium, Firefox, or WebKit, and instrumenting
-  // ReactiveElement's own requestUpdate/_$didUpdate confirmed zero reentrant calls in any of them.
-  // Kept as a permanent regression guard for this specific shape in case a future change
-  // reintroduces a synchronous write into that chain.
+  // A static disabled+required+autofocus <lr-input> present from first render (as this test
+  // originally used) never reproduces it -- there is no PRIOR render for the control to already
+  // hold focus from. The real trigger, found by reproducing the shape of a genuine consumer
+  // dialog (reused instance, multiple sibling lr-input fields, disabled bound reactively): the
+  // dialog's own overlay activation calls focusInitial(), which can focus a
+  // control's internal native <input> BEFORE that same control's own pending `disabled` write has
+  // reached the DOM (Lit schedules each element's render independently). When that control's
+  // render finally commits `disabled` on the still-focused native input, the platform force-blurs
+  // it -- this is a browser reaction to a form-associated custom element's own disabled state
+  // changing, not a user interaction, and it can fire synchronously nested inside that very
+  // control's own update (after Lit resets `isUpdatePending` but before it checks it again). Fixed
+  // at the root in `<lr-input>`'s onBlur(): it no longer marks `touched` for a blur that lands
+  // while the control is already disabled. See input.test.ts's more direct unit test for that fix;
+  // this one guards the full dialog-autofocus interaction end to end.
   const warnings: unknown[][] = [];
   const originalWarn = console.warn;
   console.warn = (...args: unknown[]) => {
@@ -43,18 +39,33 @@ it('never schedules a post-update reschedule on a disabled+required lr-input ins
   };
   let el: LyraDialog | undefined;
   try {
+    // First render: not yet disabled, so the dialog's autofocus can land on it for real.
     el = (await fixture(html`
       <lr-dialog label="Edit user" open>
-        <lr-input
-          label="Username"
-          value="ada"
-          disabled
-          required
-          autofocus
-        ></lr-input>
+        <lr-input label="Username" value="ada" required autofocus></lr-input>
+        <lr-input label="Password" type="password" required></lr-input>
+        <lr-input label="Email" type="email"></lr-input>
       </lr-dialog>
     `)) as LyraDialog;
     await el.updateComplete;
+    await Promise.resolve();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const username = el.querySelector('lr-input')!;
+    expect(
+      el.shadowRoot?.activeElement != null || username.shadowRoot?.activeElement != null,
+      'autofocus must have actually landed on the username field for this repro to be meaningful',
+    ).to.be.true;
+
+    // Second render: username becomes disabled+value changes together, exactly like a
+    // ?disabled=${this.user != null} + .value=${this.username} binding on a control the dialog
+    // already focused.
+    username.value = 'ada';
+    username.disabled = true;
+
+    await el.updateComplete;
+    await username.updateComplete;
     // Flush the queued microtasks/frames the overlay manager and AnchoredValidityController use
     // for deferred focus/anchor/registration work, so any reschedule triggered by them has had a
     // chance to fire before the assertion below.

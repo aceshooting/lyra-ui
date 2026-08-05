@@ -220,6 +220,55 @@ it('cascades disablement from an ancestor <fieldset disabled> via formDisabledCa
   expect(ctl.effectiveDisabled).to.be.false;
 });
 
+it('does not redundantly requestUpdate() from formDisabledCallback when it merely echoes the element\'s own disabled attribute change', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. The browser invokes formDisabledCallback() not
+  // only for ancestor <fieldset disabled> cascading (its doc comment's stated purpose) but also
+  // whenever the element's OWN `disabled` content attribute is added/removed directly -- confirmed
+  // via a captured stack trace showing it fire as a second, separate custom-element reaction to
+  // the exact same toggleAttribute('disabled', ...) call that also drives the `disabled` property
+  // setter (and a dedicated scratch repro against a bare FACE element with zero fieldset anywhere
+  // in the tree, which still logs formDisabledCallback(true)/formDisabledCallback(false)). That
+  // setter already calls updateValidity()/syncValidityStates()/requestUpdate() for the same
+  // transition, so formDisabledCallback's own unconditional, unguarded requestUpdate() was pure
+  // redundant work reacting to a change it did not need to react to -- and, being a second
+  // independent call site, capable of landing inside a different in-flight update's
+  // updated()/hostUpdated() window and tripping Lit's dev-mode "scheduled an update after an
+  // update completed" warning with nothing behavioral to show for it. It must stay a no-op
+  // whenever the fieldset-cascade signal it received doesn't change the overall effectiveDisabled
+  // outcome -- own `disabled` already accounts for it.
+  //
+  // The rising edge (false -> true) is the one that matters here: it is what a
+  // `?disabled=${true}` lit-html binding produces, and the shape the reported race actually needs
+  // (own `disabled` and `value` changing together on a control that already has a completed
+  // render behind it). It must cost exactly the one requestUpdate() the `disabled` setter itself
+  // already made.
+  const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
+  const host = ctl as unknown as HTMLElement;
+  await ctl.updateComplete;
+
+  let updateRequests = 0;
+  const requestUpdate = ctl.requestUpdate.bind(ctl);
+  (ctl as unknown as { requestUpdate: typeof requestUpdate }).requestUpdate = (
+    ...args: Parameters<typeof requestUpdate>
+  ) => {
+    updateRequests += 1;
+    return requestUpdate(...args);
+  };
+
+  // A real attribute mutation, exactly like a `?disabled=${true}` lit-html boolean-attribute
+  // binding would perform -- this is what triggers formDisabledCallback as a second reaction.
+  host.toggleAttribute('disabled', true);
+  expect(ctl.effectiveDisabled).to.be.true;
+  expect(updateRequests, 'own disabled attribute change requests exactly one update').to.equal(1);
+
+  // The falling edge still ends up correct -- with no real fieldset ever involved, clearing own
+  // `disabled` must resolve `effectiveDisabled` back to false, however many updates it costs to
+  // get there (the browser's combined own+fieldset signal cannot be perfectly disentangled from a
+  // single callback argument; self-correcting on the next real transition is the safe trade-off).
+  host.toggleAttribute('disabled', false);
+  expect(ctl.effectiveDisabled).to.be.false;
+});
+
 it('reflects a property-assigned `name` to the content attribute so form submission can key on it', async () => {
   const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;
   ctl.name = 'quantity';

@@ -909,14 +909,27 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     }
 
     /**
-     * Called by the browser when an ancestor `<fieldset disabled>` toggles.
-     * Tracked separately from the consumer's own `disabled` (see
-     * `effectiveDisabled`) — a native `<input>`'s own `disabled` IDL
-     * property/attribute is never mutated by fieldset cascading, so a
-     * consumer's explicit `disabled` must survive the fieldset re-enabling.
+     * Called by the browser whenever the FACE-computed disabled state changes — an ancestor
+     * `<fieldset disabled>` toggling, but ALSO the element's own `disabled` content attribute
+     * being added or removed directly (confirmed via a captured stack trace: the platform enqueues
+     * this as a second, independent custom-element reaction to the very same attribute mutation
+     * that also drives the `disabled` property setter below). `_fieldsetDisabled` is tracked
+     * separately from the consumer's own `disabled` (see `effectiveDisabled`) — a native
+     * `<input>`'s own `disabled` IDL property/attribute is never mutated by fieldset cascading, so
+     * a consumer's explicit `disabled` must survive the fieldset re-enabling.
+     *
+     * Only recomputes when doing so would actually change `effectiveDisabled`. Own `disabled`
+     * changing already ran this exact validity/state/render sequence via its own setter in the
+     * same synchronous tick — redoing it here for a callback that turns out to just be an echo of
+     * that same transition was pure redundant work, and, being a second call site, could land
+     * inside a *different* in-flight update's `updated()`/`hostUpdated()` window and trip Lit's
+     * dev-mode "scheduled an update after an update completed" warning for a render nothing
+     * observable ever needed (fr_asxOgk4UhNB07xevCWwFVQ).
      */
     formDisabledCallback(fieldsetDisabled: boolean): void {
+      const before = this.effectiveDisabled;
       this._fieldsetDisabled = fieldsetDisabled;
+      if (this.effectiveDisabled === before) return;
       // Cascaded disablement bars constraint validation exactly like the control's own `disabled`,
       // so validity has to be recomputed here rather than merely re-rendered — recording the flag
       // and requesting an update left `valueMissing` (and `:state(invalid)`) raised on every

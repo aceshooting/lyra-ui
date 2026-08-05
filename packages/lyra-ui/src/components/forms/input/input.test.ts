@@ -582,6 +582,36 @@ describe('lr-input', () => {
       await el.updateComplete;
       expect(native.getAttribute('aria-invalid')).to.equal('false');
     });
+
+    it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+      // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. The browser force-blurs a focused
+      // descendant when a form-associated custom element's own `disabled` state becomes true --
+      // confirmed via a captured marker showing the native `blur` event firing synchronously
+      // inside the `disabled` property setter, before Lit's own async re-render has even reached
+      // the internal native <input>'s own `disabled` attribute. That is not a user interaction:
+      // onBlur() unconditionally marking `touched = true` for it was, depending on exactly when in
+      // the update cycle the blur landed, capable of reentering an in-flight update and tripping
+      // Lit's dev-mode "scheduled an update after an update completed" warning for a state flip
+      // nothing observable needed in that instant (a disabled control is barred from validation
+      // regardless). Proven observably here: re-enabling afterwards must still see the field as
+      // untouched, not retroactively user-invalid from a blur the user never actually caused.
+      const el = (await fixture(html`<lr-input required></lr-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      const isTouched = () => (el as unknown as { touched: boolean }).touched;
+      native.focus();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      el.disabled = true;
+      expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+      await el.updateComplete;
+      el.disabled = false;
+      await el.updateComplete;
+      expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+
+      // A genuine user-driven blur (not caused by disablement) still marks touched, unchanged.
+      native.dispatchEvent(new Event('blur', { bubbles: true }));
+      expect(isTouched(), 'a real blur still marks touched').to.be.true;
+    });
   });
 
   describe('.strings override', () => {
