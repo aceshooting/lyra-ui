@@ -704,7 +704,15 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   };
   private onTriggerBlur = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.touched = true;
+    // The trigger's own `disabled` state becoming true force-blurs it when it currently holds
+    // focus -- a platform reaction, not a user interaction. That blur can land synchronously
+    // nested inside the very property write that disabled this control (before this update's
+    // render has even reached the internal `<button>`'s `disabled` attribute), so
+    // `effectiveDisabled` already reads true here whenever this is that case; marking `touched`
+    // for it was, depending on timing, capable of reentering that same in-flight update for a
+    // state flip nothing observable needed -- a disabled control is barred from validation
+    // regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();

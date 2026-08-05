@@ -1031,6 +1031,37 @@ describe('validity custom states', () => {
   });
 });
 
+describe('touched state', () => {
+  it('a real trigger blur marks the field touched', async () => {
+    const el = (await fixture(
+      html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    expect((el as unknown as { touched: boolean }).touched, 'touched before blur').to.be.false;
+    trigger(el).dispatchEvent(new FocusEvent('blur'));
+    expect((el as unknown as { touched: boolean }).touched, 'touched after a real blur').to.be.true;
+  });
+
+  // Regression coverage for fr_asxOgk4UhNB07xevCWwFVQ: a focused native control's own `disabled`
+  // state becoming true force-blurs it as a platform reaction, not a user interaction -- that
+  // blur must not mark the field touched.
+  it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
+    const el = (await fixture(
+      html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await el.updateComplete;
+    el.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part'), 'trigger holds focus before disabling').to.equal(
+      'trigger',
+    );
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect((el as unknown as { touched: boolean }).touched, 'touched after disable-forced blur').to.be.false;
+  });
+});
+
 describe('lr-locale-picker setCustomValidity()', () => {
   it('blocks form submission and becomes the validationMessage', async () => {
     const form = (await fixture(html`
