@@ -270,6 +270,44 @@ it('toggles data-invalid once touched and invalid', async () => {
   expect(el.hasAttribute('data-invalid')).to.be.true;
 });
 
+// Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+// the browser to blur it outright -- plain native HTML behavior, nothing to do with custom
+// elements -- and that forced blur is not a real user interaction. Marking `touched` for it could
+// (depending on exact timing) reenter an in-flight Lit update and trip Lit's dev-mode "scheduled
+// an update after an update completed" warning. Checks the private `touched` state directly (via
+// a cast), not a DOM attribute proxy like `aria-invalid`, which can lag a render behind and give
+// false confidence.
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  textarea.focus();
+  expect(el.shadowRoot!.activeElement, 'precondition: textarea holds real focus').to.equal(textarea);
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.activeElement,
+    'precondition: becoming disabled must have forced a real blur',
+  ).to.not.equal(textarea);
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a disable-forced blur must not mark the field touched',
+  ).to.be.false;
+});
+
+it('still marks touched from an ordinary blur', async () => {
+  const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  textarea.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(textarea);
+
+  textarea.blur();
+  await el.updateComplete;
+
+  expect((el as unknown as { touched: boolean }).touched).to.be.true;
+});
+
 it("colors the textarea's placeholder text instead of leaving the UA default", async () => {
   // Rendered-fixture proof, not a stylesheet-source regex: read the pseudo-element's real computed
   // color and confirm it matches --lr-color-text-quiet (via the hint part, which uses that same

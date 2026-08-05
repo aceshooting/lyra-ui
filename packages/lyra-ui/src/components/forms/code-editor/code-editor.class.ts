@@ -157,7 +157,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onInput = (event: Event): void => { this.value = (event.target as HTMLTextAreaElement).value; this.emit('input', { value: this.value }); };
   private onChange = (): void => { this.emit('change', { value: this.value }); };
   private onFocus = (): void => { this.emit('focus'); };
-  private onBlur = (): void => { this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
+  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control forces the browser to blur it --
+  // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
+  // the field touched. `tabBypassArmed`/`emit('blur')` still run unconditionally: they're tab-key
+  // bookkeeping and the public blur event contract, not validation state.
+  private onBlur = (): void => { if (!this.effectiveDisabled) this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') { this.tabBypassArmed = true; return; }
