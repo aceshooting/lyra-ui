@@ -199,11 +199,36 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     }
   }
 
+  /**
+   * `class`/`style` sit in {@link INHERITED_CONTEXT_ATTRIBUTES} so a CSS-only ancestor direction
+   * change (`.rtl-context { direction: rtl }`, an inline `style="direction: rtl"`) is still
+   * picked up with no `dir` attribute anywhere — see the "reads computed direction live after
+   * ancestor style and class changes" test. But `class`/`style` also cover every OTHER reason an
+   * ancestor's inline style or class list might change, most of which have nothing to do with
+   * direction or locale (an overlay's own `--lr-overlay-stack-index` custom property, a consumer's
+   * unrelated theming class, …). A MutationObserver callback is its own microtask, scheduled
+   * independently of Lit's update batching, so an unconditional `requestUpdate()` here could land
+   * inside another in-flight update's `updated()`/`hostUpdated()` window purely because of a
+   * direction-irrelevant style write on some unrelated ancestor — Lit's dev-mode "scheduled an
+   * update after an update completed" warning, for a re-render that was never actually warranted
+   * (fr_asxOgk4UhNB07xevCWwFVQ). Comparing the freshly resolved direction/locale against the last
+   * observed pair keeps the feature intact while dropping every spurious trigger.
+   */
   private observeInheritedContext(): void {
     this.inheritedContextObserver?.disconnect();
     const Observer = this.ownerDocument?.defaultView?.MutationObserver;
     if (!Observer) return;
-    const observer = new Observer(() => this.requestUpdate());
+    let lastLocale = resolveLyraLocale(this);
+    let lastDirection = resolveLyraDirection(this);
+    const observer = new Observer(() => {
+      invalidateLyraLocaleCache(this);
+      const locale = resolveLyraLocale(this);
+      const direction = resolveLyraDirection(this);
+      if (locale === lastLocale && direction === lastDirection) return;
+      lastLocale = locale;
+      lastDirection = direction;
+      this.requestUpdate();
+    });
     let ancestor = composedParentElement(this);
     while (ancestor) {
       observer.observe(ancestor, {

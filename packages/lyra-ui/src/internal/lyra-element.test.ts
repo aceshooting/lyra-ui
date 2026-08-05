@@ -324,6 +324,55 @@ it('disconnects the inherited class/style observer when the component is removed
   expect(updateRequests).to.equal(0);
 });
 
+it('does not request an update for an ancestor class/style mutation that leaves the computed direction/locale unchanged', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: any unrelated inline `style`/`class` write on
+  // ANY ancestor (e.g. lr-dialog's own overlay stack-index custom property, set via
+  // style.setProperty() when it opens) used to call requestUpdate() unconditionally, purely
+  // because `style`/`class` sit in INHERITED_CONTEXT_ATTRIBUTES's MutationObserver filter. That
+  // MutationObserver callback is asynchronous (its own microtask, independent of Lit's own update
+  // scheduling), so it can land inside another in-flight update's updated()/hostUpdated() window
+  // and trigger Lit's dev-mode "scheduled an update after an update completed" warning -- with no
+  // actual direction/locale change to justify a re-render at all. The observer must only request
+  // an update when the ancestor mutation actually changes the resolved direction or locale.
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div style="direction: ltr"><lr-demo-locale></lr-demo-locale></div>`,
+  );
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
+  await el.updateComplete;
+  expect(el.exposedDirection).to.equal('ltr');
+
+  let updateRequests = 0;
+  const requestUpdate = el.requestUpdate.bind(el);
+  el.requestUpdate = (...args: Parameters<DemoLocale['requestUpdate']>) => {
+    updateRequests += 1;
+    requestUpdate(...args);
+  };
+
+  // An unrelated custom property -- direction-irrelevant, exactly like lr-dialog's
+  // `--lr-overlay-stack-index` -- must not trigger a request.
+  wrapper.style.setProperty('--some-unrelated-token', '1000');
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(updateRequests, 'unrelated style mutation must not request an update').to.equal(0);
+  expect(el.exposedDirection).to.equal('ltr');
+
+  // An unrelated class toggle -- no direction-affecting rule attached -- must not trigger one either.
+  wrapper.className = 'unrelated-marker-class';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(updateRequests, 'unrelated class mutation must not request an update').to.equal(0);
+  expect(el.exposedDirection).to.equal('ltr');
+
+  // A mutation that DOES change the computed direction must still request one -- the feature this
+  // observer exists for keeps working.
+  wrapper.style.direction = 'rtl';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(updateRequests, 'a real direction change must still request an update').to.equal(1);
+  await el.updateComplete;
+  expect(el.exposedDirection).to.equal('rtl');
+});
+
 it('keeps a synthetic message locale raw while exposing a safe effective locale', async () => {
   const locale = `x_synthetic_${Date.now().toString(36)}`;
   const el = await fixture<DemoLocale>(html`<lr-demo-locale locale=${locale}></lr-demo-locale>`);
