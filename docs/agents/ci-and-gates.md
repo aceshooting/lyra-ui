@@ -299,6 +299,32 @@ least a minor bump. Pending Changesets must meet that minimum unless an exact, r
 in `scripts/public-api-semver-exceptions.json` matches the before/after values. Parser and semver
 logic remain network-free under `test:public-api`.
 
+Three release-integrity quirks worth knowing before trusting a release round's mechanics, none yet
+fixed at the source:
+
+- `scripts/publish.sh`'s changeset-package parser (`changeset_packages()`) only matches
+  double-quoted frontmatter (`^"@aceshooting/lyra-ui": (major|minor|patch)$`) — a single-quoted
+  package name is valid YAML and `pnpm changeset status` parses it fine, but the script concludes
+  there are no pending changesets for any publishable package and bails. Recurred multiple times;
+  always double-quote package names in `.changeset/*.md` frontmatter (matches what the `changeset`
+  CLI itself emits).
+- `.changeset/config.json`'s `"updateInternalDependencies": "patch"` only governs regular
+  `dependencies`/`devDependencies`. `@aceshooting/lyra-ui`'s `peerDependency` on
+  `@aceshooting/lyra-flags` (`workspace:^x.y.z`) escalates to a **major** bump the moment that
+  peer's own version changes in the same `pnpm changeset version` run, regardless of what severity
+  the pending changesets actually declare for lyra-ui. Only fires when lyra-flags' own version
+  changes in that round; an all-lyra-ui round bumps cleanly.
+- The per-package generation loop (package-metadata → manifest → component-metadata → manifest →
+  lint → build → test → default-string-slices → framework-types → design-tokens → editor-data →
+  llms) never regenerates `docs/component-integration.md`/
+  `scripts/fixtures/component-integration.json`, but every version bump shifts every component's
+  *built* gzip size regardless (the regenerated `package-metadata.ts`, embedding the new version
+  plus release history, is imported by the shared base every component bundles) — so CI's
+  `build-and-coverage / quality` job (`check:component-quality:built`) reliably fails on the pushed
+  release commit. Fix: rebuild, `node scripts/generate-component-quality.mjs --write
+  --measure-gzip`, `check:bundle-size`, then a follow-up commit on top of the already-pushed release
+  commit, re-qualified through `wait-ci`/`wait-full-engine` like any other commit before tagging.
+
 ## Coverage floors (`scripts/coverage-floors.json`)
 
 `web-test-runner.config.js` reads its blocking per-metric thresholds from
