@@ -800,6 +800,55 @@ it("reflects required/touched-invalid state onto the free-text input's aria-requ
   expect(inp.getAttribute('aria-invalid')).to.equal('true');
 });
 
+describe('touched state — blur guard against platform-forced blur', () => {
+  it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
+    // Regression test for fr_asxOgk4UhNB07xevCWwFVQ (see lr-input's identical fix). The browser
+    // force-blurs a focused native control when it becomes disabled -- not a user interaction --
+    // so onTriggerBlur() unconditionally marking `touched = true` for it could reenter an
+    // in-flight update and trip Lit's dev-mode "scheduled an update after an update completed"
+    // warning for a state flip nothing observable needed (a disabled control is barred from
+    // validation regardless). Proven observably here: re-enabling afterwards must still see the
+    // field as untouched, not retroactively user-invalid from a blur the user never caused.
+    const el = (await fixture(
+      html`<lr-voice-picker required .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const isTouched = () => (el as unknown as { touched: boolean }).touched;
+    trigger(el).focus();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    el.disabled = true;
+    expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+    await el.updateComplete;
+    el.disabled = false;
+    await el.updateComplete;
+    expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+
+    // A genuine user-driven blur (not caused by disablement) still marks touched, unchanged.
+    trigger(el).dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(isTouched(), 'a real blur still marks touched').to.be.true;
+  });
+
+  it('does not mark touched from a blur caused by the free-text combobox input itself becoming disabled', async () => {
+    // Same regression, for the free-text mode's internal <input> (onInputBlur).
+    const el = (await fixture(
+      html`<lr-voice-picker allow-custom required></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const isTouched = () => (el as unknown as { touched: boolean }).touched;
+    input(el).focus();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    el.disabled = true;
+    expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+    await el.updateComplete;
+    el.disabled = false;
+    await el.updateComplete;
+    expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+
+    input(el).dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(isTouched(), 'a real blur still marks touched').to.be.true;
+  });
+});
+
 it('omits the autocomplete attribute entirely when autocomplete is cleared', async () => {
   const el = (await fixture(
     html`<lr-voice-picker allow-custom autocomplete=""></lr-voice-picker>`,

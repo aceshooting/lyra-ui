@@ -791,7 +791,13 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   };
   private onTriggerBlur = (): void => {
     if (this.suppressControlEvents) return;
-    this.touched = true;
+    // The browser force-blurs a focused native control (this trigger `<button>`) the moment it
+    // becomes disabled -- a platform reaction, not a user interaction, and `effectiveDisabled`
+    // already reads true here whenever this is that case. Marking `touched` for it anyway could
+    // reenter an in-flight update and trip Lit's dev-mode "scheduled an update after an update
+    // completed" warning for a state flip nothing observable needed -- a disabled control is
+    // barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     this.emit('blur');
   };
@@ -860,7 +866,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   };
   private onInputBlur = (): void => {
     if (this.suppressControlEvents) return;
-    this.touched = true;
+    // Same platform reaction as onTriggerBlur() above, for the free-text mode's internal
+    // `<input>` (fr_asxOgk4UhNB07xevCWwFVQ): the browser force-blurs it the moment it becomes
+    // disabled, and that is not a user interaction worth marking `touched` for.
+    if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     this.emit('blur');
   };
