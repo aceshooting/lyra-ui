@@ -564,7 +564,34 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   protected override firstUpdated(): void {
-    this.addEventListener('blur', () => { this.touched = true; this.hasInteracted = true; this.sync(); }, true);
+    // Capture phase: a native `blur` does not bubble, but it is composed, so a capture listener
+    // on the group still observes one fired deep inside an owned `<lr-checkbox>`'s shadow tree, as
+    // well as the `blur` that checkbox's own `onBlur` relays from its host (bubbles + composed).
+    this.addEventListener('blur', (event) => {
+      // Disabling a focused checkbox -- its own `disabled`, or an ancestor `<fieldset disabled>`
+      // cascading down -- makes the platform force-blur it, exactly like a focused native
+      // input/select/textarea/button becoming disabled. That is not a real user interaction, and
+      // marking the group touched for it could reenter an in-flight Lit update.
+      //
+      // `event.target` is the blurred `<lr-checkbox>` (shadow-retargeted from outside its tree, or
+      // the direct target of its own relayed dispatch). Its live `:disabled` match is checked
+      // rather than this library's own `effectiveDisabled` bookkeeping -- on either the box or the
+      // group -- because the browser applies an ancestor fieldset's disabling, and the forced blur
+      // that comes with it, natively and synchronously, *before* `formDisabledCallback()` (what
+      // updates `effectiveDisabled`) runs; at exactly this moment `effectiveDisabled` would still
+      // read `false`. `:disabled` has no such lag, and also covers a single child disabled directly
+      // (independently of the group). Falls back to the group's own `effectiveDisabled` if the
+      // target isn't an `Element` (defensive). Mirrors `<lr-input>`'s identical `onBlur` guard.
+      const blurredControl = event.target as Element | null;
+      const disabled = typeof blurredControl?.matches === 'function'
+        ? blurredControl.matches(':disabled')
+        : this.effectiveDisabled;
+      if (!disabled) {
+        this.touched = true;
+        this.hasInteracted = true;
+      }
+      this.sync();
+    }, true);
   }
 
   protected override updated(changed: PropertyValues): void {

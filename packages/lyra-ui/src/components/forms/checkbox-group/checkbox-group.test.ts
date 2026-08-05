@@ -1134,6 +1134,53 @@ it('bars constraint validation while disabled, like a native disabled required c
   expect(el.validity.valueMissing, 'the violation returns once it is enforceable again').to.be.true;
 });
 
+describe('touched state and blur', () => {
+  it('marks touched on a real blur', async () => {
+    const el = (await fixture(html`<lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    const internal = el as unknown as { touched: boolean };
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    box.focus();
+    expect(internal.touched, 'not yet touched before any blur').to.be.false;
+    box.blur();
+    expect(internal.touched, 'a real blur marks the group touched').to.be.true;
+  });
+
+  it('does not mark touched from a blur the platform forces when a focused child checkbox becomes disabled', async () => {
+    const el = (await fixture(html`<lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+    const internal = el as unknown as { touched: boolean };
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    box.focus();
+    expect(document.activeElement, 'the checkbox must actually hold focus for this test to be meaningful').to.equal(box);
+
+    // Disabling a focused checkbox is plain native HTML behavior -- the browser force-blurs it,
+    // the same way it force-blurs a focused native input/select/textarea/button that becomes
+    // disabled. That is not a real user interaction.
+    box.disabled = true;
+    expect(document.activeElement, 'disabling the focused checkbox must actually force a blur for this test to be meaningful').to.not.equal(box);
+    expect(internal.touched, 'a platform-forced blur from disabling must not mark the group touched').to.be.false;
+  });
+
+  it('does not mark touched from a blur the platform forces when an ancestor fieldset disables a focused child checkbox', async () => {
+    const form = (await fixture(html`
+      <form>
+        <fieldset>
+          <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    const internal = group as unknown as { touched: boolean };
+    const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+    const box = group.querySelector('lr-checkbox') as LyraCheckbox;
+    box.focus();
+    expect(document.activeElement).to.equal(box);
+
+    fieldset.disabled = true;
+    expect(document.activeElement, 'the ancestor fieldset must actually force a blur for this test to be meaningful').to.not.equal(box);
+    expect(internal.touched, 'a fieldset-cascaded disable-forced blur must not mark the group touched').to.be.false;
+  });
+});
+
 it('renders the required marker from the shared themeable rule, not a literal span', async () => {
   const el = (await fixture(html`
     <lr-checkbox-group required label="Topics"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
