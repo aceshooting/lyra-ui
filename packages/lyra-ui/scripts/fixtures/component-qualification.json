@@ -6720,14 +6720,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 931,
+              "line": 933,
               "test": "is accessible in a populated, busy, chip-laden state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1127,
+              "line": 1129,
               "test": "is accessible under frame=\"plain\" with the textarea focused",
               "target": "el",
               "state": "populated"
@@ -6758,7 +6758,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1113,
+              "line": 1115,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -7238,21 +7238,21 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1068,
+              "line": 1073,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1075,
+              "line": 1080,
               "test": "is accessible in an indeterminate, labeled state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1215,
+              "line": 1220,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -15649,14 +15649,14 @@
           "evidence": [
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 638,
+              "line": 641,
               "test": "is accessible with the label/hint/error chrome populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 712,
+              "line": 715,
               "test": "is accessible with groups populated",
               "target": "el",
               "state": "populated"
@@ -17416,21 +17416,21 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 842,
+              "line": 848,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 901,
+              "line": 907,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 906,
+              "line": 912,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
               "target": "el",
               "state": "populated"
@@ -30025,14 +30025,14 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 667,
+              "line": 670,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1212,
+              "line": 1215,
               "test": "is accessible with flags enabled",
               "target": "el",
               "state": "populated"
@@ -30046,7 +30046,7 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1268,
+              "line": 1271,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -37303,42 +37303,42 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1283,
+              "line": 1295,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2596,
+              "line": 2608,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1276,
+              "line": 1288,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1505,
+              "line": 1517,
               "test": "is accessible with a single enabled option",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2800,
+              "line": 2812,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2924,
+              "line": 2936,
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
@@ -37363,7 +37363,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2780,
+              "line": 2792,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37380,7 +37380,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 1676,
+              "line": 1688,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41219,21 +41219,21 @@
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1091,
+              "line": 1097,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1098,
+              "line": 1104,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1276,
+              "line": 1282,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
