@@ -59,6 +59,17 @@ minimumReleaseAgeExclude:
   - '@shikijs/themes@4.4.2'
   - '@shikijs/types@4.4.2'
   - shiki@4.4.2
+  - '@vue/compiler-core@3.5.41'
+  - '@vue/compiler-dom@3.5.41'
+  - '@vue/compiler-sfc@3.5.41'
+  - '@vue/compiler-ssr@3.5.41'
+  - '@vue/reactivity@3.5.41'
+  - '@vue/runtime-core@3.5.41'
+  - '@vue/runtime-dom@3.5.41'
+  - '@vue/server-renderer@3.5.41'
+  - '@vue/shared@3.5.41'
+  - axe-core@4.13.0
+  - vue@3.5.41
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
