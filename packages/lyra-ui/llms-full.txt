@@ -3393,6 +3393,12 @@ see "Enter-to-submit" below for the exact rules and for which controls deliberat
 - `value: string = ''` (from `FormAssociated`)
 - `defaultValue: string = ''` — reset value, backed by the standard `value` content attribute;
   `default-value` is accepted as a Shoelace attribute alias
+- `name: string` (from `FormAssociated`) and the plain inherited `id` are both forwarded to the
+  internal native `<input>` (previously the internal input carried neither, only a fixed
+  `id="input"`), so shadow-DOM-aware password managers that key field detection off the actual
+  control's own `name`/`id` — not `autocomplete` alone — recognize `<lr-input>` fields. The
+  internal `<label for>` tracks whichever id is in use. Leaving `id` unset on the host keeps the
+  internal input at `id="input"`, identical to before
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus

@@ -359,6 +359,18 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   @query('input') private inputEl?: HTMLInputElement;
 
+  /** Id of the internal native `<input>` (and the `for` of its paired `<label>`), so a
+   *  shadow-DOM-aware password manager keys its field detection off the same id the consumer put
+   *  on the host, rather than a fixed literal. Falls back to `"input"` when the host carries no
+   *  `id`, leaving the rendered output byte-identical to before this existed. `id` is a plain
+   *  inherited DOM property rather than a reactive `@property`, so a host `id` set declaratively in
+   *  markup is picked up on first render (the native IDL reflects the parsed attribute before Lit's
+   *  own `render()` runs); mutating `el.id` after first render only takes effect on this component's
+   *  next unrelated re-render. */
+  private get inputId(): string {
+    return this.id || 'input';
+  }
+
   constructor() {
     super();
     this.addEventListener('invalid', () => { this.touched = true; });
@@ -717,7 +729,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       this.value !== '';
     return html`
       <div part="form-control">
-        <label part="form-control-label" for="input" ?hidden=${!hasLabel}>
+        <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
           <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
         <div part=${this.inputWrapperParts}>
@@ -729,9 +741,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             <slot part="prefix" name="prefix"></slot>
           </span>
           <input
-            id="input"
+            id=${this.inputId}
             part="input"
             type=${nativeType}
+            name=${this.name || nothing}
             placeholder=${this.placeholder}
             title=${this.title || nothing}
             aria-label=${this.accessibleLabel ||

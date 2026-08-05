@@ -124,6 +124,26 @@ describe('lr-input', () => {
     expect(input.step).to.equal('2');
   });
 
+  it('forwards name and a host-supplied id onto the native input, keeping the label in sync', async () => {
+    const el = (await fixture(
+      html`<lr-input name="username" id="username-field"></lr-input>`,
+    )) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const label = el.shadowRoot!.querySelector('label') as HTMLLabelElement;
+    expect(input.name).to.equal('username');
+    expect(input.id).to.equal('username-field');
+    expect(label.htmlFor).to.equal('username-field');
+  });
+
+  it('leaves the native input id/name/label at their unset defaults with no host id/name', async () => {
+    const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const label = el.shadowRoot!.querySelector('label') as HTMLLabelElement;
+    expect(input.id).to.equal('input');
+    expect(input.hasAttribute('name')).to.be.false;
+    expect(label.htmlFor).to.equal('input');
+  });
+
   it('forwards editing-assistance attributes and exposes native-style input/change events', async () => {
     const el = (await fixture(html`
       <lr-input spellcheck="false" autocapitalize="off" autocorrect="off" inputmode="email" enterkeyhint="done"></lr-input>
