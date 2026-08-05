@@ -85,7 +85,7 @@ it('does not mark touched from a blur the platform forces when the control becom
   const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
   input.focus();
-  expect(el.shadowRoot!.activeElement, 'must actually be focused before disabling it').to.equal(input);
+  expect(el.shadowRoot!.activeElement === input, 'must actually be focused before disabling it').to.be.true;
   el.disabled = true;
   await el.updateComplete;
   expect(

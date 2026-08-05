@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 import { styles } from './code-editor.styles.js';
@@ -281,15 +281,21 @@ it('does not mark touched from a blur caused by the control itself becoming disa
   const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   textarea.focus();
-  expect(el.shadowRoot!.activeElement, 'precondition: textarea holds real focus').to.equal(textarea);
+  expect(el.shadowRoot!.activeElement === textarea, 'precondition: textarea holds real focus').to.be.true;
 
   el.disabled = true;
   await el.updateComplete;
+  // The platform's own force-blur can trail the render commit by an unpredictable amount on some
+  // engines (observed on Firefox/WebKit; Chromium settles within updateComplete alone) -- poll
+  // instead of guessing a fixed delay.
+  await waitUntil(() => el.shadowRoot!.activeElement !== textarea, 'the platform never force-blurred the disabled textarea', { timeout: 2000 });
 
+  // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
+  // boolean instead.
   expect(
-    el.shadowRoot!.activeElement,
+    el.shadowRoot!.activeElement === textarea,
     'precondition: becoming disabled must have forced a real blur',
-  ).to.not.equal(textarea);
+  ).to.be.false;
   expect(
     (el as unknown as { touched: boolean }).touched,
     'a disable-forced blur must not mark the field touched',
@@ -300,7 +306,7 @@ it('still marks touched from an ordinary blur', async () => {
   const el = (await fixture(html`<lr-code-editor required></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   textarea.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(textarea);
+  expect(el.shadowRoot!.activeElement === textarea).to.be.true;
 
   textarea.blur();
   await el.updateComplete;

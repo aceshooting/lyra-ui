@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './file-input.js';
 import { DEFAULT_MAX_FILE_SIZE_BYTES, type LyraFileInput } from './file-input.js';
 import { styles } from './file-input.styles.js';
@@ -422,7 +422,7 @@ it('blur() and click() delegate to the semantic dropzone contract', async () => 
   input.addEventListener('click', () => pickerClicks++);
 
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(base);
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
 
@@ -452,14 +452,20 @@ it('does not mark touched from a blur caused by the control itself becoming disa
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   base.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(base);
+  // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
+  // boolean instead.
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
 
   el.disabled = true;
   await el.updateComplete;
+  // The platform's own force-blur can trail the render commit by an unpredictable amount on some
+  // engines (observed on Firefox/WebKit; Chromium settles within updateComplete alone) -- poll
+  // instead of guessing a fixed delay.
+  await waitUntil(() => el.shadowRoot!.activeElement === null, 'the platform never force-blurred the disabled control', { timeout: 2000 });
 
   // Disabling the control force-blurred the focused base button -- a platform reaction, not a
   // user interaction, so `touched` must stay exactly as it started.
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
   expect((el as unknown as { touched: boolean }).touched).to.equal(false);
 });
 
@@ -468,7 +474,7 @@ it('still marks touched from a genuine blur while enabled', async () => {
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   base.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(base);
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
   base.blur();
 
   expect((el as unknown as { touched: boolean }).touched).to.equal(true);

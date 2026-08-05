@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './switch.js';
 import type { LyraSwitch } from './switch.js';
@@ -524,15 +524,18 @@ it('does not mark touched from a blur the browser forces when the control become
   // (fr_asxOgk4UhNB07xevCWwFVQ), reached through a different mechanism here: <lr-switch> is
   // form-associated (`static formAssociated = true`), so setting its `disabled` attribute makes
   // the browser's own form-associated-custom-element machinery treat the host as "actually
-  // disabled" synchronously and run unfocusing steps against whatever inside the shadow tree
-  // currently holds focus -- firing a real `blur` on the internal `[part~="base"]` span
-  // synchronously inside the `disabled` setter, *before* Lit's own async re-render has even
-  // reached the span's `tabindex` attribute (confirmed below: the forced blur lands while
-  // `tabIndex` is still `0`, not yet flipped to `-1`). That is not a user interaction:
-  // onBlur() unconditionally marking `touched = true` for it was capable of reentering an
-  // in-flight Lit update and tripping Lit's dev-mode "scheduled an update after an update
-  // completed" warning, and would otherwise let a later re-enable flash `user-invalid` styling
-  // for an interaction the user never actually had a chance to make.
+  // disabled" and run unfocusing steps against whatever inside the shadow tree currently holds
+  // focus -- firing a real `blur` on the internal `[part~="base"]` span, *before* Lit's own async
+  // re-render has even reached the span's `tabindex` attribute (confirmed on Chromium: the forced
+  // blur lands synchronously inside the `disabled` setter, while `tabIndex` is still `0`, not yet
+  // flipped to `-1`). Whether Firefox/WebKit force-blur this shape at all is not asserted as a
+  // precondition here (unlike lr-checkbox's equivalent test, confirmed to eventually blur on
+  // every engine) -- only the regression contract: whichever way an engine behaves, `touched`
+  // must not end up true from it. That is not a user interaction: onBlur() unconditionally
+  // marking `touched = true` for it was capable of reentering an in-flight Lit update and
+  // tripping Lit's dev-mode "scheduled an update after an update completed" warning, and would
+  // otherwise let a later re-enable flash `user-invalid` styling for an interaction the user
+  // never actually had a chance to make.
   const el = (await fixture(html`<lr-switch required>Label</lr-switch>`)) as LyraSwitch;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const isTouched = () => (el as unknown as { touched: boolean }).touched;
@@ -541,14 +544,17 @@ it('does not mark touched from a blur the browser forces when the control become
   expect(el.shadowRoot!.activeElement === base).to.be.true;
 
   el.disabled = true;
-  // The forced blur -- and this component's onBlur() reacting to it -- already happened
-  // synchronously inside the setter above, before any awaiting.
   expect(base.tabIndex, 'the forced blur precedes the async re-render that flips tabindex').to.equal(0);
-  expect(
-    el.shadowRoot!.activeElement === base,
-    'the browser force-blurs the focused span when the host becomes actually-disabled',
-  ).to.be.false;
-  expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+  // Give a real, engine-forced blur every reasonable chance to land before checking the
+  // regression contract below -- but do not fail the test merely because this engine never fires
+  // one for this shape (see comment above).
+  try {
+    await waitUntil(() => el.shadowRoot!.activeElement !== base, undefined, { timeout: 1000 });
+  } catch {
+    /* This engine does not force-blur this shape; touched staying false is still the assertion that matters. */
+  }
+
+  expect(isTouched(), 'a disable-forced blur (if this engine fires one) must not mark touched').to.be.false;
 
   await el.updateComplete;
   el.disabled = false;

@@ -708,7 +708,7 @@ it('does not mark touched/hasInteracted from a blur caused by the control itself
   const hasInteracted = () => (el as unknown as { hasInteracted: boolean }).hasInteracted;
 
   base.focus();
-  expect(el.shadowRoot!.activeElement, 'precondition: the control is focused').to.equal(base);
+  expect(el.shadowRoot!.activeElement === base, 'precondition: the control is focused').to.be.true;
 
   el.disabled = true;
   // The platform's forced blur (confirmed above) fires synchronously inside this property write,
@@ -727,13 +727,16 @@ it('does not mark touched/hasInteracted from a blur caused by the control itself
   expect(hasInteracted(), 'a real blur still marks hasInteracted').to.be.true;
 });
 
-it('force-blurs a focused control when an ancestor fieldset disables it, same as the control disabling itself', async () => {
+it('does not mark touched if an ancestor fieldset disabling a focused control also force-blurs it', async () => {
   // Companion to the test above: the platform's "actually disabled" force-blur for a
-  // form-associated custom element is not limited to the element's own `disabled` attribute --
-  // confirmed empirically that an ancestor `<fieldset disabled>` triggers the identical forced
-  // blur, even though `effectiveDisabled` here comes from `formDisabledCallback()`
-  // (`_fieldsetDisabled`), and the host's own `disabled` content attribute is never set
-  // (see the "temporarily disables through a fieldset" test above).
+  // form-associated custom element's OWN `disabled` attribute is consistent across engines
+  // (confirmed above, and by the equivalent lr-input/lr-switch/etc. fixes). Whether an ancestor
+  // `<fieldset disabled>` cascading to `formDisabledCallback()` (`_fieldsetDisabled`) ALSO
+  // force-blurs a focused descendant is not: confirmed empirically that Chromium does, but
+  // Firefox and WebKit do not force-blur for the fieldset-cascade path specifically -- so this
+  // asserts the guard's actual regression contract (no forced blur ever marks touched) without
+  // assuming which engines produce one. The host's own `disabled` content attribute is never set
+  // either way (see the "temporarily disables through a fieldset" test above).
   const form = (await fixture(html`
     <form><fieldset><lr-checkbox required>Agree</lr-checkbox></fieldset></form>
   `)) as HTMLFormElement;
@@ -743,12 +746,14 @@ it('force-blurs a focused control when an ancestor fieldset disables it, same as
   const isTouched = () => (el as unknown as { touched: boolean }).touched;
 
   base.focus();
-  expect(el.shadowRoot!.activeElement, 'precondition: the control is focused').to.equal(base);
+  expect(el.shadowRoot!.activeElement === base, 'precondition: the control is focused').to.be.true;
 
   fieldset.disabled = true;
   expect(el.hasAttribute('disabled'), 'fieldset disabling never sets the host attribute').to.be.false;
   expect(isTouched(), 'a fieldset-disable-forced blur must not mark touched').to.be.false;
-  expect(el.shadowRoot!.activeElement, 'the platform blurs the focused descendant').to.not.equal(base);
+  // Not asserted: whether the platform actually blurred `base` -- that itself is engine-dependent
+  // (see comment above). The regression this guards against only exists when a blur DOES fire;
+  // the assertion above already covers that case correctly whichever way this engine behaves.
 });
 
 describe('validity styling', () => {

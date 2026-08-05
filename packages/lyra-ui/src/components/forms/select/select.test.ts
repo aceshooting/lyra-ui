@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './select.js';
 import '../combobox/option.js';
@@ -1125,15 +1125,27 @@ it('marks touched from a real user blur of the trigger', async () => {
 // field touched, since (depending on exact timing) it could reenter an in-flight Lit update and
 // trip Lit's dev-mode "scheduled an update after an update completed" warning.
 it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
+  // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
+  // boolean instead.
   const el = (await fixture(basic())) as LyraSelect;
   trigger(el).focus();
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement, 'trigger holds focus before disabling').to.equal(trigger(el));
+  expect(
+    el.shadowRoot!.activeElement === trigger(el),
+    'trigger holds focus before disabling',
+  ).to.be.true;
 
   el.disabled = true;
   await el.updateComplete;
+  // The platform's own force-blur can trail the render commit by an unpredictable amount on some
+  // engines (observed on Firefox/WebKit; Chromium settles within updateComplete alone) -- poll
+  // instead of guessing a fixed delay.
+  await waitUntil(() => el.shadowRoot!.activeElement === null, 'the platform never force-blurred the disabled trigger', { timeout: 2000 });
 
-  expect(el.shadowRoot!.activeElement, 'the platform force-blurred the now-disabled trigger').to.equal(null);
+  expect(
+    el.shadowRoot!.activeElement === null,
+    'the platform force-blurred the now-disabled trigger',
+  ).to.be.true;
   expect(
     (el as unknown as { touched: boolean }).touched,
     'a disable-forced blur must not mark the field touched',

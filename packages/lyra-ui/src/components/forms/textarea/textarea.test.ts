@@ -734,7 +734,7 @@ describe('touched state', () => {
     const el = (await fixture(html`<lr-textarea required></lr-textarea>`)) as LyraTextarea;
     const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
     ta.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(ta);
+    expect(el.shadowRoot!.activeElement === ta).to.be.true;
 
     el.disabled = true;
     await el.updateComplete;

@@ -874,7 +874,7 @@ it('does not mark touched from a blur caused by the control itself becoming disa
   const el = (await fixture(basic())) as LyraCombobox;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   input.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(input);
+  expect(el.shadowRoot!.activeElement === input).to.be.true;
 
   el.disabled = true;
   await el.updateComplete;

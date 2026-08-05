@@ -689,7 +689,9 @@ it('does not mark touched from a blur caused by the control itself becoming disa
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const ta = textareaOf(el);
   ta.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(ta);
+  // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
+  // boolean instead.
+  expect(el.shadowRoot!.activeElement === ta).to.be.true;
 
   el.disabled = true;
   await el.updateComplete;

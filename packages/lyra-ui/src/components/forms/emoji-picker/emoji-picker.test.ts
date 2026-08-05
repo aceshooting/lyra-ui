@@ -562,14 +562,17 @@ describe('touched vs. platform-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', () => {
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
     input.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(input);
+    expect(el.shadowRoot!.activeElement === input).to.be.true;
 
     // The browser itself force-blurs a focused native control the instant it becomes `disabled`
     // -- plain platform behavior, not a user interaction -- so this must NOT count as "touched".
     el.disabled = true;
     await el.updateComplete;
-
     expect(input.disabled, 'sanity: the disable actually reached the native input').to.be.true;
+    // The platform's own force-blur can trail the render commit by an unpredictable amount on
+    // some engines (observed on Firefox/WebKit; Chromium settles within updateComplete alone) --
+    // poll instead of guessing a fixed delay.
+    await waitUntil(() => el.shadowRoot!.activeElement !== input, 'the platform never force-blurred the disabled search input', { timeout: 2000 });
     expect(el.shadowRoot!.activeElement === input, 'sanity: the platform actually force-blurred it').to.be.false;
     expect((el as unknown as { touched: boolean }).touched).to.be.false;
   });

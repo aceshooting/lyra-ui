@@ -1284,7 +1284,7 @@ describe('touched state and disabled-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', (
     const el = (await fixture(html`<lr-date-input required></lr-date-input>`)) as LyraDateInput;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
     input.focus();
-    expect(el.shadowRoot!.activeElement, 'input must be focused before it is disabled').to.equal(input);
+    expect(el.shadowRoot!.activeElement === input, 'input must be focused before it is disabled').to.be.true;
 
     el.disabled = true;
     await el.updateComplete;

@@ -541,7 +541,7 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
     const hourSegment = segment(el, 'hour');
     hourSegment.focus();
-    expect(el.shadowRoot!.activeElement, 'focused before disable').to.equal(hourSegment);
+    expect(el.shadowRoot!.activeElement === hourSegment, 'focused before disable').to.be.true;
 
     el.disabled = true;
     await el.updateComplete;
@@ -553,7 +553,7 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
     const hourSegment = segment(el, 'hour');
     hourSegment.focus();
-    expect(el.shadowRoot!.activeElement, 'focused before blur').to.equal(hourSegment);
+    expect(el.shadowRoot!.activeElement === hourSegment, 'focused before blur').to.be.true;
 
     hourSegment.blur();
     await el.updateComplete;

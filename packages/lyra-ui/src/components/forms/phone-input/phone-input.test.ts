@@ -364,9 +364,12 @@ it('does not mark touched from a blur caused by the control itself becoming disa
   await el.updateComplete;
 
   el.input!.focus();
-  expect(el.shadowRoot!.activeElement, 'the telephone input must be focused before disabling it').to.equal(
-    el.input,
-  );
+  // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
+  // boolean instead.
+  expect(
+    el.shadowRoot!.activeElement === el.input,
+    'the telephone input must be focused before disabling it',
+  ).to.be.true;
 
   el.disabled = true;
   await el.updateComplete;
