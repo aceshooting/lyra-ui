@@ -352,6 +352,48 @@ it('bridges focus and blur from the shadow input to host-observable events', asy
   await blurPromise;
 });
 
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+  // the browser to blur it -- plain platform behavior, nothing to do with custom elements. That is
+  // not a real user interaction, so it must not mark the field touched; unconditionally doing so
+  // could reenter an in-flight Lit update and trip Lit's dev-mode "scheduled an update after an
+  // update completed" warning.
+  const el = (await fixture(html`
+    <lr-phone-input label="Phone number" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+
+  el.input!.focus();
+  expect(el.shadowRoot!.activeElement, 'the telephone input must be focused before disabling it').to.equal(
+    el.input,
+  );
+
+  el.disabled = true;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a disable-forced blur must not mark touched',
+  ).to.equal(false);
+});
+
+it('still marks touched from a real blur that is not caused by disabling', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input label="Phone number" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+
+  el.input!.focus();
+  el.input!.blur();
+  await el.updateComplete;
+
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a genuine blur must still mark touched',
+  ).to.equal(true);
+});
+
 it('participates in required validation, disabled fieldsets, and form reset', async () => {
   const form = (await fixture(html`
     <form>
