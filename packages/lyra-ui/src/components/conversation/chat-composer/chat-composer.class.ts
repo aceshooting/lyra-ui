@@ -566,7 +566,15 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private onTextareaBlur = (): void => {
-    this.touched = true;
+    // Disabling this control while its internal textarea holds focus force-blurs that textarea as
+    // plain platform behavior, not a real user interaction -- that blur can land synchronously
+    // nested inside the very property write that disabled the control (before this render has even
+    // reached the textarea's own `disabled` attribute), so `effectiveDisabled` already reads true
+    // here whenever this is that case. Marking `touched` for it was, depending on timing, capable
+    // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
+    // after an update completed" warning for a state flip nothing observable needed -- a disabled
+    // control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.emit('blur');
   };
 

@@ -680,6 +680,36 @@ it('forwards required and touched validity state to the textarea', async () => {
   expect(textarea.getAttribute('aria-required')).to.equal('false');
 });
 
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control force-blurs
+  // it as plain platform behavior, not a real user interaction -- that blur can land synchronously
+  // nested inside the very property write that disabled this control, before this render has even
+  // reached the internal textarea's own `disabled` attribute. Checked directly against the private
+  // `touched` state rather than `aria-invalid`, which can lag a render behind.
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+  const ta = textareaOf(el);
+  ta.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(ta);
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a disable-forced blur must not mark the field touched',
+  ).to.be.false;
+});
+
+it('still marks touched from a real, non-disabled blur', async () => {
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+  const ta = textareaOf(el);
+  ta.focus();
+  ta.blur();
+  await el.updateComplete;
+
+  expect((el as unknown as { touched: boolean }).touched).to.be.true;
+});
+
 it('reveals invalid state after validation and clears touched presentation on form reset', async () => {
   const form = (await fixture(html`
     <form><lr-chat-composer name="message" required></lr-chat-composer></form>
