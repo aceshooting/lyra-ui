@@ -1,6 +1,6 @@
 {
   "name": "lyra-ui",
-  "version": "8.2.0",
+  "version": "8.2.1",
   "description": "Teach Claude the @aceshooting/lyra-ui component API and interface-composition workflow, including design-token theming, localization, framework/TypeScript integration, and migration paths from Web Awesome and Shoelace.",
   "author": {
     "name": "Aceshooting"
