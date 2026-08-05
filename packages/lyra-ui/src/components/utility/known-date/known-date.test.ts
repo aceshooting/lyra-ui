@@ -961,6 +961,36 @@ describe('focus/blur bridging', () => {
       frame.remove();
     }
   });
+
+  it('does not mark touched from a blur caused by a field itself becoming disabled', async () => {
+    // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. Disabling the control mid-focus force-blurs
+    // whichever internal native field currently holds focus -- a platform reaction to the
+    // field's own `?disabled=${this.effectiveDisabled}` binding turning true, not a user
+    // interaction. onFieldBlur() unconditionally marking `touched = true` for it was, depending on
+    // timing, capable of reentering an in-flight update and tripping Lit's dev-mode "scheduled an
+    // update after an update completed" warning for a state flip nothing observable needed (a
+    // disabled control is barred from validation regardless). Proven observably here:
+    // re-enabling afterwards must still see the field as untouched.
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    const isTouched = () => (el as unknown as { touched: boolean }).touched;
+
+    fieldFor(el, 'day').focus();
+    await el.updateComplete;
+
+    el.disabled = true;
+    expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+    await el.updateComplete;
+    el.disabled = false;
+    await el.updateComplete;
+    expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+
+    // A genuine user-driven blur (not caused by disablement) still marks touched, unchanged.
+    fieldFor(el, 'day').focus();
+    await el.updateComplete;
+    fieldFor(el, 'day').blur();
+    expect(isTouched(), 'a real blur still marks touched').to.be.true;
+  });
 });
 
 describe('per-field labels', () => {
