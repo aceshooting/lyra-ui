@@ -726,6 +726,33 @@ it('resets touched state (re-hiding aria-invalid) via form.reset(), even when th
   expect(ta.getAttribute('aria-invalid')).to.equal('false');
 });
 
+describe('touched state', () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control
+  // (input/select/textarea/button) force-blurs it -- plain platform behavior, not a user
+  // interaction -- and marking `touched` for that blur could reenter an in-flight Lit update.
+  it('does not mark touched from a blur the platform forces when the control becomes disabled while focused', async () => {
+    const el = (await fixture(html`<lr-textarea required></lr-textarea>`)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    ta.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(ta);
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect((el as unknown as { touched: boolean }).touched).to.be.false;
+  });
+
+  it('still marks touched from a real (non-disabling) blur', async () => {
+    const el = (await fixture(html`<lr-textarea required></lr-textarea>`)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    ta.focus();
+    ta.blur();
+    await el.updateComplete;
+
+    expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  });
+});
+
 describe('switching resize away from "auto"', () => {
   it('tears down the resize observer and clears inline auto-grow sizing when switching away from resize="auto"', async () => {
     const el = (await fixture(html`<lr-textarea resize="auto" rows="1"></lr-textarea>`)) as LyraTextarea;

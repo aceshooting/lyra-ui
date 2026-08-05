@@ -657,7 +657,16 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   };
 
   private onBlur = (event: FocusEvent): void => {
-    this.touched = true;
+    // A form-associated custom element's own `disabled` state becoming true force-blurs whatever
+    // inside its shadow tree currently holds focus -- a platform reaction, not a user interaction.
+    // That blur can land synchronously nested inside the very property write that disabled this
+    // control (before Lit's own render has even reached the internal native <textarea>'s
+    // `disabled` attribute), so `effectiveDisabled` already reads true here whenever this is that
+    // case. Marking `touched` for it was, depending on timing, capable of reentering that same
+    // in-flight update and tripping Lit's dev-mode "scheduled an update after an update completed"
+    // warning for a state flip nothing observable needed -- a disabled control is barred from
+    // validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
