@@ -324,3 +324,11 @@ success criteria) is approved before any implementation plan; the plan breaks wo
 tasks with checkbox steps, file lists, and interfaces; each task is implemented, then reviewed
 for spec compliance and quality, with fix rounds until clean. These working docs (specs, plans,
 execution ledger) are intentionally kept out of version control.
+
+Maintain the execution ledger live, one checkbox per task, ticked in the same commit as the work
+that satisfies it — never reconstruct plan status later by re-auditing the source tree (a full
+multi-agent audit to rebuild status from scratch is pure waste that a ledger avoids entirely). A
+box is ticked only when the task's *acceptance* criterion is met (for a public API change: JSDoc +
+tests + story + `llms/<family>.md` + regenerated manifest), not merely when the code lands. Keep a
+"Gate state" block in the ledger holding the last real `lint`/`build`/`test`/`manifest` output, so
+resuming the plan later doesn't require re-running the whole gate just to learn where it stood.
