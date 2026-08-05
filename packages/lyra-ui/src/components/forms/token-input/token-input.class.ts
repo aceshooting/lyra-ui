@@ -647,7 +647,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // not fire for a keystroke that was aimed at the text being edited.
     else if (event.key === 'Backspace' && !this.draft && this.value.length && this.editingIndex < 0) { this.removeToken(this.value.length - 1); }
   };
-  private onBlur = (): void => { if (this.draft.trim()) this.addDraft(); this.touched = true; this.syncValidity(); this.emit('blur'); };
+  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+  // behavior (nothing to do with custom elements) -- that is not a real user interaction, so it
+  // must not commit a pending draft or flip `touched`, which could otherwise reenter an in-flight
+  // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
+  private onBlur = (): void => {
+    if (!this.effectiveDisabled) { if (this.draft.trim()) this.addDraft(); this.touched = true; }
+    this.syncValidity();
+    this.emit('blur');
+  };
   private onFocus = (): void => { this.emit('focus'); };
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };

@@ -77,6 +77,30 @@ it('discards an uncommitted draft on blur while disabled instead of adding it', 
   expect(el.value, 'a disabled control must not commit a draft on blur either').to.deep.equal([]);
 });
 
+it('does not mark touched from a blur the platform forces when the control becomes disabled while focused', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as
+  // plain platform behavior (nothing to do with custom elements specifically) -- that blur is not a
+  // real user interaction and must not flip `touched`, which could otherwise reenter an in-flight
+  // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  input.focus();
+  expect(el.shadowRoot!.activeElement, 'must actually be focused before disabling it').to.equal(input);
+  el.disabled = true;
+  await el.updateComplete;
+  expect(
+    (el as unknown as { touched: boolean }).touched,
+    'a disable-forced blur is not user interaction',
+  ).to.be.false;
+});
+
+it('still marks touched on a real user blur', async () => {
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  input.dispatchEvent(new Event('blur'));
+  expect((el as unknown as { touched: boolean }).touched, 'a real blur must still count as interaction').to.be.true;
+});
+
 it('is form-associated and validates required values', async () => {
   const el = (await fixture(html`<lr-token-input required></lr-token-input>`)) as LyraTokenInput;
   expect(el.checkValidity()).to.be.false;
