@@ -497,6 +497,13 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
 
     private _fieldsetDisabled = false;
     private _disabled = false;
+    // Set for the synchronous duration of a `disabled`-attribute mutation this instance itself
+    // performs (own property setter, or an external `?disabled=${...}` binding calling
+    // toggleAttribute() directly) — see the three overrides below and formDisabledCallback().
+    // Cleared on the next microtask, i.e. after the platform has finished delivering every
+    // reaction to that one mutation, however many there are and in whatever order the engine
+    // chooses to fire them.
+    private _reflectingDisabledAttribute = false;
 
     // Hand-written accessor (mirrors `value`/`required` below): native form
     // submission for a form-associated custom element keys its `FormData`
@@ -775,6 +782,65 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       this.requestUpdate('disabled', old);
     }
 
+    /**
+     * Brackets every mutation of the `disabled` attribute — from this setter above, or from an
+     * external `?disabled=${...}` lit-html binding calling `toggleAttribute()` directly on this
+     * element — with `_reflectingDisabledAttribute`, so `formDisabledCallback()` can recognize a
+     * same-tick echo of this exact mutation regardless of which of the platform's own reactions
+     * (`attributeChangedCallback` vs `formDisabledCallback`) it delivers first. That order is not
+     * guaranteed across engines: Chromium fires `attributeChangedCallback` (and so this element's
+     * own `disabled` property setter) before `formDisabledCallback`, but Firefox and WebKit were
+     * observed firing `formDisabledCallback` FIRST — at which point `this.disabled` (own) hadn't
+     * been updated yet, so a before/after `effectiveDisabled` comparison alone sees a real
+     * transition and redoes the exact work the setter is about to do anyway, once again risking
+     * the reentrant-update warning this file's `formDisabledCallback` doc comment describes
+     * (fr_asxOgk4UhNB07xevCWwFVQ). The flag itself is order-independent: it is set before the
+     * underlying native mutation runs, so every reaction the platform delivers for it — in any
+     * order — observes it `true`, and it clears only once the whole synchronous reaction burst has
+     * finished (the next microtask).
+     */
+    override toggleAttribute(qualifiedName: string, force?: boolean): boolean {
+      if (qualifiedName !== 'disabled') return super.toggleAttribute(qualifiedName, force);
+      this._reflectingDisabledAttribute = true;
+      try {
+        return super.toggleAttribute(qualifiedName, force);
+      } finally {
+        queueMicrotask(() => {
+          this._reflectingDisabledAttribute = false;
+        });
+      }
+    }
+
+    override setAttribute(qualifiedName: string, value: string): void {
+      if (qualifiedName !== 'disabled') {
+        super.setAttribute(qualifiedName, value);
+        return;
+      }
+      this._reflectingDisabledAttribute = true;
+      try {
+        super.setAttribute(qualifiedName, value);
+      } finally {
+        queueMicrotask(() => {
+          this._reflectingDisabledAttribute = false;
+        });
+      }
+    }
+
+    override removeAttribute(qualifiedName: string): void {
+      if (qualifiedName !== 'disabled') {
+        super.removeAttribute(qualifiedName);
+        return;
+      }
+      this._reflectingDisabledAttribute = true;
+      try {
+        super.removeAttribute(qualifiedName);
+      } finally {
+        queueMicrotask(() => {
+          this._reflectingDisabledAttribute = false;
+        });
+      }
+    }
+
     get required(): boolean {
       return this._required;
     }
@@ -918,15 +984,21 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * `<input>`'s own `disabled` IDL property/attribute is never mutated by fieldset cascading, so
      * a consumer's explicit `disabled` must survive the fieldset re-enabling.
      *
-     * Only recomputes when doing so would actually change `effectiveDisabled`. Own `disabled`
-     * changing already ran this exact validity/state/render sequence via its own setter in the
-     * same synchronous tick — redoing it here for a callback that turns out to just be an echo of
-     * that same transition was pure redundant work, and, being a second call site, could land
-     * inside a *different* in-flight update's `updated()`/`hostUpdated()` window and trip Lit's
-     * dev-mode "scheduled an update after an update completed" warning for a render nothing
+     * Skipped entirely while `_reflectingDisabledAttribute` is set — this call is then guaranteed
+     * to be a same-tick echo of a `disabled`-attribute mutation this instance itself is performing
+     * (see the flag's own doc comment above `toggleAttribute()`), regardless of whether the
+     * platform delivered it before or after this element's own `disabled` property setter ran.
+     *
+     * Otherwise, only recomputes when doing so would actually change `effectiveDisabled`. Own
+     * `disabled` changing already ran this exact validity/state/render sequence via its own setter
+     * in the same synchronous tick — redoing it here for a callback that turns out to just be an
+     * echo of that same transition was pure redundant work, and, being a second call site, could
+     * land inside a *different* in-flight update's `updated()`/`hostUpdated()` window and trip
+     * Lit's dev-mode "scheduled an update after an update completed" warning for a render nothing
      * observable ever needed (fr_asxOgk4UhNB07xevCWwFVQ).
      */
     formDisabledCallback(fieldsetDisabled: boolean): void {
+      if (this._reflectingDisabledAttribute) return;
       const before = this.effectiveDisabled;
       this._fieldsetDisabled = fieldsetDisabled;
       if (this.effectiveDisabled === before) return;

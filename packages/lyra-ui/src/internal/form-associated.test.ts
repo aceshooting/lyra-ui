@@ -256,17 +256,18 @@ it('does not redundantly requestUpdate() from formDisabledCallback when it merel
   };
 
   // A real attribute mutation, exactly like a `?disabled=${true}` lit-html boolean-attribute
-  // binding would perform -- this is what triggers formDisabledCallback as a second reaction.
+  // binding would perform -- this is what triggers formDisabledCallback as a second reaction,
+  // in an engine-dependent order relative to attributeChangedCallback (Chromium delivers
+  // attributeChangedCallback first; Firefox and WebKit were observed delivering
+  // formDisabledCallback first). The _reflectingDisabledAttribute guard is order-independent, so
+  // both edges cost exactly one requestUpdate() regardless of engine.
   host.toggleAttribute('disabled', true);
   expect(ctl.effectiveDisabled).to.be.true;
   expect(updateRequests, 'own disabled attribute change requests exactly one update').to.equal(1);
 
-  // The falling edge still ends up correct -- with no real fieldset ever involved, clearing own
-  // `disabled` must resolve `effectiveDisabled` back to false, however many updates it costs to
-  // get there (the browser's combined own+fieldset signal cannot be perfectly disentangled from a
-  // single callback argument; self-correcting on the next real transition is the safe trade-off).
   host.toggleAttribute('disabled', false);
   expect(ctl.effectiveDisabled).to.be.false;
+  expect(updateRequests, 'clearing it also requests exactly one more update').to.equal(2);
 });
 
 it('reflects a property-assigned `name` to the content attribute so form submission can key on it', async () => {
