@@ -574,8 +574,18 @@ test('CEM projection reports drift and marks a new assigned tag unreleased once 
   // The checked-in fixture's history.taggedCurrent is the persisted immutable snapshot of what
   // actually shipped at the current package version's release tag. A brand-new tag that isn't
   // part of that snapshot hasn't shipped yet -- it's unreleased until the next version bump, not
-  // retroactively "since" a version that already went out without it.
-  assert.equal(resolved.get('lr-new-component').since, UNRELEASED_VERSION);
+  // retroactively "since" a version that already went out without it. That only holds once
+  // taggedCurrent is actually populated, though: scripts/publish.sh runs this exact suite between
+  // bumping package.json and creating the release tag, a window where
+  // generate-component-metadata.mjs --write deliberately nulls taggedCurrent out (the just-bumped
+  // version genuinely isn't tagged yet -- see reconcileCurrentReleaseHistory's rolloverCurrent
+  // branch). In that transient state a brand-new tag is correctly stamped "since: packageVersion"
+  // instead (it's shipping in the release being prepared) -- mirror the same taggedCurrent check
+  // componentMetadataByTag itself branches on rather than hardcoding the steady-state-only answer.
+  assert.equal(
+    resolved.get('lr-new-component').since,
+    metadata.history?.taggedCurrent ? UNRELEASED_VERSION : state.packageJson.version,
+  );
 
   const manifest = structuredClone(state.manifest);
   applyComponentMetadataToManifest(state.metadata, manifest, {
