@@ -454,6 +454,63 @@ it('suppresses the free-text input blur handler during a mode switch back to the
   ).to.be.false;
 });
 
+describe('touched state (disabled-forced blur)', () => {
+  // A focused native control (button/input) auto-blurs the instant it becomes `disabled` -- plain
+  // platform behavior, not a user interaction. Marking `touched` for it too was capable of
+  // reentering the very update that disabled the control (fr_asxOgk4UhNB07xevCWwFVQ).
+  it('does not mark touched from a blur caused by the trigger itself becoming disabled (closed-dropdown mode)', async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+    )) as LyraModelSelect;
+    trigger(el).focus();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement, 'the trigger is focused before disabling').to.exist;
+
+    el.disabled = true; // forces the native blur once `disabled` reaches the trigger button
+    await el.updateComplete;
+    expect(
+      (el as unknown as { touched: boolean }).touched,
+      'a blur the platform forces by disabling the control must not mark it touched',
+    ).to.be.false;
+  });
+
+  it('does not mark touched from a blur caused by the combobox input itself becoming disabled (free-text mode)', async () => {
+    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+    input(el).focus();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement, 'the combobox input is focused before disabling').to.exist;
+
+    el.disabled = true; // forces the native blur once `disabled` reaches the combobox input
+    await el.updateComplete;
+    expect(
+      (el as unknown as { touched: boolean }).touched,
+      'a blur the platform forces by disabling the control must not mark it touched',
+    ).to.be.false;
+  });
+
+  it('still marks touched from a real (non-disabled) blur of the trigger, unchanged', async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+    )) as LyraModelSelect;
+    const control = trigger(el);
+    control.focus();
+    await el.updateComplete;
+    control.blur();
+    await el.updateComplete;
+    expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  });
+
+  it('still marks touched from a real (non-disabled) blur of the combobox input, unchanged', async () => {
+    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+    const control = input(el);
+    control.focus();
+    await el.updateComplete;
+    control.blur();
+    await el.updateComplete;
+    expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  });
+});
+
 it('clears a stale active row when an open catalog is replaced', async () => {
   const el = (await fixture(
     html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,

@@ -742,7 +742,12 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       event.stopImmediatePropagation();
       return;
     }
-    this.touched = true;
+    // The trigger's own `disabled` state becoming true force-blurs it if it currently holds
+    // focus -- a platform reaction, not a user interaction -- and can land synchronously inside
+    // the very property write that disabled this control, so `effectiveDisabled` already reads
+    // true here whenever this is that case. Marking `touched` for it risked reentering that
+    // in-flight update for a state flip nothing observable needed (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
@@ -826,7 +831,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       event.stopImmediatePropagation();
       return;
     }
-    this.touched = true;
+    // Same disabled-forced-blur guard as onTriggerBlur above -- the combobox input's own
+    // `disabled` state becoming true auto-blurs it if it currently holds focus, a platform
+    // reaction rather than user interaction (fr_asxOgk4UhNB07xevCWwFVQ).
+    if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
