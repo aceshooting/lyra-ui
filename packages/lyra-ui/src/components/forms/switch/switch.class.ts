@@ -570,7 +570,20 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   };
 
   private onBlur = (event: FocusEvent): void => {
-    this.touched = true;
+    // `<lr-switch>` is form-associated (`static formAssociated = true`), so setting the host's
+    // `disabled` attribute (the `disabled` setter's `toggleAttribute()` call) makes the browser's
+    // native form-associated-custom-element machinery treat the host as "actually disabled"
+    // synchronously -- and that runs its own unfocusing steps against whatever inside the shadow
+    // tree currently holds focus, firing a real `blur` on the internal `[part~="base"]` span
+    // *before* Lit's own async re-render has even reached its `tabindex` attribute. Confirmed via
+    // a captured marker showing the `blur` firing synchronously inside the `disabled` property
+    // setter, with the span's `tabIndex` still `0` at that point -- the exact same observable race
+    // as `<lr-input>`'s `onBlur` (fr_asxOgk4UhNB07xevCWwFVQ), just reached through the FACE
+    // disabled-state's forced blur rather than a native `<input disabled>`'s. That is not a user
+    // interaction: marking `touched` for it could reenter an in-flight Lit update and trip Lit's
+    // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
+    // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
+    if (!this.effectiveDisabled) this.touched = true;
     this.hasInteracted = true;
     this.reflectValidityStates();
     relayNativeEvent(this, event);

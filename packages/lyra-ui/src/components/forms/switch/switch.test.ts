@@ -519,6 +519,47 @@ it('reflects aria-invalid on the inner switch only after the field has been inte
   expect(base.getAttribute('aria-invalid')).to.equal('false');
 });
 
+it('does not mark touched from a blur the browser forces when the control becomes disabled while focused', async () => {
+  // Regression test for the same underlying hazard as <lr-input>'s onBlur fix
+  // (fr_asxOgk4UhNB07xevCWwFVQ), reached through a different mechanism here: <lr-switch> is
+  // form-associated (`static formAssociated = true`), so setting its `disabled` attribute makes
+  // the browser's own form-associated-custom-element machinery treat the host as "actually
+  // disabled" synchronously and run unfocusing steps against whatever inside the shadow tree
+  // currently holds focus -- firing a real `blur` on the internal `[part~="base"]` span
+  // synchronously inside the `disabled` setter, *before* Lit's own async re-render has even
+  // reached the span's `tabindex` attribute (confirmed below: the forced blur lands while
+  // `tabIndex` is still `0`, not yet flipped to `-1`). That is not a user interaction:
+  // onBlur() unconditionally marking `touched = true` for it was capable of reentering an
+  // in-flight Lit update and tripping Lit's dev-mode "scheduled an update after an update
+  // completed" warning, and would otherwise let a later re-enable flash `user-invalid` styling
+  // for an interaction the user never actually had a chance to make.
+  const el = (await fixture(html`<lr-switch required>Label</lr-switch>`)) as LyraSwitch;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
+
+  el.disabled = true;
+  // The forced blur -- and this component's onBlur() reacting to it -- already happened
+  // synchronously inside the setter above, before any awaiting.
+  expect(base.tabIndex, 'the forced blur precedes the async re-render that flips tabindex').to.equal(0);
+  expect(
+    el.shadowRoot!.activeElement === base,
+    'the browser force-blurs the focused span when the host becomes actually-disabled',
+  ).to.be.false;
+  expect(isTouched(), 'a disable-forced blur must not mark touched').to.be.false;
+
+  await el.updateComplete;
+  el.disabled = false;
+  await el.updateComplete;
+  expect(isTouched(), 'still not touched after re-enabling').to.be.false;
+
+  // A genuine user-driven blur (not caused by disablement) still marks touched, unchanged.
+  base.dispatchEvent(new FocusEvent('blur'));
+  expect(isTouched(), 'a real blur still marks touched').to.be.true;
+});
+
 it('hides the label part when the default slot has no real content', async () => {
   const el = (await fixture(html`<lr-switch></lr-switch>`)) as LyraSwitch;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
