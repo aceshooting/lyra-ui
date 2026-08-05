@@ -1,5 +1,0 @@
----
-"@aceshooting/lyra-ui": patch
----
-
-Fix `LyraElement`'s ancestor `class`/`style` observer (introduced in the previous release to stop spurious re-renders) forcing a `getComputedStyle()` read on *every* ancestor `class`/`style`/`locale`/`lang` mutation, even ones with nothing to do with direction. That forced read — from a sibling's own unrelated `MutationObserver` reacting to an ancestor's inline-style write — could permanently break a completely unrelated host's own shadow-DOM CSS custom-property resolution in Chromium (observed with `<lr-chip-group>`'s `--lr-chip-group-overflow-expanded-color`), and forced an extra synchronous style read on every reconnect/adoption regardless of whether anything direction-relevant changed. The observer now only calls `getComputedStyle()` when the mutation could plausibly affect direction (an explicit `dir`/`class` change, or a `style` change that actually declares `direction`), and seeds its baseline from whatever the host's own render already resolved instead of forcing an extra read at connect time.

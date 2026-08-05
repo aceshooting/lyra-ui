@@ -1,5 +1,33 @@
 # Changelog
 
+## 8.2.1
+
+### Patch Changes
+
+- 6c00bbc: Fix `<lr-chat-composer>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 3a942eb: Fix `<lr-checkbox>` marking a field touched/interacted from a blur the platform forces when the control (or an ancestor `<fieldset>`) becomes disabled while it is focused, which could leave the control primed to show as invalid immediately on re-enable, or trip a Lit dev-mode reentrancy warning.
+- 842484a: Fix `<lr-model-select>` marking a field touched from a blur the platform forces when the trigger button or combobox input becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 9c69ed7: Fix `<lr-textarea>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 9476967: Fix `<lr-time-input>` marking a segment touched from a blur the platform forces when the focused segment becomes disabled (its tabindex drops below zero while it still holds focus), which could trip a Lit dev-mode reentrancy warning.
+- 823b395: `@aceshooting/lyra-ui/testing`'s `installHappyDomFormAssociatedShims()` now resolves the stub `ElementInternals.form` live via `host.closest('form')` instead of always `null` — a form-associated component that calls `attachInternals()` from its constructor (before it's inserted anywhere) previously got a permanently-`null` form owner even after being placed inside a real `<form>`, silently breaking anything (like `<lr-button>`) that resolves its submit target through `internals.form`.
+- de626e7: Fix `<lr-input>` marking a field touched from a blur the platform forces when the control becomes disabled while focused (fr_asxOgk4UhNB07xevCWwFVQ), and stop `formDisabledCallback()` redoing validity/render work that a same-tick `disabled` write already performed — together these could trip Lit's dev-mode "scheduled an update after an update completed" warning inside a real `<lr-dialog>` for a re-render nothing observable needed.
+- 340d39b: Fix `<lr-known-date>` marking a field touched from a blur the platform forces when the field becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- db19f3e: `LyraElement`'s ancestor `class`/`style` observer (kept for CSS-only direction/locale context changes) now only calls `requestUpdate()` when the resolved direction or locale actually changes, instead of on every ancestor `class`/`style` mutation regardless of relevance — an unrelated ancestor style write (e.g. an overlay's own stacking-index custom property) could otherwise schedule a spurious re-render.
+- 6ef43b1: Fix `LyraElement`'s ancestor `class`/`style` observer (introduced in the previous release to stop spurious re-renders) forcing a `getComputedStyle()` read on _every_ ancestor `class`/`style`/`locale`/`lang` mutation, even ones with nothing to do with direction. That forced read — from a sibling's own unrelated `MutationObserver` reacting to an ancestor's inline-style write — could permanently break a completely unrelated host's own shadow-DOM CSS custom-property resolution in Chromium (observed with `<lr-chip-group>`'s `--lr-chip-group-overflow-expanded-color`), and forced an extra synchronous style read on every reconnect/adoption regardless of whether anything direction-relevant changed. The observer now only calls `getComputedStyle()` when the mutation could plausibly affect direction (an explicit `dir`/`class` change, or a `style` change that actually declares `direction`), and seeds its baseline from whatever the host's own render already resolved instead of forcing an extra read at connect time.
+- 0eb1de0: Fix `<lr-token-input>` marking a field touched (and committing a pending draft) from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- e849075: Fix `<lr-code-editor>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- f4b8304: Fix `<lr-phone-input>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- a9cd82e: Fix `<lr-file-input>` marking its dropzone touched from a blur the platform forces when the focused `[part="base"]` button becomes disabled, which could trip a Lit dev-mode reentrancy warning.
+- 9c35472: Fix `<lr-emoji-picker>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 5b96432: Fix `<lr-checkbox-group>` marking the group touched from a blur the platform forces when a focused child `<lr-checkbox>` becomes disabled -- either directly or via an ancestor `<fieldset disabled>` cascading down -- which could trip a Lit dev-mode reentrancy warning.
+- 3d5b695: Fix `<lr-date-input>` marking the field touched from a blur the platform forces when the internal date text input becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 8e1eb54: Fix `<lr-otp-input>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 530c30b: Fix `<lr-voice-picker>` marking a field touched from a blur the platform forces when the trigger button or free-text combobox input becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 614ee6a: Fix `<lr-switch>` marking a field touched from a blur the browser forces when the control (a form-associated custom element) becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning and could flash `user-invalid` styling on a later re-enable for an interaction the user never had.
+- 6149517: Fix `<lr-select>` marking a field touched from a blur the platform forces when the trigger becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- 1c58af5: Fix `<lr-combobox>` marking its field touched from a blur the platform forces when the internal input becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+- aa345d8: Fix `<lr-locale-picker>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
+
 ## 8.2.0
 
 ### Minor Changes
