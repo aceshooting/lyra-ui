@@ -1640,7 +1640,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   private onInputBlur = (): void => {
-    this.touched = true;
+    // fr_asxOgk4UhNB07xevCWwFVQ: a blur the platform forces when this focused native input becomes
+    // `disabled` (see the `?disabled=${this.effectiveDisabled}` binding above) is not a real user
+    // interaction -- marking `touched` for it could reenter an in-flight Lit update and trip Lit's
+    // dev-mode "scheduled an update after an update completed" warning.
+    if (!this.effectiveDisabled) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();

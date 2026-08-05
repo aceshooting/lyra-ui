@@ -866,6 +866,32 @@ it('reflects an invalid state only after the field has been interacted with once
   expect(el.hasAttribute('data-invalid')).to.be.true;
 });
 
+it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+  // a browser blur that is plain native HTML behavior, not a real user interaction, and must not
+  // flip the interaction-tracking `touched` state (the same fix already landed on <lr-input>'s own
+  // onBlur).
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(input);
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect((el as unknown as { touched: boolean }).touched).to.be.false;
+});
+
+it('still marks touched from a real blur unrelated to the control becoming disabled', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  input.blur();
+
+  expect((el as unknown as { touched: boolean }).touched).to.be.true;
+});
+
 it('shows a required-field asterisk after the label', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.label = 'Fruit';
