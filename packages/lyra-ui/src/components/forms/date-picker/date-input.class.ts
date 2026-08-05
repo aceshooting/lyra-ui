@@ -1369,7 +1369,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   private onInputBlur = (event: FocusEvent): void => {
-    this.touched = true;
+    // A blur the platform itself forces when a focused native control becomes `disabled` is not a
+    // real user interaction -- marking `touched` for it could reenter an in-flight Lit update and
+    // trip Lit's dev-mode "scheduled an update after an update completed" warning (fr_asxOgk4UhNB07xevCWwFVQ;
+    // same fix as <lr-input>'s onBlur).
+    if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
   };
 

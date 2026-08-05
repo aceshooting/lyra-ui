@@ -1274,6 +1274,41 @@ describe('blur/focus bubbling', () => {
   });
 });
 
+describe('touched state and disabled-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', () => {
+  // Regression test: the platform itself force-blurs a focused native control when it becomes
+  // `disabled` (nothing to do with custom elements) -- that is not a real user interaction, and
+  // marking `touched` for it could reenter an in-flight Lit update and trip Lit's dev-mode
+  // "scheduled an update after an update completed" warning. Checks the private `touched` state
+  // directly (not `aria-invalid`, which can lag a render behind and give false confidence).
+  it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
+    const el = (await fixture(html`<lr-date-input required></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.focus();
+    expect(el.shadowRoot!.activeElement, 'input must be focused before it is disabled').to.equal(input);
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect(
+      (el as unknown as { touched: boolean }).touched,
+      'a disable-forced blur must not mark the field touched',
+    ).to.be.false;
+  });
+
+  it('still marks touched from a real blur while enabled', async () => {
+    const el = (await fixture(html`<lr-date-input required></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.focus();
+    input.blur();
+    await el.updateComplete;
+
+    expect(
+      (el as unknown as { touched: boolean }).touched,
+      'a real user-driven blur must still mark the field touched',
+    ).to.be.true;
+  });
+});
+
 describe('native-wrapper focus/selection/editing surface', () => {
   it('exposes the internal date text input via a public getter', async () => {
     const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
