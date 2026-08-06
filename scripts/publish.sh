@@ -132,6 +132,12 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   exit 1
 fi
 
+# The exact commit this release is built from -- captured now, before the version bump below
+# rewrites package.json/CHANGELOG.md/package-metadata.ts, so it always names a real pushed commit
+# GitHub actually ran CI against. Used below to skip the redundant local `test` re-run per package
+# once that CI run is confirmed green for this exact SHA.
+PRE_BUMP_SHA="$(git rev-parse HEAD)"
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "Error: gh CLI not found. Install it to create the GitHub Release." >&2
   exit 1
@@ -151,6 +157,26 @@ if [[ "$resolved_repository" != "$GH_REPOSITORY" ]]; then
   echo "Error: GitHub resolved '$GH_REPOSITORY' as '$resolved_repository'." >&2
   exit 1
 fi
+
+# True only if every check-run GitHub has recorded for $1 (a commit SHA) is both completed and
+# non-failing (success/neutral/skipped). Fails closed -- any API error, zero check-runs (CI hasn't
+# started, or hasn't been reported yet), or a still-running/failed/cancelled check-run all count as
+# "not confirmed passing" -- so a transient network hiccup or an in-flight run never gets read as a
+# green light to skip real local verification.
+ci_confirmed_green_for_sha() {
+  local sha="$1" check_runs status conclusion
+  check_runs="$(GH_TOKEN="$GH_TOKEN" gh api "repos/$GH_REPOSITORY/commits/$sha/check-runs" --paginate \
+    --jq '.check_runs[] | "\(.status)\t\(.conclusion // "pending")"' 2>/dev/null)" || return 1
+  [[ -z "$check_runs" ]] && return 1
+  while IFS=$'\t' read -r status conclusion; do
+    [[ "$status" == "completed" ]] || return 1
+    case "$conclusion" in
+      success|neutral|skipped) ;;
+      *) return 1 ;;
+    esac
+  done <<< "$check_runs"
+  return 0
+}
 
 CHANGESET_FILES=()
 while IFS= read -r -d '' f; do
@@ -384,7 +410,12 @@ for dir in "${RELEASE_DIRS[@]}"; do
   pnpm --filter "$name" --if-present run build
   echo
   echo "==> [$name] Test"
-  pnpm --filter "$name" --if-present run test
+  if ci_confirmed_green_for_sha "$PRE_BUMP_SHA"; then
+    echo "Skipping local re-run: GitHub CI already ran and passed in full for $PRE_BUMP_SHA" \
+      "(the exact commit this release is built from, before this script's own version bump)."
+  else
+    pnpm --filter "$name" --if-present run test
+  fi
   echo
   echo "==> [$name] Generate default-string slices"
   pnpm --filter "$name" --if-present run default-string-slices
