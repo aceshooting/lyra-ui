@@ -8636,28 +8636,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 673,
+              "line": 675,
               "test": "is accessible in the plain-fallback path (no language set)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 680,
+              "line": 682,
               "test": "is accessible once shiki has highlighted the code",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 690,
+              "line": 692,
               "test": "is accessible when collapsible and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 1128,
+              "line": 1130,
               "test": "is accessible with a custom tab size on tab-indented code",
               "target": "el",
               "state": "populated"
