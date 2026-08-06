@@ -146,7 +146,7 @@ it('gives compact header controls the shared minimum hit area', async () => {
 
 describe('shiki highlighting (real peer)', () => {
   it('shows a loading skeleton and aria-busy while shiki loads for a set language, then swaps to highlighted output', async function () {
-    this.timeout(20_000);
+    this.timeout(35_000);
     // Captured against a provably-cold singleton -- see the root-level before() at the top of this
     // file for why this cannot be observed from inside the test itself.
     expect(coldLoad.ariaBusy, 'aria-busy while the shared shiki load is pending').to.equal('true');
@@ -164,13 +164,15 @@ describe('shiki highlighting (real peer)', () => {
       html`<lr-code-block language="javascript" .code=${jsSample}></lr-code-block>`,
     )) as LyraCodeBlock;
 
-    // 8000ms already flaked under load (8-way default @web/test-runner concurrency on this
-    // machine's 16 cores starves the real, unmocked shiki WASM+grammar load) -- same class of
-    // issue as lr-graph's NODE_COUNT_TIMEOUT below and flag.test.ts's img() helper.
+    // 8000ms, then 15000ms, both already flaked under load (8-way default @web/test-runner
+    // concurrency on this machine's 16 cores starves the real, unmocked shiki WASM+grammar load,
+    // and this is the one test in the file that provably observes a *cold* load rather than the
+    // singleton warmed by an earlier fixture) -- same class of issue as lr-graph's
+    // NODE_COUNT_TIMEOUT below and flag.test.ts's img() helper.
     await waitUntil(
       () => el.shadowRoot!.querySelector('.shiki') !== null,
       'highlighted output never appeared',
-      { timeout: 15000 },
+      { timeout: 30000 },
     );
 
     expect(el.hasAttribute('aria-busy')).to.be.false;
