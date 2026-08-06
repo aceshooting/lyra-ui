@@ -192,6 +192,17 @@ export default {
   // watchdog high enough for a slow worker to report the actual result without masking a stuck
   // file behind an unbounded wait.
   testsFinishTimeout: 300000,
+  // Default is 30s (@web/test-runner-core's DEFAULT_CONFIG.browserStartTimeout). Unlike
+  // chromium/firefox/webkit -- which restore from the ~/.cache/ms-playwright binary cache --
+  // Playwright's msedge/chrome "channel" browsers install via a real OS package manager
+  // (`playwright install msedge` runs an apt-get of microsoft-edge-stable) with no equivalent
+  // cache hit, so the first browser-session launch right after that install is measurably
+  // slower on a loaded shared CI runner and has repeatedly tripped the 30s default (observed
+  // 3x on lyra-ui@8.2.2's release commits: the first few test files in the edge/Node 22 shard
+  // fail with "browser was unable to create and start a test page after 30000ms", then every
+  // remaining file passes once the browser is warm). Applies to every browser, not just edge,
+  // but only matters when a launch is actually slow.
+  browserStartTimeout: 90000,
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
