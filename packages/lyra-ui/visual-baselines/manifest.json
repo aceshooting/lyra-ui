@@ -134,7 +134,12 @@
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
     { "id": "graph--default", "profile": "standard" },
-    { "id": "map--default", "profile": "standard" },
+    {
+      "id": "map--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The shadow-local MapLibre styling fix changes the current capture, which awaits human visual review."
+    },
     {
       "id": "wordcloud--default",
       "profile": "standard",
