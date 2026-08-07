@@ -1618,7 +1618,7 @@
     "katex": "^0.18.1",
     "libphonenumber-js": "^1.13.10",
     "mammoth": "^1.12.0",
-    "maplibre-gl": "^6.1.0",
+    "maplibre-gl": "^6.2.0",
     "marked": "^18.0.9",
     "oxc-parser": "^0.143.0",
     "papaparse": "^5.5.4",
