@@ -4,6 +4,7 @@ export const styles = css`
   :host {
     display: block;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     --_lr-trace-tree-bar-column: var(--lr-size-6rem);
     --_lr-trace-tree-tokens-in-column: 0;
     --_lr-trace-tree-tokens-out-column: 0;

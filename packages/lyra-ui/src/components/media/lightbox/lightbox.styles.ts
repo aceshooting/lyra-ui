@@ -15,6 +15,7 @@ export const styles = css`
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
     padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
     padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));

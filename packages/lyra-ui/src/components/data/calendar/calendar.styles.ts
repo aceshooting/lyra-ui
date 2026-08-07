@@ -8,6 +8,7 @@ export const styles = css`
        declare container-type on some ancestor whose box crosses the same threshold, making it
        effectively dead code out of the box. */
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     --lr-calendar-day-min-block-size: var(--lr-size-6rem);
     /* Component-scoped indirection over the shared --lr-color-brand-quiet token, so a consumer
        can retint the persistent selected-day highlight without also recoloring

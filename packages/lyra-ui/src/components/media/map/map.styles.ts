@@ -24,6 +24,173 @@ export const styles = css`
   [part='container'] {
     position: absolute;
     inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+  }
+  /* MapLibre creates these nodes inside the container above, hence inside this component's
+     shadow root. Page-level peer CSS cannot reach them; the wrapper owns the layout and
+     interaction rules for the MapLibre capabilities it exposes. */
+  .maplibregl-canvas-container {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  .maplibregl-canvas {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+  }
+  .maplibregl-canvas-container.maplibregl-interactive {
+    cursor: grab;
+    user-select: none;
+  }
+  .maplibregl-canvas-container.maplibregl-interactive:active {
+    cursor: grabbing;
+  }
+  .maplibregl-canvas-container.maplibregl-touch-zoom-rotate,
+  .maplibregl-canvas-container.maplibregl-touch-zoom-rotate .maplibregl-canvas {
+    touch-action: pan-x pan-y;
+  }
+  .maplibregl-canvas-container.maplibregl-touch-drag-pan,
+  .maplibregl-canvas-container.maplibregl-touch-drag-pan .maplibregl-canvas {
+    touch-action: pinch-zoom;
+  }
+  .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan,
+  .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan .maplibregl-canvas {
+    touch-action: none;
+  }
+  .maplibregl-marker {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: max-content;
+    will-change: transform;
+  }
+  .maplibregl-popup {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: var(--lr-layer-content);
+    display: flex;
+    will-change: transform;
+    pointer-events: none;
+    color: var(--lr-color-text);
+    font-family: var(--lr-font);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-normal);
+  }
+  .maplibregl-popup-anchor-top,
+  .maplibregl-popup-anchor-top-left,
+  .maplibregl-popup-anchor-top-right {
+    flex-direction: column;
+  }
+  .maplibregl-popup-anchor-bottom,
+  .maplibregl-popup-anchor-bottom-left,
+  .maplibregl-popup-anchor-bottom-right {
+    flex-direction: column-reverse;
+  }
+  .maplibregl-popup-anchor-left {
+    flex-direction: row;
+  }
+  .maplibregl-popup-anchor-right {
+    flex-direction: row-reverse;
+  }
+  :host(:dir(rtl)) .maplibregl-popup-anchor-left {
+    flex-direction: row-reverse;
+  }
+  :host(:dir(rtl)) .maplibregl-popup-anchor-right {
+    flex-direction: row;
+  }
+  .maplibregl-popup-tip {
+    inline-size: 0;
+    block-size: 0;
+    border: var(--lr-size-0-625rem) solid transparent;
+    z-index: var(--lr-layer-content);
+  }
+  .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+    align-self: center;
+    border-block-start: none;
+    border-block-end-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-top-left .maplibregl-popup-tip {
+    align-self: flex-start;
+    border-block-start: none;
+    border-inline-start: none;
+    border-block-end-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+    align-self: flex-end;
+    border-block-start: none;
+    border-inline-end: none;
+    border-block-end-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+    align-self: center;
+    border-block-end: none;
+    border-block-start-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip {
+    align-self: flex-start;
+    border-block-end: none;
+    border-inline-start: none;
+    border-block-start-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+    align-self: flex-end;
+    border-block-end: none;
+    border-inline-end: none;
+    border-block-start-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+    align-self: center;
+    border-inline-start: none;
+    border-inline-end-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+    align-self: center;
+    border-inline-end: none;
+    border-inline-start-color: var(--lr-color-surface-overlay);
+  }
+  .maplibregl-popup-content {
+    position: relative;
+    min-inline-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-m);
+    padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-xs));
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-overlay);
+    box-shadow: var(--lr-shadow-m);
+    pointer-events: auto;
+    overflow-wrap: anywhere;
+  }
+  .maplibregl-popup-close-button {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    font: inherit;
+    cursor: pointer;
+  }
+  .maplibregl-popup-close-button:hover {
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  .maplibregl-popup-close-button:active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-color-brand);
+  }
+  .maplibregl-popup-close-button:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same "optional
      peer dependency missing" failure shape. */
@@ -71,15 +238,8 @@ export const styles = css`
     flex: 0 0 auto;
   }
 
-  /* maplibre-gl injects its attribution/logo controls INTO [part='container'], i.e. into this
-     shadow root -- which the consumer's document-level \`maplibre-gl.css\` (the import map-loader.ts
-     tells them to add) can never reach across the shadow boundary. Without it the attribution
-     control is an unstyled <details>/<summary>: the corner anchors have no positioning so the
-     attribution flows in-line BELOW the canvas, and the <summary> shows the browser's default
-     disclosure triangle (a stray "▼"). Porting the essential positioning + summary reset here --
-     the same approach pdf-viewer.styles.ts uses for pdf.js's textLayer CSS -- anchors the
-     attribution to the map corner as an overlay and removes the marker. Only the attribution/
-     container rules are ported (this wrapper exposes no zoom/geolocate/etc. controls). */
+  /* MapLibre's attribution control is generated in the same shadow-local container. Keep it
+     anchored over the map and use Lyra's own surface, typography, and interaction tokens. */
   .maplibregl-ctrl-top-left,
   .maplibregl-ctrl-top-right,
   .maplibregl-ctrl-bottom-left,
@@ -107,6 +267,7 @@ export const styles = css`
   .maplibregl-ctrl {
     margin: var(--lr-space-xs);
     pointer-events: auto;
+    transform: translate(0);
   }
   .maplibregl-ctrl-attrib {
     padding: 0 var(--lr-space-xs);
@@ -121,6 +282,43 @@ export const styles = css`
   }
   .maplibregl-ctrl-attrib a:hover {
     text-decoration: underline;
+  }
+  .maplibregl-ctrl-attrib-inner {
+    overflow-wrap: anywhere;
+  }
+  .maplibregl-ctrl-attrib-button {
+    display: none;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    inline-size: var(--lr-icon-button-size);
+    block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius-pill);
+    background: transparent;
+    color: var(--lr-color-text);
+    cursor: pointer;
+  }
+  .maplibregl-ctrl-attrib.maplibregl-compact {
+    position: relative;
+    min-block-size: var(--lr-icon-button-size);
+    padding-inline-end: var(--lr-icon-button-size);
+  }
+  .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+    display: none;
+  }
+  .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button,
+  .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+    display: block;
+  }
+  .maplibregl-ctrl-attrib-button:hover,
+  .maplibregl-ctrl-attrib-button:active {
+    background: var(--lr-color-brand-quiet);
+  }
+  .maplibregl-ctrl-attrib-button:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Remove the native <summary> disclosure marker (the stray "▼") on the compact-toggle button. */
   .maplibregl-ctrl-attrib summary {

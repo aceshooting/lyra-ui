@@ -17,6 +17,7 @@ export const styles = css`
     /* Makes [part='base'] a query container so the @container rules below can
        react to the table's own available width instead of the viewport's. */
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part='filter-label'] {
     display: flex;

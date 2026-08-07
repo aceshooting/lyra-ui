@@ -96,4 +96,20 @@ describe('<lr-control-group>', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).inlineSize).to.equal('120px');
   });
+
+  it('keeps a useful intrinsic width when responsive inside a shrink-to-fit parent', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="display: grid; place-items: center;">
+        <lr-control-group responsive>
+          <lr-button size="s">Open</lr-button>
+          <lr-button size="s">Save</lr-button>
+        </lr-control-group>
+      </div>
+    `);
+    const group = wrapper.querySelector('lr-control-group') as LyraControlGroup;
+    const base = group.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(group.getBoundingClientRect().width).to.be.greaterThan(100);
+    expect(base.scrollWidth).to.be.at.most(group.clientWidth);
+  });
 });

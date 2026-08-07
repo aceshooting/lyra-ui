@@ -5,6 +5,10 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
+    /* Inline-size containment deliberately removes content-based intrinsic sizing. Supply the
+       centered/shrink-to-fit fallback that lets a standalone card remain visible while definite
+       allocations (grid tracks, percentages, explicit inline-size) continue to win normally. */
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part="base"] {
     position: relative;

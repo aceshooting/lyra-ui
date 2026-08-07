@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; container-type: inline-size; }
+  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='toolbar'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); align-items: center; }
   [part='toolbar'] h2 { min-inline-size: 0; flex: 1; margin: 0; font-size: var(--lr-font-size-lg); }

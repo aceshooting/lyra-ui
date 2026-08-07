@@ -142,7 +142,7 @@ export async function loadMaplibreModule(
   } catch (error) {
     console.warn(
       '<lr-map> needs the optional peer dependency `maplibre-gl` — install it with ' +
-        '`pnpm add maplibre-gl` and import `maplibre-gl/dist/maplibre-gl.css` once in your app.',
+        '`pnpm add maplibre-gl`.',
       error,
     );
     return null;
@@ -152,9 +152,9 @@ export async function loadMaplibreModule(
 /**
  * Lazily loads the optional peer dependency `maplibre-gl` once per page.
  * Resolves to `null` (with a one-time warning) if it isn't installed —
- * mirrors `<lr-flag>`'s peer-dependency pattern. Consumers must separately
- * import `maplibre-gl/dist/maplibre-gl.css`. MapLibre v6 consumers also configure its module-worker
- * URL for their bundler once they install the peer; v5's standard build includes its worker.
+ * mirrors `<lr-flag>`'s peer-dependency pattern. `<lr-map>` supplies the styles for MapLibre's
+ * generated DOM inside its shadow root. MapLibre v6 consumers also configure its module-worker URL
+ * for their bundler once they install the peer; v5's standard build includes its worker.
  */
 export function loadMaplibre(): Promise<MaplibreModule | null> {
   if (!maplibre) {

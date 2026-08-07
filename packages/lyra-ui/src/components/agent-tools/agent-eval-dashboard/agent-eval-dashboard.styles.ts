@@ -1,6 +1,6 @@
 import { css } from 'lit';
 export const styles = css`
-  :host { display: block; container-type: inline-size; }
+  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='heading'], [part='runs-heading'] { margin: 0; font-size: var(--lr-font-size-lg); font-weight: var(--lr-font-weight-semibold); }
   [part='metrics'] { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--lr-size-10rem), 1fr)); gap: var(--lr-space-s); }

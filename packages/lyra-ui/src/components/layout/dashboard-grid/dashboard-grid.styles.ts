@@ -7,6 +7,7 @@ export const styles = css`
        size (a dashboard-grid is commonly embedded in a panel of varying width, not the viewport)
        -- same convention as lr-button-group/lr-control-group's own container-query approach. */
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
   }
 

@@ -295,9 +295,10 @@ Release blockers for new components, bugs in existing ones. Full rules:
   most-repeated defect in this library's history).
 - Wrap internal state qualifiers in `:where()` so consumer `::part()` rules can win; target the
   node that actually receives the pseudo-class state.
-- Respond to allocation, not viewport: container queries (with `container-type` in the same
-  stylesheet), 320px + long-content coverage; dark mode keys off tokens/`data-*`, with
-  `prefers-color-scheme` demoted to a fallback.
+- Respond to allocation, not viewport: container queries (with `container-type` and a tokenized
+  `contain-intrinsic-inline-size` fallback in the same rule), 320px + long-content and
+  shrink-to-fit coverage; dark mode keys off tokens/`data-*`, with `prefers-color-scheme` demoted
+  to a fallback.
 - Motion uses tokens and stops under `prefers-reduced-motion`; test both branches.
 - A public API change is incomplete until JSDoc + tests + story + `llms/<family>.md` + the
   regenerated manifest all agree (`pnpm llms`, `pnpm manifest`); verify numeric/parity claims by

@@ -1,6 +1,6 @@
 import { css } from 'lit';
 export const styles = css`
-  :host { display: block; container-type: inline-size; }
+  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='answer'] { min-inline-size: 0; }
   [part='citations'], [part='sources'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }

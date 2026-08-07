@@ -116,6 +116,46 @@ it('renders plain <pre><code> immediately, HTML-escaped, when language is unset 
   expect(code!.textContent).to.equal('<script>alert(1)</script>');
 });
 
+it('extends the plain-code background paint box across a long line\'s full horizontal scroll width', async () => {
+  const longLine = `wget https://example.test/${'unbroken-path-segment-'.repeat(30)}`;
+  const el = (await fixture(
+    html`<lr-code-block style="inline-size: 22rem" .code=${longLine}></lr-code-block>`,
+  )) as LyraCodeBlock;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+
+  expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+  expect(pre.scrollWidth).to.be.greaterThan(body.clientWidth);
+  expect(pre.offsetWidth, 'the painted pre box must cover all of its scrollable content').to.be.at.least(
+    pre.scrollWidth,
+  );
+
+  body.scrollLeft = body.scrollWidth;
+  expect(body.scrollLeft).to.be.greaterThan(0);
+  expect(getComputedStyle(pre).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('extends the shiki-themed background paint box across a long line\'s full horizontal scroll width', async () => {
+  const longValue = `{"url":"https://example.test/${'unbroken-path-segment-'.repeat(30)}"}`;
+  const el = (await fixture(html`
+    <lr-code-block
+      style="inline-size: 22rem"
+      language="json"
+      .languages=${{ json: jsonGrammar }}
+      .code=${longValue}
+    ></lr-code-block>
+  `)) as LyraCodeBlock;
+  await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+
+  expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+  expect(pre.scrollWidth).to.be.greaterThan(body.clientWidth);
+  expect(pre.offsetWidth, 'the painted shiki pre box must cover all of its scrollable content').to.be.at.least(
+    pre.scrollWidth,
+  );
+});
+
 it('shows filename and language as visible header text when set', async () => {
   const el = (await fixture(
     html`<lr-code-block filename="app.ts" language="typescript" .code=${jsSample}></lr-code-block>`,

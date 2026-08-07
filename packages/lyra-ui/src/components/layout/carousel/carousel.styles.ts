@@ -5,6 +5,7 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   [part~="base"] {

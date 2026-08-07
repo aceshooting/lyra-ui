@@ -162,6 +162,22 @@ describe("lr-card", () => {
     expect(header.scrollWidth).to.be.at.most(header.clientWidth);
   });
 
+  it("preserves an intrinsic inline size inside a shrink-to-fit grid parent", async () => {
+    const wrapper = (await fixture(html`
+      <div style="display: grid; place-items: center; inline-size: 40rem;">
+        <lr-card>
+          <div style="min-inline-size: 20rem;">Intrinsic card content</div>
+        </lr-card>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-card") as LyraCard;
+    await el.updateComplete;
+
+    expect(el.getBoundingClientRect().width).to.be.at.least(320);
+    expect(base(el).getBoundingClientRect().width).to.be.at.least(320);
+    expect(wrapper.scrollWidth).to.equal(wrapper.clientWidth);
+  });
+
   it('stretches [part="base"] to fill a CSS Grid row, matching a taller sibling instead of leaving blank space', async () => {
     const wrapper = (await fixture(html`
       <div

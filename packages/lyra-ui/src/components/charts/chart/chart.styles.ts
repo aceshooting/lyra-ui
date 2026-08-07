@@ -9,6 +9,7 @@ export const styles = css`
     min-block-size: var(--lr-chart-height, var(--lr-size-280px));
     block-size: auto;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
        var() directly — chart.ts's themeColors() resolves these once per
        draw() via getComputedStyle, same pattern as heatmap.ts's scale-lo/-hi.

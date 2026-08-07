@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; container-type: inline-size; }
+  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   ul { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding-inline-start: var(--lr-space-l); list-style: none; }
   [part='tree'] { padding-inline-start: 0; }
   [part~='node'] { min-inline-size: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); padding-inline-start: var(--lr-space-s); }

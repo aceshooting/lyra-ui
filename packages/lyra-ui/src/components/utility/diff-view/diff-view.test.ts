@@ -1,4 +1,5 @@
-import { fixture, expect, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, aTimeout, waitUntil } from '@open-wc/testing';
+import jsonGrammar from 'shiki/langs/json.mjs';
 import './diff-view.js';
 import type { LyraDiffView } from './diff-view.js';
 import type { DiffOp } from './diff-line-diff.js';
@@ -354,6 +355,24 @@ describe('layout', () => {
     (split.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
     expect(unifiedText).to.equal(splitText);
   });
+
+  it('paints a changed plain-text line through its full horizontal overflow width', async () => {
+    const longValue = 'unbrokenplainvalue'.repeat(80);
+    const el = (await fixture(html`
+      <lr-diff-view
+        style="inline-size: 20rem;"
+        .oldText=${'before'}
+        .newText=${longValue}
+      ></lr-diff-view>
+    `)) as LyraDiffView;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const line = el.shadowRoot!.querySelector('[part="line"][data-type="add"]') as HTMLElement;
+
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(line.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(line.offsetWidth).to.be.at.least(line.scrollWidth);
+    expect(getComputedStyle(line).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
 });
 
 describe('line-ending normalization', () => {
@@ -489,6 +508,30 @@ describe('syntax highlighting', () => {
     await aTimeout(10);
     const addLine = el.shadowRoot!.querySelector('[part="line"][data-type="add"]')!;
     expect(addLine.textContent!.trim()).to.equal('+ HL:x');
+  });
+
+  it('paints a Shiki-highlighted changed line through its full horizontal overflow width', async () => {
+    const longValue = `{"value":"${'highlighted'.repeat(160)}"}`;
+    const el = (await fixture(html`
+      <lr-diff-view
+        style="inline-size: 20rem;"
+        language="json"
+        .languages=${{ json: jsonGrammar }}
+        .oldText=${'{"value":"before"}'}
+        .newText=${longValue}
+      ></lr-diff-view>
+    `)) as LyraDiffView;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="line"][data-type="add"] span[style]') != null,
+      'Shiki-highlighted diff line never rendered',
+      { timeout: 2000 },
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const line = el.shadowRoot!.querySelector('[part="line"][data-type="add"]') as HTMLElement;
+
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(line.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(line.offsetWidth).to.be.at.least(line.scrollWidth);
   });
 
   it('keeps highlighted line count in lockstep with the diff line count for CRLF input', async () => {

@@ -1086,6 +1086,46 @@ it('adds a maplibregl.Marker per entry in markers', async function () {
   expect(labels).to.deep.equal(['Station A', 'Station B']);
 });
 
+it('provides shadow-local layout for MapLibre canvas, markers, and popups without document CSS', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(
+    html`<lr-map style="inline-size: 20rem; block-size: 12rem"></lr-map>`,
+  )) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  el.markers = [{ id: 'station', lngLat: [10, 20], label: 'Station A' }];
+  await el.updateComplete;
+
+  const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
+  const canvas = el.shadowRoot!.querySelector('.maplibregl-canvas') as HTMLCanvasElement;
+  const marker = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  const controlCorner = el.shadowRoot!.querySelector(
+    '.maplibregl-ctrl-bottom-right',
+  ) as HTMLElement;
+
+  expect(container.clientWidth).to.be.greaterThan(0);
+  expect(container.clientHeight).to.be.greaterThan(0);
+  expect(canvas.clientWidth).to.equal(container.clientWidth);
+  expect(canvas.clientHeight).to.equal(container.clientHeight);
+  expect(getComputedStyle(canvas).position).to.equal('absolute');
+  expect(getComputedStyle(marker).position).to.equal('absolute');
+  expect(getComputedStyle(controlCorner).position).to.equal('absolute');
+  expect(getComputedStyle(controlCorner).pointerEvents).to.equal('none');
+
+  marker.click();
+  await waitUntil(() => el.shadowRoot!.querySelector('.maplibregl-popup') != null, 'popup never opened');
+  const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
+  const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content') as HTMLElement;
+  const popupClose = el.shadowRoot!.querySelector('.maplibregl-popup-close-button') as HTMLElement;
+  expect(getComputedStyle(popup).position).to.equal('absolute');
+  expect(getComputedStyle(popup).display).to.equal('flex');
+  expect(getComputedStyle(popup).pointerEvents).to.equal('none');
+  expect(getComputedStyle(popupContent).pointerEvents).to.equal('auto');
+  expect(getComputedStyle(popupClose).position).to.equal('absolute');
+});
+
 it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;

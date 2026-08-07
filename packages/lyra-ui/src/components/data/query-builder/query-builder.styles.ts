@@ -8,6 +8,7 @@ export const styles = css`
        component's own allocated width (a sidebar, a split pane, a dialog) rather than the
        viewport. */
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   [part='base'] {

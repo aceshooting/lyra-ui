@@ -49,6 +49,11 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
     white-space: pre-wrap;
+    /* The base/side owns horizontal scrolling while each line owns its change-state background.
+       Grow that painted box with an unbroken line, but keep short lines filling the scrollport. */
+    box-sizing: border-box;
+    inline-size: max-content;
+    min-inline-size: 100%;
   }
   [part='line']:not([data-type='fold']) {
     /* Diffed source code is read left-to-right regardless of the surrounding document direction --

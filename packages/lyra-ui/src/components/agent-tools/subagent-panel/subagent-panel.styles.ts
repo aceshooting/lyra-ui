@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; container-type: inline-size; }
+  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='list'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding: 0; list-style: none; }
   [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-l)); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); overflow: hidden; }
   [part~='run-selected'] {

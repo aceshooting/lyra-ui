@@ -153,6 +153,12 @@ component and a release blocker for a new one.
   `for f in $(grep -l '@container' src/components/*/*/*.styles.ts); do grep -q 'container-type' "$f" || echo "$f"; done`
   — this currently returns real hits, so do not assume an existing `@container` rule is proof of
   a working pattern to copy.
+- **Inline-size containment removes the query container's content-based intrinsic size.** A host
+  that stretches normally can therefore collapse to zero when a flex/grid parent asks it to
+  shrink-wrap its content. Every `container-type: inline-size` declaration also declares a
+  tokenized `contain-intrinsic-inline-size` fallback in that same rule (enforced by
+  `style-policy`), with a rendered regression that measures the component in a shrink-to-fit
+  allocation such as `display: grid; place-items: center`.
 - **A component-owned dark-mode override keyed only on `prefers-color-scheme` bypasses the
   library's theming.** Dark mode here is token/attribute-driven (`--lr-theme-*`), so a consumer
   who sets an explicit dark theme without touching OS color-scheme gets every part re-themed

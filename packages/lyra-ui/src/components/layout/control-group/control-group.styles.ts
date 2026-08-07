@@ -14,6 +14,7 @@ export const styles = css`
      responsive property. */
   :host([responsive]) {
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-12rem);
   }
 
   [part='base'] {

@@ -169,6 +169,13 @@ export const styles = css`
   [part='pre'] {
     margin: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
+    /* The body owns scrolling, so this descendant's painted box must grow to the longest
+       unwrapped line instead of stopping at the body's initially visible width. The 100%
+       minimum keeps short code filling the scrollport; max-content extends the background and
+       line-state painting through the full horizontal overflow range. */
+    box-sizing: border-box;
+    inline-size: max-content;
+    min-inline-size: 100%;
     /* Source code is read left-to-right regardless of the surrounding document
        direction -- like every code surface (VS Code, GitHub, devtools). Without
        this, an ancestor dir="rtl" bidi-reorders each line (a trailing ';' jumps

@@ -50,6 +50,24 @@ const customProperty = /^\s*(--[A-Za-z][A-Za-z0-9-]*)\s*:/;
 
 for (const file of styleFiles(componentsRoot)) {
   const source = stripComments(readFileSync(file, 'utf8'));
+
+  // `container-type: inline-size` applies inline-size containment to the declaration's own box,
+  // which removes content-based intrinsic sizing. In a shrink-to-fit flex/grid placement that
+  // otherwise resolves the component to zero. Keep the fallback on the exact query-container rule
+  // (host or internal part), so every new responsive surface is safe without relying on a distant
+  // consumer allocation.
+  for (const match of source.matchAll(/container-type\s*:\s*inline-size\s*;/g)) {
+    const ruleStart = source.lastIndexOf('{', match.index);
+    const ruleEnd = source.indexOf('}', match.index);
+    const ruleBody = source.slice(ruleStart + 1, ruleEnd);
+    if (!/contain-intrinsic-inline-size\s*:/.test(ruleBody)) {
+      const line = source.slice(0, match.index).split('\n').length;
+      findings.push(
+        `${file}:${line}: inline-size query container must declare contain-intrinsic-inline-size in the same rule`,
+      );
+    }
+  }
+
   source.split('\n').forEach((line, index) => {
     if (line.includes('@media') || line.includes('@container')) return;
 

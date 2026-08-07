@@ -7,6 +7,7 @@ export const styles = css`
     min-block-size: 0;
     block-size: 100%;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part='base'] {
     display: grid;

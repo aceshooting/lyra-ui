@@ -8,6 +8,7 @@ export const styles = css`
        allocated width (a chat transcript, a split pane, a narrow dialog) instead of the page
        viewport's -- a reusable primitive can be squeezed into a narrow panel on a wide desktop. */
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part='base'] {
     display: block;

@@ -29,6 +29,7 @@ export const styles = css`
     position: relative;
     isolation: isolate;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     overflow: hidden;
     border: var(--border-width) solid var(--border-color);
     border-radius: var(--border-radius);

@@ -41,6 +41,21 @@ describe('lr-code-block-core', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="pre"] .line')).to.have.lengthOf(2);
   });
 
+  it('extends the plain-code background paint box across a long line\'s full horizontal scroll width', async () => {
+    const longLine = `wget https://example.test/${'unbroken-path-segment-'.repeat(30)}`;
+    const el = (await fixture(
+      html`<lr-code-block-core style="inline-size: 22rem" .code=${longLine}></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+
+    expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+    expect(pre.scrollWidth).to.be.greaterThan(body.clientWidth);
+    expect(pre.offsetWidth, 'the painted pre box must cover all of its scrollable content').to.be.at.least(
+      pre.scrollWidth,
+    );
+  });
+
   it('forwards a host aria-label to the internal named code region and keeps it reactive', async () => {
     const el = (await fixture(
       html`<lr-code-block-core aria-label="Response payload" language="json"></lr-code-block-core>`,
@@ -63,6 +78,31 @@ describe('lr-code-block-core', () => {
     // too tight for under load.
     await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
     expect(el.shadowRoot!.querySelector('.shiki')).to.exist;
+  });
+
+  it('extends a shiki-themed background across a long line\'s full horizontal scroll width', async () => {
+    const longValue = `{"url":"https://example.test/${'unbroken-path-segment-'.repeat(30)}"}`;
+    const el = (await fixture(html`
+      <lr-code-block-core
+        style="inline-size: 22rem"
+        language="json"
+        .languages=${{ json: jsonGrammar }}
+        .code=${longValue}
+      ></lr-code-block-core>
+    `)) as LyraCodeBlockCore;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+
+    expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+    expect(pre.scrollWidth).to.be.greaterThan(body.clientWidth);
+    expect(pre.offsetWidth, 'the painted shiki pre box must cover all of its scrollable content').to.be.at.least(
+      pre.scrollWidth,
+    );
+
+    body.scrollLeft = body.scrollWidth;
+    expect(body.scrollLeft).to.be.greaterThan(0);
+    expect(getComputedStyle(pre).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
   it('does not set shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()', async function () {

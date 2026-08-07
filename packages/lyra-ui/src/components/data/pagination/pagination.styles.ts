@@ -5,6 +5,7 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     /* Both knobs read the shared control ladder, which owns every tier and matches both the s/m/l
        and small/medium/large spellings in one selector list. Keeping the public
        --lr-pagination-* names in front lets a consumer retune this component alone, while the

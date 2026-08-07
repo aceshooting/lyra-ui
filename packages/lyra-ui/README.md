@@ -52,9 +52,8 @@ npm install @aceshooting/lyra-ui
 # optional peers: mammoth and dompurify, only needed for <lr-docx-viewer>
 #   — Mammoth converts DOCX files to semantic HTML instead of pixel-exact Word page layout.
 # optional peer: jszip, only needed for <lr-archive-viewer>
-# optional peer: maplibre-gl, only needed for <lr-map> — also import
-#   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lr-map only
-#   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
+# optional peer: maplibre-gl, only needed for <lr-map> — lr-map styles the
+#   generated canvas, markers, popups, and controls inside its shadow root.
 #   Lyra supports MapLibre v5 and v6. v5's standard build includes its worker;
 #   v6 is ESM-only, requires WebGL2, and also needs its module-worker URL
 #   configured for your bundler before the first map is constructed.
@@ -70,7 +69,6 @@ For example, Vite consumers using MapLibre v6 configure its self-contained worke
 ```js
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import 'maplibre-gl/dist/maplibre-gl.css';
 
 setWorkerUrl(workerUrl);
 ```

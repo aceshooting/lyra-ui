@@ -4,6 +4,7 @@ export const styles = css`
   :host {
     display: block;
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     --lr-document-compare-pane-max-height: var(--lr-size-24rem);
   }
 

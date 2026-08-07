@@ -300,18 +300,18 @@ e.g. not installed). The post-mount failure is appended to the document's pre-mo
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
 
-**Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). The consumer must **separately**
-import `maplibre-gl/dist/maplibre-gl.css`. MapLibre v5's standard build includes its worker.
-MapLibre v6 is ESM-only, requires WebGL2, and additionally needs its module-worker URL configured
-for the bundler once — the component cannot choose a bundler-specific worker URL. For Vite with
-v6:
+**Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
+generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
+stylesheet is neither required nor able to reach those nodes. MapLibre v5's standard build includes
+its worker. MapLibre v6 is ESM-only, requires WebGL2, and additionally needs its module-worker URL
+configured for the bundler once — the component cannot choose a bundler-specific worker URL. For
+Vite with v6:
 
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
 <script type="module">
   import { setWorkerUrl } from 'maplibre-gl';
   import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-  import 'maplibre-gl/dist/maplibre-gl.css';
   setWorkerUrl(workerUrl);
 
   const m = document.querySelector('lr-map');

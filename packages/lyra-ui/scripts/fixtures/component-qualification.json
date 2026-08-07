@@ -5970,21 +5970,21 @@
           "evidence": [
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 193,
+              "line": 209,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 204,
+              "line": 220,
               "test": "an interactive card containing a slotted lr-button is still accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 473,
+              "line": 489,
               "test": "is accessible with every vertical action slot populated",
               "target": "el",
               "state": "populated"
@@ -8636,28 +8636,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 675,
+              "line": 715,
               "test": "is accessible in the plain-fallback path (no language set)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 682,
+              "line": 722,
               "test": "is accessible once shiki has highlighted the code",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 692,
+              "line": 732,
               "test": "is accessible when collapsible and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 1130,
+              "line": 1170,
               "test": "is accessible with a custom tab size on tab-indented code",
               "target": "el",
               "state": "populated"
@@ -8671,7 +8671,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 396,
+              "line": 436,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -8845,7 +8845,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 99,
+              "line": 139,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -8859,7 +8859,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 396,
+              "line": 436,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12903,7 +12903,7 @@
           "evidence": [
             {
               "file": "src/components/utility/diff-view/diff-view.test.ts",
-              "line": 84,
+              "line": 85,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -12923,7 +12923,7 @@
           "evidence": [
             {
               "file": "src/components/utility/diff-view/diff-view.test.ts",
-              "line": 640,
+              "line": 683,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24794,7 +24794,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 384,
+              "line": 385,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -190,8 +190,9 @@ export interface LyraMapEventMap {
  * independent of `choropleth`'s field/stops color-interpolation), plus a peer-neutral
  * `map` getter for common imperative operations. Its runtime value is the underlying MapLibre
  * map, while its declaration stays independent of the optional peer. Requires `maplibre-gl`
- * v5 or v6 (consumers also import its CSS). MapLibre v6 is ESM-only, requires WebGL2, and needs
- * its module-worker URL configured once; v5's standard build includes its worker.
+ * v5 or v6; the component styles MapLibre's generated canvas, marker, popup, and control DOM
+ * inside its shadow root. MapLibre v6 is ESM-only, requires WebGL2, and needs its module-worker
+ * URL configured once; v5's standard build includes its worker.
  *
  * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
  * constructed until this element is first visible in the viewport (tracked

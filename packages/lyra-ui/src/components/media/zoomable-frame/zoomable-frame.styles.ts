@@ -12,6 +12,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   [part='iframe'] {
