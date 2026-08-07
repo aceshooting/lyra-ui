@@ -1,5 +1,14 @@
 # Changelog
 
+## 8.2.3
+
+### Patch Changes
+
+- 7d76af5: Fix horizontally scrolled Shiki code and diff backgrounds, provide shadow-local MapLibre canvas,
+  marker, popup, and control layout, and prevent inline-size query containers from collapsing in
+  shrink-to-fit layouts.
+- db49718: Raise the optional `postal-mime` peer range to `^2.7.6`.
+
 ## 8.2.2
 
 ### Patch Changes
