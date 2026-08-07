@@ -109,7 +109,10 @@ the PR checks list tells you which of these to reproduce locally:
    free the long path from unrelated dist-dependent work. This is the one time lyra-ui's own Chromium
    suite runs; a separate `pnpm test` would repeat the same files without coverage. `build_and_coverage_build`'s
    `pnpm build` step still runs `check:build-artifacts`, which is chained inside the package's
-   `build` script.
+   `build` script. The coverage lane's timeout must budget its unconditional fresh-runner
+   `playwright install-deps` step as well as the complete deterministic sweep: a 20-minute ceiling
+   once cancelled a zero-failure run at 284/456 files after apt setup alone consumed more than ten
+   minutes, so the measured end-to-end allowance is 30 minutes.
 4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
    else `build-and-coverage` needs, so it gets its own `pnpm build` rather than waiting on that
    job. It then runs `pnpm --filter @aceshooting/lyra-ui pack --dry-run`, verifies
