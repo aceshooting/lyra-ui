@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { loadVisualStory } from './visual-story-readiness.mjs';
 
 const manifestPath = fileURLToPath(new URL('../visual-baselines/manifest.json', import.meta.url));
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
@@ -169,6 +170,43 @@ assert.match(
   ciWorkflow,
   /visual-regression-gate:[\s\S]*?needs: visual-regression/,
   'the stable release-blocking visual-regression check must aggregate all matrix legs',
+);
+
+function readinessPage(waitOutcomes) {
+  const calls = [];
+  return {
+    calls,
+    async goto(url, options) {
+      calls.push(['goto', url, options]);
+    },
+    async addStyleTag(options) {
+      calls.push(['style', options]);
+    },
+    async waitForFunction(_predicate, _argument, options) {
+      calls.push(['wait', options]);
+      const outcome = waitOutcomes.shift();
+      if (outcome instanceof Error) throw outcome;
+    },
+  };
+}
+
+const recoveredPage = readinessPage([new Error('empty root'), undefined]);
+assert.deepEqual(
+  await loadVisualStory(recoveredPage, 'http://storybook/story', ':root {}'),
+  { attempts: 2 },
+  'one empty Storybook root should receive one fresh navigation',
+);
+assert.deepEqual(
+  recoveredPage.calls.map(([name]) => name),
+  ['goto', 'style', 'wait', 'goto', 'style', 'wait'],
+  'each bounded readiness attempt must navigate, inject deterministic styles, then wait',
+);
+
+const persistentlyEmptyPage = readinessPage([new Error('empty root one'), new Error('empty root two')]);
+await assert.rejects(
+  loadVisualStory(persistentlyEmptyPage, 'http://storybook/story', ':root {}'),
+  /Storybook root was not ready after 2 attempts.*empty root two/,
+  'a persistent render failure must remain blocking after the one recovery navigation',
 );
 
 const expectedTrackedBaselines = [];

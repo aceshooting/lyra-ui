@@ -32,6 +32,7 @@ import {
   shardVisualCaptures,
   visualCapturePlan,
 } from './visual-regression-shard.mjs';
+import { loadVisualStory } from './visual-story-readiness.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -406,16 +407,10 @@ async function captureStory(page, baseUrl, story, axis) {
     reducedMotion: 'reduce',
   });
   const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme};direction:${direction}`;
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   // Applied before the story's first component upgrade so canvas painters that measure text
   // during their initial render (e.g. word-cloud's spiral-search layout) see the forced font on
   // their very first pass rather than re-measuring after a live custom-property change.
-  await page.addStyleTag({ content: FONT_OVERRIDE_CSS });
-  await page.waitForFunction(
-    () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
-    undefined,
-    { timeout: 15_000 },
-  );
+  await loadVisualStory(page, url, FONT_OVERRIDE_CSS);
   // Let webfonts, chart/canvas/map render passes, and async fixture fetches (pdf.js, mammoth,
   // papaparse) settle. networkidle is best-effort: components with a live/streaming poll timer
   // (e.g. generation-status, stream-status) never go idle, so this must not be fatal.
@@ -853,4 +848,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
-
