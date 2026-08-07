@@ -72,6 +72,7 @@ minimumReleaseAgeExclude:
   - '@vue/shared@3.5.41'
   - axe-core@4.13.0
   - vue@3.5.41
+  - postal-mime@2.7.6
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

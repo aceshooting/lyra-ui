@@ -50,7 +50,7 @@ changes the component library version without installing a supported SheetJS rel
 | `marked` | `^18.0.9` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-widget-renderer` |
 | `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
-| `postal-mime` | `^2.7.5` | `lr-email-viewer` |
+| `postal-mime` | `^2.7.6` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
 | `shiki` | `^4.4.2` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-widget-renderer` |
