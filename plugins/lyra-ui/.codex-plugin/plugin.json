@@ -1,0 +1,37 @@
+{
+  "name": "lyra-ui",
+  "version": "8.2.2",
+  "description": "Teach ChatGPT, Codex, and Claude the @aceshooting/lyra-ui component API and interface-composition workflow, including design-token theming, localization, framework/TypeScript integration, and migration paths from Web Awesome and Shoelace.",
+  "author": {
+    "name": "Aceshooting"
+  },
+  "homepage": "https://www.lyra-ui.com/",
+  "repository": "https://github.com/aceshooting/lyra-ui",
+  "license": "MIT",
+  "keywords": [
+    "lyra-ui",
+    "web-components",
+    "lit",
+    "design-system",
+    "web-awesome",
+    "shoelace",
+    "ui-library"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lyra UI",
+    "shortDescription": "Exact Lyra UI component APIs and composition workflows",
+    "longDescription": "Build, review, and migrate interfaces with exact @aceshooting/lyra-ui component contracts, design tokens, localization, framework bindings, and responsive composition guidance.",
+    "developerName": "Aceshooting",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.lyra-ui.com/",
+    "defaultPrompt": [
+      "Build an interface with Lyra UI using exact component contracts.",
+      "Migrate this project from Web Awesome or Shoelace to Lyra UI."
+    ]
+  }
+}

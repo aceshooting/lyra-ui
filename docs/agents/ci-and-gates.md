@@ -80,7 +80,8 @@ the PR checks list tells you which of these to reproduce locally:
    @aceshooting/lyra-ui run generate-editor-data` then a targeted diff of the two VS Code data
    files and `web-types.json`; `pnpm readme:check`; `./package.sh` then a targeted diff of the
    generated plugin references and both tracked skill archives; `pnpm skill:check`
-   (plugin/marketplace manifest consistency, not archive freshness); `pnpm
+   (tested Claude/Codex version synchronization plus plugin, marketplace, and repo-discovery
+   consistency, not archive freshness); `pnpm
    storybook:check-theme`.
 
    `pnpm readme:check` covers two intentionally different files: root `README.md` (monorepo
@@ -265,10 +266,13 @@ versions are accepted.
 
 After regenerating package metadata → manifest → component metadata → manifest, it runs lint →
 build → test and every prepack generator. It updates the narrowly anchored README source-version
-line (which deliberately makes no pre-publish registry claim), then shows the complete clean-start
-worktree and diff stat before confirmation. Packing reruns the same deterministic lifecycle. The
-script stages the full version-derived CEM, inventory, editor, framework, token, and LLM set; any
-other unstaged tracked output aborts for review.
+line (which deliberately makes no pre-publish registry claim). For a lyra-ui release it also
+synchronizes the Claude and Codex plugin manifests plus the version-bearing Claude marketplace
+entry, regenerates the plugin references and standalone skill archives, and verifies the complete
+plugin contract. It then shows the complete clean-start worktree and diff stat before confirmation.
+Packing reruns the same deterministic lifecycle. The script stages the full version-derived CEM,
+inventory, editor, framework, token, LLM, and plugin set; any other unstaged tracked output aborts
+for review. A flags-only release does not touch the lyra-ui plugin.
 
 The release commit is pushed alone to `origin/main`, which starts CI. The script dispatches
 `full-engine.yml` from `main`, requires an exact-SHA `push`/`main` CI run and an exact-SHA

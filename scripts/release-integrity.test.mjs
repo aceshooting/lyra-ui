@@ -501,6 +501,15 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.match(publishScript, /git diff --name-only/);
   assert.match(publishScript, /node scripts\/update-readme-status\.mjs/);
   assert.match(publishScript, /git add README\.md/);
+  assert.match(publishScript, /node scripts\/sync-plugin-version\.mjs/);
+  assert.match(publishScript, /\.\/package\.sh/);
+  assert.match(publishScript, /pnpm skill:check/);
+  assert.match(publishScript, /plugins\/lyra-ui\/\.claude-plugin\/plugin\.json/);
+  assert.match(publishScript, /plugins\/lyra-ui\/\.codex-plugin\/plugin\.json/);
+  assert.match(publishScript, /\.claude-plugin\/marketplace\.json/);
+  assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/references/);
+  assert.match(publishScript, /skills\/lyra-ui\.skill/);
+  assert.match(publishScript, /skills\/compose-lyra-interfaces\.skill/);
   assert.match(publishScript, /git --no-pager diff --stat/);
   assert.match(publishScript, /gh workflow run full-engine\.yml/);
   assert.match(publishScript, /wait-ci/);
@@ -535,6 +544,15 @@ test('release script pins its repository and pushes release refs atomically', ()
   ]) {
     const commandIndex = publishScript.indexOf(command, gateCursor + 1);
     assert.ok(commandIndex > gateCursor, `${command} must follow the preceding release gate`);
+    gateCursor = commandIndex;
+  }
+  for (const command of [
+    'node scripts/sync-plugin-version.mjs',
+    './package.sh',
+    'pnpm skill:check',
+  ]) {
+    const commandIndex = publishScript.indexOf(command, gateCursor + 1);
+    assert.ok(commandIndex > gateCursor, `${command} must follow release-time LLM generation`);
     gateCursor = commandIndex;
   }
   const pushMain = publishScript.indexOf('git push origin "$release_sha:refs/heads/main"');

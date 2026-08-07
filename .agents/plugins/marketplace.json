@@ -1,0 +1,20 @@
+{
+  "name": "aceshooting",
+  "interface": {
+    "displayName": "Aceshooting"
+  },
+  "plugins": [
+    {
+      "name": "lyra-ui",
+      "source": {
+        "source": "local",
+        "path": "./plugins/lyra-ui"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

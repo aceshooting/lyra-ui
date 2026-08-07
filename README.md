@@ -57,7 +57,7 @@ a live example, source code, and API reference.
 - [Browser & Node support](#browser--node-support)
 - [Built with](#built-with)
 - [Documentation](#documentation)
-- [Claude Code plugin](#claude-code-plugin)
+- [Codex and Claude Code plugin](#codex-and-claude-code-plugin)
 - [Status](#status)
 - [License](#license)
 
@@ -291,11 +291,18 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   [`docs/rfcs/`](./docs/rfcs/process.md) process — decision authority, RFC scope, lifecycle, and
   proposal template.
 
-## Claude Code plugin
+## Codex and Claude Code plugin
 
-`@aceshooting/lyra-ui` ships a [Claude Code](https://claude.com/claude-code) plugin so Claude gets
-the exact component API (not a guess from training data) while working in a project that depends
-on this library, plus commands for migrating off Web Awesome/Shoelace and auditing lyra-ui usage.
+`@aceshooting/lyra-ui` ships a shared [Codex](https://learn.chatgpt.com/docs/plugins) and
+[Claude Code](https://claude.com/claude-code) plugin so coding agents get the exact component API
+(not a guess from training data) while working in a project that depends on this library, plus
+workflows for migrating off Web Awesome/Shoelace and auditing lyra-ui usage.
+
+```bash
+# Via Codex CLI's plugin marketplace
+codex plugin marketplace add aceshooting/lyra-ui
+codex plugin add lyra-ui@aceshooting
+```
 
 ```bash
 # Via Claude Code's plugin marketplace
@@ -303,16 +310,22 @@ on this library, plus commands for migrating off Web Awesome/Shoelace and auditi
 /plugin install lyra-ui@aceshooting
 ```
 
-Prefer a standalone download (e.g. for claude.ai Skills, outside Claude Code's plugin system)?
-Grab [`skills/lyra-ui.skill`](./skills/lyra-ui.skill) for exact API lookup or
-[`skills/compose-lyra-interfaces.skill`](./skills/compose-lyra-interfaces.skill) for the
-interface-composition workflow directly from this repo.
+For a direct Codex skill install without the plugin:
+
+```text
+$skill-installer install https://github.com/aceshooting/lyra-ui/tree/main/plugins/lyra-ui/skills/lyra-ui
+$skill-installer install https://github.com/aceshooting/lyra-ui/tree/main/plugins/lyra-ui/skills/compose-lyra-interfaces
+```
+
+Clients that accept standalone skill bundles can instead download
+[`skills/lyra-ui.skill`](./skills/lyra-ui.skill) for exact API lookup or
+[`skills/compose-lyra-interfaces.skill`](./skills/compose-lyra-interfaces.skill) for composition.
 
 See [`plugins/lyra-ui`](./plugins/lyra-ui) for the plugin source, or
 [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) for the same component reference
-without Claude Code. The plugin also includes `$compose-lyra-interfaces`, a focused workflow for
-turning product intent into responsive, accessible Lyra component compositions while the main
-`$lyra-ui` skill remains the exact API reference.
+without a plugin install. The plugin also includes `$compose-lyra-interfaces`, a focused workflow
+for turning product intent into responsive, accessible Lyra component compositions while the
+main `$lyra-ui` skill remains the exact API reference.
 
 ## Status
 

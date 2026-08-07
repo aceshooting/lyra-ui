@@ -333,6 +333,7 @@ restore_deferred_changesets
 
 RELEASE_DIRS=()
 AUTO_EXPANDED_RELEASE_DIRS=()
+LYRA_UI_RELEASED=0
 # Changesets can bump a publishable dependent even when no selected changeset names it (for
 # example, a peer-range change can require a major dependent bump). The filesystem version delta,
 # not the pre-version plan, is therefore the authoritative release set.
@@ -340,6 +341,7 @@ for dir in "${PKG_DIRS[@]}"; do
   new_version="$(node -p "require('./$dir/package.json').version")"
   if [[ "$new_version" != "${OLD_VERSION[$dir]}" ]]; then
     RELEASE_DIRS+=("$dir")
+    [[ "$dir" == "packages/lyra-ui" ]] && LYRA_UI_RELEASED=1
     name="${PKG_NAME[$dir]}"
     if [[ ! " ${EFFECTIVE_NAMES[*]:-} " == *" $name "* ]]; then
       AUTO_EXPANDED_RELEASE_DIRS+=("$dir")
@@ -432,6 +434,18 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Generate LLM reference artifacts"
   pnpm --filter "$name" --if-present run llms
 done
+
+if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
+  echo
+  echo "==> [@aceshooting/lyra-ui] Synchronize Claude/Codex plugin versions"
+  node scripts/sync-plugin-version.mjs
+  echo
+  echo "==> [@aceshooting/lyra-ui] Regenerate plugin references and standalone skill archives"
+  ./package.sh
+  echo
+  echo "==> [@aceshooting/lyra-ui] Verify plugin and marketplace contracts"
+  pnpm skill:check
+fi
 
 echo
 echo "==> Updating and checking README release status"
@@ -608,6 +622,15 @@ for dir in "${PKG_DIRS[@]}"; do
   [[ -f "$dir/scripts/fixtures/token-docs.generated.json" ]] && git add "$dir/scripts/fixtures/token-docs.generated.json"
   [[ -f "$dir/scripts/fixtures/token-editor.generated.json" ]] && git add "$dir/scripts/fixtures/token-editor.generated.json"
 done
+if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
+  git add \
+    .claude-plugin/marketplace.json \
+    plugins/lyra-ui/.claude-plugin/plugin.json \
+    plugins/lyra-ui/.codex-plugin/plugin.json \
+    plugins/lyra-ui/skills/lyra-ui/references/ \
+    skills/lyra-ui.skill \
+    skills/compose-lyra-interfaces.skill
+fi
 [[ -f .storybook/token-preview.generated.js ]] && git add .storybook/token-preview.generated.js
 unexpected_tracked_changes="$(git diff --name-only)"
 if [[ -n "$unexpected_tracked_changes" ]]; then

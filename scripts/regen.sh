@@ -99,6 +99,9 @@ pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 step "llms docs (llms-full.txt + llms/**)"
 pnpm --filter @aceshooting/lyra-ui run llms
 
+step "Claude/Codex plugin manifest versions"
+pnpm plugin:sync
+
 step "plugin skill packages (generated API references + skills/*.skill)"
 ./package.sh
 
@@ -121,7 +124,7 @@ if ! pnpm docs:check; then
   warn "docs/index.md and/or .storybook/Introduction.mdx has a hand-counted custom-element total that no longer matches the manifest -- bump both by hand, see the message above."
 fi
 if ! pnpm skill:check; then
-  warn "plugins/lyra-ui/.claude-plugin/plugin.json's version and its mirrored entry in .claude-plugin/marketplace.json disagree -- sync them by hand, see the message above."
+  warn "The Claude/Codex plugin manifests, marketplace entries, or repo-local skill links are invalid -- repair the reported structural mismatch."
 fi
 
 step "summary: what changed"
@@ -162,6 +165,11 @@ CHANGED_PATHS=(
   packages/lyra-ui/llms.txt
   packages/lyra-ui/llms-full.txt
   packages/lyra-ui/llms/
+  .claude-plugin/marketplace.json
+  .agents/plugins/marketplace.json
+  .agents/skills/
+  plugins/lyra-ui/.claude-plugin/plugin.json
+  plugins/lyra-ui/.codex-plugin/plugin.json
   plugins/lyra-ui/skills/lyra-ui/references/
   skills/lyra-ui.skill
   skills/compose-lyra-interfaces.skill
