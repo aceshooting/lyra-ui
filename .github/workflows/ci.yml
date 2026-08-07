@@ -571,7 +571,11 @@ jobs:
             shard_total: 1
             install_browser: webkit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Every leg installs OS-level Playwright dependencies on a fresh VM before the cached browser
+    # or test shard can run. A degraded apt mirror consumed 14m48s in Firefox shard 2/4 and the
+    # former 15-minute ceiling cancelled the job before its first test. Keep hang detection while
+    # budgeting the observed setup path, as the coverage and docs lanes already do.
+    timeout-minutes: 30
     env:
       # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
       # (imports node:sqlite) under Node 20. The Node 20 leg below installs a

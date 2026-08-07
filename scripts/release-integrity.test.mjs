@@ -39,6 +39,22 @@ const successfulFullEngineJobs = () =>
     conclusion: 'success',
   }));
 
+test('budgets the platform matrix for degraded fresh-runner OS dependency setup', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const platformStart = workflow.indexOf('\n  platform-contracts:');
+  const stepsStart = workflow.indexOf('\n    steps:', platformStart);
+  assert.ok(
+    platformStart >= 0 && stepsStart > platformStart,
+    'CI must define the platform-contracts job',
+  );
+  const platformHeader = workflow.slice(platformStart, stepsStart);
+  assert.match(
+    platformHeader,
+    /timeout-minutes: 30/,
+    'platform contracts must budget the observed 15-minute install-deps path before tests begin',
+  );
+});
+
 test('collects every GitHub API page and fails closed at its page bound', async () => {
   const pages = [
     Array.from({ length: 100 }, (_, index) => index),

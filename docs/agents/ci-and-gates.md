@@ -164,7 +164,10 @@ Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Eve
 `npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, restores a
 `~/.cache/ms-playwright` cache keyed on browser + OS + `pnpm-lock.yaml` hash (system deps still
 install unconditionally via `playwright install-deps`, since that's apt-level and the cache only
-covers the downloaded browser binary), sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1`, then runs
+covers the downloaded browser binary), and therefore carries a 30-minute end-to-end timeout: a
+degraded mirror once kept Firefox shard 2/4 inside `install-deps` for 14m48s and exhausted the
+former 15-minute ceiling before any test ran. Each leg then sets `WTR_BROWSER` and
+`WTR_STRICT_CONSOLE=1` and runs
 `pnpm --filter @aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as
 Chromium-channel jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses
 `channel: msedge`). Firefox Node 22 is split into four deterministic round-robin shards
@@ -175,7 +178,7 @@ everything else) had most Node 22 legs finishing in 50-110s, of which roughly ha
 per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@11.18.0`). The package's supported engine remains `node
+uses `package.json#packageManager` (`pnpm@11.20.0`). The package's supported engine remains `node
 >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
 
@@ -220,7 +223,7 @@ artifact fails the run instead of silently falling back to a clone-generated man
 - `./scripts/ci.sh --platform` adds Firefox and WebKit `test:platform` runs under the active Node
   22/pnpm 11 toolchain. It is useful for browser-engine coverage but is not the two-Node CI matrix.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then all four
-  Node 20/22 × Firefox/WebKit legs. Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.18.0. The
+  Node 20/22 × Firefox/WebKit legs. Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.20.0. The
   `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
   accept explicit executable paths. NVM installations are discovered by major version, with the
   newest installed patch selected by version order.
