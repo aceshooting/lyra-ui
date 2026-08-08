@@ -1,6 +1,7 @@
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
+import type { LyraSourceCard } from '../source-card/source-card.class.js';
 describe('lr-rag-answer', () => {
   it('renders answer evidence and sources', async () => {
     const el = (await fixture(html`<lr-rag-answer .strings=${{ ragAnswerLabel: 'Answer' }} answer="Answer" .citations=${[{ id: 'c1', sourceId: 'd1' }]} .sources=${[{ id: 'd1', name: 'guide.md' }]} .assessment=${{ supportedClaims: 1, unsupportedClaims: 0, coverage: 1 }}></lr-rag-answer>`)) as LyraRagAnswer;
@@ -8,7 +9,57 @@ describe('lr-rag-answer', () => {
     expect(el.shadowRoot!.querySelector('lr-markdown')).to.exist;
     expect(el.shadowRoot!.querySelector('lr-grounding-summary')).to.exist;
     expect(el.shadowRoot!.querySelector('lr-citation-badge')).to.exist;
-    expect(el.shadowRoot!.querySelector('lr-source-list')).to.exist;
+    const sourceList = el.shadowRoot!.querySelector('lr-source-list');
+    expect(Boolean(sourceList)).to.be.true;
+    const sourceCard = sourceList!.querySelector('lr-source-card') as LyraSourceCard;
+    await sourceCard.updateComplete;
+    const chrome = getComputedStyle(sourceCard.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(sourceCard.frame).to.equal('plain');
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.paddingTop).to.equal('0px');
+  });
+
+  it('renders a declarative sources slot without requiring a redundant sources property', async () => {
+    const el = (await fixture(html`
+      <lr-rag-answer answer="Answer">
+        <div slot="sources" data-source>Custom source</div>
+      </lr-rag-answer>
+    `)) as LyraRagAnswer;
+    await el.updateComplete;
+
+    const sourceList = el.shadowRoot!.querySelector('lr-source-list');
+    expect(Boolean(sourceList)).to.be.true;
+    const slot = sourceList!.querySelector('slot[name="sources"]') as HTMLSlotElement;
+    expect(slot.assignedElements().map((element) => element.getAttribute('data-source'))).to.deep.equal(['']);
+  });
+
+  it('keeps a slotted answer visible while loading even when the answer property is empty', async () => {
+    const el = (await fixture(html`
+      <lr-rag-answer loading>
+        <div slot="answer" data-answer>Partial answer</div>
+      </lr-rag-answer>
+    `)) as LyraRagAnswer;
+    await el.updateComplete;
+
+    expect(Boolean(el.shadowRoot!.querySelector('[part="answer"]'))).to.be.true;
+    expect(Boolean(el.shadowRoot!.querySelector('[part="loading"]'))).to.be.false;
+    const slot = el.shadowRoot!.querySelector('slot[name="answer"]') as HTMLSlotElement;
+    expect(slot.assignedElements().map((element) => element.getAttribute('data-answer'))).to.deep.equal(['']);
+  });
+
+  it('detects a sources slot added after the initial render', async () => {
+    const el = (await fixture(html`<lr-rag-answer answer="Answer"></lr-rag-answer>`)) as LyraRagAnswer;
+    expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.be.false;
+
+    const source = document.createElement('div');
+    source.slot = 'sources';
+    source.textContent = 'Late source';
+    el.append(source);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.be.true;
   });
 
   it('settles generated and incremental sources across reconnect without a child change-in-update', async () => {

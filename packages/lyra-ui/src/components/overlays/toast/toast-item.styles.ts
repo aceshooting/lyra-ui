@@ -238,7 +238,7 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part='progress-ring__indicator'] {
-      animation: none;
+      animation: none !important;
       stroke-dashoffset: 1;
     }
   }

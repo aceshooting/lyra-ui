@@ -255,6 +255,34 @@ describe('active filters/scope chips', () => {
     });
   });
 
+  it('moves focus to the next surviving chip after keyboard removal', async () => {
+    const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+    el.scope = ['first', 'second', 'third'];
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('lr-chip[value="second"]') as HTMLElement;
+    chip.focus();
+
+    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-chip');
+    expect(el.shadowRoot!.activeElement?.getAttribute('value')).to.equal('third');
+  });
+
+  it('moves focus to the query field after removing the last chip', async () => {
+    const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+    el.scope = ['only'];
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('lr-chip[value="only"]') as HTMLElement;
+    chip.focus();
+
+    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-input');
+    expect(queryInputOf(el).shadowRoot?.activeElement?.localName).to.equal('input');
+  });
+
   it('formats a non-string filter value for its chip label', async () => {
     const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
     el.filters = { verified: true, tags: ['solar', 'inverter'] };

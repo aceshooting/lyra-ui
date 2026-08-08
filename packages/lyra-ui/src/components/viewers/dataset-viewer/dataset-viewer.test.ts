@@ -161,6 +161,24 @@ describe('lr-dataset-viewer', () => {
       expect(renderErrors).to.equal(0);
     } finally { restore(); }
   });
+  it('emits parser diagnostics while retaining the recoverable partial table', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const diagnostics: unknown[] = [];
+    el.addEventListener('lr-render-error', (event) => {
+      diagnostics.push((event as CustomEvent<{ error: unknown }>).detail.error);
+    });
+    const restore = fetchText('name,role\nAda,Math,unexpected');
+    try {
+      el.src = 'https://example.test/malformed.tsv';
+      await waitUntil(() => diagnostics.length === 1);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+
+      const codes = (diagnostics[0] as Array<{ code?: string }>).map((error) => error.code);
+      expect(codes).to.include('TooManyFields');
+      expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    } finally { restore(); }
+  });
   it('honors a host aria-label over the computed row-count caption when name is unset', async () => {
     const el = (await fixture(html`<lr-dataset-viewer aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);

@@ -1011,20 +1011,26 @@ it('blocks form submission while a required field is empty', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
-it('formResetCallback clears value back to {} on form.reset()', async () => {
+it('formResetCallback restores a cloned initial value and native form state on form.reset()', async () => {
+  const initialValue = { city: 'Paris' };
   const form = (await fixture(html`
-    <form><lr-tool-param-form name="args" .schema=${basicSchema} .value=${{ city: 'Paris' }}></lr-tool-param-form></form>
+    <form><lr-tool-param-form name="args" .schema=${basicSchema} .value=${initialValue}></lr-tool-param-form></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
   await el.updateComplete;
 
+  initialValue.city = 'Mutated after mount';
+  el.value = { city: 'Berlin' };
+  el.reportValidity();
   form.reset();
-  expect(el.value).to.deep.equal({});
+  expect(el.value).to.deep.equal({ city: 'Paris' });
+  expect(el.value).to.not.equal(initialValue);
   expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({
+    city: 'Paris',
     units: 'celsius',
     days: 3,
   });
-  expect(form.checkValidity()).to.be.false;
+  expect(form.checkValidity()).to.be.true;
 });
 
 it('temporarily disables every field through a fieldset without overwriting author state', async () => {

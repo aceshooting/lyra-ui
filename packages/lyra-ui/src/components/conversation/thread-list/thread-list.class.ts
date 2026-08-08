@@ -124,6 +124,9 @@ function defaultFilter(thread: ChatThread, query: string, locale: string): boole
  *
  * No thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
+ * Arrow/Home/End navigation skips unavailable rows, including a row placed below an `inert`
+ * ancestor by `wrapRow`; at a virtual-window edge it continues scanning the complete item model
+ * until the next available row is mounted and focusable.
  *
  * Data mode: a host needing content with no home in `lr-conversation-item`'s own
  * `title`/`excerpt`/`meta`/`actions` surface sets `wrapRow` to wrap the already-built row. For
@@ -626,7 +629,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private onSearchKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown') return;
     this.focusTaskGeneration++;
-    const rows = this.rowElements();
+    const rows = this.navigableRows();
     if (rows.length === 0) return;
     e.preventDefault();
     this.optionEl(rows[0]!)?.focus(); // safe: rows.length > 0 checked above
@@ -659,6 +662,31 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return row.shadowRoot?.querySelector<HTMLElement>('[part="option"]') ?? null;
   }
 
+  /** A row is navigable only while both its public host and semantic option can receive focus.
+   *  `wrapRow` may place the host below an inert ancestor, and an inert target refuses focus
+   *  silently, so the navigation scan must exclude it before committing an index. */
+  private isNavigableRow(row: LyraConversationItem): boolean {
+    const option = this.optionEl(row);
+    return Boolean(
+      option &&
+      option.getAttribute('role') === 'button' &&
+      row.hidden === false &&
+      row.getAttribute('aria-hidden') !== 'true' &&
+      row.getAttribute('aria-disabled') !== 'true' &&
+      !row.inert &&
+      row.closest('[inert]') === null &&
+      option.hidden === false &&
+      option.getAttribute('aria-hidden') !== 'true' &&
+      option.getAttribute('aria-disabled') !== 'true' &&
+      !option.inert &&
+      option.closest('[inert]') === null,
+    );
+  }
+
+  private navigableRows(): LyraConversationItem[] {
+    return this.rowElements().filter((row) => this.isNavigableRow(row));
+  }
+
   private focusedRowIndex(rows: LyraConversationItem[]): number {
     return rows.findIndex((row) => activeElementIn(row.shadowRoot) != null);
   }
@@ -671,7 +699,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       (origin as Element).closest('[part="group-toggle"]')
     ) return;
     const focusGeneration = ++this.focusTaskGeneration;
-    const rows = this.rowElements();
+    const rows = this.navigableRows();
     if (rows.length === 0) return;
     const currentIndex = this.focusedRowIndex(rows);
     let targetIndex: number;
@@ -700,41 +728,51 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
     if (currentItemIndex < 0) return;
     const direction = e.key === 'ArrowDown' ? 1 : -1;
-    let targetItemIndex = currentItemIndex + direction;
-    while (items[targetItemIndex]?.kind === 'group') targetItemIndex += direction;
-    const targetItem = items[targetItemIndex];
-    if (!targetItem || targetItem.kind !== 'thread') return;
-    const targetId = targetItem.thread.id;
-    list.scrollToIndex(targetItemIndex, { align: 'auto', behavior: 'auto' });
     void (async () => {
-      // The browser may still have a focus-induced scroll queued for the old edge row. Give both
-      // that native scroll and the virtual list's coalesced scroll render a frame to settle; the
-      // second pass covers a measurement update that mounts the exact target one frame later.
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        await new Promise<void>((resolve) => {
-          const view = this.ownerDocument.defaultView;
-          if (view) view.requestAnimationFrame(() => resolve());
-          else requestAnimationFrame(() => resolve());
-        });
-        if (
-          focusGeneration !== this.focusTaskGeneration ||
-          !this.isConnected ||
-          this.virtualListEl !== list
-        ) {
+      let targetItemIndex = currentItemIndex + direction;
+      while (targetItemIndex >= 0 && targetItemIndex < items.length) {
+        while (items[targetItemIndex]?.kind === 'group') targetItemIndex += direction;
+        const targetItem = items[targetItemIndex];
+        if (!targetItem || targetItem.kind !== 'thread') return;
+        const targetId = targetItem.thread.id;
+        list.scrollToIndex(targetItemIndex, { align: 'auto', behavior: 'auto' });
+
+        // The browser may still have a focus-induced scroll queued for the old edge row. Give both
+        // that native scroll and the virtual list's coalesced scroll render a frame to settle; the
+        // second pass covers a measurement update that mounts the exact target one frame later.
+        let targetRow: LyraConversationItem | undefined;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          await new Promise<void>((resolve) => {
+            const view = this.ownerDocument.defaultView;
+            if (view) view.requestAnimationFrame(() => resolve());
+            else requestAnimationFrame(() => resolve());
+          });
+          if (
+            focusGeneration !== this.focusTaskGeneration ||
+            !this.isConnected ||
+            this.virtualListEl !== list
+          ) {
+            return;
+          }
+          await list.updateComplete;
+          if (
+            focusGeneration !== this.focusTaskGeneration ||
+            !this.isConnected ||
+            this.virtualListEl !== list
+          ) {
+            return;
+          }
+          targetRow = this.rowElements().find((row) => row.id === targetId);
+          if (targetRow) break;
+        }
+        if (targetRow && this.isNavigableRow(targetRow)) {
+          this.optionEl(targetRow)?.focus();
           return;
         }
-        await list.updateComplete;
-        if (
-          focusGeneration !== this.focusTaskGeneration ||
-          !this.isConnected ||
-          this.virtualListEl !== list
-        ) {
-          return;
-        }
-        const targetRow = this.rowElements().find((row) => row.id === targetId);
-        if (!targetRow) continue;
-        this.optionEl(targetRow)?.focus();
-        return;
+        // A newly-mounted row can be disabled, semantically unavailable, or inside an inert
+        // `wrapRow`. Keep scanning the complete item model rather than committing focus to a
+        // target that will silently reject it.
+        targetItemIndex += direction;
       }
     })();
   };

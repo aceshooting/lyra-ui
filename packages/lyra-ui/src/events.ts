@@ -812,14 +812,16 @@ export type LyraCopyEvent =
   | LyraXmlViewerEventMap['lr-copy'];
 
 /**
- * `lr-copy-error` — dispatched by 2 components: `<lr-copy-button>`, `<lr-selection-toolbar>`.
+ * `lr-copy-error` — dispatched by 3 components: `<lr-copy-button>`, `<lr-diff-view>`,
+ * `<lr-selection-toolbar>`.
  *
- * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraCopyButtonEventMap['lr-copy-error']`.
  */
 export type LyraCopyErrorEvent =
   | LyraCopyButtonEventMap['lr-copy-error']
+  | LyraDiffViewEventMap['lr-copy-error']
   | LyraSelectionToolbarEventMap['lr-copy-error'];
 
 /**
@@ -954,16 +956,17 @@ export type LyraEntityActivateEvent =
 export type LyraEntityOpenEvent = LyraEntityChipEventMap['lr-entity-open'];
 
 /**
- * `lr-error` — dispatched by 5 components: `<lr-animated-image>`, `<lr-avatar>`,
- * `<lr-copy-button>`, `<lr-icon>`, `<lr-include>`.
+ * `lr-error` — dispatched by 6 components: `<lr-animated-image>`, `<lr-avatar>`,
+ * `<lr-copy-button>`, `<lr-diff-view>`, `<lr-icon>`, `<lr-include>`.
  *
- * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 6 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-error']`.
  */
 export type LyraErrorEvent =
   | LyraAnimatedImageEventMap['lr-error']
   | LyraAvatarEventMap['lr-error']
   | LyraCopyButtonEventMap['lr-error']
+  | LyraDiffViewEventMap['lr-error']
   | LyraIconEventMap['lr-error']
   | LyraIncludeEventMap['lr-error'];
 

@@ -128,7 +128,9 @@ export interface LyraTerminalEventMap {
 
 /**
  * `<lr-terminal>` — read-only ANSI console for streamed agent/tool output. Not a PTY: no
- * stdin/keystroke handling, no cursor-addressed full-screen apps.
+ * stdin/keystroke handling, no cursor-addressed full-screen apps. Split ANSI sequences retain at
+ * most 4,096 characters; an overlong unterminated control sequence is dropped so later chunks
+ * resume without an unbounded hidden carry.
  *
  * @customElement lr-terminal
  * @event lr-copy - `detail: { text }` — the copy button copied the SGR-stripped plain text.
@@ -384,7 +386,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   /** Append streamed output. Escape sequences may split across chunks -- the shared parser buffers
-   *  partial sequences internally. */
+   *  partial sequences internally up to its 4,096-character ceiling, then drops an unterminated
+   *  sequence and resumes from a clean boundary on the next write. */
   write(chunk: string): void {
     this.writeInternal(chunk);
   }

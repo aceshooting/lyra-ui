@@ -88,6 +88,26 @@ it('uses accessibleLabel verbatim instead of the auto-generated summary when set
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom summary');
 });
 
+it('lets the standard host aria-label dynamically override the component alias and summary', async () => {
+  const el = (await fixture(html`
+    <lr-sequence-strip accessible-label="Component alias" aria-label="Host label"></lr-sequence-strip>
+  `)) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  await el.updateComplete;
+  const renderedLabel = (): string | null =>
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+  expect(renderedLabel()).to.equal('Host label');
+
+  el.setAttribute('aria-label', 'Updated host label');
+  await el.updateComplete;
+  expect(renderedLabel()).to.equal('Updated host label');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(renderedLabel()).to.equal('Component alias');
+});
+
 it('renders an empty strip (no cells, generic aria-label) when items is empty', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   await el.updateComplete;
@@ -168,6 +188,57 @@ describe('hover tooltip', () => {
     cells[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement).to.equal(cells[0]);
+  });
+
+  it('preserves real focus and the sole roving stop by item id across a controlled refresh', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[1]!.focus();
+
+    el.items = labeledItems.map((item) => ({ ...item }));
+    await el.updateComplete;
+
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    const focusedId = cells.find((cell) => cell === el.shadowRoot!.activeElement)?.dataset['itemId'];
+    expect(focusedId).to.equal('2');
+    expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal(['2']);
+  });
+
+  it('clamps owned focus to a survivor and then the stable base as items shrink', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    await el.updateComplete;
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[2]!.focus();
+
+    el.items = items.slice(0, 2);
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.equal('2');
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"][tabindex="0"]')).to.have.lengthOf(1);
+
+    el.items = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  });
+
+  it('does not move external focus when an unfocused strip refreshes', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="outside-sequence">Outside</button>
+        <lr-sequence-strip></lr-sequence-strip>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    await el.updateComplete;
+    wrapper.querySelector<HTMLElement>('#outside-sequence')!.focus();
+
+    el.items = items.slice(0, 1);
+    await el.updateComplete;
+    expect(el.ownerDocument.activeElement?.id).to.equal('outside-sequence');
   });
 
   it('clears transient hover/focus details across disconnect and item replacement', async () => {

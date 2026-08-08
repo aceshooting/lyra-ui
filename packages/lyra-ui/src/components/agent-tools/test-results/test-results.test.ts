@@ -48,7 +48,9 @@ describe('lr-test-results', () => {
         .strings=${{
           testResultsPassed: '{count} réussi(s)',
           testResultsFilterLabel: 'Filtrer par statut',
+          statusSuccess: 'Réussi',
           statusError: 'Échec',
+          statusSkipped: 'Ignoré',
           collapse: 'Réduire',
           durationMilliseconds: '{value} ms!',
         }}
@@ -65,6 +67,11 @@ describe('lr-test-results', () => {
     expect(
       el.shadowRoot!.querySelector('[part="test"][data-status="failed"] [part="test-status"]')!.textContent,
     ).to.include('Échec');
+    const decorativeStatusGlyphs = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part="test-status"] > [aria-hidden="true"]',
+    )].map((node) => node.textContent?.trim() ?? '');
+    expect(decorativeStatusGlyphs).to.deep.equal(['✓', '×', '–']);
+    expect(decorativeStatusGlyphs.join('')).not.to.match(/[PFS]/);
     // The failed test auto-expands by default, so its toggle shows the localized "collapse" text.
     expect(
       el.shadowRoot!

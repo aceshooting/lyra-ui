@@ -11,6 +11,13 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Inline app HTML is uniquely sandboxed and receives its CSP before any app-controlled token is parsed.',
+      },
+    },
+  },
   render: () => html`
     <lr-mcp-app
       style="display: block; max-width: 48rem;"

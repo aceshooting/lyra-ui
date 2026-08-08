@@ -238,6 +238,32 @@ it('keyboard: ArrowDown/ArrowUp move the active row and DOM focus between top-le
   expect(el.shadowRoot!.activeElement).to.equal(items[0]);
 });
 
+it('keeps an in-flight keyboard focus target by id when sources reorder before the update', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker
+      .sources=${[
+        { id: 'a', label: 'Alpha' },
+        { id: 'b', label: 'Beta' },
+        { id: 'c', label: 'Gamma' },
+      ]}
+    ></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+
+  tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  el.sources = [
+    { id: 'c', label: 'Gamma' },
+    { id: 'a', label: 'Alpha' },
+    { id: 'b', label: 'Beta' },
+  ];
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('Beta');
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"][tabindex="0"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[role="treeitem"][tabindex="0"]')?.textContent).to.include('Beta');
+});
+
 it('keyboard: Home/End jump the active row to the first/last visible entry', async () => {
   const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;

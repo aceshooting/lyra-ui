@@ -35,8 +35,9 @@ export interface LyraDocumentViewerEventMap {
  * renderer use `<lr-document-preview>` as a safe built-in fallback.
  *
  * @customElement lr-document-viewer
- * @event lr-close - Fired when the nested dialog dismisses the viewer. The
- *   detail is the dialog close reason.
+ * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
+ *   dialog close reason. A registered renderer's own descendant dialog keeps its independent
+ *   `lr-dialog-close` path and does not close this viewer.
  * @event lr-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
  * @event lr-anchor-result - Fired once per applied `anchor`. An incapable resolved renderer
@@ -285,6 +286,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
+    // Registered renderers may compose their own dialogs. Only translate the close emitted by
+    // this viewer's direct shell; descendant dialog events keep their ordinary composed path.
+    if (event.target !== event.currentTarget) return;
     event.stopPropagation();
     this.open = false;
     this.emit('lr-close', event.detail);

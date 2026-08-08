@@ -108,4 +108,26 @@ describe('lr-knowledge-base-admin', () => {
     expect(el.shadowRoot!.querySelectorAll('[role="tab"]').length).to.equal(1);
     expect(el.shadowRoot!.activeElement?.id).to.equal(survivingTab.id);
   });
+
+  it('normalizes an invalid active tab without stranding the tablist or panels', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`,
+    )) as LyraKnowledgeBaseAdmin;
+    const details: Array<{ tab: string }> = [];
+    el.addEventListener('lr-tab-change', (event) => details.push(event.detail));
+
+    (el as LyraKnowledgeBaseAdmin & { activeTab: string }).activeTab = 'unknown';
+    await el.updateComplete;
+
+    const tabs = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const panels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
+    expect(el.activeTab).to.equal('sources');
+    expect(el.getAttribute('active-tab')).to.equal('sources');
+    expect(tabs.map((tab) => [tab.getAttribute('aria-selected'), tab.tabIndex])).to.deep.equal([
+      ['true', 0],
+      ['false', -1],
+    ]);
+    expect(panels.map((panel) => panel.hidden)).to.deep.equal([false, true]);
+    expect(details).to.deep.equal([{ tab: 'sources' }]);
+  });
 });

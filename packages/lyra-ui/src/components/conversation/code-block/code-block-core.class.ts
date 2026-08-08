@@ -16,6 +16,7 @@ import {
   clampCodeBlockFocusedLine,
   codeBlockActiveHighlightLineSet,
   codeBlockEventLine,
+  codeBlockLineHasFocus,
   codeBlockLineCount,
   codeBlockLineHighlightSet,
   codeBlockLineKeyAction,
@@ -25,6 +26,7 @@ import {
   codeBlockShowsSkeleton,
   renderCodeBlockPlainCode,
   renderCodeBlockShell,
+  restoreCodeBlockLineFocus,
   scrollCodeBlockToAnchor,
   tokenizeCodeBlock,
   writeCodeBlockClipboard,
@@ -78,7 +80,9 @@ export interface LyraCodeBlockCoreEventMap {
  * and `scrollToAnchor()` resolves a `line-range` anchor. `interactive-lines` is a separate, purely
  * local affordance that turns the (`line-numbers`-gated) gutter into a keyboard-navigable,
  * clickable roving-tabindex group emitting `lr-line-click` — it doesn't require `highlights` to
- * be set.
+ * be set. If controlled `code` shrinks while a line owns focus, focus follows the clamped
+ * surviving line through both plain and highlighted DOM replacement; an explicit move to another
+ * control during the update is never overridden.
  *
  * @customElement lr-code-block-core
  * @event lr-copy - The copy button was activated. `detail: { text }` is
@@ -196,6 +200,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   readonly anchorKinds: LyraAnchor['kind'][] = ['line-range'];
 
   @state() private focusedLine = 1;
+  private restoreFocusedLineAfterUpdate = false;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`). This component has no default/full-table fallback highlighter --
@@ -366,6 +371,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run -- <lr-code-block> has always chained
     // here and this variant silently didn't, the exact drift code-block-shared.ts exists to end.
+    this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
     if (changed.has('code')) {
       this.focusedLine = clampCodeBlockFocusedLine(this.focusedLine, this.lineCount());
     }
@@ -378,6 +384,10 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // see willUpdate() above -- same chain-up, same reason.
     applyCodeBlockAriaBusy(this, this.showsSkeleton());
+    if (this.restoreFocusedLineAfterUpdate) {
+      restoreCodeBlockLineFocus(this, this.focusedLine);
+      this.restoreFocusedLineAfterUpdate = false;
+    }
   }
 
   /** Whether this render shows the loading skeleton instead of the code. Unlike `<lr-code-block>`,

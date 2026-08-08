@@ -196,7 +196,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                 aria-pressed=${selected ? 'true' : 'false'}
                 @click=${() => this.emit('lr-metric-change', { metricId: metric.id })}
               >
-                <lr-stat appearance="plain" .label=${metric.label} .value=${this.formatMetric(metric, this.latestValue(metric))}></lr-stat>
+                <lr-stat frame="plain" .label=${metric.label} .value=${this.formatMetric(metric, this.latestValue(metric))}></lr-stat>
               </button>
             `;
           })}

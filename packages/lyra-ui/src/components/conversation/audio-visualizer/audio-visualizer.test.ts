@@ -415,13 +415,23 @@ describe('media-query change handlers', () => {
   });
 
   it('refreshes the theme (clears cached colors) when an ancestor theme attribute mutates', async () => {
-    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+    const el = (await fixture(html`
+      <lr-audio-visualizer
+        style="color: var(--visualizer-probe); --visualizer-probe: rgb(1, 2, 3); --lr-audio-visualizer-color: currentColor;"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as { resolvedColors?: unknown };
-    priv.resolvedColors = { active: 'stale', quiet: 'stale' };
+    const priv = el as unknown as {
+      resolvedColors?: { active: string; quiet: string };
+      resolveColors: () => { active: string; quiet: string };
+    };
+    priv.resolvedColors = priv.resolveColors();
+    expect(priv.resolvedColors.active).to.equal('rgb(1, 2, 3)');
+    el.style.setProperty('--visualizer-probe', 'rgb(4, 5, 6)');
     el.setAttribute('data-theme', 'dark');
     await aTimeout(0); // let the ThemeWatcher's coalesced microtask run
     expect(priv.resolvedColors).to.be.undefined; // refreshTheme() reset the cache
+    expect(priv.resolveColors().active).to.equal('rgb(4, 5, 6)');
   });
 });
 
@@ -969,6 +979,31 @@ describe('resolveColors()', () => {
     ).resolveColors();
     expect(colors.active).to.equal('rgb(1, 2, 3)');
     expect(colors.quiet).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('materializes currentColor before assigning it to the canvas context', async () => {
+    const el = (await fixture(html`
+      <lr-audio-visualizer
+        state="thinking"
+        bar-count="1"
+        style="color: rgb(10, 20, 30); --lr-audio-visualizer-color: currentColor; --lr-audio-visualizer-quiet-color: currentColor;"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+    const priv = el as unknown as {
+      hostSize?: { width: number; height: number };
+      resolveColors: () => { active: string; quiet: string };
+      resolvedColors?: { active: string; quiet: string };
+      draw: (nowMs: number) => void;
+    };
+
+    const colors = priv.resolveColors();
+    expect(colors).to.deep.equal({ active: 'rgb(10, 20, 30)', quiet: 'rgb(10, 20, 30)' });
+    priv.hostSize = { width: 40, height: 48 };
+    priv.resolvedColors = undefined;
+    priv.draw(0);
+    const ctx = (el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).getContext('2d')!;
+    expect(ctx.fillStyle).to.equal('#0a141e');
+    expect(ctx.strokeStyle).to.equal('#0a141e');
   });
 
   it('falls back to the hardcoded defaults when the custom properties resolve empty', async () => {

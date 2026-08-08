@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './spinner.js';
 import type { LyraSpinner } from './spinner.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -90,6 +90,24 @@ it('shows the slotted label in flow when label-placement is "after"', async () =
   const computed = getComputedStyle(label);
   expect(computed.position).to.not.equal('absolute');
   expect(computed.clipPath).to.not.equal('inset(50%)');
+});
+
+it('is accessible with a rich forwarded visible label and host naming override', async () => {
+  const wrapper = await fixture(html`
+    <spinner-label-forward-wrapper>
+      Loading <strong>audited reports</strong>
+    </spinner-label-forward-wrapper>
+  `);
+  const el = wrapper.shadowRoot!.querySelector('lr-spinner') as LyraSpinner;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await waitUntil(() => base.getAttribute('aria-label') === 'Loading audited reports');
+  el.setAttribute('aria-label', 'Loading the audited reports');
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+
+  expect(label.hidden).to.equal(false);
+  expect(base.getAttribute('aria-label')).to.equal('Loading the audited reports');
+  await expect(el).to.be.accessible();
 });
 
 it('can render the visible-label branch before a browser render root exists', () => {

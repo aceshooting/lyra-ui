@@ -89,8 +89,9 @@ export interface LyraPushToTalkEventMap {
  * overrides the computed trigger label.
  *
  * @customElement lr-push-to-talk
- * @slot icon - Replaces the default mic glyph.
- * @slot recording-icon - Replaces the default recording-state pulse glyph.
+ * @slot icon - Replaces the default mic glyph. Decorative: assigned content is inert and hidden
+ *   from accessibility APIs because it is rendered inside the named trigger button.
+ * @slot recording-icon - Replaces the default recording-state pulse glyph. Decorative and inert.
  * @event lr-record-start - Capture began. `detail: { stream: MediaStream }` — the same object the
  *   `stream` getter then returns for the duration of the take.
  * @event lr-record-chunk - A `timeslice-ms` slice was produced (only fires when `timeslice-ms > 0`,
@@ -111,8 +112,8 @@ export interface LyraPushToTalkEventMap {
  *   while recording.
  * @csspart timer - The `M:SS` elapsed-time readout, rendered only while recording and `show-timer`.
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
- * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Inline and block size of the circular
- *   `trigger` button.
+ * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Preferred inline and block size of the
+ *   circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.
  * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Border and text color of
  *   `[part="trigger"]` while `state` is `recording`. Recolors only the recording treatment, leaving
  *   every other danger-toned surface on the page untouched.
@@ -609,8 +610,12 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         @blur=${this.onBlur}
         @click=${this.onClick}
       >
-        <span part="icon"><slot name="icon">${micIcon()}</slot></span>
-        ${recording ? html`<span part="pulse"><slot name="recording-icon">${pulseGlyph()}</slot></span>` : nothing}
+        <span part="icon" aria-hidden="true" inert><slot name="icon">${micIcon()}</slot></span>
+        ${recording
+          ? html`<span part="pulse" aria-hidden="true" inert
+              ><slot name="recording-icon">${pulseGlyph()}</slot></span
+            >`
+          : nothing}
       </button>
       ${status ? html`<span part="status">${status}</span>` : nothing}
       ${recording && this.showTimer

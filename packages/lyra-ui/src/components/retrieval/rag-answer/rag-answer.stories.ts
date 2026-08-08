@@ -6,6 +6,14 @@ export default meta;
 type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-rag-answer answer="The retrieval pipeline found a grounded answer." .citations=${[{ id: 'c1', sourceId: 'd1' }]} .sources=${[{ id: 'd1', name: 'runbook.md', mimeType: 'text/markdown' }]} .assessment=${{ supportedClaims: 1, unsupportedClaims: 0, coverage: 1 }}></lr-rag-answer>` };
 export const Loading: Story = { render: () => html`<lr-rag-answer loading></lr-rag-answer>` };
+export const SlotOverrides: Story = {
+  render: () => html`
+    <lr-rag-answer loading>
+      <p slot="answer">A partial streamed answer supplied entirely through the answer slot.</p>
+      <div slot="sources">A custom source surface supplied without a redundant sources property.</div>
+    </lr-rag-answer>
+  `,
+};
 export const NarrowAllStates: Story = {
   name: 'Narrow long content + states (320px)',
   render: () => html`

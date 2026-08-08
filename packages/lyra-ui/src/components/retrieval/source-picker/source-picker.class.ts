@@ -114,6 +114,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   @state() private query = '';
   @state() private activeId: string | null = null;
   private pendingFocusIndex: number | 'search' | 'base' | undefined;
+  private keyboardFocusGeneration = 0;
 
   private allLeafIds(entries: LyraSourceEntry[] = this.sources): string[] {
     const acc: string[] = [];
@@ -258,10 +259,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   private focusRowByIndex(index: number, rows: SourceRow[]): void {
-    this.activeId = rows[index]?.entry.id ?? null;
+    const targetId = rows[index]?.entry.id;
+    if (!targetId) return;
+    this.activeId = targetId;
+    const generation = ++this.keyboardFocusGeneration;
     void this.updateComplete.then(() => {
+      if (!this.isConnected || generation !== this.keyboardFocusGeneration) return;
+      const currentIndex = this.visibleRows().findIndex((row) => row.entry.id === targetId);
+      if (currentIndex < 0) return;
       const items = this.renderRoot.querySelectorAll('[part~="item"]');
-      (items[index] as HTMLElement | undefined)?.focus();
+      (items[currentIndex] as HTMLElement | undefined)?.focus();
     });
   }
 

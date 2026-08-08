@@ -13,6 +13,7 @@ import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
@@ -30,6 +31,82 @@ function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   );
 }
 
+const SVG_RESOURCE_ATTRIBUTES = new Set(['href', 'xlink:href', 'src']);
+const SVG_PAINT_SERVER_ATTRIBUTES = new Set([
+  'clip-path',
+  'cursor',
+  'fill',
+  'filter',
+  'marker',
+  'marker-end',
+  'marker-mid',
+  'marker-start',
+  'mask',
+  'stroke',
+]);
+const LOCAL_SVG_PAINT_REFERENCE = /^url\(\s*(['"]?)#[^()'"\s]+\1\s*\)$/i;
+const LOCAL_SVG_RESOURCE_REFERENCE = /^#[^\s]+$/;
+const INLINE_RASTER_DATA_REFERENCE = /^data:image\/(?:gif|jpeg|png|webp);base64,[a-z\d+/=\s]+$/i;
+
+function isSafeSvgResourceReference(value: string): boolean {
+  const normalized = value.trim();
+  return LOCAL_SVG_RESOURCE_REFERENCE.test(normalized)
+    || INLINE_RASTER_DATA_REFERENCE.test(normalized);
+}
+
+/**
+ * Applies Lyra's inline-SVG profile after DOMPurify's structural allowlist. DOMPurify deliberately
+ * permits author styles and ordinary HTTP hrefs by default; both are unsafe for a document that is
+ * inserted into the caller's shadow root because they can escape its paint box or start secondary
+ * requests. Local fragment paint servers and embedded raster data remain usable.
+ */
+function sanitizeInlineSvg(
+  sanitizer: HtmlSanitizer,
+  raw: string,
+  ownerDocument: Document,
+): string {
+  const sanitized = sanitizer.sanitize(raw, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    RETURN_DOM_FRAGMENT: true,
+    FORBID_TAGS: ['style', 'animate', 'animatemotion', 'animatetransform', 'set', 'discard'],
+    FORBID_ATTR: ['style'],
+  });
+  if (
+    typeof sanitized !== 'object'
+    || sanitized === null
+    || !('nodeType' in sanitized)
+    || sanitized.nodeType !== 11
+  ) {
+    throw new Error('SVG sanitizer did not return a document fragment.');
+  }
+  const fragment = sanitized as DocumentFragment;
+  fragment.querySelectorAll('style, animate, animateMotion, animateTransform, set, discard')
+    .forEach((element) => element.remove());
+  for (const element of fragment.querySelectorAll('*')) {
+    element.removeAttribute('style');
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      if (
+        SVG_RESOURCE_ATTRIBUTES.has(name)
+        && !isSafeSvgResourceReference(attribute.value)
+      ) {
+        element.removeAttributeNode(attribute);
+        continue;
+      }
+      if (
+        SVG_PAINT_SERVER_ATTRIBUTES.has(name)
+        && (/url\s*\(/i.test(attribute.value) || attribute.value.includes('\\'))
+        && !LOCAL_SVG_PAINT_REFERENCE.test(attribute.value.trim())
+      ) {
+        element.removeAttributeNode(attribute);
+      }
+    }
+  }
+  const template = ownerDocument.createElement('template');
+  template.content.append(fragment);
+  return template.innerHTML;
+}
+
 type SvgFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
@@ -43,7 +120,9 @@ export interface LyraSvgViewerEventMap extends LyraAnchorTargetEventMap {
 class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
 
 /**
- * Fetches and safely renders an inline SVG document.
+ * Fetches and safely renders an inline SVG document. Author styles, SVG animation elements, and
+ * external resource/paint-server references are removed before insertion; local fragment paint
+ * servers and embedded raster data remain available without secondary network requests.
  *
  * Adopts `DocumentAnchorTarget`: a `region` anchor addresses one `highlights` entry by reference
  * or structural equality of its `rect` (and optional `page`) -- `scrollToAnchor()`/a declarative
@@ -188,9 +267,9 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
       const raw = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
-      const markup = sanitizer.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } });
+      const markup = sanitizeInlineSvg(sanitizer, raw, this.ownerDocument);
       if (this.isConnected && generation === this.generation) {
-        this.fetchState = { kind: 'loaded', markup: markup as string };
+        this.fetchState = { kind: 'loaded', markup };
       }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;

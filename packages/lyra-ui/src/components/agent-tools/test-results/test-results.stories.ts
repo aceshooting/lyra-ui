@@ -33,6 +33,14 @@ export const Default: Story = {
 
 export const MixedStatuses: Story = {
   name: 'Passed / Failed / Skipped / Running',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every status pairs a localized word with a language-neutral decorative mark (or spinner), so translations never retain an English initial.',
+      },
+    },
+  },
   render: () => html`<lr-test-results style="max-width:32rem" .suites=${mixedSuites}></lr-test-results>`,
 };
 

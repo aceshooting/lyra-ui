@@ -1000,7 +1000,9 @@ establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
-value is a whole object: `formResetCallback()` clears `value`/touched state back to `{}`, and
+value is a whole object: the value present on first connection is cloned as the native default, and
+`formResetCallback()` restores a fresh clone of that default while clearing touched/interaction state.
+Consumer-set custom validity remains in force until explicitly cleared, matching native controls. The
 `formDisabledCallback(disabled)` tracks inherited fieldset state separately from the author-owned
 `disabled` property. JSON serialization is guarded: circular values, `BigInt`, throwing getters/`toJSON`, and
 non-finite numbers cannot escape from an assignment or leave stale form data; the form entry is
@@ -1271,7 +1273,9 @@ status icons without changing shared status tokens.
 ## `lr-terminal`
 
 A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/keystroke handling, no
-cursor-addressed full-screen apps.
+cursor-addressed full-screen apps. An ANSI sequence split across chunks retains at most 4,096
+characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
+clean parser boundary.
 
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
 codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
@@ -1285,7 +1289,8 @@ only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to th
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
 is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.
 
-**Methods:** `write(text)` appends ANSI-parsed text to the buffer. `clear()` empties the buffer.
+**Methods:** `write(text)` appends ANSI-parsed text to the buffer, subject to the bounded partial
+sequence behavior above. `clear()` empties the buffer.
 `scrollToBottom()` and `scrollToAnchor(anchor): Promise<boolean>` control scroll position.
 `search(query): Promise<number>` (resolves the match count after the resulting render),
 `searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search — matching is
@@ -1560,6 +1565,9 @@ expansion state is always keyed by the suite+test pair, so toggling one duplicat
 sibling.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
 repeated row controls remain distinguishable.
+
+Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
+adjacent localized status word carries the meaning. Running rows use the decorative spinner.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
@@ -2224,7 +2232,8 @@ unselected row omits the attribute rather than writing `"false"`, because ARIA a
 ## `lr-mcp-app`
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
-with injected CSP; remote documents are URL-validated. The frame can only request tool calls,
+with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text
+head decoys therefore cannot bypass the policy. Remote documents are URL-validated. The frame can only request tool calls,
 messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
 unless explicitly enabled in `resource.permissions`.
 

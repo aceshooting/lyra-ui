@@ -153,6 +153,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * `relationshipTypeOptions`/`nodeTypeOptions` (e.g. a saved query referencing a type that was
  * since renamed/removed from the picker's own option list) still renders as a chip, labeled with
  * its raw value, rather than being silently dropped.
+ * Removing a focused filter chip moves focus to its adjacent survivor or the matching add picker.
+ * When the host applies a focused saved-query deletion, focus follows the adjacent delete action
+ * or the stable save-name input; unrelated controlled updates never steal external focus.
  *
  * **Query model placement:** `GraphQuery` is kept local to this component rather than promoted
  * to the shared `src/ai/types.ts` surface. Unlike that module's types (`ChatMessage`,
@@ -285,7 +288,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   /** Pickable node types offered by the node-type "add" picker. */
   @property({ attribute: false }) nodeTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
   /** Host-persisted saved queries. Controlled -- this component never mutates this array itself,
-   *  it only emits `lr-query-save`/`lr-query-delete` requests for the host to act on. */
+   *  it only emits `lr-query-save`/`lr-query-delete` requests for the host to act on. Applying a
+   *  deletion requested from the focused row restores focus to the nearest survivor or save input. */
   @property({ attribute: false }) savedQueries: GraphQuerySavedItem[] = EMPTY_SAVED;
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
@@ -323,6 +327,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   // Guards lr-validity-change so it only fires on an actual change -- `undefined` guarantees the
   // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
   private lastValidityKey: string | undefined;
+  private pendingRemovalFocus?:
+    | { kind: 'chip'; group: 'relationship' | 'node-type'; targetValue?: string }
+    | { kind: 'saved'; targetId?: string };
+  private removalFocusGeneration = 0;
 
   constructor() {
     super();
@@ -331,6 +339,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, () => this.emit('lr-invalid'));
     this.syncFormState();
+  }
+
+  override disconnectedCallback(): void {
+    this.removalFocusGeneration++;
+    this.pendingRemovalFocus = undefined;
+    super.disconnectedCallback();
   }
 
   /** `attachInternals()` throws in any environment without a real `ElementInternals`
@@ -599,6 +613,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.setValue({ ...this._value, relationshipTypes: [...this._value.relationshipTypes, type] });
   }
   private removeRelationshipType(type: string): void {
+    this.captureChipRemovalFocus('relationship', type, this._value.relationshipTypes);
     this.setValue({ ...this._value, relationshipTypes: this._value.relationshipTypes.filter((t) => t !== type) });
   }
   private addNodeType(type: string): void {
@@ -606,7 +621,27 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.setValue({ ...this._value, nodeTypes: [...this._value.nodeTypes, type] });
   }
   private removeNodeType(type: string): void {
+    this.captureChipRemovalFocus('node-type', type, this._value.nodeTypes);
     this.setValue({ ...this._value, nodeTypes: this._value.nodeTypes.filter((t) => t !== type) });
+  }
+
+  private captureChipRemovalFocus(
+    group: 'relationship' | 'node-type',
+    value: string,
+    selected: string[],
+  ): void {
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
+    if (
+      active?.localName !== 'lr-chip' ||
+      active.getAttribute('value') !== value ||
+      active.closest<HTMLElement>('lr-chip-group')?.getAttribute('part') !== expectedPart
+    ) return;
+    const index = selected.indexOf(value);
+    const survivors = selected.filter((candidate) => candidate !== value);
+    const targetValue = survivors[Math.min(Math.max(index, 0), survivors.length - 1)];
+    this.pendingRemovalFocus = { kind: 'chip', group, targetValue };
+    this.removalFocusGeneration++;
   }
 
   private markTouched(part: string): void {
@@ -643,7 +678,22 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.emit('lr-query-delete', { id: item.id });
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('savedQueries')) return;
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    if (active?.getAttribute('part') !== 'saved-delete-button') return;
+    const focusedId = active.closest<HTMLElement>('[data-query-id]')?.dataset['queryId'];
+    if (!focusedId || this.savedQueries.some((item) => item.id === focusedId)) return;
+    const previous = (changed.get('savedQueries') as GraphQuerySavedItem[] | undefined) ?? [];
+    const index = previous.findIndex((item) => item.id === focusedId);
+    const target = this.savedQueries[Math.min(Math.max(index, 0), this.savedQueries.length - 1)];
+    this.pendingRemovalFocus = { kind: 'saved', targetId: target?.id };
+    this.removalFocusGeneration++;
+  }
+
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('value') || changed.has('_errors')) {
       const valid = Object.keys(this._errors).length === 0;
       const key = JSON.stringify({ valid, errors: this._errors });
@@ -652,6 +702,37 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
       }
     }
+    const pending = this.pendingRemovalFocus;
+    if (!pending) return;
+    this.pendingRemovalFocus = undefined;
+    const generation = this.removalFocusGeneration;
+    this.scheduleAfterUpdate(() => {
+      if (generation !== this.removalFocusGeneration || !this.isConnected) return;
+      if (pending.kind === 'chip') {
+        if (pending.targetValue) {
+          const part = pending.group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
+          const chip = [...(this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="${part}"] lr-chip`) ?? [])]
+            .find((candidate) => candidate.getAttribute('value') === pending.targetValue);
+          if (chip) {
+            chip.focus();
+            return;
+          }
+        }
+        const pickerPart = pending.group === 'relationship' ? 'relationship-picker' : 'node-type-picker';
+        this.shadowRoot?.querySelector<HTMLElement>(`[part="${pickerPart}"]`)?.focus();
+        return;
+      }
+      if (pending.targetId) {
+        const item = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-query-id]') ?? [])]
+          .find((candidate) => candidate.dataset['queryId'] === pending.targetId);
+        const action = item?.querySelector<HTMLElement>('[part="saved-delete-button"]');
+        if (action) {
+          action.focus();
+          return;
+        }
+      }
+      this.shadowRoot?.querySelector<HTMLElement>('[part="save-name-input"]')?.focus();
+    }, 'graph-query-removal-focus');
   }
 
   private hopOptions(): number[] {
@@ -877,7 +958,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             ? html`<p part="saved-empty">${this.localize('noData')}</p>`
             : html`<ul part="saved-list">
                 ${this.savedQueries.map(
-                  (item) => html`<li part="saved-item">
+                  (item) => html`<li part="saved-item" data-query-id=${item.id}>
                     <button
                       part="saved-load-button"
                       type="button"

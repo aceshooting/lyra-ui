@@ -34,6 +34,9 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * `<lr-realtime-session>` — a provider-neutral voice-session shell composing connection status,
  * live activity, transcript, native capture, mute, interruption, and connect/disconnect intents.
  * Transport, authentication, audio playback, and SDK ownership remain with the host.
+ * State transitions transfer focus from a disappearing session action to the replacement
+ * connect/disconnect action. Hiding the public capture surface does the same only when capture
+ * owned focus; surviving or foreign focus is never moved.
  *
  * @customElement lr-realtime-session
  * @slot controls - Additional provider-specific controls.
@@ -87,6 +90,8 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   @property({ attribute: false }) stream: MediaStream | null = null;
   @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true }) muted = false;
+  /** Shows native push-to-talk capture. Hiding a focused capture transfers focus to the current
+   *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
   @property({ type: Boolean, attribute: 'show-capture', reflect: true, converter: trueDefaultBooleanConverter })
   showCapture = true;
   @property({ attribute: 'error-code' }) errorCode = '';
@@ -135,20 +140,25 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (!changed.has('state')) return;
+    super.willUpdate(changed);
+    const stateChanged = changed.has('state');
+    const captureHidden = changed.has('showCapture') && changed.get('showCapture') === true && !this.showCapture;
+    if (!stateChanged && !captureHidden) return;
     const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
     const focusedPart = focused?.getAttribute('part') ?? null;
-    this.transferActionFocus =
-      focused !== null &&
-      (focused.closest('[part="controls"]') !== null ||
-        focusedPart === 'connect' ||
-        focusedPart === 'disconnect' ||
-        focusedPart === 'mute' ||
-        focusedPart === 'interrupt' ||
-        focusedPart === 'capture');
+    this.transferActionFocus = captureHidden && !stateChanged
+      ? focusedPart === 'capture'
+      : focused !== null &&
+        (focused.closest('[part="controls"]') !== null ||
+          focusedPart === 'connect' ||
+          focusedPart === 'disconnect' ||
+          focusedPart === 'mute' ||
+          focusedPart === 'interrupt' ||
+          focusedPart === 'capture');
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     const stateChanged = changed.has('state');
     if (stateChanged && !this.suppressNextStateAnnouncement) {
       // A state supplied at mount is context. Later error transitions use only the assertive sink;
@@ -160,7 +170,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         this.statusAnnouncementSink?.announce(this.stateLabel());
       }
     }
-    if (stateChanged && this.transferActionFocus) {
+    if ((stateChanged || changed.has('showCapture')) && this.transferActionFocus) {
       this.transferActionFocus = false;
       (this.renderRoot.querySelector('[part="connect"], [part="disconnect"]') as HTMLElement | null)?.focus();
     }

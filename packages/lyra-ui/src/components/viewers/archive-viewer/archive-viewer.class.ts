@@ -20,6 +20,7 @@ import {
   type ArchiveFileApi,
   type ArchiveLibraryApi,
 } from './archive-loader.js';
+import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -125,9 +126,11 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
   return selection.getRangeAt(0);
 }
 
-/** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. Sizes use
- * archive metadata when available; file entries without size metadata are inflated sequentially
- * once for measurement. The combined declared and measured uncompressed size is capped at 100 MB.
+/** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. The
+ * central directory is checked for the 10,000-entry and 100 MB declared-expansion ceilings before
+ * the optional ZIP peer materializes entries. Sizes use archive metadata when available; file
+ * entries without size metadata are inflated sequentially once for measurement. The combined
+ * declared and measured uncompressed size is capped at 100 MB.
  * Fragment anchors use the exact ZIP entry path as their `id`; text-quote anchors resolve against
  * each complete entry path before the matching virtual row is scrolled into view. Text selections
  * and painted highlights are likewise scoped to entry paths rendered in the nested virtual list.
@@ -369,6 +372,16 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       }
       const buffer = await readResponseArrayBuffer(response);
       if (!this.isConnected || generation !== this.generation) return;
+      // Enforce central-directory entry and declared-expansion ceilings before JSZip constructs
+      // its entry graph. Non-ZIP input is left to the peer so malformed-input behavior remains
+      // consistent, but a structurally recognizable ZIP cannot bypass the preflight.
+      assertZipArchiveMetadataWithinLimits(buffer, {
+        description: 'ZIP',
+        maxEntries: MAX_ARCHIVE_ENTRIES,
+        maxUncompressedBytes: MAX_ARCHIVE_UNCOMPRESSED_BYTES,
+        allowNonZip: true,
+        signal,
+      });
       const zip = await library.loadAsync(buffer);
       if (!this.isConnected || generation !== this.generation) return;
       const entries: ArchiveEntry[] = [];

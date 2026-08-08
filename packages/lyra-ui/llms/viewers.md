@@ -213,8 +213,10 @@ type. First-party invention.
   renderer.
 
 **Events:**
-- `lr-close` — `detail: DocumentViewerCloseReason`, the nested dialog's dismissal reason. The
-  event is emitted after the viewer sets `open` to `false`.
+- `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
+  The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
+  its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
+  does not close the document viewer.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
@@ -441,7 +443,9 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
 `jszip` peer. It is listing-only: entry content is never rendered or previewed. Each entry's size is
 read straight from JSZip's local file header (`uncompressedSize`) when available, falling back to
-fully decompressing only the rare entry missing that header field. The list composes
+fully decompressing only the rare entry missing that header field. Before JSZip materializes its
+entry graph, the viewer checks the ZIP central directory against its 10,000-entry and 100 MB
+declared-expansion ceilings. The list composes
 `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
@@ -609,6 +613,10 @@ malformed, or more-permissive limits make the peer unavailable and the viewer fa
 ## `lr-svg-viewer`
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
+The inline profile removes author `<style>`/`style`, SVG animation elements, and external
+resource or paint-server references before insertion, preventing fetched SVG content from escaping
+the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
+raster data remain available.
 
 Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
 anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`
@@ -741,7 +749,9 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. PapaParse
+diagnostics also emit this event when the recoverable partial table remains rendered, so malformed
+or extra cells are never silently presented as a clean parse.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
@@ -1280,9 +1290,10 @@ code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`collapsed-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
 `xml` reassignment) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
-sections, and processing instructions. Namespace-literal: qualified names render exactly as authored,
-with no namespace-URI-aware matching. `DOMParser` never resolves external entities or DTDs, so XXE
-injection is structurally out of reach. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
+sections, and processing instructions, preserved in their original mixed-child source order.
+Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
+matching. Every document type declaration is rejected before `DOMParser`, preventing external
+entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
 (sanitized *rendered* HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
@@ -1299,7 +1310,9 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches.
+`clearSearch()` clears the query and matches. When the XML document reloads while a query remains
+active, matches are recomputed, the active index is clamped to the new result set, and a fresh
+`lr-search-change` announces that state.
 
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a

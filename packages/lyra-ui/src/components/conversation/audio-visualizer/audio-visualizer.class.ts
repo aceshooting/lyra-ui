@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { styles } from './audio-visualizer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -38,6 +39,8 @@ interface OwnedAnimationFrame {
  * loop via `scheduleDraw()`. The loop is also paused while the host is scrolled off-screen (an
  * `IntersectionObserver`-gated `visible` flag, mirroring `<lr-chart>`'s own `draw()` gating), so a
  * live-signal visualizer buried behind later transcript messages doesn't keep repainting for nobody.
+ * Canvas-bound theme colors are materialized through a live DOM color probe before drawing, so
+ * `currentColor`, inherited expressions, and invalid values cannot silently paint as stale black.
  *
  * @customElement lr-audio-visualizer
  * @csspart base - The root wrapper.
@@ -457,13 +460,16 @@ export class LyraAudioVisualizer extends LyraElement {
     return this.ambientAmplitudes(nowMs, prefersReducedMotion(this.ownerDocument.defaultView));
   }
 
-  /** Resolves the two drawing colors once; the theme/color-scheme observers and `refreshTheme()`
-   *  invalidate the cached pair, so steady-state frames never pay for `getComputedStyle`. */
+  /** Resolves and validates the two drawing colors once; the theme/color-scheme observers and
+   *  `refreshTheme()` invalidate the cached pair, so steady-state frames never pay for the DOM
+   *  color probe or `getComputedStyle`. */
   private resolveColors(): { active: string; quiet: string } {
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
+    const active = cs?.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da';
+    const quiet = cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff';
     return {
-      active: cs?.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da',
-      quiet: cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff',
+      active: resolveCanvasColor(this, active, '#0969da'),
+      quiet: resolveCanvasColor(this, quiet, '#ddf4ff'),
     };
   }
 

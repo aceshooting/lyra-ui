@@ -118,6 +118,36 @@ it('moves focus from a nested capture control when the connected controls are re
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
 });
 
+it('moves focus from the capture control when showCapture removes it without a state change', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  const capture = el.shadowRoot!.querySelector('lr-push-to-talk') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await capture.updateComplete;
+  const trigger = capture.shadowRoot!.querySelector('button') as HTMLButtonElement;
+  trigger.disabled = false;
+  trigger.focus();
+
+  el.showCapture = false;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
+});
+
+it('does not move a surviving session action when showCapture changes', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  (el.shadowRoot!.querySelector('[part="mute"]') as HTMLButtonElement).focus();
+
+  el.showCapture = false;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('mute');
+});
+
 it('preserves action focus from a genuinely foreign descendant after adoption', async () => {
   const iframe = document.createElement('iframe');
   document.body.append(iframe);

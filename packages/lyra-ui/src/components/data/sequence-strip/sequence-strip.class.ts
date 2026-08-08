@@ -38,7 +38,9 @@ export interface SequenceStripCategory {
  * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
  * Exactly one cell is tabbable; Left/Right and Home/End rove through the items and show the same
  * detail tooltip as pointer hover. Cells are inspectable rather than actionable, so they do not
- * emit an activation event.
+ * emit an activation event. A host `aria-label` names the internal list ahead of the
+ * `accessible-label` alias and generated summary. Controlled item refreshes preserve the focused
+ * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
  *
  * @customElement lr-sequence-strip
  * @csspart base - The root strip wrapper (`role="list"`).
@@ -81,6 +83,9 @@ export class LyraSequenceStrip extends LyraElement {
   /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
    *  computes the summary from `items`/`categories`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  /** Standard host accessible-name override. Wins over `accessibleLabel` and the generated
+   *  category summary, and is forwarded to the internal list that owns the semantic role. */
+  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
    *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
@@ -99,15 +104,59 @@ export class LyraSequenceStrip extends LyraElement {
   @state() private hoverIndex: number | null = null;
   /** The roving keyboard-focus index (`null` while focus is outside the strip). */
   @state() private keyboardIndex: number | null = null;
+  private pendingFocusTarget: number | 'base' | undefined;
+  private restoringOwnedFocus = false;
+  private focusRestoreGeneration = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('items')) {
       this.hoverIndex = null;
-      this.keyboardIndex = null;
+      const renderedCells = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ?? [])];
+      const focusedIndex = renderedCells.indexOf(this.shadowRoot?.activeElement as HTMLElement);
+      if (focusedIndex < 0) {
+        this.keyboardIndex = null;
+        return;
+      }
+      const previousItems = (changed.get('items') as SequenceStripItem[] | undefined) ?? [];
+      const focusedId = previousItems[focusedIndex]?.id;
+      const retainedIndex = focusedId == null ? -1 : this.items.findIndex((item) => item.id === focusedId);
+      const nextIndex = retainedIndex >= 0
+        ? retainedIndex
+        : this.items.length
+          ? Math.min(focusedIndex, this.items.length - 1)
+          : -1;
+      this.keyboardIndex = nextIndex >= 0 ? nextIndex : null;
+      this.pendingFocusTarget = nextIndex >= 0 ? nextIndex : 'base';
+      this.restoringOwnedFocus = true;
+      this.focusRestoreGeneration++;
     }
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const pending = this.pendingFocusTarget;
+    if (pending === undefined) return;
+    this.pendingFocusTarget = undefined;
+    const generation = this.focusRestoreGeneration;
+    this.scheduleAfterUpdate(() => {
+      try {
+        if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
+        if (pending === 'base') {
+          this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+          return;
+        }
+        this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[pending]?.focus();
+      } finally {
+        this.restoringOwnedFocus = false;
+      }
+    }, 'sequence-strip-focus');
+  }
+
   override disconnectedCallback(): void {
+    this.focusRestoreGeneration++;
+    this.pendingFocusTarget = undefined;
+    this.restoringOwnedFocus = false;
     this.hoverIndex = null;
     this.keyboardIndex = null;
     super.disconnectedCallback();
@@ -151,10 +200,11 @@ export class LyraSequenceStrip extends LyraElement {
   }
 
   private onCellFocus(index: number): void {
-    this.keyboardIndex = index;
+    if (!this.restoringOwnedFocus) this.keyboardIndex = index;
   }
 
   private onStripFocusOut(e: FocusEvent): void {
+    if (this.restoringOwnedFocus) return;
     const next = e.relatedTarget;
     if (!(next instanceof Element) || next.getAttribute('part') !== 'cell') this.keyboardIndex = null;
   }
@@ -207,16 +257,17 @@ export class LyraSequenceStrip extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const ariaLabel = this.accessibleLabel || this.autoSummary();
+    const ariaLabel = this.hostAriaLabel || this.accessibleLabel || this.autoSummary();
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
     const tabStop = this.keyboardIndex ?? 0;
     return html`
-      <div part="base" role="list" aria-label=${ariaLabel} @focusout=${this.onStripFocusOut}>
+      <div part="base" role="list" aria-label=${ariaLabel} tabindex="-1" @focusout=${this.onStripFocusOut}>
         ${this.items.map(
           (item, index) => html`
             <span
               part="cell"
+              data-item-id=${item.id}
               role="listitem"
               aria-label=${this.itemLabel(item)}
               aria-posinset=${index + 1}

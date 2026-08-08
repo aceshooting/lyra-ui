@@ -694,7 +694,8 @@ announced through the shared document-level light-DOM assertive sink)
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same host-level mechanism, token names, and defaults as `lr-chart`
-(also `getComputedStyle`-resolved on every draw), but declared in its own stylesheet, not a
+(also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
+concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
 so `--lr-theme-color-chart-*` retheming reaches box plots too.

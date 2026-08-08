@@ -1179,6 +1179,10 @@ Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button ove
 interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
 `aria-pressed="true"|"false"` from the controlled `selectedCell`, and roving tabindex/arrow-key
 focus; it continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
+When matrix/calendar data refreshes while one of those buttons owns focus, the semantic matrix
+coordinate or calendar date remains the sole roving stop. If it disappears, focus clamps to the
+nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
+refresh never steals external focus.
 
 **Properties:**
 - `rowLabels: string[] = []` (attribute: false — matrix mode only)
@@ -1231,8 +1235,8 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   one `[part="cell"]` native button per interactive cell. Buttons expose localized `aria-label`s,
   explicit `aria-pressed` state from `selectedCell`, and a roving tabindex; the canvas becomes
-  `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
-  its low DOM footprint.
+`aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
+  its low DOM footprint. Controlled refresh focus follows the preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard announcement text; receives the cell
   position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
@@ -1435,6 +1439,12 @@ actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>
 to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
 below the strip, so the color-to-category mapping is readable without visiting each cell.
 
+A standard host `aria-label` dynamically names the internal list and wins over the
+`accessible-label` alias, which in turn wins over the generated category-count summary. When an
+`items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
+clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
+refreshes do not move focus.
+
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
@@ -1451,7 +1461,7 @@ below the strip, so the color-to-category mapping is readable without visiting e
   vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
-  summary from `items`/`categories`
+  summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the *scheme*, not the current data: a category with no matching item
@@ -2436,6 +2446,12 @@ to the document's shared light-DOM polite sink, including zero and repeated equa
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
+
+Removing a focused relationship/node filter chip moves focus to the adjacent chip, or to that
+filter's add picker when no chips remain. `savedQueries` is controlled: when the host applies a
+focused `lr-query-delete` request, focus follows the adjacent saved-query delete action, or the
+stable save-name input when the list becomes empty. Updates that did not remove the focused control
+never move external focus.
 
 **Properties:** `value`, `customError` (`custom-error`), `label`, `labels`, `name`, `disabled`,
 `effectiveDisabled`, `nodeTypeOptions`,

@@ -152,6 +152,34 @@ describe('parsing and tree rendering', () => {
       DOMParser.prototype.parseFromString = original;
     }
   });
+
+  it('rejects document type declarations before DOMParser can expand internal entities', async () => {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+    const original = DOMParser.prototype.parseFromString;
+    let parseCalls = 0;
+    DOMParser.prototype.parseFromString = function (...args): Document {
+      parseCalls++;
+      return original.apply(this, args);
+    };
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.xml = `<!DOCTYPE root [
+        <!ENTITY a "1234567890">
+        <!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">
+        <!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">
+      ]><root>&c;</root>`;
+      const event = await eventPromise as CustomEvent<{ error: unknown }>;
+      await el.updateComplete;
+      expect(parseCalls).to.equal(0);
+      expect(event.detail.error).to.be.instanceOf(Error);
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'This document could not be parsed as XML.',
+      );
+    } finally {
+      DOMParser.prototype.parseFromString = original;
+    }
+  });
 });
 
 describe('loading xml via src', () => {
@@ -410,6 +438,26 @@ describe('search', () => {
     await eventPromise;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-active-match]')).to.exist;
+  });
+
+  it('clamps and announces the active search match when a reloaded document has fewer matches', async () => {
+    const el = await fixture<LyraXmlViewer>(html`
+      <lr-xml-viewer .xml=${'<root><item/><item/><item/></root>'}></lr-xml-viewer>
+    `);
+    expect(await el.search('item')).to.equal(3);
+    expect(await el.searchNext()).to.be.true;
+    expect(await el.searchNext()).to.be.true;
+
+    const eventPromise = oneEvent(el, 'lr-search-change');
+    el.xml = '<root><item/></root>';
+    const event = await eventPromise as CustomEvent<{
+      query: string;
+      matchCount: number;
+      activeIndex: number;
+    }>;
+    await el.updateComplete;
+    expect(event.detail).to.deep.equal({ query: 'item', matchCount: 1, activeIndex: 0 });
+    expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
   });
 
   it('searchNext/searchPrevious no-op when there are no matches', async () => {
@@ -734,6 +782,35 @@ describe('comment, CDATA, and processing-instruction leaves', () => {
     expect(el.shadowRoot!.querySelector('[part="comment"]')!.textContent).to.equal('<!-- a comment -->');
     expect(el.shadowRoot!.querySelector('[part="cdata"]')!.textContent).to.include('raw <data>');
     expect(el.shadowRoot!.querySelector('[part="pi"]')!.textContent).to.include('myapp');
+  });
+
+  it('preserves mixed element, text, comment, CDATA, and processing-instruction source order', async () => {
+    const el = await fixture<LyraXmlViewer>(html`
+      <lr-xml-viewer
+        .xml=${'<root>before<a/>between<!--note--><b/><![CDATA[data]]><?app value?>after</root>'}
+      ></lr-xml-viewer>
+    `);
+    const rows = Array.from(el.shadowRoot!.querySelectorAll(
+      '[part="node"], [part="text"], [part="comment"], [part="cdata"], [part="pi"]',
+    ));
+    const sequence = rows.map((row) => {
+      const parts = row.getAttribute('part') ?? '';
+      if (parts.split(/\s+/).includes('node')) {
+        return `node:${row.querySelector('[part="tag"]')?.textContent ?? ''}`;
+      }
+      return `${parts}:${row.textContent?.trim() ?? ''}`;
+    });
+    expect(sequence).to.deep.equal([
+      'node:root',
+      'text:before',
+      'node:a',
+      'text:between',
+      'comment:<!--note-->',
+      'node:b',
+      'cdata:<![CDATA[data]]>',
+      'pi:<?app value?>',
+      'text:after',
+    ]);
   });
 });
 

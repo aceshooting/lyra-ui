@@ -95,9 +95,11 @@ function buildCsp(csp: McpAppCsp | undefined): string {
 
 function withCsp(htmlSource: string, csp: McpAppCsp | undefined): string {
   const meta = `<meta http-equiv="Content-Security-Policy" content="${buildCsp(csp)}">`;
-  return /<head(?:\s[^>]*)?>/i.test(htmlSource)
-    ? htmlSource.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}${meta}`)
-    : `${meta}${htmlSource}`;
+  // Trusted policy bytes must precede every caller-controlled token. Searching for a textual
+  // <head> lets a decoy inside a comment or script string capture the insertion, leaving the real
+  // document unrestricted. The HTML parser implicitly creates the head for this leading meta;
+  // any later doctype/head tokens from the app cannot retroactively weaken an enforced policy.
+  return `${meta}${htmlSource}`;
 }
 
 function permissionPolicy(permissions: McpAppPermissions | undefined): string {
@@ -113,6 +115,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
 
 /**
  * `<lr-mcp-app>` — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
+ * Inline resources receive a trusted leading CSP meta before any caller-controlled HTML token, so
+ * comments or script strings cannot redirect policy insertion away from the parsed document head.
  * The frame can request tools, messages, links, logs, and resizing only through typed events;
  * the component never performs those external actions itself.
  *

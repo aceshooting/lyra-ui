@@ -1390,7 +1390,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   with, and renders identically to, any `line-range` entries there.
 - `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
-  Has no effect while `lineNumbers` is unset.
+  Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
+  focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
 - `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
@@ -1550,7 +1551,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   with, and renders identically to, any `line-range` entries there.
 - `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
-  Has no effect while `lineNumbers` is unset.
+  Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
+  focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
 - `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -1719,7 +1721,9 @@ number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied t
 amplitude; `label: string = ''` — the host's accessible name.
 
 **Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change (the
-canvas resolves token values at paint time and cannot inherit `var()` directly).
+canvas resolves token values at paint time and cannot inherit `var()` directly). Canvas-bound
+colors are materialized through a live DOM probe, so `currentColor` and inherited expressions
+resolve in the component's theme scope while invalid values fall back safely.
 
 **Events:** none — purely presentational.
 
@@ -1768,7 +1772,9 @@ alike — via `.focus()`. Only the plain-button built-ins (`regenerate`/`edit`) 
 toggled by this component itself; a composite child (`lr-copy-button`, the `feedback` built-in, any
 slotted custom element) remains independently reachable via the page's native Tab order alongside the
 toolbar's single roving stop, since a shadow-root-internal focusable element can't be suppressed from
-outside its own component.
+outside its own component. Disabled, hidden, `aria-hidden`, and inert controls (including controls
+beneath an inert ancestor) are excluded from arrow navigation before the usable roving fallback is
+chosen.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
@@ -1861,7 +1867,8 @@ properties: `state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' = '
 the pointer/keyboard gestures).
 
 **Slots:** `icon` (replaces the default mic glyph) and `recording-icon` (replaces the default
-recording-state pulse glyph).
+recording-state pulse glyph). Both are decorative inside the named trigger: their flattened content
+is inert and hidden from accessibility APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
@@ -1874,7 +1881,8 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
-trigger button's inline and block size. `--lr-push-to-talk-recording-color` (default
+trigger button's preferred inline and block size; the shared `--lr-icon-button-size` remains its
+minimum hit-area floor even when this value is smaller. `--lr-push-to-talk-recording-color` (default
 `var(--lr-color-danger)`) — the border and text color of `[part='trigger']` while `state` is
 `recording`; it recolors only the recording treatment and leaves every other danger-toned surface on
 the page untouched. Like the library's other state hooks it is an inline `var()` fallback at the
@@ -2067,6 +2075,11 @@ host-supplied `lr-conversation-item`s from the default slot as-is: no grouping, 
 row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the *requested* new
 state; the host mutates `threads`.
+
+ArrowUp/ArrowDown/Home/End navigation skips rows that are disabled, hidden, `aria-hidden`, or
+`inert` (including an inert ancestor introduced by `wrapRow`). At a virtual-window edge the scan
+continues through the complete item model and mounts the next available row before moving focus,
+so an unavailable row cannot strand keyboard navigation.
 
 **Properties:** `threads: ChatThread[] = []` (attribute: false) — `ChatThread { id: string; title:
 string; excerpt?: string; timestamp?: Date | string; pinned?: boolean; archived?: boolean }`
@@ -2730,6 +2743,10 @@ import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.j
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
 
+When a focused row action requests removal and the host applies the proposed queue, focus moves to
+the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
+receives focus. Removing an unfocused row does not move focus.
+
 **Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
@@ -2794,6 +2811,11 @@ clamped by the composed visualizer); `stream: MediaStream | null = null` and `en
 LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
 converter); `errorCode: string = ''` (attribute `error-code`); `label: string = ''`.
+
+When a state transition removes a focused session action, focus moves to the replacement
+connect/disconnect action. Setting `showCapture` to `false` applies that handoff only when the
+capture control owned focus; a surviving built-in, slotted, or external focus destination is not
+moved.
 
 **Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
 composed push-to-talk events continue bubbling.

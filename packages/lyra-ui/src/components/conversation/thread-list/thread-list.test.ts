@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './thread-list.js';
 import '../../overlays/chip/chip.js';
 import '../../layout/menu/menu.js';
@@ -865,6 +865,35 @@ describe('data mode', () => {
     expect(rows[1].shadowRoot!.activeElement).to.equal(secondOption);
   });
 
+  it('skips a row whose wrapRow ancestor is inert instead of stranding arrow focus', async () => {
+    const el = (await fixture(html`
+      <lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${[
+          { id: 'first', title: 'First' },
+          { id: 'inert-middle', title: 'Unavailable' },
+          { id: 'third', title: 'Third' },
+        ]}
+        .wrapRow=${(thread: { id: string }, row: unknown) =>
+          thread.id === 'inert-middle' ? html`<div inert>${row}</div>` : row}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    dataRow(el, 'first').shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
+
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await nextFrame();
+
+    const focusedId =
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
+      'none';
+    expect(focusedId).to.equal('third');
+  });
+
   it('does not reinterpret row-navigation keys originating on a group toggle', async () => {
     const el = (await fixture(html`
       <lr-thread-list
@@ -1569,6 +1598,37 @@ describe('keyboard navigation past the rendered window', () => {
       scrollEvents.every((trusted) => trusted),
       'no synthetic scroll event is dispatched at the child',
     ).to.be.true;
+  });
+
+  it('continues past an inert row mounted beyond the prior virtual window edge', async () => {
+    const el = await mountKeyboardWindow();
+    const rendered = dataRows(el);
+    const last = rendered[rendered.length - 1]!;
+    const lastIndex = manyThreads.findIndex((thread) => thread.id === last.id);
+    const inertId = manyThreads[lastIndex + 1]!.id;
+    const expectedId = manyThreads[lastIndex + 2]!.id;
+    el.wrapRow = (thread, row) =>
+      thread.id === inertId ? html`<div inert>${row}</div>` : row;
+    await el.updateComplete;
+    const currentLast = dataRows(el).find((row) => row.id === last.id)!;
+    await currentLast.updateComplete;
+    currentLast.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
+
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await waitUntil(
+      () => dataRows(el).some(
+        (row) => row.id === expectedId && row.shadowRoot!.activeElement?.getAttribute('part') === 'option',
+      ),
+      'focus did not continue past the inert virtual row',
+      { timeout: 3000 },
+    );
+
+    const focusedId =
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
+      'none';
+    expect(focusedId).to.equal(expectedId);
   });
 
   it('does nothing at the very end of the list', async () => {

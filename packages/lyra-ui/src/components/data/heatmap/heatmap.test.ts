@@ -260,6 +260,96 @@ it('renders an opt-in native button overlay with persistent per-cell semantics',
   await expect(el).to.be.accessible();
 });
 
+it('keeps the focused accessible cell as the sole roving stop across a same-shape refresh', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      .rowLabels=${['A']}
+      .colLabels=${['X', 'Y']}
+      .values=${[[1, 2]]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  cells[1]!.focus();
+
+  el.values = [[3, 4]];
+  await el.updateComplete;
+
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellKey']).to.equal('matrix-0-1');
+  expect(
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][tabindex="0"]')]
+      .map((cell) => cell.dataset['cellKey']),
+  ).to.deep.equal(['matrix-0-1']);
+});
+
+it('clamps owned accessible-cell focus when a controlled matrix shrinks', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      .rowLabels=${['A', 'B']}
+      .colLabels=${['X', 'Y']}
+      .values=${[[1, 2], [3, 4]]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')[3]!.focus();
+
+  el.rowLabels = ['A'];
+  el.values = [[1, 2]];
+  await el.updateComplete;
+
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellKey']).to.equal('matrix-0-1');
+  expect(el.shadowRoot!.querySelectorAll('[part="cell"][tabindex="0"]')).to.have.lengthOf(1);
+
+  el.rowLabels = [];
+  el.values = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('preserves the focused calendar date when a refresh moves it to a different week column', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      mode="calendar"
+      .days=${[{ date: '2026-03-08', value: 8 }]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const marchEighth = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')]
+    .find((cell) => cell.dataset['cellIdentity'] === '2026-03-08')!;
+  marchEighth.focus();
+
+  el.days = [
+    { date: '2026-02-01', value: 1 },
+    { date: '2026-03-08', value: 9 },
+  ];
+  await el.updateComplete;
+
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellIdentity']).to.equal('2026-03-08');
+  expect(
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][tabindex="0"]')]
+      .map((cell) => cell.dataset['cellIdentity']),
+  ).to.deep.equal(['2026-03-08']);
+});
+
+it('does not move external focus when an unfocused accessible heatmap refreshes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside-heatmap">Outside</button>
+      <lr-heatmap accessible-cells .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
+  await el.updateComplete;
+  wrapper.querySelector<HTMLElement>('#outside-heatmap')!.focus();
+
+  el.values = [[2]];
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-heatmap');
+});
+
 it('gives adjacent accessible matrix and calendar cells non-overlapping shared minimum hit areas', async () => {
   const matrix = (await fixture(html`
     <lr-heatmap

@@ -58,7 +58,9 @@ function editIcon(): SVGTemplateResult {
  * built-ins and slotted controls alike -- via `.focus()`, including composite children
  * (`lr-copy-button`, the `feedback` built-in, any slotted custom element) that expose their own
  * `focus()` delegation. Composite children are reconciled after their own Lit updates so the
- * toolbar retains exactly one sequential Tab stop.
+ * toolbar retains exactly one sequential Tab stop. Disabled, hidden, `aria-hidden`, and inert
+ * controls (including a control beneath an inert ancestor) are excluded before choosing that stop,
+ * because inert targets silently refuse `.focus()` and would otherwise strand arrow navigation.
  *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
@@ -220,16 +222,20 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private focusableStops(): HTMLElement[] {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (!base) return [];
-    const isDisabled = (el: HTMLElement): boolean =>
+    const isUnavailable = (el: HTMLElement): boolean =>
       el.matches(':disabled, [aria-disabled="true"]') ||
       el.hasAttribute('disabled') ||
-      (el as HTMLElement & { disabled?: boolean }).disabled === true;
+      (el as HTMLElement & { disabled?: boolean }).disabled === true ||
+      el.hidden !== false ||
+      el.getAttribute('aria-hidden') === 'true' ||
+      el.inert ||
+      el.closest('[inert]') !== null;
     const direct = [...base.children].filter(
       (el): el is HTMLElement =>
         el.nodeType === 1 &&
         typeof (el as HTMLElement).focus === 'function' &&
         el.tagName !== 'SLOT' &&
-        !isDisabled(el as HTMLElement),
+        !isUnavailable(el as HTMLElement),
     );
     const slotEl = base.querySelector('slot') as HTMLSlotElement | null;
     const slotted =
@@ -237,7 +243,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         (el): el is HTMLElement =>
           el.nodeType === 1 &&
           typeof (el as HTMLElement).focus === 'function' &&
-          !isDisabled(el as HTMLElement),
+          !isUnavailable(el as HTMLElement),
       ) ?? [];
     return [...direct, ...slotted];
   }

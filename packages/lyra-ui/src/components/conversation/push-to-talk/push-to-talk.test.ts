@@ -1164,6 +1164,29 @@ it('slots override the default icon and recording-icon glyphs', async () => {
   expect(iconSlot.assignedElements()[0].textContent).to.equal('mic');
 });
 
+it('keeps an undersized public size override above the shared icon-button hit floor', async () => {
+  const el = (await fixture(html`
+    <lr-push-to-talk
+      style="--lr-push-to-talk-size:8px;--lr-theme-icon-button-size:44px"
+    ></lr-push-to-talk>
+  `)) as LyraPushToTalk;
+  const rect = trigger(el).getBoundingClientRect();
+  expect(rect.width).to.be.at.least(44);
+  expect(rect.height).to.be.at.least(44);
+});
+
+it('makes interactive icon-slot content decorative and unfocusable inside the trigger', async () => {
+  const el = (await fixture(html`
+    <lr-push-to-talk><button id="nested-icon" slot="icon">Nested action</button></lr-push-to-talk>
+  `)) as LyraPushToTalk;
+  const nested = el.querySelector<HTMLElement>('#nested-icon')!;
+  nested.focus();
+
+  expect(el.ownerDocument.activeElement?.id).to.not.equal('nested-icon');
+  expect(el.shadowRoot!.querySelector('[part="icon"]')?.hasAttribute('inert')).to.be.true;
+  await expect(el).to.be.accessible();
+});
+
 // -- Accessibility -------------------------------------------------------
 
 it('is accessible in hold mode', async () => {

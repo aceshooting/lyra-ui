@@ -142,6 +142,15 @@ function expectPaletteContrast(mode: PaletteMode): void {
     );
   }
 
+  // Neutral ships the same loud/on-loud semantic pair as the other tones, but deliberately has
+  // no `--lr-color-neutral-quiet` convenience alias: quiet neutral surfaces use the complete
+  // palette token (`--lr-color-neutral-fill-quiet`) through the contextual vocabulary instead.
+  const neutral = fallbackHex('--lr-color-neutral', mode);
+  pairs.push(
+    ['neutral / surface', neutral, surface, 4.5],
+    ['on-neutral / neutral', fallbackHex('--lr-color-on-neutral', mode), neutral, 4.5],
+  );
+
   const failures = pairs.flatMap(([label, foreground, background, minimum]) => {
     const actual = contrastRatio(foreground, background);
     return actual + Number.EPSILON < minimum
@@ -420,36 +429,14 @@ async function probeVarUnder(themeClass: string, name: string): Promise<string> 
   return getComputedStyle(probe).getPropertyValue(name).trim();
 }
 
-const REQUIRED_THEME_INPUTS = [
-  '--lr-theme-focus-ring-width',
-  '--lr-theme-focus-ring-offset',
-  '--lr-theme-icon-button-size',
-  '--lr-theme-color-surface-raised',
-  '--lr-theme-color-overlay',
-  '--lr-theme-color-overlay-strong',
-  // The surface a MODAL panel paints itself with. A separate input from the page surface because
-  // in dark mode it must NOT equal it: a dialog painted the page's near-black read as a scrim
-  // with floating text and no panel at all.
-  '--lr-theme-color-surface-overlay',
-  // Elevation. The colour is its own input so a theme can tint all five steps at once.
-  '--lr-theme-shadow-color',
-  ...ELEVATION_STEPS.map((step) => `--lr-theme-shadow-${step}`),
-  // 'md' is deliberately absent: it and 'm' were the same 1rem under two names, so a control could
-  // declare two 'different' type tiers that rendered identically. 8.0.0 keeps 'm'.
-  ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
-  ...['2xs', 'xs', 's', 'm', 'l', '2xl'].map((step) => `--lr-theme-space-${step}`),
-  ...['base', 'content', 'dropdown', 'popover', 'modal', 'toast'].map((layer) => `--lr-theme-z-index-${layer}`),
-  ...Array.from({ length: 8 }, (_, index) => `--lr-theme-color-chart-${index + 1}`),
-  ...Array.from({ length: 8 }, (_, index) => `--lr-theme-graph-cat-${index + 1}`),
-  // Foregrounds and backgrounds are two independent ramps: one shared set made a background slot
-  // the same colour as the text drawn on it.
-  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-color-${slot}`),
-  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-bg-${slot}`),
-];
+function bridgedThemeInputs(): string[] {
+  const layers = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
+  return [...new Set([...layers.matchAll(/var\((--lr-theme-[\w-]+)/g)].map((match) => match[1]))].sort();
+}
 
-it('declares every documented theme input in theme.css', async () => {
+it('declares every bridged theme input in theme.css', async () => {
   const { text } = await loadThemeCss();
-  const missing = REQUIRED_THEME_INPUTS.filter((name) => !new RegExp(`^\\s*${name}:`, 'm').test(text));
+  const missing = bridgedThemeInputs().filter((name) => !new RegExp(`^\\s*${name}:`, 'm').test(text));
   expect(missing.join('\n')).to.equal('');
 });
 
@@ -461,6 +448,13 @@ it('names only theme inputs that a component token layer actually reads', async 
   const read = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
   const unused = declared.filter((name) => !read.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
+});
+
+it('keeps the theme interaction-mix partner aligned with text in both modes', async () => {
+  await withThemeCss(async () => {
+    expect(await probeVarUnder('lr-light', '--lr-color-mix-partner')).to.equal('#1a1a1a');
+    expect(await probeVarUnder('lr-dark', '--lr-color-mix-partner')).to.equal('#f2f2f2');
+  });
 });
 
 it('leaves every bridged token at its built-in value when theme.css is imported', async () => {

@@ -109,6 +109,26 @@ export const WithLineNumbers: Story = {
   `,
 };
 
+export const InteractiveLines: Story = {
+  name: 'Keyboard-interactive line numbers',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tab into the gutter and use ArrowUp, ArrowDown, Home, and End. If a live code update removes the focused line, focus follows the final surviving line instead of escaping the widget.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-code-block
+      filename="stream.ts"
+      line-numbers
+      interactive-lines
+      .code=${'const first = 1;\nconst second = 2;\nconst third = 3;\nconst fourth = 4;'}
+    ></lr-code-block>
+  `,
+};
+
 export const UnrecognizedLanguage: Story = {
   name: 'Unrecognized language id (falls back to plain text)',
   render: () => html`

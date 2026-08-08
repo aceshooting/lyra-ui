@@ -383,7 +383,9 @@ export interface LyraHeatmapEventMap {
  * assistive technology. The opt-in overlay uses native buttons with a
  * roving tabindex, localized `aria-label`, and explicit `aria-pressed` state
  * derived from the controlled `selectedCell` property; the canvas remains the
- * visual rendering surface underneath.
+ * visual rendering surface underneath. When grid data refreshes while one of those buttons owns
+ * focus, its semantic matrix coordinate or calendar date remains the sole roving stop; removal
+ * clamps to the nearest survivor, or to the stable heatmap base when no interactive cells remain.
  *
  * `columnX` (calendar mode only) overrides the x-origin computed for each
  * week column — drawing, hit-testing, the focus ring, and month-label
@@ -647,7 +649,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * `"false"` from `selectedCell`, and participates in a roving tabindex so a
    * dense calendar does not create hundreds of tab stops. The selection is
    * controlled: clicking a cell still emits `lr-cell-click`, and the
-   * consumer updates `selectedCell` when it wants `aria-pressed` to change.
+  * consumer updates `selectedCell` when it wants `aria-pressed` to change.
+   * Controlled grid refreshes preserve owned focus by matrix coordinate or calendar date, then
+   * clamp to the nearest surviving interactive cell (or the heatmap base when none remain).
    */
   @property({ type: Boolean, attribute: 'accessible-cells' }) accessibleCells = false;
   /** Formats the per-cell tooltip and keyboard announcement text — receives the cell position
@@ -783,6 +787,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Text mirrored in `[part="live-region"]`, refreshed on every focus move. */
   @state() private liveText = '';
   @state() private accessibleTargetSizePx = DEFAULT_ACCESSIBLE_TARGET_SIZE_PX;
+  private pendingAccessibleFocus: CellPos | 'base' | undefined;
+  private restoringAccessibleFocus = false;
+  private accessibleFocusGeneration = 0;
   private announcementSink?: AnnouncementSink;
   private authorRole: string | null = null;
   private authorAriaLabel: string | null = null;
@@ -825,6 +832,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.accessibleFocusGeneration++;
+    this.pendingAccessibleFocus = undefined;
+    this.restoringAccessibleFocus = false;
     this.releaseAnnouncementSink();
     this.hoverCell = null;
     this.focusedCell = null;
@@ -892,15 +902,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (
+    const collectionChanged =
       changed.has('mode') ||
       changed.has('rowLabels') ||
       changed.has('colLabels') ||
       changed.has('days') ||
       changed.has('firstDayOfWeek') ||
       changed.has('cellInteractive') ||
-      changed.has('values')
-    ) {
+      changed.has('values');
+    const activeAccessibleCell = collectionChanged && this.accessibleCells
+      ? this.shadowRoot?.activeElement as HTMLElement | null
+      : null;
+    const renderedAccessibleCells = activeAccessibleCell?.matches('[part="cell"]')
+      ? [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ?? [])]
+      : [];
+    const accessibleFocusSnapshot = activeAccessibleCell?.matches('[part="cell"]')
+      ? {
+          identity: activeAccessibleCell.dataset['cellIdentity'],
+          index: renderedAccessibleCells.indexOf(activeAccessibleCell),
+        }
+      : undefined;
+    if (collectionChanged) {
       // The previous focus/hover cursor may no longer address a real cell
       // once the grid's shape (or mode) changes out from under it —
       // stroking a focus ring at a stale (row, col)/(week, weekday), or
@@ -964,6 +986,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // is gated avoids redoing it on every pointer move.
     if (changed.has('values') || changed.has('days') || changed.has('mode') || !this.hasUpdated) {
       this.cachedValueRange = this.computeValueRange();
+    }
+    if (accessibleFocusSnapshot) {
+      const positions = this.accessibleCellPositions();
+      const retained = accessibleFocusSnapshot.identity == null
+        ? undefined
+        : positions.find((pos) => this.accessibleCellIdentity(pos) === accessibleFocusSnapshot.identity);
+      const target = retained ?? positions[Math.min(Math.max(accessibleFocusSnapshot.index, 0), positions.length - 1)] ?? null;
+      this.focusedCell = target;
+      this.liveText = target ? this.resolveCellText(target) : '';
+      this.pendingAccessibleFocus = target ?? 'base';
+      this.restoringAccessibleFocus = true;
+      this.accessibleFocusGeneration++;
     }
     const bounds = this.cachedValueRange;
     const range = bounds
@@ -1082,6 +1116,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       if (focusOnly && this.repaintFocusRing(changed.get('focusedCell') as CellPos | null | undefined)) return;
       this.draw();
     }
+    const pending = this.pendingAccessibleFocus;
+    if (pending === undefined) return;
+    this.pendingAccessibleFocus = undefined;
+    const generation = this.accessibleFocusGeneration;
+    this.scheduleAfterUpdate(() => {
+      try {
+        if (generation !== this.accessibleFocusGeneration || !this.isConnected) return;
+        if (pending === 'base') {
+          this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+          return;
+        }
+        const identity = this.accessibleCellIdentity(pending);
+        const target = [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="cell"]') ?? [])]
+          .find((candidate) => candidate.dataset['cellIdentity'] === identity);
+        target?.focus();
+      } finally {
+        this.restoringAccessibleFocus = false;
+      }
+    }, 'heatmap-accessible-focus');
   }
 
   /** Redraws canvas content after an upstream token or theme change. */
@@ -2260,6 +2313,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return 'week' in pos ? `calendar-${pos.week}-${pos.weekday}` : `matrix-${pos.row}-${pos.col}`;
   }
 
+  private accessibleCellIdentity(pos: CellPos): string {
+    return 'week' in pos ? pos.date : this.accessibleCellKey(pos);
+  }
+
   private accessibleCellAtKey(key: string): CellPos | null {
     return (
       this.accessibleCellPositions().find((pos) => this.accessibleCellKey(pos) === key) ?? null
@@ -2277,6 +2334,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private onAccessibleCellFocus = (e: FocusEvent): void => {
+    if (this.restoringAccessibleFocus) return;
     const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
@@ -2319,6 +2377,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
               class="cell"
               type="button"
               data-cell-key=${key}
+              data-cell-identity=${this.accessibleCellIdentity(pos)}
               aria-label=${this.resolveCellText(pos)}
               aria-pressed=${this.isSelectedPos(pos) ? 'true' : 'false'}
               tabindex=${this.samePos(tabStop, pos) ? '0' : '-1'}
@@ -2377,7 +2436,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const range = this.cachedValueRange;
     const labeledAnnotations = this.annotations.filter((a) => a.label);
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1">
         <canvas
           part="canvas"
           tabindex=${this.accessibleCells ? '-1' : '0'}

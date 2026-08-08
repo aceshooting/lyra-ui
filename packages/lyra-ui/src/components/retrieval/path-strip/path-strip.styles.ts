@@ -7,6 +7,10 @@ export const styles = css`
   [part='base'] {
     display: block;
   }
+  [part='base']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='node'],
   [part='relation'] {
     /* Both pill kinds share this rule, so both get the same shared minimum

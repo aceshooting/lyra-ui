@@ -115,6 +115,14 @@ describe('lr-terminal', () => {
     expect(el.getPlainText()).to.equal('fresh');
   });
 
+  it('recovers visible streamed output after an overlong unterminated OSC sequence', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    el.write(`\x1b]0;${'x'.repeat(5_000)}`);
+    el.write('\x1b[31mrecovered');
+    await el.updateComplete;
+    expect(el.getPlainText()).to.equal('recovered');
+  });
+
   it('copy button emits lr-copy with the SGR-stripped plain text', async () => {
     const el = (await fixture(html`<lr-terminal copyable></lr-terminal>`)) as LyraTerminal;
     el.write('\x1b[31mred\x1b[0m plain');

@@ -19,6 +19,8 @@ export const styles = css`
     position: relative;
     inline-size: var(--lr-push-to-talk-size, var(--lr-size-3rem));
     block-size: var(--lr-push-to-talk-size, var(--lr-size-3rem));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border-radius: 50%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);

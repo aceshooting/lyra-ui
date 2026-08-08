@@ -38,6 +38,16 @@ export const Narrow320: Story = {
   `,
 };
 
+/** The visual size hook may request a smaller circle, but the interactive trigger retains the
+ * shared icon-button hit floor. Custom icon content remains decorative inside that one control. */
+export const HitFloorWithCustomIcon: Story = {
+  render: () => html`
+    <lr-push-to-talk style="--lr-push-to-talk-size:var(--lr-size-1rem);">
+      <span slot="icon" style="font-size:var(--lr-font-size-xs);">MIC</span>
+    </lr-push-to-talk>
+  `,
+};
+
 export const ThemedRecording: Story = {
   name: 'Themed recording state (cssprop)',
   parameters: {

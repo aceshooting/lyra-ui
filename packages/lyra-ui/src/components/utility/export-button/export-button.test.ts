@@ -93,14 +93,35 @@ it('preserves focus ownership when loading/disabled invalidates the focused cont
   await el.updateComplete;
   expect(document.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
   expect(el.open).to.be.false;
+  expect(el.getAttribute('tabindex')).to.equal('-1');
 
   el.loading = false;
   await el.updateComplete;
+  expect(el.hasAttribute('tabindex')).to.be.false;
   el.focus();
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('trigger');
   el.disabled = true;
   await el.updateComplete;
   expect(document.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
+});
+
+it('preserves an author-owned host tabindex across disable and re-enable', async () => {
+  const el = (await fixture(
+    html`<lr-export-button tabindex="3"></lr-export-button>`,
+  )) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  (el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement).focus();
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.getAttribute('tabindex')).to.equal('3');
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(el.getAttribute('tabindex')).to.equal('3');
 });
 
 it('preserves focus ownership when the owner realm exposes focus through a receiver-sensitive accessor', async () => {

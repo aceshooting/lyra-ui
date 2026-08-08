@@ -50,6 +50,36 @@ describe('lr-svg-viewer', () => {
     }
   });
 
+  it('removes stylesheet and external resource references while preserving local SVG references', async () => {
+    const restore = fetchSvg(`
+      <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="paint"><stop offset="1" stop-color="red" /></linearGradient>
+        </defs>
+        <style>:host { position: fixed; inset: 0 } image { filter: url(https://example.test/filter.svg#x) }</style>
+        <image id="remote-image" href="https://example.test/tracker.png" />
+        <rect id="remote-paint" fill="url(https://example.test/paint.svg#gradient)" />
+        <rect id="local-paint" fill="url(#paint)" />
+        <circle id="inline-style" style="fill:url(https://example.test/paint.svg#gradient)" />
+      </svg>
+    `);
+    try {
+      const el = await fixture<LyraSvgViewer>(html`
+        <lr-svg-viewer src="https://example.test/a.svg"></lr-svg-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"] svg') !== null);
+      const content = el.shadowRoot!.querySelector('[part="svg"]')!;
+      expect(content.querySelectorAll('style').length).to.equal(0);
+      expect(content.querySelector('#remote-image')?.hasAttribute('href')).to.be.false;
+      expect(content.querySelector('#remote-paint')?.hasAttribute('fill')).to.be.false;
+      expect(content.querySelector('#inline-style')?.hasAttribute('style')).to.be.false;
+      expect(content.querySelector('#local-paint')?.getAttribute('fill')).to.equal('url(#paint)');
+      expect(getComputedStyle(el).position).to.not.equal('fixed');
+    } finally {
+      restore();
+    }
+  });
+
   it('forwards a host aria-label to the role="img" content region, winning over the localized default', async () => {
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {

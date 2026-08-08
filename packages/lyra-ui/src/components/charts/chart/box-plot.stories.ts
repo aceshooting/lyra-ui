@@ -62,7 +62,8 @@ export const NarrowLongContent: Story = {
 
 /**
  * Canvas chrome and the wrapping DOM legend share chart tokens; `refreshTheme()` picks up
- * out-of-band canvas and computed legend-swatch changes.
+ * out-of-band canvas and computed legend-swatch changes. Canvas-bound token expressions are
+ * resolved to concrete colors and invalid values fail to semantic paint fallbacks.
  */
 export const ThemedTokensAndRefresh: Story = {
   render: () => {

@@ -132,12 +132,51 @@ it('publishes the visible custom state exactly while the stack contains a toast 
   expect(region.matches(':state(visible)')).to.equal(false);
 });
 
-it('keeps fixed toast placements clear of display cutouts', () => {
-  const cssText = Array.isArray(styles)
-    ? styles.map((style) => style.cssText).join('\n')
-    : (styles as { cssText: string }).cssText;
-  expect(cssText).to.include('var(--lr-safe-area-top)');
-  expect(cssText).to.include('var(--lr-safe-area-bottom)');
+it('keeps every logical placement clear of rendered safe-area insets in LTR and RTL', async () => {
+  const placements = [
+    'top-start',
+    'top-center',
+    'top-end',
+    'bottom-start',
+    'bottom-center',
+    'bottom-end',
+  ] as const;
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const placement of placements) {
+      const region = (await fixture(html`
+        <lr-toast
+          dir=${direction}
+          placement=${placement}
+          style="
+            --lr-space-l: 11px;
+            --lr-safe-area-top: 101px;
+            --lr-safe-area-bottom: 103px;
+            --lr-safe-area-inline-start: 107px;
+            --lr-safe-area-inline-end: 109px;
+            --lr-toast-width: 2000px;
+          "
+        ></lr-toast>
+      `)) as LyraToast;
+      const placementStyle = getComputedStyle(region);
+      const stack = region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+      const stackStyle = getComputedStyle(stack);
+
+      if (placement.startsWith('top')) {
+        expect(placementStyle.insetBlockStart, `${direction} ${placement} block start`).to.equal('101px');
+      } else {
+        expect(placementStyle.insetBlockEnd, `${direction} ${placement} block end`).to.equal('103px');
+      }
+      if (placement.endsWith('start')) {
+        expect(placementStyle.insetInlineStart, `${direction} ${placement} inline start`).to.equal('107px');
+      } else if (placement.endsWith('end')) {
+        expect(placementStyle.insetInlineEnd, `${direction} ${placement} inline end`).to.equal('109px');
+      }
+      expect(
+        Number.parseFloat(stackStyle.maxInlineSize),
+        `${direction} ${placement} stack max inline size`,
+      ).to.equal(window.innerWidth - 22 - 107 - 109);
+    }
+  }
 });
 
 it('does not retroactively move an already-open toast when a later call uses a different placement', async () => {

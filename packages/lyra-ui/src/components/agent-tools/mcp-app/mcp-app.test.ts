@@ -44,6 +44,45 @@ it('renders executable app HTML only inside a uniquely-origin sandbox with CSP m
   expect(iframe.srcdoc).to.contain('https://api.example.com');
 });
 
+it('enforces CSP before attacker-controlled comment or script-text head decoys', async () => {
+  for (const [name, prefix] of [
+    ['comment', '<!-- <head> -->'],
+    ['script text', '<script>const decoy = "<head>";</script>'],
+  ] as const) {
+    const token = `mcp-csp-${name}-${crypto.randomUUID()}`;
+    let cleanup = (): void => {};
+    const result = new Promise<boolean>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error(`Timed out waiting for ${name} CSP probe`)), 3_000);
+      const handler = (event: MessageEvent): void => {
+        if (event.data?.token !== token) return;
+        cleanup();
+        resolve(Boolean(event.data.blocked));
+      };
+      cleanup = () => {
+        window.clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+      };
+      window.addEventListener('message', handler);
+    });
+    try {
+      const el = await fixture<LyraMcpApp>(html`<lr-mcp-app></lr-mcp-app>`);
+      el.resource = {
+        uri: `ui://csp/${name}`,
+        html: `${prefix}<script>
+          fetch('data:text/plain,csp-probe').then(
+            () => parent.postMessage({ token: ${JSON.stringify(token)}, blocked: false }, '*'),
+            () => parent.postMessage({ token: ${JSON.stringify(token)}, blocked: true }, '*')
+          );
+        </script>`,
+      };
+      await el.updateComplete;
+      expect(await result, name).to.be.true;
+    } finally {
+      cleanup();
+    }
+  }
+});
+
 it('rejects executable frame URLs instead of navigating them', async () => {
   const el = (await fixture(html`<lr-mcp-app
     .resource=${{ uri: 'ui://unsafe', src: 'javascript:alert(1)' }}

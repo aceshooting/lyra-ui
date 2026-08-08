@@ -29,7 +29,8 @@ export interface AnsiSegment {
 export interface AnsiParser {
   /** Feeds `chunk` through the parser, returning the styled text segments it produced. A partial
    *  escape sequence at the end of `chunk` is buffered internally and completed by a later `push()`
-   *  call rather than emitted as literal text. */
+   *  call rather than emitted as literal text. An unterminated sequence longer than the bounded
+   *  carry ceiling is dropped so later output resumes from a clean parser boundary. */
   push(chunk: string): AnsiSegment[];
   /** Clears style state and any buffered partial sequence — call alongside a full scrollback reset. */
   reset(): void;
@@ -114,6 +115,9 @@ function ansi256ToColor(n: number, role: 'fg' | 'bg' = 'fg'): string {
 }
 
 const CSI_FINAL_BYTE = /[\x40-\x7e]/;
+/** ANSI control sequences are small; this generous ceiling prevents a truncated OSC/CSI from
+ * retaining and repeatedly rescanning an unbounded streamed suffix. */
+export const MAX_ANSI_SEQUENCE_LENGTH = 4_096;
 
 export function createAnsiParser(): AnsiParser {
   let styles: AnsiStyles = { ...RESET_STYLES };
@@ -192,7 +196,7 @@ export function createAnsiParser(): AnsiParser {
         // safe: input[j] is read only while j < input.length (same && condition)
         while (j < input.length && !CSI_FINAL_BYTE.test(input[j]!)) j++;
         if (j >= input.length) {
-          carry = input.slice(i);
+          carry = input.length - i <= MAX_ANSI_SEQUENCE_LENGTH ? input.slice(i) : '';
           return segments;
         }
         if (input[j] === 'm') {
@@ -224,7 +228,7 @@ export function createAnsiParser(): AnsiParser {
           j++;
         }
         if (!terminated) {
-          carry = input.slice(i);
+          carry = input.length - i <= MAX_ANSI_SEQUENCE_LENGTH ? input.slice(i) : '';
           return segments;
         }
         i = j;

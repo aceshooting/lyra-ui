@@ -457,6 +457,39 @@ describe('interactive-lines', () => {
     expect(el.shadowRoot!.querySelector('[data-line="2"]')!.getAttribute('tabindex')).to.equal('0');
   });
 
+  it('rehomes real focus to the clamped roving line when controlled code shrinks', async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core code=${'a\nb\nc\nd'} line-numbers interactive-lines></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    const line4 = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-line="4"]')!;
+    line4.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-line')).to.equal('4');
+
+    el.code = 'a\nb';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-line')).to.equal('2');
+    const tabStops = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="line-button"]')]
+      .filter((button) => button.tabIndex === 0)
+      .map((button) => button.dataset['line']);
+    expect(tabStops).to.deep.equal(['2']);
+  });
+
+  it('does not restore a line after focus deliberately moves outside during a code update', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-code-block-core code=${'a\nb\nc\nd'} line-numbers interactive-lines></lr-code-block-core>
+        <button id="outside-code-block-core">Outside</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-code-block-core') as LyraCodeBlockCore;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-line="4"]')!.focus();
+    el.code = 'a\nb';
+    wrapper.querySelector<HTMLButtonElement>('#outside-code-block-core')!.focus();
+    await el.updateComplete;
+    expect(document.activeElement?.id).to.equal('outside-code-block-core');
+  });
+
   it('does not emit lr-line-click while interactive-lines is off', async () => {
     const el = (await fixture(html`<lr-code-block-core code=${'a\nb'} line-numbers></lr-code-block-core>`)) as LyraCodeBlockCore;
     await el.updateComplete;

@@ -162,6 +162,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
+  private chipFocusGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -234,16 +235,35 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     });
   }
 
-  private removeScope(value: string): void {
-    this.scope = this.scope.filter((s) => s !== value);
-    this.emitFiltersChange();
+  private repairFocusAfterChipRemoval(index: number, shouldRepair: boolean): void {
+    const generation = ++this.chipFocusGeneration;
+    if (!shouldRepair) return;
+    void this.updateComplete.then(() => {
+      if (!this.isConnected || generation !== this.chipFocusGeneration) return;
+      const chips = this.renderRoot.querySelectorAll<HTMLElement>('[part="filters"] lr-chip');
+      const target = chips[Math.min(index, chips.length - 1)];
+      if (target) {
+        target.focus();
+        return;
+      }
+      this.renderRoot.querySelector<HTMLElement>('[part="query"]')?.focus();
+    });
   }
 
-  private removeFilter(key: string): void {
+  private removeScope(value: string, shouldRepairFocus = false): void {
+    const index = this.scope.indexOf(value);
+    this.scope = this.scope.filter((s) => s !== value);
+    this.emitFiltersChange();
+    this.repairFocusAfterChipRemoval(Math.max(0, index), shouldRepairFocus);
+  }
+
+  private removeFilter(key: string, shouldRepairFocus = false): void {
+    const index = this.scope.length + Object.keys(this.filters).indexOf(key);
     const next = { ...this.filters };
     delete next[key];
     this.filters = next;
     this.emitFiltersChange();
+    this.repairFocusAfterChipRemoval(Math.max(0, index), shouldRepairFocus);
   }
 
   private onQueryInput = (e: CustomEvent<{ value: string }>): void => {
@@ -312,7 +332,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               ${this.scope.map(
                 (s) => html`<lr-chip variant="brand" removable value=${s} @lr-remove=${(event: Event) => {
                   event.stopPropagation();
-                  this.removeScope(s);
+                  const chip = event.currentTarget as HTMLElement;
+                  this.removeScope(s, chip.shadowRoot?.activeElement !== null);
                 }}
                   >${s}</lr-chip
                 >`,
@@ -320,7 +341,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               ${Object.entries(this.filters).map(
                 ([k, v]) => html`<lr-chip removable value=${k} @lr-remove=${(event: Event) => {
                   event.stopPropagation();
-                  this.removeFilter(k);
+                  const chip = event.currentTarget as HTMLElement;
+                  this.removeFilter(k, chip.shadowRoot?.activeElement !== null);
                 }}
                   >${this.localize('retrievalFilterChipLabel', undefined, {
                     key: k,

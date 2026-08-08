@@ -50,6 +50,13 @@ const STATUS_LABEL_KEY: Record<TestStatus, string> = {
   running: 'statusRunning',
 };
 
+/** Language-neutral decorative marks; the adjacent localized word carries the status meaning. */
+const STATUS_GLYPH: Record<Exclude<TestStatus, 'running'>, string> = {
+  passed: '✓',
+  failed: '×',
+  skipped: '–',
+};
+
 /** URI-encode a slot-name segment without throwing on an isolated UTF-16 surrogate. For
  * well-formed strings this is exactly `encodeURIComponent(value)`; malformed code units get their
  * own `%uXXXX` escape so distinct public ids remain distinct instead of crashing or collapsing. */
@@ -98,7 +105,8 @@ export interface LyraTestResultsEventMap {
  * @csspart suite - One suite section.
  * @csspart suite-header - The suite's name row.
  * @csspart test - One test row; carries `data-status`.
- * @csspart test-status - The status glyph and its visible status-word text; carries `data-status`.
+ * @csspart test-status - A language-neutral decorative status glyph and its localized visible
+ *   status-word text; carries `data-status`.
  * @csspart test-name - The activatable test-name button.
  * @csspart test-duration - The duration text.
  * @csspart test-expand-toggle - The expand/collapse button for a row's failure detail. Rendered
@@ -385,7 +393,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         <span part="test-status" id=${statusId} data-status=${test.status}>
           ${test.status === 'running'
             ? html`<span aria-hidden="true"><lr-spinner></lr-spinner></span>`
-            : html`<span aria-hidden="true">${test.status.charAt(0).toUpperCase()}</span>`}
+            : html`<span aria-hidden="true">${STATUS_GLYPH[test.status]}</span>`}
           ${this.localize(STATUS_LABEL_KEY[test.status])}
         </span>
         <button

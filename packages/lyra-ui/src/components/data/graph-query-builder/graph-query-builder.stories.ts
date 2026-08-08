@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { GraphQuery, GraphQuerySavedItem, GraphQueryTypeOption } from './graph-query-builder.js';
+import type {
+  GraphQuery,
+  GraphQuerySavedItem,
+  GraphQueryTypeOption,
+  LyraGraphQueryBuilder,
+} from './graph-query-builder.js';
 
 const relationshipTypeOptions: GraphQueryTypeOption[] = [
   { value: 'works_for', label: 'Works for' },
@@ -73,6 +78,31 @@ export const Populated: Story = {
       @lr-query-save=${(e: CustomEvent<{ name: string; query: GraphQuery }>) => console.log('save', e.detail)}
       @lr-query-load=${(e: CustomEvent<{ id: string; query: GraphQuery }>) => console.log('load', e.detail)}
       @lr-query-delete=${(e: CustomEvent<{ id: string }>) => console.log('delete', e.detail)}
+    ></lr-graph-query-builder>
+  `,
+};
+
+/** Remove a focused filter chip to follow its adjacent chip/picker, or activate a saved-query
+ * delete action. This fixture immediately accepts the controlled delete request, so focus follows
+ * the nearest saved row (and eventually the save-name input). */
+export const ControlledRemovalFocus: Story = {
+  render: () => html`
+    <lr-graph-query-builder
+      style="max-width: 40rem"
+      .relationshipTypeOptions=${relationshipTypeOptions}
+      .nodeTypeOptions=${nodeTypeOptions}
+      .value=${{
+        ...populatedValue,
+        relationshipTypes: ['works_for', 'founded_by'],
+      }}
+      .savedQueries=${[
+        ...savedQueries,
+        { ...savedQueries[0]!, id: 'saved-2', name: 'Second saved traversal' },
+      ]}
+      @lr-query-delete=${(event: CustomEvent<{ id: string }>) => {
+        const builder = event.currentTarget as LyraGraphQueryBuilder;
+        builder.savedQueries = builder.savedQueries.filter((item) => item.id !== event.detail.id);
+      }}
     ></lr-graph-query-builder>
   `,
 };

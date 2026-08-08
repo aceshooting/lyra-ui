@@ -71,6 +71,19 @@ export interface ToolParamFormSchema {
 
 const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
 
+function cloneFormValue(
+  value: Record<string, unknown>,
+  ownerWindow: Window | null,
+): Record<string, unknown> {
+  try {
+    if (ownerWindow?.structuredClone) return ownerWindow.structuredClone(value);
+  } catch {
+    // A consumer may temporarily supply a non-cloneable value (the serialization guard handles it
+    // separately). Preserve its own-property shape without invoking accessors during connection.
+  }
+  return Object.defineProperties({}, Object.getOwnPropertyDescriptors(value));
+}
+
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
  *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
@@ -174,6 +187,10 @@ export interface LyraToolParamFormEventMap {
  * layered on top of the primary integration contract (`value` +
  * `lr-input`/`lr-validity-change`), not a requirement: a consumer that
  * never puts this inside a `<form>` loses nothing.
+ * The value present on first connection is cloned as the native default.
+ * `form.reset()` restores a fresh clone of that default, clears touched and
+ * interaction state, and preserves any consumer-set custom validity message,
+ * matching native controls' separation between reset state and custom errors.
  *
  * @customElement lr-tool-param-form
  * @event lr-input - A field's value changed. `detail: { value }` — the
@@ -280,6 +297,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private _name = '';
   private _schema: ToolParamFormSchema = EMPTY_SCHEMA;
   private _value: Record<string, unknown> = {};
+  private defaultValueSnapshot: Record<string, unknown> = {};
+  private defaultValueCaptured = false;
   private _effectiveValue: Record<string, unknown> = {};
   private _validityFlags: ValidityStateFlags = {};
   private _disabled = false;
@@ -394,6 +413,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   override connectedCallback(): void {
+    if (!this.defaultValueCaptured) {
+      this.defaultValueSnapshot = cloneFormValue(this._value, this.ownerDocument.defaultView);
+      this.defaultValueCaptured = true;
+    }
     super.connectedCallback();
     if (this.errorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
       this.errorAnnouncementSink?.release();
@@ -682,7 +705,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     // Cleared before the `value` assignment below, whose setter is what republishes the custom
     // states — a reset form is pristine again, so `user-valid`/`user-invalid` must drop off it.
     this.hasInteracted = false;
-    this.value = {};
+    this.value = cloneFormValue(this.defaultValueSnapshot, this.ownerDocument.defaultView);
     this.touchedFields = new Set();
     this.showFormError = false;
   }

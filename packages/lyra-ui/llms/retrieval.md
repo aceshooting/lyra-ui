@@ -1661,8 +1661,9 @@ fetches, ranks, or computes retrieval results itself.
   `rerank`/`filter` → `'tool'`
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
   unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
-  through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`); `text` is free-form
-  (e.g. the rewritten query, an embedding model id); `metadata` renders as a plain key/value list. A
+  through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
+  page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
+  embedding model id); `metadata` renders as a plain key/value list. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
@@ -1714,7 +1715,8 @@ reconnect content is not replayed); `showSources: boolean = true`; `showClaims: 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
-source list.
+source list. Either slot renders from its assigned content without requiring the corresponding
+`answer` or `sources` data property; a slotted answer remains visible while `loading`.
 
 **CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
 `grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.
@@ -1753,6 +1755,8 @@ IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestio
 `label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
+An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
+tab and panel inactive.
 
 **Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the

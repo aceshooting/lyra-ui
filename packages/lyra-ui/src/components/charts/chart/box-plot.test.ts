@@ -520,6 +520,29 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
+it('replaces invalid canvas theme expressions with concrete fallbacks for every paint route', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  for (const name of [
+    '--lr-chart-grid-color',
+    '--lr-chart-tick-color',
+    '--lr-chart-legend-color',
+    '--lr-chart-tooltip-bg',
+    '--lr-chart-tooltip-text',
+  ]) {
+    el.style.setProperty(name, 'url(#missing-paint)');
+  }
+  await el.updateComplete;
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.grid.color).to.equal('#8a8a90');
+  expect(config.options.scales.y.ticks.color).to.equal('#6b7280');
+  expect(config.options.scales.y.title.color).to.equal('#6b7280');
+  expect(config.options.plugins.legend.labels.color).to.equal('#1a1a1a');
+  expect(config.options.plugins.tooltip.backgroundColor).to.equal('#fff');
+  expect(config.options.plugins.tooltip.titleColor).to.equal('#1a1a1a');
+  expect(config.options.plugins.tooltip.bodyColor).to.equal('#1a1a1a');
+});
+
 it('gives uncolored box-plot series concrete themed palette colors', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.style.setProperty('--lr-color-chart-1', 'rgb(130, 80, 220)');

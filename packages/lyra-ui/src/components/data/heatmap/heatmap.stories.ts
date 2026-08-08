@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { CalendarDay } from './calendar-grid.js';
-import type { CalendarCellPos, MatrixCellPos } from './heatmap.js';
+import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from './heatmap.js';
 
 const meta: Meta = {
   title: 'Heatmap',
@@ -119,7 +119,8 @@ export const HoverFocusClick: Story = {
 /**
  * Opts into persistent native buttons over the canvas for consumers that need
  * one accessible control per cell. The overlay keeps a roving tab stop and
- * exposes the controlled `selectedCell` as `aria-pressed`.
+ * exposes the controlled `selectedCell` as `aria-pressed`. Focus a cell and press R to replace the
+ * value matrix; the same semantic cell remains the sole roving stop.
  */
 export const AccessibleCells: Story = {
   render: () => html`
@@ -135,6 +136,11 @@ export const AccessibleCells: Story = {
         [5, 8, 3, 1],
       ]}
       .selectedCell=${{ row: 1, col: 2 }}
+      @keydown=${(event: KeyboardEvent) => {
+        if (event.key.toLocaleLowerCase() !== 'r') return;
+        const heatmap = event.currentTarget as LyraHeatmap;
+        heatmap.values = heatmap.values.map((row) => row.map((value) => value + 1));
+      }}
     ></lr-heatmap>
   `,
 };

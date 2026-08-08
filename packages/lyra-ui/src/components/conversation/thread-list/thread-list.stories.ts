@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './thread-list.js';
 import type { ChatThread } from './thread-list.class.js';
@@ -101,6 +101,22 @@ export const FlatUngrouped: Story = {
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
       <lr-thread-list grouping="none" .threads=${threads}></lr-thread-list>
     </div>`,
+};
+
+/** A host may make a rendered row temporarily unavailable through `wrapRow`. Keyboard navigation
+ * skips that inert row and continues to the following conversation, including when the target has
+ * to be mounted beyond the current virtual window. */
+export const UnavailableWrappedRow: Story = {
+  render: () => html`
+    <div style="block-size:240px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        grouping="none"
+        .threads=${threads}
+        .wrapRow=${(thread: ChatThread, row: TemplateResult) =>
+          thread.id === '2' ? html`<div inert style="opacity:var(--lr-opacity-disabled);">${row}</div>` : row}
+      ></lr-thread-list>
+    </div>
+  `,
 };
 
 export const SlottedMode: Story = {

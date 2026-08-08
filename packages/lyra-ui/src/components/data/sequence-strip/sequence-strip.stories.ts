@@ -78,6 +78,23 @@ export const CustomAccessibleLabel: Story = {
     html`<lr-sequence-strip
       .items=${items}
       .categories=${categories()}
-      accessible-label="Conversation turn history: 2 text, 2 tool, 1 mixed"
+      accessible-label="Component alias"
+      aria-label="Conversation turn history: 2 text, 2 tool, 1 mixed"
     ></lr-sequence-strip>`,
+};
+
+/** Focus a cell and press R. The story replaces every item object without changing its ids; real
+ * focus and the sole roving stop remain on that id instead of resetting to the first cell. */
+export const ControlledRefreshFocus: Story = {
+  render: () => html`
+    <lr-sequence-strip
+      .items=${items}
+      .categories=${categories()}
+      @keydown=${(event: KeyboardEvent) => {
+        if (event.key.toLocaleLowerCase() !== 'r') return;
+        const strip = event.currentTarget as HTMLElement & { items: SequenceStripItem[] };
+        strip.items = strip.items.map((item) => ({ ...item }));
+      }}
+    ></lr-sequence-strip>
+  `,
 };

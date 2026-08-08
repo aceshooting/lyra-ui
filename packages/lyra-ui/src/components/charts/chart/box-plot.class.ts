@@ -386,17 +386,39 @@ export class LyraBoxPlot extends LyraElement {
    * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
    * consume CSS `var()` directly — same constraint `chart.ts`'s
    * `themeColors()` documents — so this is called fresh from `buildConfig()`
-   * on every draw rather than cached.
+   * on every draw rather than cached. Each computed value is also round-tripped
+   * through a CSS color probe; invalid expressions fail to a concrete semantic
+   * fallback instead of silently preserving an earlier canvas paint.
    */
   private themeColors(): ThemeColors {
     const view = this.ownerWindow;
     const cs = view ? view.getComputedStyle(this) : this.style;
     return {
-      grid: cs.getPropertyValue('--lr-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
-      tick: cs.getPropertyValue('--lr-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
-      legend: cs.getPropertyValue('--lr-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
-      tooltipBg: cs.getPropertyValue('--lr-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
-      tooltipText: cs.getPropertyValue('--lr-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
+      grid: resolveCanvasColor(
+        this,
+        cs.getPropertyValue('--lr-chart-grid-color').trim(),
+        FALLBACK_GRID_COLOR,
+      ),
+      tick: resolveCanvasColor(
+        this,
+        cs.getPropertyValue('--lr-chart-tick-color').trim(),
+        FALLBACK_TICK_COLOR,
+      ),
+      legend: resolveCanvasColor(
+        this,
+        cs.getPropertyValue('--lr-chart-legend-color').trim(),
+        FALLBACK_LEGEND_COLOR,
+      ),
+      tooltipBg: resolveCanvasColor(
+        this,
+        cs.getPropertyValue('--lr-chart-tooltip-bg').trim(),
+        FALLBACK_TOOLTIP_BG,
+      ),
+      tooltipText: resolveCanvasColor(
+        this,
+        cs.getPropertyValue('--lr-chart-tooltip-text').trim(),
+        FALLBACK_TOOLTIP_TEXT,
+      ),
     };
   }
 

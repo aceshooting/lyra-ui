@@ -96,7 +96,7 @@ export const NativeFormAndCustomError: Story = {
     docs: {
       description: {
         story:
-          'The complete parameter object participates in a native form. The controls exercise `customError`, `getForm()`, and the bubbling `lr-invalid` alias.',
+          'The complete parameter object participates in a native form. Reset restores a fresh clone of the initial Lisbon value while a consumer-set custom error remains until cleared. The controls also exercise `getForm()` and the bubbling `lr-invalid` alias.',
       },
     },
   },
@@ -144,6 +144,7 @@ export const NativeFormAndCustomError: Story = {
         ></lr-tool-param-form>
         <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
           <button type="submit">Submit</button>
+          <button type="reset">Reset to Lisbon</button>
           <button type="button" @click=${reject}>Set tool error</button>
           <button type="button" @click=${clear}>Clear tool error</button>
         </div>

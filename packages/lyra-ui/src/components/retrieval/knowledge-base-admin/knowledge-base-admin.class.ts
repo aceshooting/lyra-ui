@@ -72,8 +72,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   @property({ attribute: false }) sources: KnowledgeSource[] = [];
   /** Documents currently moving through ingestion. */
   @property({ attribute: false }) ingestionItems: IngestionQueueItem[] = [];
-  /** Active tab. Controlled by the host after `lr-tab-change` if desired. If the ingestion tab
-   * becomes unavailable, this normalizes to `'sources'` through the same event contract. */
+  /** Active tab. Controlled by the host after `lr-tab-change` if desired. An invalid value, or an
+   * ingestion tab that becomes unavailable, normalizes to `'sources'` through the same event
+   * contract. */
   @property({ attribute: 'active-tab', reflect: true }) activeTab: KnowledgeBaseAdminTab = 'sources';
   /** Accessible name and visible heading. */
   @property() label = '';
@@ -99,9 +100,10 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!this.hideIngestion || this.activeTab !== 'ingestion') return;
-    this.focusSourcesAfterUpdate =
-      activeElementIn(this.shadowRoot)?.id === this.tabId('ingestion');
+    const invalidTab = this.activeTab !== 'sources' && this.activeTab !== 'ingestion';
+    const unavailableIngestion = this.hideIngestion && this.activeTab === 'ingestion';
+    if (!invalidTab && !unavailableIngestion) return;
+    this.focusSourcesAfterUpdate = activeElementIn(this.shadowRoot)?.matches('[role="tab"]') ?? false;
     this.activeTab = 'sources';
     this.emit('lr-tab-change', { tab: 'sources' });
   }
@@ -147,7 +149,8 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   override render(): TemplateResult {
     const visibleLabel = this.label || this.localize('knowledgeBaseAdminLabel');
     const accessibleLabel = this.getAttribute('aria-label') || visibleLabel;
-    const tab = this.hideIngestion && this.activeTab === 'ingestion' ? 'sources' : this.activeTab;
+    const tab: KnowledgeBaseAdminTab =
+      this.activeTab === 'ingestion' && !this.hideIngestion ? 'ingestion' : 'sources';
     return html`<section part="base" aria-label=${accessibleLabel}>
       <h2 part="heading">${visibleLabel}</h2>
       <div part="tabs" role="tablist" aria-label=${accessibleLabel}>

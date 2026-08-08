@@ -1,5 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
+import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
 import type { ArchiveLibraryApi } from './archive-loader.js';
@@ -25,6 +26,19 @@ async function buildZip(files: Record<string, string>): Promise<ArrayBuffer> {
   const bytes = await zip.generateAsync({ type: 'uint8array' });
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
+
+function withDeclaredZipEntryCount(source: ArrayBuffer, count: number): ArrayBuffer {
+  const copy = source.slice(0);
+  const view = new DataView(copy);
+  for (let offset = copy.byteLength - 22; offset >= 0; offset--) {
+    if (view.getUint32(offset, true) !== 0x06054b50) continue;
+    view.setUint16(offset + 8, count, true);
+    view.setUint16(offset + 10, count, true);
+    return copy;
+  }
+  throw new Error('ZIP end-of-central-directory record not found');
+}
+
 function stubFetch(buffer: ArrayBuffer, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof window.fetch; return () => { window.fetch = original; }; }
 function useLibrary(el: LyraArchiveViewer, library: ArchiveLibraryApi | null): void { (el as unknown as { loadLibrary: () => Promise<ArchiveLibraryApi | null> }).loadLibrary = () => Promise.resolve(library); }
 function libraryWithEntries(names: string[]): ArchiveLibraryApi {
@@ -213,6 +227,33 @@ describe('lr-archive-viewer', () => {
     }
   });
   it('renders the empty archive message', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const restore = stubFetch(await buildZip({})); try { el.src = 'https://example.test/empty.zip'; await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This archive is empty.'); } finally { restore(); } });
+
+  it('rejects an excessive central-directory entry count before the ZIP peer materializes entries', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    let loadCalls = 0;
+    useLibrary(el, {
+      loadAsync: async () => {
+        loadCalls++;
+        return { forEach: () => {} };
+      },
+    } as unknown as ArchiveLibraryApi);
+    const buffer = withDeclaredZipEntryCount(await buildZip({ 'one.txt': 'one' }), 10_001);
+    const restore = stubFetch(buffer);
+    try {
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/too-many-entries.zip';
+      const event = await errorPromise as CustomEvent<{ error: unknown }>;
+      await el.updateComplete;
+      expect(loadCalls).to.equal(0);
+      expect(event.detail.error).to.be.instanceOf(LyraResourceLimitError);
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'This document is too large to preview.',
+      );
+    } finally {
+      restore();
+    }
+  });
   it('renders a missing-peer error and rejects unsafe URLs', async () => { const missing = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); useLibrary(missing, null); const restore = stubFetch(new ArrayBuffer(0)); try { missing.src = 'https://example.test/archive.zip'; await waitUntil(() => missing.shadowRoot!.querySelector('[part="error"]') !== null); expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Archive preview is unavailable.'); } finally { restore(); }
     let called = false; const original = window.fetch; window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch; try { const unsafe = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer .src=${'java\tscript:alert(1)'}></lr-archive-viewer>`); await unsafe.updateComplete; expect(called).to.be.false; expect(unsafe.shadowRoot!.querySelector('[part="error"]')).to.exist; } finally { window.fetch = original; }
   });

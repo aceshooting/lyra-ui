@@ -24,7 +24,8 @@ export type RetrievalStageKind = 'query-rewrite' | 'embed' | 'retrieve' | 'reran
  * Evidence backing one `RetrievalStage`, rendered in that stage's expandable evidence panel.
  * `chunks` reuses `RetrievalChunk` (`src/ai/types.ts`) verbatim -- the same shape a retrieval
  * step already produces -- and renders through `<lr-chunk-inspector>` rather than new chunk
- * markup, mapping `source.id -> sourceId` / `source.name -> title`.
+ * markup, mapping `source.id -> sourceId` / `source.name -> title` and preserving the optional
+ * document `locator` as the inspector's `anchor` (plus visible `page` for page locators).
  */
 export interface RetrievalStageEvidence {
   /** Free-form text, e.g. the rewritten query string or an embedding model identifier. */
@@ -85,7 +86,15 @@ function hasEvidence(evidence: RetrievalStageEvidence | undefined): evidence is 
 }
 
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
-  return { id: chunk.id, text: chunk.text, score: chunk.score, sourceId: chunk.source.id, title: chunk.source.name };
+  return {
+    id: chunk.id,
+    text: chunk.text,
+    score: chunk.score,
+    sourceId: chunk.source.id,
+    title: chunk.source.name,
+    ...(chunk.locator ? { anchor: chunk.locator } : {}),
+    ...(chunk.locator?.kind === 'page' ? { page: chunk.locator.page } : {}),
+  };
 }
 
 export interface LyraRetrievalTraceEventMap {

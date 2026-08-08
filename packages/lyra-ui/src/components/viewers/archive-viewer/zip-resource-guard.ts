@@ -34,6 +34,12 @@ interface ParsedZipEntry extends ZipEntryInfo {
   localOffset: number;
 }
 
+interface ParsedZipArchiveMetadata {
+  view: DataView;
+  directoryOffset: number;
+  entries: ParsedZipEntry[];
+}
+
 export interface XmlComplexityLimits {
   includeEntry: (name: string) => boolean;
   maxNodes: number;
@@ -129,23 +135,18 @@ export function createXmlComplexityInspectorFactory(
   };
 }
 
-/**
- * Validates and measures a classic single-disk ZIP before an optional document peer expands it.
- * Stored entries are inspected through zero-copy ArrayBuffer views; DEFLATE entries are inspected
- * chunk-by-chunk, with an abort/generation boundary immediately after every stream await.
- */
-export async function assertZipArchiveWithinLimits(
+function parseZipArchiveMetadata(
   source: ArrayBuffer,
   options: ZipArchiveGuardOptions,
-): Promise<void> {
+): ParsedZipArchiveMetadata | null {
   throwIfAborted(options.signal);
   if (source.byteLength < 4) {
-    if (options.allowNonZip) return;
+    if (options.allowNonZip) return null;
     throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
   }
   const view = new DataView(source);
   if (view.getUint32(0, true) !== ZIP_LOCAL_FILE_SIGNATURE) {
-    if (options.allowNonZip) return;
+    if (options.allowNonZip) return null;
     throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
   }
 
@@ -225,6 +226,33 @@ export async function assertZipArchiveWithinLimits(
   if (offset !== directoryOffset + directorySize) {
     throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
   }
+
+  return { view, directoryOffset, entries };
+}
+
+/**
+ * Validates classic single-disk ZIP metadata and enforces declared entry and expansion ceilings
+ * without inflating an entry or passing the archive to an optional parser.
+ */
+export function assertZipArchiveMetadataWithinLimits(
+  source: ArrayBuffer,
+  options: ZipArchiveGuardOptions,
+): void {
+  parseZipArchiveMetadata(source, options);
+}
+
+/**
+ * Validates and measures a classic single-disk ZIP before an optional document peer expands it.
+ * Stored entries are inspected through zero-copy ArrayBuffer views; DEFLATE entries are inspected
+ * chunk-by-chunk, with an abort/generation boundary immediately after every stream await.
+ */
+export async function assertZipArchiveWithinLimits(
+  source: ArrayBuffer,
+  options: ZipArchiveGuardOptions,
+): Promise<void> {
+  const metadata = parseZipArchiveMetadata(source, options);
+  if (!metadata) return;
+  const { view, directoryOffset, entries } = metadata;
 
   let measuredBytes = 0;
   for (const entry of entries) {

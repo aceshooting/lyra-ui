@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
@@ -36,6 +36,9 @@ export interface LyraPromptQueueEventMap {
 /**
  * `<lr-prompt-queue>` — a controlled queue of follow-up prompts that can be edited, reordered,
  * removed, or sent immediately while another agent turn is active.
+ * When the host accepts a removal while that row's action owns focus, the equivalent action on
+ * the nearest surviving row receives focus; an emptied queue focuses its stable region instead.
+ * Controlled updates never steal focus when the removed row did not own it.
  *
  * @customElement lr-prompt-queue
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
@@ -76,6 +79,39 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  private pendingRemovalFocus?: { targetId?: string; action: string };
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('items')) return;
+    const focusedAction = this.shadowRoot?.activeElement as HTMLElement | null;
+    const action = focusedAction?.getAttribute('data-action');
+    const focusedItem = focusedAction?.closest<HTMLElement>('[data-id]');
+    const focusedId = focusedItem?.dataset['id'];
+    if (!action || !focusedId || this.items.some((item) => item.id === focusedId)) return;
+
+    const previousItems = (changed.get('items') as PromptQueueItem[] | undefined) ?? [];
+    const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
+    const target = this.items[Math.min(Math.max(previousIndex, 0), this.items.length - 1)];
+    this.pendingRemovalFocus = { targetId: target?.id, action };
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const pending = this.pendingRemovalFocus;
+    if (!pending) return;
+    this.pendingRemovalFocus = undefined;
+    if (!pending.targetId) {
+      this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+      return;
+    }
+    const targetItem = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-id]') ?? [])]
+      .find((item) => item.dataset['id'] === pending.targetId);
+    const equivalentAction = [...(targetItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [])]
+      .find((candidate) => candidate.dataset['action'] === pending.action);
+    equivalentAction?.focus();
+  }
 
   private emitChange(items: PromptQueueItem[], reason: PromptQueueChangeReason, itemId: string): void {
     this.emit('lr-queue-change', { items, reason, itemId });
@@ -169,7 +205,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('promptQueueLabel');
-    return html`<section part="base" aria-label=${label}>
+    return html`<section part="base" aria-label=${label} tabindex="-1">
       <h3 part="heading">${label}</h3>
       ${this.items.length
         ? html`<ol part="list" role="list">

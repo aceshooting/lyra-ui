@@ -35,6 +35,23 @@ export const WithSlottedBranchPicker: Story = {
   `,
 };
 
+export const UnavailableSlottedControl: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Unavailable slotted controls are excluded from the toolbar roving order. The available action remains the single usable Tab and arrow-navigation fallback.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-message-actions>
+      <button inert>Unavailable custom action</button>
+      <button>Available custom action</button>
+    </lr-message-actions>
+  `,
+};
+
 export const RevealOnHover: Story = {
   render: () => html`
     <lr-chat-message data-role="assistant">

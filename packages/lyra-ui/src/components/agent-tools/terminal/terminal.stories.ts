@@ -19,6 +19,13 @@ const SAMPLE = [
 ].join('\n');
 
 export const Default: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Streamed ANSI sequences may span writes; incomplete control-sequence carry is bounded and recovers cleanly.',
+      },
+    },
+  },
   render: () =>
     html`<lr-terminal
       style="max-width:40rem"

@@ -1,3 +1,5 @@
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+
 /**
  * Last-resort series colours, used when the theme tokens cannot be resolved at all -- no DOM, or a
  * `--lr-color-chart-*` that fails to parse.
@@ -23,40 +25,7 @@ const FALLBACK_SERIES_PALETTE = [
 /* chart fallback: end */
 
 const AREA_FILL_PERCENT = 28;
-const INVALID_COLOR_SENTINELS = ['rgb(1, 2, 3)', 'rgb(4, 5, 6)'] as const;
-
-/**
- * Resolves a CSS color expression in the element's live theme scope. Canvas APIs and Chart.js
- * silently retain their previous paint when handed an unresolved `var()` or unsupported color.
- */
-export function resolveCanvasColor(scope: Element, color: string, fallback: string): string {
-  if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') return fallback;
-  const normalized = color.trim().toLowerCase();
-  if (normalized === 'currentcolor' || normalized === 'inherit' || normalized === 'unset') {
-    return getComputedStyle(scope).color || fallback;
-  }
-
-  const parent = document.createElement('span');
-  const probe = document.createElement('span');
-  parent.hidden = true;
-  parent.setAttribute('aria-hidden', 'true');
-  probe.style.color = color;
-  parent.append(probe);
-  (scope.shadowRoot ?? scope).append(parent);
-  try {
-    parent.style.color = INVALID_COLOR_SENTINELS[0];
-    const first = getComputedStyle(probe).color;
-    if (!first || first !== INVALID_COLOR_SENTINELS[0]) return first || fallback;
-
-    // A second inherited sentinel distinguishes an invalid declaration from a legitimate color
-    // whose concrete value happens to equal the first sentinel.
-    parent.style.color = INVALID_COLOR_SENTINELS[1];
-    const second = getComputedStyle(probe).color;
-    return !second || second === INVALID_COLOR_SENTINELS[1] ? fallback : second;
-  } finally {
-    parent.remove();
-  }
-}
+export { resolveCanvasColor } from '../../../internal/canvas-color.js';
 
 /**
  * Resolves the categorical chart ramp to concrete canvas-safe colors. Passing `null` selects the

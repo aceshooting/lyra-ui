@@ -34,6 +34,14 @@ export const Default: Story = {
 };
 
 export const Copyable: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The button remains in its resting state until the Clipboard API resolves. Rejections show and announce the localized failure state and emit `lr-error` plus `lr-copy-error`.',
+      },
+    },
+  },
   render: () => html`
     <lr-diff-view copyable .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lr-diff-view>
   `,

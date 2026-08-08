@@ -31,7 +31,13 @@ const STAGES: RetrievalStage[] = [
     detail: '2 chunks',
     evidence: {
       chunks: [
-        { id: 'c1', text: 'Mount Si is a popular day hike.', score: 0.91, source: { id: 's1', name: 'trail-guide.pdf' } },
+        {
+          id: 'c1',
+          text: 'Mount Si is a popular day hike.',
+          score: 0.91,
+          source: { id: 's1', name: 'trail-guide.pdf' },
+          locator: { kind: 'page', page: 12 },
+        },
         { id: 'c2', text: 'Rattlesnake Ledge offers sweeping views.', score: 0.84, source: { id: 's2', name: 'trail-guide.pdf' } },
       ],
     },
@@ -211,7 +217,7 @@ describe('lr-retrieval-trace', () => {
     expect(text!.textContent).to.equal('best hiking trails near Seattle');
   });
 
-  it('renders chunk evidence via a compact lr-chunk-inspector, mapping source.id/name to sourceId/title', async () => {
+  it('renders chunk evidence via a compact lr-chunk-inspector, preserving source metadata and locators', async () => {
     const el = (await fixture(html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`)) as LyraRetrievalTrace;
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[data-id="retrieve"] [part="evidence-toggle"]') as HTMLButtonElement).click();
@@ -220,9 +226,23 @@ describe('lr-retrieval-trace', () => {
     expect(inspector).to.exist;
     expect(inspector.hasAttribute('compact')).to.be.true;
     expect(inspector.chunks).to.deep.equal([
-      { id: 'c1', text: 'Mount Si is a popular day hike.', score: 0.91, sourceId: 's1', title: 'trail-guide.pdf' },
+      {
+        id: 'c1',
+        text: 'Mount Si is a popular day hike.',
+        score: 0.91,
+        sourceId: 's1',
+        title: 'trail-guide.pdf',
+        anchor: { kind: 'page', page: 12 },
+        page: 12,
+      },
       { id: 'c2', text: 'Rattlesnake Ledge offers sweeping views.', score: 0.84, sourceId: 's2', title: 'trail-guide.pdf' },
     ]);
+
+    await inspector.updateComplete;
+    const opened = oneEvent(el, 'lr-chunk-open');
+    (inspector.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
+    const event = await opened;
+    expect(event.detail).to.deep.equal({ id: 'c1', sourceId: 's1', anchor: { kind: 'page', page: 12 } });
   });
 
   it('renders metadata evidence as a key/value list', async () => {

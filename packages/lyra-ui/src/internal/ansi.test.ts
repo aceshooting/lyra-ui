@@ -123,6 +123,22 @@ describe('createAnsiParser', () => {
     expect(second.map((s) => s.text).join('')).to.equal('end');
   });
 
+  it('drops an overlong unterminated OSC carry and parses the next chunk from a clean boundary', () => {
+    const parser = createAnsiParser();
+    expect(parser.push(`\x1b]0;${'x'.repeat(5_000)}`)).to.deep.equal([]);
+    const recovered = parser.push('\x1b[31mvisible');
+    expect(recovered.map((segment) => segment.text).join('')).to.equal('visible');
+    expect(recovered[0]?.styles.fg).to.equal('var(--lr-terminal-color-red)');
+  });
+
+  it('drops an overlong unterminated CSI carry and parses the next chunk from a clean boundary', () => {
+    const parser = createAnsiParser();
+    expect(parser.push(`\x1b[${'1;'.repeat(2_500)}`)).to.deep.equal([]);
+    const recovered = parser.push('\x1b[31mvisible');
+    expect(recovered.map((segment) => segment.text).join('')).to.equal('visible');
+    expect(recovered[0]?.styles.fg).to.equal('var(--lr-terminal-color-red)');
+  });
+
   it('reset() clears style state and any buffered partial sequence', () => {
     const parser = createAnsiParser();
     parser.push('\x1b[1;31mbold-red\x1b[3');

@@ -80,6 +80,31 @@ export function clampCodeBlockFocusedLine(focusedLine: number, lineCount: number
   return Math.min(Math.max(1, focusedLine), lineCount);
 }
 
+export interface CodeBlockLineFocusHost extends HTMLElement {
+  readonly renderRoot: HTMLElement | DocumentFragment;
+}
+
+/** Whether real focus currently sits on one of the rendered roving line controls. */
+export function codeBlockLineHasFocus(host: CodeBlockLineFocusHost): boolean {
+  return host.shadowRoot?.activeElement?.matches('[data-line][part~="line-button"]') ?? false;
+}
+
+/** Restores focus after Lit replaces a focused line node, but never overrides focus that moved
+ *  to another internal or external control while the update was pending. */
+export function restoreCodeBlockLineFocus(host: CodeBlockLineFocusHost, line: number): boolean {
+  const shadowActive = host.shadowRoot?.activeElement;
+  if (shadowActive) return shadowActive.matches('[data-line][part~="line-button"]');
+
+  const documentActive = host.ownerDocument.activeElement;
+  if (documentActive && documentActive !== host.ownerDocument.body && documentActive !== host) return false;
+
+  const target = host.renderRoot.querySelector<HTMLElement>(
+    `[data-line="${line}"][part~="line-button"]`,
+  );
+  target?.focus();
+  return host.shadowRoot?.activeElement === target;
+}
+
 /** The merged set of one-based line numbers to emphasize: the `highlight-lines` spec plus the
  *  `line-range` slice of `highlights`. Shared by both the shiki transformer options and the
  *  plain-text fallback path so their emphasis is always identical. */

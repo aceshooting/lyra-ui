@@ -96,15 +96,19 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (!changed.has('path') || !this.restoreFocusAfterPathChange || this.path.length === 0) return;
+    if (!changed.has('path') || !this.restoreFocusAfterPathChange) return;
     this.restoreFocusAfterPathChange = false;
     // Focusing dispatches the control's focus handler, which updates the live-region text.
     // Run it after this update completes so that reactive announcement does not schedule another
     // update from inside updated() and trigger Lit's change-in-update warning.
     this.scheduleAfterUpdate(() => {
+      if (this.path.length === 0) {
+        this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+        return;
+      }
       const controls = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]');
       controls?.[this.activeIndex]?.focus();
-    });
+    }, 'restore-path-focus');
   }
 
   private activate(index: number): void {
@@ -213,7 +217,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   override render(): TemplateResult {
     if (this.path.length === 0) {
-      return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
+      return html`<div part="base" tabindex="-1"><div part="empty">${this.localize('noData')}</div></div>`;
     }
     const label =
       this.getAttribute('aria-label') || this.label || this.localize('pathStripLabel');

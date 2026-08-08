@@ -29,6 +29,23 @@ export const WaveformWithLevel: Story = {
   render: () => html`<lr-audio-visualizer variant="waveform" level="0.6" state="speaking"></lr-audio-visualizer>`,
 };
 
+export const CurrentColorTheme: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Canvas colors accept inherited CSS expressions. Both hooks resolve `currentColor` to the host\'s concrete success color before drawing.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-audio-visualizer
+      state="thinking"
+      style="color:var(--lr-color-success);--lr-audio-visualizer-color:currentColor;--lr-audio-visualizer-quiet-color:currentColor"
+    ></lr-audio-visualizer>
+  `,
+};
+
 export const Narrow320: Story = {
   render: () => html`
     <div style="max-inline-size: 320px; border: 1px dashed var(--lr-color-border); padding: 8px;">

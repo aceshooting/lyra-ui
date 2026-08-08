@@ -76,6 +76,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
+  private slotObserver?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -83,10 +84,29 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       document: this.ownerDocument,
       source: this,
     });
+    const Observer = this.ownerDocument.defaultView?.MutationObserver ?? MutationObserver;
+    this.slotObserver = new Observer((records) => {
+      if (
+        this.isConnected &&
+        records.some((record) =>
+          record.type === 'childList' ? record.target === this : record.target.parentNode === this,
+        )
+      ) {
+        this.requestUpdate();
+      }
+    });
+    this.slotObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['slot'],
+    });
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
+    this.slotObserver?.disconnect();
+    this.slotObserver = undefined;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();
@@ -108,7 +128,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     if (citation) this.emit('lr-citation-select', { citation });
   };
   private renderSource(source: DocumentRef): TemplateResult {
-    return html`<lr-source-card appearance="plain" compact .sourceId=${source.id} .title=${source.name} .href=${source.uri ?? ''}>
+    return html`<lr-source-card frame="plain" compact .sourceId=${source.id} .title=${source.name} .href=${source.uri ?? ''}>
       ${source.mimeType ? html`<span slot="excerpt">${source.mimeType}</span>` : nothing}
     </lr-source-card>`;
   }
@@ -121,13 +141,13 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   }
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('ragAnswerLabel');
-    if (this.loading && !this.answer && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
+    if (this.loading && !this.answer && !this.hasSlot('answer') && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
     return html`<article part="base" aria-label=${label}>
       ${this.error ? html`<div part="error">${this.error}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
       ${this.answer || this.hasSlot('answer') ? html`<div part="answer"><slot name="answer"><lr-markdown .content=${this.answer}></lr-markdown></slot></div>` : nothing}
       ${this.assessment ? html`<lr-grounding-summary part="grounding" .assessment=${this.assessment} .citations=${this.citations} .showClaims=${this.showClaims}></lr-grounding-summary>` : nothing}
       ${this.citations.length ? html`<section part="citations" aria-label=${this.localize('ragAnswerCitations')}><h3 part="section-heading">${this.localize('ragAnswerCitations')}</h3><div part="citation-list">${this.citations.map((citation, index) => html`<lr-citation-badge .index=${index + 1} .sourceId=${citation.sourceId ?? ''} .label=${citation.label ?? ''} @lr-citation-activate=${this.onCitationActivate}></lr-citation-badge>`)}</div></section>` : nothing}
-      ${this.showSources && this.sources.length ? html`<section part="sources" aria-label=${this.localize('ragAnswerSources')}><h3 part="section-heading">${this.localize('ragAnswerSources')}</h3><lr-source-list part="source-list" .label=${this.localize('ragAnswerSources')} expanded>${this.renderSourceItems()}</lr-source-list></section>` : nothing}
+      ${this.showSources && (this.sources.length > 0 || this.hasSlot('sources')) ? html`<section part="sources" aria-label=${this.localize('ragAnswerSources')}><h3 part="section-heading">${this.localize('ragAnswerSources')}</h3><lr-source-list part="source-list" .label=${this.localize('ragAnswerSources')} expanded>${this.renderSourceItems()}</lr-source-list></section>` : nothing}
     </article>`;
   }
 }

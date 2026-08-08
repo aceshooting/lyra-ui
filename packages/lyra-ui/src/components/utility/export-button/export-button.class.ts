@@ -110,6 +110,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private pendingMenuFocusIndex = 0;
   private formatsFocusSnapshot?: { index: number; id: string };
   private forcedMenuClose?: 'invalid-open' | 'formats' | 'state';
+  /** Tracks only the temporary focus-rescue tabindex this component added itself. */
+  private injectedHostTabIndex = false;
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -222,13 +224,25 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.setAttribute('aria-busy', String(this.loading));
+    if (
+      (changed.has('disabled') || changed.has('loading')) &&
+      !this.disabled &&
+      !this.loading &&
+      this.injectedHostTabIndex
+    ) {
+      if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
+      this.injectedHostTabIndex = false;
+    }
     if ((changed.has('disabled') || changed.has('loading')) && (this.disabled || this.loading)) {
       const active = activeElementIn(this.shadowRoot);
       if (
         active === this.triggerEl ||
         active?.getAttribute('part') === 'menu-item'
       ) {
-        if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
+        if (!this.hasAttribute('tabindex')) {
+          this.tabIndex = -1;
+          this.injectedHostTabIndex = true;
+        }
         const ownerHTMLElement = this.ownerDocument.defaultView?.HTMLElement;
         const nativeFocus = ownerHTMLElement
           ? Reflect.get(ownerHTMLElement.prototype, 'focus', this)

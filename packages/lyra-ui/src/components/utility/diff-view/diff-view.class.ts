@@ -2,8 +2,13 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import type { LyraCopyErrorReason } from '../copy-button/copy-button.class.js';
 import { computeLineDiff, pairOpsForSplit, type DiffOp, type DiffSplitRow } from './diff-line-diff.js';
 import {
   loadShikiHighlighterCore,
@@ -14,13 +19,22 @@ import {
 import { styles } from './diff-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_open, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
 const COPY_CONFIRM_MS = 1500;
+
+type CopyStatus = 'rest' | 'success' | 'error';
+
+class ClipboardUnsupportedError extends Error {
+  constructor() {
+    super('The Clipboard API is unavailable in this context.');
+    this.name = 'ClipboardUnsupportedError';
+  }
+}
 
 /** Split into logical lines while normalizing all three line-ending conventions (CRLF, lone CR,
  *  LF). A raw `text.split('\n')` leaves a trailing `\r` on every CRLF line -- which makes two files
@@ -32,6 +46,8 @@ const splitLines = (text: string): string[] => text.split(/\r\n|\r|\n/);
 
 export interface LyraDiffViewEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-copy-error': CustomEvent<{ text: string; reason: LyraCopyErrorReason; error: unknown }>;
 }
 
 /** The internal diff rendering layout -- `'unified'` (the default) is one interleaved column,
@@ -47,7 +63,11 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  *
  * @customElement lr-diff-view
  * @event lr-copy - Fired on copy-button activation. `detail: { text: string }` (the full
- *   unified-diff text, regardless of whether the clipboard write actually succeeded).
+ *   unified-diff text, including attempts whose clipboard write then fails).
+ * @event lr-error - The clipboard write failed. A bubbling, composed, non-cancelable event with
+ *   no detail.
+ * @event lr-copy-error - The clipboard write failed. `detail: { text, reason, error }`, where
+ *   `reason` is `'unsupported' | 'denied' | 'failed'`.
  * @csspart base - The root wrapper.
  * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"|"fold"`
  *   (`"empty"` is an unbalanced-replace placeholder cell in `layout="split"` and never carries a
@@ -70,13 +90,17 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyDiff: LYRA_DEFAULT_copyDiff,
+    copyFailed: LYRA_DEFAULT_copyFailed,
+    details: LYRA_DEFAULT_details,
     diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
     diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
     diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
     diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
+    open: LYRA_DEFAULT_open,
     remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -117,8 +141,12 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
    *  to `5000`. Set to `Infinity` explicitly to opt back into unbounded diffing. */
   @property({ type: Number, attribute: 'max-lines' }) maxLines = 5000;
 
-  @state() private justCopied = false;
+  @state() private copyStatus: CopyStatus = 'rest';
   @state() private diffTooLarge = false;
+
+  /** Copy outcomes announce through a light-DOM sink because live regions inside shadow roots are
+   * not consistently exposed by assistive technology. */
+  private copyAnnouncementSink?: AnnouncementSink;
 
   @state() private highlightedOldLines: string[] | null = null;
   @state() private highlightedNewLines: string[] | null = null;
@@ -127,21 +155,22 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     languages: Record<string, ShikiLanguageInput>,
   ) => Promise<ShikiHighlighterCore | null> = loadShikiHighlighterCore;
 
-  private copyTimer?: { owner: Window; handle: number };
+  private copyTimer?: { owner: Window; handle: number; generation: number };
+  /** Invalidates clipboard outcomes when another activation, source change, disconnect, or
+   * adoption makes the pending write obsolete. */
+  private copyGeneration = 0;
 
   // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
-  // changes. A render triggered purely by `justCopied` toggling reuses the same result.
+  // changes. A render triggered purely by copy feedback toggling reuses the same result.
   private diffOps: DiffOp[] = [];
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       this.hasUpdated &&
-      (changed.has('oldText') || changed.has('newText')) &&
-      this.justCopied
+      (changed.has('oldText') || changed.has('newText'))
     ) {
-      this.cancelCopyTimer();
-      this.justCopied = false;
+      this.resetCopyFeedback();
     }
     if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
       const oldLines = splitLines(this.oldText);
@@ -164,22 +193,38 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.copyAnnouncementSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cancelCopyTimer();
-    this.justCopied = false;
+    this.resetCopyFeedback();
+    this.copyAnnouncementSink?.release();
+    this.copyAnnouncementSink = undefined;
   }
 
   adoptedCallback(): void {
     // A disconnected node can be adopted without receiving another disconnect notification.
-    this.cancelCopyTimer();
-    this.justCopied = false;
+    this.resetCopyFeedback();
+    this.copyAnnouncementSink?.release();
+    this.copyAnnouncementSink = undefined;
   }
 
   private cancelCopyTimer(): void {
     const timer = this.copyTimer;
     this.copyTimer = undefined;
     if (timer) timer.owner.clearTimeout(timer.handle);
+  }
+
+  private resetCopyFeedback(): void {
+    this.copyGeneration += 1;
+    this.cancelCopyTimer();
+    this.copyStatus = 'rest';
   }
 
   private syncHighlight(): void {
@@ -302,33 +347,69 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       .join('\n');
   }
 
-  private onCopyClick = (): void => {
+  private failureReason(error: unknown): LyraCopyErrorReason {
+    if (error instanceof ClipboardUnsupportedError) return 'unsupported';
+    const name = error !== null && typeof error === 'object'
+      ? (error as { name?: unknown }).name
+      : undefined;
+    if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied';
+    return 'failed';
+  }
+
+  private isCurrentCopy(generation: number, owner: Window): boolean {
+    return this.isConnected
+      && generation === this.copyGeneration
+      && this.ownerDocument.defaultView === owner;
+  }
+
+  private showCopyStatus(status: Exclude<CopyStatus, 'rest'>, generation: number): void {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isCurrentCopy(generation, owner)) return;
+    this.copyStatus = status;
+    this.copyAnnouncementSink?.announce(
+      status === 'success' ? this.localize('copied') : this.localize('copyFailed'),
+    );
+    this.cancelCopyTimer();
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      const timer = this.copyTimer;
+      if (
+        timer?.owner !== owner
+        || timer.handle !== handle
+        || timer.generation !== generation
+        || !this.isCurrentCopy(generation, owner)
+      ) return;
+      this.copyTimer = undefined;
+      this.copyStatus = 'rest';
+    }, COPY_CONFIRM_MS);
+    this.copyTimer = { owner, handle, generation };
+  }
+
+  private async copy(): Promise<void> {
+    const generation = ++this.copyGeneration;
+    this.cancelCopyTimer();
+    this.copyStatus = 'rest';
     const text = this.unifiedText;
     this.emit('lr-copy', { text });
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     if (!owner) return;
     try {
-      owner.navigator.clipboard?.writeText(text).catch(() => {
-        // best-effort -- lr-copy still fires with the intended text regardless
-      });
-    } catch {
-      // Some clipboard shims and restricted browser contexts throw before returning a promise.
-      // The event contract remains best-effort and still reports the intended snapshot above.
+      const clipboard = owner.navigator.clipboard;
+      if (typeof clipboard?.writeText !== 'function') throw new ClipboardUnsupportedError();
+      await clipboard.writeText(text);
+    } catch (error) {
+      if (!this.isCurrentCopy(generation, owner)) return;
+      this.showCopyStatus('error', generation);
+      this.emit('lr-error');
+      this.emit('lr-copy-error', { text, reason: this.failureReason(error), error });
+      return;
     }
-    this.justCopied = true;
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner
-        || this.copyTimer.handle !== handle
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
-      this.copyTimer = undefined;
-      this.justCopied = false;
-    }, COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle };
+    if (!this.isCurrentCopy(generation, owner)) return;
+    this.showCopyStatus('success', generation);
+  }
+
+  private onCopyClick = (): void => {
+    void this.copy();
   };
 
   // Tracks each op's index within the *original* per-source-line `oldText`/`newText` arrays --
@@ -422,10 +503,22 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
           ? html`<button
               part="copy-button"
               type="button"
-              aria-label=${this.justCopied ? this.localize('copied') : this.localize('copyDiff')}
+              aria-label=${
+                this.copyStatus === 'success'
+                  ? this.localize('copied')
+                  : this.copyStatus === 'error'
+                    ? this.localize('copyFailed')
+                    : this.localize('copyDiff')
+              }
               @click=${this.onCopyClick}
             >
-              ${this.justCopied ? this.localize('copied') : this.localize('copy')}
+              ${
+                this.copyStatus === 'success'
+                  ? this.localize('copied')
+                  : this.copyStatus === 'error'
+                    ? this.localize('copyFailed')
+                    : this.localize('copy')
+              }
             </button>`
           : nothing}
         ${this.layout === 'split' ? this.renderSplit() : this.renderUnified()}

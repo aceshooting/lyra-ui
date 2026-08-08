@@ -149,6 +149,43 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.relationshipTypes).to.deep.equal(['founded_by']);
   });
 
+  it('moves focus to the adjacent chip when the focused relationship filter is removed', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
+        .value=${query({ relationshipTypes: ['works_for', 'founded_by'] })}
+      ></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const chips = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="relationship-chips"] lr-chip');
+    chips[0]!.focus();
+    chips[0]!.dispatchEvent(
+      new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { value: 'works_for' } }),
+    );
+    await el.updateComplete;
+
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.localName).to.equal('lr-chip');
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('value')).to.equal('founded_by');
+  });
+
+  it('moves focus to the matching picker when the focused final chip is removed', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        .nodeTypeOptions=${NODE_TYPE_OPTIONS}
+        .value=${query({ nodeTypes: ['person'] })}
+      ></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="node-type-chips"] lr-chip')!;
+    chip.focus();
+    chip.dispatchEvent(
+      new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { value: 'person' } }),
+    );
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('node-type-picker');
+  });
+
   it('adds and removes node types the same way as relationship types', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder .nodeTypeOptions=${NODE_TYPE_OPTIONS}></lr-graph-query-builder>`,
@@ -294,6 +331,65 @@ describe('lr-graph-query-builder', () => {
     expect(ev.detail.id).to.equal('s1');
     expect(el.savedQueries).to.equal(saved);
     expect(el.savedQueries.length).to.equal(1);
+  });
+
+  it('moves focus to the stable save input when controlled deletion removes the sole saved query', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const el = (await fixture(
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    el.addEventListener('lr-query-delete', (event) => {
+      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
+    });
+    const deleteButton = el.shadowRoot!.querySelector<HTMLElement>('[part="saved-delete-button"]')!;
+    deleteButton.focus();
+    deleteButton.click();
+    await el.updateComplete;
+
+    expect(el.savedQueries).to.have.lengthOf(0);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('save-name-input');
+  });
+
+  it('moves controlled saved-query deletion focus to the adjacent delete action', async () => {
+    const saved: GraphQuerySavedItem[] = [
+      { id: 's1', name: 'First', query: query() },
+      { id: 's2', name: 'Second', query: query() },
+      { id: 's3', name: 'Third', query: query() },
+    ];
+    const el = (await fixture(
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    el.addEventListener('lr-query-delete', (event) => {
+      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
+    });
+    const deleteButtons = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="saved-delete-button"]');
+    deleteButtons[1]!.focus();
+    deleteButtons[1]!.click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('saved-delete-button');
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)
+        ?.closest('[data-query-id]')
+        ?.getAttribute('data-query-id'),
+    ).to.equal('s3');
+  });
+
+  it('does not steal external focus when an unfocused saved query is removed', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="outside-query-builder">Outside</button>
+        <lr-graph-query-builder
+          .savedQueries=${[{ id: 's1', name: 'Only', query: query() }]}
+        ></lr-graph-query-builder>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    wrapper.querySelector<HTMLElement>('#outside-query-builder')!.focus();
+    el.savedQueries = [];
+    await el.updateComplete;
+
+    expect(el.ownerDocument.activeElement?.id).to.equal('outside-query-builder');
   });
 
   it('disables every interactive part when disabled', async () => {

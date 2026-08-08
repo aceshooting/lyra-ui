@@ -224,6 +224,41 @@ describe('dialog wiring', () => {
     expect(wrapperClose).to.equal(1);
   });
 
+  it('does not close the viewer when a registered renderer closes its own descendant dialog', async () => {
+    registerDocumentRenderer('application/x-dialog-renderer', {
+      render: () => html`<lr-dialog id="renderer-dialog" open></lr-dialog>`,
+    });
+    const wrapper = await fixture(html`
+      <div>
+        <lr-document-viewer
+          open
+          name="nested-dialog"
+          mime-type="application/x-dialog-renderer"
+          src="https://example.test/nested"
+        ></lr-document-viewer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-document-viewer') as LyraDocumentViewer;
+    await el.updateComplete;
+    const rendererDialog = el.shadowRoot!.querySelector('#renderer-dialog') as HTMLElement;
+    let rawCloses = 0;
+    let wrapperCloses = 0;
+    wrapper.addEventListener('lr-dialog-close', () => rawCloses++);
+    wrapper.addEventListener('lr-close', () => wrapperCloses++);
+
+    rendererDialog.dispatchEvent(
+      new CustomEvent<DialogCloseReason>('lr-dialog-close', {
+        detail: 'close-button',
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(el.open).to.equal(true);
+    expect(rawCloses).to.equal(1);
+    expect(wrapperCloses).to.equal(0);
+  });
+
   it('renders a download action and emits lr-download for safe sources', async () => {
     const el = (await fixture(html`
       <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>

@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { PromptQueueItem } from './prompt-queue.class.js';
+import type {
+  LyraPromptQueue,
+  PromptQueueChangeDetail,
+  PromptQueueItem,
+} from './prompt-queue.class.js';
 import './prompt-queue.js';
 
 const meta: Meta = {
@@ -24,6 +28,20 @@ const items: PromptQueueItem[] = [
 
 export const Default: Story = {
   render: () => html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`,
+};
+
+/** This fixture accepts every controlled queue proposal immediately. Tab to a Remove action and
+ * activate it: focus follows the same action on the nearest survivor, or the queue region after
+ * the final removal. */
+export const ControlledRemovalFocus: Story = {
+  render: () => html`
+    <lr-prompt-queue
+      .items=${items}
+      @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) => {
+        (event.currentTarget as LyraPromptQueue).items = event.detail.items;
+      }}
+    ></lr-prompt-queue>
+  `,
 };
 
 export const Narrow: Story = {

@@ -5,6 +5,15 @@ import type { LyraDiffView } from './diff-view.js';
 import type { DiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
+function stubClipboard(target: Navigator, value: unknown): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(target, 'clipboard');
+  Object.defineProperty(target, 'clipboard', { configurable: true, value });
+  return () => {
+    if (descriptor) Object.defineProperty(target, 'clipboard', descriptor);
+    else Reflect.deleteProperty(target, 'clipboard');
+  };
+}
+
 describe('lr-diff-view', () => {
   it('renders the localized size fallback instead of diffing past maxLines', async () => {
     const el = (await fixture(
@@ -108,14 +117,10 @@ describe('lr-diff-view', () => {
     expect(css).to.match(/\[part='copy-button'\]:hover\s*\{[^}]+\}/);
   });
 
-  it('still emits exactly one lr-copy and enters confirmation state when clipboard.writeText throws synchronously', async () => {
-    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText(): Promise<void> {
-          throw new Error('synchronous clipboard failure');
-        },
+  it('reports a synchronous clipboard failure without falsely confirming success', async () => {
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText(): Promise<void> {
+        throw new Error('synchronous clipboard failure');
       },
     });
     try {
@@ -124,20 +129,162 @@ describe('lr-diff-view', () => {
       )) as LyraDiffView;
       let events = 0;
       let detail = '';
+      let errors = 0;
+      let errorReason = '';
       el.addEventListener('lr-copy', (event) => {
         events++;
         detail = (event as CustomEvent<{ text: string }>).detail.text;
       });
+      el.addEventListener('lr-error', () => errors++);
+      el.addEventListener('lr-copy-error', (event) => {
+        errorReason = (event as CustomEvent<{ reason: string }>).detail.reason;
+      });
 
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-      await el.updateComplete;
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copy failed',
+      );
 
       expect(events).to.equal(1);
       expect(detail).to.equal('- a\n+ b');
-      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
+      expect(errors).to.equal(1);
+      expect(errorReason).to.equal('failed');
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy failed');
     } finally {
-      if (originalDescriptor) Object.defineProperty(navigator, 'clipboard', originalDescriptor);
-      else Reflect.deleteProperty(navigator, 'clipboard');
+      restoreClipboard();
+    }
+  });
+
+  it('reports an unavailable Clipboard API as unsupported', async () => {
+    const restoreClipboard = stubClipboard(navigator, undefined);
+    try {
+      const el = (await fixture(
+        html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      let reason = '';
+      el.addEventListener('lr-copy-error', (event) => {
+        reason = (event as CustomEvent<{ reason: string }>).detail.reason;
+      });
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await waitUntil(() => reason !== '');
+
+      expect(reason).to.equal('unsupported');
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal(
+        'Copy failed',
+      );
+    } finally {
+      restoreClipboard();
+    }
+  });
+
+  it('reports permission rejection as denied and localizes the visible and announced failure', async () => {
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => Promise.reject(new DOMException('denied', 'NotAllowedError')),
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-diff-view
+          copyable
+          .oldText=${'a'}
+          .newText=${'b'}
+          .strings=${{ copyFailed: 'Échec de la copie' }}
+        ></lr-diff-view>`,
+      )) as LyraDiffView;
+      let reason = '';
+      el.addEventListener('lr-copy-error', (event) => {
+        reason = (event as CustomEvent<{ reason: string }>).detail.reason;
+      });
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await waitUntil(
+        () =>
+          el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()
+          === 'Échec de la copie',
+      );
+
+      const announcement = document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '';
+      expect(reason).to.equal('denied');
+      expect(announcement).to.contain('Échec de la copie');
+    } finally {
+      restoreClipboard();
+    }
+  });
+
+  it('waits for clipboard success before entering the copied state', async () => {
+    let resolveWrite: (() => void) | undefined;
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => new Promise<void>((resolve) => (resolveWrite = resolve)),
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+      button.click();
+      await Promise.resolve();
+      expect(button.textContent!.trim()).to.equal('Copy');
+
+      resolveWrite?.();
+      await waitUntil(() => button.textContent!.trim() === 'Copied!');
+      expect(button.textContent!.trim()).to.equal('Copied!');
+    } finally {
+      resolveWrite?.();
+      restoreClipboard();
+    }
+  });
+
+  it('ignores a successful clipboard outcome after the compared text changes', async () => {
+    let resolveWrite: (() => void) | undefined;
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => new Promise<void>((resolve) => (resolveWrite = resolve)),
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+      button.click();
+      el.newText = 'new snapshot';
+      await el.updateComplete;
+      resolveWrite?.();
+      await aTimeout(0);
+
+      expect(button.textContent!.trim()).to.equal('Copy');
+    } finally {
+      resolveWrite?.();
+      restoreClipboard();
+    }
+  });
+
+  it('ignores a rejected clipboard outcome after disconnect', async () => {
+    let rejectWrite: ((reason?: unknown) => void) | undefined;
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => new Promise<void>((_resolve, reject) => (rejectWrite = reject)),
+    });
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    let errors = 0;
+    el.addEventListener('lr-copy-error', () => errors++);
+    try {
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      el.remove();
+      rejectWrite?.(new Error('late failure'));
+      await aTimeout(0);
+
+      expect(errors).to.equal(0);
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal(
+        'Copy',
+      );
+    } finally {
+      rejectWrite?.(new Error('cleanup'));
+      el.remove();
+      restoreClipboard();
     }
   });
 
@@ -253,38 +400,54 @@ describe('lr-diff-view', () => {
   });
 
   it('clears copy confirmation state across disconnect and reconnect', async () => {
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => Promise.resolve(),
+    });
     const el = (await fixture(
       html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
     )) as LyraDiffView;
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
+    try {
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copied!',
+      );
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
 
-    el.remove();
-    document.body.append(el);
-    await el.updateComplete;
+      el.remove();
+      document.body.append(el);
+      await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+    } finally {
+      restoreClipboard();
+    }
   });
 
   it('clears copied feedback immediately when either source changes', async () => {
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () => Promise.resolve(),
+    });
     const el = (await fixture(
       html`<lr-diff-view copyable .oldText=${'old'} .newText=${'new'}></lr-diff-view>`,
     )) as LyraDiffView;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    button.click();
-    await el.updateComplete;
-    expect(button.textContent!.trim()).to.equal('Copied!');
+    try {
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      button.click();
+      await waitUntil(() => button.textContent!.trim() === 'Copied!');
+      expect(button.textContent!.trim()).to.equal('Copied!');
 
-    el.newText = 'newer';
-    await el.updateComplete;
-    expect(button.textContent!.trim()).to.equal('Copy');
+      el.newText = 'newer';
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copy');
 
-    button.click();
-    await el.updateComplete;
-    el.oldText = 'older';
-    await el.updateComplete;
-    expect(button.textContent!.trim()).to.equal('Copy');
+      button.click();
+      await waitUntil(() => button.textContent!.trim() === 'Copied!');
+      el.oldText = 'older';
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copy');
+    } finally {
+      restoreClipboard();
+    }
   });
 
   it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {

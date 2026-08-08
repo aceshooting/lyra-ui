@@ -87,6 +87,43 @@ function findParserError(doc: Document): string | null {
   return errorEl ? (errorEl.textContent ?? 'XML parse error') : null;
 }
 
+class XmlDoctypeError extends Error {
+  constructor() {
+    super('XML document type declarations are not supported.');
+    this.name = 'XmlDoctypeError';
+  }
+}
+
+/** Finds an active document type declaration without mistaking comment/CDATA contents for markup.
+ * Rejecting it before DOMParser is important: browser XML parsers do not fetch external entities,
+ * but they can expand an internal entity graph before Lyra gets a document to count. */
+function containsXmlDoctype(raw: string): boolean {
+  for (let offset = 0; offset < raw.length;) {
+    if (raw.startsWith('<!--', offset)) {
+      const end = raw.indexOf('-->', offset + 4);
+      if (end < 0) return false;
+      offset = end + 3;
+      continue;
+    }
+    if (raw.startsWith('<![CDATA[', offset)) {
+      const end = raw.indexOf(']]>', offset + 9);
+      if (end < 0) return false;
+      offset = end + 3;
+      continue;
+    }
+    if (raw.slice(offset, offset + 9).toUpperCase() === '<!DOCTYPE') return true;
+    offset++;
+  }
+  return false;
+}
+
+function parseXmlDocument(raw: string, ownerDocument: Document): Document {
+  if (containsXmlDoctype(raw)) throw new XmlDoctypeError();
+  const DOMParserCtor = ownerDocument.defaultView?.DOMParser;
+  if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
+  return new DOMParserCtor().parseFromString(raw, 'application/xml');
+}
+
 function validateDocumentComplexity(node: Node): void {
   const pending: Array<{ node: Node; depth: number }> = [{ node, depth: 0 }];
   let count = 0;
@@ -141,7 +178,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * mirroring `lr-json-viewer`'s UX (`collapsed-depth`, `copyable`, structural-path-keyed expand
  * state that survives a same-shape `xml` reassignment -- e.g. a streaming document being patched
  * in place) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
- * sections, and processing instructions.
+ * sections, and processing instructions, rendered in their original mixed-child source order.
  *
  * Search is a purely imperative surface (`search()`/`searchNext()`/`searchPrevious()`/
  * `clearSearch()`), the same uniform contract every anchor-target, search-capable viewer in this
@@ -151,8 +188,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * element's attributes.
  *
  * Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
- * matching. `DOMParser` never resolves external entities or DTDs, so XXE injection is
- * structurally out of reach.
+ * matching. Every document type declaration is rejected before `DOMParser`, preventing both
+ * external-entity access and browser-specific internal-entity expansion.
  *
  * @customElement lr-xml-viewer
  * @event lr-copy - `detail: { text }`.
@@ -340,10 +377,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private parseInline(raw: string): void {
     const generation = ++this.generation;
     try {
-      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
-      if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
-      const doc = new DOMParserCtor().parseFromString(raw, 'application/xml');
-      this.setDoc(doc, generation);
+      this.setDoc(parseXmlDocument(raw, this.ownerDocument), generation);
     } catch (error) {
       this.xmlState = { kind: 'error', message: this.localize('xmlViewerParseError') };
       this.emit('lr-render-error', { error });
@@ -376,14 +410,18 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
-      const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
-      if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
-      this.setDoc(new DOMParserCtor().parseFromString(text, 'application/xml'), generation);
+      this.setDoc(parseXmlDocument(text, this.ownerDocument), generation);
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.xmlState = {
         kind: 'error',
-        message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
+        message: this.localize(
+          error instanceof XmlDoctypeError
+            ? 'xmlViewerParseError'
+            : isResourceLimitError(error)
+              ? 'documentPreviewResourceTooLarge'
+              : 'documentPreviewFailedToLoad',
+        ),
       };
       this.emit('lr-render-error', { error });
     }
@@ -412,6 +450,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.xmlState = { kind: 'loaded', doc };
     const next = this.computeSearch(doc);
     this.searchState = next;
+    const hasSearchQuery = Boolean(this.searchQuery.trim());
+    if (hasSearchQuery) {
+      this.activeSearchIndex = next.ordered.length
+        ? Math.min(Math.max(this.activeSearchIndex, 0), next.ordered.length - 1)
+        : -1;
+      this.emitSearchChange();
+    }
     if (this.expandedOverrides.size) {
       let pruned: Map<string, boolean> | null = null;
       for (const key of this.expandedOverrides.keys()) {
@@ -504,7 +549,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** Case-insensitive substring search over every element's tag name, attribute names/values,
    *  and own text, layered over the already-parsed document -- resolves the match count and
    *  fires `lr-search-change`. Matches are re-derived automatically whenever the document
-   *  reloads with the same query still set (see `setDoc()`). */
+   *  reloads with the same query still set; the active index is clamped and the recomputed state
+   *  fires `lr-search-change` again (see `setDoc()`). */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;
@@ -614,17 +660,35 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   private renderNode(el: Element, path: PathSegment[], depth: number): TemplateResult {
     const pathKey = JSON.stringify(path);
-    const children = elementChildren(el);
-    const textNodes = Array.from(el.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim());
-    const commentNodes = Array.from(el.childNodes).filter((n) => n.nodeType === Node.COMMENT_NODE);
-    const cdataNodes = Array.from(el.childNodes).filter((n) => n.nodeType === Node.CDATA_SECTION_NODE);
-    const piNodes = Array.from(el.childNodes).filter((n) => n.nodeType === Node.PROCESSING_INSTRUCTION_NODE);
-    const hasChildren = children.length > 0 || textNodes.length > 0 || commentNodes.length > 0 || cdataNodes.length > 0 || piNodes.length > 0;
+    const renderedChildren = Array.from(el.childNodes).filter((node) => (
+      node.nodeType === Node.ELEMENT_NODE
+      || (node.nodeType === Node.TEXT_NODE && Boolean((node.textContent ?? '').trim()))
+      || node.nodeType === Node.COMMENT_NODE
+      || node.nodeType === Node.CDATA_SECTION_NODE
+      || node.nodeType === Node.PROCESSING_INSTRUCTION_NODE
+    ));
+    const hasChildren = renderedChildren.length > 0;
     const expanded = hasChildren && this.isExpanded(pathKey, depth);
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lr-space-l))`;
     const isMatch = this.searchState.matches.has(pathKey);
     const activeMatchKey = this.searchState.ordered[this.activeSearchIndex];
     const toggleLabel = el.tagName;
+    let elementIndex = 0;
+    const childRows = renderedChildren.map((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        return this.renderNode(node as Element, [...path, elementIndex++], depth + 1);
+      }
+      if (node.nodeType === Node.TEXT_NODE) {
+        return html`<div part="text" class="row" style=${indentStyle} ?data-match=${this.searchState.textMatches.has(pathKey)}>${node.textContent}</div>`;
+      }
+      if (node.nodeType === Node.COMMENT_NODE) {
+        return html`<div part="comment" class="row" style=${indentStyle}>&lt;!--${node.textContent}--&gt;</div>`;
+      }
+      if (node.nodeType === Node.CDATA_SECTION_NODE) {
+        return html`<div part="cdata" class="row" style=${indentStyle}>&lt;![CDATA[${node.textContent}]]&gt;</div>`;
+      }
+      return html`<div part="pi" class="row" style=${indentStyle}>&lt;?${(node as ProcessingInstruction).target} ${node.textContent}?&gt;</div>`;
+    });
 
     return html`
       <div
@@ -666,26 +730,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         ${!expanded && hasChildren
           ? html`<span class="preview">${this.localize('xmlViewerChildCount', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(
-                children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
+                renderedChildren.length,
               ),
-              pluralCount:
-                children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
+              pluralCount: renderedChildren.length,
             })}</span>`
           : nothing}
         ${this.renderCopyButton(() => el, toggleLabel)}
       </div>
       ${expanded
-        ? html`
-            ${children.map((child, i) => this.renderNode(child, [...path, i], depth + 1))}
-            ${textNodes.map(
-              (n) => html`<div part="text" class="row" style=${indentStyle} ?data-match=${this.searchState.textMatches.has(pathKey)}>${n.textContent}</div>`,
-            )}
-            ${commentNodes.map((n) => html`<div part="comment" class="row" style=${indentStyle}>&lt;!--${n.textContent}--&gt;</div>`)}
-            ${cdataNodes.map((n) => html`<div part="cdata" class="row" style=${indentStyle}>&lt;![CDATA[${n.textContent}]]&gt;</div>`)}
-            ${piNodes.map(
-              (n) => html`<div part="pi" class="row" style=${indentStyle}>&lt;?${(n as ProcessingInstruction).target} ${n.textContent}?&gt;</div>`,
-            )}
-          `
+        ? childRows
         : nothing}
     `;
   }

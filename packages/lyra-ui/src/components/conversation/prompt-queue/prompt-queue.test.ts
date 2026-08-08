@@ -51,6 +51,59 @@ it('emits edit, remove, and send-now requests with stable ids', async () => {
   expect(sendEvent.detail.item.id).to.equal('one');
 });
 
+it('moves focus to the equivalent action on the nearest survivor after controlled removal', async () => {
+  const controlledItems: PromptQueueItem[] = [
+    { id: 'one', value: 'First follow-up' },
+    { id: 'two', value: 'Second follow-up' },
+    { id: 'three', value: 'Third follow-up' },
+  ];
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${controlledItems}></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  el.addEventListener('lr-queue-change', (event) => {
+    el.items = event.detail.items;
+  });
+  const removeActions = el.shadowRoot!.querySelectorAll<HTMLElement>('[data-action="remove"]');
+  removeActions[1]!.focus();
+  removeActions[1]!.click();
+  await el.updateComplete;
+
+  const focusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(focusedAction?.getAttribute('data-action')).to.equal('remove');
+  expect(focusedAction?.closest('[data-id]')?.getAttribute('data-id')).to.equal('three');
+});
+
+it('moves focus to the queue region when controlled removal empties the queue', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${[items[0]!]}></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  el.addEventListener('lr-queue-change', (event) => {
+    el.items = event.detail.items;
+  });
+  const removeAction = el.shadowRoot!.querySelector<HTMLElement>('[data-action="remove"]')!;
+  removeAction.focus();
+  removeAction.click();
+  await el.updateComplete;
+
+  expect(el.items).to.have.lengthOf(0);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('does not steal external focus when a controlled update removes an unfocused row', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside">Outside</button>
+      <lr-prompt-queue .items=${items}></lr-prompt-queue>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-prompt-queue') as LyraPromptQueue;
+  wrapper.querySelector<HTMLElement>('#outside')!.focus();
+  el.items = [items[1]!];
+  await el.updateComplete;
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('applies per-instance strings to the queue label', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue

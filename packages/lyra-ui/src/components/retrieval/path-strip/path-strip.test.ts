@@ -169,7 +169,8 @@ it('mirrors the directed-edge arrow glyph and swaps ArrowLeft/ArrowRight semanti
 it('shows an empty message when path is empty', async () => {
   const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+  expect(Boolean(el.shadowRoot!.querySelector('[part="empty"]'))).to.be.true;
+  await expect(el).to.be.accessible();
 });
 
 it('announces node focus through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
@@ -243,4 +244,15 @@ it('moves focus to a surviving path control when the focused item is removed', a
   el.path = path.slice(0, 1);
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('node');
+});
+
+it('moves focus to the empty base when the focused path is cleared', async () => {
+  const el = (await fixture(html`<lr-path-strip .path=${path}></lr-path-strip>`)) as LyraPathStrip;
+  (el.shadowRoot!.querySelector('[part="relation"]') as HTMLButtonElement).focus();
+
+  el.path = [];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect(el.shadowRoot!.activeElement?.getAttribute('tabindex')).to.equal('-1');
 });

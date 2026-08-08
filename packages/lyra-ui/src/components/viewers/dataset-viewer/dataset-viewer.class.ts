@@ -22,6 +22,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
+interface DatasetParseResult { table: DatasetTable | null; errors: unknown[]; }
 type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
 type OwnedAnimationFrameWait = {
   owner: Window;
@@ -63,7 +64,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * string value, ordered row then column.
  *
  * @customElement lr-dataset-viewer
- * @event lr-render-error - Fired when the fetched text fails to parse, or exceeds the resource-size guard.
+ * @event lr-render-error - Fired when fetching or parsing fails, the resource guard rejects the
+ *   table, or PapaParse returns nonfatal diagnostics alongside a recoverable partial table.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { id }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -233,11 +235,19 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      const table = await this.parse(source, generation);
-      if (table === undefined) return;
+      const parsed = await this.parse(source, generation);
+      if (parsed === undefined) return;
       if (this.isConnected && this.loadTask.isCurrent(generation)) {
+        const { table } = parsed;
         this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
         if (table && this.searchQuery) await this.search(this.searchQuery);
+        if (
+          parsed.errors.length
+          && this.isConnected
+          && this.loadTask.isCurrent(generation)
+        ) {
+          this.emit('lr-render-error', { error: parsed.errors });
+        }
       }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || !this.loadTask.isCurrent(generation)) return;
@@ -250,14 +260,19 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
    *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
    *  or an oversized file, and must not be funneled into the same error chrome/assertive announcement as those
    *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
-  private async parse(text: string, generation: number): Promise<DatasetTable | null | undefined> {
+  private async parse(text: string, generation: number): Promise<DatasetParseResult | undefined> {
     const papa = await loadPapaParseCached();
     if (!this.isConnected || !this.loadTask.isCurrent(generation)) return undefined;
     if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'));
     const result = parseDelimitedRecords(papa, text);
-    if (!result.fields.length || !result.rows.length) return null;
+    if (!result.fields.length || !result.rows.length) {
+      return { table: null, errors: result.errors };
+    }
     assertTableDimensions(result.rows.length, result.fields.length);
-    return { fields: result.fields, rows: result.rows };
+    return {
+      table: { fields: result.fields, rows: result.rows },
+      errors: result.errors,
+    };
   }
 
   // -- cell highlights -----------------------------------------------------------------------------

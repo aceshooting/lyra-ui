@@ -861,8 +861,19 @@ First-party invention (no Web Awesome equivalent).
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
   highlighting the diff. Set the property to `Infinity` explicitly to opt into unbounded diffing.
 
-**Events:** `lr-copy` (`detail: { text: string }` — the full unified-diff text, fired on
-copy-button activation regardless of whether the clipboard write actually succeeded).
+**Events:**
+
+- `lr-copy` (`detail: { text: string }`) — the full unified-diff text, fired on every copy-button
+  activation, including an attempt whose clipboard write later fails.
+- `lr-error` (no detail) — the Clipboard API was unavailable or the write failed.
+- `lr-copy-error` (detail contains the text, a `LyraCopyErrorReason`, and the original error) — the
+  detailed failure alias. The reason is `'unsupported' | 'denied' | 'failed'`; its error field
+  preserves the original platform error for diagnostics.
+
+The copy button stays in its resting state until `writeText()` resolves. Success renders and
+announces localized `copied`; failure renders and announces localized `copyFailed`. A newer
+activation, source-text change, disconnect, or document adoption retires an older pending outcome,
+so stale writes cannot confirm or fail the current diff.
 
 **Slots:** none.
 
@@ -890,6 +901,9 @@ the plain unhighlighted diff text untouched.
   diff.oldText = 'line one\nline two\nline three';
   diff.newText = 'line one\nline TWO\nline three\nline four';
   diff.addEventListener('lr-copy', (e) => console.log(e.detail.text));
+  diff.addEventListener('lr-copy-error', (e) => {
+    console.error(`Copy ${e.detail.reason}`, e.detail.error);
+  });
 </script>
 ```
 

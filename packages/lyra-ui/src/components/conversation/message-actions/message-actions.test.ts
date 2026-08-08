@@ -261,6 +261,21 @@ it('slotted controls participate in arrow-key navigation', async () => {
   expect(branchPicker.shadowRoot!.activeElement).to.exist;
 });
 
+it('excludes inert slotted controls and keeps exactly one usable roving fallback', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <button id="inert-message-action" inert>Unavailable</button>
+      <button id="usable-message-action">Available</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  await el.updateComplete;
+  await Promise.resolve();
+
+  const access = el as unknown as { focusableStops(): HTMLElement[] };
+  expect(access.focusableStops().map((stop) => stop.id)).to.deep.equal(['usable-message-action']);
+  expect(el.querySelector<HTMLButtonElement>('#usable-message-action')!.tabIndex).to.equal(0);
+});
+
 it('reveal-on-hover binds to the closest lr-chat-message ancestor', async () => {
   const host = document.createElement('div');
   host.innerHTML = '<lr-chat-message><lr-message-actions reveal-on-hover></lr-message-actions></lr-chat-message>';

@@ -33,6 +33,24 @@ export const UnavailableIngestionFallback: Story = {
   `,
 };
 
+export const InvalidActiveTabFallback: Story = {
+  name: 'Invalid active tab fallback',
+  parameters: {
+    docs: {
+      description: {
+        story: 'An invalid authored tab value normalizes to Sources, leaving one active tab and one visible panel.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-knowledge-base-admin
+      active-tab="unknown"
+      .sources=${sources}
+      .ingestionItems=${ingestionItems}
+    ></lr-knowledge-base-admin>
+  `,
+};
+
 export const Narrow320: Story = {
   name: 'Narrow allocation (320px)',
   render: () => html`

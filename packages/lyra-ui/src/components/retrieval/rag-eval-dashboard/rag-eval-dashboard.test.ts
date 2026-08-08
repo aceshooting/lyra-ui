@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './rag-eval-dashboard.js';
 import type { LyraRagEvalDashboard, RagEvaluationMetric, RagEvaluationRun } from './rag-eval-dashboard.js';
+import type { LyraStat } from '../../data/stat/stat.class.js';
 
 const metrics: RagEvaluationMetric[] = [
   { id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' },
@@ -16,7 +17,16 @@ it('renders latest metric cards, a selected trend, and filters runs by slice', a
   const el = (await fixture(
     html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`,
   )) as LyraRagEvalDashboard;
-  expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(2);
+  const stats = [...el.shadowRoot!.querySelectorAll('lr-stat')] as LyraStat[];
+  expect(stats.length).to.equal(2);
+  for (const stat of stats) {
+    await stat.updateComplete;
+    const chrome = getComputedStyle(stat.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    expect(stat.frame).to.equal('plain');
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.paddingTop).to.equal('0px');
+  }
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(2);
   const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { datasets: unknown[] };
   expect(chart).to.exist;

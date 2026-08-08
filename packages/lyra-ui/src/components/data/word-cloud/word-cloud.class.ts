@@ -32,7 +32,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type { WordCloudWord };
+export type { WordCloudOrientations, WordCloudScale, WordCloudWord };
 
 const DEFAULT_MIN_FONT_SIZE = 12;
 const DEFAULT_MAX_FONT_SIZE = 48;

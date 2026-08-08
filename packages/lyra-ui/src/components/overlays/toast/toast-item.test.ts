@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import './toast-item.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
@@ -821,6 +821,39 @@ it('completes a hide on transitionend without waiting for the fallback timeout',
 it('collapses the show/hide transition duration under prefers-reduced-motion', () => {
   expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
   expect(styles.cssText).to.match(/transition-duration:\s*0\.01ms/);
+});
+
+it('stops the visible progress-ring animation under prefers-reduced-motion', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="5000">Reduced motion progress</lr-toast-item>`,
+  )) as LyraToastItem;
+  await waitUntil(() => el.hasAttribute('data-visible'));
+  const indicator = el.shadowRoot!.querySelector<SVGElement>(
+    '[part="progress-ring__indicator"]',
+  )!;
+  expect(getComputedStyle(indicator).animationName).to.equal('lr-toast-progress');
+  const reducedRule = el.shadowRoot!.adoptedStyleSheets
+    .flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule
+        && rule.conditionText === '(prefers-reduced-motion: reduce)'
+        && [...rule.cssRules].some(
+          (nested) =>
+            nested instanceof CSSStyleRule
+            && nested.selectorText.includes('progress-ring__indicator'),
+        ),
+    );
+  expect(reducedRule?.conditionText).to.equal('(prefers-reduced-motion: reduce)');
+  const originalCondition = reducedRule!.media.mediaText;
+  try {
+    reducedRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(indicator).animationName).to.equal('none');
+  } finally {
+    reducedRule!.media.mediaText = originalCondition;
+    el.duration = 0;
+  }
 });
 
 it('skips the JS-side show/hide delay (not just the CSS transition) under prefers-reduced-motion', async () => {
