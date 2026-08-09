@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,6 +22,7 @@ activation, selection, movement, and connection are all `lr-flow-canvas` events;
 owns none of that.
 
 **Properties:**
+
 - `nodeId: string = ''` (attribute `node-id`)
 - `heading: string = ''`
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
@@ -51,8 +52,8 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 (default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
 `--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
 `selected`. Like the other state-scoped custom properties here they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so they can be set on the element *or any
-ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
+their point of use rather than `:host` declarations, so they can be set on the element _or any
+ancestor_ (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
 `--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
 `status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
@@ -64,15 +65,25 @@ to the shared border-strong, brand, success, danger, and warning tokens;
 `--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
 `--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
 `--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
-`--lr-flow-node-status-denied-color`.
+`--lr-flow-node-status-denied-color`. `--lr-flow-node-progress-track-color` (default
+`var(--lr-color-border)`) and `--lr-flow-node-progress-fill-color` (default
+`var(--lr-color-brand)`) independently retint the determinate progress track and fill. All of
+these hooks inherit, so one canvas-level override can retint every descendant node without
+changing a library-wide semantic token.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-flow-node node-id="a" heading="Fetch" status="running" progress="40"></lr-flow-node>
+<lr-flow-node
+  node-id="a"
+  heading="Fetch"
+  status="running"
+  progress="40"
+></lr-flow-node>
 ```
 
 **Known gotchas:**
+
 - A running node's card pulses (`?data-pulse`) unless `prefers-reduced-motion` is set — the same
   reduced-motion exception every animated surface in this library follows.
 - `status` drives a status chip with a localized label plus `statusDetail`/`durationMs`, never a

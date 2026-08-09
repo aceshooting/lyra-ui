@@ -23,6 +23,8 @@ export const styles = css`
        class, and with it the pill property -- has one name to override. */
     --lr-radio-radius: var(--lr-radius-pill);
     display: inline-block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* Published (not an override hook, so it is declared rather than read with an inline
        var() fallback) so a consumer composing their own per-option hint text under the label
        can align it without re-deriving the geometry by reading these shadow styles. Same two
@@ -37,6 +39,8 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
        value and the rendered label offset cannot drift: the label always starts exactly
        --lr-radio-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
@@ -81,15 +85,15 @@ export const styles = css`
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   :host(:not(:disabled)) [part='base']:hover [part~='circle'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-radio-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed. A ring rather than a fill, for the same reason <lr-checkbox>'s [part='box'] takes one:
      the circle's fill IS the state readout (surface unchecked, the dot inside it once checked), so
      tinting it under the thumb would read as a half-selected radio. Visibly more than the hover's
      border-colour step, and the same soft-ring vocabulary <lr-slider>'s thumb uses. */
   :host(:not(:disabled)) [part='base']:active [part~='circle'] {
-    border-color: var(--lr-color-brand);
-    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
+    border-color: var(--lr-radio-active-border-color, var(--lr-radio-hover-border-color, var(--lr-color-brand)));
+    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-radio-active-ring-color, var(--lr-color-brand-quiet));
   }
   [part~='circle'][part~='checked'] {
     /* Component-scoped indirection (mirrors lr-checkbox's identical --lr-checkbox-checked-bg/
@@ -108,6 +112,9 @@ export const styles = css`
     display: none;
   }
   [part='label'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
   }

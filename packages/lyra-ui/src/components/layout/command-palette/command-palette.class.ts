@@ -90,8 +90,10 @@ export interface LyraCommandPaletteEventMap {
  * @cssprop [--lr-command-palette-max-block-size=70vh] - Maximum dialog height.
  * @cssprop [--lr-command-palette-list-max-block-size=50vh] - Maximum height of the scrolling command list.
  * @cssprop [--lr-command-palette-offset-block-start=12vh] - Gap between the viewport top and the dialog.
- * @cssprop [--lr-command-palette-row-height=var(--lr-size-3rem)] - Virtual command-row height.
- * @cssprop [--lr-command-palette-group-height=var(--lr-size-2rem)] - Virtual group-heading height.
+ * @cssprop [--lr-command-palette-row-height=var(--lr-size-3rem)] - Virtual command-row height;
+ *   live changes rebuild row transforms, scrolling coordinates, and the result extent.
+ * @cssprop [--lr-command-palette-group-height=var(--lr-size-2rem)] - Virtual group-heading height;
+ *   live changes rebuild heading/row transforms and the result extent.
  * @cssprop [--lr-command-palette-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (keyboard-highlighted, `data-active="true"`) command row. Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the active row
@@ -130,6 +132,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private activeCommand?: LyraCommand;
   private listResizeObserver?: ResizeObserver;
   private observedList?: HTMLElement;
+  private observedRow?: HTMLElement;
+  private observedGroup?: HTMLElement;
+  private rowPitchFrame?: number;
   private listScrollFrame?: number;
   /** Window that owns listeners, observers, and animation frames for the current connection. */
   private runtimeWindow?: Window;
@@ -144,6 +149,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private filteredForLocale = "";
   private filteredRows: LyraCommand[] = [];
   private resultModelFor?: LyraCommand[];
+  private resultModelRowPitch?: number;
+  private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
 
   /** One lowercased searchable string per command, index-aligned with `commands`. `filtered`
@@ -219,6 +226,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (list !== this.observedList) {
       if (this.observedList)
         this.listResizeObserver?.unobserve(this.observedList);
+      this.clearPitchSentinels();
       this.observedList = list;
       if (list) {
         this.listResizeObserver?.observe(list);
@@ -232,6 +240,35 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         });
       }
     }
+    this.observePitchSentinels();
+  }
+
+  private observePitchSentinels(): void {
+    const row =
+      this.renderRoot.querySelector<HTMLElement>('[part="command"]') ??
+      undefined;
+    const group =
+      this.renderRoot.querySelector<HTMLElement>('[part="group"]') ??
+      undefined;
+    if (row !== this.observedRow) {
+      if (this.observedRow)
+        this.listResizeObserver?.unobserve(this.observedRow);
+      this.observedRow = row;
+      if (row) this.listResizeObserver?.observe(row);
+    }
+    if (group !== this.observedGroup) {
+      if (this.observedGroup)
+        this.listResizeObserver?.unobserve(this.observedGroup);
+      this.observedGroup = group;
+      if (group) this.listResizeObserver?.observe(group);
+    }
+  }
+
+  private clearPitchSentinels(): void {
+    if (this.observedRow) this.listResizeObserver?.unobserve(this.observedRow);
+    if (this.observedGroup) this.listResizeObserver?.unobserve(this.observedGroup);
+    this.observedRow = undefined;
+    this.observedGroup = undefined;
   }
 
 
@@ -248,6 +285,19 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (group !== undefined && group > 0 && group !== this.groupPitch) this.groupPitch = group;
   }
 
+  private scheduleRowPitchMeasurement(): void {
+    if (this.rowPitchFrame !== undefined) return;
+    const view = this.runtimeWindow ?? this.ownerDocument.defaultView;
+    if (!view) {
+      this.measureRowPitch();
+      return;
+    }
+    this.rowPitchFrame = view.requestAnimationFrame(() => {
+      this.rowPitchFrame = undefined;
+      if (this.isConnected) this.measureRowPitch();
+    });
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     const view = this.ownerDocument.defaultView;
@@ -257,10 +307,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (ResizeObserverCtor && view) {
       let observer: ResizeObserver;
       observer = new ResizeObserverCtor((entries) => {
-        if (this.listResizeObserver !== observer || this.runtimeWindow !== view) return;
-        const entry = entries[0];
+        if (this.listResizeObserver !== observer || this.runtimeWindow !== view)
+          return;
+        this.scheduleRowPitchMeasurement();
+        const entry = entries.find(
+          (candidate) => candidate.target === this.observedList
+        );
         if (!entry) return;
-        this.measureRowPitch();
         const height =
           entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
         if (height > 0 && this.listViewportHeight !== height)
@@ -289,9 +342,15 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
     this.observedList = undefined;
+    this.observedRow = undefined;
+    this.observedGroup = undefined;
     if (this.listScrollFrame !== undefined) {
       view?.cancelAnimationFrame(this.listScrollFrame);
       this.listScrollFrame = undefined;
+    }
+    if (this.rowPitchFrame !== undefined) {
+      view?.cancelAnimationFrame(this.rowPitchFrame);
+      this.rowPitchFrame = undefined;
     }
     this.runtimeWindow = undefined;
   }
@@ -428,7 +487,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private get resultModel(): CommandResultModel {
     const rows = this.filtered;
-    if (this.resultModelFor === rows && this.resultModelCache)
+    if (
+      this.resultModelFor === rows &&
+      this.resultModelRowPitch === this.rowPitch &&
+      this.resultModelGroupPitch === this.groupPitch &&
+      this.resultModelCache
+    )
       return this.resultModelCache;
     const resultRows: CommandResultRow[] = [];
     const groups: CommandResultGroup[] = [];
@@ -455,6 +519,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       top += this.rowPitch;
     }
     this.resultModelFor = rows;
+    this.resultModelRowPitch = this.rowPitch;
+    this.resultModelGroupPitch = this.groupPitch;
     this.resultModelCache = { rows: resultRows, groups, totalHeight: top };
     return this.resultModelCache;
   }

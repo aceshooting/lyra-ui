@@ -720,6 +720,14 @@ describe('lr-archive-viewer', () => {
     const hostLabeledBase = hostLabeled.shadowRoot!.querySelector('[part="base"]')!;
     expect(hostLabeledBase.getAttribute('role')).to.equal('region');
     expect(hostLabeledBase.getAttribute('aria-label')).to.equal('Backup contents');
+
+    const emptyHostLabel = await fixture<LyraArchiveViewer>(
+      html`<lr-archive-viewer name="backup.zip" aria-label=""></lr-archive-viewer>`,
+    );
+    const emptyHostLabelBase = emptyHostLabel.shadowRoot!.querySelector('[part="base"]')!;
+    expect(emptyHostLabelBase.getAttribute('role')).to.equal('region');
+    expect(emptyHostLabelBase.hasAttribute('aria-label')).to.be.true;
+    expect(emptyHostLabelBase.getAttribute('aria-label')).to.equal('');
   });
 });
 

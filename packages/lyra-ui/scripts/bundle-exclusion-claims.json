@@ -1,0 +1,25 @@
+{
+  "$comment": "Documented lean-entry dependency exclusions verified from real peer-inclusive esbuild metafiles. includedOptionalPeers removes only those peers from the ordinary external list; forbiddenInputs are normalized metafile path fragments.",
+  "dist/components/conversation/code-block/code-block-core.js": {
+    "includedOptionalPeers": ["shiki"],
+    "forbiddenInputs": ["node_modules/@shikijs/langs/dist/"]
+  },
+  "dist/components/conversation/markdown/markdown-core.js": {
+    "includedOptionalPeers": ["shiki"],
+    "forbiddenInputs": ["node_modules/@shikijs/langs/dist/"]
+  },
+  "dist/components/conversation/widget-renderer/widget-renderer.class.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/conversation/widget-renderer/default-registry.js",
+      "components/layout/card/card.class.js",
+      "components/overlays/badge/badge.class.js",
+      "components/forms/button/button.class.js",
+      "components/data/stat/stat.class.js",
+      "components/agent-tools/result-card/result-card.class.js",
+      "components/agent-tools/result-card/result-field.class.js",
+      "components/conversation/markdown/markdown.class.js",
+      "components/media/media-card/media-card.class.js"
+    ]
+  }
+}

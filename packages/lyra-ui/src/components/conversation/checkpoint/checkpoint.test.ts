@@ -32,7 +32,7 @@ it('renders a formatted timestamp, overridable via formatTimestamp, unset for an
   const ts = new Date('2024-01-01T10:30:00Z');
   const withTs = (await fixture(html`<lr-checkpoint .timestamp=${ts}></lr-checkpoint>`)) as LyraCheckpoint;
   const time = withTs.shadowRoot!.querySelector('[part="timestamp"]') as HTMLTimeElement;
-  expect(time).to.exist;
+  expect((time) != null).to.equal(true);
   expect(time.getAttribute('datetime')).to.equal(ts.toISOString());
 
   const custom = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
@@ -72,7 +72,7 @@ describe('restoring state', () => {
     const button = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-disabled')).to.equal('true');
     expect(button.textContent!.trim()).to.equal('Restoring…');
-    expect(button.querySelector('svg')).to.exist;
+    expect((button.querySelector('svg')) != null).to.equal(true);
   });
 
   it('ignores a click while restoring', async () => {
@@ -124,7 +124,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="restore-button"]')).to.not.exist;
     const group = el.shadowRoot!.querySelector('[part="confirm-group"]') as HTMLElement;
-    expect(group).to.exist;
+    expect((group) != null).to.equal(true);
     expect(group.querySelector('[part="confirm-prompt"]')!.textContent!.trim()).to.equal(
       'Restore the conversation to this point?',
     );
@@ -138,7 +138,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
     const confirmButton = el.shadowRoot!.querySelector('[part="confirm-button"]') as HTMLButtonElement;
-    expect(el.shadowRoot!.activeElement).to.equal(confirmButton);
+    expect((el.shadowRoot!.activeElement) === (confirmButton)).to.equal(true);
   });
 
   it('fires lr-restore with checkpointId/label on confirm, and reverts the group', async () => {
@@ -168,7 +168,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await new Promise((r) => requestAnimationFrame(r));
     expect(fired).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="restore-button"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
   it('reverts to the restore button and refocuses it on Escape', async () => {
@@ -180,7 +180,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
     expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="restore-button"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
   it('reverts silently (no refocus) when focus leaves the confirm group entirely', async () => {
@@ -199,7 +199,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await checkpoint.updateComplete;
     expect(checkpoint.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
     // No forced refocus -- the browser's natural focus target (outside) is left alone.
-    expect(checkpoint.shadowRoot!.activeElement).to.not.equal(checkpoint.shadowRoot!.querySelector('[part="restore-button"]'));
+    expect((checkpoint.shadowRoot!.activeElement) !== (checkpoint.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
   it('gives confirm-button and cancel-button a hover state', () => {

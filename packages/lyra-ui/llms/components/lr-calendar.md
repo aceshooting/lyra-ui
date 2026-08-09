@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,8 +18,9 @@
 Responsive month calendar with event markers and an agenda view.
 
 **Properties:**
+
 - `events: CalendarEvent[] = []` (attribute: false) — `{ id?, date, title, start?, end?, color?,
-  data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is sanitized before being used as the
+data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is sanitized before being used as the
   marker background
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
@@ -47,11 +48,13 @@ the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `t
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
-≤ 28rem), and `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) — background of
-a selected (`data-selected="true"`) day cell. Component-scoped indirection over the shared
-`--lr-color-brand-quiet` token, so a consumer can retint the persistent selected-day highlight
-without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
-token directly for a visually distinct purpose (transient hover feedback).
+≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected
+day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and
+`--lr-calendar-day-outside-bg` (default `var(--lr-color-surface)`) for adjacent-month days; and
+`--lr-calendar-day-today-outline-color` (default `var(--lr-color-brand)`) for today's outline.
+These state hooks use inline fallbacks at their paint rules, so an application theme can set them
+on an ancestor. They keep persistent selection, outside-month chrome, and today's outline
+independent from shared tokens that also drive unrelated component states.
 
 Month-view `[part='event']` markers are real keyboard-focusable buttons inside a non-interactive
 `role="gridcell"` day container; Enter/Space activates the same `lr-event-select` path as a pointer.

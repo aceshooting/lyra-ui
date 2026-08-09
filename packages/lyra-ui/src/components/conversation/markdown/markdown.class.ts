@@ -7,11 +7,7 @@ import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../in
 import { scopeFromElement, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraAnchorKind } from '../../viewers/document-viewer/anchors.js';
-import type {
-  LyraMarkedParser,
-  MarkdownDeps,
-  MarkedModule,
-} from './markdown-loader.js';
+import type { LyraMarkedParser, MarkdownDeps, MarkedModule } from './markdown-loader.js';
 import {
   loadShikiHighlighter,
   loadShikiLanguage,
@@ -36,11 +32,13 @@ import {
   markdownMathPeerError,
   markdownNeedsReparse,
   MarkdownOwnedAnimationFrameController,
+  normalizeMarkdownLeadingTabs,
   parseMarkdownDocument,
   renderMarkdownContent,
   renderMarkdownDocument,
   repaintMarkdownHighlights,
   setCachedHighlight as setCachedHighlightShared,
+  sharedMarkdownParser,
   tokenizeMarkdownHighlight,
   HIGHLIGHT_CACHE_MAX,
   type PendingHighlight,
@@ -54,7 +52,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** Re-exported so `markdown.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
 export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
@@ -62,45 +59,6 @@ export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** This variant's own `katex` resolution state -- see `createMarkdownKatexState()` for why
  *  `<lr-markdown-core>` deliberately owns a separate one rather than sharing this instance. */
 const katexState = createMarkdownKatexState();
-
-/** One configurable parser per resolved `marked` module namespace. Keeping this cache at module
- *  scope makes the public `marked` property genuinely shared across `<lr-markdown>` instances,
- *  while the weak key lets an alternate loader/test module be collected normally. */
-const sharedMarkedInstances = new WeakMap<object, LyraMarkedParser>();
-
-function sharedMarkedInstance(marked: MarkedModule | undefined): LyraMarkedParser | undefined {
-  if (
-    !marked ||
-    (typeof marked !== 'object' && typeof marked !== 'function') ||
-    typeof marked.Marked !== 'function'
-  ) {
-    return undefined;
-  }
-  const key = marked as object;
-  let instance = sharedMarkedInstances.get(key);
-  if (!instance) {
-    instance = new marked.Marked() as unknown as LyraMarkedParser;
-    sharedMarkedInstances.set(key, instance);
-  }
-  return instance;
-}
-
-/** Converts tabs only in a line's indentation to spaces at real tab stops. Markdown treats four
- *  leading spaces as an indented code block, so a simple fixed `tab.repeat(width)` replacement is
- *  wrong after existing spaces; the next stop depends on the current indentation column. */
-function normalizeLeadingTabs(content: string, tabSize: number): string {
-  const width = finiteInteger(tabSize, 4, 1, 32);
-  return content.replace(/^[\t ]+/gm, (indentation) => {
-    let column = 0;
-    let normalized = '';
-    for (const character of indentation) {
-      const spaces = character === '\t' ? width - (column % width) : 1;
-      normalized += ' '.repeat(spaces);
-      column += spaces;
-    }
-    return normalized;
-  });
-}
 
 /** @internal Test-only seam: forces `math` rendering to behave as if `katex` resolved to `katex`
  *  (or, with `null`, as if the optional peer failed to load). Pass `undefined` to restore the real
@@ -152,6 +110,8 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  * a second render replaces it with the real Markdown output. Set
  * `eager-load` to skip that window once the shared dependency cache is
  * already warm; see that property's doc for exactly what "warm" requires.
+ * Disconnecting and reconnecting while the shared load is pending invalidates the earlier
+ * connection's settlement callback, so the current connection parses only once.
  *
  * `heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are rendered
  * through a `marked` renderer override that injects `part="..."` attributes
@@ -362,12 +322,12 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
 
   private deps?: MarkdownDeps;
 
-  /** The configurable `marked.Marked` parser shared by every `<lr-markdown>` instance on this
-   *  page. It is `undefined` only while the optional `marked` peer is unresolved or unavailable.
+  /** The configurable `marked.Marked` parser shared by both Markdown variants on this page. It is
+   *  `undefined` only while the optional `marked` peer is unresolved or unavailable.
    *  Configuration installed with `marked.use()` is copied into each fresh internal parse; call
    *  `renderMarkdown()` to refresh existing content after changing that configuration. */
   get marked(): LyraMarkedParser | undefined {
-    return sharedMarkedInstance(this.deps?.marked);
+    return sharedMarkdownParser(this.deps?.marked);
   }
 
   /** Document-ordered heading outline computed on every parse (see `getHeadingTree()`), regardless
@@ -656,12 +616,12 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   private parseMarkdown(
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[],
+    headingTreeOut: MarkdownHeadingItem[]
   ): { html: string; hadMathFallback: boolean } {
     return parseMarkdownDocument({
       marked,
-      content: normalizeLeadingTabs(this.content, this.tabSize),
-      markedConfiguration: sharedMarkedInstance(marked)?.defaults,
+      content: normalizeMarkdownLeadingTabs(this.content, finiteInteger(this.tabSize, 4, 1, 32)),
+      markedConfiguration: sharedMarkdownParser(marked)?.defaults,
       gfm: this.gfm,
       // Falsy (`null` or `''`) means the consumer explicitly opted out of
       // target="..."/rel="..." on rendered links -- see the linkTarget doc.

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './app-rail.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'AppRail',
@@ -81,6 +82,77 @@ export const ForcedMobile: Story = {
         <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
       </lr-app-rail>
     `),
+};
+
+export const NarrowRtlLongContent: Story = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An exact 320px allocation exercises the open mobile panel with RTL direction and long localized header, navigation, and footer content. The preview opens the drawer automatically; use its toggle in docs view.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; block-size: var(--lr-size-22rem); border: var(--lr-border-width-thin) solid var(--lr-color-border); overflow: hidden;"
+    >
+      <lr-app-rail
+        label="التنقل الرئيسي"
+        mode="mobile"
+        .open=${context.viewMode !== 'docs'}
+        style="block-size: 100%; --lr-app-rail-mobile-width: 320px;"
+      >
+        <span slot="header">عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span>
+        <lr-app-rail-item href="#reports">
+          <span slot="icon" aria-hidden="true">📊</span>
+          تقرير-تحليلي-طويل-جداً-غير-قابل-للفصل
+        </lr-app-rail-item>
+        <lr-app-rail-item href="#archive">
+          <span slot="icon" aria-hidden="true">🗂️</span>
+          أرشيف-المستندات-ذات-الأسماء-الطويلة-جداً
+        </lr-app-rail-item>
+        <span slot="footer">حساب-مستخدم-طويل-جداً-غير-قابل-للفصل</span>
+      </lr-app-rail>
+    </div>
+  `,
+};
+
+export const ThemedInteractionStates: Story = {
+  name: 'Themed interaction states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover/press the mobile toggle and full-mode resizer. Their scoped state hooks inherit from these wrappers without changing unrelated brand-colored components.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l);">
+      <lr-app-rail
+        mode="mobile"
+        style="
+          --lr-app-rail-toggle-hover-bg: ${storyColor('successQuiet')};
+          --lr-app-rail-toggle-hover-color: ${storyColor('success')};
+          --lr-app-rail-toggle-active-bg: ${storyColor('warningQuiet')};
+          --lr-app-rail-toggle-active-color: ${storyColor('warning')};
+        "
+      ></lr-app-rail>
+      <lr-app-rail
+        mode="full"
+        resizable
+        style="
+          inline-size: var(--lr-app-rail-width);
+          block-size: var(--lr-size-10rem);
+          --lr-app-rail-resizer-hover-bg: ${storyColor('success')};
+          --lr-app-rail-resizer-active-bg: ${storyColor('warning')};
+        "
+      ></lr-app-rail>
+    </div>
+  `,
 };
 
 export const MobileOpenInitially: Story = {

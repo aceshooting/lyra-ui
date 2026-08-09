@@ -95,7 +95,7 @@ export const styles = css`
   [part='bar'][data-selected],
   [part='point'][data-selected] {
     stroke: var(--lr-lite-chart-selected-outline-color, var(--lr-color-brand));
-    stroke-width: var(--lr-size-2px);
+    stroke-width: var(--lr-lite-chart-selected-outline-width, var(--lr-size-2px));
   }
   [part='bar']:focus-visible,
   [part='point']:focus-visible {

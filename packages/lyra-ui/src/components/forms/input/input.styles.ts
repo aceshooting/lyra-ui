@@ -10,10 +10,10 @@ export const styles = css`
        component's own l and xl tiers used to overshoot their declared floor by 2px and 5px, so an
        input never actually lined up with the button beside it). The ladder matches both spellings
        of every tier in one selector list, so size="small" is size="s" here for free. */
-    --lr-input-padding-block: var(--lr-form-control-padding-block);
-    --lr-input-padding-inline: var(--lr-form-control-padding-inline);
-    --lr-input-font-size: var(--lr-form-control-font-size);
-    --lr-input-control-min-height: var(--lr-form-control-height);
+    --_lr-input-padding-block-default: var(--lr-form-control-padding-block);
+    --_lr-input-padding-inline-default: var(--lr-form-control-padding-inline);
+    --_lr-input-font-size-default: var(--lr-form-control-font-size);
+    --_lr-input-control-min-height-default: var(--lr-form-control-height);
     /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
        hatch consumed only through the two var() fallbacks on [part~='input-wrapper'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and
@@ -23,42 +23,42 @@ export const styles = css`
     /* The adornment gap is deliberately NOT taken from the ladder: it does not vary by tier there
        either, and the ladder's value is tuned for a button's icon-beside-label spacing, which is
        tighter than a text field wants between an adornment and the caret. */
-    --lr-input-gap: var(--lr-space-xs);
-    --lr-input-radius: var(--lr-form-control-radius);
+    --_lr-input-gap-default: var(--lr-space-xs);
+    --_lr-input-radius-default: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below. The mapped default is outlined, so an element
        whose appearance attribute has not reflected yet still paints the correct border-only box. */
-    --lr-input-fill: transparent;
-    --lr-input-border-color: var(--lr-color-border);
+    --_lr-input-fill-default: transparent;
+    --_lr-input-border-color-default: var(--lr-color-border);
   }
   :host([appearance='filled-outlined']) {
-    --lr-input-fill: var(--lr-color-surface);
-    --lr-input-border-color: var(--lr-color-border);
+    --_lr-input-fill-default: var(--lr-color-surface);
+    --_lr-input-border-color-default: var(--lr-color-border);
   }
   :host([appearance='outlined']) {
-    --lr-input-fill: transparent;
-    --lr-input-border-color: var(--lr-color-border);
+    --_lr-input-fill-default: transparent;
+    --_lr-input-border-color-default: var(--lr-color-border);
   }
   :host([appearance='filled']) {
-    --lr-input-fill: var(--lr-color-surface-raised);
-    --lr-input-border-color: transparent;
+    --_lr-input-fill-default: var(--lr-color-surface-raised);
+    --_lr-input-border-color-default: transparent;
   }
   :host([filled]) {
-    --lr-input-fill: var(--lr-color-surface-raised);
-    --lr-input-border-color: transparent;
+    --_lr-input-fill-default: var(--lr-color-surface-raised);
+    --_lr-input-border-color-default: transparent;
   }
   :host([appearance='plain']) {
-    --lr-input-fill: transparent;
-    --lr-input-border-color: transparent;
+    --_lr-input-fill-default: transparent;
+    --_lr-input-border-color-default: transparent;
   }
   /* The loudest tier still has to read as an editable text surface, so it takes the *quiet* brand
      tint as its fill and the loud brand color on the border only -- a loud fill would put user
      text on a saturated background at an unpredictable contrast ratio. */
   :host([appearance='accent']) {
-    --lr-input-fill: var(--lr-color-brand-quiet);
-    --lr-input-border-color: var(--lr-color-brand);
+    --_lr-input-fill-default: var(--lr-color-brand-quiet);
+    --_lr-input-border-color-default: var(--lr-color-brand);
   }
   :host([pill]) {
-    --lr-input-radius: var(--lr-radius-pill);
+    --_lr-input-radius-default: var(--lr-radius-pill);
   }
   [part='form-control-label'] {
     display: block;
@@ -73,20 +73,20 @@ export const styles = css`
   [part~='input-wrapper'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-input-gap);
+    gap: var(--lr-input-gap, var(--_lr-input-gap-default));
     inline-size: 100%;
     box-sizing: border-box;
-    min-block-size: var(--lr-input-control-height, var(--lr-input-control-min-height));
+    min-block-size: var(--lr-input-control-height, var(--lr-input-control-min-height, var(--_lr-input-control-min-height-default)));
     /* Pinned only when --lr-input-control-height is set; 'auto' otherwise, so the row keeps
        growing to fit its own content. */
     block-size: var(--lr-input-control-height, auto);
-    padding-inline: var(--lr-input-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-input-border-color);
-    border-radius: var(--lr-input-radius);
-    background: var(--lr-input-fill);
+    padding-inline: var(--lr-input-padding-inline, var(--_lr-input-padding-inline-default));
+    border: var(--lr-border-width-thin) solid var(--lr-input-border-color, var(--_lr-input-border-color-default));
+    border-radius: var(--lr-input-radius, var(--_lr-input-radius-default));
+    background: var(--lr-input-fill, var(--_lr-input-fill-default));
   }
   [part~='input-wrapper']:focus-within {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-input-focus-border-color, var(--lr-color-brand));
   }
   /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated
      (FormAssociated mixin), so the UA computes its disabled state (and
@@ -109,16 +109,16 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     box-sizing: border-box;
-    padding-block: var(--lr-input-padding-block);
+    padding-block: var(--lr-input-padding-block, var(--_lr-input-padding-block-default));
     border: none;
     outline: none;
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lr-input-font-size);
+    font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
   [part='input']::placeholder {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-input-action-color, var(--lr-color-text-quiet));
   }
   [part='input'][type='search']::-webkit-search-cancel-button,
   [part='input'][type='search']::-webkit-search-decoration {
@@ -145,10 +145,23 @@ export const styles = css`
   }
   [part='start'],
   [part='end'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 50%;
+    overflow: hidden;
     color: var(--lr-color-text-quiet);
+  }
+  [part='start'] slot,
+  [part='end'] slot,
+  [part='start'] slot::slotted(*),
+  [part='end'] slot::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='start'][hidden],
   [part='end'][hidden] {
@@ -174,10 +187,10 @@ export const styles = css`
     font-size: var(--lr-font-size-m);
   }
   [part='password-toggle']:hover {
-    color: var(--lr-color-text);
+    color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
   [part='clear-button']:hover {
-    color: var(--lr-color-text);
+    color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
   /* Pressed: the hover's quiet-to-full text step PLUS a fill, mixing the page surface toward
      --lr-color-mix-partner. Deliberately more than the hover rather than a repeat of it -- these
@@ -186,8 +199,11 @@ export const styles = css`
      down cannot. */
   [part='password-toggle']:active,
   [part='clear-button']:active {
-    color: var(--lr-color-text);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
+    background: var(
+      --lr-input-action-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='password-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

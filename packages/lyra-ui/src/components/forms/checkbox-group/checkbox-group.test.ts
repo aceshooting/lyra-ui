@@ -5,6 +5,17 @@ import type { LyraCheckboxGroup } from './checkbox-group.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import { styles } from './checkbox-group.styles.js';
 
+it('lets a consumer retint the invalid options border independently', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group style="--lr-checkbox-group-invalid-border: rgb(1, 2, 3)">
+      <lr-checkbox>A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  el.setAttribute('data-invalid', '');
+  const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
+  expect(getComputedStyle(options).borderTopColor).to.equal('rgb(1, 2, 3)');
+});
+
 it('applies required and disabled states when server rendering provides no light-DOM query API', () => {
   const el = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
   let requiredError = '';
@@ -189,7 +200,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect((el!.form) === (null)).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -803,7 +814,7 @@ describe('ElementInternals fallback', () => {
 
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, (el) => {
-      expect(el.form).to.be.null;
+      expect((el.form) === null).to.equal(true);
       expect(el.willValidate).to.be.false;
       expect(el.validationMessage).to.equal('');
       expect(el.checkValidity()).to.be.true;
@@ -1207,4 +1218,25 @@ it('renders the required marker from the shared themeable rule, not a literal sp
   el.style.setProperty('--lr-form-control-required-content', "''");
   await el.updateComplete;
   expect(getComputedStyle(label, '::after').content).to.not.contain('*');
+});
+
+it('contains long horizontal options in an exact 320px RTL allocation', async () => {
+  const long = 'LocalizedUnbrokenCheckboxGroupOption'.repeat(32);
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:320px;overflow:auto">
+      <lr-checkbox-group
+        orientation="horizontal"
+        label=${long}
+        hint=${long}
+        style="max-inline-size:100%"
+      >
+        <lr-checkbox value="a">${long}</lr-checkbox>
+        <lr-checkbox value="b">${long}</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `);
+  const group = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const options = group.shadowRoot!.querySelector<HTMLElement>('[part~="options"]')!;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(options.scrollWidth).to.be.at.most(options.clientWidth);
 });

@@ -168,6 +168,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * draft submits the empty string. Use `<lr-native-time-input>` for the Lyra 7 browser-native
  * `input[type=time]` experience.
  *
+ * The outer row follows the shared control-height ladder without adding padding around its action
+ * hit targets: compact tiers grow only enough for the clear/expand buttons, while `l` and `xl`
+ * retain their larger shared heights.
+ *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
  * @event change - Native `Event` fired when a complete value is committed.
@@ -195,7 +199,8 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @slot footer - Replaces the default Now footer action.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-input - The row containing segments and actions.
- * @csspart form-control-label - The label wrapper.
+ * @csspart form-control-label - The wrap-safe label wrapper; unbroken localized text stays within
+ *   the host allocation.
  * @csspart label - Compatibility alias for `form-control-label` on the same node.
  * @csspart base - The segmented time row.
  * @csspart time-input - Compatibility alias for `base` on the same node.
@@ -203,20 +208,47 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @csspart input - The segmented editing surface.
  * @csspart segment - An editable time segment.
  * @csspart segment-literal - A locale-derived separator.
- * @csspart start - Wrapper around the `start` slot.
- * @csspart end - Wrapper around the `end` slot.
+ * @csspart start - Shrinkable wrapper around the `start` slot; long content ellipsizes.
+ * @csspart end - Shrinkable wrapper around the `end` slot; long content ellipsizes.
  * @csspart clear-button - The clear action.
  * @csspart expand-button - The picker toggle.
  * @csspart expand-icon - The picker-toggle glyph.
  * @csspart popup - The positioned picker surface.
  * @csspart columns - The picker column group.
- * @csspart column - One hour, minute, second, or day-period column.
+ * @csspart column - One hour, minute, second, or day-period column. It scrolls only in the block
+ *   axis and clips inline overflow when a consumer supplies an undersized `--column-width`.
  * @csspart column-item - A picker column option.
  * @csspart column-item-selected - A selected picker option; also carries `column-item`.
  * @csspart now-button - The default Now footer action.
  * @csspart hint - The hint message.
  * @csspart error - Ordinary validation text referenced by the segmented input through
  *   `aria-describedby`; it is not a live region, avoiding duplicate native validation feedback.
+ * @cssprop [--lr-time-input-gap=var(--lr-form-control-gap)] - Gap between segments, adornments,
+ *   and actions in the outer row. Undeclared on the host so ancestor theme wrappers can set it.
+ * @cssprop [--lr-time-input-radius=var(--lr-form-control-radius)] - Outer row corner radius.
+ *   `pill` supplies `--lr-radius-pill` only as the fallback, so a component-scoped value wins.
+ * @cssprop [--lr-time-input-border-color=var(--lr-color-border)] - Outer row border color, with
+ *   appearance-specific fallbacks.
+ * @cssprop [--lr-time-input-fill=transparent] - Outer row background, with appearance-specific
+ *   fallbacks.
+ * @cssprop [--lr-time-input-color=var(--lr-color-text)] - Outer row text color, including the
+ *   accent appearance fallback.
+ * @cssprop [--lr-time-input-focus-border-color=var(--lr-color-brand)] - Open/focused row border.
+ * @cssprop [--lr-time-input-segment-hover-bg=var(--lr-color-brand-quiet)] - Segment hover fill.
+ * @cssprop --lr-time-input-segment-active-bg - Segment pressed fill; derived from hover when unset.
+ * @cssprop [--lr-time-input-segment-focus-bg=var(--lr-time-input-segment-hover-bg,var(--lr-color-brand-quiet))] -
+ *   Keyboard-focused segment fill.
+ * @cssprop [--lr-time-input-action-color=var(--lr-color-text-quiet)] - Resting clear/expand color.
+ * @cssprop [--lr-time-input-action-hover-color=var(--lr-color-text)] - Hovered clear/expand color.
+ * @cssprop [--lr-time-input-action-hover-bg=var(--lr-color-brand-quiet)] - Clear/expand/Now hover fill.
+ * @cssprop --lr-time-input-action-active-bg - Clear/expand/Now pressed fill; derived from hover when unset.
+ * @cssprop [--lr-time-input-column-hover-bg=var(--lr-color-brand-quiet)] - Picker-option hover fill.
+ * @cssprop --lr-time-input-column-active-bg - Picker-option pressed fill; derived from hover when unset.
+ * @cssprop [--lr-time-input-column-selected-bg=var(--lr-color-brand)] - Selected option fill.
+ * @cssprop [--lr-time-input-column-selected-color=var(--lr-color-on-brand)] - Selected option text.
+ * @cssprop [--lr-time-input-column-selected-font-weight=var(--lr-font-weight-semibold)] - Selected option weight.
+ * @cssprop --lr-time-input-column-selected-hover-bg - Selected-option hover fill; derived when unset.
+ * @cssprop --lr-time-input-column-selected-active-bg - Selected-option pressed fill; derived when unset.
  * @cssprop [--column-item-height=2.25em] - Picker row height.
  * @cssprop [--column-width=3em] - Picker column width.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Picker opening duration.
@@ -716,7 +748,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return this.renderRoot?.querySelector(`[data-segment="${name}"]`) as HTMLElement | null;
   }
 
+  /** Focuses the active segment unless the control is directly or fieldset disabled. */
   override focus(options?: FocusOptions): void {
+    if (this.effectiveDisabled) return;
     const order = this.segmentOrder;
     if (!order.includes(this.activeSegment)) this.activeSegment = order[0] ?? 'hour';
     this.segmentElement(this.activeSegment)?.focus(options);

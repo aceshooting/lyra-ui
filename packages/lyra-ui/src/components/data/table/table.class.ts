@@ -1,10 +1,4 @@
-import {
-  html,
-  nothing,
-  type TemplateResult,
-  type PropertyValues,
-  type ComplexAttributeConverter,
-} from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -21,15 +15,11 @@ import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
  *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination
@@ -50,8 +40,7 @@ const MAX_DERIVED_SKELETON_ROWS = 20;
 
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
 const URL_FUNCTION = /url\s*\(/i;
-const SAFE_STYLE_PROPERTY =
-  /^-?[_a-zA-Z][\w-]*$|^--[a-zA-Z0-9_-]+$/;
+const SAFE_STYLE_PROPERTY = /^-?[_a-zA-Z][\w-]*$|^--[a-zA-Z0-9_-]+$/;
 
 interface OwnedAnimationFrame {
   owner: Window;
@@ -68,6 +57,14 @@ interface TableResizeState {
   handle: HTMLElement;
   /** Width stored before this drag, restored if the live preview is canceled or vetoed. */
   previousWidth: number | undefined;
+}
+
+interface TableRovingFocusSnapshot {
+  kind: 'header' | 'row';
+  key: string;
+  index: number;
+  targetKey: string | null;
+  element: HTMLElement;
 }
 
 /**
@@ -318,14 +315,16 @@ function encodeKey(key: string | number): string {
 function safeStringifyForFilter(row: unknown): string {
   const seen = new WeakSet<object>();
   try {
-    return JSON.stringify(row, (_key, value) => {
-      if (typeof value === 'bigint') return value.toString();
-      if (typeof value === 'object' && value !== null) {
-        if (seen.has(value)) return '[Circular]';
-        seen.add(value);
-      }
-      return value;
-    }) ?? '';
+    return (
+      JSON.stringify(row, (_key, value) => {
+        if (typeof value === 'bigint') return value.toString();
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+        }
+        return value;
+      }) ?? ''
+    );
   } catch {
     return '';
   }
@@ -392,7 +391,10 @@ export interface LyraTableEventMap<T = unknown> {
  * move within the body; Down from the header enters the body's roving stop,
  * and Up from the body's first row returns to the header's roving stop.
  * Enter/Space still only sort/activate (see `activateColumn()` /
- * `activateRow()`).
+ * `activateRow()`). When controlled rows or columns replace the focused
+ * member, focus follows the same stable key when it survives and otherwise
+ * clamps to the nearest surviving index; an update never reclaims focus once
+ * the user has moved it outside the table.
  *
  * Set `aria-label` on the host to give the `role="grid"` element an
  * accessible name; it's forwarded into the shadow DOM's `<table>`.
@@ -471,7 +473,9 @@ export interface LyraTableEventMap<T = unknown> {
  * against a shared scale spanning every `heatValue`-defining column across every currently-rendered
  * row (auto-derived, or overridden via `heatTintScale`) and painted as a `color-mix()` background via
  * the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties (matching `lr-heatmap`'s own
- * ramp-token convention). `rowTotal`/`grandTotal` add a trailing column mirroring `expandedContent`'s
+ * ramp-token convention). The heat-tint and resize properties can be set on the table or a theme
+ * ancestor; a value set directly on the table wins through the normal cascade. `rowTotal`/`grandTotal`
+ * add a trailing column mirroring `expandedContent`'s
  * leading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with
  * the footer row (only when a column also defines `footer`) — both share `footer`'s own
  * "consumer computes/renders" contract rather than assuming addition.
@@ -580,14 +584,15 @@ export interface LyraTableEventMap<T = unknown> {
  *   `<lr-empty>` renders as this slot's fallback content. The no-columns branch renders its own
  *   `noColumnsHeading` state and is not slot-replaceable.
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
- *   resizable column without an explicit pixel `minWidth`.
+ *   resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
+ *   Inherits from theme ancestors.
  * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
  *   table body scrolls.
  * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
- *   ramp used by `heatValue` columns.
+ *   ramp used by `heatValue` columns. Inherits from theme ancestors.
  * @cssprop [--lr-table-heat-tint-hi=var(--lr-color-brand)] - High endpoint of the heat-tint ramp
- *   used by `heatValue` columns.
+ *   used by `heatValue` columns. Inherits from theme ancestors.
  * @cssprop [--lr-table-heat-t] - This cell's position on the heat-tint ramp, as a percentage
  *   string. Set inline by the component on each `[data-heat]` cell; not consumer-settable.
  * @cssprop [--lr-table-row-selected-bg=var(--lr-color-brand-quiet)] - Background of a row whose
@@ -719,8 +724,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  from cell content: declare `columns[].width`, or set `layout="fixed"`. Under the default
    *  `table-layout: auto`, placeholder cells have no intrinsic width, so the columns re-measure
    *  when real content arrives — exactly as they do between any two different data sets. */
-  @property({ reflect: true, attribute: 'loading-appearance' }) loadingAppearance: TableLoadingAppearance =
-    'spinner';
+  @property({ reflect: true, attribute: 'loading-appearance' }) loadingAppearance: TableLoadingAppearance = 'spinner';
   /** Number of placeholder rows rendered by `loadingAppearance="skeleton"`. `0` (the default)
    *  derives the count instead: the normalized `pageSize` when pagination is on (capped at 20, so
    *  a large page size can't emit thousands of placeholder cells), otherwise 3. Any positive value
@@ -851,6 +855,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  entirely (no `focusin` reaches this component to clear it) would let any later, unrelated
    *  update yank focus back into the table. */
   private editorHadFocusBeforeUpdate = false;
+  /** Focused roving member captured before a controlled collection update removes or moves its
+   * DOM node. `targetKey` is resolved from the new collection before render; `updated()` only has
+   * to put focus on the already-correct `tabindex="0"` owner. */
+  private rovingFocusSnapshot: TableRovingFocusSnapshot | null = null;
   @state() private resizedColumnWidths = new Map<string, number>();
 
   private resizeState?: TableResizeState;
@@ -897,12 +905,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (explicit !== undefined) return Math.max(0, explicit);
     const ownerWindow = this.ownerDocument.defaultView;
     const hostStyle = ownerWindow?.getComputedStyle(this);
-    const themed = hostStyle?.getPropertyValue('--lr-table-resize-min-width').trim() ?? '';
+    const themed =
+      hostStyle?.getPropertyValue('--lr-table-resize-min-width').trim() ||
+      hostStyle?.getPropertyValue('--_lr-table-resize-min-width-default').trim() ||
+      '';
     const value = Number.parseFloat(themed);
     if (!Number.isFinite(value)) return 48;
     if (themed.endsWith('rem')) {
       const rootFontSize = Number.parseFloat(
-        ownerWindow?.getComputedStyle(this.ownerDocument.documentElement).fontSize ?? '',
+        ownerWindow?.getComputedStyle(this.ownerDocument.documentElement).fontSize ?? ''
       );
       return Number.isFinite(rootFontSize) ? Math.max(0, value * rootFontSize) : 48;
     }
@@ -959,9 +970,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const header = handle.closest('th[data-col-key]') as HTMLElement | null;
     const resizeEventWindow = this.ownerDocument.defaultView;
     if (!key || !column || !header || !resizeEventWindow) return;
-    const replacedStartWidth = this.resizeState?.key === key
-      ? this.resizeState.startWidth
-      : undefined;
+    const replacedStartWidth = this.resizeState?.key === key ? this.resizeState.startWidth : undefined;
     this.cancelResizeGesture();
     const minWidth = this.minimumResizeWidth(column);
     this.resizeState = {
@@ -1040,11 +1049,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       const key = handle.dataset['colKey'];
       if (!key) continue;
       const column = this.columnsByKey.get(key);
-      if (
-        !column ||
-        this.resizedColumnWidths.has(key) ||
-        this.parsePixelLength(column.width) !== undefined
-      ) {
+      if (!column || this.resizedColumnWidths.has(key) || this.parsePixelLength(column.width) !== undefined) {
         continue;
       }
       const rendered = handle.closest('th[data-col-key]')?.getBoundingClientRect().width;
@@ -1143,15 +1148,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     super.firstUpdated(changed);
     // A grid with no accessible name is a real a11y defect but silently renders. Warn once per
     // element (dev signal; the guard keeps it out of hot render paths and prevents log spam).
-    if (
-      isDevelopmentRuntime() &&
-      !this.accessibleLabel &&
-      !this.getAttribute('aria-label') &&
-      !this.caption
-    ) {
+    if (isDevelopmentRuntime() && !this.accessibleLabel && !this.getAttribute('aria-label') && !this.caption) {
       console.warn(
         '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
-          '`caption` so assistive technology can identify the grid.',
+          '`caption` so assistive technology can identify the grid.'
       );
     }
   }
@@ -1164,11 +1164,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     let observer: ResizeObserver | undefined;
     if (ResizeObserverCtor) {
       observer = new ResizeObserverCtor(() => {
-        if (
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== owner ||
-          this.resizeObserver !== observer
-        ) {
+        if (!this.isConnected || this.ownerDocument.defaultView !== owner || this.resizeObserver !== observer) {
           return;
         }
         this.scheduleLayoutSync();
@@ -1239,7 +1235,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const headers = new Set<Element>(
       this.columns.some((column) => column.sticky || column.resizable)
         ? this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')
-        : [],
+        : []
     );
     for (const header of this.observedHeaders) {
       if (!headers.has(header)) {
@@ -1266,9 +1262,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const hasPriorityColumns = this.columns.some((col) => col.priority);
     const anyPriorityHidden =
       hasPriorityColumns &&
-      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-priority]')].some(
-        (el) => el.offsetParent === null,
-      );
+      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-priority]')].some((el) => el.offsetParent === null);
     const next = anyPriorityHidden || (hasPriorityColumns && this.showAllColumns);
     this.rehomeFocusedColumn();
     if (this.columnsHidden === next) return;
@@ -1451,7 +1445,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Array.prototype.sort is stable, so rows comparing equal keep their `rows` order.
     const compare = (
       a: { value: string | number | null | undefined },
-      b: { value: string | number | null | undefined },
+      b: { value: string | number | null | undefined }
     ): number => {
       const av = a.value;
       const bv = b.value;
@@ -1489,7 +1483,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       // constant value, so the announced ordering genuinely holds. Every bucket is non-empty by
       // construction, and `sort` is stable, so groups whose values tie keep first appearance.
       const constantWithinEveryGroup = ordered.every((bucket) =>
-        bucket.every((decoration) => compare(decoration, bucket[0]!) === 0),
+        bucket.every((decoration) => compare(decoration, bucket[0]!) === 0)
       );
       if (constantWithinEveryGroup) ordered.sort((a, b) => compare(a[0]!, b[0]!));
       sorted = [];
@@ -1545,12 +1539,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private focusedColKey(): string | null {
     const visible = this.visibleHeaders();
     const visibleKeys = new Set(
-      visible.map((el) => el.dataset['colKey']).filter((key): key is string => key !== undefined && this.columnsByKey.has(key)),
+      visible
+        .map((el) => el.dataset['colKey'])
+        .filter((key): key is string => key !== undefined && this.columnsByKey.has(key))
     );
     if (this.activeColKey !== null && this.columnsByKey.has(this.activeColKey)) {
       if (visibleKeys.size === 0 || visibleKeys.has(this.activeColKey)) return this.activeColKey;
     }
-    return visible.find((el) => el.dataset['colKey'] !== undefined && this.columnsByKey.has(el.dataset['colKey']))?.dataset['colKey'] ?? this.columns[0]?.key ?? null;
+    return (
+      visible.find((el) => el.dataset['colKey'] !== undefined && this.columnsByKey.has(el.dataset['colKey']))?.dataset[
+        'colKey'
+      ] ??
+      this.columns[0]?.key ??
+      null
+    );
   }
 
   /** The body row that currently owns `tabindex="0"`. */
@@ -1566,8 +1568,69 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return first ? encodeKey(this.keyOf(first.row, first.index)) : null;
   }
 
+  private rowsAffectingRovingFocusChanged(changed: PropertyValues): boolean {
+    return (
+      changed.has('rows') ||
+      changed.has('rowKey') ||
+      changed.has('filterText') ||
+      changed.has('filter') ||
+      changed.has('page') ||
+      changed.has('pageSize') ||
+      changed.has('paginationMode') ||
+      changed.has('totalItems') ||
+      changed.has('columns') ||
+      changed.has('sortKey') ||
+      changed.has('sortDir') ||
+      changed.has('sortMode') ||
+      changed.has('groupBy')
+    );
+  }
+
+  /** Captures a direct header/row focus owner before `repeat()` moves or removes it. Nested
+   * controls and persistent editors deliberately do not qualify: they own their own focus
+   * contracts, and the editor restoration path below handles the one supported moved-node case. */
+  private captureRovingFocus(changed: PropertyValues): void {
+    this.rovingFocusSnapshot = null;
+    const active = activeElementIn(this.shadowRoot);
+    const HTMLElementCtor = this.ownerDocument?.defaultView?.HTMLElement;
+    if (!HTMLElementCtor || !(active instanceof HTMLElementCtor)) return;
+
+    if (changed.has('columns') && active.matches('th[data-col-key]')) {
+      const headers = this.visibleHeaders();
+      const key = active.dataset['colKey'];
+      const index = headers.indexOf(active);
+      if (key !== undefined && index >= 0) {
+        this.rovingFocusSnapshot = { kind: 'header', key, index, targetKey: null, element: active };
+      }
+      return;
+    }
+
+    if (this.rowsAffectingRovingFocusChanged(changed) && active.matches('tr[data-row-key]')) {
+      const renderedRows = [...this.renderRoot.querySelectorAll<HTMLElement>('tbody tr[data-row-key]')];
+      const key = active.dataset['rowKey'];
+      const index = renderedRows.indexOf(active);
+      if (key !== undefined && index >= 0) {
+        this.rovingFocusSnapshot = { kind: 'row', key, index, targetKey: null, element: active };
+      }
+    }
+  }
+
+  /** Resolves the captured key against the new controlled collection before render, so the new
+   * DOM immediately assigns `tabindex="0"` to the member `updated()` will focus. */
+  private resolveRovingFocusTarget(): void {
+    const snapshot = this.rovingFocusSnapshot;
+    if (snapshot === null) return;
+    const keys = snapshot.kind === 'header' ? this.columns.map((column) => column.key) : [...this.rowsByKey.keys()];
+    snapshot.targetKey = keys.includes(snapshot.key)
+      ? snapshot.key
+      : keys[Math.min(snapshot.index, keys.length - 1)] ?? null;
+    if (snapshot.kind === 'header') this.activeColKey = snapshot.targetKey;
+    else this.activeRowKey = snapshot.targetKey;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.captureRovingFocus(changed);
     // Restore a persisted `showAllColumns` preference once, before the first render, so the restored
     // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
     // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
@@ -1576,7 +1639,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (!this.hasUpdated) {
       const parsed = readPersistedState(
         this.storageFullKey,
-        (v): v is { showAllColumns?: unknown } => typeof v === 'object' && v !== null,
+        (v): v is { showAllColumns?: unknown } => typeof v === 'object' && v !== null
       );
       if (parsed && typeof parsed.showAllColumns === 'boolean') this.showAllColumns = parsed.showAllColumns;
     }
@@ -1608,18 +1671,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       changed.has('groupBy')
     ) {
       this.rowsByKey = new Map(
-        this.renderedEntries().map((entry) => [
-          encodeKey(this.keyOf(entry.row, entry.index)),
-          entry,
-        ]),
+        this.renderedEntries().map((entry) => [encodeKey(this.keyOf(entry.row, entry.index)), entry])
       );
     }
+    this.resolveRovingFocusTarget();
     if (this.editingCell !== null) {
       const column = this.columnsByKey.get(this.editingCell.columnKey);
-      if (
-        !this.rowsByKey.has(this.editingCell.rowKey) ||
-        editTrigger(column?.editable) !== 'double-click'
-      ) {
+      if (!this.rowsByKey.has(this.editingCell.rowKey) || editTrigger(column?.editable) !== 'double-click') {
         this.editingCell = null;
       }
     }
@@ -1733,12 +1791,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (
-      this.loadingAnnouncementsReady &&
-      changed.has('loading') &&
-      this.loading &&
-      this.columns.length > 0
-    ) {
+    if (this.loadingAnnouncementsReady && changed.has('loading') && this.loading && this.columns.length > 0) {
       this.announcementSink?.announce(this.loadingText());
     }
     this.loadingAnnouncementsReady = true;
@@ -1758,6 +1811,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
     this.observeHeaders();
+    this.restoreRovingFocus();
     if (this.hasAlwaysOnEditors) this.restoreAlwaysOnEditorFocus();
     // Scoped to the cell that actually opened: an unqualified `[part="cell-editor"]` lookup would
     // steal focus to whichever editor happens to be first in the tree, which stopped being "the
@@ -1775,6 +1829,34 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // update finish first, so the follow-up update is a normal externally
     // triggered one instead.
     queueMicrotask(() => this.recomputeColumnsHidden());
+  }
+
+  /** Restores only focus that the current render displaced. If another internal control or an
+   * outside element owns focus now, the snapshot is discarded instead of stealing it back. */
+  private restoreRovingFocus(): void {
+    const snapshot = this.rovingFocusSnapshot;
+    this.rovingFocusSnapshot = null;
+    if (snapshot === null) return;
+
+    const internalActive = activeElementIn(this.shadowRoot);
+    if (internalActive !== null && internalActive !== snapshot.element) return;
+    const documentActive = activeElementIn(this.ownerDocument);
+    if (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body) {
+      return;
+    }
+
+    const candidates =
+      snapshot.kind === 'header'
+        ? this.visibleHeaders()
+        : [...this.renderRoot.querySelectorAll<HTMLElement>('tbody tr[data-row-key]')];
+    const exact = candidates.find((candidate) =>
+      snapshot.kind === 'header'
+        ? candidate.dataset['colKey'] === snapshot.targetKey
+        : candidate.dataset['rowKey'] === snapshot.targetKey
+    );
+    const target = exact ?? candidates[Math.min(snapshot.index, candidates.length - 1)] ?? null;
+    if (snapshot.kind === 'header') this.focusHeader(target);
+    else this.focusRow(target);
   }
 
   /** Header activation (click, Enter, Space). Owns `sortKey`/`sortDir` end-to-end now that
@@ -1807,7 +1889,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     } else if (this.selectionMode === 'multiple') {
       const rawKey = this.keyOf(row, index);
       const next = new Set(this.selectedKeys);
-      if (next.has(rawKey)) next.delete(rawKey); else next.add(rawKey);
+      if (next.has(rawKey)) next.delete(rawKey);
+      else next.add(rawKey);
       this.selectedKeys = next;
       this.emit('lr-selection-change', { keys: [...next] });
     }
@@ -1839,8 +1922,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const input = event.currentTarget as HTMLInputElement;
     const entry = this.rowsByKey.get(rowKey);
     const column = this.columnsByKey.get(columnKey);
-    const isTransient =
-      this.editingCell?.rowKey === rowKey && this.editingCell.columnKey === columnKey;
+    const isTransient = this.editingCell?.rowKey === rowKey && this.editingCell.columnKey === columnKey;
     if (!entry || !column || editTrigger(column.editable) === undefined) {
       if (isTransient) this.editingCell = null;
       return;
@@ -1857,7 +1939,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  prefix (`string:a`), so neither is safe to splat into CSS unescaped. */
   private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | null {
     const row = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].find(
-      (el) => el.dataset['rowKey'] === rowKey,
+      (el) => el.dataset['rowKey'] === rowKey
     );
     const cell = row
       ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset['colKey'] === columnKey)
@@ -1945,7 +2027,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  measurement pass) but must never be treated as header cells here. */
   private visibleHeaders(): HTMLElement[] {
     return [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
-      (el) => el.offsetParent !== null,
+      (el) => el.offsetParent !== null
     );
   }
 
@@ -2165,10 +2247,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             data-sticky=${stickyDirection(col.sticky) ?? nothing}
           >
             ${this.renderSkeletonPlaceholder()}
-          </td>`,
+          </td>`
         )}
         ${hasRowTotal ? html`<td part="row-total-cell">${this.renderSkeletonPlaceholder()}</td>` : nothing}
-      </tr>`,
+      </tr>`
     );
   }
 
@@ -2239,9 +2321,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // column (the same way hasExpand/hasRowTotal were each added) only has to be added here once.
     const spanningColspan = this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0);
     const renderedEntries = this.renderedEntries();
-    const renderedGroupKeys = this.groupBy
-      ? renderedEntries.map((entry) => this.groupBy!(entry.row))
-      : [];
+    const renderedGroupKeys = this.groupBy ? renderedEntries.map((entry) => this.groupBy!(entry.row)) : [];
     const renderedGroupRows = new Map<string | number, T[]>();
     if (this.groupLabel) {
       renderedEntries.forEach((entry, index) => {
@@ -2286,21 +2366,21 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               ${hasExpand ? html`<col style=${styleMap({ 'inline-size': 'var(--lr-icon-button-size)' })} />` : nothing}
               ${this.columns.map(
                 (col) =>
-                  html`<col style=${styleMap({
-                    // Consumer-supplied CSS lengths: styleMap emits a joined declaration string on
-                    // its first commit, so an unsanitized value would inject extra declarations.
-                    'inline-size': this.renderedColumnWidth(col),
-                    'min-inline-size': sanitizeCssLength(col.minWidth, 'height'),
-                    'max-inline-size': sanitizeCssLength(col.maxWidth, 'height'),
-                  })} />`,
+                  html`<col
+                    style=${styleMap({
+                      // Consumer-supplied CSS lengths: styleMap emits a joined declaration string on
+                      // its first commit, so an unsanitized value would inject extra declarations.
+                      'inline-size': this.renderedColumnWidth(col),
+                      'min-inline-size': sanitizeCssLength(col.minWidth, 'height'),
+                      'max-inline-size': sanitizeCssLength(col.maxWidth, 'height'),
+                    })}
+                  />`
               )}
               ${hasRowTotal ? html`<col />` : nothing}
             </colgroup>
             <thead part="head">
               <tr role="row">
-                ${hasExpand
-                  ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>`
-                  : nothing}
+                ${hasExpand ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>` : nothing}
                 ${this.columns.map((col) => {
                   const active = Boolean(col.sortable) && this.sortKey === col.key;
                   const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
@@ -2317,12 +2397,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     aria-sort=${col.sortable ? ariaSort : nothing}
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
-                    ${col.headerCell ? col.headerCell(col) : col.label}
-                    ${this.renderResizeHandle(col)}
+                    ${col.headerCell ? col.headerCell(col) : col.label} ${this.renderResizeHandle(col)}
                     ${active
-                      ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
-                          >${chevronIcon()}</span
-                        >`
+                      ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true">${chevronIcon()}</span>`
                       : nothing}
                   </th>`;
                 })}
@@ -2333,123 +2410,113 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               ${skeletonLoading
                 ? this.renderSkeletonRows(hasExpand, hasRowTotal)
                 : repeat(
-                renderedEntries,
-                (entry) => this.keyOf(entry.row, entry.index),
-                (entry, entryIndex) => {
-                  const { row, index } = entry;
-                  const key = this.keyOf(row, index);
-                  const selected = (this.selectedKey !== null && this.selectedKey === key) || this.selectedKeys.has(key);
-                  const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
-                  const rowExpanded = canExpandRow && this.expandedKeys.has(key);
-                  const groupKey = renderedGroupKeys[entryIndex];
-                  const previousGroupKey = entryIndex > 0 ? renderedGroupKeys[entryIndex - 1] : undefined;
-                  const isNewGroup =
-                    this.groupBy !== undefined && (entryIndex === 0 || groupKey !== previousGroupKey);
-                  return [
-                    isNewGroup
-                      ? html`<tr part="group-row" role="row">
-                          <td
-                            part="group-cell"
-                            role="gridcell"
-                            colspan=${spanningColspan}
-                          >
-                            ${this.groupLabel
-                              ? this.groupLabel(
-                                  groupKey!,
-                                  renderedGroupRows.get(groupKey!) ?? [],
-                                )
-                              : String(groupKey)}
-                          </td>
-                        </tr>`
-                      : nothing,
-                    html`<tr
-                      part="row"
-                      role="row"
-                      data-row-key=${encodeKey(key)}
-                      ?data-stripe=${entryIndex % 2 === 0}
-                      aria-selected=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
-                      tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
-                    >
-                      ${hasExpand
-                        ? html`<td part="expand-toggle-cell">
-                            ${canExpandRow
-                              ? html`<button
-                                  type="button"
-                                  part="row-expand-toggle"
-                                  aria-expanded=${String(rowExpanded)}
-                                  aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
-                                  @click=${() => this.activateExpandToggle(key)}
-                                >
-                                  <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
-                                </button>`
-                              : nothing}
-                          </td>`
-                        : nothing}
-                      ${this.columns.map((col) => {
-                        const heatShare = this.heatShare(col, row, heatDomain);
-                        const cellStyle = {
-                          ...sanitizeCellStyle(col.cellStyle ? col.cellStyle(row) ?? {} : undefined),
-                          ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
-                        };
-                        // An `'always'` column renders its editor unconditionally, from first
-                        // paint and with no interaction; `editingCell` (a single nullable object,
-                        // one open editor at a time) only ever drives the double-click flavor.
-                        const alwaysOn = editTrigger(col.editable) === 'always';
-                        const editing =
-                          alwaysOn ||
-                          (editTrigger(col.editable) === 'double-click' &&
-                            this.editingCell?.rowKey === encodeKey(key) &&
-                            this.editingCell.columnKey === col.key);
-                        // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
-                        // it actively suppresses an ancestor's tooltip, so an empty return omits
-                        // the attribute the same way `undefined` does (mirroring `lr-stat`'s
-                        // `exactValue`). Suppressed while editing so the tooltip can't shadow the
-                        // open `[part='cell-editor']`.
-                        const cellTitle = editing ? undefined : col.cellTitle?.(row);
-                        return html`<td
-                            part="cell"
-                            role="gridcell"
-                            data-col-key=${col.key}
-                            data-align=${col.align ?? 'start'}
-                            data-priority=${col.priority ?? nothing}
-                            data-sticky=${stickyDirection(col.sticky) ?? nothing}
-                            ?data-heat=${heatShare !== null}
-                            title=${cellTitle || nothing}
-                            style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
-                          >
-                            ${editing ? this.renderCellEditor(row, col, encodeKey(key), alwaysOn) : col.cell(row)}
-                          </td>`;
-                      })}
-                      ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
-                    </tr>`,
-                    rowExpanded
-                      ? html`<tr part="expanded-row" role="row">
-                          <td
-                            part="expanded-cell"
-                            role="gridcell"
-                            colspan=${spanningColspan}
-                          >
-                            ${this.expandedContent?.(row)}
-                          </td>
-                        </tr>`
-                      : nothing,
-                  ];
-                },
-              )}
+                    renderedEntries,
+                    (entry) => this.keyOf(entry.row, entry.index),
+                    (entry, entryIndex) => {
+                      const { row, index } = entry;
+                      const key = this.keyOf(row, index);
+                      const selected =
+                        (this.selectedKey !== null && this.selectedKey === key) || this.selectedKeys.has(key);
+                      const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
+                      const rowExpanded = canExpandRow && this.expandedKeys.has(key);
+                      const groupKey = renderedGroupKeys[entryIndex];
+                      const previousGroupKey = entryIndex > 0 ? renderedGroupKeys[entryIndex - 1] : undefined;
+                      const isNewGroup =
+                        this.groupBy !== undefined && (entryIndex === 0 || groupKey !== previousGroupKey);
+                      return [
+                        isNewGroup
+                          ? html`<tr part="group-row" role="row">
+                              <td part="group-cell" role="gridcell" colspan=${spanningColspan}>
+                                ${this.groupLabel
+                                  ? this.groupLabel(groupKey!, renderedGroupRows.get(groupKey!) ?? [])
+                                  : String(groupKey)}
+                              </td>
+                            </tr>`
+                          : nothing,
+                        html`<tr
+                          part="row"
+                          role="row"
+                          data-row-key=${encodeKey(key)}
+                          ?data-stripe=${entryIndex % 2 === 0}
+                          aria-selected=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
+                          tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
+                        >
+                          ${hasExpand
+                            ? html`<td part="expand-toggle-cell">
+                                ${canExpandRow
+                                  ? html`<button
+                                      type="button"
+                                      part="row-expand-toggle"
+                                      aria-expanded=${String(rowExpanded)}
+                                      aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
+                                      @click=${() => this.activateExpandToggle(key)}
+                                    >
+                                      <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
+                                    </button>`
+                                  : nothing}
+                              </td>`
+                            : nothing}
+                          ${this.columns.map((col) => {
+                            const heatShare = this.heatShare(col, row, heatDomain);
+                            const cellStyle = {
+                              ...sanitizeCellStyle(col.cellStyle ? col.cellStyle(row) ?? {} : undefined),
+                              ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
+                            };
+                            // An `'always'` column renders its editor unconditionally, from first
+                            // paint and with no interaction; `editingCell` (a single nullable object,
+                            // one open editor at a time) only ever drives the double-click flavor.
+                            const alwaysOn = editTrigger(col.editable) === 'always';
+                            const editing =
+                              alwaysOn ||
+                              (editTrigger(col.editable) === 'double-click' &&
+                                this.editingCell?.rowKey === encodeKey(key) &&
+                                this.editingCell.columnKey === col.key);
+                            // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
+                            // it actively suppresses an ancestor's tooltip, so an empty return omits
+                            // the attribute the same way `undefined` does (mirroring `lr-stat`'s
+                            // `exactValue`). Suppressed while editing so the tooltip can't shadow the
+                            // open `[part='cell-editor']`.
+                            const cellTitle = editing ? undefined : col.cellTitle?.(row);
+                            return html`<td
+                              part="cell"
+                              role="gridcell"
+                              data-col-key=${col.key}
+                              data-align=${col.align ?? 'start'}
+                              data-priority=${col.priority ?? nothing}
+                              data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                              ?data-heat=${heatShare !== null}
+                              title=${cellTitle || nothing}
+                              style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
+                            >
+                              ${editing ? this.renderCellEditor(row, col, encodeKey(key), alwaysOn) : col.cell(row)}
+                            </td>`;
+                          })}
+                          ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
+                        </tr>`,
+                        rowExpanded
+                          ? html`<tr part="expanded-row" role="row">
+                              <td part="expanded-cell" role="gridcell" colspan=${spanningColspan}>
+                                ${this.expandedContent?.(row)}
+                              </td>
+                            </tr>`
+                          : nothing,
+                      ];
+                    }
+                  )}
             </tbody>
             ${this.columns.some((c) => c.footer)
               ? html`<tfoot part="foot">
                   <tr part="footer-row">
                     ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
                     ${this.columns.map(
-                      (col) => html`<td
-                        part="footer-cell"
-                        data-col-key=${col.key}
-                        data-align=${col.align ?? 'start'}
-                      >${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`,
+                      (col) => html`<td part="footer-cell" data-col-key=${col.key} data-align=${col.align ?? 'start'}>
+                        ${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}
+                      </td>`
                     )}
                     ${hasRowTotal
-                      ? html`<td part="footer-cell" data-align="end">${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`
+                      ? html`<td part="footer-cell" data-align="end">
+                          ${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}
+                        </td>`
                       : nothing}
                   </tr>
                 </tfoot>`
@@ -2459,9 +2526,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return html`
       <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy=${skeletonLoading ? 'true' : 'false'}>
         ${skeletonLoading
-          ? html`<div part="loading" class="sr-only" aria-hidden="true">
-              ${this.loadingText()}
-            </div>`
+          ? html`<div part="loading" class="sr-only" aria-hidden="true">${this.loadingText()}</div>`
           : nothing}
         ${this.filterable
           ? html`<label part="filter-label">
@@ -2495,11 +2560,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             </button>`
           : nothing}
         ${this.hasMore
-          ? html`<button
-              part="more-button"
-              type="button"
-              @click=${() => this.emit('lr-load-more')}
-            >
+          ? html`<button part="more-button" type="button" @click=${() => this.emit('lr-load-more')}>
               ${this.localize('loadMore', this.moreLabel || undefined)}
             </button>`
           : nothing}

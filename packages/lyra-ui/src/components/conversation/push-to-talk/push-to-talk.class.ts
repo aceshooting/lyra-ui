@@ -11,7 +11,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type PushToTalkMode = 'hold' | 'toggle';
 export type PushToTalkState = 'idle' | 'requesting' | 'denied' | 'recording' | 'error';
 
@@ -153,12 +152,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   @property({ attribute: 'device-id' }) deviceId = '';
   /** Merged into the audio constraints (`echoCancellation`, …); unset keeps browser defaults. */
   @property({ attribute: false }) audioConstraints?: MediaTrackConstraints;
+  /** Enables `lr-level` sampling. Changes take effect immediately during an active recording. */
   @property({ type: Boolean, attribute: 'level-events' }) levelEvents = false;
   /** `> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)
    *  never auto-stops. Clamped to `[1, MAX_TIMEOUT_MS]` at the point it's handed to `setTimeout()`
    *  -- see `start()` -- the browser timer ceiling, matching `lr-playback`'s `interval-ms`
-   *  handling of its own duration-like property. */
+   *  handling of its own duration-like property. Changes during recording reschedule the deadline
+   *  relative to the original recording start; setting `0` cancels it. */
   @property({ type: Number, attribute: 'max-duration-ms' }) maxDurationMs = 0;
+  /** Shows and samples the elapsed timer. Changes take effect immediately while recording. */
   @property({ type: Boolean, attribute: 'show-timer', converter: trueDefaultBooleanConverter }) showTimer = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
 
@@ -231,6 +233,11 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (changed.has('disabled') && this.disabled && (this._state === 'recording' || this._state === 'requesting')) {
       this.cancel();
     }
+    const owner = this.captureWindow;
+    if (this._state !== 'recording' || !owner) return;
+    if (changed.has('showTimer')) this.syncElapsedTimer(owner);
+    if (changed.has('maxDurationMs')) this.syncMaxDurationTimer(owner);
+    if (changed.has('levelEvents')) this.syncLevelMeter(owner);
   }
 
   override focus(options?: FocusOptions): void {
@@ -327,41 +334,21 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       // lr-playback's scheduleTick() for interval-ms. `> 0` already excludes NaN/negative (both
       // fail that comparison), but not Infinity or an oversized finite value that would otherwise
       // overflow setTimeout's 32-bit delay or fail MediaRecorder.start()'s unsigned-long timeslice.
-      const timeslice = this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
+      const timeslice =
+        this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
       recorder.start(timeslice);
       this.recordingStartedAt = owner.performance.now();
       this.elapsedMs = 0;
       this.setState('recording');
       this.emit('lr-record-start', { stream });
       this.announce(this.localize('pushToTalkStarted'));
-      if (this.levelEvents) this.startLevelMeter(stream, owner);
-      if (this.maxDurationMs > 0) {
-        const delay = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
-        const timer: OwnedTimer = { owner, handle: 0 };
-        timer.handle = owner.setTimeout(() => {
-          if (this.maxDurationTimer !== timer || this.captureWindow !== owner) return;
-          this.maxDurationTimer = undefined;
-          this.stop();
-        }, delay);
-        this.maxDurationTimer = timer;
-      }
-      if (this.showTimer) {
-        const timer: OwnedTimer = { owner, handle: 0 };
-        timer.handle = owner.setInterval(() => {
-          if (this.tickTimer !== timer || this.captureWindow !== owner || this._state !== 'recording') return;
-          this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
-        }, 1000);
-        this.tickTimer = timer;
-      }
+      this.syncLevelMeter(owner);
+      this.syncMaxDurationTimer(owner, true);
+      this.syncElapsedTimer(owner, true);
       return true;
     } catch (err) {
       this.teardownStream();
-      if (
-        this.cancelRequested ||
-        this.disabled ||
-        !this.isConnected ||
-        this.ownerWindow !== owner
-      ) {
+      if (this.cancelRequested || this.disabled || !this.isConnected || this.ownerWindow !== owner) {
         this.cancelRequested = false;
         this.setState('idle');
         this.emit('lr-record-cancel');
@@ -441,6 +428,42 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.stopLevelMeter();
   }
 
+  private syncElapsedTimer(owner: PushToTalkWindow, initial = false): void {
+    if (this.tickTimer) this.tickTimer.owner.clearInterval(this.tickTimer.handle);
+    this.tickTimer = undefined;
+    if (!this.showTimer || this._state !== 'recording' || this.captureWindow !== owner) return;
+    if (!initial) this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
+    const timer: OwnedTimer = { owner, handle: 0 };
+    timer.handle = owner.setInterval(() => {
+      if (this.tickTimer !== timer || this.captureWindow !== owner || this._state !== 'recording') return;
+      this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
+    }, 1000);
+    this.tickTimer = timer;
+  }
+
+  private syncMaxDurationTimer(owner: PushToTalkWindow, initial = false): void {
+    if (this.maxDurationTimer) this.maxDurationTimer.owner.clearTimeout(this.maxDurationTimer.handle);
+    this.maxDurationTimer = undefined;
+    if (this.maxDurationMs <= 0 || this._state !== 'recording' || this.captureWindow !== owner) return;
+    const duration = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
+    const elapsed = initial ? 0 : Math.max(0, owner.performance.now() - this.recordingStartedAt);
+    const timer: OwnedTimer = { owner, handle: 0 };
+    timer.handle = owner.setTimeout(() => {
+      if (this.maxDurationTimer !== timer || this.captureWindow !== owner) return;
+      this.maxDurationTimer = undefined;
+      this.stop();
+    }, Math.max(0, duration - elapsed));
+    this.maxDurationTimer = timer;
+  }
+
+  private syncLevelMeter(owner: PushToTalkWindow): void {
+    if (!this.levelEvents || this._state !== 'recording' || this.captureWindow !== owner || !this._stream) {
+      this.stopLevelMeter();
+      return;
+    }
+    if (!this.audioCtx) this.startLevelMeter(this._stream, owner);
+  }
+
   private startLevelMeter(stream: MediaStream, owner: PushToTalkWindow): void {
     const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
     if (!AudioCtxCtor) return;
@@ -455,12 +478,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private sampleLevel(owner: PushToTalkWindow): void {
-    if (
-      !this.analyser ||
-      !this.levelData ||
-      this._state !== 'recording' ||
-      this.captureWindow !== owner
-    ) {
+    if (!this.analyser || !this.levelData || this._state !== 'recording' || this.captureWindow !== owner) {
       return;
     }
     this.analyser.getByteTimeDomainData(this.levelData);
@@ -612,9 +630,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       >
         <span part="icon" aria-hidden="true" inert><slot name="icon">${micIcon()}</slot></span>
         ${recording
-          ? html`<span part="pulse" aria-hidden="true" inert
-              ><slot name="recording-icon">${pulseGlyph()}</slot></span
-            >`
+          ? html`<span part="pulse" aria-hidden="true" inert><slot name="recording-icon">${pulseGlyph()}</slot></span>`
           : nothing}
       </button>
       ${status ? html`<span part="status">${status}</span>` : nothing}

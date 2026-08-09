@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +19,9 @@ A locale-aware segmented field and column picker mirroring `wa-time-input`. Its 
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
 Locale changes segment order, separators, digits, and day-period labels — never the wire value.
 An incomplete draft remains visible for editing but submits `''` and raises `badInput`.
+The clear/expand actions sit directly in the shared outer height ladder: compact tiers grow only
+enough for their hit targets, while `l` and `xl` retain the shared 48px and 56px heights rather
+than adding outer padding around the buttons.
 
 **Properties:**
 
@@ -49,8 +52,10 @@ An incomplete draft remains visible for editing but submits `''` and raises `bad
 - `autocomplete = ''` is forwarded to a visually hidden, nameless native time input used only as
   the browser autofill seam; the FACE host remains the sole submitted control.
 
-**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the active segment; `show()` and
-`hide()` control the picker, while its form methods are described above.
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the active segment; `focus()` and
+`click()` are synchronous no-ops while directly or fieldset disabled, so they cannot create focus
+events from a removed tab stop. `show()` and `hide()` control the picker, while its form methods are
+described above.
 
 **Keyboard:** only one segment is in the tab order. Digits fill the active segment and advance when
 no further digit can be accepted; Left/Right moves in locale order and reverses under RTL;
@@ -71,6 +76,11 @@ precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion set
 `base time-input input-wrapper` (same node), `input`, `segment`, `segment-literal`, `start`, `end`,
 `clear-button`, `expand-button`, `expand-icon`, `popup`, `columns`, `column`, `column-item`,
 `column-item-selected`, `now-button`, `hint`, and `error`.
+Each `column` is a block-axis scroll container and explicitly clips inline overflow, so an
+undersized `--column-width` cannot introduce a second scrollbar.
+The label/hint/error chrome wraps unbroken localized content within the host, while `start`/`end`
+adornments shrink and ellipsize. The exact-320px RTL story keeps that copy, the seconds segments,
+fixed-size actions, and the open picker contained.
 
 `error` is ordinary visible validation text referenced by the segmented input through
 `aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
@@ -85,8 +95,23 @@ above, not a copy of it, so `--lr-form-control-required-content`,
 here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
 painted.
 
-**Themeable custom properties:** upstream-compatible `--column-item-height`, `--column-width`,
-`--show-duration`, and `--hide-duration`, each with a Lyra design-token fallback.
+**Themeable custom properties:** `--lr-time-input-gap` (outer segment/adornment/action gap,
+default `--lr-form-control-gap`) and `--lr-time-input-radius` (outer row radius, default
+`--lr-form-control-radius`, or `--lr-radius-pill` with `pill`) remain undeclared on the host, so an
+ancestor theme wrapper or direct-host value overrides those fallbacks. Also available are
+`--lr-time-input-border-color`, `--lr-time-input-fill`, and `--lr-time-input-color` for the
+appearance surface; `--lr-time-input-focus-border-color`;
+`--lr-time-input-segment-hover-bg`, `--lr-time-input-segment-active-bg`, and
+`--lr-time-input-segment-focus-bg`; `--lr-time-input-action-color`,
+`--lr-time-input-action-hover-color`, `--lr-time-input-action-hover-bg`, and
+`--lr-time-input-action-active-bg`; and `--lr-time-input-column-hover-bg`,
+`--lr-time-input-column-active-bg`, `--lr-time-input-column-selected-bg`,
+`--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
+`--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
+Every state hook falls back to the exact semantic token or color mix used previously, and remains
+undeclared on the host so ancestor themes work. The upstream-compatible
+`--column-item-height`, `--column-width`, `--show-duration`, and
+`--hide-duration`, each with a Lyra design-token fallback.
 
 ```html
 <lr-time-input label="Start time" value="09:30" with-clear with-now></lr-time-input>

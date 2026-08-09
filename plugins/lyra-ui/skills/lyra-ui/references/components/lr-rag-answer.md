@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -30,7 +30,8 @@ reconnect content is not replayed); `showSources: boolean = true`; `showClaims: 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
-source list.
+source list. Either slot renders from its assigned content without requiring the corresponding
+`answer` or `sources` data property; a slotted answer remains visible while `loading`.
 
 **CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
 `grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.

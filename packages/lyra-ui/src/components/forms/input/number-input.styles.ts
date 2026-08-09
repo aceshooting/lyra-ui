@@ -21,16 +21,16 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-input-action-color, var(--lr-color-text-quiet));
     padding: var(--lr-space-xs);
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
-    font-size: var(--lr-input-font-size);
+    font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
   [part~='stepper-down']:hover,
   [part~='stepper-up']:hover {
-    color: var(--lr-color-text);
+    color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
   /* Pressed. A stepper is the one control here a user holds down and repeats, so the press state
      doing more than the hover is not decoration: it is the only confirmation that the auto-repeat
@@ -38,8 +38,11 @@ export const styles = css`
      toward --lr-color-mix-partner at the stronger active share. */
   [part~='stepper-down']:active,
   [part~='stepper-up']:active {
-    color: var(--lr-color-text);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
+    background: var(
+      --lr-input-action-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part~='stepper-down']:focus-visible,
   [part~='stepper-up']:focus-visible {

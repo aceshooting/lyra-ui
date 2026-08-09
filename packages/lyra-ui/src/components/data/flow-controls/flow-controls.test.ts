@@ -78,6 +78,27 @@ it('the zoom-out button disables once the canvas viewport reaches minZoom', asyn
   expect((controls.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement).disabled).to.be.true;
 });
 
+it('uses the canvas effective sorted zoom bounds instead of disabling from raw swapped values', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas min-zoom="4" max-zoom="0.5">
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+  await controls.updateComplete;
+  const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  const zoomOut = controls.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement;
+
+  expect(zoomIn.disabled).to.equal(false);
+  expect(zoomOut.disabled).to.equal(false);
+  const before = wrapper.viewport.zoom;
+  zoomIn.click();
+  expect(wrapper.viewport.zoom).to.be.greaterThan(before);
+});
+
 it('the lock button toggles the canvas locked attribute and mirrors aria-pressed both ways', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>

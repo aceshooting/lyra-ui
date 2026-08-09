@@ -24,7 +24,7 @@ describe('pptx loader', () => {
       await loadPptxRenderer(async () => ({ default: fallback }) as never),
     ).to.equal(fallback);
     const mixed = await loadPptxRenderer(async () => ({ ...named, default: fallback }) as never);
-    expect(mixed!.PptxViewer).to.equal(named.PptxViewer);
+    expect((mixed!.PptxViewer) === (named.PptxViewer)).to.equal(true);
     expect(mixed!.RECOMMENDED_ZIP_LIMITS).to.equal(named.RECOMMENDED_ZIP_LIMITS);
   });
 
@@ -83,7 +83,7 @@ describe('pptx loader', () => {
     this.timeout(60_000);
     const module = await loadPptxRenderer();
     expect(module).to.not.be.null;
-    expect(module!.PptxViewer).to.exist;
+    expect((module!.PptxViewer) != null).to.equal(true);
     expect(module!.RECOMMENDED_ZIP_LIMITS).to.exist;
   });
 

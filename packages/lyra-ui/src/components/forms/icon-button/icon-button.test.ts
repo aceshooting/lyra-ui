@@ -5,6 +5,17 @@ import { styles } from './icon-button.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
 
+it('inherits its public radius from an ancestor theme wrapper', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-icon-button-radius: 17px">
+      <lr-icon-button name="close" label="Close"></lr-icon-button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-icon-button') as LyraIconButton;
+  const button = el.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+  expect(getComputedStyle(button).borderTopLeftRadius).to.equal('17px');
+});
+
 /** A 1x1 inline SVG, so `<lr-flag>` renders synchronously with no peer-package round trip. */
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 
@@ -120,9 +131,9 @@ it('restores SVG context for slotted bare geometry with no icon and no enclosing
     </lr-icon-button>
   `);
   const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement | null;
-  expect(fallback, 'a fallback SVG must be mounted').to.exist;
+  expect((fallback) != null, 'a fallback SVG must be mounted').to.equal(true);
   const clonedPath = fallback!.querySelector('path');
-  expect(clonedPath, 'the bare <path> must be cloned into real SVG namespace').to.exist;
+  expect((clonedPath) != null, 'the bare <path> must be cloned into real SVG namespace').to.equal(true);
   expect(clonedPath!.namespaceURI).to.equal('http://www.w3.org/2000/svg');
   expect(clonedPath!.getAttribute('d')).to.equal('M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z');
   // The original slotted node stays in the light DOM untouched (still there, still HTML-namespaced) --
@@ -222,10 +233,11 @@ it('retunes the corner radius via --lr-icon-button-radius with no element-select
   expect(cs.borderRadius).to.equal('3px');
 });
 
-it('declares --lr-icon-button-radius on :host and consumes it on the button element', () => {
+it('keeps the public radius inheritable and consumes a private host fallback', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:host \{[^}]*--lr-icon-button-radius: var\(--lr-radius\);/);
-  expect(css).to.include('border-radius: var(--lr-icon-button-radius);');
+  expect(css).to.not.match(/:host \{[^}]*--lr-icon-button-radius:/);
+  expect(css).to.include('--_lr-icon-button-radius-default: var(--lr-radius);');
+  expect(css).to.include('border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default));');
 });
 
 it('names the button from aria-label, then label, then the localized fallback', async () => {
@@ -547,9 +559,9 @@ it('blur() releases the native button it focused', async () => {
   )) as LyraIconButton;
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('button'));
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('button'))).to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect((el.shadowRoot!.activeElement) === null).to.equal(true);
 });
 
 describe('lr-icon-button — mapped Shoelace surface', () => {
@@ -598,7 +610,7 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
       ></lr-icon-button>
     `)) as LyraIconButton;
     const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
-    expect(anchor).to.exist;
+    expect((anchor) != null).to.equal(true);
     expect(anchor.getAttribute('href')).to.equal('https://example.com/icon.svg');
     expect(anchor.target).to.equal('_blank');
     expect(anchor.rel).to.equal('noopener noreferrer');

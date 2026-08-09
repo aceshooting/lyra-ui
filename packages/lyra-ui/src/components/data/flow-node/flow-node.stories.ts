@@ -18,7 +18,13 @@ export const RunStates: Story = {
   render: () => html`
     <div style="display:flex;flex-direction:column;gap:1rem;align-items:flex-start">
       <lr-flow-node heading="Fetch data" status="pending"></lr-flow-node>
-      <lr-flow-node heading="Summarize" status="running" progress="40" duration-ms="1800" status-detail="chunk 2 of 5"></lr-flow-node>
+      <lr-flow-node
+        heading="Summarize"
+        status="running"
+        progress="40"
+        duration-ms="1800"
+        status-detail="chunk 2 of 5"
+      ></lr-flow-node>
       <lr-flow-node heading="Notify" status="success" duration-ms="812"></lr-flow-node>
       <lr-flow-node heading="Validate" status="error" status-detail="schema mismatch"></lr-flow-node>
       <lr-flow-node heading="Send email" status="denied"></lr-flow-node>
@@ -55,6 +61,28 @@ export const RetintedRunStates: Story = {
       <lr-flow-node heading="Complete" status="success"></lr-flow-node>
       <lr-flow-node heading="Failed" status="error"></lr-flow-node>
       <lr-flow-node heading="Denied" status="denied"></lr-flow-node>
+    </div>
+  `,
+};
+
+export const RetintedProgress: Story = {
+  name: 'Retinted progress track and fill',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The progress track and fill inherit independent component hooks, so a canvas can retint every descendant node without changing shared border or brand tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-flow-node-progress-track-color: var(--lr-color-warning-quiet);
+        --lr-flow-node-progress-fill-color: var(--lr-color-warning);
+      "
+    >
+      <lr-flow-node heading="Index documents" status="running" progress="64"></lr-flow-node>
     </div>
   `,
 };

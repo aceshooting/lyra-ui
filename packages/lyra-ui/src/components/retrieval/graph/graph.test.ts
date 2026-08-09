@@ -188,7 +188,7 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
     el.shadowRoot!.querySelector('[role="alert"], [role="status"], [aria-live]') === null,
     'the controller-owned loading state must not create a second shadow live region',
   ).to.be.true;
-  expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('svg')) == null).to.equal(true);
 
   el.nodes = nodes;
   el.links = links;
@@ -199,7 +199,7 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('svg')).to.exist;
+  expect((el.shadowRoot!.querySelector('svg')) != null).to.equal(true);
 });
 
 it('announces graph navigation through one light-DOM sink without speaking the initial item', async () => {
@@ -671,7 +671,7 @@ describe('hover events', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const stub = el.shadowRoot!.querySelector('[part="link"][data-dangling]') as SVGLineElement;
-    expect(stub).to.exist;
+    expect((stub) != null).to.equal(true);
 
     let fired = false;
     el.addEventListener('lr-link-enter', () => (fired = true));
@@ -1076,7 +1076,7 @@ describe('drawn edge labels (J2)', () => {
   it('draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
     const el = await mountLabeled(true);
     const label = el.shadowRoot!.querySelector('[part="link-label"]') as SVGTextElement;
-    expect(label).to.exist;
+    expect((label) != null).to.equal(true);
     expect(label.textContent).to.equal('cites');
     expect(label.getAttribute('aria-hidden')).to.equal('true');
     expect(label.getAttribute('text-anchor')).to.equal('middle');
@@ -2236,13 +2236,13 @@ describe('canvas renderer — static draw', () => {
   it('defaults renderer to svg', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     expect(el.renderer).to.equal('svg');
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   });
 
   it('renderer="canvas" renders a canvas element instead of an svg, no [part="node"]/[part="link"] elements', async () => {
     const el = await mountCanvas();
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
-    expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
+    expect((el.shadowRoot!.querySelector('svg')) == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="node"]')).to.not.exist;
   });
 
@@ -2309,7 +2309,7 @@ describe('canvas renderer — static draw', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   });
 
   it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async function () {
@@ -3338,7 +3338,7 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
   const linkEls = [...el.shadowRoot!.querySelectorAll('[part="link"]')];
   expect(linkEls).to.have.length(2); // the real a-b link, plus a dangling stub off 'a'
   const stub = linkEls.find((l) => l.hasAttribute('data-dangling'))!;
-  expect(stub).to.exist;
+  expect((stub) != null).to.equal(true);
   expect(stub.getAttribute('aria-hidden')).to.equal('true');
 });
 
@@ -4890,9 +4890,9 @@ describe('coverage: canvas surface setup edge cases', () => {
     };
     const internal = el as unknown as Internals;
     const measureCanvasBefore = internal.edgeLabelMeasureCanvas;
-    expect(measureCanvasBefore).to.exist;
+    expect((measureCanvasBefore) != null).to.equal(true);
     internal.ensureCanvasOwnerRealm(); // same document, same realm -- must NOT reset the cache
-    expect(internal.edgeLabelMeasureCanvas).to.equal(measureCanvasBefore);
+    expect((internal.edgeLabelMeasureCanvas) === (measureCanvasBefore)).to.equal(true);
 
     el.shadowRoot!.querySelector('[part="tooltip"]')?.remove();
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -4951,11 +4951,11 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
     const internal = el as unknown as Internals;
     const politeBefore = internal.politeAnnouncementSink;
     const assertiveBefore = internal.assertiveAnnouncementSink;
-    expect(politeBefore).to.exist;
-    expect(assertiveBefore).to.exist;
+    expect((politeBefore) != null).to.equal(true);
+    expect((assertiveBefore) != null).to.equal(true);
     internal.syncAnnouncementSinks(); // called again with no intervening release -- same document already
-    expect(internal.politeAnnouncementSink).to.equal(politeBefore); // untouched, not reacquired
-    expect(internal.assertiveAnnouncementSink).to.equal(assertiveBefore);
+    expect((internal.politeAnnouncementSink) === (politeBefore)).to.equal(true); // untouched, not reacquired
+    expect((internal.assertiveAnnouncementSink) === (assertiveBefore)).to.equal(true);
   });
 
   it('fit() no-ops without throwing when every node is hidden (simNodes empty), and defaults its padding option', async () => {
@@ -5505,7 +5505,7 @@ describe('coverage: selection and keyboard edge cases', () => {
     });
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as unknown as HTMLElement;
     nodeEl.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(nodeEl as unknown as Element);
+    expect((el.shadowRoot!.activeElement) === (nodeEl as unknown as Element)).to.equal(true);
 
     el.nodes = [];
     el.links = [];
@@ -5668,7 +5668,7 @@ describe('coverage: remaining branch gaps (batch 3)', () => {
     });
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as unknown as HTMLElement;
     nodeEl.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(nodeEl as unknown as Element);
+    expect((el.shadowRoot!.activeElement) === (nodeEl as unknown as Element)).to.equal(true);
 
     // Hides every node (nodes.length stays > 0, so the svg root itself keeps rendering) -- the
     // previously node-focused item vanishes entirely, landing pendingGraphItemFocus on 'base' while
@@ -5682,7 +5682,7 @@ describe('coverage: remaining branch gaps (batch 3)', () => {
     await el.updateComplete;
     expect(el.simNodes.length).to.equal(0);
     const svgEl = el.shadowRoot!.querySelector('svg');
-    expect(el.shadowRoot!.activeElement).to.equal(svgEl);
+    expect((el.shadowRoot!.activeElement) === (svgEl)).to.equal(true);
   });
 
   it('removing the focused LINK/COMMUNITY entirely falls back activeGraphItem to a plain re-clamp (graphItemIndex -1 branch)', async () => {

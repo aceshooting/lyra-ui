@@ -6,7 +6,7 @@
 - **Class** `LyraConversationItem`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated slot** `leading` since `8.2.3`; use slot `slot="start"`; removal not before `10.0.0` — The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window.
 - **Optional peers** none
 - **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -20,6 +20,7 @@ A selectable row representing one chat session in a history sidebar list. Usable
 First-party invention (no Web Awesome equivalent).
 
 **Properties:**
+
 - `title: string = ''` — the session's display title. Falls back to "Untitled conversation" when empty
   (display only — the property itself is never mutated by that fallback).
 - `excerpt: string = ''` — a short preview snippet of the last message. Omit for no excerpt line.
@@ -65,11 +66,13 @@ as an implicit cancel), `blur` (no detail — re-dispatched from the in-place re
 in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 
 **Slots:**
+
 - `actions` — overflow/icon-button controls rendered at the trailing edge of the row (e.g. a
   pin/delete control); only visually shown once it actually has assigned elements. The only slot that
   may hold focusable content.
-- `leading` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
-  selectable region before the title/excerpt content.
+- `start` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
+  selectable region before the title/excerpt content. The deprecated `leading` compatibility alias
+  shares the same wrapper and may coexist with `start`.
 - `content` — replaces the built-in title + excerpt + meta content area with host-supplied
   non-interactive row content.
 - `excerpt` — full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`);
@@ -77,16 +80,17 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 - `meta` — small, non-focusable structured fields below the title/excerpt (a day label, cost, request
   count); entirely app-supplied, this component computes none of it.
 
-`leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
+`start`/`leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
 **CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`), `option`,
-`content`, `title`, `title-input`, `rename-button`, `excerpt`, `timestamp`, `actions`
+`leading`, `content`, `title`, `title-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
+`actions`
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
 (default `var(--lr-color-text)`) — the text color of `[part='excerpt']` and `[part='timestamp']`
 while `active`. Both are declared as inline `var()` fallbacks at the point of use and never on
-`:host`, so either can be set on the element *or on any ancestor* (a thread-list wrapper, a page
+`:host`, so either can be set on the element _or on any ancestor_ (a thread-list wrapper, a page
 theme layer); `::part(base)[active]` is not valid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — so the only previous lever was overriding the library-wide `--lr-color-brand-quiet`
 token and repainting everything else reading it. Unset, each falls back to exactly the token its rule
@@ -95,7 +99,7 @@ used before.
 **These two are a contrast-sensitive pair — override them together, never one alone.** The
 `-active-color` hook exists precisely because the quiet text tone only reaches about 4.25:1 against
 the default active background; keep any override at 4.5:1 or better against it. And note that
-`[part='title']` is *not* restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
+`[part='title']` is _not_ restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
 custom active background needs its own title color set alongside them, or the title drops below
 contrast while the excerpt stays legible.
 
@@ -112,7 +116,7 @@ the row is inactive.
 inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
 retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
 `compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
-[part='base']` is ordered *before* `:host([active]) [part='base']` (equal specificity), so a row that
+[part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
 is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
 
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
@@ -140,12 +144,13 @@ valid semantics both standalone and inside a larger history-list layout: it acti
 session rather than being a listbox option, so it requires no particular owner role. Selection is
 conveyed via `aria-current="true"` while `active`, not `aria-selected`. Because `role="button"`
 forbids focusable descendants (axe-core's `nested-interactive` rule), the rename button and the
-`actions` slot are rendered as DOM *siblings* of `[part="option"]` inside `[part="base"]`, not nested
+`actions` slot are rendered as DOM _siblings_ of `[part="option"]` inside `[part="base"]`, not nested
 inside it — the same constraint the in-place rename `<input>` runs into one level deeper, which is
 why `[part="option"]` sheds its `role`/`tabindex`/`aria-current`/`aria-label` entirely for the
-duration of an edit rather than just visually swapping content (a row mid-edit *is* a text field).
+duration of an edit rather than just visually swapping content (a row mid-edit _is_ a text field).
 
 **Known gotchas:**
+
 - `lr-select` carries no detail payload at all — read the session id off the event's own `target`/
   `currentTarget`, not a `detail` field.
 - Renaming is a controlled interaction: committing `lr-rename` never updates `title` locally: the

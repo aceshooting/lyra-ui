@@ -43,28 +43,31 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
-  ::slotted([slot='top-start']),
-  ::slotted([slot='top-end']),
-  ::slotted([slot='bottom-start']),
-  ::slotted([slot='bottom-end']) {
+  [part='overlay-rail'] {
     position: absolute;
+    inset-inline: var(--lr-space-s);
     z-index: var(--lr-layer-content);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--lr-space-s);
+    pointer-events: none;
   }
-  ::slotted([slot='top-start']) {
+  [part='overlay-rail'][data-edge='top'] {
     inset-block-start: var(--lr-space-s);
-    inset-inline-start: var(--lr-space-s);
   }
-  ::slotted([slot='top-end']) {
-    inset-block-start: var(--lr-space-s);
-    inset-inline-end: var(--lr-space-s);
-  }
-  ::slotted([slot='bottom-start']) {
+  [part='overlay-rail'][data-edge='bottom'] {
     inset-block-end: var(--lr-space-s);
-    inset-inline-start: var(--lr-space-s);
   }
-  ::slotted([slot='bottom-end']) {
-    inset-block-end: var(--lr-space-s);
-    inset-inline-end: var(--lr-space-s);
+  .overlay-group {
+    display: flex;
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+    gap: var(--lr-space-s);
+    pointer-events: auto;
+  }
+  .overlay-group[data-align='end'] {
+    margin-inline-start: auto;
   }
   [part='node'] {
     position: absolute;
@@ -81,7 +84,7 @@ export const styles = css`
   }
   [part='edge'] {
     fill: none;
-    stroke: var(--lr-color-border);
+    stroke: var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border));
     stroke-width: 1.5;
     pointer-events: stroke;
     cursor: pointer;
@@ -94,19 +97,31 @@ export const styles = css`
     cursor: pointer;
   }
   [part='edge'][data-tone='accent'] {
-    stroke: var(--lr-color-brand);
+    stroke: var(--lr-flow-canvas-edge-accent-color, var(--lr-color-brand));
   }
   [part='edge'][data-tone='success'] {
-    stroke: var(--lr-color-success);
+    stroke: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
   }
   [part='edge'][data-tone='warning'] {
-    stroke: var(--lr-color-warning);
+    stroke: var(--lr-flow-canvas-edge-warning-color, var(--lr-color-warning));
   }
   [part='edge'][data-tone='danger'] {
-    stroke: var(--lr-color-danger);
+    stroke: var(--lr-flow-canvas-edge-danger-color, var(--lr-color-danger));
   }
   [part='arrowhead'] {
-    fill: var(--lr-color-border);
+    fill: var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border));
+  }
+  [part='arrowhead'][data-tone='accent'] {
+    fill: var(--lr-flow-canvas-edge-accent-color, var(--lr-color-brand));
+  }
+  [part='arrowhead'][data-tone='success'] {
+    fill: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
+  }
+  [part='arrowhead'][data-tone='warning'] {
+    fill: var(--lr-flow-canvas-edge-warning-color, var(--lr-color-warning));
+  }
+  [part='arrowhead'][data-tone='danger'] {
+    fill: var(--lr-flow-canvas-edge-danger-color, var(--lr-color-danger));
   }
   [part='stub'] {
     stroke: var(--lr-color-border);
@@ -135,7 +150,7 @@ export const styles = css`
     inline-size: 500%;
     block-size: 500%;
     background-image: radial-gradient(circle, var(--lr-color-border) var(--lr-size-1px), transparent var(--lr-size-1px));
-    background-size: var(--lr-flow-canvas-grid-size, var(--lr-size-0-5rem)) var(--lr-flow-canvas-grid-size, var(--lr-size-0-5rem));
+    background-size: var(--lr-flow-canvas-grid-size, var(--_lr-flow-canvas-grid-size, var(--lr-size-0-5rem))) var(--lr-flow-canvas-grid-size, var(--_lr-flow-canvas-grid-size, var(--lr-size-0-5rem)));
     cursor: grab;
   }
   [part='viewport'][data-panning] [part='background'] {

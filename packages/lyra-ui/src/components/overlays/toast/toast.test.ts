@@ -35,7 +35,7 @@ it('renders an action button when provided', async () => {
   });
   const el = await item;
   const btn = el.querySelector('button');
-  expect(btn).to.exist;
+  expect((btn) != null).to.equal(true);
   btn!.click();
   expect(clicked).to.be.true;
 });

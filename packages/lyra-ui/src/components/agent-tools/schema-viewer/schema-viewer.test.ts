@@ -144,8 +144,8 @@ it('renders an info-severity issue with its own styling, distinct from the dange
   `)) as LyraSchemaViewer;
   const infoIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="info"]') as HTMLElement;
   const errorIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="error"]') as HTMLElement;
-  expect(infoIssue).to.exist;
-  expect(errorIssue).to.exist;
+  expect((infoIssue) != null).to.equal(true);
+  expect((errorIssue) != null).to.equal(true);
   expect(getComputedStyle(infoIssue).borderInlineStartColor).to.not.equal(
     getComputedStyle(errorIssue).borderInlineStartColor,
   );

@@ -51,8 +51,10 @@ const timelineItemVariantConverter = {
  * @customElement lr-timeline-item
  * @slot - The item's primary heading/title content. Rich content allowed (inline code, a badge, a
  *   link) — nothing renders when this slot is empty, a valid if unusual usage.
- * @slot icon - Leading marker/glyph override (e.g. a `<lr-icon>`, an emoji, a small avatar-like
- *   element). Falls back to a plain color-coded dot (driven by `variant`) when empty.
+ * @slot marker-icon - Canonical leading marker/glyph override (e.g. a `<lr-icon>`, an emoji, a
+ *   small avatar-like element). Takes precedence over the legacy `icon` slot.
+ * @slot icon - Legacy marker-glyph alias, retained as the fallback for `marker-icon`. When both
+ *   icon slots are empty, the marker falls back to a plain color-coded dot driven by `variant`.
  * @slot timestamp - Full override of the timestamp presentation (e.g.
  *   `<lr-format-date slot="timestamp">`, a custom string, a differently-configured
  *   `<lr-relative-time>`). Wins over the `timestamp` property whenever it has assigned content,
@@ -81,16 +83,18 @@ const timelineItemVariantConverter = {
  * @csspart description - Wrapper around the `description` slot. Hidden entirely when the slot is
  *   empty.
  * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Diameter of the marker circle
- *   (both inline-size and block-size, so the default dot stays circular).
+ *   (both inline-size and block-size, so the default dot stays circular). Inherits from theme
+ *   ancestors.
  * @cssprop [--lr-timeline-rail-width=var(--lr-border-width-medium)] - Thickness of the
- *   connecting rail line.
+ *   connecting rail line. Inherits from theme ancestors.
  * @cssprop [--lr-timeline-rail-color=var(--lr-color-border)] - Color of the connecting rail
  *   line. A component-scoped property (not just inlining `var(--lr-color-border)` at every use
  *   site) so a consumer can retint just the rail without touching the library-wide border color
- *   elsewhere.
+ *   elsewhere. Inherits from theme ancestors.
  * @cssprop [--lr-timeline-marker-color=var(--lr-color-text-quiet)] - Marker fill/accent color.
- *   Swapped per `variant` (see the class doc's variant table); a consumer overriding this directly on
- *   one item wins over the variant default via normal CSS cascade/specificity.
+ *   Swapped per `variant` (see the class doc's variant table); a consumer can override it on an
+ *   ancestor for a themed group or directly on one item, with the direct value winning via the
+ *   normal cascade.
  * @cssprop [--lr-timeline-item-direction=row] - Internal orientation plumbing, not a retheming
  *   knob: `[part="base"]`'s `flex-direction`, set by an ancestor `<lr-timeline>`'s `:host` and
  *   inherited across the slot boundary (`row` vertical, `column` horizontal). The `row` fallback
@@ -170,8 +174,13 @@ export class LyraTimelineItem extends LyraElement {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
-  private onIconSlotChange = (e: Event): void => {
-    this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onIconSlotChange = (): void => {
+    const markerIconSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="marker-icon"]');
+    const iconSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="icon"]');
+    this.hasIconSlot = Boolean(
+      markerIconSlot?.assignedElements({ flatten: true }).length ||
+        iconSlot?.assignedElements({ flatten: true }).length,
+    );
   };
 
   private onTimestampSlotChange = (e: Event): void => {
@@ -189,16 +198,16 @@ export class LyraTimelineItem extends LyraElement {
     // Intl-formatted absolute date/time -- caller/data formatting exempt from localize() routing per
     // AGENTS.md's i18n carve-out for Intl-formatted dates. Never hand-rolled.
     const absolute = ts
-      ? getDateTimeFormat(this.effectiveLocale || undefined, { dateStyle: 'long', timeStyle: 'short' }).format(
-          ts,
-        )
+      ? getDateTimeFormat(this.effectiveLocale || undefined, { dateStyle: 'long', timeStyle: 'short' }).format(ts)
       : '';
 
     return html`
       <div part="base">
         <div part="track">
           <span part="marker" aria-hidden="true" ?data-has-icon=${this.hasIconSlot}>
-            <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
+            <slot name="marker-icon" @slotchange=${this.onIconSlotChange}
+              ><slot name="icon" @slotchange=${this.onIconSlotChange}></slot></slot
+            >
           </span>
           <span part="rail"></span>
         </div>

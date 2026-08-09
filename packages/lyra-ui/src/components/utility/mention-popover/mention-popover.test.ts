@@ -60,7 +60,7 @@ it('renders items as listbox rows, with icon/description parts only when set', a
 it('shows the empty-text row when items is empty', async () => {
   const el = await openWithItems([]);
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty.textContent).to.equal('No matches');
   expect(empty.getAttribute('role')).to.equal('option');
   expect(empty.getAttribute('aria-disabled')).to.equal('true');
@@ -143,7 +143,7 @@ it('scrolls the active row into view as ArrowDown moves it past the popup\'s vis
   }
 
   const activeRow = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-  expect(activeRow).to.exist;
+  expect((activeRow) != null).to.equal(true);
   const rowRect = activeRow.getBoundingClientRect();
   const boxRect = box.getBoundingClientRect();
   expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;

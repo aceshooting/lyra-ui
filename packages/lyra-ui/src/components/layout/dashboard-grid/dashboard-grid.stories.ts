@@ -9,6 +9,7 @@ const layout: DashboardCell[] = [
   { id: 'latency', x: 8, y: 0, w: 4, h: 2, label: 'p95 latency', widget: { type: 'stat', props: { label: 'p95 latency', value: '212ms' } } },
   { id: 'summary', x: 0, y: 2, w: 12, h: 3, label: 'Summary', widget: { type: 'markdown', props: { content: 'Nothing needs attention right now.' } } },
 ];
+const unbrokenCustomCellText = 'LocalizationWithoutBreakOpportunity'.repeat(20);
 
 const meta: Meta = {
   title: 'Dashboard Grid',
@@ -93,6 +94,60 @@ export const NarrowAllocation: Story = {
   render: () => html`
     <div style="inline-size:320px; max-inline-size:100%; border:1px dashed var(--lr-color-border);">
       <lr-dashboard-grid style="width:100%" .layout=${layout}></lr-dashboard-grid>
+    </div>
+  `,
+};
+
+export const NarrowShortResizableCustomCells: Story = {
+  name: 'Narrow short resizable custom cells (320px RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Short consumer-authored cells retain the shared 40px action floor while their resize handles exist, preventing an absolute handle from overlapping the previous cell or stacked gap.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border);"
+    >
+      <lr-dashboard-grid style="inline-size: 100%;" cells-resizable .layout=${[
+        { id: 'short-a', x: 0, y: 0, w: 6, h: 1, label: 'Short A' },
+        { id: 'short-b', x: 6, y: 0, w: 6, h: 1, label: 'Short B' },
+      ] satisfies DashboardCell[]}>
+        <div cell-id="short-a">A</div>
+        <div cell-id="short-b">B</div>
+      </lr-dashboard-grid>
+    </div>
+  `,
+};
+
+export const NarrowLongCustomContent: Story = {
+  name: 'Narrow long custom content (320px RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A direct unbroken text run wraps inside its custom cell, while a consumer that explicitly owns overflow can retain a contained horizontal scrollport without widening the dashboard.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border);"
+    >
+      <lr-dashboard-grid style="inline-size: 100%;" .layout=${[
+        { id: 'wrapped', x: 0, y: 0, w: 6, h: 1, label: 'Wrapped content' },
+        { id: 'scrollport', x: 6, y: 0, w: 6, h: 1, label: 'Owned scrollport' },
+      ] satisfies DashboardCell[]}>
+        <div cell-id="wrapped">${unbrokenCustomCellText}</div>
+        <div cell-id="scrollport" style="overflow: auto; white-space: nowrap;">
+          ${unbrokenCustomCellText}
+        </div>
+      </lr-dashboard-grid>
     </div>
   `,
 };

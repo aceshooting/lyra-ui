@@ -25,6 +25,7 @@ quieter cue for a tight space, e.g. next to an avatar), `cursor` (a blinking ver
 sit inline at the tail end of streamed text still being appended to).
 
 **Properties:**
+
 - `variant: TypingIndicatorVariant = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = 'Thinking…'` — the accessible name, exposed via `role="status"`; not re-announced
   on every animation frame, only on mount and on any later change to this property
@@ -74,12 +75,13 @@ Accessibility: since this indicator typically mounts and unmounts around a real 
 updates of its own, it does **not** route through `<lr-live-region>`/the internal `Announcer` —
 that machinery exists to coalesce many rapidly-changing announcements into one, and there is only
 ever a single announcement here: the mount itself. `role="status"` plus an accessible name derived
-from `label` is set both as `aria-label` on the host *and* as a visually-hidden text node
+from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
 (`.sr-only`) in the shadow tree, so the name survives even if only one of the two is picked up by a
 given assistive-tech/browser pairing. The animated shape itself is `aria-hidden="true"` — it's
 decorative; `label` is the entire accessible content, nothing narrates individual animation frames.
 
 **Known gotchas:**
+
 - under `prefers-reduced-motion: reduce`, every variant collapses to its plain, fully-visible resting
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk

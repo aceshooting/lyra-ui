@@ -84,6 +84,55 @@ it("renders one composed control per filter, matched to its declared type", asyn
   ).to.equal("range");
 });
 
+it("forwards common field and input parts from every built-in composed control", async () => {
+  const filters: FilterBarFilterDefinition[] = [
+    ...basicFilters.slice(0, 3),
+    { id: "query", label: "Query", type: "text" },
+  ];
+  const wrapper = (await fixture(html`
+    <div>
+      <style>
+        lr-filter-bar::part(filter-control-field) {
+          outline: 7px solid rgb(1, 2, 3);
+        }
+        lr-filter-bar::part(filter-control-input) {
+          caret-color: rgb(4, 5, 6);
+        }
+      </style>
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-filter-bar") as LyraFilterBar;
+  await el.updateComplete;
+
+  const probes = [
+    ["status", '[part~="trigger"]'],
+    ["tags", '[part~="combobox"]'],
+    ["created", '[part~="input-wrapper"]'],
+    ["query", '[part~="input-wrapper"]'],
+  ] as const;
+  for (const [id, selector] of probes) {
+    const composed = control(el, id) as HTMLElement & { updateComplete: Promise<unknown> };
+    await composed.updateComplete;
+    const field = composed.shadowRoot!.querySelector<HTMLElement>(selector);
+    expect(field !== null, `${id} field probe`).to.be.true;
+    expect(getComputedStyle(field!).outlineWidth, `${id} field alias`).to.equal("7px");
+  }
+
+  const inputs = [
+    ["status", '[part~="display-input"]'],
+    ["tags", '[part~="combobox-input"]'],
+    ["created", '[part~="input"]'],
+    ["query", '[part~="input"]'],
+  ] as const;
+  for (const [id, selector] of inputs) {
+    const composed = control(el, id);
+    const input = composed.shadowRoot!.querySelector<HTMLElement>(selector);
+    expect(input !== null, `${id} input probe`).to.be.true;
+    expect(getComputedStyle(input!).caretColor, `${id} input alias`).to.equal("rgb(4, 5, 6)");
+  }
+});
+
 describe("custom filters", () => {
   it("renders an existing control with controlled value, disabled, required, and error state", async () => {
     const filters: FilterBarFilterDefinition[] = [
@@ -323,6 +372,50 @@ describe("lr-input (filter edits)", () => {
     expect(ev.detail.value.range).to.equal("2026-01-01/2026-01-31");
   });
 
+  for (const [filterId, expectedValue] of [
+    ["status", "open"],
+    ["tags", ["urgent"]],
+  ] as const) {
+    it(`keeps ${filterId}'s child aliases inside while retaining native input/change`, async () => {
+      const el = (await fixture(
+        html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+      )) as LyraFilterBar;
+      const composed = control(el, filterId) as HTMLElement & {
+        open: boolean;
+        updateComplete: Promise<unknown>;
+      };
+      composed.open = true;
+      await composed.updateComplete;
+
+      const filterInputs: FilterBarInputDetail[] = [];
+      let childChanges = 0;
+      let nativeInputs = 0;
+      let nativeChanges = 0;
+      el.addEventListener("lr-input", (event) => {
+        filterInputs.push((event as CustomEvent<FilterBarInputDetail>).detail);
+      });
+      el.addEventListener("lr-change", () => {
+        childChanges += 1;
+      });
+      el.addEventListener("input", () => {
+        nativeInputs += 1;
+      });
+      el.addEventListener("change", () => {
+        nativeChanges += 1;
+      });
+
+      (composed.shadowRoot!.querySelector('[part="option"]') as HTMLElement).click();
+      await el.updateComplete;
+
+      expect(filterInputs.length).to.equal(1);
+      expect(filterInputs[0].filterId).to.equal(filterId);
+      expect(filterInputs[0].value[filterId]).to.deep.equal(expectedValue);
+      expect(childChanges).to.equal(0);
+      expect(nativeInputs).to.equal(1);
+      expect(nativeChanges).to.equal(1);
+    });
+  }
+
   it("never mutates value or emits while disabled, even from a directly-dispatched control change", async () => {
     const el = (await fixture(
       html`<lr-filter-bar disabled .filters=${basicFilters}></lr-filter-bar>`
@@ -405,6 +498,51 @@ describe("active-filter chips", () => {
         new Date(Date.UTC(2026, 0, 1)),
         new Date(Date.UTC(2026, 0, 31))
       )}`,
+    ]);
+  });
+
+  it("preserves impossible ISO dates and ranges verbatim instead of normalizing them", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = {
+      created: "2026-02-31",
+      range: "2026-01-01/2026-13-01",
+    };
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]')].map(
+      (chip) => chip.textContent!.trim()
+    );
+    expect(labels).to.deep.equal([
+      "Created: 2026-02-31",
+      "Active period: 2026-01-01/2026-13-01",
+    ]);
+  });
+
+  it("locale-formats valid four-digit years below 0100 without remapping them to the 1900s", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { created: "0001-02-03", range: "0099-01-01/0099-01-31" };
+    await el.updateComplete;
+    const date = (year: number, month: number, day: number): Date => {
+      const result = new Date(0);
+      result.setUTCHours(0, 0, 0, 0);
+      result.setUTCFullYear(year, month - 1, day);
+      return result;
+    };
+    const formatter = new Intl.DateTimeFormat(el.effectiveLocale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+    const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]')].map(
+      (chip) => chip.textContent!.trim()
+    );
+    expect(labels).to.deep.equal([
+      `Created: ${formatter.format(date(1, 2, 3))}`,
+      `Active period: ${formatter.formatRange(date(99, 1, 1), date(99, 1, 31))}`,
     ]);
   });
 
@@ -503,6 +641,26 @@ describe("active-filter chips", () => {
 });
 
 describe("reset()", () => {
+  it("keeps the reset action on the same default size tier and rendered height as adjacent fields", async () => {
+    const el = (await fixture(html`
+      <lr-filter-bar .filters=${basicFilters} .value=${{ status: "open" }}></lr-filter-bar>
+    `)) as LyraFilterBar;
+    const select = control(el, "status") as HTMLElement & { updateComplete: Promise<unknown> };
+    const resetButton = el.shadowRoot!.querySelector('[part="reset-button"]') as HTMLElement & {
+      size: string;
+      updateComplete: Promise<unknown>;
+    };
+    await Promise.all([select.updateComplete, resetButton.updateComplete]);
+    const selectTrigger = select.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+    const buttonBase = resetButton.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+
+    expect(resetButton.size).to.equal("m");
+    expect(buttonBase.getBoundingClientRect().height).to.be.closeTo(
+      selectTrigger.getBoundingClientRect().height,
+      1,
+    );
+  });
+
   it("disables the reset button until a filter becomes active, and while loading/disabled", async () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
@@ -618,7 +776,7 @@ describe("disabled", () => {
       removable: boolean;
       updateComplete: Promise<unknown>;
     };
-    expect(chip).to.not.equal(null);
+    expect((chip) !== (null)).to.equal(true);
     expect(chip.removable).to.be.false;
     expect(chip.hasAttribute("removable")).to.be.false;
     await chip.updateComplete;
@@ -769,6 +927,19 @@ describe("label forwarding", () => {
     expect(base.getAttribute("aria-label")).to.equal("Author filters");
   });
 
+  it("preserves an explicitly empty host aria-label instead of replacing it with label", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar
+        label="Report filters"
+        aria-label=""
+        .filters=${basicFilters}
+      ></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.hasAttribute("aria-label")).to.be.true;
+    expect(base.getAttribute("aria-label")).to.equal("");
+  });
+
   it("falls back to a forwarded host aria-label when label is unset", async () => {
     const el = (await fixture(
       html`<lr-filter-bar
@@ -808,6 +979,47 @@ describe("RTL and narrow-allocation layout", () => {
     ) as HTMLElement;
     expect(getComputedStyle(controlsRow).flexWrap).to.equal("wrap");
   });
+
+  for (const direction of ["ltr", "rtl"] as const) {
+    it(`contains one unbroken active-filter chip inside a 320px ${direction.toUpperCase()} allocation`, async () => {
+      const longLabel = "LocalizedFilterValueWithoutBreakOpportunity".repeat(100);
+      const filters: FilterBarFilterDefinition[] = [
+        {
+          id: "status",
+          label: "Status",
+          type: "select",
+          options: [{ value: "active", label: longLabel }],
+        },
+      ];
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-filter-bar
+            style="inline-size: 100%;"
+            .filters=${filters}
+            .value=${{ status: "active" }}
+          ></lr-filter-bar>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-filter-bar") as LyraFilterBar;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const activeFilters = el.shadowRoot!.querySelector<HTMLElement>('[part="active-filters"]')!;
+      const chips = el.shadowRoot!.querySelector<HTMLElement>('[part="chips"]')!;
+      const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="chip"]')!;
+      await Promise.all([
+        (chips as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete,
+        (chip as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete,
+      ]);
+
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+      expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+      expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+      expect(activeFilters.scrollWidth).to.be.at.most(activeFilters.clientWidth);
+      expect(chips.scrollWidth).to.be.at.most(chips.clientWidth);
+      expect(chip.getBoundingClientRect().width).to.be.at.most(320);
+      expect(getComputedStyle(activeFilters).direction).to.equal(direction);
+    });
+  }
 });
 
 describe("'text' free-text filters", () => {
@@ -846,7 +1058,7 @@ describe("'text' free-text filters", () => {
     expect(composed.label).to.equal("Search");
     expect(composed.placeholder).to.equal("Search logs");
     // No duplicate chrome: the label/hint/error belong to <lr-input>, never re-rendered here.
-    expect(el.shadowRoot!.querySelector("label")).to.not.exist;
+    expect((el.shadowRoot!.querySelector("label")) == null).to.equal(true);
     const native = await nativeInput(el, "q");
     expect(native.type).to.equal("text");
   });

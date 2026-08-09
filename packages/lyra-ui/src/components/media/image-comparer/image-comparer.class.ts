@@ -30,7 +30,9 @@ export interface LyraImageComparerEventMap {
  * @customElement lr-image-comparer
  * @slot before - The before-state image or content.
  * @slot after - The after-state image or content.
- * @slot handle - Custom decorative content inside the draggable handle.
+ * @slot handle - Custom decorative content inside the draggable handle. The flattened slot
+ *   subtree is inert and hidden from assistive technology; the native range remains the only
+ *   interaction target.
  * @event lr-position-change - Divider moved. `detail: { position }`, where position is 0–100.
  * @event lr-change - Emitted when the range gesture commits.
  * @event {Event} change - Bubbling, composed native change event emitted when the range gesture
@@ -167,7 +169,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
           @pointercancel=${this.onPointerEnd}
           @lostpointercapture=${this.onPointerEnd}
         />
-        <span class="handle-visual" aria-hidden="true">
+        <span class="handle-visual" aria-hidden="true" inert>
           <slot name="handle"
             ><span class="handle-fallback">${chevronIcon()}${chevronIcon()}</span></slot
           >

@@ -276,16 +276,11 @@ it("preserves the active command by identity across reorder and repairs it after
     el.shadowRoot!.querySelector('[part="command"][data-active="true"]')!
       .textContent
   ).to.contain("Bravo");
-  expect(
-    el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!),
-    "the reconciled active descendant remains rendered"
-  ).to.exist;
+  expect((el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)) != null, "the reconciled active descendant remains rendered").to.equal(true);
 
   el.commands = [charlie, alpha];
   await el.updateComplete;
-  expect(
-    el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)
-  ).to.exist;
+  expect((el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)) != null).to.equal(true);
 });
 
 it("case-folds command search with the effective locale", async () => {
@@ -351,9 +346,7 @@ it("virtualizes a 5,000-command catalog while keeping the active descendant moun
   const rendered = el.shadowRoot!.querySelectorAll('[part="command"]');
   const input = el.shadowRoot!.querySelector("input")!;
   expect(rendered.length).to.be.lessThan(100);
-  expect(
-    el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)
-  ).to.exist;
+  expect((el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)) != null).to.equal(true);
 });
 
 it("renders a visible focus indicator on the auto-focused search input", async () => {
@@ -617,7 +610,7 @@ describe("active-command cssprop", () => {
     const active = el.shadowRoot!.querySelector(
       '[part="command"][data-active="true"]'
     ) as HTMLElement;
-    expect(active).to.exist;
+    expect((active) != null).to.equal(true);
     expect(getComputedStyle(active).backgroundColor).to.equal(
       "rgb(0, 51, 102)"
     );
@@ -756,6 +749,79 @@ it("derives the virtual row pitch from the row-height tokens, not a hardcoded pi
   // which is exactly what a raised browser font size does to the 3rem default.
   expect((el as unknown as { rowPitch: number }).rowPitch).to.equal(60);
   expect((el as unknown as { groupPitch: number }).groupPitch).to.equal(40);
+});
+
+function virtualGeometry(el: LyraCommandPalette): {
+  rows: string[];
+  groups: string[];
+  spacer: string;
+} {
+  return {
+    rows: [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]'),
+    ].map((row) => row.style.transform),
+    groups: [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]'),
+    ].map((group) => group.style.transform),
+    spacer: el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="list-spacer"]'
+    )!.style.blockSize,
+  };
+}
+
+async function settleRowPitch(el: LyraCommandPalette): Promise<void> {
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+  await el.updateComplete;
+}
+
+it("rebuilds virtual transforms and spacer extent from the measured pitches", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
+      .commands=${[
+        { id: "save", label: "Save", group: "File" },
+        { id: "close", label: "Close", group: "File" },
+        { id: "copy", label: "Copy", group: "Edit" },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  await settleRowPitch(el);
+
+  expect(virtualGeometry(el)).to.deep.equal({
+    rows: ["translateY(40px)", "translateY(100px)", "translateY(200px)"],
+    groups: ["translateY(0px)", "translateY(160px)"],
+    spacer: "260px",
+  });
+});
+
+it("rebuilds virtual geometry after live row and group token changes", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
+      .commands=${[
+        { id: "save", label: "Save", group: "File" },
+        { id: "close", label: "Close", group: "File" },
+        { id: "copy", label: "Copy", group: "Edit" },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  await settleRowPitch(el);
+
+  el.style.setProperty("--lr-command-palette-row-height", "72px");
+  el.style.setProperty("--lr-command-palette-group-height", "36px");
+  await settleRowPitch(el);
+
+  expect(virtualGeometry(el)).to.deep.equal({
+    rows: ["translateY(36px)", "translateY(108px)", "translateY(216px)"],
+    groups: ["translateY(0px)", "translateY(180px)"],
+    spacer: "288px",
+  });
 });
 
 it("does not schedule a Lit update from the initial row-pitch measurement", async () => {

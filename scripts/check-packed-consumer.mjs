@@ -562,18 +562,41 @@ import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
 import type {
   LyraChartEventMap,
   LyraGraphEventMap,
+  LyraMarkedParser,
   LyraMapEventMap,
+  LyraModelSelectSize,
+  MarkdownHeadingItem,
+  MessageFeedbackRating,
+  MessageFeedbackValue,
+  ShikiLanguageInput,
 } from '@aceshooting/lyra-ui';
+import type {
+  LyraMarkedParser as GranularMarkedParser,
+  MarkdownHeadingItem as GranularHeadingItem,
+  ShikiLanguageInput as GranularLanguageInput,
+} from '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';
 
 const name: string = tag('empty');
 const Empty = GranularLyraEmpty satisfies typeof LyraEmpty;
 const dialog = new LyraDialog();
 const table = new LyraTable();
 const events: [LyraChartEventMap, LyraGraphEventMap, LyraMapEventMap] | undefined = undefined;
+const conversationTypes: [
+  LyraMarkedParser,
+  LyraModelSelectSize,
+  MarkdownHeadingItem,
+  MessageFeedbackRating,
+  MessageFeedbackValue,
+  ShikiLanguageInput,
+  GranularMarkedParser,
+  GranularHeadingItem,
+  GranularLanguageInput,
+] | undefined = undefined;
 const localeStrings: LyraLocaleStrings = { close: 'Close' };
 const localeKey: LyraMessageKey = 'close';
 registerLyraLocale('packed-typecheck', localeStrings);
 defineElement('consumer-empty', Empty);
+void conversationTypes;
 
 class PackedLitElementRenderer {
   static matchesClass(

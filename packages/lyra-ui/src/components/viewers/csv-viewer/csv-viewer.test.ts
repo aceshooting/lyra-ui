@@ -203,6 +203,22 @@ describe('lr-csv-viewer', () => {
     expect(base.getAttribute('role')).to.equal('region');
     expect(base.getAttribute('aria-label')).to.equal('Quarterly report');
   });
+  it('preserves an explicitly empty host aria-label on both region and loaded table', async () => {
+    const el = (await fixture(html`<lr-csv-viewer name="quarterly.csv" aria-label=""></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/report.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="sheet"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      const sheet = el.shadowRoot!.querySelector('[part="sheet"]')!;
+      expect(base.hasAttribute('aria-label')).to.be.true;
+      expect(base.getAttribute('aria-label')).to.equal('');
+      expect(sheet.hasAttribute('aria-label')).to.be.true;
+      expect(sheet.getAttribute('aria-label')).to.equal('');
+    } finally {
+      restore();
+    }
+  });
   it('emits exactly one render error for an unsafe URL', async () => {
     const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     let count = 0;
@@ -327,7 +343,7 @@ describe('lr-csv-viewer', () => {
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
-        expect(highlighted).to.exist;
+        expect((highlighted) != null).to.equal(true);
         expect(highlighted.getAttribute('role')).to.equal('cell');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         expect(action !== null).to.be.true;
@@ -336,6 +352,25 @@ describe('lr-csv-viewer', () => {
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('localizes the complete highlighted-cell name with independently ordered value and label placeholders', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      el.strings = {
+        cellHighlightWithLabel: '{label} ⇐ {value}',
+      };
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        expect(action.getAttribute('aria-label')).to.equal('First result ⇐ Ada');
       } finally {
         restore();
       }

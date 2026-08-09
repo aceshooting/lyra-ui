@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 const meta: Meta = {
   title: 'WordCloud',
@@ -30,13 +31,11 @@ export const Default: Story = {
 };
 
 export const SqrtScale: Story = {
-  render: () =>
-    html`<lr-word-cloud .words=${WORDS} scale="sqrt" style="height: 20rem"></lr-word-cloud>`,
+  render: () => html`<lr-word-cloud .words=${WORDS} scale="sqrt" style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const MixedOrientation: Story = {
-  render: () =>
-    html`<lr-word-cloud .words=${WORDS} orientations="mixed" style="height: 20rem"></lr-word-cloud>`,
+  render: () => html`<lr-word-cloud .words=${WORDS} orientations="mixed" style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const GroupedColors: Story = {
@@ -78,13 +77,64 @@ export const CustomPalette: Story = {
     html`<lr-word-cloud
       style="height: 20rem"
       .words=${WORDS}
-      .palette=${[
-        storyColor('danger'),
-        storyColor('warning'),
-        storyColor('success'),
-        storyColor('brand'),
-      ]}
+      .palette=${[storyColor('danger'), storyColor('warning'), storyColor('success'), storyColor('brand')]}
     ></lr-word-cloud>`,
+};
+
+export const AncestorPalette: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The default palette hooks inherit from a theme wrapper; use the palette property when colors come from data instead.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-word-cloud-color-1: var(--lr-color-danger); --lr-word-cloud-color-2: var(--lr-color-warning); --lr-word-cloud-color-3: var(--lr-color-success); --lr-word-cloud-color-4: var(--lr-color-brand)"
+    >
+      <lr-word-cloud .words=${WORDS} style="height: var(--lr-size-20rem)"></lr-word-cloud>
+    </div>
+  `,
+};
+
+export const NarrowLegend: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paired LTR/RTL allocations at the default 20rem (320px) contract combine mixed word orientations with long localized legend labels.',
+      },
+    },
+  },
+  render: () =>
+    narrowStoryFrames((direction) => {
+      const rtl = direction === 'rtl';
+      return html`
+        <lr-word-cloud
+          show-legend
+          orientations="mixed"
+          style="block-size: var(--lr-size-20rem)"
+          .words=${[
+            { text: rtl ? 'إمكانية الوصول' : 'Barrierefreiheit', weight: 90, group: 'quality' },
+            { text: rtl ? 'مكونات الويب' : 'Webkomponenten', weight: 70, group: 'platform' },
+            { text: rtl ? 'التدويل' : 'Internationalisierung', weight: 55, group: 'quality' },
+            { text: rtl ? 'اختبار' : 'Tests', weight: 40, group: 'platform' },
+          ]}
+          .legend=${[
+            {
+              label: rtl ? 'فئةجودةطويلةجداًوغيرقابلةللالتفاف' : 'SehrLangeNichtUmbrechbareQualitätskategorie',
+              color: storyColor('brand'),
+            },
+            {
+              label: rtl ? 'منصة المكونات المشتركة' : 'Gemeinsame Komponentenplattform',
+              color: storyColor('success'),
+            },
+          ]}
+        ></lr-word-cloud>
+      `;
+    }),
 };
 
 export const Empty: Story = {

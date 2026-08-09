@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './calendar-viewer.js';
 
-const meta: Meta = { title: 'CalendarViewer', component: 'lr-calendar-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'CalendarViewer',
+  component: 'lr-calendar-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A host `aria-label` names the calendar region by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks.' } } },
+};
 export default meta;
 type Story = StoryObj;
 const SAMPLE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//storybook//EN', 'BEGIN:VEVENT', 'UID:event-1@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260714T140000Z', 'DTEND:20260714T150000Z', 'SUMMARY:Quarterly planning', 'LOCATION:Room 204', 'DESCRIPTION:Review roadmap and budget.', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');

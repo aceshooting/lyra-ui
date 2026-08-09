@@ -29,8 +29,10 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). `maxHeight` caps the scrollable document body; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
+`max-height`). A host `aria-label` names the rendered document by attribute presence, including an
+explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
+scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
 'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 

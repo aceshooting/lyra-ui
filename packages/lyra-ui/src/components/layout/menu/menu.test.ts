@@ -40,6 +40,60 @@ it('renders role="menu" around the default slot, and reflects open=false by defa
   expect(items(el).length).to.equal(3);
 });
 
+it("renders a triggerless standalone menu visible and keyboard reachable", async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Document actions">
+      <lr-menu-label>File</lr-menu-label>
+      <lr-menu-item value="open">Open</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+  const [first, second] = items(el);
+
+  expect(getComputedStyle(popup).visibility).to.equal("visible");
+  expect(first.tabIndex).to.equal(0);
+  expect(second.tabIndex).to.equal(-1);
+  first.focus();
+  first.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  expect(document.activeElement?.getAttribute("value")).to.equal("duplicate");
+  await expect(el).to.be.accessible();
+});
+
+it("switches between standalone and trigger-owned presentations when the trigger changes", async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Document actions">
+      <lr-menu-item value="open">Open</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+  expect(getComputedStyle(popup).visibility).to.equal("visible");
+
+  const button = document.createElement("button");
+  button.slot = "trigger";
+  button.textContent = "Actions";
+  el.prepend(button);
+  await nextFrame();
+  await el.updateComplete;
+  await waitUntil(() => getComputedStyle(popup).visibility === "hidden");
+  expect(getComputedStyle(popup).visibility).to.equal("hidden");
+  expect(items(el).map((item) => item.tabIndex)).to.deep.equal([-1, -1]);
+
+  button.remove();
+  await nextFrame();
+  await el.updateComplete;
+  await waitUntil(() => getComputedStyle(popup).visibility === "visible");
+  expect(getComputedStyle(popup).visibility).to.equal("visible");
+  expect(items(el).map((item) => item.tabIndex)).to.deep.equal([0, -1]);
+});
+
 it("sets aria-haspopup/aria-expanded/aria-controls on the assigned trigger element", async () => {
   const el = (await fixture(basic())) as LyraMenu;
   const btn = trigger(el);
@@ -146,7 +200,7 @@ it("opens on trigger click and moves focus to the first item", async () => {
   trigger(el).click();
   await el.updateComplete;
   expect(el.open).to.be.true;
-  expect(document.activeElement).to.equal(items(el)[0]);
+  expect((document.activeElement) === (items(el)[0])).to.equal(true);
 });
 
 it("closes on a second trigger click", async () => {
@@ -172,7 +226,7 @@ it("opens with focus on the first item via ArrowDown on the trigger", async () =
   );
   await el.updateComplete;
   expect(el.open).to.be.true;
-  expect(document.activeElement).to.equal(items(el)[0]);
+  expect((document.activeElement) === (items(el)[0])).to.equal(true);
 });
 
 it("opens with focus on the last item via ArrowUp on the trigger", async () => {
@@ -186,7 +240,7 @@ it("opens with focus on the last item via ArrowUp on the trigger", async () => {
   );
   await el.updateComplete;
   expect(el.open).to.be.true;
-  expect(document.activeElement).to.equal(items(el)[2]);
+  expect((document.activeElement) === (items(el)[2])).to.equal(true);
 });
 
 it("gives the roving-focused item tabIndex 0 and every other item -1", async () => {
@@ -204,7 +258,7 @@ it("moves the roving focus with ArrowDown/ArrowUp, wrapping past either end", as
   trigger(el).click();
   await el.updateComplete;
   const [first, second, third] = items(el);
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 
   (document.activeElement as HTMLElement).dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -214,7 +268,7 @@ it("moves the roving focus with ArrowDown/ArrowUp, wrapping past either end", as
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(second);
+  expect((document.activeElement) === (second)).to.equal(true);
 
   (document.activeElement as HTMLElement).dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -224,7 +278,7 @@ it("moves the roving focus with ArrowDown/ArrowUp, wrapping past either end", as
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(third);
+  expect((document.activeElement) === (third)).to.equal(true);
 
   // Wraps past the last item back to the first.
   (document.activeElement as HTMLElement).dispatchEvent(
@@ -235,7 +289,7 @@ it("moves the roving focus with ArrowDown/ArrowUp, wrapping past either end", as
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 
   // Wraps backward past the first item to the last.
   (document.activeElement as HTMLElement).dispatchEvent(
@@ -246,7 +300,7 @@ it("moves the roving focus with ArrowDown/ArrowUp, wrapping past either end", as
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(third);
+  expect((document.activeElement) === (third)).to.equal(true);
 });
 
 it("Home/End jump to the first/last item", async () => {
@@ -263,7 +317,7 @@ it("Home/End jump to the first/last item", async () => {
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(third);
+  expect((document.activeElement) === (third)).to.equal(true);
 
   (document.activeElement as HTMLElement).dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -273,7 +327,7 @@ it("Home/End jump to the first/last item", async () => {
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 });
 
 it("selects the active item with Enter and closes, refocusing the trigger", async () => {
@@ -294,7 +348,7 @@ it("selects the active item with Enter and closes, refocusing the trigger", asyn
   const ev = await oneEvent(el, "lr-menu-select");
   expect(ev.detail).to.deep.equal({ value: "rename" });
   expect(el.open).to.be.false;
-  expect(document.activeElement).to.equal(btn);
+  expect((document.activeElement) === (btn)).to.equal(true);
 });
 
 it("selects the active item with Space, same as Enter", async () => {
@@ -381,7 +435,7 @@ it("skips a disabled item during ArrowDown navigation", async () => {
   trigger(el).click();
   await el.updateComplete;
   const [a, , c] = items(el);
-  expect(document.activeElement).to.equal(a);
+  expect((document.activeElement) === (a)).to.equal(true);
 
   (document.activeElement as HTMLElement).dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -391,7 +445,7 @@ it("skips a disabled item during ArrowDown navigation", async () => {
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(c);
+  expect((document.activeElement) === (c)).to.equal(true);
 });
 
 /**
@@ -635,7 +689,7 @@ it("closes on Escape and returns focus to the trigger", async () => {
   );
   await el.updateComplete;
   expect(el.open).to.be.false;
-  expect(document.activeElement).to.equal(btn);
+  expect((document.activeElement) === (btn)).to.equal(true);
 });
 
 it("closes on a pointerdown outside the trigger and popup, without refocusing the trigger", async () => {
@@ -754,7 +808,7 @@ it("positions the popup and moves focus even when declared open from the start (
   `)) as LyraMenu;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.style.position).to.equal("fixed");
-  expect(document.activeElement).to.equal(items(el)[0]);
+  expect((document.activeElement) === (items(el)[0])).to.equal(true);
 });
 
 it("positions the popup relative to the trigger element via place()", async () => {
@@ -902,12 +956,12 @@ it("resyncs the roving activeIndex when focus lands on an item outside setActive
   trigger(el).click();
   await el.updateComplete;
   const [a, b] = items(el);
-  expect(document.activeElement).to.equal(a);
+  expect((document.activeElement) === (a)).to.equal(true);
 
   // A real mousedown-driven focus lands directly on the disabled item --
   // tabIndex="-1" remains mouse-focusable per spec -- bypassing setActiveItem().
   b.focus();
-  expect(document.activeElement).to.equal(b);
+  expect((document.activeElement) === (b)).to.equal(true);
   await el.updateComplete;
 
   // Without the focusin resync, activeIndex would still be stuck on `a`'s
@@ -921,7 +975,7 @@ it("resyncs the roving activeIndex when focus lands on an item outside setActive
     })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(a);
+  expect((document.activeElement) === (a)).to.equal(true);
 });
 
 it("closes on Tab without preventing the default focus-advance behavior", async () => {
@@ -953,7 +1007,7 @@ it("jumps the roving focus with type-ahead to the next non-disabled item whose t
     new KeyboardEvent("keydown", { key: "d", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(duplicate);
+  expect((document.activeElement) === (duplicate)).to.equal(true);
 });
 
 it("accumulates the type-ahead buffer across quick keystrokes to narrow the match", async () => {
@@ -970,7 +1024,7 @@ it("accumulates the type-ahead buffer across quick keystrokes to narrow the matc
     new KeyboardEvent("keydown", { key: "e", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(destroy);
+  expect((document.activeElement) === (destroy)).to.equal(true);
 });
 
 it("case-folds type-ahead with the effective locale", async () => {
@@ -988,7 +1042,7 @@ it("case-folds type-ahead with the effective locale", async () => {
     new KeyboardEvent("keydown", { key: "ı", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(light);
+  expect((document.activeElement) === (light)).to.equal(true);
 });
 
 it("clears the type-ahead buffer across disconnect and reconnect", async () => {
@@ -1010,7 +1064,7 @@ it("clears the type-ahead buffer across disconnect and reconnect", async () => {
     new KeyboardEvent("keydown", { key: "e", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(rename);
+  expect((document.activeElement) === (rename)).to.equal(true);
 });
 
 it("clips horizontal overflow while retaining vertical list scrolling", async () => {
@@ -1037,7 +1091,7 @@ it("skips a disabled item during type-ahead even when its text would otherwise m
     new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(blueberry);
+  expect((document.activeElement) === (blueberry)).to.equal(true);
 });
 
 it("skips a hidden or aria-hidden item during type-ahead even when its text would otherwise match", async () => {
@@ -1058,7 +1112,7 @@ it("skips a hidden or aria-hidden item during type-ahead even when its text woul
     new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true })
   );
   await el.updateComplete;
-  expect(document.activeElement).to.equal(blueberry);
+  expect((document.activeElement) === (blueberry)).to.equal(true);
 });
 
 it("does not intercept Arrow/Home/End/Escape from a non-LyraMenuItem child slotted into the default slot", async () => {
@@ -1159,7 +1213,7 @@ it("closes and refocuses the trigger on Escape from slotted non-item content whe
   );
   await el.updateComplete;
   expect(el.open).to.be.false;
-  expect(document.activeElement).to.equal(btn);
+  expect((document.activeElement) === (btn)).to.equal(true);
 });
 
 it("still gives Arrow/Home/End/Enter/Space full default behavior from slotted non-item content even when closeOnEscapeAnywhere is true", async () => {

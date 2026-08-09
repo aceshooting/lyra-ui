@@ -28,6 +28,14 @@ export const Default: Story = {
 };
 
 export const Disabled: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Direct or fieldset disablement also aborts any keyboard or captured-pointer gesture already in flight. A later physical release cannot commit a stale change; form reset applies the same invalidation before restoring declared values.',
+      },
+    },
+  },
   render: () =>
     html`<lr-time-range min="0" max="100" start="20" end="80" disabled></lr-time-range>`,
 };
@@ -35,6 +43,22 @@ export const Disabled: Story = {
 export const CoarseStep: Story = {
   render: () =>
     html`<lr-time-range min="0" max="100" start="20" end="80" step="10"></lr-time-range>`,
+};
+
+export const KeyboardBlurCommit: Story = {
+  name: 'Keyboard blur commit',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Move a handle with Arrow/Home/End/PageUp/PageDown, then move focus before releasing the key. The pending keyboard gesture commits once on handle blur; the later keyup cannot emit a duplicate change.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>
+    <button type="button">Next focus target</button>
+  `,
 };
 
 export const HumanReadableValueText: Story = {
@@ -90,6 +114,38 @@ export const ThemedActivePreset: Story = {
       )}; --lr-time-range-preset-active-border-color: ${storyColor(
         'success',
       )}; --lr-time-range-preset-active-color: ${storyColor('onBrand')};"
+    ></lr-time-range>
+  `,
+};
+
+/** Preset and handle pointer states have independent hooks, with the original shared-token paint
+ * retained as the fallback when a hook is unset. Hover or press each control to compare them. */
+export const IndependentPointerStates: Story = {
+  name: 'Independent pointer-state themes',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Preset hover/press and handle rest/hover/press paint can be themed independently without changing a library-wide brand token.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-time-range
+      min="0"
+      max="90"
+      start="0"
+      end="30"
+      .presets=${presets}
+      style="
+        --lr-time-range-preset-hover-border-color: var(--lr-color-success);
+        --lr-time-range-preset-pressed-border-color: var(--lr-color-warning);
+        --lr-time-range-preset-pressed-bg: var(--lr-color-warning-quiet);
+        --lr-time-range-handle-bg: var(--lr-color-brand);
+        --lr-time-range-handle-border-color: var(--lr-color-surface-raised);
+        --lr-time-range-handle-hover-bg: var(--lr-color-success);
+        --lr-time-range-handle-pressed-bg: var(--lr-color-warning);
+      "
     ></lr-time-range>
   `,
 };

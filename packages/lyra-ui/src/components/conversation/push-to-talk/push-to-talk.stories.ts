@@ -19,8 +19,19 @@ export const Toggle: Story = {
 };
 
 export const WithLevelEventsAndMaxDuration: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`level-events`, `max-duration-ms`, and `show-timer` remain live during a recording. Changing them starts or stops their owned runtime work immediately; a revised maximum duration remains measured from the original recording start.',
+      },
+    },
+  },
   render: () => html`
-    <lr-push-to-talk mode="toggle" level-events max-duration-ms="30000"
+    <lr-push-to-talk
+      mode="toggle"
+      level-events
+      max-duration-ms="30000"
       @lr-level=${(e: CustomEvent<{ level: number }>) => console.log('level', e.detail.level)}
     ></lr-push-to-talk>
   `,

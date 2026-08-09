@@ -16,11 +16,13 @@ export const styles = css`
     font-size: var(--lr-details-font-size, var(--lr-form-control-font-size));
   }
   :host([appearance='outlined']) [part~='accordion-item'] {
-    background: var(--lr-color-surface);
+    background: var(--lr-accordion-item-outlined-bg, var(--lr-color-surface));
   }
-  :host([appearance='filled']) [part~='accordion-item'],
+  :host([appearance='filled']) [part~='accordion-item'] {
+    background: var(--lr-accordion-item-filled-bg, var(--lr-color-surface-raised));
+  }
   :host([appearance='filled-outlined']) [part~='accordion-item'] {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-accordion-item-filled-outlined-bg, var(--lr-color-surface-raised));
   }
   [part~='heading'] {
     margin: 0;
@@ -44,13 +46,16 @@ export const styles = css`
     cursor: pointer;
   }
   [part~='button']:where(:hover):where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-accordion-item-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part~='button']:where(:active):where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-accordion-item-button-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part~='button']:where(:focus-visible) {

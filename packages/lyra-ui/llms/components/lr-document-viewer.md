@@ -19,6 +19,9 @@ A dialog-hosted, format-dispatching full viewer for one document or attachment. 
 renderer registry and falls back to `<lr-document-preview>` when no renderer matches the file's MIME
 type. First-party invention.
 
+A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty
+value, without suppressing the visible `name` heading.
+
 **Properties:**
 - `open: boolean = false` (reflected) — opens or closes the viewer dialog.
 - `name: string = ''` — display name passed to the renderer and used as the dialog heading.
@@ -37,8 +40,10 @@ type. First-party invention.
   renderer.
 
 **Events:**
-- `lr-close` — `detail: DocumentViewerCloseReason`, the nested dialog's dismissal reason. The
-  event is emitted after the viewer sets `open` to `false`.
+- `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
+  The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
+  its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
+  does not close the document viewer.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per

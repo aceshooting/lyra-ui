@@ -22,6 +22,7 @@ geometry always comes from the canvas's `registerCompanion()` snapshots, so the 
 disagree.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; when empty, the nearest ancestor canvas
   is used (the slotted-into-a-corner-slot case, the primary wiring)
 - `label: string = ''` — accessible name for the map region. A host `aria-label` takes precedence,
@@ -32,7 +33,8 @@ disagree.
 **Slots:** none.
 
 **CSS parts:** `base`, `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
-draggable, focusable view rectangle).
+draggable, focusable view rectangle), `instructions` (visually hidden keyboard help), and
+`live-region` (the `aria-hidden` mirror of the latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
 `--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
@@ -52,17 +54,22 @@ success, danger, and warning colors respectively. Their expanded names are
 ```
 
 **Known gotchas:**
+
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
   from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
   currently renders.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
-  event to wire up.
+  event to wire up. A completed drag consumes only the browser-synthesized click following its
+  `pointerup`; a canceled or lost-capture drag leaves the next genuine map click available for
+  click-to-center navigation.
 
 **Additional API surface:**
 
 - `part="instructions"` — Visually hidden keyboard instructions for the viewport.
 - `part="live-region"` — Visually hidden, `aria-hidden` mirror of the latest viewport-change text.
-  The initial companion snapshot is silent; interaction-requested changes append to the document's
-  shared light-DOM polite sink, including repeated identical snapshots.
+  The initial companion snapshot is silent. Keyboard, map-click, and wheel viewport changes append
+  their next rAF-coalesced snapshot to the document's shared light-DOM polite sink; a completed
+  viewport drag appends its final position once, while canceled/lost-capture drags remain silent.
+  Repeated identical snapshots are still separate additions.
 
 ---

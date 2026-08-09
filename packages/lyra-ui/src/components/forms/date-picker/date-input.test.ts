@@ -673,11 +673,11 @@ it('uses shared svg icons instead of literal glyphs for clear and calendar toggl
   await el.updateComplete;
 
   const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
-  expect(clearBtn.querySelector('svg')).to.exist;
+  expect((clearBtn.querySelector('svg')) != null).to.equal(true);
   expect(clearBtn.textContent?.trim()).to.equal('');
 
   const expandIcon = el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
-  expect(expandIcon.querySelector('svg')).to.exist;
+  expect((expandIcon.querySelector('svg')) != null).to.equal(true);
   expect(expandIcon.textContent?.trim()).to.equal('');
 });
 
@@ -736,7 +736,7 @@ it('renders errorText in var(--lr-color-danger), distinct from and alongside the
 
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
-  expect(errorPart).to.exist;
+  expect((errorPart) != null).to.equal(true);
   expect(errorPart.textContent).to.contain('Invalid date');
   expect(hintPart.textContent).to.contain('Use ISO format');
   expect(getComputedStyle(errorPart).color).to.not.equal(getComputedStyle(hintPart).color);
@@ -1017,7 +1017,7 @@ it('re-binds positioning after a disconnect+reconnect while open', async () => {
   parent.appendChild(el);
   await el.updateComplete;
   const popup = el.shadowRoot!.querySelector('[part="popup"] [part="date-picker"]')!;
-  expect(popup).to.exist; // popup content still renders; positioning re-attached, not just left stale
+  expect((popup) != null).to.equal(true); // popup content still renders; positioning re-attached, not just left stale
 });
 
 it('resets `open` on disconnect so a later reconnect starts from a clean, re-bindable state', async () => {
@@ -1313,16 +1313,16 @@ describe('native-wrapper focus/selection/editing surface', () => {
   it('exposes the internal date text input via a public getter', async () => {
     const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
-    expect(el.input).to.equal(el.shadowRoot!.querySelector('[part="input"]'));
+    expect((el.input) === (el.shadowRoot!.querySelector('[part="input"]'))).to.equal(true);
   });
 
   it('focus()/blur() delegate to the internal input instead of the host', async () => {
     const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
     await el.updateComplete;
     el.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(el.input);
+    expect((el.shadowRoot!.activeElement) === (el.input)).to.equal(true);
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('select() and the selectionStart/selectionEnd accessors operate on the internal input', async () => {
@@ -1455,7 +1455,7 @@ describe('start/end adornment slots', () => {
       </lr-date-input>
     `)) as LyraDateInput;
     await el.updateComplete;
-    expect(part(el, 'clear-button')).to.exist;
+    expect((part(el, 'clear-button')) != null).to.equal(true);
     await expect(el).to.be.accessible();
   });
 });
@@ -2435,11 +2435,11 @@ it('normalizes an invalid placement attribute to bottom-start', async () => {
 it('setting validationTarget overrides the default input anchor', async () => {
   const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   const anchor = document.createElement('span');
-  expect(el.validationTarget).to.equal(el.input);
+  expect((el.validationTarget) === (el.input)).to.equal(true);
   el.validationTarget = anchor;
-  expect(el.validationTarget).to.equal(anchor);
+  expect((el.validationTarget) === (anchor)).to.equal(true);
   el.validationTarget = undefined;
-  expect(el.validationTarget).to.equal(el.input);
+  expect((el.validationTarget) === (el.input)).to.equal(true);
 });
 
 it('reads valueAsRange back in range mode and reports nulls outside it', async () => {
@@ -2659,8 +2659,8 @@ describe('lr-date-input cross-document and reconnect listener guards', () => {
     };
     expect(priv.cleanupFn, 'positioned while open').to.be.a('function');
     expect(priv.overlayHandle, 'overlay active while open').to.exist;
-    expect(priv.visibilityListenerDocument, 'visibility listener bound').to.exist;
-    expect(priv.pointerListenerDocument, 'pointer listener bound').to.exist;
+    expect((priv.visibilityListenerDocument) != null, 'visibility listener bound').to.equal(true);
+    expect((priv.pointerListenerDocument) != null, 'pointer listener bound').to.equal(true);
 
     let deactivated = false;
     priv.overlayHandle!.deactivate = () => { deactivated = true; };
@@ -2670,8 +2670,8 @@ describe('lr-date-input cross-document and reconnect listener guards', () => {
     expect(deactivated, 'the overlay handle was deactivated').to.be.true;
     expect(priv.cleanupFn, 'positioning cleanup cleared').to.equal(undefined);
     expect(priv.overlayHandle, 'overlay handle cleared').to.equal(undefined);
-    expect(priv.visibilityListenerDocument, 'visibility listener unbound').to.equal(undefined);
-    expect(priv.pointerListenerDocument, 'pointer listener unbound').to.equal(undefined);
+    expect((priv.visibilityListenerDocument) === (undefined), 'visibility listener unbound').to.equal(true);
+    expect((priv.pointerListenerDocument) === (undefined), 'pointer listener unbound').to.equal(true);
   });
 });
 
@@ -2711,4 +2711,21 @@ it('does not commit or dispatch a native change when Enter is pressed over unpar
   expect(input.value).to.equal(committedDisplay);
   expect(changes).to.equal(0);
   expect(el.internals.validity.badInput).to.be.true;
+});
+
+it('contains an unbroken end adornment in a 320px LTR or RTL allocation', async () => {
+  const adornment = 'LocalizedDateMetadata'.repeat(64);
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px; overflow: auto">
+        <lr-date-input style="max-inline-size: 100%"><span slot="end">${adornment}</span></lr-date-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+    const inputWrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+    expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(inputWrapper.scrollWidth, `${direction} input wrapper scroll width`).to.be.at.most(
+      inputWrapper.clientWidth,
+    );
+  }
 });

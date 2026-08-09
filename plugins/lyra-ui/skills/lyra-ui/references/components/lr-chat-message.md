@@ -15,7 +15,7 @@
 
 ## `lr-chat-message`
 
-A role-based message bubble *shell* for a chat/agent conversation surface. It renders none of the
+A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
 chrome: alignment/coloring by `role`, an avatar/badges header row, an optional collapse toggle, an
@@ -27,6 +27,7 @@ and `<lr-code-block>`'s copy-affordance event name/shape, for anything listening
 conversation-surface level).
 
 **Properties:**
+
 - `role: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`) — reflects to
   `data-role`, **not** the bare `role` attribute (those role strings aren't valid ARIA role tokens
   and reflecting to `role` would collide with the element's own ARIA role); a plain `role="..."`
@@ -101,7 +102,7 @@ Two matching geometry properties cover the bubble's box:
   library.
 
 **Use these instead of a `::part(bubble)` padding/radius override.** A `::part` declaration written
-in the consumer's tree outranks *every* rule inside this component's shadow tree, so a
+in the consumer's tree outranks _every_ rule inside this component's shadow tree, so a
 `::part(bubble) { padding: … }` rule silently suppresses the per-`status` treatments layered on the
 same element — `status="failed"`'s danger tint, `status="streaming"`'s border — along with the
 per-role fills above. The two properties are declared as `var()` fallbacks at the point of use and
@@ -122,7 +123,7 @@ via `::part(bubble)`) so message bubbles stay visually distinct from the surroun
 > Retheming a bubble from outside `<lr-chat-message>` (e.g. per-thread or per-role colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
 component, auto-imported alongside this one, not an npm peer) for the status-transition
@@ -136,12 +137,14 @@ announcements described below.
   <button slot="actions">Copy</button>
 </lr-chat-message>
 <script>
-  document.querySelector('lr-chat-message').addEventListener('lr-retry', () => resend());
+  document
+    .querySelector("lr-chat-message")
+    .addEventListener("lr-retry", () => resend());
 </script>
 ```
 
 Accessibility of `status`: the current status is always available as plain visible text
-(`[part="status-text"]`), never color alone. A transition *to* `"failed"`, or *from* `"streaming"` to
+(`[part="status-text"]`), never color alone. A transition _to_ `"failed"`, or _from_ `"streaming"` to
 `"sent"` (a stream finishing), is additionally announced through the internal `<lr-live-region>` —
 `"failed"` announces assertively (`"Message failed to send."`), a streaming→sent completion announces
 politely (`"Message complete."`) — so a screen-reader user not currently focused on this message
@@ -152,9 +155,10 @@ since that component only ever announces once (its own mount); this component's 
 between several values across a single element's lifetime.
 
 **Known gotchas:**
+
 - mounting a message with `status="failed"` (or any other non-`"sent"` status) already set does
-  **not** announce anything — only a genuine *later* transition (`changed.get('status') !==
-  undefined`, i.e. not the very first update) triggers the live-region announcement.
+  **not** announce anything — only a genuine _later_ transition (`changed.get('status') !==
+undefined`, i.e. not the very first update) triggers the live-region announcement.
 - `lr-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
   and is omitted otherwise.
 - the header/footer/avatar/badges/attachments/actions wrappers are shown/hidden via the `hidden`

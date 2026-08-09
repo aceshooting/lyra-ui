@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import {
@@ -39,6 +40,8 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
 /**
  * `<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries
  * the selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.
+ * Controlled action refreshes preserve a focused action by id, otherwise move to the nearest
+ * survivor, or focus the toolbar when no actions remain, without overriding newer focus moves.
  *
  * @customElement lr-selection-toolbar
  * @event lr-selection-action - An action was chosen. `detail: { action, text, anchor }`.
@@ -77,6 +80,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   @property() text = '';
   @property({ attribute: false }) anchor: DocumentLocator | null = null;
   @property({ attribute: false }) rect: DOMRectReadOnly | null = null;
+  /**
+   * Controlled action set. A focused action survives reordering by id; if it is removed, focus
+   * moves to the nearest action or the stable toolbar when the set becomes empty.
+   */
   @property({ attribute: false }) actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy'];
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -88,6 +95,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private lifecycleGeneration = 0;
   private positioningGeneration = 0;
   private rovingGeneration = 0;
+  private pendingActionFocus?: { action: SelectionAction; index: number; origin: Element };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -102,6 +110,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   override disconnectedCallback(): void {
     this.lifecycleGeneration++;
     this.rovingGeneration++;
+    this.pendingActionFocus = undefined;
     this.retirePositioning();
     this.overlay?.suspend();
     super.disconnectedCallback();
@@ -112,17 +121,63 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     // every continuation and exact owner-window subscription retained by the old document.
     this.lifecycleGeneration++;
     this.rovingGeneration++;
+    this.pendingActionFocus = undefined;
     this.retirePositioning();
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('actions')) return;
+    const active = activeElementIn(this.shadowRoot);
+    if (active?.nodeType !== 1 || !active.matches('lr-button[data-action]')) return;
+    const activeButton = active as HTMLElement;
+    const action = activeButton.getAttribute('data-action') as SelectionAction | null;
+    const index = this.actionButtons().indexOf(activeButton);
+    if (!action || index < 0) return;
+    this.pendingActionFocus = { action, index, origin: activeButton };
+  }
+
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open') || changed.has('text')) this.syncOpenLifecycle();
     if (this.open && this.text && (changed.has('rect') || changed.has('actions'))) {
       this.updateToolbarPosition();
     }
     if (this.open && this.text && (changed.has('open') || changed.has('text') || changed.has('actions'))) {
-      void this.syncRovingStops();
+      const pending = changed.has('actions') ? this.pendingActionFocus : undefined;
+      this.pendingActionFocus = undefined;
+      if (!pending) {
+        void this.syncRovingStops();
+        return;
+      }
+      const buttons = this.actionButtons();
+      const retainedIndex = buttons.findIndex(
+        (button) => button.getAttribute('data-action') === pending.action,
+      );
+      const targetIndex = retainedIndex >= 0
+        ? retainedIndex
+        : Math.min(Math.max(pending.index, 0), buttons.length - 1);
+      if (buttons.length === 0) {
+        this.scheduleAfterUpdate(() => {
+          if (this.canRestoreActionFocus(pending.origin)) this.toolbar?.focus();
+        }, 'selection-toolbar-focus');
+        return;
+      }
+      void this.syncRovingStops(targetIndex).then((button) => {
+        if (button && this.canRestoreActionFocus(pending.origin)) button.focus();
+      });
     }
+  }
+
+  private canRestoreActionFocus(origin: Element): boolean {
+    const documentActive = activeElementIn(this.ownerDocument);
+    if (
+      documentActive !== null &&
+      documentActive !== this.ownerDocument.body &&
+      documentActive !== this
+    ) return false;
+    const internalActive = activeElementIn(this.shadowRoot);
+    return internalActive === null || internalActive === origin;
   }
 
   private syncOpenLifecycle(): void {

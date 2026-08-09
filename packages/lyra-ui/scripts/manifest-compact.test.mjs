@@ -18,6 +18,10 @@ assert.equal(
 );
 assert.deepEqual(child.members.map(({ name }) => name), ['value', 'setRangeText']);
 assert.deepEqual(child.attributes.map(({ name }) => name), ['value']);
+assert.deepEqual(child.slots.map(({ name }) => name), ['', 'label']);
+assert.equal(child.slots.find(({ name }) => name === 'label').description, 'The child-specific label.');
+assert.deepEqual(child.cssProperties.map(({ name }) => name), ['--lr-fixture-base-color', '--lr-fixture-child-color']);
+assert.equal(child.cssProperties[0].default, 'blue');
 // Unlike members/attributes/events/slots/cssProperties, cssParts are never pruned back off a
 // resolvable subclass: `::part()` consumers (docs generators, editor tooling, ::part() lint
 // checks) look a tag's parts up per element and do not walk the JS superclass chain the way a
@@ -46,6 +50,10 @@ assert.deepEqual(
   expanded.modules[1].declarations[0].slots.map(({ name }) => name),
   ['', 'label'],
 );
+assert.equal(
+  expanded.modules[1].declarations[0].slots.find(({ name }) => name === 'label').description,
+  'The child-specific label.',
+);
 assert.deepEqual(
   expanded.modules[1].declarations[0].cssParts.map(({ name }) => name),
   ['base', 'control'],
@@ -54,6 +62,7 @@ assert.deepEqual(
   expanded.modules[1].declarations[0].cssProperties.map(({ name }) => name),
   ['--lr-fixture-base-color', '--lr-fixture-child-color'],
 );
+assert.equal(expanded.modules[1].declarations[0].cssProperties[0].default, 'blue');
 assert.deepEqual(expanded.modules[2].declarations[0].members.map(({ name }) => name), ['mixedValue']);
 
 const storybook = publicStorybookManifest(compact);

@@ -42,6 +42,13 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * @csspart icon - Expand/collapse icon container.
  * @csspart panel - Expandable panel.
  * @csspart content - Content container inside the panel.
+ * @cssprop [--lr-accordion-item-outlined-bg=var(--lr-color-surface)] - Outlined item background.
+ * @cssprop [--lr-accordion-item-filled-bg=var(--lr-color-surface-raised)] - Filled item background.
+ * @cssprop [--lr-accordion-item-filled-outlined-bg=var(--lr-color-surface-raised)] -
+ *   Filled-outlined item background.
+ * @cssprop [--lr-accordion-item-button-hover-bg=var(--lr-color-brand-quiet)] - Trigger hover
+ *   background.
+ * @cssprop [--lr-accordion-item-button-active-bg=color-mix(...)] - Trigger pressed background.
  * @cssprop [--lr-accordion-item-spacing=var(--lr-form-control-padding-inline)] - Header/content
  *   spacing.
  * @cssprop [--lr-accordion-item-show-duration=var(--lr-duration-base)] - Expand transition

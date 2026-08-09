@@ -2,6 +2,7 @@ import { fixture, expect, html, elementUpdated } from '@open-wc/testing';
 import './slider.js';
 import type { LyraSlider } from './slider.js';
 import { styles } from './slider.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function mockTrackWidth(el: LyraSlider, width: number): void {
   const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
@@ -20,6 +21,62 @@ function mockTrackWidth(el: LyraSlider, width: number): void {
       },
     }) as DOMRect;
 }
+
+it('themes the row gap through a component-scoped hook', async () => {
+  const el = (await fixture(html`
+    <lr-slider aria-label="Volume" style="--lr-slider-gap: 13px"></lr-slider>
+  `)) as LyraSlider;
+  expect(getComputedStyle(el).columnGap).to.equal('13px');
+  expect(getComputedStyle(el).rowGap).to.equal('13px');
+});
+
+it('themes slider thumb rest, hover, and pressed paint through component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-slider
+      aria-label="Volume"
+      style="
+        --lr-slider-thumb-bg: rgb(1, 2, 3);
+        --lr-slider-thumb-border-color: rgb(4, 5, 6);
+        --lr-slider-thumb-hover-ring-color: rgb(7, 8, 9);
+        --lr-slider-thumb-active-ring-color: rgb(10, 11, 12);
+      "
+    ></lr-slider>
+  `)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+  expect(getComputedStyle(thumb).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(thumb).borderTopColor).to.equal('rgb(4, 5, 6)');
+  const rect = thumb.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(thumb).boxShadow).to.contain('rgb(7, 8, 9)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(thumb).boxShadow).to.contain('rgb(10, 11, 12)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('contains standalone unbroken label, reference, and hint content at 320px in LTR and RTL', async () => {
+  const text = 'InternationalizedSliderContentWithoutAnyNaturalBreakOpportunity';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-slider label=${text} hint=${text} show-value>
+          <span slot="reference">${text}</span>
+        </lr-slider>
+      </div>
+    `);
+    const slider = wrapper.querySelector('lr-slider')!;
+    expect(wrapper.scrollWidth, `dir=${direction} wrapper`).to.be.at.most(wrapper.clientWidth);
+    expect(slider.getBoundingClientRect().width, `dir=${direction} host`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
+  }
+});
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`<lr-slider aria-label="Volume"></lr-slider>`)) as LyraSlider;
@@ -358,7 +415,7 @@ it('renders the indicator and thumb position from the current percent-of-range',
 it('renders the visible value readout when requested, and omits it by default', async () => {
   const shown = (await fixture(html`<lr-slider value="42" show-value></lr-slider>`)) as LyraSlider;
   const readout = shown.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
-  expect(readout).to.exist;
+  expect((readout) != null).to.equal(true);
   expect(readout.textContent).to.equal('42');
   expect(readout.getAttribute('aria-hidden')).to.equal('true');
 
@@ -439,6 +496,24 @@ it('lets a forwarded host aria-label win on the thumb while retaining the label 
   )) as LyraSlider;
   const thumb3 = hostOverride.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   expect(thumb3.getAttribute('aria-label')).to.equal('Author label');
+});
+
+it('preserves an explicitly empty host aria-label on both slider role-owner shapes', async () => {
+  const single = (await fixture(
+    html`<lr-slider aria-label="" label="Volume"></lr-slider>`,
+  )) as LyraSlider;
+  const thumb = single.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(thumb.hasAttribute('aria-label')).to.equal(true);
+  expect(thumb.getAttribute('aria-label')).to.equal('');
+  expect(thumb.hasAttribute('aria-labelledby')).to.equal(false);
+
+  const range = (await fixture(
+    html`<lr-slider range aria-label="" label="Budget"></lr-slider>`,
+  )) as LyraSlider;
+  const base = range.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-label')).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('');
+  expect(base.hasAttribute('aria-labelledby')).to.equal(false);
 });
 
 it('falls back to the localized generic slider label when neither `label` nor a host aria-label is set', async () => {
@@ -921,7 +996,7 @@ it('forwards host focus()/blur() to the internal thumb control', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement === thumb).to.be.true;
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('blurs the active range thumb and relays exactly one native pair plus prefixed aliases', async () => {
@@ -941,7 +1016,7 @@ it('blurs the active range thumb and relays exactly one native pair plus prefixe
   expect(el.shadowRoot!.activeElement === maxThumb).to.be.true;
   el.blur();
 
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
@@ -2259,14 +2334,14 @@ it('steps the low handle of a range and blurs whichever thumb has focus', async 
 
   el.focus();
   await elementUpdated(el);
-  expect(el.shadowRoot!.activeElement).to.exist;
+  expect((el.shadowRoot!.activeElement) != null).to.equal(true);
   el.blur();
   await elementUpdated(el);
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 
   // Blurring again with nothing focused falls back to the first thumb and stays a no-op.
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('renders markers only for a finite, reasonably sized grid', async () => {

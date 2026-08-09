@@ -6,16 +6,16 @@ import '../input/input.js';
 import '../select/select.js';
 import '../button/button.js';
 import '../token-input/token-input.js';
+import '../color-picker/color-picker.js';
 import '../../layout/segmented/segmented.js';
 import type { ComboboxFilterDetail, LyraCombobox } from './combobox.js';
+import type { LyraColorPicker } from '../color-picker/color-picker.js';
 import { styles } from './combobox.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function assertiveAnnouncements(): string[] {
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  );
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
@@ -36,7 +36,7 @@ async function typeQuery(el: LyraCombobox, text: string) {
       composed: true,
       data: text,
       inputType: 'insertText',
-    }),
+    })
   );
   await el.updateComplete;
   return input;
@@ -415,7 +415,9 @@ it('participates in a form (single + multiple)', async () => {
  *  toward each other and reports a false "serious" violation. Finishing it outright matches the
  *  idiom overlay.test.ts already uses for this same kind of reveal animation. */
 const finishListboxAnimation = (el: LyraCombobox): void => {
-  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
+  el.shadowRoot!.querySelector('[part="listbox"]')
+    ?.getAnimations()
+    .forEach((animation) => animation.finish());
 };
 
 it('is accessible', async () => {
@@ -438,7 +440,13 @@ it('is accessible with the listbox open, a keyboard-active option, and selected 
   el.open = true;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      composed: true,
+    })
+  );
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
   expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]') !== null).to.be.true;
@@ -521,9 +529,7 @@ it('updates disabled form participation synchronously without awaiting a Lit upd
 });
 
 it('switches the submitted single/multiple representation synchronously', async () => {
-  const form = (await fixture(html`
-    <form><lr-combobox name="tags"></lr-combobox></form>
-  `)) as HTMLFormElement;
+  const form = (await fixture(html` <form><lr-combobox name="tags"></lr-combobox></form> `)) as HTMLFormElement;
   const el = form.querySelector('lr-combobox') as LyraCombobox;
   el.value = ['a', 'b'];
   expect(new FormData(form).getAll('tags')).to.deep.equal(['a']);
@@ -585,9 +591,7 @@ it('keeps only the first declared default selected when a single combobox resets
 });
 
 it('applies post-mount defaultSelected changes to a pristine live selection', async () => {
-  const el = (await fixture(html`
-    <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
-  `)) as LyraCombobox;
+  const el = (await fixture(html` <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox> `)) as LyraCombobox;
   const option = el.querySelector('lr-option')!;
   await el.updateComplete;
   expect(el.value).to.equal('');
@@ -650,13 +654,17 @@ it('keeps a late-slotted default selection pristine for subsequent default chang
 
 it('retains a defaultSelected refresh when the parent detaches during option notification', async () => {
   const form = (await fixture(html`
-    <form><lr-combobox name="fruit"><lr-option value="a">Apple</lr-option></lr-combobox></form>
+    <form>
+      <lr-combobox name="fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+    </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-combobox') as LyraCombobox;
   const option = el.querySelector('lr-option')!;
   await el.updateComplete;
 
-  option.addEventListener('lr-option-change', () => el.remove(), { once: true });
+  option.addEventListener('lr-option-change', () => el.remove(), {
+    once: true,
+  });
   option.defaultSelected = true;
   await option.updateComplete;
   await Promise.resolve();
@@ -922,7 +930,10 @@ it('does not render an orphaned asterisk when required but no label is provided'
 
 it('applies the shared focus-ring tokens to the clear and tag-remove buttons', () => {
   const css = styles.cssText;
-  const clearFocusBlock = /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?tag__remove-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
+  const clearFocusBlock =
+    /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?tag__remove-button['"]?]:focus-visible\s*{([^}]*)}/.exec(
+      css
+    );
   expect(clearFocusBlock, 'expected a shared clear/tag-remove :focus-visible rule').to.not.equal(null);
   expect(clearFocusBlock![1]).to.include('var(--lr-focus-ring-width)');
   expect(clearFocusBlock![1]).to.include('var(--lr-focus-ring-color)');
@@ -971,9 +982,7 @@ it('renders sub and dot-color from light-DOM options', async () => {
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="option-sub"]')!.textContent).to.equal('Running');
-  expect((el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement).style.background).to.equal(
-    'green',
-  );
+  expect((el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement).style.background).to.equal('green');
 });
 
 it('sanitizes maxOptionsVisible/maxRender to finite non-negative integers instead of poisoning the row cap/tag cap with NaN', async () => {
@@ -1019,9 +1028,7 @@ it('caps rendered rows at maxRender and shows an overflow indicator', async () =
 });
 
 it('formats the option-overflow count with the effective locale', async () => {
-  const el = (await fixture(
-    html`<lr-combobox lang="ar-EG" max-render="3"></lr-combobox>`,
-  )) as LyraCombobox;
+  const el = (await fixture(html`<lr-combobox lang="ar-EG" max-render="3"></lr-combobox>`)) as LyraCombobox;
   for (let i = 0; i < 10; i++) {
     const opt = document.createElement('lr-option');
     opt.value = `${i}`;
@@ -1030,8 +1037,9 @@ it('formats the option-overflow count with the effective locale', async () => {
   }
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent)
-    .to.include(new Intl.NumberFormat('ar-EG').format(7));
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.include(
+    new Intl.NumberFormat('ar-EG').format(7)
+  );
 });
 
 it('always keeps the current selection visible even when capped out', async () => {
@@ -1064,7 +1072,7 @@ it('calls source with the current query (debounced) and renders its rows', async
 
   expect(calls).to.deep.equal(['']);
   expect(el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!.textContent).to.contain(
-    'Result for ""',
+    'Result for ""'
   );
 
   await typeQuery(el, 'ban');
@@ -1083,7 +1091,7 @@ it('shows a loading row while an in-flight source call is pending', async () => 
   await waitUntil(
     () => el.shadowRoot!.querySelector('.loading') !== null,
     'loading state was not rendered after the source debounce',
-    { timeout: 2000 },
+    { timeout: 2000 }
   );
 
   // Resolving the source promise only fires the `.then()` -> set asyncRows -> `.finally()` ->
@@ -1126,9 +1134,7 @@ it('ignores a stale source response that resolves after a newer query', async ()
   // `.trim()`: `[part="option-label"]`'s textContent includes the template's own whitespace
   // (it wraps the label in a nested `<span>` alongside a conditional `sub` span), so comparing
   // the raw textContent against a bare label string was never actually going to match.
-  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) =>
-    n.textContent?.trim(),
-  );
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) => n.textContent?.trim());
   expect(labels).to.deep.equal(['Fresh result']);
 });
 
@@ -1164,6 +1170,78 @@ it('closes the listbox on a pointerdown outside the element after it was opened 
   expect(el.open).to.be.false;
 });
 
+it('shares visual order and topmost dismissal with other managed nonmodal overlays', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-color-picker label="Accent"></lr-color-picker>
+      ${basic()}
+      <button id="outside" type="button">Outside</button>
+    </div>
+  `)) as HTMLElement;
+  const color = root.querySelector('lr-color-picker') as LyraColorPicker;
+  const combo = root.querySelector('lr-combobox') as LyraCombobox;
+  const outside = root.querySelector('#outside') as HTMLButtonElement;
+  const input = combo.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  const listbox = combo.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+
+  color.open = true;
+  await color.updateComplete;
+  input.focus();
+  combo.open = true;
+  await combo.updateComplete;
+  await aTimeout(0);
+  const comboOverlay = (combo as unknown as {
+    overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+  }).overlayHandle;
+  expect(comboOverlay?.isActive()).to.be.true;
+  expect(comboOverlay?.isTopmost()).to.be.true;
+
+  const colorStack = Number.parseInt(color.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  const comboStack = Number.parseInt(combo.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  expect(Number.isFinite(colorStack)).to.be.true;
+  expect(comboStack).to.be.greaterThan(colorStack);
+  expect(Number.parseInt(getComputedStyle(listbox).zIndex, 10)).to.equal(comboStack);
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await combo.updateComplete;
+  await color.updateComplete;
+  expect(combo.open, 'Escape closes only the newest overlay').to.be.false;
+  expect(color.open, 'the older overlay remains open').to.be.true;
+
+  combo.open = true;
+  await combo.updateComplete;
+  outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  outside.focus();
+  await combo.updateComplete;
+  await color.updateComplete;
+  expect(combo.open, 'outside pointer closes only the newest overlay').to.be.false;
+  expect(color.open, 'the older overlay remains open after the same pointer event').to.be.true;
+  expect(document.activeElement === color, 'focus returns through the manager to the surviving overlay').to.be.true;
+
+  color.open = false;
+  await color.updateComplete;
+
+  combo.open = true;
+  await combo.updateComplete;
+  color.open = true;
+  await color.updateComplete;
+  await aTimeout(0);
+  const reverseComboStack = Number.parseInt(combo.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  const reverseColorStack = Number.parseInt(color.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  const colorPanel = color.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  expect(reverseColorStack).to.be.greaterThan(reverseComboStack);
+  expect(Number.parseInt(getComputedStyle(colorPanel).zIndex, 10)).to.equal(reverseColorStack);
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await color.updateComplete;
+  await combo.updateComplete;
+  expect(color.open, 'reverse order Escape closes only the newest color picker').to.be.false;
+  expect(combo.open, 'reverse order leaves the older combobox open').to.be.true;
+
+  combo.open = false;
+  await combo.updateComplete;
+});
+
 it('re-fetches with the reset query after picking a row, refreshing stale async results (multiple + source)', async () => {
   const el = (await fixture(html`<lr-combobox multiple></lr-combobox>`)) as LyraCombobox;
   const calls: string[] = [];
@@ -1192,9 +1270,7 @@ it('re-fetches with the reset query after picking a row, refreshing stale async 
   await el.updateComplete;
 
   expect(calls).to.deep.equal(['', 'ban', '']);
-  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) =>
-    n.textContent?.trim(),
-  );
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) => n.textContent?.trim());
   expect(labels).to.deep.equal(['Apple', 'Banana']);
 });
 
@@ -1342,9 +1418,7 @@ it('shows the empty-state message with a custom emptyText when no rows match', a
 // path must resolve each listbox message -- a set prop wins verbatim instead
 // (covered by the emptyText test above).
 it('resolves the loading message through .strings when loadingText is unset', async () => {
-  const el = (await fixture(
-    html`<lr-combobox .strings=${{ loading: 'Chargement…' }}></lr-combobox>`,
-  )) as LyraCombobox;
+  const el = (await fixture(html`<lr-combobox .strings=${{ loading: 'Chargement…' }}></lr-combobox>`)) as LyraCombobox;
   el.source = () => new Promise(() => {});
   el.open = true;
   await el.updateComplete;
@@ -1356,7 +1430,7 @@ it('resolves the loading message through .strings when loadingText is unset', as
 
 it('resolves the no-matches message through .strings when emptyText is unset', async () => {
   const el = (await fixture(
-    html`<lr-combobox .strings=${{ noMatches: 'Aucun résultat' }}></lr-combobox>`,
+    html`<lr-combobox .strings=${{ noMatches: 'Aucun résultat' }}></lr-combobox>`
   )) as LyraCombobox;
   el.open = true;
   await el.updateComplete;
@@ -1366,7 +1440,7 @@ it('resolves the no-matches message through .strings when emptyText is unset', a
 
 it('resolves the overflow indicator through .strings, interpolating {n}, when overflowText is unset', async () => {
   const el = (await fixture(
-    html`<lr-combobox max-render="3" .strings=${{ comboboxOverflow: '+{n} de plus' }}></lr-combobox>`,
+    html`<lr-combobox max-render="3" .strings=${{ comboboxOverflow: '+{n} de plus' }}></lr-combobox>`
   )) as LyraCombobox;
   for (let i = 0; i < 10; i++) {
     const opt = document.createElement('lr-option');
@@ -1417,7 +1491,7 @@ it('is accessible while showing the loading state (async source pending)', async
   await waitUntil(
     () => el.shadowRoot!.querySelector('.loading') !== null,
     'loading state was not rendered before the accessibility check',
-    { timeout: 2000 },
+    { timeout: 2000 }
   );
   finishListboxAnimation(el);
   await expect(el).to.be.accessible();
@@ -1455,8 +1529,7 @@ it('renders structured async-row adornments and preserves selected opaque data',
 it('retains a loaded async row when its value is selected programmatically before a later query omits it', async () => {
   const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
   const payload = { kind: 'city', longitude: 6.13 };
-  el.source = async (query) =>
-    query ? [] : [{ value: 'lux', label: 'Luxembourg', data: payload }];
+  el.source = async (query) => (query ? [] : [{ value: 'lux', label: 'Luxembourg', data: payload }]);
   el.open = true;
   await el.updateComplete;
   await aTimeout(250);
@@ -1519,7 +1592,11 @@ it('keeps the dropdown open on a mousedown inside the listbox but outside any op
   expect(el.open).to.be.true;
 
   const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
-  const ev = new MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true });
+  const ev = new MouseEvent('mousedown', {
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
   listbox.dispatchEvent(ev);
   // The browser's default action for an uncancelled mousedown moves focus to
   // the pressed element, blurring the input. Synthetic dispatchEvent never
@@ -1547,7 +1624,7 @@ it('ignores a mousedown on the combobox container while disabled', async () => {
 
 it('prefers a host-level aria-label over label/placeholder for the input', async () => {
   const el = (await fixture(
-    html`<lr-combobox aria-label="Filter items" placeholder="Search…"></lr-combobox>`,
+    html`<lr-combobox aria-label="Filter items" placeholder="Search…"></lr-combobox>`
   )) as LyraCombobox;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLElement;
   expect(input.getAttribute('aria-label')).to.equal('Filter items');
@@ -1667,7 +1744,9 @@ it('resets `open` to false on disconnect so a reconnect never resumes half-open 
 });
 
 it('re-renders when an already-slotted option mutates its own label', async () => {
-  const el = (await fixture(html`<lr-combobox><lr-option value="x">Old label</lr-option></lr-combobox>`)) as LyraCombobox;
+  const el = (await fixture(
+    html`<lr-combobox><lr-option value="x">Old label</lr-option></lr-combobox>`
+  )) as LyraCombobox;
   // Open *before* mutating the option's label so the `lr-option-change`
   // notification path (MutationObserver -> emit -> `onOptionChange()`
   // reassigning `options`) is the only thing that can update the
@@ -1788,8 +1867,7 @@ it('omits aria-activedescendant when no option is active', async () => {
 
 it('localizes and locale-formats the selected-tag overflow count', async () => {
   const el = (await fixture(html`
-    <lr-combobox multiple max-options-visible="1" locale="ar-EG"
-      .strings=${{ comboboxSelectedOverflow: '{n} إضافية' }}>
+    <lr-combobox multiple max-options-visible="1" locale="ar-EG" .strings=${{ comboboxSelectedOverflow: '{n} إضافية' }}>
       <lr-option value="a">A</lr-option>
       <lr-option value="b">B</lr-option>
       <lr-option value="c">C</lr-option>
@@ -1802,8 +1880,7 @@ it('localizes and locale-formats the selected-tag overflow count', async () => {
 
 it('renders a localized, non-live error row and announces each async source failure in light DOM', async () => {
   const el = (await fixture(html`
-    <lr-combobox source-delay="0" open
-      .strings=${{ comboboxLoadError: 'Options unavailable' }}></lr-combobox>
+    <lr-combobox source-delay="0" open .strings=${{ comboboxLoadError: 'Options unavailable' }}></lr-combobox>
   `)) as LyraCombobox;
   const originalWarn = console.warn;
   console.warn = () => {};
@@ -1852,8 +1929,7 @@ it('invalidates an in-flight request when source is replaced and clamps active s
   await aTimeout(0);
   await el.updateComplete;
 
-  const labels = [...el.shadowRoot!.querySelectorAll('[part="option"]')]
-    .map((row) => row.textContent?.trim());
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="option"]')].map((row) => row.textContent?.trim());
   expect(labels).to.deep.equal(['New']);
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   expect(input.hasAttribute('aria-activedescendant')).to.be.false;
@@ -1881,9 +1957,17 @@ it('resets an abandoned single-select filter query on close (Escape) so a reopen
 
   const input = await typeQuery(el, 'ban');
   expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
+  const overlay = (el as unknown as {
+    overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+  }).overlayHandle;
+  expect(overlay?.isActive()).to.be.true;
+  expect(overlay?.isTopmost()).to.be.true;
 
   // Dismiss via Escape without picking a row.
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  input.dispatchEvent(escape);
+  expect(escape.defaultPrevented, 'the topmost combobox owns Escape').to.be.true;
+  expect(el.open, 'Escape closes synchronously before the render').to.be.false;
   await el.updateComplete;
   expect(el.open).to.be.false;
 
@@ -1953,7 +2037,7 @@ it('uses a custom loadingText instead of the hardcoded default while a source ca
 
 it('uses a custom overflowText with a {n} token substitution instead of the hardcoded default', async () => {
   const el = (await fixture(
-    html`<lr-combobox max-render="3" overflow-text="Only 3 shown, {n} hidden"></lr-combobox>`,
+    html`<lr-combobox max-render="3" overflow-text="Only 3 shown, {n} hidden"></lr-combobox>`
   )) as LyraCombobox;
   for (let i = 0; i < 10; i++) {
     const opt = document.createElement('lr-option');
@@ -1964,9 +2048,7 @@ it('uses a custom overflowText with a {n} token substitution instead of the hard
   el.open = true;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.equal(
-    'Only 3 shown, 7 hidden',
-  );
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.equal('Only 3 shown, 7 hidden');
 });
 
 it('jumps to the first row on Home and the last navigable row on End', async () => {
@@ -2011,6 +2093,53 @@ it('skips a trailing disabled option so End lands on the last navigable row', as
   expect(activeRow?.textContent).to.contain('Banana');
 });
 
+it('normalizes the active descendant after local option removal and disablement', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+  el.open = true;
+  await el.updateComplete;
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await el.updateComplete;
+  let activeId = input.getAttribute('aria-activedescendant');
+  expect(el.shadowRoot!.getElementById(activeId ?? '')?.getAttribute('data-value')).to.equal('c');
+
+  el.querySelector<HTMLElement>('lr-option[value="c"]')!.remove();
+  await aTimeout(0);
+  await el.updateComplete;
+  activeId = input.getAttribute('aria-activedescendant');
+  expect(el.shadowRoot!.getElementById(activeId ?? '')?.getAttribute('data-value')).to.equal('b');
+
+  (
+    el.querySelector('lr-option[value="b"]') as HTMLElement & {
+      disabled: boolean;
+    }
+  ).disabled = true;
+  await aTimeout(0);
+  await el.updateComplete;
+  activeId = input.getAttribute('aria-activedescendant');
+  expect(el.shadowRoot!.getElementById(activeId ?? '')?.getAttribute('data-value')).to.equal('a');
+
+  (
+    el.querySelector('lr-option[value="a"]') as HTMLElement & {
+      disabled: boolean;
+    }
+  ).disabled = true;
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(input.hasAttribute('aria-activedescendant')).to.be.false;
+
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      composed: true,
+    })
+  );
+  await el.updateComplete;
+  expect(input.hasAttribute('aria-activedescendant')).to.be.false;
+});
+
 it('scrolls the keyboard-active option into view in a scrolling listbox', async () => {
   const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
   for (let i = 0; i < 20; i++) {
@@ -2039,8 +2168,8 @@ it('scrolls the keyboard-active option into view in a scrolling listbox', async 
   const rowRect = activeRow.getBoundingClientRect();
   const boxRect = box.getBoundingClientRect();
   expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;
-  expect(rowRect.bottom <= boxRect.bottom + 1, 'active row bottom must be within the scrolled listbox viewport').to
-    .be.true;
+  expect(rowRect.bottom <= boxRect.bottom + 1, 'active row bottom must be within the scrolled listbox viewport').to.be
+    .true;
 });
 
 it('prunes _selectedLabelCache back to the live selection instead of growing unboundedly', async () => {
@@ -2071,16 +2200,16 @@ it('prunes _selectedLabelCache back to the live selection instead of growing unb
 it('registers the outside-click pointerdown listener on this.ownerDocument, not the bare global document', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   const fakeDoc = document.implementation.createHTMLDocument('fake');
-  let addCalls = 0;
-  let removeCalls = 0;
+  let pointerAddCalls = 0;
+  let pointerRemoveCalls = 0;
   const originalAdd = fakeDoc.addEventListener.bind(fakeDoc);
   const originalRemove = fakeDoc.removeEventListener.bind(fakeDoc);
   fakeDoc.addEventListener = ((...args: Parameters<typeof originalAdd>) => {
-    addCalls++;
+    if (args[0] === 'pointerdown') pointerAddCalls++;
     return originalAdd(...args);
   }) as typeof fakeDoc.addEventListener;
   fakeDoc.removeEventListener = ((...args: Parameters<typeof originalRemove>) => {
-    removeCalls++;
+    if (args[0] === 'pointerdown') pointerRemoveCalls++;
     return originalRemove(...args);
   }) as typeof fakeDoc.removeEventListener;
   // Swaps what `this.ownerDocument` resolves to for this instance only --
@@ -2088,15 +2217,18 @@ it('registers the outside-click pointerdown listener on this.ownerDocument, not 
   // document rather than the bare global `document` the module closure
   // captured at evaluation time (the bug this regression guards against
   // only manifests when those two differ, e.g. a same-origin iframe).
-  Object.defineProperty(el, 'ownerDocument', { value: fakeDoc, configurable: true });
+  Object.defineProperty(el, 'ownerDocument', {
+    value: fakeDoc,
+    configurable: true,
+  });
 
   el.open = true;
   await el.updateComplete;
-  expect(addCalls).to.equal(1);
+  expect(pointerAddCalls).to.equal(1);
 
   el.open = false;
   await el.updateComplete;
-  expect(removeCalls).to.equal(1);
+  expect(pointerRemoveCalls).to.equal(1);
 });
 
 it('folds the filter query and option labels through locale-aware toLocaleLowerCase, not the invariant toLowerCase', async () => {
@@ -2209,13 +2341,13 @@ describe('size', () => {
       const stepEl = await fixture(html`<lr-combobox size=${step} label="Tags"></lr-combobox>`);
       const box = (el: Element) => el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
       expect(getComputedStyle(box(aliasEl)).minBlockSize, `min-block-size for ${alias}`).to.equal(
-        getComputedStyle(box(stepEl)).minBlockSize,
+        getComputedStyle(box(stepEl)).minBlockSize
       );
       expect(getComputedStyle(box(aliasEl)).fontSize, `font-size for ${alias}`).to.equal(
-        getComputedStyle(box(stepEl)).fontSize,
+        getComputedStyle(box(stepEl)).fontSize
       );
       expect(box(aliasEl).getBoundingClientRect().height, `laid-out height for ${alias}`).to.equal(
-        box(stepEl).getBoundingClientRect().height,
+        box(stepEl).getBoundingClientRect().height
       );
     }
   });
@@ -2260,9 +2392,7 @@ describe('size', () => {
     `)) as LyraCombobox;
     const mBox = mEl.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
     const xsBox = xsEl.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
-    expect(parseFloat(getComputedStyle(xsBox).minHeight)).to.be.lessThan(
-      parseFloat(getComputedStyle(mBox).minHeight),
-    );
+    expect(parseFloat(getComputedStyle(xsBox).minHeight)).to.be.lessThan(parseFloat(getComputedStyle(mBox).minHeight));
   });
 
   it('aligns input, select, combobox, and segmented at size="s" without part overrides', async () => {
@@ -2271,11 +2401,7 @@ describe('size', () => {
         <lr-input size="s" aria-label="Input"></lr-input>
         <lr-select size="s" aria-label="Select"></lr-select>
         <lr-combobox size="s" aria-label="Combobox"><lr-option value="a">Apple</lr-option></lr-combobox>
-        <lr-segmented
-          size="s"
-          value="a"
-          .items=${[{ value: 'a', label: 'Alpha' }]}
-        ></lr-segmented>
+        <lr-segmented size="s" value="a" .items=${[{ value: 'a', label: 'Alpha' }]}></lr-segmented>
       </div>
     `);
     const input = root.querySelector('lr-input')!.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
@@ -2306,9 +2432,7 @@ describe('size', () => {
     await xsEl.updateComplete;
     const mTag = mEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
     const xsTag = xsEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
-    expect(parseFloat(getComputedStyle(xsTag).fontSize)).to.be.lessThan(
-      parseFloat(getComputedStyle(mTag).fontSize),
-    );
+    expect(parseFloat(getComputedStyle(xsTag).fontSize)).to.be.lessThan(parseFloat(getComputedStyle(mTag).fontSize));
   });
 });
 
@@ -2398,7 +2522,10 @@ describe('native input surface', () => {
 
 describe('lr-filter (live filter text)', () => {
   /** Collects every `lr-filter` detail value in dispatch order. */
-  function trackFilter(el: LyraCombobox): { values: string[]; events: CustomEvent<ComboboxFilterDetail>[] } {
+  function trackFilter(el: LyraCombobox): {
+    values: string[];
+    events: CustomEvent<ComboboxFilterDetail>[];
+  } {
     const values: string[] = [];
     const events: CustomEvent<ComboboxFilterDetail>[] = [];
     el.addEventListener('lr-filter', (event) => {
@@ -2615,13 +2742,14 @@ describe('exact-height escape hatch', () => {
 });
 
 describe('start/end adornment slots', () => {
-  const part = (el: LyraCombobox, name: string) =>
-    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+  const part = (el: LyraCombobox, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
   it('renders a slotted glyph inside the trigger, before the field text, with no consumer padding', async () => {
     const el = (await fixture(html`
       <lr-combobox size="s" label="Fruit">
-        <svg slot="start" width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>
+        <svg slot="start" width="12" height="12" aria-hidden="true">
+          <circle cx="6" cy="6" r="5"></circle>
+        </svg>
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
@@ -2646,10 +2774,10 @@ describe('start/end adornment slots', () => {
     await el.updateComplete;
     const end = part(el, 'end');
     expect(end.hasAttribute('hidden')).to.be.false;
-    expect(end.compareDocumentPosition(part(el, 'expand-icon')) & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(0);
-    expect(end.getBoundingClientRect().right).to.be.at.most(
-      part(el, 'expand-icon').getBoundingClientRect().left + 1,
+    expect(end.compareDocumentPosition(part(el, 'expand-icon')) & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(
+      0
     );
+    expect(end.getBoundingClientRect().right).to.be.at.most(part(el, 'expand-icon').getBoundingClientRect().left + 1);
   });
 
   it('hides both wrappers when nothing is slotted', async () => {
@@ -2718,8 +2846,7 @@ describe('start/end adornment slots', () => {
 describe('clear affordance on the filter axis', () => {
   const clearButton = (el: LyraCombobox) =>
     el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
-  const inputEl = (el: LyraCombobox) =>
-    el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  const inputEl = (el: LyraCombobox) => el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
 
   it('renders the clear button for a query-only state and clearing it emits lr-filter with an empty value', async () => {
     const el = (await fixture(html`
@@ -2788,7 +2915,9 @@ describe('clear affordance on the filter axis', () => {
     const filters: string[] = [];
     let changes = 0;
     let clears = 0;
-    el.addEventListener('lr-filter', (event) => filters.push((event as CustomEvent<ComboboxFilterDetail>).detail.value));
+    el.addEventListener('lr-filter', (event) =>
+      filters.push((event as CustomEvent<ComboboxFilterDetail>).detail.value)
+    );
     el.addEventListener('change', () => changes++);
     el.addEventListener('lr-clear', () => clears++);
 
@@ -2890,7 +3019,7 @@ it("renders the combobox-input's ::placeholder in the shared quiet-text token's 
   // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a
   // shadow-DOM part boundary issue). This reads the actual rendered pseudo-element instead.
   const el = (await fixture(
-    html`<lr-combobox style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-combobox>`,
+    html`<lr-combobox style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-combobox>`
   )) as LyraCombobox;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
@@ -3038,13 +3167,17 @@ it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
   // live (rather than grepping source text for the call) is to patch the base-class hook itself
   // -- the exact hook a future mixin would extend -- and confirm it actually fires.
   const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'willUpdate');
-  const original = (LitElement.prototype as unknown as { willUpdate?: (changed: PropertyValues) => void })
-    .willUpdate;
+  const original = (
+    LitElement.prototype as unknown as {
+      willUpdate?: (changed: PropertyValues) => void;
+    }
+  ).willUpdate;
   let called = false;
-  (LitElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void }).willUpdate = function (
-    this: LitElement,
-    changed: PropertyValues,
-  ) {
+  (
+    LitElement.prototype as unknown as {
+      willUpdate: (changed: PropertyValues) => void;
+    }
+  ).willUpdate = function (this: LitElement, changed: PropertyValues) {
     called = true;
     original?.call(this, changed);
   };
@@ -3066,12 +3199,17 @@ it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
 
 it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
   const hadOwn = Object.prototype.hasOwnProperty.call(LitElement.prototype, 'updated');
-  const original = (LitElement.prototype as unknown as { updated?: (changed: PropertyValues) => void }).updated;
+  const original = (
+    LitElement.prototype as unknown as {
+      updated?: (changed: PropertyValues) => void;
+    }
+  ).updated;
   let called = false;
-  (LitElement.prototype as unknown as { updated: (changed: PropertyValues) => void }).updated = function (
-    this: LitElement,
-    changed: PropertyValues,
-  ) {
+  (
+    LitElement.prototype as unknown as {
+      updated: (changed: PropertyValues) => void;
+    }
+  ).updated = function (this: LitElement, changed: PropertyValues) {
     called = true;
     original?.call(this, changed);
   };
@@ -3139,9 +3277,7 @@ describe('source AbortSignal and configurable debounce', () => {
     await el.updateComplete;
     await aTimeout(250);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!.textContent).to.contain(
-      'Result ""',
-    );
+    expect(el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!.textContent).to.contain('Result ""');
   });
 
   it('honours a custom sourceDelay (sanitized to a finite non-negative duration)', async () => {
@@ -3162,9 +3298,11 @@ describe('ElementInternals fallback', () => {
    *  suite): the component must still construct and stay inert rather than throwing on import. */
   const withAttachInternals = async (
     impl: undefined | (() => never),
-    assertion: (el: LyraCombobox) => void,
+    assertion: (el: LyraCombobox) => void
   ): Promise<void> => {
-    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const proto = HTMLElement.prototype as unknown as {
+      attachInternals?: unknown;
+    };
     const original = proto.attachInternals;
     if (impl === undefined) delete proto.attachInternals;
     else proto.attachInternals = impl;
@@ -3179,10 +3317,10 @@ describe('ElementInternals fallback', () => {
   it('falls back to inert no-op internals when attachInternals is missing entirely', async () => {
     await withAttachInternals(undefined, (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect(internals.form === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
-      expect(internals.labels).to.deep.equal([]);
+      expect(internals.labels.length).to.equal(0);
       expect(internals.checkValidity()).to.be.true;
       expect(internals.reportValidity()).to.be.true;
       expect(() => internals.setFormValue('x')).to.not.throw();
@@ -3199,7 +3337,7 @@ describe('ElementInternals fallback', () => {
         const internals = (el as unknown as { internals: ElementInternals }).internals;
         expect(internals.willValidate).to.be.false;
         expect(internals.reportValidity()).to.be.true;
-      },
+      }
     );
   });
 });
@@ -3233,13 +3371,25 @@ it('ArrowDown and ArrowUp open a closed list before moving within it', async () 
   const el = (await fixture(basic())) as LyraCombobox;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   expect(el.open).to.be.false;
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.true;
 
   const second = (await fixture(basic())) as LyraCombobox;
   const secondInput = second.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
-  secondInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  secondInput.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await second.updateComplete;
   expect(second.open).to.be.true;
 });
@@ -3279,10 +3429,7 @@ it('tints the tag remove button on hover and deepens that tint while it is press
   await el.updateComplete;
   const remove = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLElement;
   const rect = remove.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
+  const centre: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
   const rest = getComputedStyle(remove).backgroundColor;
   try {
     await sendMouse({ type: 'move', position: centre });
@@ -3509,7 +3656,13 @@ describe('lr-combobox setCustomValidity()', () => {
 describe('lr-combobox implicit form submission', () => {
   const enterOn = (el: LyraCombobox, init: KeyboardEventInit = {}) =>
     (el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement).dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        ...init,
+      })
     );
 
   const inForm = () => html`
@@ -3526,7 +3679,10 @@ describe('lr-combobox implicit form submission', () => {
     const el = form.querySelector('lr-combobox') as LyraCombobox;
     await el.updateComplete;
     let submits = 0;
-    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
     enterOn(el);
     expect(submits).to.equal(1);
   });
@@ -3557,11 +3713,19 @@ describe('lr-combobox implicit form submission', () => {
     const el = form.querySelector('lr-combobox') as LyraCombobox;
     await el.updateComplete;
     let submits = 0;
-    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
     el.show();
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement).dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
     enterOn(el);
@@ -3575,7 +3739,10 @@ describe('lr-combobox implicit form submission', () => {
     const el = form.querySelector('lr-combobox') as LyraCombobox;
     await el.updateComplete;
     let submits = 0;
-    form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submits += 1;
+    });
     enterOn(el, { shiftKey: true });
     enterOn(el, { ctrlKey: true });
     enterOn(el, { altKey: true });
@@ -3617,9 +3784,7 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
     expect(el.withHint).to.be.false;
     expect(el.withLabel).to.be.false;
     expect(el.validators).to.deep.equal([]);
-    expect(el.validationTarget).to.equal(
-      el.shadowRoot!.querySelector('[part~="combobox-input"]'),
-    );
+    expect(el.validationTarget === el.shadowRoot!.querySelector('[part~="combobox-input"]')).to.equal(true);
     expect(el.resetValidity).to.be.a('function');
     expect(el.show).to.be.a('function');
     expect(el.hide).to.be.a('function');
@@ -3655,17 +3820,14 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
 
   it('renders a localized create row and lets lr-create veto the default append/select behavior', async () => {
     const el = (await fixture(html`
-      <lr-combobox
-        allow-create
-        .strings=${{ comboboxCreate: 'Ajouter {value}' }}
-      >
+      <lr-combobox allow-create .strings=${{ comboboxCreate: 'Ajouter {value}' }}>
         <lr-option value="existing">Existing</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
     await typeQuery(el, 'New tag');
 
     const create = el.shadowRoot!.querySelector('[data-create]') as HTMLElement;
-    expect(create).to.exist;
+    expect(create != null).to.equal(true);
     expect(create.textContent).to.contain('Ajouter New tag');
 
     let detail: { inputValue: string } | undefined;
@@ -3675,14 +3837,15 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
         detail = event.detail;
         event.preventDefault();
       },
-      { once: true },
+      { once: true }
     );
     create.click();
     await el.updateComplete;
 
     expect(detail).to.deep.equal({ inputValue: 'New tag' });
     expect(el.value).to.equal('');
-    expect([...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'New tag')).to.be.false;
+    expect([...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'New tag')).to.be
+      .false;
   });
 
   it('appends and selects a created lr-option by default in single and multiple modes', async () => {
@@ -3697,13 +3860,11 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
       await el.updateComplete;
 
       const created = [...el.querySelectorAll('lr-option')].find(
-        (option) => option.getAttribute('value') === 'New tag',
+        (option) => option.getAttribute('value') === 'New tag'
       );
       expect(created).to.exist;
       expect(created!.textContent).to.equal('New tag');
-      expect(multiple ? el.value : [el.value]).to.deep.equal(
-        multiple ? ['existing', 'New tag'] : ['New tag'],
-      );
+      expect(multiple ? el.value : [el.value]).to.deep.equal(multiple ? ['existing', 'New tag'] : ['New tag']);
     }
   });
 
@@ -3720,7 +3881,7 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
         bubbles: true,
         composed: true,
         cancelable: true,
-      }),
+      })
     );
     await el.updateComplete;
 
@@ -3748,12 +3909,7 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
     expect(el.shadowRoot!.querySelector('slot[name="expand-icon"]')).to.exist;
     el.getTag = undefined;
     await el.updateComplete;
-    for (const part of [
-      'form-control-input',
-      'label',
-      'tag__content',
-      'tag__remove-button__base',
-    ]) {
+    for (const part of ['form-control-input', 'label', 'tag__content', 'tag__remove-button__base']) {
       expect(el.shadowRoot!.querySelector(`[part~="${part}"]`), part).to.exist;
     }
   });
@@ -3780,7 +3936,7 @@ describe('reviewed Web Awesome Pro combobox surface', () => {
 
 it('mirrors the lowercase IDL aliases of the native input hints', async () => {
   const el = (await fixture(
-    html`<lr-combobox label="City"><lr-option value="paris">Paris</lr-option></lr-combobox>`,
+    html`<lr-combobox label="City"><lr-option value="paris">Paris</lr-option></lr-combobox>`
   )) as LyraCombobox;
   expect(el.inputmode).to.equal('');
   expect(el.enterkeyhint).to.equal('');
@@ -3810,7 +3966,7 @@ it('mirrors the lowercase IDL aliases of the native input hints', async () => {
 
 it('drops a consumer validity message and restores the intrinsic constraint', async () => {
   const el = (await fixture(
-    html`<lr-combobox label="City" required><lr-option value="paris">Paris</lr-option></lr-combobox>`,
+    html`<lr-combobox label="City" required><lr-option value="paris">Paris</lr-option></lr-combobox>`
   )) as LyraCombobox;
   el.setCustomValidity('Pick a supported city');
   await el.updateComplete;
@@ -3840,7 +3996,9 @@ it('honours preventDefault() on lr-show and lr-hide, keeping property and attrib
   const el = (await fixture(basic())) as LyraCombobox;
   await el.updateComplete;
 
-  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-show', (event) => event.preventDefault(), {
+    once: true,
+  });
   await el.show();
   await el.updateComplete;
   await aTimeout(60);
@@ -3852,12 +4010,52 @@ it('honours preventDefault() on lr-show and lr-hide, keeping property and attrib
   await aTimeout(60);
   expect(el.open, 'the veto was one-shot; the next request opens normally').to.be.true;
 
-  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), {
+    once: true,
+  });
   el.open = false;
   await el.updateComplete;
   await aTimeout(60);
   expect(el.open, 'a vetoed close stays open even for a direct property write').to.be.true;
   expect(el.hasAttribute('open')).to.be.true;
+});
+
+it('preserves source query, rows, and active option when hide() is vetoed', async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  el.source = async (query: string) =>
+    query
+      ? [
+          { value: 'one', label: `One ${query}` },
+          { value: 'two', label: `Two ${query}` },
+        ]
+      : [];
+  await el.show();
+  await typeQuery(el, 'ban');
+  await aTimeout(250);
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  const activeBefore = input.getAttribute('aria-activedescendant');
+  const labelsBefore = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]')].map(
+    (option) => option.textContent?.trim() ?? '',
+  );
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  await el.hide();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(input.value).to.equal('ban');
+  expect(input.getAttribute('aria-activedescendant')).to.equal(activeBefore);
+  expect(
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]')].map(
+      (option) => option.textContent?.trim() ?? '',
+    ),
+  ).to.deep.equal(labelsBefore);
+
+  await el.hide();
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
 });
 
 it('makes lr-show/lr-hide cancelable and the settled after-events not', async () => {
@@ -4081,7 +4279,7 @@ it('checks async source rows, not local options, for an exact match when allow-c
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[data-create]'),
-    'an exact async-row label match suppresses the create row',
+    'an exact async-row label match suppresses the create row'
   ).to.equal(null);
 
   await typeQuery(el, 'brand new');
@@ -4122,7 +4320,11 @@ it('clamps a stale activeIndex when a fresh source response has fewer navigable 
   el.source = async () => {
     callCount++;
     return callCount === 1
-      ? [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }]
+      ? [
+          { value: 'a', label: 'A' },
+          { value: 'b', label: 'B' },
+          { value: 'c', label: 'C' },
+        ]
       : [{ value: 'a', label: 'A' }];
   };
   el.open = true;
@@ -4133,7 +4335,13 @@ it('clamps a stale activeIndex when a fresh source response has fewer navigable 
 
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   const arrowDown = () =>
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        cancelable: true,
+      })
+    );
   arrowDown();
   arrowDown();
   arrowDown();
@@ -4171,9 +4379,10 @@ it('silently drops a source rejection that arrives after disconnect', async () =
     reject(new Error('boom'));
     await aTimeout(0);
     expect(warned, 'a stale rejection after disconnect must not be warned about').to.be.false;
-    expect(el.shadowRoot!.querySelector('.source-error'), 'a stale rejection must not surface the error state').to.equal(
-      null,
-    );
+    expect(
+      el.shadowRoot!.querySelector('.source-error'),
+      'a stale rejection must not surface the error state'
+    ).to.equal(null);
   } finally {
     console.warn = originalWarn;
   }
@@ -4205,7 +4414,7 @@ it('swallows an AbortError the source rejects with while its request is still cu
     await aTimeout(0);
     expect(warned, 'an AbortError must not be warned about').to.be.false;
     expect(el.shadowRoot!.querySelector('.source-error'), 'an AbortError must not surface the failure state').to.equal(
-      null,
+      null
     );
   } finally {
     console.warn = originalWarn;
@@ -4239,27 +4448,35 @@ it('creates a new option via Enter when the create row is showing but not keyboa
   `)) as LyraCombobox;
   const input = await typeQuery(el, 'Brand new');
   input.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    })
   );
   await el.updateComplete;
 
   expect(el.value).to.equal('Brand new');
-  expect(
-    [...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'Brand new'),
-  ).to.be.true;
+  expect([...el.querySelectorAll('lr-option')].some((option) => option.getAttribute('value') === 'Brand new')).to.be
+    .true;
 });
 
 it('focuses the input and opens the listbox on a mousedown inside the trigger row that is not on a button', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   await el.updateComplete;
   const container = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
-  const ev = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true });
+  const ev = new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
   container.dispatchEvent(ev);
   await el.updateComplete;
 
   expect(ev.defaultPrevented).to.be.true;
   expect(el.open).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="combobox-input"]'));
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="combobox-input"]')).to.equal(true);
 });
 
 it('is a no-op the second time the same tag remove button fires before a re-render drops it', async () => {
@@ -4336,8 +4553,8 @@ it('resolves an external form owner, and exposes labels/willValidate/getForm()/v
   el.form = 'ext';
   await el.updateComplete;
   expect(el.getAttribute('form')).to.equal('ext');
-  expect(el.form).to.equal(form);
-  expect(el.getForm()).to.equal(form);
+  expect(el.form === form).to.equal(true);
+  expect(el.getForm() === form).to.equal(true);
 
   el.form = null;
   await el.updateComplete;
@@ -4348,7 +4565,7 @@ it('resolves an external form owner, and exposes labels/willValidate/getForm()/v
 
   const override = document.createElement('span');
   el.validationTarget = override;
-  expect(el.validationTarget).to.equal(override);
+  expect(el.validationTarget === override).to.equal(true);
   el.validationTarget = undefined;
-  expect(el.validationTarget).to.equal(el.input ?? undefined);
+  expect(el.validationTarget === (el.input ?? undefined)).to.equal(true);
 });

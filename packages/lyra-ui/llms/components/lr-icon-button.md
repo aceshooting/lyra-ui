@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -18,7 +18,11 @@
 An accessible icon-only action button — a form-associated custom element with a native `<button>`
 inside. Its `type="submit"`/`"reset"` behavior is forwarded to the ancestor form by the component.
 
+Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
+wrapper can override the built-in fallbacks; a value set directly on the element still wins.
+
 **Properties:**
+
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)
 - `name: string = ''` — Shoelace alias for `icon`; reads and writes stay synchronized. Assigning
   the upstream `undefined` spelling clears both names to the canonical `''` read value
@@ -66,7 +70,7 @@ complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — render at its ow
 instead of being forced into a 1:1 box. Setting both `icon` and slotted content renders both, side
 by side; that is a valid composition, not a fallback.
 
-**Bare SVG geometry fallback:** slotted bare SVG *geometry* (`path`, `circle`, `rect`, `line`,
+**Bare SVG geometry fallback:** slotted bare SVG _geometry_ (`path`, `circle`, `rect`, `line`,
 `polygon`, `polyline`, `ellipse`, `g`, `use`) with no `icon` set and no enclosing `<svg>` of its
 own has no real SVG parent as parsed, and is detected and cloned into an internal
 `[part="fallback"]` SVG-namespaced element so it still paints — the same fallback `<lr-icon>`'s own
@@ -98,7 +102,7 @@ setting only one still behaves:
 
 - `--lr-icon-button-background` (default `transparent`),
   `--lr-icon-button-background-hover` (default `color-mix(in oklab, var(--lr-color-surface),
-  var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
+var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
   `--lr-icon-button-background-active` (the same mix at the stronger `--lr-color-mix-active` share,
   so a press reads as more than a hover) — the `[part='button']` background in each state. The
   hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
@@ -108,7 +112,7 @@ setting only one still behaves:
   `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
 - `--lr-icon-button-border` (default `0`), `--lr-icon-button-border-hover` (default
   `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-border-active` (default
-  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the *complete* native
+  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the _complete_ native
   border shorthand, replaced wholesale in each state rather than merged.
 
 These are the same per-component indirection `lr-button`'s

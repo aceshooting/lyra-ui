@@ -4,6 +4,7 @@ import type { LyraAgentRun } from './agent-run.js';
 import type { LyraGenerationStatus } from '../../conversation/generation-status/generation-status.js';
 import type { LyraTaskList } from '../task-list/task-list.js';
 import type { AgentRun, AgentStep, AgentStatusKind, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './agent-run.styles.js';
 
 function makeRun(overrides: Partial<AgentRun> = {}): AgentRun {
@@ -33,7 +34,7 @@ it('defaults to run=null, showCancel=true, showRetry=true, and renders the share
   expect(el.showCancel).to.be.true;
   expect(el.showRetry).to.be.true;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No data');
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
 });
@@ -512,12 +513,25 @@ describe('localization', () => {
   });
 });
 
-it('transitions the current-step icon spin animation, disabled under reduced motion', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('animation: lr-agent-run-spin var(--lr-agent-run-spin) infinite;');
-  expect(css).to.include(
-    "@media (prefers-reduced-motion: reduce) { [part='cancel-button'], [part='retry-button'] { transition: none !important; } [part='current-step-icon'] svg { animation: none !important; } }",
-  );
+it('renders the current-step spin and stops it under reduced motion', async () => {
+  try {
+    await setReducedMotion('no-preference');
+    const el = (await fixture(html`
+      <lr-agent-run .run=${makeRun({ status: { kind: 'running' }, steps })}></lr-agent-run>
+    `)) as LyraAgentRun;
+    const spinner = el.shadowRoot!.querySelector('[part="current-step-icon"] svg') as SVGElement;
+
+    const fullMotion = getComputedStyle(spinner);
+    expect(fullMotion.animationName).to.equal('lr-agent-run-spin');
+    expect(fullMotion.animationIterationCount).to.equal('infinite');
+
+    await setReducedMotion('reduce');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+    expect(getComputedStyle(spinner).animationName).to.equal('none');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('is accessible with no run', async () => {
@@ -695,7 +709,7 @@ it('keeps the Cancel/Retry buttons visibly interactive under plain (their chrome
     html`<lr-agent-run frame="plain" .run=${makeRun({ steps })}></lr-agent-run>`,
   )) as LyraAgentRun;
   const cancel = el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLElement;
-  expect(cancel).to.exist;
+  expect((cancel) != null).to.equal(true);
   const s = getComputedStyle(cancel);
   expect(s.borderTopWidth).to.equal('1px');
   expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');

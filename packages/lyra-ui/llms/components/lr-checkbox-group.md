@@ -8,12 +8,16 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-checkbox-group`
+
+Long group labels, hints, errors, and horizontal option labels wrap within the host in both logical
+directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
+targets keep their own fixed hit-area floor while the surrounding text wraps.
 
 A form-associated collection of `<lr-checkbox>` children. Its `value` is a `string[]`; each
 selected value is submitted under `name` and `required` requires at least one selection.
@@ -58,6 +62,8 @@ and messages, and `--lr-checkbox-group-option-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
 `size` through the shared control ladder. WA's `--gap` alias is the value used by the rendered
 option layout and defaults to `--lr-checkbox-group-option-gap`.
+`--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
+invalid option-collection border without changing other danger-colored surfaces.
 
 **`value` is a read-out of child state, not an input.** The children are the single source of
 truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,

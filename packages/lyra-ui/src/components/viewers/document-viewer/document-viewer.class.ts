@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
 import {
@@ -33,6 +34,8 @@ export interface LyraDocumentViewerEventMap {
  * A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
  * A registered renderer receives the current file; files without a matching
  * renderer use `<lr-document-preview>` as a safe built-in fallback.
+ * A host `aria-label` names the nested dialog by attribute presence, including an explicitly
+ * empty value; `name` remains the visible dialog heading.
  *
  * @customElement lr-document-viewer
  * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
@@ -73,7 +76,8 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Whether the viewer is open. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** Display name passed to the renderer and shown as the dialog heading. */
+  /** Display name passed to the renderer and shown as the dialog heading. A host `aria-label`
+   *  independently overrides the nested dialog's accessible name by attribute presence. */
   @property() name = '';
 
   /** MIME type used for renderer dispatch. */
@@ -328,7 +332,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         ?open=${this.open}
         heading=${this.name || nothing}
         label=${this.localize('documentViewerLabel')}
-        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-label=${hostAriaLabel(this) ?? nothing}
         closable
         @lr-dialog-close=${this.onDialogClose}
       >

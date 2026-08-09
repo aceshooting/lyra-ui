@@ -131,7 +131,7 @@ describe('lr-knowledge-graph-explorer', () => {
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
     const emptyEl = el.shadowRoot!.querySelector('[part="search-empty"]');
-    expect(emptyEl).to.exist;
+    expect((emptyEl) != null).to.equal(true);
     // `[part="search-empty"]` is a direct child of the `role="list"` `[part="search-results"]`
     // container, same as the real `[part="search-result"]` match rows -- every child of a list
     // role must itself carry role="listitem" (or a small allowed set) or the ARIA is invalid.
@@ -436,7 +436,7 @@ describe('lr-knowledge-graph-explorer', () => {
     el.pinnedNodeIds = ['marie', 'pierre'];
     await el.updateComplete;
     const findPathButton = pinnedRow().querySelector('lr-button') as HTMLElement;
-    expect(findPathButton).to.exist;
+    expect((findPathButton) != null).to.equal(true);
     const pathListener = oneEvent(el, 'lr-path-request');
     findPathButton.click();
     const pathEvent = await pathListener;
@@ -868,7 +868,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
     await card.updateComplete;
     const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement & { updateComplete: Promise<unknown> };
-    expect(focusButton).to.exist;
+    expect((focusButton) != null).to.equal(true);
     await focusButton.updateComplete;
     focusButton.click();
     await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });

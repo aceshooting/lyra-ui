@@ -40,6 +40,18 @@ export const SupportingTextAliases: Story = {
   `,
 };
 
+export const ErrorChrome: Story = {
+  render: () => html`
+    <lr-checkbox
+      required
+      hint="Required to create the account"
+      error-text="Accept the terms before continuing"
+    >
+      Accept the terms
+    </lr-checkbox>
+  `,
+};
+
 export const Indeterminate: Story = {
   render: () => html`<lr-checkbox indeterminate>Select all</lr-checkbox>`,
 };
@@ -56,7 +68,16 @@ export const Disabled: Story = {
 
 export const NoLabelSlot: Story = {
   name: 'No label slot (aria-label only)',
-  render: () => html`<lr-checkbox aria-label="Subscribe to updates"></lr-checkbox>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Even at `size="2xs"`, the tier-sized visible box is centered inside the shared ' +
+          '`--lr-icon-button-size` minimum interactive target.',
+      },
+    },
+  },
+  render: () => html`<lr-checkbox size="2xs" aria-label="Subscribe to updates"></lr-checkbox>`,
 };
 
 export const ExternalDescription: Story = {
@@ -204,6 +225,46 @@ export const Sizes: StoryObj = {
       <lr-checkbox size="m">Size m</lr-checkbox>
       <lr-checkbox size="l">Size l</lr-checkbox>
       <lr-checkbox size="xl">Size xl</lr-checkbox>
+    </div>
+  `,
+};
+
+export const ScopedStateTheme: Story = {
+  name: 'Scoped hover / press / invalid theme',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover and press the control to see component-scoped border/ring hooks; submit the empty required control to reveal the independently themed invalid border.',
+      },
+    },
+  },
+  render: () => html`
+    <form>
+      <lr-checkbox
+        required
+        style="--lr-checkbox-hover-border: var(--lr-color-success); --lr-checkbox-active-border: var(--lr-color-warning); --lr-checkbox-active-ring: var(--lr-color-warning-quiet); --lr-checkbox-invalid-border: var(--lr-color-danger);"
+      >Accept the terms</lr-checkbox>
+      <button type="submit">Validate</button>
+    </form>
+  `,
+};
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow RTL long label (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The public label wraps while the checkbox target stays fixed inside an exact 320px RTL allocation.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+      <lr-checkbox style="display:block;max-inline-size:100%">
+        ${'LocalizedUnbrokenCheckboxLabel'.repeat(16)}
+      </lr-checkbox>
     </div>
   `,
 };

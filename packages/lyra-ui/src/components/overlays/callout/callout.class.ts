@@ -12,7 +12,7 @@ import { styles } from './callout.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -36,7 +36,9 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * the host or a composed ancestor is hidden stay silent. A nested forwarding slot contributes its
  * flattened assigned text rather than fallback content, and later assignment or assigned-content
  * mutations are observed. A nonempty host/property accessible label prefixes the visible update as
- * context instead of replacing it; an explicitly empty host label still leaves visible text live.
+ * context instead of replacing it; the complete order and punctuation come from the localized
+ * `calloutAnnouncementWithContext` message. An explicitly empty host label still leaves visible
+ * text live.
  *
  * @customElement lr-callout
  * @slot - Message content.
@@ -82,6 +84,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    calloutAnnouncementWithContext: LYRA_DEFAULT_calloutAnnouncementWithContext,
     close: LYRA_DEFAULT_close,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
@@ -282,7 +285,9 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       .map((node) => composedAccessibilityText(node));
     const content = this.normalizedText([...heading, ...message].join(' '));
     if (!context || context === content) return content;
-    return content ? `${context}: ${content}` : context;
+    return content
+      ? this.localize('calloutAnnouncementWithContext', undefined, { context, content })
+      : context;
   }
 
   private announceCurrentContent(force = false): void {

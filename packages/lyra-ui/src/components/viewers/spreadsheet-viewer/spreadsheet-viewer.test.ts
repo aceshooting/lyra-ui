@@ -526,7 +526,7 @@ describe('lr-spreadsheet-viewer', () => {
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
-        expect(highlighted).to.exist;
+        expect((highlighted) != null).to.equal(true);
         expect(highlighted.hasAttribute('tabindex')).to.be.false;
         expect(highlighted.getAttribute('role')).to.equal('cell');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
@@ -536,6 +536,25 @@ describe('lr-spreadsheet-viewer', () => {
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('localizes the complete highlighted-cell name with independently ordered value and label placeholders', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      el.strings = {
+        cellHighlightWithLabel: '{label} ⇐ {value}',
+      };
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        expect(action.getAttribute('aria-label')).to.equal('First result ⇐ Ada');
       } finally {
         restore();
       }

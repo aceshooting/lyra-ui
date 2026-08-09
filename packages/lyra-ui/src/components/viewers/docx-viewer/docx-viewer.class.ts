@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -253,7 +253,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   /** URL to fetch and convert as a DOCX document. */
   @property() src = '';
 
-  /** Accessible name for the rendered document. */
+  /** Accessible name for the rendered document when the host has no `aria-label`. Host
+   *  `aria-label` wins by attribute presence, including an empty value. */
   @property() name = '';
 
   /** A CSS `max-height` that caps the scrollable document body; invalid values are ignored. */
@@ -767,7 +768,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           <div
             part="content"
             role="document"
-            aria-label=${this.getAttribute('aria-label') || this.name || this.localize('docxViewerLabel')}
+            aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('docxViewerLabel'))}
             @click=${this.onContentClick}
           >
             ${unsafeHTML(this.fetchState.markup)}

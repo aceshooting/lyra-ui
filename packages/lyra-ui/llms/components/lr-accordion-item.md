@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-details`, `lr-accordion` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -128,6 +128,18 @@ when set. The Details compatibility hooks `--lr-details-font-size` and `--lr-det
 continue to affect an accordion item. Panel and icon transitions stop under
 `prefers-reduced-motion: reduce`.
 
+Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
+`var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
+`var(--lr-color-border)`); `--lr-accordion-filled-bg` (default
+`var(--lr-color-surface-raised)`) and `--lr-accordion-filled-border-color` (default `transparent`);
+and `--lr-accordion-filled-outlined-bg` (default `var(--lr-color-surface-raised)`) plus
+`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border)`). Direct item
+surfaces have matching `--lr-accordion-item-outlined-bg`, `--lr-accordion-item-filled-bg`, and
+`--lr-accordion-item-filled-outlined-bg` hooks with the same surface fallbacks. Item trigger paint
+uses `--lr-accordion-item-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-accordion-item-button-active-bg` (default the existing active `color-mix(...)`). These hooks
+are read as inline fallbacks rather than declared on the host, so an ancestor theme can set them.
+
 Details exposes `--lr-details-font-size` (default
 `var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
 `--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
@@ -139,6 +151,17 @@ whereas the ladder's own block padding exists to fit text inside a fixed control
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
+`--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon
+gap, and `--lr-details-radius` (default `var(--lr-radius)`) controls the surface corners. Both use
+inline fallbacks, inherit from ancestors, and remain independent of the `size` density ladder.
+Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
+`--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
+`--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are
+respectively the existing surface/border, brand-quiet/transparent, and brand-quiet/border values.
+Summary interaction paint uses `--lr-details-summary-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-details-summary-active-bg` (default the existing active
+`color-mix(...)`). All eight are inheritable inline-fallback hooks, so they isolate one disclosure
+theme without requiring shared-token changes or shadow-part selectors.
 
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>

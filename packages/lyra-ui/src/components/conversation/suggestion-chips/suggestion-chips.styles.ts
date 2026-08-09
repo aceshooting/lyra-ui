@@ -17,9 +17,8 @@ export const styles = css`
   }
   [part~='chip'] {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--lr-space-2xs);
+    align-items: center;
+    gap: var(--lr-space-xs);
     flex: 0 0 auto;
     max-inline-size: var(--lr-size-16rem);
     padding-inline: var(--lr-space-m);
@@ -32,6 +31,17 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
     min-block-size: var(--lr-size-2-5rem);
+  }
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--lr-space-2xs);
+    min-inline-size: 0;
+  }
+  [part='chip-icon'] {
+    flex: none;
+    line-height: var(--lr-line-height-compact);
   }
   [part~='chip']:hover {
     background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));

@@ -95,6 +95,8 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
 
 /**
  * `<lr-checkbox-group>` — a form-associated group of `<lr-checkbox>` elements.
+ * Long label/hint/error content and horizontal option labels remain contained in a 320px LTR or
+ * RTL allocation; options wrap without shrinking their checkbox targets.
  *
  * @customElement lr-checkbox-group
  * @slot - `<lr-checkbox>` children.
@@ -129,6 +131,8 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
  * between the group's label, options and messages, scaled by `size`.
  * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
  * adjacent options, scaled by `size`.
+ * @cssprop [--lr-checkbox-group-invalid-border=var(--lr-color-danger)] - Border around the option
+ * collection while invalid chrome is visible.
  * @cssprop [--gap=var(--lr-checkbox-group-option-gap)] - WA-compatible option gap.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any

@@ -4,6 +4,38 @@ import './radio-button.js';
 import './radio-group.js';
 import type { LyraRadio } from './radio.js';
 import type { LyraRadioGroup } from './radio-group.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+it('contains a horizontal button group with long content at 320px in LTR and RTL', async () => {
+  const label = 'InternationalizedRadioGroupLabelWithoutAnyNaturalBreakOpportunity';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-radio-group orientation="horizontal" label=${label} hint=${label}>
+          <lr-radio-button value="one">${label}One</lr-radio-button>
+          <lr-radio-button value="two">${label}Two</lr-radio-button>
+        </lr-radio-group>
+      </div>
+    `);
+    expect(wrapper.scrollWidth, `dir=${direction}`).to.be.at.most(wrapper.clientWidth);
+  }
+});
+
+it('contains a standalone unbroken label at 320px in LTR and RTL', async () => {
+  const label = 'InternationalizedStandaloneRadioLabelWithoutAnyNaturalBreakOpportunity';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-radio value="choice">${label}</lr-radio>
+      </div>
+    `);
+    const radio = wrapper.querySelector('lr-radio')!;
+    expect(wrapper.scrollWidth, `dir=${direction} wrapper`).to.be.at.most(wrapper.clientWidth);
+    expect(radio.getBoundingClientRect().width, `dir=${direction} host`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
+  }
+});
 
 it('applies group required and disabled states when server rendering provides no light-DOM query API', () => {
   const group = document.createElement('lr-radio-group') as LyraRadioGroup;
@@ -534,6 +566,18 @@ it('exposes an accessible name for the radiogroup from its visible label', async
   expect(group.shadowRoot!.getElementById(labelId!)?.textContent).to.contain('Choice');
 });
 
+it('preserves an explicitly empty host aria-label instead of restoring the visible group label', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group aria-label="" label="Choice">
+      <lr-radio value="a">A</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  const base = group.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-label')).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('');
+  expect(base.hasAttribute('aria-labelledby')).to.equal(false);
+});
+
 it('restores the declarative default-checked state on form reset', async () => {
   const form = (await fixture(html`
     <form>
@@ -560,7 +604,7 @@ it('exposes native form validity/focus APIs and restores serialized checked stat
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-radio') as LyraRadio;
 
-  expect(el.form).to.equal(form);
+  expect((el.form) === (form)).to.equal(true);
   expect(el.validity.valueMissing).to.be.true;
   expect(el.validationMessage).to.equal('Please select an option.');
   expect(el.willValidate).to.be.true;
@@ -574,7 +618,7 @@ it('exposes native form validity/focus APIs and restores serialized checked stat
   el.focus({ preventScroll: true });
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 
   el.formStateRestoreCallback('unchecked', 'autocomplete');
   expect(el.checked).to.be.false;
@@ -1295,6 +1339,36 @@ describe('checked-state cssprop escape hatch', () => {
   });
 });
 
+it('themes radio hover and pressed border/ring paint through component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-radio
+      style="
+        --lr-transition-fast: 0s;
+        --lr-radio-hover-border-color: rgb(1, 2, 3);
+        --lr-radio-active-border-color: rgb(4, 5, 6);
+        --lr-radio-active-ring-color: rgb(7, 8, 9);
+      "
+    >Choice</lr-radio>
+  `)) as LyraRadio;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const circle = el.shadowRoot!.querySelector<HTMLElement>('[part~="circle"]')!;
+  const rect = base.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(circle).borderTopColor).to.equal('rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(circle);
+    expect(pressed.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(pressed.boxShadow).to.contain('rgb(7, 8, 9)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it('is accessible as a label-less radio named only by aria-label', async () => {
   const el = (await fixture(html`<lr-radio checked aria-label="Only option"></lr-radio>`)) as LyraRadio;
   await expect(el).to.be.accessible();
@@ -1380,7 +1454,7 @@ describe('inert ElementInternals fallback', () => {
   it('falls back when the ElementInternals global is absent entirely', async () => {
     await withGlobalRemoved((el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect((internals.form) === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;
@@ -1666,12 +1740,12 @@ describe('lr-radio-group orientation, focus, and compatibility aliases', () => {
     `)) as LyraRadioGroup;
     const [, b, c] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
     group.focus();
-    expect(c.shadowRoot!.activeElement).to.equal(c.shadowRoot!.querySelector('[part~="base"]'));
+    expect((c.shadowRoot!.activeElement) === (c.shadowRoot!.querySelector('[part~="base"]'))).to.equal(true);
 
     c.checked = false;
     await group.updateComplete;
     group.focus();
-    expect(b.shadowRoot!.activeElement).to.equal(b.shadowRoot!.querySelector('[part~="base"]'));
+    expect((b.shadowRoot!.activeElement) === (b.shadowRoot!.querySelector('[part~="base"]'))).to.equal(true);
   });
 
   it('keeps the WA default name empty and exports WA/Shoelace form-control aliases', async () => {
@@ -1689,7 +1763,7 @@ describe('lr-radio-group orientation, focus, and compatibility aliases', () => {
     const input = group.shadowRoot!.querySelector('[part~="form-control-input"]') as HTMLElement;
     const label = group.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
     const hint = group.shadowRoot!.querySelector('[part~="form-control-help-text"]') as HTMLElement;
-    expect(formControl).to.exist;
+    expect((formControl) != null).to.equal(true);
     expect(input.getAttribute('part')!.split(/\s+/)).to.include.members([
       'radios', 'form-control-input', 'button-group', 'button-group__base',
     ]);

@@ -6,13 +6,19 @@ export const styles = css`
     display: block;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-12rem);
+    --_lr-time-input-border-color-default: var(--lr-color-border);
+    --_lr-time-input-fill-default: transparent;
+    --_lr-time-input-color-default: var(--lr-color-text);
   }
 
   [part~='form-control-label'] {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin-block-end: var(--lr-space-xs);
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
   }
   [part~='form-control-label'][hidden] {
     display: none;
@@ -25,37 +31,37 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: 100%;
     min-block-size: var(--lr-form-control-height);
-    gap: var(--lr-form-control-gap);
-    padding-block: var(--lr-form-control-padding-block);
+    gap: var(--lr-time-input-gap, var(--lr-form-control-gap));
     padding-inline: var(--lr-form-control-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-form-control-radius);
-    background: transparent;
-    color: var(--lr-color-text);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-time-input-border-color, var(--_lr-time-input-border-color-default));
+    border-radius: var(--lr-time-input-radius, var(--lr-form-control-radius));
+    background: var(--lr-time-input-fill, var(--_lr-time-input-fill-default));
+    color: var(--lr-time-input-color, var(--_lr-time-input-color-default));
     font: inherit;
     font-size: var(--lr-form-control-font-size);
   }
-  :host([appearance='filled']) [part~='time-input'] {
-    border-color: transparent;
-    background: var(--lr-color-surface-raised);
+  :host([appearance='filled']) {
+    --_lr-time-input-border-color-default: transparent;
+    --_lr-time-input-fill-default: var(--lr-color-surface-raised);
   }
-  :host([appearance='filled-outlined']) [part~='time-input'] {
-    background: var(--lr-color-surface-raised);
+  :host([appearance='filled-outlined']) {
+    --_lr-time-input-fill-default: var(--lr-color-surface-raised);
   }
-  :host([appearance='plain']) [part~='time-input'] {
-    border-color: transparent;
+  :host([appearance='plain']) {
+    --_lr-time-input-border-color-default: transparent;
   }
-  :host([appearance='accent']) [part~='time-input'] {
-    border-color: transparent;
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+  :host([appearance='accent']) {
+    --_lr-time-input-border-color-default: transparent;
+    --_lr-time-input-fill-default: var(--lr-color-brand);
+    --_lr-time-input-color-default: var(--lr-color-on-brand);
   }
   :host([pill]) [part~='time-input'] {
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-time-input-radius, var(--lr-radius-pill));
   }
   :host([open]) [part~='time-input'],
   [part~='time-input']:focus-within {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-time-input-focus-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part~='time-input'] {
     opacity: var(--lr-opacity-disabled);
@@ -64,10 +70,23 @@ export const styles = css`
 
   [part='start'],
   [part='end'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 50%;
+    overflow: hidden;
     color: var(--lr-color-text-quiet);
+  }
+  [part='start'] slot,
+  [part='end'] slot,
+  [part='start'] slot::slotted(*),
+  [part='end'] slot::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='start'][hidden],
   [part='end'][hidden] {
@@ -98,18 +117,25 @@ export const styles = css`
     user-select: none;
   }
   [part='segment']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='segment']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-time-input-segment-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part='segment']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-time-input-segment-focus-bg, var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet)));
   }
   [part='segment'][data-empty] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-time-input-action-color, var(--lr-color-text-quiet));
   }
   :host([appearance='accent']) [part='segment'][data-empty] {
     color: inherit;
@@ -145,12 +171,19 @@ export const styles = css`
   }
   [part='clear-button']:hover,
   [part='expand-button']:hover {
-    color: var(--lr-color-text);
-    background: var(--lr-color-brand-quiet);
+    color: var(--lr-time-input-action-hover-color, var(--lr-color-text));
+    background: var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='clear-button']:active,
   [part='expand-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-time-input-action-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {
@@ -211,6 +244,7 @@ export const styles = css`
     inline-size: var(--column-width, var(--lr-size-3rem));
     max-block-size: calc(var(--column-item-height, var(--lr-size-2-25rem)) * 6);
     overflow-block: auto;
+    overflow-inline: hidden;
     overscroll-behavior: contain;
     scrollbar-width: thin;
   }
@@ -232,25 +266,46 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
   :where([part~='column-item']):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-time-input-column-hover-bg, var(--lr-color-brand-quiet));
   }
   :where([part~='column-item']):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-time-input-column-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-column-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   :where([part~='column-item']):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   [part~='column-item-selected'] {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
-    font-weight: var(--lr-font-weight-semibold);
+    background: var(--lr-time-input-column-selected-bg, var(--lr-color-brand));
+    color: var(--lr-time-input-column-selected-color, var(--lr-color-on-brand));
+    font-weight: var(--lr-time-input-column-selected-font-weight, var(--lr-font-weight-semibold));
   }
   :where([part~='column-item-selected']):hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(
+      --lr-time-input-column-selected-hover-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-column-selected-bg, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
+    );
   }
   :where([part~='column-item-selected']):active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-time-input-column-selected-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-column-selected-bg, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part='now-button'] {
     inline-size: 100%;
@@ -266,10 +321,17 @@ export const styles = css`
     font: inherit;
   }
   [part='now-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='now-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-time-input-action-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part='now-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -282,6 +344,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
   [part='hint'] {
     color: var(--lr-color-text-quiet);

@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -17,10 +17,11 @@
 
 A token-coalescing incremental text renderer for streaming assistant output, with an optional
 blinking cursor and auto-detected Markdown rendering. First-party invention (no Web Awesome
-equivalent). The host is expected to assign the *entire* current text on every update to `content`,
+equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
 not a delta — this component does no accumulation or ordering of its own.
 
 **Properties:**
+
 - `content: string = ''` — the full current text so far.
 - `streaming: boolean = false` (reflected) — shows the blinking cursor after the rendered text;
   reflects so a host can also target `lr-streaming-text[streaming]` in CSS.
@@ -55,15 +56,20 @@ component-specific, since no shared "inline cursor bar" token exists, the same p
 `--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
 cycle length).
 
-**Optional peer deps:** none — internally imports and auto-registers `<lr-markdown>` for
-Markdown-mode rendering (a side-effect import; the host never needs to import or register it
-itself).
+**Optional peer deps:** the registration entry imports and auto-registers `<lr-markdown>` (the host
+does not register it separately), so its optional-peer module graph includes `marked`, `dompurify`,
+`shiki`, and `katex`. The runtime matrix is narrower: `markdown="false"` and auto-detected plain text
+stay on the peer-free plain-text path; Markdown rendering lazy-loads `marked` plus the default
+`dompurify` sanitizer and falls back to readable plain text if either is unavailable. Fenced code
+can additionally use `shiki`, whose absence only leaves code unhighlighted. The composed Markdown
+implementation contains the opt-in `katex` loader, but this wrapper does not enable its `math`
+property and therefore never requests `katex` itself.
 
 ```html
 <lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
 <script type="module">
-  const out = document.getElementById('out');
-  let text = '';
+  const out = document.getElementById("out");
+  let text = "";
   for await (const token of tokenStream) {
     text += token;
     out.content = text; // always the full string so far, never a delta
@@ -75,10 +81,10 @@ itself).
 Token-by-token streaming can update `content` far faster than a human can usefully perceive a
 re-render, so updates funnel through `Announcer` (`../../internal/announcer.js`), reused here
 purely as a generic "coalesce rapid calls, flush the latest" timing primitive — with none of that
-class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the *last* `content` value
+class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the _last_ `content` value
 assigned actually reaches the rendered DOM. Two cases always bypass the throttle and flush
 immediately: the very first `content` assignment after mount, and any transition of `streaming`
-between `true` and `false` in *either* direction — so the final chunk of a finished stream can
+between `true` and `false` in _either_ direction — so the final chunk of a finished stream can
 never be left stranded mid-window, and a stream restarting on a reused element can never keep
 showing the previous stream's stale final content for the length of the window.
 
@@ -91,9 +97,10 @@ below the rendered content instead of attempting to splice into whatever nested 
 happens to end with.
 
 **Known gotchas:**
+
 - `content` must always be the complete string so far, never a delta — this component does no
   accumulation of its own.
-- Only the very *first* `content` assignment after mount bypasses `coalesceMs` unconditionally —
+- Only the very _first_ `content` assignment after mount bypasses `coalesceMs` unconditionally —
   every later assignment is throttled normally except when it lands in the same update as a
   `streaming` transition (either `true → false` or `false → true`), which also forces an immediate
   flush.

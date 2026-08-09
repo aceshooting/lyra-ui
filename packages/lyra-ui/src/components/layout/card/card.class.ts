@@ -98,6 +98,13 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
  * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
+ * @cssprop [--lr-card-filled-bg=var(--lr-color-brand-quiet)] - Filled appearance background.
+ * @cssprop [--lr-card-filled-outlined-bg=var(--lr-color-brand-quiet)] - Filled-outlined background.
+ * @cssprop [--lr-card-accent-border-color=var(--lr-color-brand)] - Accent stripe color.
+ * @cssprop [--lr-card-interactive-hover-border-color=var(--lr-color-brand)] - Interactive hover border.
+ * @cssprop [--lr-card-interactive-active-border-color=var(--lr-color-brand)] - Interactive pressed border.
+ * @cssprop --lr-card-interactive-active-overlay - Interactive pressed overlay; defaults to the
+ *   former transparent active mix.
  * @status stable
  * @since 4.0.0
  */
@@ -314,6 +321,16 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
     this.contentObserverDocument = undefined;
+  }
+
+  /** Activates the native whole-card owner: the linked root when `href` is safe, or the
+   *  activation button while `interactive` is set without a link. Passive cards remain inert. */
+  override click(): void {
+    this.renderRoot
+      .querySelector<HTMLAnchorElement | HTMLButtonElement>(
+        'a[part~="base"], button[part~="activation-button"]'
+      )
+      ?.click();
   }
 
   override render(): TemplateResult {

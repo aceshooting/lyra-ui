@@ -216,7 +216,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    * text-selection range. Takes precedence over `for` and the `anchor` slot. Assign `null` to go
    * back to element anchoring.
    */
-  @property({ attribute: false }) virtualAnchor: VirtualAnchor | { x: number; y: number; width?: number; height?: number } | null = null;
+  /** Highest-priority anchor. A plain rect defaults omitted dimensions to zero, clamps negative
+   *  dimensions to zero, and ignores a rect containing any non-finite field. */
+  @property({ attribute: false })
+  virtualAnchor: VirtualAnchor | { x: number; y: number; width?: number; height?: number } | null = null;
 
   /** The positioned popup element, exposed for mapped popup integrations. Upstream public types
    * permit assignment, so writes are accepted for source compatibility; the shadow-owned node
@@ -250,7 +253,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    *  layout change — but a consumer that moved a virtual anchor imperatively can force a pass. */
   reposition(): void {
     this.teardown();
-    if (!this.active || !this.popup) return;
+    if (!this.isConnected || !this.active || !this.popup) return;
     const anchor = this.resolveAnchor();
     if (!anchor) return;
     const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
@@ -304,9 +307,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
           fallbackSizeProperty: '--lr-popup-arrow-size',
         });
         this.applyArrowSidePart(side);
-        if (placement === this.resolvedPlacement) return;
-        this.resolvedPlacement = placement;
-        this.applySidePart(placement);
+        if (placement !== this.resolvedPlacement) {
+          this.resolvedPlacement = placement;
+          this.applySidePart(placement);
+        }
         this.emit('lr-reposition', { placement });
       },
     });
@@ -332,8 +336,15 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
       const candidate = this.virtualAnchor as VirtualAnchor;
       if (typeof candidate.getBoundingClientRect === 'function') return candidate;
       const rect = this.virtualAnchor as { x: number; y: number; width?: number; height?: number };
-      if (!Number.isFinite(rect.x) || !Number.isFinite(rect.y)) return null;
-      return virtualAnchorFromRect(rect);
+      const width = rect.width ?? 0;
+      const height = rect.height ?? 0;
+      if (![rect.x, rect.y, width, height].every(Number.isFinite)) return null;
+      return virtualAnchorFromRect({
+        x: rect.x,
+        y: rect.y,
+        width: Math.max(0, width),
+        height: Math.max(0, height),
+      });
     }
     if (this.anchor) {
       if (typeof this.anchor === 'string') {

@@ -73,6 +73,32 @@ export const LegendNarrowAllocation: Story = {
   `,
 };
 
+/** High-cardinality strips retain every semantic cell and keyboard stop at 320px. Two hundred
+ *  cells flex below their ordinary 2px minimum; above 320 items, decorative gaps collapse too. */
+export const HighCardinalityNarrow: Story = {
+  name: 'High cardinality (200 / 500 at 320px, LTR / RTL)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); justify-items: start">
+      ${([200, 500] as const).flatMap((count) =>
+        (['ltr', 'rtl'] as const).map((direction) => {
+          const denseItems: SequenceStripItem[] = Array.from({ length: count }, (_, index) => ({
+            id: `${count}-${index}`,
+            category: index % 3 === 0 ? 'tool' : index % 3 === 1 ? 'mixed' : 'text',
+            marker: index % 17 === 0,
+            label: `Item ${index + 1} of ${count}`,
+          }));
+          return html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+              <p style="margin: 0 0 var(--lr-space-2xs)">${count} items · ${direction.toUpperCase()}</p>
+              <lr-sequence-strip .items=${denseItems} .categories=${categories()}></lr-sequence-strip>
+            </div>
+          `;
+        }),
+      )}
+    </div>
+  `,
+};
+
 export const CustomAccessibleLabel: Story = {
   render: () =>
     html`<lr-sequence-strip
@@ -94,6 +120,26 @@ export const ControlledRefreshFocus: Story = {
         if (event.key.toLocaleLowerCase() !== 'r') return;
         const strip = event.currentTarget as HTMLElement & { items: SequenceStripItem[] };
         strip.items = strip.items.map((item) => ({ ...item }));
+      }}
+    ></lr-sequence-strip>
+  `,
+};
+
+/** Focus the first cell and press ArrowRight. The host replaces the complete controlled model in
+ * that same key event; focus clamps from the previously focused first item to Replacement A rather
+ * than letting the obsolete ArrowRight continuation land on Replacement B by numeric index. */
+export const ControlledReplacementDuringArrow: Story = {
+  render: () => html`
+    <lr-sequence-strip
+      .items=${items}
+      .categories=${categories()}
+      @keydown=${(event: KeyboardEvent) => {
+        if (event.key !== 'ArrowRight') return;
+        const strip = event.currentTarget as HTMLElement & { items: SequenceStripItem[] };
+        strip.items = [
+          { id: 'replacement-a', category: 'text', label: 'Replacement A' },
+          { id: 'replacement-b', category: 'tool', label: 'Replacement B' },
+        ];
       }}
     ></lr-sequence-strip>
   `,

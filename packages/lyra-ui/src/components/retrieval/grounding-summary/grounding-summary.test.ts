@@ -60,7 +60,7 @@ it('renders claim-level evidence when claims are supplied and allows it to be hi
   el.citations = CITATIONS;
   await el.updateComplete;
   const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as HTMLElement & { claims: unknown[] };
-  expect(claims).to.exist;
+  expect((claims) != null).to.equal(true);
   expect(claims.claims.length).to.equal(1);
 
   el.showClaims = false;
@@ -160,7 +160,7 @@ it('omits the warnings section when there are none, and renders each warning ver
   el.assessment = ASSESSMENT;
   await el.updateComplete;
   const warningsEl = el.shadowRoot!.querySelector('[part="warnings"]')!;
-  expect(warningsEl).to.exist;
+  expect((warningsEl) != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="warnings-count"]')!.textContent).to.equal('1');
   const items = el.shadowRoot!.querySelectorAll('[part="warning"]');
   expect(items.length).to.equal(1);

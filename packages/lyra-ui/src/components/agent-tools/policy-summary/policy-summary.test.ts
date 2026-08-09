@@ -131,7 +131,7 @@ describe('lr-policy-summary', () => {
 
     const denyRow = rows.find((r) => r.getAttribute('data-state') === 'deny' && r.getAttribute('data-category') === 'permission')!;
     const detailsEl = denyRow.querySelector('[part="detail"]') as HTMLElement & { open: boolean };
-    expect(detailsEl).to.exist;
+    expect((detailsEl) != null).to.equal(true);
     expect(detailsEl.tagName.toLowerCase()).to.equal('lr-details');
     expect(detailsEl.open).to.be.false;
     expect(detailsEl.textContent).to.include('Matched rule "no-pii-read"');

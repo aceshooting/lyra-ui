@@ -407,12 +407,17 @@ export interface LyraHeatmapEventMap {
  * `fitToWidth`, the same host-width-derived size matrix mode already
  * supports) governs calendar mode's grid too.
  *
+ * Full canvas redraws are suspended while the host is outside the viewport. Data, locale, theme,
+ * resize, and DPR invalidations remain pending and coalesce into one redraw when the heatmap
+ * intersects again; environments without `IntersectionObserver` retain eager drawing.
+ *
  * @customElement lr-heatmap
  * @event lr-cell-click - Fired on click, or Enter/Space on the
  * focused/hovered cell. `detail: { row, col, value }` in matrix mode,
  * `detail: { date, value }` in calendar mode. `cellText` overrides the
- * built-in English "Row X, Col Y: value" / "Mon DD: value" template used for
- * both the hover tooltip and the keyboard live-region announcement.
+ * localized matrix row/column/value or calendar date/value template used for both the hover
+ * tooltip and the keyboard live-region announcement. Use the callback for application-specific
+ * wording that is not represented by the locale catalog.
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
@@ -657,7 +662,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Formats the per-cell tooltip and keyboard announcement text — receives the cell position
    *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` — which carries the resolved ISO
    *  `yyyy-mm-dd` `date`, gap positions included — in calendar mode) and its value. Falls back to
-   *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
+   *  localized matrix row/column/value or calendar date/value templates when unset; the default
+   *  English catalog renders "Row X, Col Y: value" / "Mon DD: value". Use this callback for
+   *  application-specific wording rather than ordinary translation. */
   @property({ attribute: false }) cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string;
   /** Opts individual cells out of the interaction model — receives the cell position and its
    *  value, return `false` to make that cell present-but-non-interactive (no hover tooltip,
@@ -692,7 +699,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  render a label and, when it returns a string, uses it instead of the built-in
    *  `Intl.DateTimeFormat`-derived short month name. Mirrors `weekdayLabelText`'s exact
    *  override-with-fallback shape -- unset (the default) reproduces today's exact
-   *  `toLocaleString(undefined, ...)`-derived output. */
+   *  `toLocaleString(effectiveLocale, ...)`-derived output. */
   @property({ attribute: false }) monthLabelText?: (jsMonth: number, year: number) => string | undefined;
   /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
    *  interpolating between the two `--lr-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
@@ -734,6 +741,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
+  private intersectionObserver?: IntersectionObserver;
   private drawFrameRequest?: OwnedAnimationFrame;
   private dprQuery?: MediaQueryList;
   private dprChangeListener?: (event: MediaQueryListEvent) => void;
@@ -778,6 +786,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Set after a complete canvas pass. Focus movement can then repaint only the old/new cell
    * rectangles instead of clearing and repainting an entire dense heatmap. */
   private canvasHasContent = false;
+  private canvasVisible = true;
+  private drawDirty = false;
 
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
   @state() private hoverCell: CellPos | null = null;
@@ -824,6 +834,26 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.resizeObserver = observer;
       observer.observe(this);
     }
+    const IntersectionObserverCtor = owner?.IntersectionObserver;
+    this.canvasVisible = true;
+    if (owner && IntersectionObserverCtor) {
+      let observer: IntersectionObserver;
+      observer = new IntersectionObserverCtor((entries) => {
+        if (
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner ||
+          this.intersectionObserver !== observer
+        ) {
+          return;
+        }
+        const entry = entries.find((candidate) => candidate.target === this);
+        if (!entry || entry.isIntersecting === this.canvasVisible) return;
+        this.canvasVisible = entry.isIntersecting;
+        if (this.canvasVisible && this.drawDirty) this.scheduleDraw();
+      });
+      this.intersectionObserver = observer;
+      observer.observe(this);
+    }
     this.cachedRamp = null;
     this.canvasColorCache.clear();
     this.watchDpr();
@@ -840,8 +870,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.focusedCell = null;
     this.liveText = '';
     this.canvasHasContent = false;
+    this.drawDirty = true;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
+    this.canvasVisible = true;
     this.clearDprWatcher();
     this.cancelDrawFrame();
   }
@@ -898,7 +932,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private onDprChange = (): void => {
     this.watchDpr();
-    this.draw();
+    this.requestDraw();
   };
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1019,8 +1053,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const rows = this.rowLabels.length;
       const cols = this.colLabels.length;
       label = this.localize('heatmapMatrixLabel', undefined, {
-        rows,
-        cols,
+        rows: this.formatCount(rows),
+        cols: this.formatCount(cols),
         label: valueLabel,
         range,
       });
@@ -1110,11 +1144,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'legendStops',
         'accessibleCells',
         'accessibleTargetSizePx',
+        'locale',
       ].some((name) => changed.has(name))
     ) {
       const focusOnly = changed.has('focusedCell') && [...changed.keys()].every((key) => key === 'focusedCell' || key === 'liveText');
       if (focusOnly && this.repaintFocusRing(changed.get('focusedCell') as CellPos | null | undefined)) return;
-      this.draw();
+      this.requestDraw();
     }
     const pending = this.pendingAccessibleFocus;
     if (pending === undefined) return;
@@ -1144,7 +1179,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // must discard the previously computed canvas colors even though the property text is stable.
     this.cachedRamp = null;
     const changed = this.refreshAccessibleTargetSize();
-    if (!changed) this.draw();
+    if (!changed) this.requestDraw();
   }
 
   private refreshAccessibleTargetSize(): boolean {
@@ -1220,9 +1255,19 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private draw(): void {
+    if (!this.canvasVisible) {
+      this.drawDirty = true;
+      return;
+    }
+    this.drawDirty = false;
     this.canvasHasContent = false;
     if (this.mode === 'calendar') this.drawCalendar();
     else this.drawMatrix();
+  }
+
+  private requestDraw(): void {
+    this.drawDirty = true;
+    if (this.canvasVisible) this.draw();
   }
 
   /** Repaints the old and new focus-ring cells after keyboard/click navigation. The underlying
@@ -1252,7 +1297,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     request.handle = owner.requestAnimationFrame(() => {
       if (this.drawFrameRequest !== request) return;
       this.drawFrameRequest = undefined;
-      if (this.isConnected && this.ownerDocument.defaultView === owner) this.draw();
+      if (this.isConnected && this.ownerDocument.defaultView === owner) this.requestDraw();
     });
     this.drawFrameRequest = request;
   };
@@ -2036,7 +2081,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /**
    * Human-readable "<label>: <value>" text for a cell — shared by the hover
    * tooltip and the keyboard-focus live-region announcement, so both always
-   * describe a cell the same way. This is the built-in English fallback used
+   * describe a cell the same way. This is the built-in localized fallback used
    * when `cellText` isn't set — see `resolveCellText()`.
    */
   private defaultCellText(pos: CellPos): string {

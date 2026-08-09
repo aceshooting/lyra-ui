@@ -75,7 +75,7 @@
       "name": "--arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
+        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Arrow half-width inherited from the popover surface.\n\n**`<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
       }
     },
     {
@@ -152,7 +152,7 @@
       "name": "--body-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Shoelace body padding override."
+        "value": "**`<lr-dialog>`** — Shoelace body padding override.\n\n**`<lr-drawer>`** — Shoelace body padding."
       }
     },
     {
@@ -544,7 +544,7 @@
       "name": "--footer-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Shoelace footer padding override."
+        "value": "**`<lr-dialog>`** — Shoelace footer padding override.\n\n**`<lr-drawer>`** — Shoelace footer padding."
       }
     },
     {
@@ -621,7 +621,7 @@
       "name": "--header-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dialog>`, `<lr-drawer>`** — Mapped header padding override."
+        "value": "**`<lr-dialog>`** — Mapped header padding override.\n\n**`<lr-drawer>`** — Shoelace header padding."
       }
     },
     {
@@ -649,7 +649,7 @@
       "name": "--hide-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-dialog>`, `<lr-drawer>`** — Mapped closing animation duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-duration-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
       }
     },
     {
@@ -758,6 +758,48 @@
       }
     },
     {
+      "name": "--lr-accordion-filled-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `var(--lr-color-surface-raised)`) — Filled group background."
+      }
+    },
+    {
+      "name": "--lr-accordion-filled-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `transparent`) — Filled border color."
+      }
+    },
+    {
+      "name": "--lr-accordion-filled-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `var(--lr-color-surface-raised)`) — Filled-outlined group background."
+      }
+    },
+    {
+      "name": "--lr-accordion-filled-outlined-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `var(--lr-color-border)`) — Filled-outlined border color."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `color-mix(...)`) — Trigger pressed background."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-color-brand-quiet)`) — Trigger hover background."
+      }
+    },
+    {
       "name": "--lr-accordion-item-easing",
       "description": {
         "kind": "markdown",
@@ -765,10 +807,31 @@
       }
     },
     {
+      "name": "--lr-accordion-item-filled-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-color-surface-raised)`) — Filled item background."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-filled-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-color-surface-raised)`) — Filled-outlined item background."
+      }
+    },
+    {
       "name": "--lr-accordion-item-hide-duration",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Collapse transition duration."
+      }
+    },
+    {
+      "name": "--lr-accordion-item-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-color-surface)`) — Outlined item background."
       }
     },
     {
@@ -783,6 +846,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Header/content spacing."
+      }
+    },
+    {
+      "name": "--lr-accordion-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `var(--lr-color-surface)`) — Outlined group background."
+      }
+    },
+    {
+      "name": "--lr-accordion-outlined-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion>`** (default: `var(--lr-color-border)`) — Outlined border color."
       }
     },
     {
@@ -933,6 +1010,20 @@
       }
     },
     {
+      "name": "--lr-app-rail-item-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** — Pressed background; defaults to the former brand-quiet active mix."
+      }
+    },
+    {
+      "name": "--lr-app-rail-item-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand)`) — Pressed text/icon color."
+      }
+    },
+    {
       "name": "--lr-app-rail-item-current-bg",
       "description": {
         "kind": "markdown",
@@ -947,6 +1038,20 @@
       }
     },
     {
+      "name": "--lr-app-rail-item-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand-quiet)`) — Hover background."
+      }
+    },
+    {
+      "name": "--lr-app-rail-item-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand)`) — Hover text/icon color."
+      }
+    },
+    {
       "name": "--lr-app-rail-mobile-width",
       "description": {
         "kind": "markdown",
@@ -958,6 +1063,48 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-app-rail>`** (default: `var(--lr-color-overlay)`) — The mobile overlay scrim's background."
+      }
+    },
+    {
+      "name": "--lr-app-rail-resizer-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** — Resizer-track pressed background; defaults to the former brand active mix."
+      }
+    },
+    {
+      "name": "--lr-app-rail-resizer-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-color-brand)`) — Resizer-track hover background."
+      }
+    },
+    {
+      "name": "--lr-app-rail-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** — Toggle pressed background; defaults to the former brand-quiet active mix."
+      }
+    },
+    {
+      "name": "--lr-app-rail-toggle-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-color-brand)`) — Toggle pressed foreground."
+      }
+    },
+    {
+      "name": "--lr-app-rail-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-color-brand-quiet)`) — Toggle hover background."
+      }
+    },
+    {
+      "name": "--lr-app-rail-toggle-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-app-rail>`** (default: `var(--lr-color-brand)`) — Toggle hover foreground."
       }
     },
     {
@@ -1430,6 +1577,13 @@
       }
     },
     {
+      "name": "--lr-breadcrumb-item-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-breadcrumb-item>`** — Link/button pressed background; defaults to the former transparent active mix."
+      }
+    },
+    {
       "name": "--lr-browser-frame-aspect-ratio",
       "description": {
         "kind": "markdown",
@@ -1717,10 +1871,31 @@
       }
     },
     {
+      "name": "--lr-calendar-day-outside-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `var(--lr-color-surface)`) — Background of an adjacent-month day cell."
+      }
+    },
+    {
+      "name": "--lr-calendar-day-outside-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `var(--lr-color-text-quiet)`) — Text color of an adjacent-month day cell."
+      }
+    },
+    {
       "name": "--lr-calendar-day-selected-bg",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-calendar>`** (default: `var(--lr-color-brand-quiet)`) — Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background."
+      }
+    },
+    {
+      "name": "--lr-calendar-day-today-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-calendar>`** (default: `var(--lr-color-brand)`) — Outline color of today's day cell."
       }
     },
     {
@@ -1780,6 +1955,48 @@
       }
     },
     {
+      "name": "--lr-card-accent-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-brand)`) — Accent stripe color."
+      }
+    },
+    {
+      "name": "--lr-card-filled-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-brand-quiet)`) — Filled appearance background."
+      }
+    },
+    {
+      "name": "--lr-card-filled-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-brand-quiet)`) — Filled-outlined background."
+      }
+    },
+    {
+      "name": "--lr-card-interactive-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-brand)`) — Interactive pressed border."
+      }
+    },
+    {
+      "name": "--lr-card-interactive-active-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** — Interactive pressed overlay; defaults to the former transparent active mix."
+      }
+    },
+    {
+      "name": "--lr-card-interactive-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-card>`** (default: `var(--lr-color-brand)`) — Interactive hover border."
+      }
+    },
+    {
       "name": "--lr-carousel-indicator-current-bg",
       "description": {
         "kind": "markdown",
@@ -1794,6 +2011,62 @@
       }
     },
     {
+      "name": "--lr-carousel-navigation-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** — Navigation pressed background; defaults to the former brand-quiet active mix."
+      }
+    },
+    {
+      "name": "--lr-carousel-navigation-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Navigation pressed border."
+      }
+    },
+    {
+      "name": "--lr-carousel-navigation-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand-quiet)`) — Navigation hover background."
+      }
+    },
+    {
+      "name": "--lr-carousel-navigation-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Navigation hover border."
+      }
+    },
+    {
+      "name": "--lr-carousel-pagination-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** — Pagination-dot pressed background; defaults to the former brand-quiet active mix."
+      }
+    },
+    {
+      "name": "--lr-carousel-pagination-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Pagination-dot pressed border."
+      }
+    },
+    {
+      "name": "--lr-carousel-pagination-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand-quiet)`) — Pagination-dot hover background."
+      }
+    },
+    {
+      "name": "--lr-carousel-pagination-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-carousel>`** (default: `var(--lr-color-brand)`) — Pagination-dot hover border."
+      }
+    },
+    {
       "name": "--lr-carousel-slide-basis",
       "description": {
         "kind": "markdown",
@@ -1801,10 +2074,31 @@
       }
     },
     {
+      "name": "--lr-cell-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-size-2-25rem)`) — Inline and block size of each day cell and the matching calendar grid track."
+      }
+    },
+    {
       "name": "--lr-chart-canvas-hover-outline-width",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above)."
+      }
+    },
+    {
+      "name": "--lr-chart-data-table-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of an actionable generated- table value; defaults to the standard active mix of `--lr-color-brand-quiet`."
+      }
+    },
+    {
+      "name": "--lr-chart-data-table-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of an actionable generated-table value."
       }
     },
     {
@@ -1829,10 +2123,38 @@
       }
     },
     {
+      "name": "--lr-chart-legend-item-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of a legend visibility button; defaults to the standard active mix of `--lr-color-brand-quiet`."
+      }
+    },
+    {
+      "name": "--lr-chart-legend-item-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of a legend visibility button."
+      }
+    },
+    {
       "name": "--lr-chart-pattern-step",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to one system color and the stripe/crosshatch pattern becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart."
+      }
+    },
+    {
+      "name": "--lr-chart-reset-zoom-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of the reset-zoom button; defaults to the standard active mix of `--lr-color-brand-quiet`."
+      }
+    },
+    {
+      "name": "--lr-chart-reset-zoom-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of the reset-zoom button."
       }
     },
     {
@@ -1990,6 +2312,20 @@
       }
     },
     {
+      "name": "--lr-checkbox-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-brand)`) — Box border while pressed."
+      }
+    },
+    {
+      "name": "--lr-checkbox-active-ring",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-brand-quiet)`) — Outer box ring while pressed."
+      }
+    },
+    {
       "name": "--lr-checkbox-box-size",
       "description": {
         "kind": "markdown",
@@ -2011,6 +2347,13 @@
       }
     },
     {
+      "name": "--lr-checkbox-group-invalid-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox-group>`** (default: `var(--lr-color-danger)`) — Border around the option collection while invalid chrome is visible."
+      }
+    },
+    {
       "name": "--lr-checkbox-group-option-gap",
       "description": {
         "kind": "markdown",
@@ -2022,6 +2365,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-checkbox-group>`** (default: `calc(var(--lr-form-control-height) * 0.1)`) — Vertical gap between the group's label, options and messages, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-checkbox-hover-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-brand)`) — Box border while the enabled interactive control is hovered."
+      }
+    },
+    {
+      "name": "--lr-checkbox-invalid-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-checkbox>`** (default: `var(--lr-color-danger)`) — Box border while invalid chrome is visible."
       }
     },
     {
@@ -2197,6 +2554,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-code-block>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Same default as `--lr-code-editor-tab-size`, so the editable and read-only code surfaces agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a token and never written inline, so a host override survives shiki's own inline `style` on the highlighted `pre`. The default is a `var()` fallback at the point of use rather than a `:host` declaration, so it inherits: set it on the element, a container, or `:root` and it reaches every code surface below. The markdown surface wraps (`white-space: pre-wrap`) while this one does not, so the same value can look different on a wrapped line, where tab stops restart.\n\n**`<lr-code-block-core>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.\n\n**`<lr-markdown>`, `<lr-markdown-core>`** (default: `2`) — Tab width for a rendered fenced/indented `code-block`. Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a consumer sets one tab width for every code surface — it is declared here rather than inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can render differently on a wrapped line, where tab stops restart."
+      }
+    },
+    {
+      "name": "--lr-code-editor-hover-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-color-brand)`) — Editor-frame border while the enabled surface is hovered."
+      }
+    },
+    {
+      "name": "--lr-code-editor-invalid-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-color-danger)`) — Editor-frame border while invalid chrome is visible."
       }
     },
     {
@@ -2676,6 +3047,20 @@
       }
     },
     {
+      "name": "--lr-color-picker-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-color-brand)`) — Border of the selected palette swatch."
+      }
+    },
+    {
+      "name": "--lr-color-picker-selected-check-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-color-surface)`) — Checkmark color on the selected palette swatch."
+      }
+    },
+    {
       "name": "--lr-color-picker-slider-block-size",
       "description": {
         "kind": "markdown",
@@ -3008,7 +3393,7 @@
       "name": "--lr-command-palette-group-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-2rem)`) — Virtual group-heading height."
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-2rem)`) — Virtual group-heading height; live changes rebuild heading/row transforms and the result extent."
       }
     },
     {
@@ -3043,7 +3428,7 @@
       "name": "--lr-command-palette-row-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-3rem)`) — Virtual command-row height."
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-3rem)`) — Virtual command-row height; live changes rebuild row transforms, scrolling coordinates, and the result extent."
       }
     },
     {
@@ -3341,6 +3726,41 @@
       }
     },
     {
+      "name": "--lr-date-picker-day-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `color-mix(in oklab, var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Day pressed background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-day-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Day hover background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-day-outside-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-text-quiet)`) — Adjacent-month day color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-disabled-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-text-quiet)`) — Disabled day text color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-disabled-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-opacity-disabled)`) — Disabled day opacity."
+      }
+    },
+    {
       "name": "--lr-date-picker-header-gap",
       "description": {
         "kind": "markdown",
@@ -3352,6 +3772,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-date-picker>`** (default: `var(--lr-space-l)`) — Gap between visible months."
+      }
+    },
+    {
+      "name": "--lr-date-picker-nav-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `color-mix(in oklab, var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed month-navigation background."
       }
     },
     {
@@ -3369,17 +3796,192 @@
       }
     },
     {
+      "name": "--lr-date-picker-range-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Selected-range interior background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-range-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-text)`) — Adjacent-month range text color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-range-preview-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet))`) — Pending-range preview background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Selected day/range-endpoint background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-on-brand)`) — Selected day/range-endpoint text color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-title-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Pressed title background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-title-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Pressed title color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-title-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Hovered title color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-today-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Today outline color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `color-mix(in oklab, var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Selection-view item pressed background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-disabled-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-opacity-disabled)`) — Disabled selection-view item opacity."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Selection-view item hover background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Selected selection-view item background."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-on-brand)`) — Selected selection-view item text color."
+      }
+    },
+    {
+      "name": "--lr-date-picker-view-today-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Current-period selection-view outline."
+      }
+    },
+    {
+      "name": "--lr-details-filled-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled surface background."
+      }
+    },
+    {
+      "name": "--lr-details-filled-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `transparent`) — Filled border color."
+      }
+    },
+    {
+      "name": "--lr-details-filled-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled-outlined surface background."
+      }
+    },
+    {
+      "name": "--lr-details-filled-outlined-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-border)`) — Filled-outlined border color."
+      }
+    },
+    {
       "name": "--lr-details-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-font-size)`) — Details compatibility alias for the item's text size.\n\n**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+      }
+    },
+    {
+      "name": "--lr-details-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-space-s)`) — Gap between summary content and its icon."
+      }
+    },
+    {
+      "name": "--lr-details-outlined-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-surface)`) — Outlined surface background."
+      }
+    },
+    {
+      "name": "--lr-details-outlined-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-border)`) — Outlined border color."
+      }
+    },
+    {
+      "name": "--lr-details-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-radius)`) — Disclosure surface corner radius."
       }
     },
     {
       "name": "--lr-details-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Details compatibility alias for the item's spacing.\n\n**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+      }
+    },
+    {
+      "name": "--lr-details-summary-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `color-mix(...)`) — Summary pressed background."
+      }
+    },
+    {
+      "name": "--lr-details-summary-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Summary hover background."
       }
     },
     {
@@ -3792,7 +4394,7 @@
       "name": "--lr-emoji-picker-item-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Floored at 24px; the small size tiers can stay denser than the shared 40px icon-button size."
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Floored at the shared `--lr-icon-button-size`; small size tiers scale the glyph without shrinking the interactive target."
       }
     },
     {
@@ -3985,17 +4587,52 @@
       }
     },
     {
+      "name": "--lr-flow-canvas-edge-accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Accent edge and arrowhead color."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-edge-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-danger)`) — Danger edge and arrowhead color."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-edge-neutral-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-border)`) — Neutral edge and arrowhead color."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-edge-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-success)`) — Success edge and arrowhead color."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-edge-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-warning)`) — Warning edge and arrowhead color."
+      }
+    },
+    {
       "name": "--lr-flow-canvas-grid-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-size-0-5rem)`) — Dotted background spacing. The canvas also writes it inline as `${grid}px` from the `grid` property, which wins over the stylesheet fallback whenever a grid is in effect."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-size-0-5rem)`) — Dotted background spacing. The `grid` property supplies the fallback when this hook is unset; an element or ancestor hook takes precedence."
       }
     },
     {
       "name": "--lr-flow-canvas-march-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-transition-ambient)`) — Running-edge march animation duration."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-duration-ambient)`) — Running-edge march animation duration."
       }
     },
     {
@@ -4108,6 +4745,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-node>`** (default: `calc(var(--lr-size-10rem) + var(--lr-size-1rem))`) — Minimum card inline size."
+      }
+    },
+    {
+      "name": "--lr-flow-node-progress-fill-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Determinate progress fill color, independent from the track and other brand-colored states."
+      }
+    },
+    {
+      "name": "--lr-flow-node-progress-track-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-border)`) — Determinate progress track color."
       }
     },
     {
@@ -4486,6 +5137,118 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-graph-legend>`** (default: `0.5`) — Opacity of a filtered-out row's decorative swatch."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-run-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** — Run button pressed background; defaults to the current brand active mix."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-run-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-brand)`) — Run button resting background."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-run-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-brand)`) — Run button resting border color."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-run-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-on-brand)`) — Run button resting foreground."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-run-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** — Run button hover background; defaults to the current brand hover mix."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-save-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** — Save button pressed background; defaults to the current quiet-brand active mix."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-save-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-surface)`) — Save button resting background."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-save-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-border)`) — Save button resting border color."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-save-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-text)`) — Save button resting foreground."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-save-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-brand-quiet)`) — Save button hover background."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-delete-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-danger-quiet)`) — Saved-query delete pressed background."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-delete-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** — Saved-query delete pressed foreground; defaults to the current danger active mix."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-delete-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-text-quiet)`) — Saved-query delete foreground."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-delete-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-danger)`) — Saved-query delete hover foreground."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-load-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** — Saved-query Load button pressed background; defaults to the current surface active mix."
+      }
+    },
+    {
+      "name": "--lr-graph-query-builder-saved-load-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-query-builder>`** (default: `var(--lr-color-text)`) — Saved-query Load button foreground."
       }
     },
     {
@@ -4874,6 +5637,34 @@
       }
     },
     {
+      "name": "--lr-input-action-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `color-mix(in oklab,var(--lr-color-surface),var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed action background. The same hooks apply to `lr-number-input`'s stepper pair."
+      }
+    },
+    {
+      "name": "--lr-input-action-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-input-action-hover-color,var(--lr-color-text))`) — Pressed action color."
+      }
+    },
+    {
+      "name": "--lr-input-action-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-text-quiet)`) — Resting clear/password/number- stepper action color."
+      }
+    },
+    {
+      "name": "--lr-input-action-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-text)`) — Hovered action color."
+      }
+    },
+    {
       "name": "--lr-input-border-color",
       "description": {
         "kind": "markdown",
@@ -4899,6 +5690,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `transparent`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"outlined\"`'s value."
+      }
+    },
+    {
+      "name": "--lr-input-focus-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-brand)`) — Control-row border color while focus is within the field."
       }
     },
     {
@@ -5203,6 +6001,13 @@
       }
     },
     {
+      "name": "--lr-lite-chart-selected-outline-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-size-2px)`) — Stroke width for a bar/point whose category index is in `selectedIndex`."
+      }
+    },
+    {
       "name": "--lr-locale-picker-expand-size",
       "description": {
         "kind": "markdown",
@@ -5249,6 +6054,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand)`) — Selected option text."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-font-weight-semibold)`) — Selected option font weight."
       }
     },
     {
@@ -5539,6 +6351,69 @@
       }
     },
     {
+      "name": "--lr-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `color-mix(in oklab, var(--lr-option-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed background."
+      }
+    },
+    {
+      "name": "--lr-option-checked-icon-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--lr-color-brand)`) — Selected checkmark color."
+      }
+    },
+    {
+      "name": "--lr-option-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--lr-color-brand-quiet)`) — Keyboard-current background."
+      }
+    },
+    {
+      "name": "--lr-option-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--current-text-color, var(--lr-color-text))`) — Keyboard-current text color; the upstream `--current-text-color` remains its fallback."
+      }
+    },
+    {
+      "name": "--lr-option-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--lr-color-brand-quiet)`) — Hover background."
+      }
+    },
+    {
+      "name": "--lr-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-option>`** (default: `var(--lr-font-weight-semibold)`) — Selected label weight."
+      }
+    },
+    {
+      "name": "--lr-otp-input-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-focus-ring-color)`) — Active segment border."
+      }
+    },
+    {
+      "name": "--lr-otp-input-active-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-focus-ring-color)`) — Active segment outer ring."
+      }
+    },
+    {
+      "name": "--lr-otp-input-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `var(--lr-color-danger)`) — Invalid segment border."
+      }
+    },
+    {
       "name": "--lr-otp-input-mask-char",
       "description": {
         "kind": "markdown",
@@ -5577,14 +6452,14 @@
       "name": "--lr-overlay-arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`** — Retained Lyra fallback for `--arrow-size`."
+        "value": "**`<lr-dropdown>`** — Retained Lyra arrow-size fallback.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--arrow-size`."
       }
     },
     {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`** — Retained Lyra fallback for `--max-width`."
+        "value": "**`<lr-dropdown>`** — Maximum inline size of the popup.\n\n**`<lr-popover>`** — Retained Lyra fallback for `--max-width`."
       }
     },
     {
@@ -5644,6 +6519,27 @@
       }
     },
     {
+      "name": "--lr-pagination-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Ordinary control pressed background; defaults to the current quiet-brand active mix."
+      }
+    },
+    {
+      "name": "--lr-pagination-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-brand)`) — Ordinary control pressed border color."
+      }
+    },
+    {
+      "name": "--lr-pagination-base-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-space-m)`) — Gap between the summary and controls."
+      }
+    },
+    {
       "name": "--lr-pagination-control-bg",
       "description": {
         "kind": "markdown",
@@ -5655,6 +6551,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-pagination>`** — Resting border color of every control; defaults from the `appearance` variant."
+      }
+    },
+    {
+      "name": "--lr-pagination-control-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-text)`) — Resting control foreground."
       }
     },
     {
@@ -5679,6 +6582,62 @@
       }
     },
     {
+      "name": "--lr-pagination-controls-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-space-xs)`) — Gap between the navigation controls and the numbered-page list or compact page field."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** — Current-page pressed background; defaults to the current brand active mix."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `transparent`) — Current-page pressed border color."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-brand)`) — Current-page background."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `transparent`) — Current-page border color."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-on-brand)`) — Current-page foreground."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-brand)`) — Current-page hover background."
+      }
+    },
+    {
+      "name": "--lr-pagination-current-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `transparent`) — Current-page hover border color."
+      }
+    },
+    {
       "name": "--lr-pagination-font-size",
       "description": {
         "kind": "markdown",
@@ -5686,10 +6645,31 @@
       }
     },
     {
+      "name": "--lr-pagination-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-brand-quiet)`) — Ordinary control hover background."
+      }
+    },
+    {
+      "name": "--lr-pagination-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-brand)`) — Ordinary control hover border color."
+      }
+    },
+    {
       "name": "--lr-pagination-invalid-border",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-pagination>`** (default: `var(--lr-color-danger)`) — Border color of `[part=\"page-input\"]` while the typed page is out of range (`aria-invalid=\"true\"`)."
+      }
+    },
+    {
+      "name": "--lr-pagination-pages-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-space-xs)`) — Gap between numbered page controls."
       }
     },
     {
@@ -5787,7 +6767,7 @@
       "name": "--lr-phone-input-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-phone-input>`** — Input block-padding, scaled by `size`."
+        "value": "**`<lr-phone-input>`** — Input block-padding, scaled by `size` through the shared form-control ladder."
       }
     },
     {
@@ -5969,7 +6949,7 @@
       "name": "--lr-push-to-talk-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-size-3rem)`) — Inline and block size of the circular `trigger` button."
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-size-3rem)`) — Preferred inline and block size of the circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor."
       }
     },
     {
@@ -5984,6 +6964,104 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-qr-code>`** (default: `var(--lr-color-text)`) — Dark/foreground module color."
+      }
+    },
+    {
+      "name": "--lr-radio-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-radio-hover-border-color)`) — Indicator border while the interactive row is pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-active-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand-quiet)`) — Indicator ring while the interactive row is pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `color-mix(...)`) — Unchecked button background while pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-button-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-radio-button-hover-border-color)`) — Unchecked button border while pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `color-mix(...)`) — Checked button background while pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-radio-button-checked-hover-border-color)`) — Checked button border while pressed."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Checked button background."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Checked button border."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-color-on-brand)`) — Checked button text color."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `color-mix(...)`) — Checked button background while hovered."
+      }
+    },
+    {
+      "name": "--lr-radio-button-checked-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-radio-button-checked-border-color)`) — Checked button border while hovered."
+      }
+    },
+    {
+      "name": "--lr-radio-button-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-space-xs)`) — Gap between prefix, label, and suffix in both `<lr-radio-button>` and `<lr-radio appearance=\"button\">`."
+      }
+    },
+    {
+      "name": "--lr-radio-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-color-brand-quiet)`) — Unchecked button background while hovered."
+      }
+    },
+    {
+      "name": "--lr-radio-button-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Unchecked button border while hovered."
       }
     },
     {
@@ -6022,6 +7100,13 @@
       }
     },
     {
+      "name": "--lr-radio-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Indicator border while the interactive row is hovered."
+      }
+    },
+    {
       "name": "--lr-radio-label-indent",
       "description": {
         "kind": "markdown",
@@ -6032,7 +7117,7 @@
       "name": "--lr-radio-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set."
+        "value": "**`<lr-radio>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set.\n\n**`<lr-radio-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the outer edges of the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius; `pill` swaps it for `--lr-radius-pill`."
       }
     },
     {
@@ -6554,6 +7639,90 @@
       }
     },
     {
+      "name": "--lr-rubric-form-skip-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `color-mix(...)`) — Skip background while pressed."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-skip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-surface)`) — Skip-button background."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-skip-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-border)`) — Skip-button border."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-skip-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-text)`) — Skip-button text color."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-skip-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-brand-quiet)`) — Skip background while hovered."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `color-mix(...)`) — Submit background while pressed."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `color-mix(...)`) — Submit border while pressed."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-brand)`) — Submit-button background."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-brand)`) — Submit-button border."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `var(--lr-color-on-brand)`) — Submit-button text color."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `color-mix(...)`) — Submit background while hovered."
+      }
+    },
+    {
+      "name": "--lr-rubric-form-submit-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rubric-form>`** (default: `color-mix(...)`) — Submit border while hovered."
+      }
+    },
+    {
       "name": "--lr-safe-area-bottom",
       "description": {
         "kind": "markdown",
@@ -6757,6 +7926,13 @@
       }
     },
     {
+      "name": "--lr-select-open-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-color-brand)`) — Trigger border while the listbox is open."
+      }
+    },
+    {
       "name": "--lr-select-option-active-bg",
       "description": {
         "kind": "markdown",
@@ -6813,10 +7989,24 @@
       }
     },
     {
+      "name": "--lr-select-trigger-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `color-mix(...)`) — Trigger background while pressed."
+      }
+    },
+    {
       "name": "--lr-select-trigger-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-select>`** — Exact trigger height. Unset by default, which leaves `--lr-select-trigger-min-height` as a floor only; set it to a length to both floor and cap the trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+      }
+    },
+    {
+      "name": "--lr-select-trigger-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-color-brand-quiet)`) — Trigger background while hovered. Accent appearance keeps its louder mixed fallback when this hook is unset."
       }
     },
     {
@@ -7597,10 +8787,45 @@
       }
     },
     {
+      "name": "--lr-slider-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-space-s)`) — Gap between the track row, value, label, references, and hint as they wrap."
+      }
+    },
+    {
       "name": "--lr-slider-row-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-slider>`** (default: `calc(var(--lr-form-control-height) * 0.6)`) — Cross-axis extent of the control's interactive row: its block size when horizontal, its inline size when vertical. Scales off the shared form-control ladder, so a size tier moves it without a per-tier rule."
+      }
+    },
+    {
+      "name": "--lr-slider-thumb-active-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-slider-thumb-hover-ring-color)`) — Thumb ring while pressed."
+      }
+    },
+    {
+      "name": "--lr-slider-thumb-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-color-brand)`) — Resting thumb background."
+      }
+    },
+    {
+      "name": "--lr-slider-thumb-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-color-surface)`) — Resting thumb border."
+      }
+    },
+    {
+      "name": "--lr-slider-thumb-hover-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-slider>`** (default: `var(--lr-color-brand-quiet)`) — Thumb ring while hovered."
       }
     },
     {
@@ -7877,6 +9102,20 @@
       }
     },
     {
+      "name": "--lr-stat-emphasis-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-brand)`) — Accent-edge color when `emphasis` is set. Independent of the headline's emphasis tint and `brand` variant."
+      }
+    },
+    {
+      "name": "--lr-stat-emphasis-value-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-brand)`) — Headline value color when `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant."
+      }
+    },
+    {
       "name": "--lr-stat-trend-bad-bg",
       "description": {
         "kind": "markdown",
@@ -8136,10 +9375,38 @@
       }
     },
     {
+      "name": "--lr-switch-checked-track-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-color-brand)`) — Track fill while checked."
+      }
+    },
+    {
+      "name": "--lr-switch-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-space-s)`) — Gap between the track and label."
+      }
+    },
+    {
+      "name": "--lr-switch-thumb-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `var(--lr-color-surface)`) — Thumb fill in either checked state."
+      }
+    },
+    {
       "name": "--lr-switch-thumb-offset",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-switch>`** (default: `var(--lr-size-2px)`) — Inset of the thumb from the track's edges."
+      }
+    },
+    {
+      "name": "--lr-switch-track-active-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `color-mix(...)`) — Track fill while pressed."
       }
     },
     {
@@ -8153,7 +9420,14 @@
       "name": "--lr-switch-track-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-switch>`** (default: `var(--lr-color-border)`) — Resting fill of `[part='track']`, re-pointed at `var(--lr-color-brand)` while `checked`. The hover and press states mix away from whichever of the two is current, so retinting this retints all four renderings at once."
+        "value": "**`<lr-switch>`** (default: `var(--lr-color-border)`) — Resting fill of `[part='track']`, used as the source for the hover and press fallbacks."
+      }
+    },
+    {
+      "name": "--lr-switch-track-hover-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-switch>`** (default: `color-mix(...)`) — Track fill while hovered."
       }
     },
     {
@@ -8209,14 +9483,14 @@
       "name": "--lr-table-heat-tint-hi",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `var(--lr-color-brand)`) — High endpoint of the heat-tint ramp used by `heatValue` columns."
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand)`) — High endpoint of the heat-tint ramp used by `heatValue` columns. Inherits from theme ancestors."
       }
     },
     {
       "name": "--lr-table-heat-tint-lo",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `var(--lr-color-brand-quiet)`) — Low endpoint of the heat-tint ramp used by `heatValue` columns."
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand-quiet)`) — Low endpoint of the heat-tint ramp used by `heatValue` columns. Inherits from theme ancestors."
       }
     },
     {
@@ -8230,14 +9504,14 @@
       "name": "--lr-table-resize-handle-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle."
+        "value": "**`<lr-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle. Inherits from theme ancestors."
       }
     },
     {
       "name": "--lr-table-resize-min-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `var(--lr-size-3rem)`) — Default minimum width for a resizable column without an explicit pixel `minWidth`."
+        "value": "**`<lr-table>`** (default: `var(--lr-size-3rem)`) — Default minimum width for a resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors."
       }
     },
     {
@@ -8689,6 +9963,13 @@
       }
     },
     {
+      "name": "--lr-textarea-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-brand)`) — Field border color while the native textarea is hovered."
+      }
+    },
+    {
       "name": "--lr-textarea-max-block-size",
       "description": {
         "kind": "markdown",
@@ -8720,35 +10001,35 @@
       "name": "--lr-theme-border-radius-pill",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-radius-pill; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-radius-pill."
       }
     },
     {
       "name": "--lr-theme-border-radius-xs",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-radius-xs; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-radius-xs."
       }
     },
     {
       "name": "--lr-theme-border-width-medium",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-border-width-medium; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-border-width-medium."
       }
     },
     {
       "name": "--lr-theme-border-width-thick",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-border-width-thick; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-border-width-thick."
       }
     },
     {
       "name": "--lr-theme-border-width-thin",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-border-width-thin; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-border-width-thin."
       }
     },
     {
@@ -8951,21 +10232,21 @@
       "name": "--lr-theme-color-mix-active",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-color-mix-active; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-color-mix-active."
       }
     },
     {
       "name": "--lr-theme-color-mix-hover",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-color-mix-hover; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-color-mix-hover."
       }
     },
     {
       "name": "--lr-theme-color-mix-partner",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-color-mix-partner; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-color-mix-partner."
       }
     },
     {
@@ -9056,7 +10337,7 @@
       "name": "--lr-theme-color-shadow",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-color-shadow; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-color-shadow."
       }
     },
     {
@@ -9231,49 +10512,49 @@
       "name": "--lr-theme-duration-fast",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-duration-fast; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-duration-fast."
       }
     },
     {
       "name": "--lr-theme-duration-icon",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-duration-icon; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-duration-icon."
       }
     },
     {
       "name": "--lr-theme-duration-normal",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-duration-base; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-duration-base."
       }
     },
     {
       "name": "--lr-theme-duration-slow",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-duration-ambient; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-duration-ambient."
       }
     },
     {
       "name": "--lr-theme-easing-emphasized",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-easing-emphasized; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-easing-emphasized."
       }
     },
     {
       "name": "--lr-theme-easing-linear",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-easing-linear; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-easing-linear."
       }
     },
     {
       "name": "--lr-theme-easing-standard",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-easing-standard; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-easing-standard."
       }
     },
     {
@@ -9378,28 +10659,28 @@
       "name": "--lr-theme-font-weight-bold",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-font-weight-bold; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-font-weight-bold."
       }
     },
     {
       "name": "--lr-theme-font-weight-medium",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-font-weight-medium; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-font-weight-medium."
       }
     },
     {
       "name": "--lr-theme-font-weight-normal",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-font-weight-normal; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-font-weight-normal."
       }
     },
     {
       "name": "--lr-theme-font-weight-semibold",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-font-weight-semibold; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-font-weight-semibold."
       }
     },
     {
@@ -9462,7 +10743,7 @@
       "name": "--lr-theme-hover-brightness",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-hover-brightness; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-hover-brightness."
       }
     },
     {
@@ -9476,77 +10757,77 @@
       "name": "--lr-theme-line-height-1-4",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-1-4; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-1-4."
       }
     },
     {
       "name": "--lr-theme-line-height-compact",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-compact; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-compact."
       }
     },
     {
       "name": "--lr-theme-line-height-loose",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-loose; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-loose."
       }
     },
     {
       "name": "--lr-theme-line-height-none",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-none; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-none."
       }
     },
     {
       "name": "--lr-theme-line-height-normal",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-normal; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-normal."
       }
     },
     {
       "name": "--lr-theme-line-height-snug",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-line-height-snug; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-line-height-snug."
       }
     },
     {
       "name": "--lr-theme-opacity-disabled",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-opacity-disabled; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-opacity-disabled."
       }
     },
     {
       "name": "--lr-theme-opacity-muted",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-opacity-muted; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-opacity-muted."
       }
     },
     {
       "name": "--lr-theme-otp-input-segment-size",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-otp-input-segment-size; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-otp-input-segment-size."
       }
     },
     {
       "name": "--lr-theme-popover-viewport-clamp",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-popover-viewport-clamp; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-popover-viewport-clamp."
       }
     },
     {
       "name": "--lr-theme-scroll-fade-size",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-scroll-fade-size; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-scroll-fade-size."
       }
     },
     {
@@ -9595,623 +10876,623 @@
       "name": "--lr-theme-size-0-02em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-02em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-02em."
       }
     },
     {
       "name": "--lr-theme-size-0-03em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-03em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-03em."
       }
     },
     {
       "name": "--lr-theme-size-0-04em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-04em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-04em."
       }
     },
     {
       "name": "--lr-theme-size-0-05rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-05rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-05rem."
       }
     },
     {
       "name": "--lr-theme-size-0-0625rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-0625rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-0625rem."
       }
     },
     {
       "name": "--lr-theme-size-0-09375rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-09375rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-09375rem."
       }
     },
     {
       "name": "--lr-theme-size-0-125rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-125rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-125rem."
       }
     },
     {
       "name": "--lr-theme-size-0-15rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-15rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-15rem."
       }
     },
     {
       "name": "--lr-theme-size-0-1875rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-1875rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-1875rem."
       }
     },
     {
       "name": "--lr-theme-size-0-1rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-1rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-1rem."
       }
     },
     {
       "name": "--lr-theme-size-0-25rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-25rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-25rem."
       }
     },
     {
       "name": "--lr-theme-size-0-3125rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-3125rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-3125rem."
       }
     },
     {
       "name": "--lr-theme-size-0-35em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-35em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-35em."
       }
     },
     {
       "name": "--lr-theme-size-0-375rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-375rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-375rem."
       }
     },
     {
       "name": "--lr-theme-size-0-3em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-3em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-3em."
       }
     },
     {
       "name": "--lr-theme-size-0-4375rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-4375rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-4375rem."
       }
     },
     {
       "name": "--lr-theme-size-0-4em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-4em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-4em."
       }
     },
     {
       "name": "--lr-theme-size-0-4rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-4rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-4rem."
       }
     },
     {
       "name": "--lr-theme-size-0-5em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-5em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-5em."
       }
     },
     {
       "name": "--lr-theme-size-0-5rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-5rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-5rem."
       }
     },
     {
       "name": "--lr-theme-size-0-625rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-625rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-625rem."
       }
     },
     {
       "name": "--lr-theme-size-0-6875rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-6875rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-6875rem."
       }
     },
     {
       "name": "--lr-theme-size-0-6rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-6rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-6rem."
       }
     },
     {
       "name": "--lr-theme-size-0-75em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-75em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-75em."
       }
     },
     {
       "name": "--lr-theme-size-0-75rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-75rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-75rem."
       }
     },
     {
       "name": "--lr-theme-size-0-7em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-7em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-7em."
       }
     },
     {
       "name": "--lr-theme-size-0-875em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-875em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-875em."
       }
     },
     {
       "name": "--lr-theme-size-0-8rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-8rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-8rem."
       }
     },
     {
       "name": "--lr-theme-size-0-9375rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-0-9375rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-0-9375rem."
       }
     },
     {
       "name": "--lr-theme-size-1-0625rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-0625rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-0625rem."
       }
     },
     {
       "name": "--lr-theme-size-1-1rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-1rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-1rem."
       }
     },
     {
       "name": "--lr-theme-size-1-25rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-25rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-25rem."
       }
     },
     {
       "name": "--lr-theme-size-1-5em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-5em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-5em."
       }
     },
     {
       "name": "--lr-theme-size-1-5rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-5rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-5rem."
       }
     },
     {
       "name": "--lr-theme-size-1-75rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-75rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-75rem."
       }
     },
     {
       "name": "--lr-theme-size-1-875rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1-875rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1-875rem."
       }
     },
     {
       "name": "--lr-theme-size-10px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-10px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-10px."
       }
     },
     {
       "name": "--lr-theme-size-10rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-10rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-10rem."
       }
     },
     {
       "name": "--lr-theme-size-12em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-12em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-12em."
       }
     },
     {
       "name": "--lr-theme-size-12rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-12rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-12rem."
       }
     },
     {
       "name": "--lr-theme-size-14px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-14px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-14px."
       }
     },
     {
       "name": "--lr-theme-size-14rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-14rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-14rem."
       }
     },
     {
       "name": "--lr-theme-size-15rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-15rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-15rem."
       }
     },
     {
       "name": "--lr-theme-size-16px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-16px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-16px."
       }
     },
     {
       "name": "--lr-theme-size-16rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-16rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-16rem."
       }
     },
     {
       "name": "--lr-theme-size-18rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-18rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-18rem."
       }
     },
     {
       "name": "--lr-theme-size-1em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1em."
       }
     },
     {
       "name": "--lr-theme-size-1px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1px."
       }
     },
     {
       "name": "--lr-theme-size-1rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-1rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-1rem."
       }
     },
     {
       "name": "--lr-theme-size-2-25rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-2-25rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-2-25rem."
       }
     },
     {
       "name": "--lr-theme-size-2-5ch",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-2-5ch; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-2-5ch."
       }
     },
     {
       "name": "--lr-theme-size-2-5rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-2-5rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-2-5rem."
       }
     },
     {
       "name": "--lr-theme-size-20rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-20rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-20rem."
       }
     },
     {
       "name": "--lr-theme-size-22rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-22rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-22rem."
       }
     },
     {
       "name": "--lr-theme-size-24px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-24px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-24px."
       }
     },
     {
       "name": "--lr-theme-size-24rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-24rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-24rem."
       }
     },
     {
       "name": "--lr-theme-size-280px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-280px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-280px."
       }
     },
     {
       "name": "--lr-theme-size-28px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-28px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-28px."
       }
     },
     {
       "name": "--lr-theme-size-28rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-28rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-28rem."
       }
     },
     {
       "name": "--lr-theme-size-2px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-2px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-2px."
       }
     },
     {
       "name": "--lr-theme-size-2rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-2rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-2rem."
       }
     },
     {
       "name": "--lr-theme-size-3-5em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-3-5em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-3-5em."
       }
     },
     {
       "name": "--lr-theme-size-3-5rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-3-5rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-3-5rem."
       }
     },
     {
       "name": "--lr-theme-size-30rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-30rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-30rem."
       }
     },
     {
       "name": "--lr-theme-size-32rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-32rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-32rem."
       }
     },
     {
       "name": "--lr-theme-size-36rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-36rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-36rem."
       }
     },
     {
       "name": "--lr-theme-size-38rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-38rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-38rem."
       }
     },
     {
       "name": "--lr-theme-size-3ch",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-3ch; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-3ch."
       }
     },
     {
       "name": "--lr-theme-size-3px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-3px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-3px."
       }
     },
     {
       "name": "--lr-theme-size-3rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-3rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-3rem."
       }
     },
     {
       "name": "--lr-theme-size-48rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-48rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-48rem."
       }
     },
     {
       "name": "--lr-theme-size-4ch",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-4ch; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-4ch."
       }
     },
     {
       "name": "--lr-theme-size-4px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-4px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-4px."
       }
     },
     {
       "name": "--lr-theme-size-4rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-4rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-4rem."
       }
     },
     {
       "name": "--lr-theme-size-5em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-5em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-5em."
       }
     },
     {
       "name": "--lr-theme-size-5rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-5rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-5rem."
       }
     },
     {
       "name": "--lr-theme-size-6ch",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-6ch; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-6ch."
       }
     },
     {
       "name": "--lr-theme-size-6em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-6em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-6em."
       }
     },
     {
       "name": "--lr-theme-size-6px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-6px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-6px."
       }
     },
     {
       "name": "--lr-theme-size-6rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-6rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-6rem."
       }
     },
     {
       "name": "--lr-theme-size-7rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-7rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-7rem."
       }
     },
     {
       "name": "--lr-theme-size-8em",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-8em; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-8em."
       }
     },
     {
       "name": "--lr-theme-size-8rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-8rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-8rem."
       }
     },
     {
       "name": "--lr-theme-size-neg-0-15rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-0-15rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-0-15rem."
       }
     },
     {
       "name": "--lr-theme-size-neg-0-25rem",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-0-25rem; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-0-25rem."
       }
     },
     {
       "name": "--lr-theme-size-neg-1px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-1px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-1px."
       }
     },
     {
       "name": "--lr-theme-size-neg-4px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-4px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-4px."
       }
     },
     {
       "name": "--lr-theme-size-neg-6px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-6px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-6px."
       }
     },
     {
       "name": "--lr-theme-size-neg-8px",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-size-neg-8px; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-size-neg-8px."
       }
     },
     {
@@ -10484,21 +11765,21 @@
       "name": "--lr-theme-transition-fast",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-transition-fast; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-transition-fast."
       }
     },
     {
       "name": "--lr-theme-transition-normal",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-transition-base; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-transition-base."
       }
     },
     {
       "name": "--lr-theme-transition-slow",
       "description": {
         "kind": "markdown",
-        "value": "**Application theme input** — Application input for --lr-transition-ambient; falls back to the shared token default."
+        "value": "**Application theme input** — Application theme input for --lr-transition-ambient."
       }
     },
     {
@@ -10586,10 +11867,178 @@
       }
     },
     {
+      "name": "--lr-time-input-action-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** — Clear/expand/Now pressed fill; derived from hover when unset."
+      }
+    },
+    {
+      "name": "--lr-time-input-action-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-text-quiet)`) — Resting clear/expand color."
+      }
+    },
+    {
+      "name": "--lr-time-input-action-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-brand-quiet)`) — Clear/expand/Now hover fill."
+      }
+    },
+    {
+      "name": "--lr-time-input-action-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-text)`) — Hovered clear/expand color."
+      }
+    },
+    {
+      "name": "--lr-time-input-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-border)`) — Outer row border color, with appearance-specific fallbacks."
+      }
+    },
+    {
+      "name": "--lr-time-input-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-text)`) — Outer row text color, including the accent appearance fallback."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** — Picker-option pressed fill; derived from hover when unset."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-brand-quiet)`) — Picker-option hover fill."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-selected-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** — Selected-option pressed fill; derived when unset."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-brand)`) — Selected option fill."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-on-brand)`) — Selected option text."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-font-weight-semibold)`) — Selected option weight."
+      }
+    },
+    {
+      "name": "--lr-time-input-column-selected-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** — Selected-option hover fill; derived when unset."
+      }
+    },
+    {
+      "name": "--lr-time-input-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `transparent`) — Outer row background, with appearance-specific fallbacks."
+      }
+    },
+    {
+      "name": "--lr-time-input-focus-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-brand)`) — Open/focused row border."
+      }
+    },
+    {
+      "name": "--lr-time-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-form-control-gap)`) — Gap between segments, adornments, and actions in the outer row. Undeclared on the host so ancestor theme wrappers can set it."
+      }
+    },
+    {
+      "name": "--lr-time-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-form-control-radius)`) — Outer row corner radius. `pill` supplies `--lr-radius-pill` only as the fallback, so a component-scoped value wins."
+      }
+    },
+    {
+      "name": "--lr-time-input-segment-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** — Segment pressed fill; derived from hover when unset."
+      }
+    },
+    {
+      "name": "--lr-time-input-segment-focus-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-time-input-segment-hover-bg,var(--lr-color-brand-quiet))`) — Keyboard-focused segment fill."
+      }
+    },
+    {
+      "name": "--lr-time-input-segment-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-input>`** (default: `var(--lr-color-brand-quiet)`) — Segment hover fill."
+      }
+    },
+    {
       "name": "--lr-time-range-base-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-time-range>`** (default: `1.5rem*scale`) — Brush baseline block size."
+      }
+    },
+    {
+      "name": "--lr-time-range-handle-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-brand)`) — Resting handle background."
+      }
+    },
+    {
+      "name": "--lr-time-range-handle-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-surface)`) — Resting handle border."
+      }
+    },
+    {
+      "name": "--lr-time-range-handle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Hovered handle background; defaults to a hover-state mix of `--lr-time-range-handle-bg`."
+      }
+    },
+    {
+      "name": "--lr-time-range-handle-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Pressed handle background; defaults to an active-state mix of `--lr-time-range-handle-bg`."
       }
     },
     {
@@ -10642,10 +12091,31 @@
       }
     },
     {
+      "name": "--lr-time-range-preset-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-color-brand)`) — Border color of a hovered preset button."
+      }
+    },
+    {
       "name": "--lr-time-range-preset-padding",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-time-range>`** — Preset button padding, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Background of a pressed preset button; defaults to an active-state mix of `--lr-color-surface`."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-pressed-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Border color of a pressed preset button; defaults to an active-state mix of `--lr-color-brand`."
       }
     },
     {
@@ -10715,28 +12185,28 @@
       "name": "--lr-timeline-marker-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-text-quiet)`) — Marker fill/accent color. Swapped per `variant` (see the class doc's variant table); a consumer overriding this directly on one item wins over the variant default via normal CSS cascade/specificity."
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-text-quiet)`) — Marker fill/accent color. Swapped per `variant` (see the class doc's variant table); a consumer can override it on an ancestor for a themed group or directly on one item, with the direct value winning via the normal cascade."
       }
     },
     {
       "name": "--lr-timeline-marker-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `var(--lr-size-1-25rem)`) — Diameter of the marker circle (both inline-size and block-size, so the default dot stays circular)."
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-size-1-25rem)`) — Diameter of the marker circle (both inline-size and block-size, so the default dot stays circular). Inherits from theme ancestors."
       }
     },
     {
       "name": "--lr-timeline-rail-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-border)`) — Color of the connecting rail line. A component-scoped property (not just inlining `var(--lr-color-border)` at every use site) so a consumer can retint just the rail without touching the library-wide border color elsewhere."
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-border)`) — Color of the connecting rail line. A component-scoped property (not just inlining `var(--lr-color-border)` at every use site) so a consumer can retint just the rail without touching the library-wide border color elsewhere. Inherits from theme ancestors."
       }
     },
     {
       "name": "--lr-timeline-rail-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `var(--lr-border-width-medium)`) — Thickness of the connecting rail line."
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-border-width-medium)`) — Thickness of the connecting rail line. Inherits from theme ancestors."
       }
     },
     {
@@ -10806,7 +12276,7 @@
       "name": "--lr-token-input-control-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-token-input>`** — Exact input-wrapper height. Unset by default, which leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+        "value": "**`<lr-token-input>`** — Exact input-wrapper height. Unset by default, which leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). An uncapped row grows as tokens wrap; a capped row clips inline overflow and intentionally scrolls in the block axis so wrapped tokens and their hit-area-floored actions remain reachable. Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
       }
     },
     {
@@ -10814,6 +12284,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-token-input>`** (default: `var(--lr-form-control-height)`) — Input-wrapper block-size floor. Reads the shared form-control height ladder, so retuning `--lr-theme-form-control-height-*` moves this control and every sibling field together."
+      }
+    },
+    {
+      "name": "--lr-token-input-edit-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-token-input-action-hover-bg)`) — Editable token label hover background, independently themeable from the remove action."
+      }
+    },
+    {
+      "name": "--lr-token-input-edit-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** — Editable token label pressed background; defaults to an active-state mix of `--lr-token-input-edit-hover-bg`."
       }
     },
     {
@@ -10877,6 +12361,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius. The `pill` attribute swaps it for `--lr-radius-pill`."
+      }
+    },
+    {
+      "name": "--lr-token-input-remove-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-token-input-action-hover-bg)`) — Remove action hover background, independently themeable from the editable label."
+      }
+    },
+    {
+      "name": "--lr-token-input-remove-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** — Remove action pressed background; defaults to an active-state mix of `--lr-token-input-remove-hover-bg`."
       }
     },
     {
@@ -11349,6 +12847,48 @@
       }
     },
     {
+      "name": "--lr-tree-checkbox-checked-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Checked control background."
+      }
+    },
+    {
+      "name": "--lr-tree-checkbox-checked-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Checked control border."
+      }
+    },
+    {
+      "name": "--lr-tree-checkbox-checked-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-on-brand)`) — Checked glyph color."
+      }
+    },
+    {
+      "name": "--lr-tree-checkbox-indeterminate-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Indeterminate control background."
+      }
+    },
+    {
+      "name": "--lr-tree-checkbox-indeterminate-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Indeterminate control border."
+      }
+    },
+    {
+      "name": "--lr-tree-checkbox-indeterminate-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-on-brand)`) — Indeterminate glyph color."
+      }
+    },
+    {
       "name": "--lr-tree-depth",
       "description": {
         "kind": "markdown",
@@ -11653,7 +13193,7 @@
       "name": "--max-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the popup.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the tooltip."
+        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size inherited from the popover surface.\n\n**`<lr-popover>`** (default: `var(--lr-overlay-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the popup.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))`) — Maximum inline size of the tooltip."
       }
     },
     {
@@ -11814,7 +13354,7 @@
       "name": "--show-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-dialog>`, `<lr-drawer>`** — Mapped opening animation duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-duration-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
       }
     },
     {
@@ -11849,7 +13389,7 @@
       "name": "--spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-dialog>`, `<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical)."
+        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-spacing`; set on either name.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-dialog>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical).\n\n**`<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Web Awesome shared region spacing."
       }
     },
     {

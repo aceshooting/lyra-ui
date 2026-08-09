@@ -9,6 +9,8 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 
   [part="base"] {
@@ -20,6 +22,8 @@ export const styles = css`
     grid-auto-rows: var(--lr-dashboard-grid-row-height, var(--lr-size-5rem));
     gap: var(--lr-dashboard-grid-gap, var(--lr-space-m));
     align-items: stretch;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   [part="empty"] {
@@ -30,8 +34,17 @@ export const styles = css`
     position: relative;
     display: flex;
     min-inline-size: 0;
+    max-inline-size: 100%;
     min-block-size: 0;
     border-radius: var(--lr-radius);
+    overflow-wrap: anywhere;
+  }
+
+  /* The resize handle is absolutely positioned and therefore cannot contribute to the cell's
+     intrinsic block size. Apply the shared action floor only while that handle actually exists;
+     readonly and locked short cells keep their content-derived height in the stacked layout. */
+  [part="cell"][data-resizable] {
+    min-block-size: var(--lr-icon-button-size);
   }
 
   /* A cell's slotted content (default lr-widget, or a consumer's own opaque markup) commonly
@@ -60,8 +73,10 @@ export const styles = css`
 
   [part="cell"] ::slotted(*) {
     min-inline-size: 0;
+    max-inline-size: 100%;
     min-block-size: 0;
     inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 
   [part="cell"][data-dragging],

@@ -71,18 +71,18 @@ describe('defaults', () => {
 describe('kind detection', () => {
   it('auto-detects audio from an audio/* mime-type', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} mime-type="audio/mpeg"></lr-av-player>`)) as LyraAvPlayer;
-    expect(el.shadowRoot!.querySelector('audio')).to.exist;
-    expect(el.shadowRoot!.querySelector('video')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('audio')) != null).to.equal(true);
+    expect((el.shadowRoot!.querySelector('video')) == null).to.equal(true);
   });
 
   it('defaults to video when mime-type is unset or non-audio', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP4_SRC} mime-type="video/mp4"></lr-av-player>`)) as LyraAvPlayer;
-    expect(el.shadowRoot!.querySelector('video')).to.exist;
+    expect((el.shadowRoot!.querySelector('video')) != null).to.equal(true);
   });
 
   it('an explicit kind overrides auto-detection', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} mime-type="audio/mpeg" kind="video"></lr-av-player>`)) as LyraAvPlayer;
-    expect(el.shadowRoot!.querySelector('video')).to.exist;
+    expect((el.shadowRoot!.querySelector('video')) != null).to.equal(true);
   });
 });
 
@@ -147,7 +147,7 @@ describe('playback controls', () => {
     expect(getComputedStyle(select).appearance).to.equal('none');
     expect(getComputedStyle(select).cursor).to.equal('pointer');
     const wrapper = select.closest('.rate-select-wrapper');
-    expect(wrapper, 'the select must be wrapped so a decorative chevron can be positioned over it').to.exist;
+    expect((wrapper) != null, 'the select must be wrapped so a decorative chevron can be positioned over it').to.equal(true);
     expect(wrapper!.querySelector('.rate-select-chevron svg'), 'a decorative chevron must render since appearance:none removes the native one').to.exist;
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='rate-select'\] option[^{]*\{[^}]*background:/);
@@ -759,9 +759,9 @@ describe('seeking before the media element mounts', () => {
 describe('waveform', () => {
   it('renders a plain seek rail when peaks is empty, and a canvas when peaks is set', async () => {
     const withoutPeaks = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
-    expect(withoutPeaks.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((withoutPeaks.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
     const withPeaks = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.1, 0.5, 0.9, 0.3]}></lr-av-player>`)) as LyraAvPlayer;
-    expect(withPeaks.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((withPeaks.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   });
 
   it('still redraws on window resize after a disconnect/reconnect (regression)', async () => {
@@ -977,7 +977,7 @@ describe('source identity', () => {
     el.src = MP4_SRC;
     await el.updateComplete;
     const replacement = mediaEl(el);
-    expect(replacement).to.not.equal(oldMedia);
+    expect((replacement) !== (oldMedia)).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]')!;
     expect(timeline.getAttribute('aria-valuemax')).to.equal('0');
@@ -1113,17 +1113,26 @@ describe('render error', () => {
 
 describe('render branches', () => {
   it('renders an error region instead of a media element when src is unsafe', async () => {
-    const el = (await fixture(html`<lr-av-player src="javascript:alert(1)"></lr-av-player>`)) as LyraAvPlayer;
-    expect(el.shadowRoot!.querySelector('audio, video')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    const el = (await fixture(html`
+      <lr-av-player src="javascript:alert(1)" aria-label="Episode controls"></lr-av-player>
+    `)) as LyraAvPlayer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(el.shadowRoot!.querySelectorAll('audio, video').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Episode controls');
     expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal(null);
     expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
+    await expect(el).to.be.accessible();
   });
 
-  it('announces a post-mount transition to an unsafe source', async () => {
-    const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  it('announces a post-mount transition to an unsafe source without losing the named region', async () => {
+    const el = (await fixture(html`<lr-av-player aria-label="Episode controls"></lr-av-player>`)) as LyraAvPlayer;
     el.src = 'javascript:alert(1)';
     await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Episode controls');
     expect(assertiveAnnouncements()).to.deep.equal(['The media failed to load.']);
   });
 

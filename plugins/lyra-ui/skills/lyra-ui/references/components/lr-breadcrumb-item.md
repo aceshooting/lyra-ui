@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-breadcrumb` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -29,6 +29,9 @@ non-link form; assigning `undefined` clears it and reads back as the canonical `
 `rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
 sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
 
+**`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
+is a no-op for the current-page label.
+
 **Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
 copied to every item without an item-level override. An item's default slot is its label;
 `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and `separator`
@@ -46,6 +49,8 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `::part()`), so tinting the current item previously meant overriding the library-wide
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
+`--lr-breadcrumb-item-active-bg` independently themes a non-current link/button's pressed fill;
+unset, it retains the former transparent active mix.
 
 **Additional API surface:**
 

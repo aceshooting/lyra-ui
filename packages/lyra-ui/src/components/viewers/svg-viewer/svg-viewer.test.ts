@@ -387,7 +387,7 @@ describe('region highlights', () => {
       await el.updateComplete;
       const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
       const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
-      expect(region).to.exist;
+      expect((region) != null).to.equal(true);
       expect(target.getAttribute('role')).to.equal('button');
       expect(region.style.left).to.equal('10%');
     } finally {

@@ -59,6 +59,14 @@ export const WithOutsideDays: Story = {
 };
 
 export const Localized: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`firstDayOfWeek` uses the shared closed weekday vocabulary (`auto`, then `sun` through `sat`) on both `lr-date-picker` and `lr-date-input`; `auto` derives from the effective locale when the runtime exposes week info.',
+      },
+    },
+  },
   render: () => html`
     <lr-date-picker
       locale="fr-FR"
@@ -82,6 +90,59 @@ export const Sizes: Story = {
       </div>
     `;
   },
+};
+
+export const CustomCellGeometry: Story = {
+  name: 'Custom day-cell geometry',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-cell-size` sets both dimensions of every day cell and the seven matching grid tracks. The default is `var(--lr-size-2-25rem)` and the public `size` tiers supply their own tokenized values.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-picker
+      value="2026-07-15"
+      style="--lr-cell-size: calc(var(--lr-size-2-5rem) + var(--lr-space-xs))"
+    ></lr-date-picker>
+  `,
+};
+
+export const PartAliases: Story = {
+  name: 'Date-picker/base part aliases',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Web Awesome’s `date-picker` part and the deprecated Lyra `base` compatibility name are tokens on the same visible shell. Either consumer selector therefore reaches identical padding, background, border, and radius chrome.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .date-picker-part::part(date-picker),
+      .base-part::part(base) {
+        padding: var(--lr-space-m);
+        background: var(--lr-color-brand-quiet);
+        border-color: var(--lr-color-brand);
+        border-radius: var(--lr-radius);
+      }
+    </style>
+    <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-l);">
+      <lr-date-picker
+        class="date-picker-part"
+        value="2026-07-15"
+        aria-label="Styled through date-picker part"
+      ></lr-date-picker>
+      <lr-date-picker
+        class="base-part"
+        value="2026-07-15"
+        aria-label="Styled through base part"
+      ></lr-date-picker>
+    </div>
+  `,
 };
 
 export const ConstraintsAndSlots: Story = {
@@ -112,6 +173,25 @@ export const CalendarViews: Story = {
       <lr-date-picker view="months" value="2026-07-15"></lr-date-picker>
       <lr-date-picker view="years" value="2026-07-15"></lr-date-picker>
       <lr-date-picker view="decades" value="2026-07-15"></lr-date-picker>
+    </div>
+  `,
+};
+
+export const ScopedStateTheme: Story = {
+  name: 'Scoped calendar state theme',
+  parameters: { docs: { description: { story: 'Day and selection-view states use independent component hooks while retaining the shared semantic tokens as defaults.' } } },
+  render: () => html`
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--lr-space-l)">
+      <lr-date-picker
+        value="2026-07-15"
+        today="2026-07-10"
+        style="--lr-date-picker-day-hover-bg: var(--lr-color-warning-quiet); --lr-date-picker-selected-bg: var(--lr-color-success); --lr-date-picker-selected-color: var(--lr-color-on-success); --lr-date-picker-today-outline: var(--lr-color-warning)"
+      ></lr-date-picker>
+      <lr-date-picker
+        view="months"
+        value="2026-07-15"
+        style="--lr-date-picker-view-hover-bg: var(--lr-color-warning-quiet); --lr-date-picker-view-selected-bg: var(--lr-color-danger); --lr-date-picker-view-selected-color: var(--lr-color-on-danger)"
+      ></lr-date-picker>
     </div>
   `,
 };

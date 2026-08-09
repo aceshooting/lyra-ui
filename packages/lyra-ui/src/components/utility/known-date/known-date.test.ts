@@ -199,7 +199,7 @@ describe('mirrored Web Awesome public surface', () => {
     await el.updateComplete;
     expect(el.value).to.equal('2026-03-05');
     expect(fieldFor(el, 'day').value).to.equal('5');
-    expect(el.valueInput?.constructor.name).to.equal('HTMLInputElement');
+    expect((el.valueInput?.constructor.name) === ('HTMLInputElement')).to.equal(true);
     expect(el.valueInput.type).to.equal('date');
     expect(el.valueInput.value).to.equal('2026-03-05');
     expect(el.valueInput.min).to.equal('2000-01-01');
@@ -239,7 +239,7 @@ describe('mirrored Web Awesome public surface', () => {
     el.parts = { day: '5', month: '', year: '' };
     await el.updateComplete;
     el.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
 
     el.setCustomValidity('Server rejected this date');
     expect(el.validity.customError).to.be.true;
@@ -602,17 +602,17 @@ describe('auto-advance and backspace navigation', () => {
 
     typeInto(fieldFor(el, 'day'), '27');
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
 
     typeInto(fieldFor(el, 'month'), '03');
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'year'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'year'))).to.equal(true);
 
     fieldFor(el, 'year').focus();
     typeInto(fieldFor(el, 'year'), '2007');
     await el.updateComplete;
     // Nothing after year -- focus stays put instead of moving off the control.
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'year'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'year'))).to.equal(true);
   });
 
   it('moves focus to the previous field on Backspace in an already-empty field, without altering its content', async () => {
@@ -638,7 +638,7 @@ describe('auto-advance and backspace navigation', () => {
     );
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'day'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'day'))).to.equal(true);
     expect(fieldFor(el, 'day').value).to.equal('27'); // untouched by the previous field's Backspace
   });
 
@@ -657,7 +657,7 @@ describe('auto-advance and backspace navigation', () => {
       }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(day);
+    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
   });
 });
 
@@ -680,7 +680,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
 
     const month = fieldFor(el, 'month');
     month.setSelectionRange(0, 0); // caret at the start
@@ -693,7 +693,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(day);
+    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
   });
 
   it('flips which physical arrow key means "next field" under an inherited RTL ancestor, without changing the field order itself', async () => {
@@ -723,7 +723,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(day);
+    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
 
     // ArrowLeft-at-start now means "toward the next field" under RTL.
     day.setSelectionRange(0, 0);
@@ -736,7 +736,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(fieldFor(el, 'month'));
+    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
   });
 });
 
@@ -1411,10 +1411,10 @@ it('focus() activates the first field in locale order and blur() releases it', a
   await el.updateComplete;
   el.focus();
   const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
-  expect(focused, 'focus() reaches an internal field').to.exist;
+  expect((focused) != null, 'focus() reaches an internal field').to.equal(true);
   expect(focused!.tagName).to.equal('INPUT');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect((el.shadowRoot!.activeElement) === null).to.equal(true);
 });
 
 describe('lr-known-date implicit form submission', () => {

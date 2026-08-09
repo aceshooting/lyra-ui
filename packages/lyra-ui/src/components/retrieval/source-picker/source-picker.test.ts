@@ -229,13 +229,13 @@ it('keyboard: ArrowDown/ArrowUp move the active row and DOM focus between top-le
   let items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items[1]!.getAttribute('tabindex')).to.equal('0');
   expect(items[0]!.getAttribute('tabindex')).to.equal('-1');
-  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+  expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 
   tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
   await el.updateComplete;
   items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items[0]!.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
 it('keeps an in-flight keyboard focus target by id when sources reorder before the update', async () => {
@@ -278,13 +278,13 @@ it('keyboard: Home/End jump the active row to the first/last visible entry', asy
   await el.updateComplete;
   let items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items[3]!.getAttribute('tabindex')).to.equal('0'); // doc3, the last visible row
-  expect(el.shadowRoot!.activeElement).to.equal(items[3]);
+  expect((el.shadowRoot!.activeElement) === (items[3])).to.equal(true);
 
   tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
   await el.updateComplete;
   items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items[0]!.getAttribute('tabindex')).to.equal('0'); // folder1, the first visible row
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
 it('keyboard: ArrowRight on an already-expanded, focused folder moves focus into its first child', async () => {
@@ -301,7 +301,7 @@ it('keyboard: ArrowRight on an already-expanded, focused folder moves focus into
   const items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items.length).to.equal(4);
   expect(items[1]!.getAttribute('tabindex')).to.equal('0'); // doc1, folder1's first child
-  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+  expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 });
 
 it('keyboard: ArrowLeft collapses an expanded, focused folder', async () => {
@@ -338,7 +338,7 @@ it('keyboard: ArrowLeft on a focused leaf walks focus back to its ancestor folde
   await el.updateComplete;
   items = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(items[0]!.getAttribute('tabindex')).to.equal('0'); // back to folder1
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
 it('keyboard: Enter on the focused tree row toggles it, same as Space', async () => {

@@ -18,7 +18,7 @@
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
 out via an outward Archimedean-spiral search — heaviest word placed first, each word spiraling from
 the center until it clears every word already placed. Unlike sibling `lr-sparkline`/`lr-heatmap`
-(one `role="img"` glyph standing in for an aggregate value), the individual words here *are* the
+(one `role="img"` glyph standing in for an aggregate value), the individual words here _are_ the
 meaningful interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
 its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`'s cells, the whole
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
@@ -32,8 +32,9 @@ and repeated edge movements append repeated announcements even when their text i
 no live-region role of its own.
 
 **Properties:**
+
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
-  string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
+string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
   `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
   `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
   declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
@@ -78,7 +79,8 @@ the actual announcement uses the shared light-DOM polite sink),
 `--lr-word-cloud-color-6`, `--lr-word-cloud-color-7`, `--lr-word-cloud-color-8` (the default
 categorical palette, cycled by word index or `group`; a data-driven literal exception like
 `lr-heatmap`'s scale-ramp endpoints — exposed as retheme-able custom properties instead of
-hardcoded), plus shared tokens (`--lr-font`,
+hardcoded). They inherit from theme ancestors, while a value set directly on the word cloud wins
+through the normal cascade), plus shared tokens (`--lr-font`,
 `--lr-focus-ring-*`, `--lr-transition-fast`, `--lr-color-text-quiet`).
 
 **Optional peer deps:** none.
@@ -86,12 +88,14 @@ hardcoded), plus shared tokens (`--lr-font`,
 ```html
 <lr-word-cloud id="cloud" style="height: 20rem"></lr-word-cloud>
 <script type="module">
-  document.getElementById('cloud').words = [
-    { text: 'JavaScript', weight: 90 },
-    { text: 'TypeScript', weight: 75 },
-    { text: 'Lit', weight: 60, group: 'framework' },
+  document.getElementById("cloud").words = [
+    { text: "JavaScript", weight: 90 },
+    { text: "TypeScript", weight: 75 },
+    { text: "Lit", weight: 60, group: "framework" },
   ];
-  document.getElementById('cloud').addEventListener('lr-word-click', (e) => console.log(e.detail));
+  document
+    .getElementById("cloud")
+    .addEventListener("lr-word-click", (e) => console.log(e.detail));
 </script>
 ```
 
@@ -99,11 +103,12 @@ The host itself gets `role="group"` and an auto-computed `aria-label` (e.g. `"Wo
 words"` / `"Word cloud of 1 word"`, counting only words actually rendered — post `MAX_WORDS`-cap and
 post-drop, not the raw `words.length`) **unless** the host already carried its own `role`/`aria-label`
 attribute at first render. That opt-out check runs exactly once (the very first update) and is never
-re-checked afterwards, so setting `role`/`aria-label` yourself *after* the component has already
+re-checked afterwards, so setting `role`/`aria-label` yourself _after_ the component has already
 rendered at least once only sticks until the next `words`-driven relayout, which overwrites it back
 to the auto default — set it in the initial markup (or before first paint) to opt out permanently.
 
 **Known gotchas:**
+
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
   `MAX_BARS` DOM-node-count guard) — over the cap, the **heaviest** 150 survive and the rest are
   dropped, regardless of where they fell in the input array (it is not simply "first 150 in, rest

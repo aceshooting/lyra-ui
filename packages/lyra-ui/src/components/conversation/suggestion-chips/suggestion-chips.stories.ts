@@ -19,9 +19,9 @@ export default meta;
 type Story = StoryObj;
 
 const followUps = [
-  { id: 'a', label: 'What caused the spike?', detail: 'Based on the error rate chart above' },
-  { id: 'b', label: 'Show the affected services' },
-  { id: 'c', label: 'Draft a status update' },
+  { id: 'a', label: 'What caused the spike?', icon: '🔎', detail: 'Based on the error rate chart above' },
+  { id: 'b', label: 'Show the affected services', icon: '📊' },
+  { id: 'c', label: 'Draft a status update', icon: '✍️' },
 ];
 
 export const ScrollableRow: Story = {

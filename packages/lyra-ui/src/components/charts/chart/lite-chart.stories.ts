@@ -172,7 +172,11 @@ export const SelectedLinePoint: Story = {
     <lr-lite-chart
       type="line"
       height="16rem"
-      style="width: 22rem"
+      style="
+        width: 22rem;
+        --lr-lite-chart-selected-outline-color: var(--lr-color-success);
+        --lr-lite-chart-selected-outline-width: var(--lr-border-width-thick);
+      "
       .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
       .datasets=${[{ label: 'Runs', data: [12, 19, 14, 22] }]}
       .selectedIndex=${[1]}

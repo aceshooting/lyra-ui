@@ -104,6 +104,12 @@ describe('lr-contact-viewer', () => {
     const unnamed = (await fixture(html`<lr-contact-viewer></lr-contact-viewer>`)) as LyraContactViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Contact viewer');
   });
+  it('preserves an explicitly empty host aria-label ahead of name', async () => {
+    const el = (await fixture(html`<lr-contact-viewer name="contacts.vcf" aria-label=""></lr-contact-viewer>`)) as LyraContactViewer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
+  });
   it('supports a .strings override for the contactViewerLabel fallback', async () => {
     const el = (await fixture(html`<lr-contact-viewer .strings=${{ contactViewerLabel: 'Visionneuse de contacts' }}></lr-contact-viewer>`)) as LyraContactViewer;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de contacts');

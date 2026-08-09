@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './card.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Card',
@@ -71,6 +72,64 @@ export const Interactive: Story = {
     <lr-card interactive style="max-inline-size:20rem;">
       Hover or focus this card to see the border-color and cursor affordance for a clickable tile.
     </lr-card>
+  `,
+};
+
+export const ProgrammaticActivation: Story = {
+  name: 'Programmatic click()',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Calling `click()` on the host activates the native whole-card button (or linked root). A passive card remains inert.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-card
+        id="programmatic-card"
+        interactive
+        style="max-inline-size:20rem;"
+        @lr-card-activate=${() => {
+          const output = document.getElementById('programmatic-card-status');
+          if (output) output.textContent = 'Card activated.';
+        }}
+      >
+        Programmatically activatable card
+      </lr-card>
+      <button
+        type="button"
+        @click=${() => document.getElementById('programmatic-card')?.click()}
+      >
+        Call host click()
+      </button>
+      <p id="programmatic-card-status" aria-live="polite">Not activated.</p>
+    </div>
+  `,
+};
+
+export const IndependentStateTheme: Story = {
+  name: 'Independent appearance and state theme',
+  render: () => html`
+    <div
+      style="
+        display: grid;
+        gap: var(--lr-space-s);
+        max-inline-size: var(--lr-size-24rem);
+        --lr-card-filled-bg: ${storyColor('successQuiet')};
+        --lr-card-filled-outlined-bg: ${storyColor('warningQuiet')};
+        --lr-card-accent-border-color: ${storyColor('success')};
+        --lr-card-interactive-hover-border-color: ${storyColor('warning')};
+        --lr-card-interactive-active-border-color: ${storyColor('danger')};
+        --lr-card-interactive-active-overlay: ${storyColor('dangerQuiet')};
+      "
+    >
+      <lr-card appearance="filled">Filled surface</lr-card>
+      <lr-card appearance="filled-outlined">Filled-outlined surface</lr-card>
+      <lr-card appearance="accent">Accent surface</lr-card>
+      <lr-card interactive>Hover or press the interactive surface</lr-card>
+    </div>
   `,
 };
 

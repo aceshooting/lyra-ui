@@ -41,6 +41,40 @@ export function mentionsName(text, name) {
 }
 
 /**
+ * Checks one member only inside its explicitly labelled authored API block. A component may use the
+ * same vocabulary in several namespaces (`leading` can be a slot and a CSS part; `label` can be a
+ * property, slot, and part), so a section-wide token search cannot prove the named contract surface
+ * is actually enumerated where consumers look for it.
+ */
+export function contractBlockMentionsName(text, label, name, tag = '') {
+  let scope = text;
+  if (tag) {
+    const headings = [...text.matchAll(/^(#{2,6})\s+`(lr-[a-z0-9-]+)`\s*$/gm)];
+    const ownIndex = headings.findIndex((heading) => heading[2] === tag);
+    if (ownIndex >= 0) {
+      const own = headings[ownIndex];
+      const ownLevel = own[1].length;
+      const next = headings.slice(ownIndex + 1).find((heading) => heading[1].length <= ownLevel);
+      scope = text.slice(own.index, next?.index ?? text.length);
+    }
+  }
+  const escapedLabel = label.split(/\s+/).map(escapePattern).join('\\s+');
+  const inlineMarker = new RegExp(`\\*\\*${escapedLabel}(?: \\(\\d+\\))?:\\*\\*`, 'i').exec(scope);
+  const headingMarker = new RegExp(`^#{2,6}\\s+${escapedLabel}\\s*$`, 'im').exec(scope);
+  const marker =
+    inlineMarker && headingMarker
+      ? inlineMarker.index < headingMarker.index
+        ? inlineMarker
+        : headingMarker
+      : inlineMarker ?? headingMarker;
+  if (!marker) return false;
+  const remainder = scope.slice(marker.index + marker[0].length);
+  const nextBlock = remainder.search(/^(?:\*\*[^*\n]+:\*\*|#{1,6}\s|---\s*$)/m);
+  const block = nextBlock < 0 ? remainder : remainder.slice(0, nextBlock);
+  return mentionsName(block, name);
+}
+
+/**
  * True only for the authored whole-surface inheritance declaration. Ordinary prose saying that a
  * component "inherits from" another one is intentionally insufficient: the exact marker is a
  * reviewable promise that every public inherited attribute, slot, part, event, and theme property
@@ -118,8 +152,8 @@ export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverrid
         if (!entry) continue;
         const { decl, mod } = entry;
         const lines = section.text.split('\n').length;
-        const miss = (kind, names) => {
-          const gone = [...new Set(names)].filter((n) => n && !mentionsName(section.text, n));
+        const miss = (kind, names, mentions = (name) => mentionsName(section.text, name)) => {
+          const gone = [...new Set(names)].filter((n) => n && !mentions(n));
           if (gone.length) gaps.push({ family, tag, lines, kind, names: gone });
         };
         miss(
@@ -162,12 +196,19 @@ export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverrid
             .map((slot) => slot.name)
             .filter(Boolean),
         );
+        const cssParts = (decl.cssParts ?? []).filter(
+          (part) => !inheritedSurfaceIsDocumented(part, section.text, tagByDeclaration),
+        );
         miss(
           'csspart',
-          (decl.cssParts ?? [])
-            .filter((part) => !inheritedSurfaceIsDocumented(part, section.text, tagByDeclaration))
-            .map((part) => part.name),
+          cssParts.filter((part) => !part.inheritedFrom).map((part) => part.name),
+          (name) => contractBlockMentionsName(section.text, 'CSS parts', name, tag),
         );
+        // Inherited members may be covered by the exact whole-surface declaration above or by
+        // explicit compatibility prose in the child section. They are not required to be repeated
+        // in the child's direct CSS-parts list, especially when a subclass intentionally replaces
+        // a base visual while the compact manifest still retains the inherited metadata.
+        miss('csspart (inherited)', cssParts.filter((part) => part.inheritedFrom).map((part) => part.name));
         miss(
           'cssprop (manifest)',
           (decl.cssProperties ?? [])
@@ -196,4 +237,3 @@ function tagFactsFor() {
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
   return readTagFacts(manifest);
 }
-

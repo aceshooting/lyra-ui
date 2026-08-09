@@ -36,7 +36,7 @@ export const styles = css`
   }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }
-  :host([data-invalid]) [part~='options'] { padding: var(--lr-space-xs); border: var(--lr-border-width-thin) solid var(--lr-color-danger); border-radius: var(--lr-radius); }
+  :host([data-invalid]) [part~='options'] { padding: var(--lr-space-xs); border: var(--lr-border-width-thin) solid var(--lr-checkbox-group-invalid-border, var(--lr-color-danger)); border-radius: var(--lr-radius); }
   [part='form-control'],
   [part='form-control-label'],
   [part='hint'],

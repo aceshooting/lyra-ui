@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,15 +22,17 @@ Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacin
 mid-conversation preserves focus on any chip whose `id` survives.
 
 **Properties:** `suggestions: ChatSuggestion[] = []` (attribute: false) — `ChatSuggestion { id:
-string; label: string; detail?: string }` (exported here); `detail` is an optional secondary line.
-Empty renders nothing at all. `wrap: boolean = false`
+string; label: string; icon?: string; detail?: string }` (exported here); `icon` is an optional
+peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
+`detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
 string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
 
 **Events:** `lr-suggestion-select` — `detail: { id, label }`.
 
-**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
-text), `chip-detail` (the secondary line, only rendered when `detail` is set).
+**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-icon` (the optional
+decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary line, only
+rendered when `detail` is set).
 
 **Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
 `var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`

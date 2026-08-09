@@ -19,6 +19,10 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired
  *
  * Consecutive `<lr-radio-button>` siblings collapse their shared borders into one segmented
  * control automatically — nothing needs to be set on the group.
+ * A host `aria-label` is forwarded to the internal `role="radio"` by attribute presence, so an
+ * explicitly empty value remains authoritative rather than restoring a label-text fallback.
+ * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long prefix
+ * and suffix adornments truncate inside their capped portions instead of widening the page.
  *
  * @customElement lr-radio-button
  * @slot - Label text.
@@ -58,6 +62,27 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius;
  * `pill` swaps it for `--lr-radius-pill`.
+ * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between prefix, label, and suffix in
+ * both `<lr-radio-button>` and `<lr-radio appearance="button">`.
+ * @cssprop [--lr-radio-button-hover-bg=var(--lr-color-brand-quiet)] - Unchecked button background
+ * while hovered.
+ * @cssprop [--lr-radio-button-hover-border-color=var(--lr-color-brand)] - Unchecked button border
+ * while hovered.
+ * @cssprop [--lr-radio-button-active-bg=color-mix(...)] - Unchecked button background while
+ * pressed.
+ * @cssprop [--lr-radio-button-active-border-color=var(--lr-radio-button-hover-border-color)] -
+ * Unchecked button border while pressed.
+ * @cssprop [--lr-radio-button-checked-bg=var(--lr-color-brand)] - Checked button background.
+ * @cssprop [--lr-radio-button-checked-border-color=var(--lr-color-brand)] - Checked button border.
+ * @cssprop [--lr-radio-button-checked-color=var(--lr-color-on-brand)] - Checked button text color.
+ * @cssprop [--lr-radio-button-checked-hover-bg=color-mix(...)] - Checked button background while
+ * hovered.
+ * @cssprop [--lr-radio-button-checked-hover-border-color=var(--lr-radio-button-checked-border-color)] -
+ * Checked button border while hovered.
+ * @cssprop [--lr-radio-button-checked-active-bg=color-mix(...)] - Checked button background while
+ * pressed.
+ * @cssprop [--lr-radio-button-checked-active-border-color=var(--lr-radio-button-checked-hover-border-color)] -
+ * Checked button border while pressed.
  * @status stable
  * @since 8.0.0
  */
@@ -93,7 +118,7 @@ export class LyraRadioButton extends LyraRadio {
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-disabled=${disabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-label=${this.getAttribute('aria-label') ?? nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
         @focus=${this.onFocus}

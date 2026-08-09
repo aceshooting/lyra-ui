@@ -554,7 +554,7 @@ describe('lr-copy-button', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement === button).to.be.true;
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('forwards host click() to the internal button and respects disabled state', async () => {

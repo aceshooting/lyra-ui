@@ -35,7 +35,11 @@ section above for the full write-up of shared behavior. There is no `languagesOn
 meaningless without a full-table fallback to gate, matching `<lr-code-block-core>` having none
 either.
 
-**Properties:** `content: string = ''`, `sanitize: boolean = true`, `escapeHtml: boolean = false`
+**Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
+finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
+or non-finite values fall back to `4`, independently of rendered code's
+`--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the
+same peer-neutral configurable parser shared by both Markdown variants; `sanitize: boolean = true`, `escapeHtml: boolean = false`
 (attribute `escape-html`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `eagerLoad: boolean = false` (attribute
@@ -46,7 +50,9 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 `math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment',
 'text-quote']`.
 
-**Methods:** `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
+**Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
+sanitize, highlight, and fallback pipeline after changing shared `marked` configuration; safely
+no-ops while the parser is unresolved. `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result` — identical detail shapes to `<lr-markdown>`'s own.
@@ -66,17 +72,19 @@ container-level value reaches it, and carried here in its own right because this
 differently on a wrapped line.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
-(for `math`). Does *not* depend on the full `shiki` package's default entry point — only
+(for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
 `shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
 `<lr-code-block-core>` depends on.
 
 ```html
 <lr-markdown-core
   content="# Report&#10;&#10;\`\`\`python&#10;print('hi')&#10;\`\`\`"
-  .languages=${{ python }}
+  .languages="${{"
+  python
+  }}
 ></lr-markdown-core>
 <script type="module">
-  import python from 'shiki/langs/python.mjs';
+  import python from "shiki/langs/python.mjs";
 </script>
 ```
 

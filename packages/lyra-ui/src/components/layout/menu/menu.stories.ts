@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './menu.js';
 import './menu-item.js';
+import './menu-label.js';
 import '../../forms/icon-button/icon-button.js';
 import type { MenuItemSelectDetail } from './menu.js';
 
@@ -13,13 +14,26 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An anchored dropdown of `<lr-menu-item>` actions, opened from a `trigger`-slotted element (typically an icon button). `role="menu"`/`role="menuitem"` with real roving DOM focus, not a listbox — see the class doc for why.',
+          'A menu of `<lr-menu-item>` actions. Supply a `trigger` to make it an anchored dropdown; omit both trigger and anchor for the always-visible standalone shape mapped from `sl-menu`. `role="menu"`/`role="menuitem"` uses real roving DOM focus, not a listbox.',
       },
     },
   },
 };
 export default meta;
 type Story = StoryObj;
+
+/** The exact standalone Shoelace authoring shape after a mechanical `sl-` → `lr-` rename. With
+ * no trigger or anchor, the menu stays inline and visible and exposes one roving Tab stop. */
+export const StandaloneMappedMenu: Story = {
+  render: () => html`
+    <lr-menu label="File actions">
+      <lr-menu-label>File</lr-menu-label>
+      <lr-menu-item value="open">Open…</lr-menu-item>
+      <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
+      <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+    </lr-menu>
+  `,
+};
 
 /** The gear-menu/avatar-menu/history-row-overflow-menu shape this component
  *  exists to replace: an icon-only trigger, a short action list, and a

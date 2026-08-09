@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,8 +19,11 @@ A configurable annotation rubric (LangSmith annotation-queue style): score, cate
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
 `<lr-slider>`; `category` renders `<lr-select>` or `<lr-checkbox-group>` (`multiple`); `comment`
-renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: a host `aria-label` or
-native external `<label for>` names the whole rubric while each key retains its field-level name.
+renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: aggregate label, hint,
+and error chrome is linked to that same-shadow role. A host `aria-label` wins by attribute presence
+(including an explicitly empty value), while each key retains its field-level name.
+Both score branches format visible numeric labels with the effective locale (including non-Latin
+digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
 **Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
 required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
@@ -28,11 +31,22 @@ required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` c
 checkbox-group category route, and `placeholder?` customizes comment input), `value: RubricValue =
 {}` (attribute: false), `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
-boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
-string>` is the current per-key validation-message state. `customError: string | null` reflects
-through `custom-error` for a consumer-owned whole-form rejection.
+boolean = false`, aggregate `label: string = ''`, `hint: string = ''`, `helpText: string = ''`
+(attribute `help-text`, a compatibility alias for `hint`), `errorText: string = ''` (attribute
+`error-text`), SSR presence hints `withLabel: boolean = false` / `withHint: boolean = false`
+(attributes `with-label` / `with-hint`), and the shared form properties `name` and `disabled`.
+`errors: Record<string, string>` is the current per-key validation-message state. `customError:
+string | null` reflects through `custom-error` for a consumer-owned whole-form rejection.
 
-**Slots:** `actions` — extra host controls rendered in the footer beside Submit/Skip.
+The `value` present before the component's first render is the native form-reset baseline. Later
+`value` assignments are live edits and do not rewrite it; `form.reset()` restores a fresh clone of
+the seeded object (including cloned array fields), clears touched/error-reveal state, and preserves
+any consumer `setCustomValidity()` message. An initially empty rubric therefore still resets to
+`{}`, while a rubric mounted with `.value=${{ accuracy: 5 }}` resets to that seeded score.
+
+**Slots:** `label` — aggregate rubric label before the fields; `hint` — aggregate supporting text;
+`help-text` — compatibility alias for `hint`; `error` — aggregate validation content; `actions` —
+extra host controls rendered in the footer beside Submit/Skip.
 
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
@@ -45,22 +59,32 @@ express ("this item was already annotated by someone else"): a non-empty message
 `customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
 required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
 the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
-here is never attributed to one key. It survives every `value`/`keys` write and a form reset.
+here is never attributed to one key. It survives every `value`/`keys` write and a form reset. When
+`errorText` is empty, the current custom-validity message is rendered in the aggregate error region;
+clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
 
-**CSS parts:** `base` (the outer `role="group"` wrapper), `field` (one key's wrapper), `label`, `description`,
-`scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
-message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
-no entries), and `unsupported` (the fallback note for a key whose `type` is outside the three
-supported ones).
+**CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
+`aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /
+`form-control-help-text`, `aggregate-error` / `form-control-error`, `field` (one key's wrapper),
+`label`, `description`, `scale` (the
+rendered score/category/comment control's wrapper), `error` (a field-level validation message),
+`footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has no
+entries), and `unsupported` (the fallback note for a key whose `type` is outside the three supported
+ones).
 
 Field-level `error` content is ordinary visible validation text, not a shadow live region. Score
 controls compose the current message into the semantic control's accessible name; category/comment
 controls use their own same-shadow label/error plumbing. `reportValidity()` therefore reveals and
 focuses the error once without an additional `role="alert"` announcement.
 
-**Themeable custom properties:** shared tokens only. The footer's disabled `submit`/`skip` buttons
-dim through `--lr-opacity-disabled`, the same library-wide token every other disabled control
-reads — so retuning `--lr-theme-opacity-disabled` keeps this form's disabled state consistent with
-the rest of the UI instead of needing a `::part()` rule here.
+**Themeable custom properties:** Submit rest uses `--lr-rubric-form-submit-bg`,
+`--lr-rubric-form-submit-border-color`, and `--lr-rubric-form-submit-color`; its hover and pressed
+paint use `--lr-rubric-form-submit-hover-bg`, `--lr-rubric-form-submit-hover-border-color`,
+`--lr-rubric-form-submit-active-bg`, and `--lr-rubric-form-submit-active-border-color`. Skip rest uses
+`--lr-rubric-form-skip-bg`, `--lr-rubric-form-skip-border-color`, and
+`--lr-rubric-form-skip-color`, with `--lr-rubric-form-skip-hover-bg` and
+`--lr-rubric-form-skip-active-bg` for its pointer states. All preserve the existing shared-token
+and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-opacity-disabled`,
+the same library-wide token every other disabled control reads.

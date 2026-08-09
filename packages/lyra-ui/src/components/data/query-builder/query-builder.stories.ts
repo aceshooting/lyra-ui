@@ -71,11 +71,64 @@ export const EveryFieldType: Story = {
     ></lr-query-builder>`,
 };
 
+/** Provider data containing a non-finite numeric condition fails closed to an unset number rather
+ * than displaying blank while retaining an Infinity that JSON would persist as null. */
+export const NonFiniteNumberModel: Story = {
+  render: () => html`
+    <lr-query-builder
+      style="max-width: 42rem"
+      .fields=${fields}
+      .value=${{
+        combinator: 'and',
+        conditions: [{ id: 'overflow', field: 'age', operator: 'gt', value: Number.POSITIVE_INFINITY }],
+      } satisfies QueryBuilderValue}
+    ></lr-query-builder>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`<lr-query-builder style="max-width: 42rem" disabled .fields=${fields} .value=${value}></lr-query-builder>`,
 };
 
-/** 320px container -- condition rows stack into a single column via a container query. */
+/** Exact 320px containers with adversarial field/operator labels. The composed selects shrink and
+ *  ellipsize inside the stacked condition row in both directions instead of widening the page. */
 export const Narrow: Story = {
-  render: () => html`<lr-query-builder style="max-width: 320px" .fields=${fields} .value=${value}></lr-query-builder>`,
+  name: 'Narrow long labels (320px, LTR / RTL)',
+  render: () => {
+    const longFields: QueryBuilderField[] = [
+      {
+        name: 'long-field',
+        label: `Customer lifecycle classification ${'unbroken'.repeat(24)}`,
+        type: 'string',
+        operators: ['contains'],
+      },
+    ];
+    const longValue: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'long', field: 'long-field', operator: 'contains', value: 'enterprise' }],
+    };
+    const strings = {
+      queryBuilderOperatorContains:
+        'contains the following exceptionally long localized matching phrase without widening the allocation',
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l); justify-items: start">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div
+              dir=${direction}
+              style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border)"
+            >
+              <lr-query-builder
+                style="inline-size: 100%"
+                .fields=${longFields}
+                .value=${longValue}
+                .strings=${strings}
+              ></lr-query-builder>
+            </div>
+          `
+        )}
+      </div>
+    `;
+  },
 };

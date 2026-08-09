@@ -30,10 +30,7 @@ class FakeMediaRecorder extends EventTarget {
   ondataavailable: ((e: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
   mimeType: string;
-  constructor(
-    public stream: FakeStream,
-    options?: { mimeType?: string },
-  ) {
+  constructor(public stream: FakeStream, options?: { mimeType?: string }) {
     super();
     this.mimeType = options?.mimeType ?? 'audio/webm';
   }
@@ -89,7 +86,8 @@ function stubSuccessfulCapture(): () => void {
   const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   const originalAudioContext = window.AudioContext;
-  navigator.mediaDevices.getUserMedia = (async () => new FakeStream() as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
+  navigator.mediaDevices.getUserMedia = (async () =>
+    new FakeStream() as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
   return () => {
@@ -158,9 +156,7 @@ async function mountServerRenderedPushToTalk(): Promise<LyraPushToTalk> {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
     setHTMLUnsafe(value: string): void;
   };
-  container.setHTMLUnsafe(
-    '<lr-push-to-talk><template shadowrootmode="open"></template></lr-push-to-talk>',
-  );
+  container.setHTMLUnsafe('<lr-push-to-talk><template shadowrootmode="open"></template></lr-push-to-talk>');
   return container.firstElementChild as LyraPushToTalk;
 }
 
@@ -247,7 +243,10 @@ describe('--lr-push-to-talk-recording-color', () => {
       expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(10, 20, 30)');
 
       const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
-      expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length, 'pulse must actually render while recording').to.equal(1);
+      expect(
+        el.shadowRoot!.querySelectorAll('[part="pulse"]').length,
+        'pulse must actually render while recording'
+      ).to.equal(1);
       // Pre-fix, this read the hardcoded --lr-color-danger regardless of the cssprop override,
       // visibly disagreeing with the trigger's own recolored border above.
       expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(10, 20, 30)');
@@ -296,7 +295,7 @@ it('renders the trigger disabled and shows the unsupported status when MediaReco
 describe('owner-window capture runtime', () => {
   it('uses the adopted owner for capture, recorder, clock, timers, Blob, AudioContext, typed data, and animation frames', async () => {
     const el = (await fixture(
-      html`<lr-push-to-talk level-events max-duration-ms="500"></lr-push-to-talk>`,
+      html`<lr-push-to-talk level-events max-duration-ms="500"></lr-push-to-talk>`
     )) as LyraPushToTalk;
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
@@ -947,7 +946,8 @@ it('stops the granted stream when MediaRecorder construction fails', async () =>
   const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   const stream = new FakeStream();
-  navigator.mediaDevices.getUserMedia = (async () => stream as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
+  navigator.mediaDevices.getUserMedia = (async () =>
+    stream as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = class {
     static isTypeSupported(): boolean {
       return true;
@@ -973,9 +973,7 @@ it('stops the granted stream when MediaRecorder construction fails', async () =>
 it('emits lr-record-chunk once per timeslice when timeslice-ms > 0, and never when it is 0', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(
-      html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`,
-    )) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`)) as LyraPushToTalk;
     const chunks: Blob[] = [];
     el.addEventListener('lr-record-chunk', (e) => chunks.push((e as CustomEvent<{ blob: Blob }>).detail.blob));
     await el.start();
@@ -1025,14 +1023,104 @@ it('emits no lr-level when level-events is unset (the default)', async () => {
   }
 });
 
+it('starts and stops the elapsed timer when show-timer changes during recording', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
+    const runtime = el as unknown as { tickTimer?: { owner: Window; handle: number } };
+    await el.start();
+    expect(runtime.tickTimer === undefined).to.equal(true);
+
+    el.showTimer = true;
+    await el.updateComplete;
+    expect(runtime.tickTimer !== undefined).to.equal(true);
+
+    el.showTimer = false;
+    await el.updateComplete;
+    expect(runtime.tickTimer === undefined).to.equal(true);
+    el.cancel();
+  } finally {
+    restore();
+  }
+});
+
+it('starts and stops level sampling when level-events changes during recording', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const runtime = el as unknown as {
+      audioCtx?: AudioContext;
+      levelFrame?: { owner: Window; handle: number };
+    };
+    await el.start();
+    expect(runtime.audioCtx === undefined).to.equal(true);
+
+    el.levelEvents = true;
+    await el.updateComplete;
+    expect(runtime.audioCtx !== undefined).to.equal(true);
+    expect(runtime.levelFrame !== undefined).to.equal(true);
+
+    el.levelEvents = false;
+    await el.updateComplete;
+    expect(runtime.audioCtx === undefined).to.equal(true);
+    expect(runtime.levelFrame === undefined).to.equal(true);
+    el.cancel();
+  } finally {
+    restore();
+  }
+});
+
+it('starts, reschedules, and disables the recording-start deadline when max-duration-ms changes', async () => {
+  const restore = stubSuccessfulCapture();
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  const scheduledDelays: number[] = [];
+  const clearedHandles: number[] = [];
+  let nextHandle = 500;
+  try {
+    const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
+    const runtime = el as unknown as { maxDurationTimer?: { owner: Window; handle: number } };
+    await el.start();
+    expect(runtime.maxDurationTimer === undefined).to.equal(true);
+    window.setTimeout = ((_handler: TimerHandler, delay?: number) => {
+      scheduledDelays.push(delay ?? 0);
+      return nextHandle++;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = ((handle?: number) => {
+      if (handle !== undefined) clearedHandles.push(handle);
+    }) as typeof window.clearTimeout;
+
+    el.maxDurationMs = 10_000;
+    await el.updateComplete;
+    const firstHandle = runtime.maxDurationTimer?.handle;
+    expect(firstHandle).to.equal(500);
+    expect(scheduledDelays[0]).to.be.greaterThan(0);
+    expect(scheduledDelays[0]).to.be.at.most(10_000);
+
+    el.maxDurationMs = 20_000;
+    await el.updateComplete;
+    expect(clearedHandles).to.include(firstHandle);
+    expect(runtime.maxDurationTimer?.handle).to.equal(501);
+    expect(scheduledDelays[1]).to.be.greaterThan(scheduledDelays[0] ?? 0);
+
+    el.maxDurationMs = 0;
+    await el.updateComplete;
+    expect(runtime.maxDurationTimer === undefined).to.equal(true);
+    expect(clearedHandles).to.include(501);
+    el.cancel();
+  } finally {
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+    restore();
+  }
+});
+
 // -- max-duration-ms auto-stop -----------------------------------------------
 
 it('auto-stops at max-duration-ms', async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(
-      html`<lr-push-to-talk max-duration-ms="40"></lr-push-to-talk>`,
-    )) as LyraPushToTalk;
+    const el = (await fixture(html`<lr-push-to-talk max-duration-ms="40"></lr-push-to-talk>`)) as LyraPushToTalk;
     const stopPromise = oneEvent(el, 'lr-record-stop');
     await el.start();
     await stopPromise;
@@ -1065,7 +1153,7 @@ it('clamps a NaN/oversized timeslice-ms before it reaches MediaRecorder.start() 
   }
 });
 
-it('clamps an oversized max-duration-ms to the browser timer ceiling instead of overflowing setTimeout\'s 32-bit delay (regression)', async () => {
+it("clamps an oversized max-duration-ms to the browser timer ceiling instead of overflowing setTimeout's 32-bit delay (regression)", async () => {
   const restore = stubSuccessfulCapture();
   const originalSetTimeout = window.setTimeout;
   const delays: number[] = [];
@@ -1166,9 +1254,7 @@ it('slots override the default icon and recording-icon glyphs', async () => {
 
 it('keeps an undersized public size override above the shared icon-button hit floor', async () => {
   const el = (await fixture(html`
-    <lr-push-to-talk
-      style="--lr-push-to-talk-size:8px;--lr-theme-icon-button-size:44px"
-    ></lr-push-to-talk>
+    <lr-push-to-talk style="--lr-push-to-talk-size:8px;--lr-theme-icon-button-size:44px"></lr-push-to-talk>
   `)) as LyraPushToTalk;
   const rect = trigger(el).getBoundingClientRect();
   expect(rect.width).to.be.at.least(44);
@@ -1220,7 +1306,7 @@ it('localizes trigger labels and status text via this.localize()', async () => {
 
 it('a host-level aria-label overrides the computed trigger label', async () => {
   const el = (await fixture(
-    html`<lr-push-to-talk aria-label="Talk to the assistant"></lr-push-to-talk>`,
+    html`<lr-push-to-talk aria-label="Talk to the assistant"></lr-push-to-talk>`
   )) as LyraPushToTalk;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Talk to the assistant');
 });

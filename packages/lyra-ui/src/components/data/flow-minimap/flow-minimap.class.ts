@@ -37,9 +37,13 @@ interface FlowCanvasLike extends HTMLElement {
  * a draggable viewport rectangle, for orientation and fast navigation on canvases larger than the
  * screen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never
  * reads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so
- * the two can never disagree. The initial companion snapshot is silent; interaction-requested
- * viewport changes append to the document's shared light-DOM polite sink, including identical
- * repeats, while `[part="live-region"]` remains an aria-hidden mirror.
+ * the two can never disagree. The initial companion snapshot is silent; keyboard, map-click, and
+ * wheel viewport changes append their next rAF-coalesced snapshot to the document's shared
+ * light-DOM polite sink, while a completed viewport drag appends its final position once.
+ * Identical repeats remain distinct additions and `[part="live-region"]` stays an aria-hidden
+ * mirror. A completed viewport drag consumes the browser-synthesized click that follows its
+ * `pointerup`; canceled or lost-capture drags stay silent and leave the next genuine map click
+ * available for click-to-center navigation.
  *
  * @customElement lr-flow-minimap
  * @csspart base - The root wrapper.
@@ -89,7 +93,14 @@ export class LyraFlowMinimap extends LyraElement {
   private announcementSink?: AnnouncementSink;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
-  private dragState?: { pointerId: number; startClientX: number; startClientY: number; startViewport: { x: number; y: number; zoom: number } };
+  private dragState?: {
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startViewport: { x: number; y: number; zoom: number };
+    latestViewport?: { x: number; y: number; zoom: number };
+    moved: boolean;
+  };
   /** Window that owns the active viewport drag's global pointer listeners. */
   private dragEventWindow?: Window;
   /** Set once an in-progress viewport drag actually moves. A completed pointer drag makes the
@@ -123,6 +134,7 @@ export class LyraFlowMinimap extends LyraElement {
     // If the element is removed mid-drag, nothing else ever detaches the owner-window drag
     // listeners, so they are removed unconditionally here.
     this.dragState = undefined;
+    this.justDraggedViewport = false;
     this.detachViewportDragListeners();
   }
 
@@ -142,6 +154,23 @@ export class LyraFlowMinimap extends LyraElement {
       document: this.ownerDocument,
       source: this,
     });
+  }
+
+  private announceViewport(
+    viewport: Pick<FlowStructureSnapshot['viewport'], 'x' | 'y' | 'zoom'>,
+  ): void {
+    const number = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 });
+    const percent = getNumberFormat(this.effectiveLocale, {
+      style: 'percent',
+      maximumFractionDigits: 1,
+    });
+    const text = this.localize('flowMinimapViewportChanged', undefined, {
+      x: number.format(viewport.x),
+      y: number.format(viewport.y),
+      zoom: percent.format(viewport.zoom),
+    });
+    this.liveText = text;
+    this.announcementSink?.announce(text);
   }
 
   // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`
@@ -177,18 +206,7 @@ export class LyraFlowMinimap extends LyraElement {
       this.snapshot = snapshot;
       if (this.announceNextSnapshot) {
         this.announceNextSnapshot = false;
-        const number = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 });
-        const percent = getNumberFormat(this.effectiveLocale, {
-          style: 'percent',
-          maximumFractionDigits: 1,
-        });
-        const text = this.localize('flowMinimapViewportChanged', undefined, {
-          x: number.format(snapshot.viewport.x),
-          y: number.format(snapshot.viewport.y),
-          zoom: percent.format(snapshot.viewport.zoom),
-        });
-        this.liveText = text;
-        this.announcementSink?.announce(text);
+        this.announceViewport(snapshot.viewport);
       }
     });
   }
@@ -254,12 +272,14 @@ export class LyraFlowMinimap extends LyraElement {
     if (!this.canvasEl || !this.snapshot || this.canvasEl.locked) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
     const { zoom, width, height } = this.snapshot.viewport;
+    this.announceNextSnapshot = true;
     this.canvasEl.setViewport({ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom });
   };
 
   private onMapWheel = (e: WheelEvent): void => {
     if (!this.canvasEl || this.canvasEl.locked) return;
     e.preventDefault();
+    this.announceNextSnapshot = true;
     if (e.deltaY < 0) this.canvasEl.zoomIn();
     else this.canvasEl.zoomOut();
   };
@@ -269,7 +289,14 @@ export class LyraFlowMinimap extends LyraElement {
     if (!this.canvasEl || !this.snapshot || !dragEventWindow || this.canvasEl.locked) return;
     e.stopPropagation();
     this.detachViewportDragListeners();
-    this.dragState = { pointerId: e.pointerId, startClientX: e.clientX, startClientY: e.clientY, startViewport: { ...this.snapshot.viewport } };
+    this.justDraggedViewport = false;
+    this.dragState = {
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startViewport: { ...this.snapshot.viewport },
+      moved: false,
+    };
     (e.target as SVGElement).setPointerCapture?.(e.pointerId);
     this.dragEventWindow = dragEventWindow;
     dragEventWindow.addEventListener('pointermove', this.onViewportPointerMove);
@@ -284,22 +311,29 @@ export class LyraFlowMinimap extends LyraElement {
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId || !this.canvasEl || this.canvasEl.locked) return;
-    this.justDraggedViewport = true;
     const svgEl = this.renderRoot.querySelector('[part="map"]') as SVGSVGElement | null;
     const ctm = svgEl?.getScreenCTM();
     if (!ctm) return;
     const scale = ctm.a || 1; // uniform scale (no skew with preserveAspectRatio="xMidYMid meet")
     const dxContent = (e.clientX - drag.startClientX) / scale;
     const dyContent = (e.clientY - drag.startClientY) / scale;
-    this.canvasEl.setViewport({
+    if (dxContent === 0 && dyContent === 0) return;
+    drag.moved = true;
+    drag.latestViewport = {
       x: drag.startViewport.x - dxContent * drag.startViewport.zoom,
       y: drag.startViewport.y - dyContent * drag.startViewport.zoom,
       zoom: drag.startViewport.zoom,
-    });
+    };
+    this.canvasEl.setViewport(drag.latestViewport);
   };
 
   private onViewportPointerUp = (e: PointerEvent): void => {
-    if (!this.dragState || e.pointerId !== this.dragState.pointerId) return;
+    const drag = this.dragState;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    this.justDraggedViewport = e.type === 'pointerup' && drag.moved;
+    if (this.justDraggedViewport && drag.latestViewport && !this.canvasEl?.locked) {
+      this.announceViewport(drag.latestViewport);
+    }
     this.dragState = undefined;
     this.detachViewportDragListeners();
   };

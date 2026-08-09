@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInputSize } from './token-input.class.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInput, LyraTokenInputSize } from './token-input.class.js';
 const meta: Meta = { title: 'Token Input', component: 'lr-token-input', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-token-input label="Recipients" placeholder="Add a recipient…" .value=${['Ada', 'Grace']}></lr-token-input>` };
 /**
@@ -58,6 +58,62 @@ export const Editable: Story = {
   ></lr-token-input>`,
 };
 
+export const DisabledEditableTokens: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Own and fieldset-cascaded disablement remove every editable token label and action from keyboard focus, expose disabled semantics, and suppress hover feedback. Host focus() and click() are synchronous no-ops even in the same task that starts disablement; re-enabling restores one roving token stop.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); max-inline-size: 24rem;">
+      <lr-token-input
+        editable
+        disabled
+        label="Explicitly disabled rules"
+        .value=${['Read(src/**)', 'WebFetch(domain:example.com)']}
+      ></lr-token-input>
+      <fieldset disabled>
+        <legend>Disabled by fieldset</legend>
+        <lr-token-input
+          editable
+          label="Inherited disabled rules"
+          .value=${['Bash(git status:*)', 'Read(docs/**)']}
+        ></lr-token-input>
+      </fieldset>
+    </div>
+  `,
+};
+
+/** Edit and remove actions expose separate hover and pressed hooks while the older aggregate hover
+ * hook remains the backwards-compatible fallback. */
+export const IndependentPointerStates: Story = {
+  name: 'Independent pointer-state themes',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover or press the editable token label and remove action: each surface uses its own component-scoped theme hooks.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-token-input
+      editable
+      label="Independently themed token actions"
+      style="
+        --lr-token-input-edit-hover-bg: var(--lr-color-success-quiet);
+        --lr-token-input-edit-pressed-bg: var(--lr-color-success);
+        --lr-token-input-remove-hover-bg: var(--lr-color-danger-quiet);
+        --lr-token-input-remove-pressed-bg: var(--lr-color-danger);
+      "
+      .value=${['Editable token']}
+    ></lr-token-input>
+  `,
+};
+
 /** Editing-assistance attributes reach both the new-token draft and the inline token editor. */
 export const EditingAssistance: Story = {
   render: () => html`
@@ -73,6 +129,33 @@ export const EditingAssistance: Story = {
   `,
 };
 
+/** The host exposes the draft input's native selection and event-silent range-editing facade. */
+export const ProgrammaticDraftEditing: Story = {
+  name: 'Programmatic draft editing',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Type a draft, select part of it, then press Replace selection. The public setRangeText() method edits the pending draft without emitting user events; Enter, a delimiter, or blur commits the edited result.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-s);max-inline-size:24rem">
+      <lr-token-input label="Recipients" placeholder="Type and select part of a draft"></lr-token-input>
+      <button
+        type="button"
+        @pointerdown=${(event: PointerEvent) => event.preventDefault()}
+        @click=${(event: Event) => {
+          const field = (event.currentTarget as HTMLElement).previousElementSibling as LyraTokenInput;
+          field.setRangeText('[selected]');
+          field.focus();
+        }}
+      >Replace selection</button>
+    </div>
+  `,
+};
+
 /** 320px allocation with one adversarial unbroken token and editable state. */
 export const Narrow: Story = {
   name: 'Narrow (320px)',
@@ -85,6 +168,21 @@ export const Narrow: Story = {
         .value=${[
           'Bash(git-status-with-an-intentionally-unbroken-generated-scope-identifier-that-must-stay-contained:*)',
         ]}
+      ></lr-token-input>
+    </div>
+  `,
+};
+
+/** An explicit 40px row cap keeps inline overflow clipped and makes wrapped tokens reachable in a
+ * deliberate block-axis scrollport. Focus a token and use Home/End to inspect focus scrolling. */
+export const ExactHeightScrollableTokens: Story = {
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-token-input
+        editable
+        label="Pinned-height recipients"
+        style="--lr-token-input-control-height: 40px"
+        .value=${Array.from({ length: 12 }, (_, index) => `recipient-${index + 1}`)}
       ></lr-token-input>
     </div>
   `,

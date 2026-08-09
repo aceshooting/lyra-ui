@@ -3,13 +3,58 @@ import './otp-input.js';
 import '../button/button.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
-const controlOf = (el: Element): HTMLInputElement => el.shadowRoot!.querySelector('[part="control"]') as HTMLInputElement;
-const segmentsOf = (el: Element): HTMLElement[] => [...el.shadowRoot!.querySelectorAll('[part~="segment"]')] as HTMLElement[];
+const controlOf = (el: Element): HTMLInputElement =>
+  el.shadowRoot!.querySelector('[part="control"]') as HTMLInputElement;
+const segmentsOf = (el: Element): HTMLElement[] =>
+  [...el.shadowRoot!.querySelectorAll('[part~="segment"]')] as HTMLElement[];
 const fieldOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part~="segments"]') as HTMLElement;
 const partOf = (el: Element, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[part~="${name}"]`) as HTMLElement;
 const activeIndexOf = (el: Element): number =>
   segmentsOf(el).findIndex((segment) => segment.getAttribute('part')!.split(/\s+/).includes('active'));
+
+it('inherits public segment paint and radius across an appearance fallback', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-otp-input-segment-fill: rgb(1, 2, 3); --lr-otp-input-segment-border-color: rgb(4, 5, 6); --lr-otp-input-segment-radius: 17px">
+      <lr-otp-input appearance="filled-outlined" length="4"></lr-otp-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
+  const segment = segmentsOf(el)[0];
+  const computed = getComputedStyle(segment);
+  expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(computed.borderTopColor).to.equal('rgb(4, 5, 6)');
+  expect(computed.borderTopLeftRadius).to.equal('17px');
+});
+
+it('uses scoped active and invalid segment paint inherited from an ancestor', async () => {
+  const activeWrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-transition-fast: 0ms; --lr-otp-input-active-border-color: rgb(1, 2, 3); --lr-otp-input-active-ring-color: rgb(4, 5, 6)">
+      <lr-otp-input></lr-otp-input>
+    </div>
+  `);
+  const activeEl = activeWrapper.querySelector('lr-otp-input') as LyraOtpInput;
+  for (const segment of segmentsOf(activeEl)) segment.style.transition = 'none';
+  controlOf(activeEl).focus();
+  await activeEl.updateComplete;
+  const active = partOf(activeEl, 'active');
+  const activeStyle = getComputedStyle(active);
+  expect(activeStyle.getPropertyValue('--lr-otp-input-active-border-color').trim()).to.equal('rgb(1, 2, 3)');
+  expect(activeStyle.borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(activeStyle.boxShadow).to.contain('rgb(4, 5, 6)');
+
+  const invalidWrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-transition-fast: 0ms; --lr-otp-input-invalid-border-color: rgb(7, 8, 9)">
+      <lr-otp-input required></lr-otp-input>
+    </div>
+  `);
+  const invalidEl = invalidWrapper.querySelector('lr-otp-input') as LyraOtpInput;
+  for (const segment of segmentsOf(invalidEl)) segment.style.transition = 'none';
+  invalidEl.reportValidity();
+  await invalidEl.updateComplete;
+  const invalid = partOf(invalidEl, 'invalid');
+  expect(getComputedStyle(invalid).borderTopColor).to.equal('rgb(7, 8, 9)');
+});
 const key = (el: Element, value: string, init: KeyboardEventInit = {}): KeyboardEvent => {
   const event = new KeyboardEvent('keydown', {
     key: value,
@@ -24,7 +69,7 @@ const key = (el: Element, value: string, init: KeyboardEventInit = {}): Keyboard
 const paste = (el: Element, value: string): Event => {
   const event = new Event('paste', { bubbles: true, composed: true, cancelable: true });
   Object.defineProperty(event, 'clipboardData', {
-    value: { getData: (type: string) => type === 'text' ? value : '' },
+    value: { getData: (type: string) => (type === 'text' ? value : '') },
   });
   controlOf(el).dispatchEvent(event);
   return event;
@@ -36,6 +81,16 @@ const maskGlyphOf = (segment: HTMLElement): string => {
   if (content === 'none' || content === 'normal' || content === '') return '';
   return content.replace(/^["']|["']$/g, '');
 };
+
+interface OtpInputEditingFacade {
+  readonly input: HTMLInputElement | null;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  selectionDirection: 'forward' | 'backward' | 'none' | null;
+  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void;
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+}
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input required label="Code"></lr-otp-input>`);
@@ -78,9 +133,7 @@ it('bars constraint validation while disabled or fieldset-disabled, not only whi
   // `readonly` was already suspended (see the readonly suspension test below); `disabled` was not,
   // so a <lr-otp-input required disabled> reported valueMissing and published :state(invalid)
   // while no barred native control does.
-  const el = await fixture<LyraOtpInput>(
-    html`<lr-otp-input required label="Code" length="4" disabled></lr-otp-input>`,
-  );
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input required label="Code" length="4" disabled></lr-otp-input>`);
   expect(el.validity.valueMissing, 'disabled + required').to.equal(false);
   expect(el.validity.valid).to.equal(true);
   expect(el.matches(':state(invalid)'), 'disabled must not be :state(invalid)').to.equal(false);
@@ -138,17 +191,12 @@ it('derives segments and separators from format, overriding length', async () =>
   expect(el.effectiveLength).to.equal(6);
   const separators = el.shadowRoot!.querySelectorAll('[part~="segment-literal"]');
   expect(separators).to.have.lengthOf(1);
-  expect(separators[0].getAttribute('part')!.split(/\s+/)).to.include.members([
-    'separator',
-    'segment-literal',
-  ]);
+  expect(separators[0].getAttribute('part')!.split(/\s+/)).to.include.members(['separator', 'segment-literal']);
   expect(separators[0].textContent).to.equal('-');
 });
 
 it('treats a nonempty format with no segment markers as unset and falls back to length', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Key" length="4" format="---"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Key" length="4" format="---"></lr-otp-input> `);
   expect(segmentsOf(el)).to.have.lengthOf(4);
   expect(el.effectiveLength).to.equal(4);
   expect(controlOf(el).maxLength).to.equal(4);
@@ -199,19 +247,17 @@ it('supports the mapped appearances and shared size ladder', async () => {
   expect(filledOutlined.appearance).to.equal('filled-outlined');
   expect(contained.appearance).to.equal('contained');
   expect(getComputedStyle(segmentsOf(filled)[0]).backgroundColor).to.not.equal(
-    getComputedStyle(segmentsOf(outlined)[0]).backgroundColor,
+    getComputedStyle(segmentsOf(outlined)[0]).backgroundColor
   );
   expect(segmentsOf(filled)[0].getBoundingClientRect().height).to.be.greaterThan(
-    segmentsOf(outlined)[0].getBoundingClientRect().height,
+    segmentsOf(outlined)[0].getBoundingClientRect().height
   );
   expect(getComputedStyle(fieldOf(contained)).gap).to.equal('0px');
   expect(getComputedStyle(fieldOf(contained)).borderStyle).to.equal('solid');
 });
 
 it('uses standalone m fallbacks while an unset size inherits a nested outer size context', async () => {
-  const standalone = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Standalone"></lr-otp-input>
-  `);
+  const standalone = await fixture<LyraOtpInput>(html` <lr-otp-input label="Standalone"></lr-otp-input> `);
   const explicitMedium = await fixture<LyraOtpInput>(html`
     <lr-otp-input label="Explicit medium" size="m"></lr-otp-input>
   `);
@@ -235,8 +281,9 @@ it('uses standalone m fallbacks while an unset size inherits a nested outer size
   expect(nested.hasAttribute('size')).to.equal(false);
   expect(nestedStyle.fontSize).to.equal(outerStyle.fontSize);
   expect(nestedStyle.borderRadius).to.equal(outerStyle.borderRadius);
-  expect(getComputedStyle(nested).getPropertyValue('--lr-form-control-height').trim())
-    .to.equal(getComputedStyle(outer).getPropertyValue('--lr-form-control-height').trim());
+  expect(getComputedStyle(nested).getPropertyValue('--lr-form-control-height').trim()).to.equal(
+    getComputedStyle(outer).getPropertyValue('--lr-form-control-height').trim()
+  );
   expect(nestedStyle.fontSize).to.not.equal(standaloneStyle.fontSize);
   expect(nestedStyle.borderRadius).to.not.equal(standaloneStyle.borderRadius);
 });
@@ -244,11 +291,7 @@ it('uses standalone m fallbacks while an unset size inherits a nested outer size
 it('lets explicit same-default m property and attribute writes override inherited size context', async () => {
   const outer = await fixture<LyraOtpInput>(html`
     <lr-otp-input label="Outer" size="xs">
-      <lr-otp-input
-        slot="hint"
-        label="Property override"
-        style="--lr-form-control-height-m: 73px;"
-      ></lr-otp-input>
+      <lr-otp-input slot="hint" label="Property override" style="--lr-form-control-height-m: 73px;"></lr-otp-input>
       <lr-otp-input slot="hint" label="Attribute override" size="m"></lr-otp-input>
     </lr-otp-input>
   `);
@@ -270,8 +313,7 @@ it('lets explicit same-default m property and attribute writes override inherite
   const outerStyle = getComputedStyle(segmentsOf(outer)[0]);
   expect(propertyStyle.fontSize).to.equal(attributeStyle.fontSize);
   expect(propertyStyle.borderRadius).to.equal(attributeStyle.borderRadius);
-  expect(getComputedStyle(propertyOverride).getPropertyValue('--lr-form-control-height').trim())
-    .to.equal('73px');
+  expect(getComputedStyle(propertyOverride).getPropertyValue('--lr-form-control-height').trim()).to.equal('73px');
   expect(propertyStyle.fontSize).to.not.equal(outerStyle.fontSize);
   expect(propertyStyle.borderRadius).to.not.equal(outerStyle.borderRadius);
 });
@@ -366,9 +408,7 @@ it('honors a compact segment-size exactly while keeping the combined input targe
   const xs = await fixture<LyraOtpInput>(html`
     <lr-otp-input label="Extra small" length="1" size="xs"></lr-otp-input>
   `);
-  const medium = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Medium" length="1" size="m"></lr-otp-input>
-  `);
+  const medium = await fixture<LyraOtpInput>(html` <lr-otp-input label="Medium" length="1" size="m"></lr-otp-input> `);
   const cellRect = segmentsOf(compact)[0].getBoundingClientRect();
   const targetRect = fieldOf(compact).getBoundingClientRect();
   const inputRect = controlOf(compact).getBoundingClientRect();
@@ -378,15 +418,16 @@ it('honors a compact segment-size exactly while keeping the combined input targe
   expect(targetRect.height).to.be.at.least(40);
   expect(inputRect.width).to.be.closeTo(targetRect.width, 1);
   expect(inputRect.height).to.be.closeTo(targetRect.height, 1);
-  expect(segmentsOf(medium)[0].getBoundingClientRect().height)
-    .to.be.greaterThan(segmentsOf(xs)[0].getBoundingClientRect().height);
+  expect(segmentsOf(medium)[0].getBoundingClientRect().height).to.be.greaterThan(
+    segmentsOf(xs)[0].getBoundingClientRect().height
+  );
 });
 
-it('contains a long fixed-cell row in a 320px allocation while keeping every cell reachable', async () => {
+it('contains a long RTL fixed-cell row in a 320px allocation while keeping every cell reachable', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="inline-size: 320px; max-inline-size: 320px;">
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px;">
       <lr-otp-input
-        label="A very long verification code label that must wrap inside its allocated container"
+        label="InternationalizedUnbrokenVerificationCodeLabelThatMustWrapInsideItsAllocatedContainer"
         hint="A very long supporting hint that must also wrap without widening the containing page"
         length="8"
       ></lr-otp-input>
@@ -411,9 +452,7 @@ it('contains a long fixed-cell row in a 320px allocation while keeping every cel
 });
 
 it('forwards autofocus to the real input and focuses it after first render', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" autofocus></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" autofocus></lr-otp-input> `);
   await aTimeout(0);
   expect(el.autofocus).to.be.true;
   expect(controlOf(el).autofocus).to.be.true;
@@ -428,7 +467,9 @@ it('drops characters the type rejects', async () => {
 });
 
 it('accepts letters when type is alphanumeric and applies the case transform', async () => {
-  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" type="alphanumeric" case="upper"></lr-otp-input>`);
+  const el = await fixture<LyraOtpInput>(
+    html`<lr-otp-input label="Code" type="alphanumeric" case="upper"></lr-otp-input>`
+  );
   await type(el, 'ab1');
   expect(el.value).to.equal('AB1');
 });
@@ -458,13 +499,15 @@ it('defers sanitization and public editing events while IME composition is in pr
   el.addEventListener('lr-complete', (event) => completions.push(event as CustomEvent));
 
   control.value = 'あ';
-  control.dispatchEvent(new InputEvent('input', {
-    bubbles: true,
-    composed: true,
-    data: 'あ',
-    inputType: 'insertCompositionText',
-    isComposing: true,
-  }));
+  control.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: 'あ',
+      inputType: 'insertCompositionText',
+      isComposing: true,
+    })
+  );
   expect(el.value).to.equal('');
   expect(control.value).to.equal('あ');
   expect(inputs).to.have.lengthOf(0);
@@ -472,13 +515,15 @@ it('defers sanitization and public editing events while IME composition is in pr
 
   control.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, composed: true, data: 'a1' }));
   control.value = 'a1';
-  control.dispatchEvent(new InputEvent('input', {
-    bubbles: true,
-    composed: true,
-    data: 'a1',
-    inputType: 'insertCompositionText',
-    isComposing: false,
-  }));
+  control.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: 'a1',
+      inputType: 'insertCompositionText',
+      isComposing: false,
+    })
+  );
   await el.updateComplete;
   expect(el.value).to.equal('A1');
   expect(control.value).to.equal('A1');
@@ -533,9 +578,7 @@ it('re-sanitizes an existing value when type narrows', async () => {
 });
 
 it('moves the active segment with clamped physical arrows in LTR and RTL', async () => {
-  const ltr = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const ltr = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   ltr.focus();
   await ltr.updateComplete;
   expect(activeIndexOf(ltr)).to.equal(3);
@@ -563,9 +606,7 @@ it('moves the active segment with clamped physical arrows in LTR and RTL', async
 });
 
 it('clears fixed cells with Backspace and Delete without shifting trailing characters', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   const inputs: InputEvent[] = [];
   el.addEventListener('input', (event) => inputs.push(event as InputEvent));
   el.focus();
@@ -597,9 +638,7 @@ it('clears fixed cells with Backspace and Delete without shifting trailing chara
 });
 
 it('emits lr-clear once when fixed-cell Backspace clears the last occupied cell', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="1" value="7"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="1" value="7"></lr-otp-input> `);
   const order: string[] = [];
   el.addEventListener('input', () => order.push('input'));
   el.addEventListener('lr-clear', () => order.push('lr-clear'));
@@ -615,9 +654,7 @@ it('emits lr-clear once when fixed-cell Backspace clears the last occupied cell'
 });
 
 it('makes select-all replacement part of fixed-cell keyboard editing', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   el.select();
 
   key(el, '9');
@@ -630,26 +667,109 @@ it('makes select-all replacement part of fixed-cell keyboard editing', async () 
   expect(controlOf(el).selectionEnd).to.equal(1);
 });
 
+it('exposes a silent compact-string selection and range-editing facade', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-otp-input
+        name="code"
+        label="Code"
+        length="4"
+        type="alphanumeric"
+        case="upper"
+        required
+        value="12AB"
+      ></lr-otp-input>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  const facade = el as LyraOtpInput & OtpInputEditingFacade;
+  const native = controlOf(el);
+  const events: string[] = [];
+  for (const type of ['input', 'change', 'lr-clear', 'lr-complete']) {
+    el.addEventListener(type, () => events.push(type));
+  }
+
+  expect(facade.input === native).to.equal(true);
+  facade.setSelectionRange(1, 3, 'forward');
+  expect(facade.selectionStart).to.equal(1);
+  expect(facade.selectionEnd).to.equal(3);
+  expect(facade.selectionDirection).to.equal('forward');
+
+  facade.setRangeText('z-', 1, 3, 'select');
+  await el.updateComplete;
+  expect(el.value).to.equal('1ZB');
+  expect(native.value).to.equal('1ZB');
+  expect(segmentsOf(el).map((segment) => segment.textContent)).to.deep.equal(['1', 'Z', 'B', '']);
+  expect(facade.selectionStart).to.equal(1);
+  expect(facade.selectionEnd).to.equal(2);
+  expect(el.validity.tooShort).to.equal(true);
+  expect(new FormData(form).get('code')).to.equal('1ZB');
+
+  facade.selectionStart = 1;
+  facade.selectionEnd = 2;
+  facade.selectionDirection = 'backward';
+  facade.setRangeText('99');
+  await el.updateComplete;
+  expect(el.value).to.equal('199B');
+  expect(el.validity.valid).to.equal(true);
+  expect(new FormData(form).get('code')).to.equal('199B');
+  expect(events).to.deep.equal([]);
+});
+
+it('maps a collapsed host selection to the fixed-cell keyboard target', async () => {
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
+  const facade = el as LyraOtpInput & OtpInputEditingFacade;
+
+  el.focus();
+  facade.setSelectionRange(1, 1);
+  key(el, '9');
+  await el.updateComplete;
+
+  expect(el.value).to.equal('1934');
+  expect(segmentsOf(el).map((segment) => segment.textContent)).to.deep.equal(['1', '9', '3', '4']);
+  expect(activeIndexOf(el)).to.equal(2);
+});
+
+it('makes the selection facade safe before the native input renders', () => {
+  const facade = document.createElement('lr-otp-input') as LyraOtpInput & OtpInputEditingFacade;
+
+  expect(facade.input === null).to.equal(true);
+  expect(facade.selectionStart).to.equal(null);
+  expect(facade.selectionEnd).to.equal(null);
+  expect(facade.selectionDirection).to.equal(null);
+  expect(() => {
+    facade.selectionStart = 0;
+    facade.selectionEnd = 0;
+    facade.selectionDirection = 'forward';
+    facade.select();
+    facade.setSelectionRange(0, 0);
+    facade.setRangeText('ignored');
+  }).to.not.throw();
+  expect(facade.value).to.equal('');
+});
+
 it('clears a select-all range with either deletion key in one input operation', async () => {
   for (const deletionKey of ['Backspace', 'Delete']) {
-    const el = await fixture<LyraOtpInput>(html`
-      <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-    `);
+    const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
     const inputs: InputEvent[] = [];
     let clears = 0;
     el.addEventListener('input', (event) => inputs.push(event as InputEvent));
-    el.addEventListener('lr-clear', () => { clears += 1; });
+    el.addEventListener('lr-clear', () => {
+      clears += 1;
+    });
     el.select();
 
     key(el, deletionKey);
     await el.updateComplete;
 
     expect(el.value, deletionKey).to.equal('');
-    expect(segmentsOf(el).map((segment) => segment.textContent), deletionKey)
-      .to.deep.equal(['', '', '', '']);
+    expect(
+      segmentsOf(el).map((segment) => segment.textContent),
+      deletionKey
+    ).to.deep.equal(['', '', '', '']);
     expect(inputs, deletionKey).to.have.lengthOf(1);
     expect(inputs[0].inputType).to.equal(
-      deletionKey === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward',
+      deletionKey === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward'
     );
     expect(clears, deletionKey).to.equal(1);
     expect(activeIndexOf(el), deletionKey).to.equal(0);
@@ -659,9 +779,7 @@ it('clears a select-all range with either deletion key in one input operation', 
 });
 
 it('maps a compact native selection range back onto occupied fixed cells', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   el.focus();
   key(el, 'ArrowLeft');
   key(el, 'Delete');
@@ -681,9 +799,7 @@ it('maps a compact native selection range back onto occupied fixed cells', async
 });
 
 it('replaces a fixed cell and advances when typing after a middle deletion', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   el.focus();
   key(el, 'ArrowLeft');
   key(el, 'Delete');
@@ -698,9 +814,7 @@ it('replaces a fixed cell and advances when typing after a middle deletion', asy
 });
 
 it('emits one native change when a fixed-cell keyboard edit settles on blur', async () => {
-  const wrapper = await fixture<HTMLElement>(html`
-    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
-  `);
+  const wrapper = await fixture<HTMLElement>(html` <div><lr-otp-input label="Code" length="4"></lr-otp-input></div> `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
   const changes: Event[] = [];
   wrapper.addEventListener('change', (event) => changes.push(event));
@@ -748,8 +862,7 @@ it('never submits on an Enter that commits an IME candidate', async () => {
   expect(composing.defaultPrevented, 'and the keystroke is left to the IME').to.equal(false);
 
   key(el, 'Enter', { keyCode: 229 });
-  expect(submits, 'keyCode 229 is the fallback for engines that under-report isComposing')
-    .to.equal(0);
+  expect(submits, 'keyCode 229 is the fallback for engines that under-report isComposing').to.equal(0);
 
   key(el, 'Enter');
   expect(submits, 'a bare Enter still submits').to.equal(1);
@@ -769,8 +882,7 @@ it('never submits on a modifier-held Enter', async () => {
   for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey'] as const) {
     const event = key(el, 'Enter', { [modifier]: true });
     expect(submits, `${modifier}+Enter is an application shortcut, never a submission`).to.equal(0);
-    expect(event.defaultPrevented, `${modifier}+Enter stays available to the application`)
-      .to.equal(false);
+    expect(event.defaultPrevented, `${modifier}+Enter stays available to the application`).to.equal(false);
   }
 
   key(el, 'Enter');
@@ -834,8 +946,7 @@ it("names the form's first enabled native submit button as SubmitEvent.submitter
   });
 
   key(el, 'Enter');
-  expect(submitterId, 'the default button carries its own name/value into the submission')
-    .to.equal('go');
+  expect(submitterId, 'the default button carries its own name/value into the submission').to.equal('go');
 });
 
 it('activates an lr-button submitter, which requestSubmit() itself would reject', async () => {
@@ -894,18 +1005,22 @@ it('passes a foreign native autosubmit button to requestSubmit instead of clicki
   const requested: Array<HTMLElement | undefined> = [];
   let clicks = 0;
   form.requestSubmit = ((submitter?: HTMLElement) => requested.push(submitter)) as typeof form.requestSubmit;
-  button.click = (() => { clicks += 1; }) as typeof button.click;
+  button.click = (() => {
+    clicks += 1;
+  }) as typeof button.click;
 
   try {
     expect(button instanceof HTMLButtonElement, 'the submitter is genuinely foreign').to.be.false;
     const control = controlOf(el);
     control.value = '7';
-    control.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      composed: true,
-      data: '7',
-      inputType: 'insertText',
-    }));
+    control.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        composed: true,
+        data: '7',
+        inputType: 'insertText',
+      })
+    );
     await aTimeout(0);
 
     expect(requested.length).to.equal(1);
@@ -928,10 +1043,14 @@ it('lets a listener that vetoes lr-complete asynchronously suppress the autosubm
   });
   // The veto point is real, so it has to survive one await — a listener that checks the code
   // before letting the form go cannot decide synchronously.
-  el.addEventListener('lr-complete', async (event) => {
-    await Promise.resolve();
-    event.preventDefault();
-  }, { once: true });
+  el.addEventListener(
+    'lr-complete',
+    async (event) => {
+      await Promise.resolve();
+      event.preventDefault();
+    },
+    { once: true }
+  );
 
   await type(el, '123');
   await aTimeout(0);
@@ -939,9 +1058,7 @@ it('lets a listener that vetoes lr-complete asynchronously suppress the autosubm
 });
 
 it('fills an empty field from a full sanitized paste with one input and one completion', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4"></lr-otp-input> `);
   const inputs: InputEvent[] = [];
   const completions: CustomEvent<{ value: string }>[] = [];
   el.addEventListener('input', (event) => inputs.push(event as InputEvent));
@@ -966,7 +1083,9 @@ it('emits completion and autosubmits only on an incomplete-to-complete transitio
   const el = form.querySelector('lr-otp-input') as LyraOtpInput;
   let completions = 0;
   let submits = 0;
-  el.addEventListener('lr-complete', () => { completions += 1; });
+  el.addEventListener('lr-complete', () => {
+    completions += 1;
+  });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     submits += 1;
@@ -1033,9 +1152,7 @@ it('sanitizes a pristine declarative default while preserving dirty/default rese
 });
 
 it('sanitizes a defaultValue assignment into the live value while the control is pristine', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4"></lr-otp-input> `);
 
   el.defaultValue = 'a1b2c345';
 
@@ -1056,9 +1173,7 @@ it('emits lr-complete on an incomplete-to-complete input transition', async () =
 });
 
 it('clear() clears the live value, returns focus, and emits lr-clear once', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   const cleared = oneEvent(el, 'lr-clear');
   el.clear();
   const event = await cleared;
@@ -1105,6 +1220,66 @@ it('autosubmits only after the cancelable completion event and honors preventDef
   expect(order).to.deep.equal(['complete']);
 });
 
+it('does not let one completion task submit a synchronously replaced full code', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-otp-input name="code" label="Code" length="3" autosubmit></lr-otp-input>
+    </form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  const submittedCodes: string[] = [];
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submittedCodes.push(String(new FormData(form).get('code')));
+  });
+  el.addEventListener('lr-complete', () => {
+    el.value = '456';
+  }, { once: true });
+
+  await type(el, '123');
+  await aTimeout(0);
+
+  expect(el.value).to.equal('456');
+  expect(submittedCodes).to.deep.equal([]);
+});
+
+it('retires a queued autosubmit across default, reset, and state-restore mutations', async () => {
+  const cases: Array<{
+    name: string;
+    mutate(el: LyraOtpInput, form: HTMLFormElement): void;
+  }> = [
+    { name: 'default write', mutate: (el) => { el.defaultValue = '456'; } },
+    {
+      name: 'form reset',
+      mutate: (el, form) => {
+        el.defaultValue = '456';
+        form.reset();
+      },
+    },
+    { name: 'state restore', mutate: (el) => { el.formStateRestoreCallback('456', 'restore'); } },
+  ];
+
+  for (const testCase of cases) {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-otp-input name="code" label="Code" length="3" autosubmit></lr-otp-input>
+      </form>
+    `);
+    const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+    el.addEventListener('lr-complete', () => testCase.mutate(el, form), { once: true });
+
+    await type(el, '123');
+    await aTimeout(0);
+
+    expect(submits, testCase.name).to.equal(0);
+  }
+});
+
 it('does not submit on completion while autosubmit is unset', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form><lr-otp-input name="code" label="Code" length="3"></lr-otp-input></form>
@@ -1121,22 +1296,22 @@ it('does not submit on completion while autosubmit is unset', async () => {
 });
 
 it('relays exactly one non-composing native InputEvent with its editing payload from the real input', async () => {
-  const wrapper = await fixture<HTMLElement>(html`
-    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
-  `);
+  const wrapper = await fixture<HTMLElement>(html` <div><lr-otp-input label="Code" length="4"></lr-otp-input></div> `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
   const control = controlOf(el);
   const events: InputEvent[] = [];
   wrapper.addEventListener('input', (event) => events.push(event as InputEvent));
 
   control.value = '7';
-  control.dispatchEvent(new InputEvent('input', {
-    bubbles: true,
-    composed: true,
-    data: '7',
-    inputType: 'insertText',
-    isComposing: false,
-  }));
+  control.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: '7',
+      inputType: 'insertText',
+      isComposing: false,
+    })
+  );
 
   expect(events).to.have.lengthOf(1);
   expect(events[0] instanceof InputEvent).to.be.true;
@@ -1147,9 +1322,7 @@ it('relays exactly one non-composing native InputEvent with its editing payload 
 });
 
 it('relays exactly one host-target native non-cancelable change event', async () => {
-  const wrapper = await fixture<HTMLElement>(html`
-    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
-  `);
+  const wrapper = await fixture<HTMLElement>(html` <div><lr-otp-input label="Code" length="4"></lr-otp-input></div> `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
   const events: Event[] = [];
   wrapper.addEventListener('change', (event) => events.push(event));
@@ -1166,7 +1339,9 @@ it('relays exactly one host-target native non-cancelable change event', async ()
 it('does not emit lr-complete while the code is short', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="3"></lr-otp-input>`);
   let fired = false;
-  el.addEventListener('lr-complete', () => { fired = true; });
+  el.addEventListener('lr-complete', () => {
+    fired = true;
+  });
   await type(el, '12');
   expect(fired).to.equal(false);
 });
@@ -1214,8 +1389,9 @@ it('returns intrinsic invalid rendering to pristine on form reset', async () => 
   const el = form.querySelector('lr-otp-input') as LyraOtpInput;
   await type(el, '1');
   expect(controlOf(el).getAttribute('aria-invalid')).to.equal('true');
-  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid')))
-    .to.equal(true);
+  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid'))).to.equal(
+    true
+  );
 
   form.reset();
   await el.updateComplete;
@@ -1223,14 +1399,13 @@ it('returns intrinsic invalid rendering to pristine on form reset', async () => 
   expect(el.value).to.equal('');
   expect(el.validity.valueMissing).to.equal(true);
   expect(controlOf(el).getAttribute('aria-invalid')).to.equal('false');
-  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid')))
-    .to.equal(false);
+  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid'))).to.equal(
+    false
+  );
 });
 
 it('sanitizes browser-restored state without emitting editing events', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4"></lr-otp-input> `);
   const events: string[] = [];
   el.addEventListener('input', () => events.push('input'));
   el.addEventListener('change', () => events.push('change'));
@@ -1312,8 +1487,12 @@ it('dims the segments and disables the control inside a disabled fieldset', asyn
   expect(el.effectiveDisabled, 'effective disabled state').to.equal(true);
   expect(controlOf(el).disabled, 'the real input').to.equal(true);
   let delegatedCalls = 0;
-  controlOf(el).click = () => { delegatedCalls += 1; };
-  controlOf(el).focus = () => { delegatedCalls += 1; };
+  controlOf(el).click = () => {
+    delegatedCalls += 1;
+  };
+  controlOf(el).focus = () => {
+    delegatedCalls += 1;
+  };
   el.click();
   el.focus();
   expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
@@ -1340,9 +1519,7 @@ it('marks the next segment active only while focused', async () => {
 });
 
 it('relays one native focus/blur pair and one prefixed alias pair from the real input', async () => {
-  const wrapper = await fixture<HTMLElement>(html`
-    <div><lr-otp-input label="Code" length="4"></lr-otp-input></div>
-  `);
+  const wrapper = await fixture<HTMLElement>(html` <div><lr-otp-input label="Code" length="4"></lr-otp-input></div> `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
   const nativeEvents: FocusEvent[] = [];
   const aliases: string[] = [];
@@ -1373,7 +1550,7 @@ it('does not mark touched from a blur caused by the control itself becoming disa
 
   expect(
     (el as unknown as { touched: boolean }).touched,
-    'a platform-forced blur from becoming disabled must not count as user interaction',
+    'a platform-forced blur from becoming disabled must not count as user interaction'
   ).to.equal(false);
 });
 
@@ -1389,18 +1566,14 @@ it('still marks touched from a real blur while enabled', async () => {
 });
 
 it('select() forwards to the real input and selects the complete code', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" value="1234"></lr-otp-input> `);
   el.select();
   expect(controlOf(el).selectionStart).to.equal(0);
   expect(controlOf(el).selectionEnd).to.equal(4);
 });
 
 it('exposes form-control part aliases and paints the required marker on a populated label', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" required></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" required></lr-otp-input> `);
   const base = partOf(el, 'base');
   const label = partOf(el, 'label');
   expect(base.getAttribute('part')!.split(/\s+/)).to.include.members(['base', 'form-control']);
@@ -1470,8 +1643,9 @@ it('renders explicit errorText and its ARIA state immediately without faking int
   expect(error.textContent!.trim()).to.equal('That code is unavailable.');
   expect(controlOf(el).getAttribute('aria-describedby')!.split(/\s+/)).to.include(error.id);
   expect(controlOf(el).getAttribute('aria-invalid')).to.equal('true');
-  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid')))
-    .to.equal(false);
+  expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid'))).to.equal(
+    false
+  );
 });
 
 it('renders the English fallback label with no locale registered', async () => {
@@ -1501,9 +1675,7 @@ it('is not editable while readonly but still submits', async () => {
 });
 
 it('suspends intrinsic required/completeness validity while readonly and restores it when editable', async () => {
-  const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" length="4" required></lr-otp-input>
-  `);
+  const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" required></lr-otp-input> `);
   await type(el, '12');
   expect(el.validity.tooShort).to.equal(true);
 
@@ -1526,8 +1698,8 @@ it('suspends intrinsic required/completeness validity while readonly and restore
 
 it('exposes the real input and validation target as public readonly views', async () => {
   const disconnected = document.createElement('lr-otp-input') as LyraOtpInput;
-  expect(disconnected.input).to.equal(null);
-  expect(disconnected.validationTarget).to.equal(null);
+  expect(disconnected.input === null).to.equal(true);
+  expect(disconnected.validationTarget === null).to.equal(true);
 
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code"></lr-otp-input>`);
   expect(el.input === controlOf(el)).to.equal(true);
@@ -1568,9 +1740,7 @@ describe('lr-otp-input custom validity', () => {
   });
 
   it('resetValidity() clears the consumer error and restores intrinsic validity', async () => {
-    const el = await fixture<LyraOtpInput>(html`
-      <lr-otp-input label="Code" length="4" required></lr-otp-input>
-    `);
+    const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" required></lr-otp-input> `);
     el.setCustomValidity('Server said no.');
     expect(el.validity.customError).to.equal(true);
 
@@ -1659,19 +1829,19 @@ describe('lr-otp-input validity custom states', () => {
   });
 
   it('reveals intrinsic ARIA and segment invalid styling after reportValidity()', async () => {
-    const el = await fixture<LyraOtpInput>(html`
-      <lr-otp-input label="Code" length="4" required></lr-otp-input>
-    `);
+    const el = await fixture<LyraOtpInput>(html` <lr-otp-input label="Code" length="4" required></lr-otp-input> `);
     expect(controlOf(el).getAttribute('aria-invalid')).to.equal('false');
-    expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid')))
-      .to.equal(false);
+    expect(segmentsOf(el).some((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid'))).to.equal(
+      false
+    );
 
     el.reportValidity();
     await el.updateComplete;
 
     expect(controlOf(el).getAttribute('aria-invalid')).to.equal('true');
-    expect(segmentsOf(el).every((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid')))
-      .to.equal(true);
+    expect(segmentsOf(el).every((segment) => segment.getAttribute('part')!.split(/\s+/).includes('invalid'))).to.equal(
+      true
+    );
   });
 
   it('tracks a custom error in valid/invalid', async function () {

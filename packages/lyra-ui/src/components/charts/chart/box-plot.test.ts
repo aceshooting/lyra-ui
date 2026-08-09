@@ -57,7 +57,7 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(loadingLabel!.textContent).to.equal('Boxplot wird geladen');
   expect(loadingLabel!.hasAttribute('role')).to.be.false;
   expect(loadingLabel!.hasAttribute('aria-live')).to.be.false;
-  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
 
   // `waitUntil`'s own default timeout (1000ms) is tighter than this codebase's
   // established budget for async-peer-dep-loader races under concurrent-test
@@ -67,7 +67,7 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   const sink = assertiveSink();
   expect(sink !== null, 'a connected box plot must acquire its sink before a peer failure').to.be
     .true;
@@ -144,7 +144,7 @@ it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin
   ];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 2000 });
-  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
 it('updates in place (same Chart instance) when only boxes/labels change', async () => {
@@ -203,7 +203,7 @@ it('renders a newly-added box series as pressed in the DOM legend on its first u
   await el.updateComplete;
 
   const legendItems = [
-    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+    ...el.shadowRoot!.querySelectorAll('[part~="legend-item"]'),
   ];
   expect(chart.isDatasetVisible(1)).to.be.true;
   expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
@@ -364,9 +364,9 @@ it('fails closed with static visible error text and one light-DOM alert when the
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
   await (el as any).onBoxPlotPluginLoaded(null);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-  expect(error).to.exist;
+  expect((error) != null).to.equal(true);
   expect(error.hasAttribute('role'), 'the shadow error must not be a second alert').to.be.false;
   expect(error.hasAttribute('aria-hidden'), 'the visible error must remain discoverable').to.be.false;
   expect(error.textContent!.trim()).to.not.equal('');
@@ -835,9 +835,9 @@ describe('remediated box-plot context and flow', () => {
     await aTimeout(0);
 
     const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
-    const legendItem = el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement;
+    const legendItem = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
     const after = wrapper.querySelector('#after') as HTMLElement;
-    expect(legendItem).to.exist;
+    expect((legendItem) != null).to.equal(true);
     expect(legendItem.textContent).to.contain('must remain visible');
     expect(legendItem.getBoundingClientRect().right).to.be.at.most(
       el.getBoundingClientRect().right + 0.5,
@@ -852,8 +852,11 @@ describe('remediated box-plot context and flow', () => {
 
     legendItem.click();
     await el.updateComplete;
+    const hiddenLegendItem = el.shadowRoot!.querySelector<HTMLElement>('[part~="legend-item"]')!;
     expect((el as any).chart.isDatasetVisible(0)).to.equal(false);
-    expect(legendItem.getAttribute('aria-pressed')).to.equal('false');
+    expect(hiddenLegendItem.getAttribute('aria-pressed')).to.equal('false');
+    expect(hiddenLegendItem.part.contains('legend-item-hidden')).to.be.true;
+    expect(getComputedStyle(hiddenLegendItem).textDecorationLine).to.contain('line-through');
   });
 
   it('re-resolves a public box color for the DOM legend on theme refresh', async () => {

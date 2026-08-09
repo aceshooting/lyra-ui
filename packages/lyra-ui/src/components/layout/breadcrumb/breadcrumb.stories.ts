@@ -16,3 +16,26 @@ export const SharedSeparator: StoryObj = {
     </lr-breadcrumb>
   `,
 };
+
+export const NarrowRtlLongContent: StoryObj = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'An exact 320px allocation verifies wrapping for long localized breadcrumb labels in RTL.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) solid var(--lr-color-border); padding: var(--lr-space-s);"
+    >
+      <lr-breadcrumb label="مسار المشروع">
+        <lr-breadcrumb-item href="/">الصفحة-الرئيسية-ذات-العنوان-الطويل-جداً</lr-breadcrumb-item>
+        <lr-breadcrumb-item href="/reports">التقارير-التحليلية-المفصلة-جداً</lr-breadcrumb-item>
+        <lr-breadcrumb-item current>النتيجة-الحالية-ذات-العنوان-الطويل-جداً</lr-breadcrumb-item>
+      </lr-breadcrumb>
+    </div>
+  `,
+};

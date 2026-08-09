@@ -48,10 +48,39 @@ export const FreeTextNoCatalog: Story = {
   render: () => html`<lr-voice-picker label="Voice" placeholder="Type a voice id…"></lr-voice-picker>`,
 };
 
+/** Custom label markup occupies the same native label and standard form-control frame in either
+ *  picker mode; the property remains available for plain text. */
+export const SlottedLabel: Story = {
+  render: () => html`
+    <lr-voice-picker .catalog=${catalog}>
+      <span slot="label">Narration <small>(required for spoken replies)</small></span>
+    </lr-voice-picker>
+  `,
+};
+
 /** `preview="false"` (via a property binding) omits both the standalone preview toggle and the
  *  per-row preview icons entirely. */
 export const NoPreview: Story = {
   render: () => html`<lr-voice-picker label="Voice" .catalog=${catalog} .preview=${false}></lr-voice-picker>`,
+};
+
+/** All six shared size tiers. Compact fields retain a 40px preview-action hit area; large tiers
+ *  grow that action with the field. */
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-24rem);">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`
+          <lr-voice-picker
+            size=${size}
+            label=${`Voice (${size})`}
+            value="aria"
+            .catalog=${catalog}
+          ></lr-voice-picker>
+        `
+      )}
+    </div>
+  `,
 };
 
 /** A narrow 320px allocation — the control row still fits the trigger/combobox and the preview

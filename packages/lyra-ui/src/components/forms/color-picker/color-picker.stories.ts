@@ -28,6 +28,22 @@ export const Open: StoryObj = {
   `,
 };
 
+/** Dragging a grid or slider is a live `input` preview. Releasing commits one `change`; an
+ * interrupted gesture (pointer cancellation, lost capture, disablement, or reparenting) restores
+ * the pre-drag visible and submitted value without emitting a commit. */
+export const ReversiblePointerPreview: StoryObj = {
+  name: 'Reversible pointer preview',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-s); block-size:22rem; max-inline-size:24rem;">
+      <lr-color-picker label="Drag a colour, then release or interrupt" value=${ACCENT} open></lr-color-picker>
+      <p style="margin:0; color:var(--lr-color-text-quiet); font-size:var(--lr-font-size-sm);">
+        Pointer release commits. A canceled or capture-lost drag returns to the colour present when
+        the gesture began.
+      </p>
+    </div>
+  `,
+};
+
 /** `inline` removes the popup trigger and keeps the complete picker panel in normal flow.
  * `no-format-toggle` is the Shoelace spelling of `without-format-toggle`; `default-value` supplies
  * the reset value. */
@@ -101,6 +117,21 @@ export const Swatches: StoryObj = {
           '; ',
         )}
         open
+      ></lr-color-picker>
+    </div>
+  `,
+};
+
+export const ScopedSelectedSwatchTheme: StoryObj = {
+  name: 'Scoped selected-swatch theme',
+  render: () => html`
+    <div style="block-size:24rem">
+      <lr-color-picker
+        label="Brand palette"
+        value=${ACCENT}
+        swatches=${[ACCENT, SUCCESS, DANGER].join('; ')}
+        open
+        style="--lr-color-picker-selected-border: var(--lr-color-danger); --lr-color-picker-selected-check-color: var(--lr-color-on-danger)"
       ></lr-color-picker>
     </div>
   `,

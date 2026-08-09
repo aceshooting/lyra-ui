@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -211,7 +211,8 @@ undefined, value: unknown }`). For scatter/bubble points, `label` prefers the pe
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
-wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-swatch`,
+wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
+that button while its dataset is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
 `center` slot), `error` (neutral visible message rendered in place of `canvas` when the optional
 `chart.js` peer dependency fails to load; the failure transition is announced through the shared
@@ -229,6 +230,12 @@ descendant, since custom properties only cascade downward);
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; plus
+`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
+`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`, and
+`--lr-chart-reset-zoom-button-hover-bg` / `--lr-chart-reset-zoom-button-active-bg` — independent
+background hooks for each DOM control's hover and pressed states. Hover defaults to
+`--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair
+without repainting the other controls;
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) — the width of
 `[part="canvas"]`'s own `:hover` outline. Unlike the tokens above, this one is a real CSS
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is

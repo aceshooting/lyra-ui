@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,6 +60,9 @@ each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain it. A host
 `aria-label` wins on the internal radio by presence, including `aria-label=""`.
 
+A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
+LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.
+
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
 `button`, `control`, `button--checked` while selected, and `label`.
@@ -67,11 +70,10 @@ visual wrapper synchronized; element-only and visible `aria-hidden` decorations 
 **Themeable custom properties:**
 
 - `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height)
-  * 0.7))`; `1.75rem` at the default `m` tier) — the edge length of `[part='circle']`, derived from
-  the active `size` tier's shared control height so a radio lines up with an
-  `lr-input`/`lr-select`/`lr-button` of the same `size`.
+  - 0.7))`; `1.75rem`at the default`m`tier) — the edge length of`[part='circle']`, derived from
+the active `size`tier's shared control height so a radio lines up with an`lr-input`/`lr-select`/`lr-button`of the same`size`.
 - `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5),
-  calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
+calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
   capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
   or the `--lr-icon-button-size` cap.
 - `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
@@ -89,6 +91,9 @@ visual wrapper synchronized; element-only and visible `aria-hidden` decorations 
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
 `--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
+The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
+`var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
+and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`).
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 

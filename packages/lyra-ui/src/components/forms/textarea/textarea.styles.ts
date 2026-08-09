@@ -99,7 +99,7 @@ export const styles = css`
      treatment would render for one frame between the hover border and the focus ring and read as a
      flicker; focus is this control's real "you are acting on me" state. */
   :host(:not(:disabled)) [part='textarea']:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-textarea-hover-border-color, var(--lr-color-brand));
   }
   [part='textarea']:disabled {
     opacity: var(--lr-opacity-disabled);

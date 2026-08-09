@@ -14,7 +14,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A form-associated numeric slider. `value`, `defaultValue`, and `valueAsNumber` are numbers; range mode submits two same-name entries and pushes the sibling handle when crossed.',
+          'A form-associated numeric slider. `value`, `defaultValue`, and `valueAsNumber` are numbers; range mode submits two same-name entries and pushes the sibling handle when crossed. Host `aria-label` wins on the role owner by attribute presence, including an explicitly empty override.',
       },
     },
   },
@@ -24,6 +24,17 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-slider label="Volume" style="max-inline-size: 20rem;"></lr-slider>`,
+};
+
+export const IndependentThumbStateTheme: Story = {
+  name: 'Independent thumb state theme',
+  render: () => html`
+    <lr-slider
+      label="Hover and drag the thumb"
+      value="50"
+      style="max-inline-size: var(--lr-size-20rem); --lr-slider-gap: var(--lr-space-l); --lr-slider-thumb-bg: var(--lr-color-success); --lr-slider-thumb-border-color: var(--lr-color-success-quiet); --lr-slider-thumb-hover-ring-color: var(--lr-color-warning-quiet); --lr-slider-thumb-active-ring-color: var(--lr-color-danger-quiet);"
+    ></lr-slider>
+  `,
 };
 
 export const Temperature: Story = {
@@ -111,6 +122,28 @@ export const RightToLeft: Story = {
       value="0.7"
       style="max-inline-size: 20rem;"
     ></lr-slider>
+  `,
+};
+
+/** Exact-320px standalone sliders contain unbroken label/reference/hint text in both directions. */
+export const StandaloneNarrow: Story = {
+  name: 'Standalone narrow LTR/RTL (320px)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+            <lr-slider
+              label="InternationalizedSliderLabelWithoutAnyNaturalBreakOpportunity"
+              hint="InternationalizedSliderHintWithoutAnyNaturalBreakOpportunity"
+              show-value
+            >
+              <span slot="reference">ReferenceUnitWithoutAnyNaturalBreakOpportunity</span>
+            </lr-slider>
+          </div>
+        `,
+      )}
+    </div>
   `,
 };
 

@@ -30,7 +30,10 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
-**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle).
+**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle). The
+flattened `handle` subtree is always inert and hidden from assistive technology, so even an
+accidentally interactive slotted descendant cannot become a second focus target; the native range
+remains the sole interaction surface.
 
 **CSS parts:** `base` and `comparison` are aliases on the same comparison viewport; `before`,
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native

@@ -124,9 +124,11 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * disabling the textarea or the busy-state Stop action.
  *
  * @customElement lr-chat-composer
- * @slot leading - Content rendered before the textarea (e.g. an attach-file trigger button).
+ * @slot start - Content rendered before the textarea (e.g. an attach-file trigger button).
+ * @slot leading - Deprecated compatibility alias for `start`; both spellings may coexist.
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
- * @slot trailing - Overrides the built-in send/stop button entirely when it has assigned content.
+ * @slot end - Overrides the built-in send/stop button entirely when it has assigned content.
+ * @slot trailing - Deprecated compatibility alias for `end`; either spelling suppresses the built-in action.
  * @event lr-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
  * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"` and `submitDisabled` is false. `detail: { value }`.
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
@@ -138,11 +140,11 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
- * @csspart row - The row holding the leading slot, textarea, and trailing slot/button.
- * @csspart leading - The wrapper around the `leading` slot. Hidden entirely when the slot is empty.
+ * @csspart row - The row holding the start/leading slots, textarea, and end/trailing slots/button.
+ * @csspart leading - The wrapper around the `start` and `leading` slots. Hidden entirely when both are empty.
  * @csspart textarea - The auto-resizing `<textarea>` itself.
- * @csspart trailing - The wrapper around the `trailing` slot and the built-in `action-button`.
- * @csspart action-button - The built-in send/stop button. Absent from the accessibility tree's meaningful content whenever `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
+ * @csspart trailing - The wrapper around the `end` and `trailing` slots and the built-in `action-button`.
+ * @csspart action-button - The built-in send/stop button. Absent whenever `end` or `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
  * @status stable
  * @since 4.0.0
@@ -319,9 +321,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // A server render sees no light-DOM children, so a hydrating composer reproduces the server's
     // slot-less rendering first and adopts the real adornment slots on the next update.
     this.seedFirstRenderState(() => {
-      this.hasLeadingSlot = this.hasSlotted('leading');
+      this.syncLeadingSlots();
       this.hasChipsSlot = this.hasSlotted('chips');
-      this.hasTrailingSlot = this.hasSlotted('trailing');
+      this.syncTrailingSlots();
     });
   }
 
@@ -553,16 +555,16 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.emit('lr-submit', { value: this.value });
   }
 
-  private onLeadingSlotChange = (e: Event): void => {
-    this.hasLeadingSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private syncLeadingSlots = (): void => {
+    this.hasLeadingSlot = this.hasSlotted('start') || this.hasSlotted('leading');
   };
 
   private onChipsSlotChange = (e: Event): void => {
     this.hasChipsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private onTrailingSlotChange = (e: Event): void => {
-    this.hasTrailingSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private syncTrailingSlots = (): void => {
+    this.hasTrailingSlot = this.hasSlotted('end') || this.hasSlotted('trailing');
   };
 
   private onTextareaBlur = (): void => {
@@ -606,7 +608,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
         </div>
         <div part="row">
           <span part="leading" ?hidden=${!this.hasLeadingSlot}>
-            <slot name="leading" @slotchange=${this.onLeadingSlotChange}></slot>
+            <slot name="start" @slotchange=${this.syncLeadingSlots}></slot>
+            <slot name="leading" @slotchange=${this.syncLeadingSlots}></slot>
           </span>
           <textarea
             part="textarea"
@@ -631,7 +634,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             @blur=${this.onTextareaBlur}
           ></textarea>
           <span part="trailing">
-            <slot name="trailing" @slotchange=${this.onTrailingSlotChange}></slot>
+            <slot name="end" @slotchange=${this.syncTrailingSlots}></slot>
+            <slot name="trailing" @slotchange=${this.syncTrailingSlots}></slot>
             ${this.hasTrailingSlot ? nothing : this.renderActionButton()}
           </span>
         </div>

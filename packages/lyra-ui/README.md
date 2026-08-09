@@ -959,7 +959,7 @@ API details.
 | `<lr-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
 | `<lr-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
 | `<lr-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
-| `<lr-sequence-strip>` | — (extra) | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a glanceable aggregate (`role="img"`) sized/named consistently with the sparkline/heatmap family, not a `role="list"` of separately-operable cells |
+| `<lr-sequence-strip>` | — (extra) | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a named roving `role="list"` whose `role="listitem"` cells are individually inspectable with Arrow/Home/End navigation but deliberately non-activating |
 | `<lr-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lr-tree>` + `<lr-tree-item>` | `wa-tree` / `wa-tree-item` / `sl-tree` / `sl-tree-item` | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
 
@@ -1087,7 +1087,7 @@ each one-liner below.
 | `<lr-chat-message>` | — (extra) | Role-based (`user`/`assistant`/`system`) message bubble shell; avatar/badges header, status-aware footer (built-in retry on `status="failed"`), attachments strip — renders no message content itself, just the chrome around a slotted body |
 | `<lr-message-parts>` | — (extra) | Provider-neutral renderer for ordered text, reasoning, tool-call, tool-result, citation, file, and declarative widget parts |
 | `<lr-chat-viewport>` | — (extra) | Transcript scroll container: stick-to-bottom while an answer streams, a "jump to latest" pill, and an unread divider; auto-detects slotted `<lr-chat-message>` children vs. a single nested `<lr-virtual-list>` (virtual mode) and defers scrolling to it |
-| `<lr-prompt-input>` | — (extra) | Form-associated multimodal prompt editor for text, attachments, source selection, and send/stop behavior, emitting a typed submission payload |
+| `<lr-prompt-input>` | — (extra) | Composite multimodal prompt surface for text, attachments, source selection, and send/stop behavior; deliberately event-submitted rather than a native successful form control |
 | `<lr-prompt-queue>` | — (extra) | Controlled queue of pending prompts with reorder, edit, remove, and submit-next request events |
 | `<lr-selection-toolbar>` | — (extra) | Contextual toolbar for actions on selected transcript text, positioned from a host-supplied selection rectangle |
 | `<lr-realtime-session>` | — (extra) | Voice/realtime session controller surface that visualizes connection and speaking state and emits connect, disconnect, mute, and interrupt requests |

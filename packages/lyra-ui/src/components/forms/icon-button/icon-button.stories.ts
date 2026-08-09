@@ -57,3 +57,12 @@ export const ShoelaceAliasesAndLink: Story = {
     </div>
   `,
 };
+
+/** A component hook inherited from a theme wrapper overrides the built-in radius fallback. */
+export const AncestorTheme: Story = {
+  render: () => html`
+    <div style="--lr-icon-button-radius: var(--lr-radius-pill)">
+      <lr-icon-button icon="search" aria-label="Search"></lr-icon-button>
+    </div>
+  `,
+};

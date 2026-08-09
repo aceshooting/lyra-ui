@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,7 +26,10 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 **Properties:**
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
   slide in the active page. `index: number = 0` (attribute `index`, reflected) is the established
-  Lyra alias; setting either name updates and reflects both through one clamped state value.
+  Lyra alias; setting either name updates and reflects both through one clamped state value. The
+  pinned Web Awesome markup spelling `currentSlide` is also accepted through HTML's normalized
+  `currentslide` attribute as a permanent compatibility alias. When both spellings are present on
+  initial markup, canonical `current-slide` wins.
 - `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
@@ -64,7 +67,7 @@ defaults to `false`. The autoplay interval also changes from Lyra's former 5000m
 - `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide;
   `goTo(index, behavior)` is the Lyra compatibility alias
 - `addSlide(slide: LyraCarouselItem)` appends a slide and `removeSlide(index)` removes one; page
-  count, reflected `slides`, active range, inertness, loop endcaps, and pagination reconcile
+  count, reflected `slides`, active range, inertness, eligible loop snapshots, and pagination reconcile
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
@@ -78,9 +81,14 @@ slide keeps its layout box but becomes `inert` and `aria-hidden="true"`, so visi
 pages remain fully operable while off-page links are unreachable. Native mandatory scroll snap
 owns touch, trackpad, momentum, and rubber-band behavior. Settling adopts the nearest page once and
 emits one event for the whole gesture. Programmatic movement scrolls the same track; first mount
-and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden endcaps so
-forward/backward wrapping continues in the requested direction, then silently resets to the
-matching original slide. Clone idrefs and form-identifying attributes are not duplicated.
+and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden snapshots only
+for side-effect-free plain HTML, so forward/backward wrapping can continue in the requested
+direction before silently resetting to the matching original slide. Those snapshots refresh after
+light-DOM content or attribute changes, and their idrefs/form-identifying attributes are removed. A
+slide containing a custom element, media/resource owner, form state, script/style, or non-HTML
+descendant is never cloned; wrapping falls back to the original slide instead, avoiding duplicate
+lifecycle, network/playback, and state owners even when the physical wrap cannot use an endcap in
+the requested direction.
 
 Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
 announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
@@ -121,6 +129,13 @@ aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot
 active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
 overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
 layouts because it also updates paging and accessibility state.
+Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
+`--lr-carousel-navigation-hover-border-color`, `--lr-carousel-navigation-active-bg`, and
+`--lr-carousel-navigation-active-border-color` hooks. Pagination dots use the corresponding
+`--lr-carousel-pagination-hover-bg`, `--lr-carousel-pagination-hover-border-color`,
+`--lr-carousel-pagination-active-bg`, and `--lr-carousel-pagination-active-border-color` hooks.
+All are inline fallbacks at their state rules, inherit from ancestors, and retain the previous
+brand/active-mix rendering when unset.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">

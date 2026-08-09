@@ -50,7 +50,11 @@ export const styles = css`
      :where() keeps the state qualifier itself out of the count. */
   [part='row']:active,
   :host(:where([aria-selected='true'])) [part='row']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   :host([aria-disabled='true']) [part='row'] {
     cursor: default;
@@ -95,10 +99,7 @@ export const styles = css`
     inset-block: var(--indent-guide-offset, 0);
     inset-inline-start: 0;
     box-sizing: border-box;
-    inline-size: min(
-      calc(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l))),
-      var(--lr-size-8rem)
-    );
+    inline-size: min(calc(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l))), var(--lr-size-8rem));
     border-inline-end-width: var(--indent-guide-width, 0);
     border-inline-end-style: var(--indent-guide-style, solid);
     border-inline-end-color: var(--indent-guide-color, var(--lr-color-border));
@@ -138,11 +139,7 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   [part='checkbox']:active [part~='checkbox__control'] {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host([aria-disabled='true']) [part='checkbox'] {
     cursor: default;
@@ -168,10 +165,15 @@ export const styles = css`
     color: var(--lr-color-on-brand);
     background: var(--lr-color-surface);
   }
-  [part~='checkbox__control--checked'],
+  [part~='checkbox__control--checked'] {
+    border-color: var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand));
+    background: var(--lr-tree-checkbox-checked-bg, var(--lr-color-brand));
+    color: var(--lr-tree-checkbox-checked-color, var(--lr-color-on-brand));
+  }
   [part~='checkbox__control--indeterminate'] {
-    border-color: var(--lr-color-brand);
-    background: var(--lr-color-brand);
+    border-color: var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand));
+    background: var(--lr-tree-checkbox-indeterminate-bg, var(--lr-color-brand));
+    color: var(--lr-tree-checkbox-indeterminate-color, var(--lr-color-on-brand));
   }
   [part='checkbox__checked-icon'],
   [part='checkbox__indeterminate-icon'] {

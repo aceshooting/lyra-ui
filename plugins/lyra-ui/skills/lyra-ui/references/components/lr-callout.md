@@ -88,8 +88,10 @@ stay silent. Nested forwarding slots expose their flattened assigned text instea
 content, and later assignment plus assigned-node text/style/visibility mutations are observed.
 Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
 `aria-label` (or `accessible-label` fallback) prefixes visible update text as context, with an
-equality check preventing duplicate copy; an explicitly empty host label still leaves visible
-heading/message text live.
+equality check preventing duplicate copy. The complete localized
+`calloutAnnouncementWithContext: '{context}: {content}'` message owns both fields, their order, and
+punctuation; override that key through `strings` rather than prejoining either field. An explicitly
+empty host label still leaves visible heading/message text live.
 `[part="base"]` is an ordinary wrapper, upgraded to a non-live `role="group"` only when it has an
 accessible label. Initial connection, reconnection, adoption, and detached changes that settle
 during staging stay silent; each connection acquires its owning document's shared sink.

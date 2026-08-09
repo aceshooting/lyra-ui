@@ -576,7 +576,10 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
-**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle).
+**Slots:** `before`, `after`, and `handle` (decorative content inside the visible drag handle). The
+flattened `handle` subtree is always inert and hidden from assistive technology, so even an
+accidentally interactive slotted descendant cannot become a second focus target; the native range
+remains the sole interaction surface.
 
 **CSS parts:** `base` and `comparison` are aliases on the same comparison viewport; `before`,
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
@@ -1652,7 +1655,9 @@ inside), `cue-match` (added alongside `cue` on a row matching the current search
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
 playback, or unsafe-source failure appends the localized message to the document's pre-mounted
 `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains visible but does
-not interrupt on mount; identical later failures append distinct children.
+not interrupt on mount; identical later failures append distinct children. `[part="base"]` remains
+a named `role="region"` in the unsafe-source branch and across a safe-to-unsafe transition, so the
+player does not lose its landmark or accessible name when its media is replaced by the error.
 
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a
@@ -1741,6 +1746,11 @@ immediate host `timeupdate`, before a browser's eventual native seek notificatio
 `pause-icon`, `play-icon`, `poster-icon`, and `volume-icon` customize the control surface. Consumer
 source/track nodes remain in light DOM: the component inserts fresh private clones containing only
 safe URL, source (`type`, `media`), and track (`kind`, `srclang`, `label`, `default`) attributes.
+The seven `*-icon` slots are decorative glyph overrides: assigned content renders in an inert,
+`aria-hidden`, pointer-transparent visual layer beside the named native button, never inside its
+flat-tree descendants. An accidentally supplied link, button, or input therefore cannot create a
+nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
+composition slots and may intentionally contain interactive controls.
 
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,

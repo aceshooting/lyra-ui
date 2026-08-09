@@ -34,7 +34,7 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
 `var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
-can be set on the element *or any ancestor*. They exist because
+can be set on the element _or any ancestor_. They exist because
 `::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so restyling the pressed state otherwise required overriding the
 library-wide brand tokens.

@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
   presenceTrueDefaultBooleanConverter,
@@ -41,6 +42,11 @@ export interface LyraNumberInputEventMap extends LyraInputEventMap {
  * itself, which the native `<input type="number">` already handles, so making them tab stops would
  * add two stops per field for no new capability. A click returns focus to the field.
  *
+ * The component retains the complete shared size sheet inherited conceptually from `lr-input`:
+ * compact tiers grow only enough for the stepper hit targets, while `l` and `xl` retain their
+ * larger control heights. The mirrored `small`, `medium`, and `large` spellings render exactly as
+ * canonical `s`, `m`, and `l`, including row height, padding, and native-input font size.
+ *
  * @customElement lr-number-input
  * @event beforeinput - The internal native input's cancelable `InputEvent`, which bubbles and
  *   composes through the host. Calling `preventDefault()` on the host vetoes the edit.
@@ -76,7 +82,7 @@ export class LyraNumberInput extends LyraInput {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, inputStyles, numberInputStyles];
+  static override styles = [LyraElement.styles, sizes, inputStyles, numberInputStyles];
 
   protected override get inputWrapperParts(): string {
     return `${super.inputWrapperParts} number-input`;

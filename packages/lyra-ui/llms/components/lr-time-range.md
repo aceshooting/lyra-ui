@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,6 +25,7 @@ names the two-handle aggregate, while `startLabel` and `endLabel` continue to na
 sliders.
 
 **Properties:**
+
 - `min: number = 0`
 - `max: number = 100`
 - `start: number = 0`
@@ -43,7 +44,7 @@ sliders.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
-  number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
+number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would
@@ -51,9 +52,11 @@ sliders.
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
 both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
 native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
-on pointer release / key-up-commit, or when a preset button is clicked. The focused handle's native
-`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
-its prefixed alias `lr-focus` / `lr-blur` (no detail).
+on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
+or when a preset button is clicked. A blur commit retires the gesture before the later physical
+keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
+re-dispatched from the host as bubbling, composed events, each followed by its prefixed alias
+`lr-focus` / `lr-blur` (no detail).
 
 **Methods:** `focus(options?)` and `click()` forward to `[part="handle-start"]`. `blur()` releases
 whichever handle actually owns focus, falling back to the start handle when neither does. Without
@@ -69,7 +72,7 @@ control — so a consumer re-validating a range on every `lr-input` calls this w
 caller-supplied and is used verbatim, never localized.
 
 **`form.reset()` — `formResetCallback()`.** The control has no submitted value, but it does take
-part in its owning form's reset, and a reset undoes everything the *user* did to it:
+part in its owning form's reset, and a reset undoes everything the _user_ did to it:
 
 - **The range** goes back to the declared `start`/`end` **content attributes** — the markup default,
   the way a native `<input>` resets to its `value` attribute rather than to its current IDL value. A
@@ -80,8 +83,9 @@ part in its owning form's reset, and a reset undoes everything the *user* did to
   and `:state(user-invalid)` stop matching until the user touches it again. Without this, a range a
   consumer had rejected kept rendering as the user's mistake on a form they had just reset.
 - **An in-flight keyboard gesture** is dropped, so the next key-up cannot commit an `lr-change` for
-  a step the reset already discarded. A drag in progress is left alone — only the pointer sequence
-  itself ends it.
+  a step the reset already discarded. Every in-flight pointer drag is also retired synchronously,
+  including its window listeners, so a later pointer release cannot commit the restored range as a
+  stale user change. Direct and fieldset disablement use the same gesture invalidation path.
 
 Two things deliberately **survive** the reset, matching native semantics:
 
@@ -117,6 +121,18 @@ palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
 to exactly the token the rule used before they existed, so the default rendering is unchanged.
 
+Pointer states and handle chrome are independently themeable too:
+
+- `--lr-time-range-preset-hover-border-color`,
+  `--lr-time-range-preset-pressed-border-color`, and `--lr-time-range-preset-pressed-bg` control
+  preset hover/press paint.
+- `--lr-time-range-handle-bg`, `--lr-time-range-handle-border-color`,
+  `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-pressed-bg` control the handle's
+  resting, hovered, and pressed paint.
+
+Every hook falls through to the prior shared brand/surface token or color-mix expression, so old
+themes retain their rendering and can opt into only the state they need.
+
 One additional component-local property, `--lr-time-range-size-scale` (unitless multiplier,
 default 1, automatically set based on the `size` property), scales the handle, track, and preset
 button dimensions proportionally — unset, it defaults to 1 (size='m', no scaling).
@@ -138,20 +154,20 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 <script>
   const months = ['April 2023', 'May 2023', 'June 2023'];
   const range = document.getElementById('months');
-  range.valueFormatter = (value, handle) =>
-    `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
+  range.valueFormatter = (value, handle) => `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
   range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
 </script>
 ```
 
 **Known gotchas:**
+
 - Keyboard support now matches the full WAI-ARIA APG slider pattern: ArrowUp/Right and ArrowDown/Left
   move by `step` (RTL-aware — under `direction: rtl` the forward/backward keys swap so they still
   track the visually-adjacent direction), PageUp/PageDown move by `step * 10`, and Home/End jump to
-  that handle's actual *reachable* bound — clamped by the sibling handle's current value, not the
+  that handle's actual _reachable_ bound — clamped by the sibling handle's current value, not the
   component's full `[min, max]` domain, so Home/End on the `end` handle can't jump past `start` (and
   vice versa). Pointer-drag is RTL-aware the same way (mirrors the drag ratio under `direction:
-  rtl`).
+rtl`).
 - A disabled handle now gets `aria-disabled="true"` in addition to losing `tabindex` — a
   screen-reader user exploring by virtual cursor no longer hears it announced as a live, adjustable
   slider.

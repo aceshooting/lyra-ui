@@ -482,7 +482,7 @@ describe('focus / blur', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('play-button');
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('bridges internal play-button focus/blur as bubbling, composed host events', async () => {

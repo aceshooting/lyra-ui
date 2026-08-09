@@ -138,6 +138,8 @@ export interface LyraTimeRangeEventMap {
  * relying on native form submission. It still takes part in `form.reset()`, though — see
  * `formResetCallback()`, which restores the declared `start`/`end` and puts the control back to
  * pristine so it cannot keep blocking a form the user just reset.
+ * Direct disablement, fieldset disablement, and form reset synchronously retire every active
+ * keyboard/pointer gesture without a stale `change` commit on a later key or pointer release.
  *
  * It has no constraints of its own — every reachable range is a legal one, so `checkValidity()`
  * passes unless a consumer has set an error through `setCustomValidity()`. That method is the
@@ -155,7 +157,8 @@ export interface LyraTimeRangeEventMap {
  * @event input - Native event fired continuously while a user moves either handle.
  * @event change - Native event fired when a handle interaction or preset commits.
  * @event lr-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
- * @event lr-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
+ * @event lr-change - Fired on pointer release, keyboard keyup or handle-blur commit, or when a
+ *   preset button is clicked. `detail: { start, end }`.
  * @event focus - Native focus relayed once from either handle.
  * @event blur - Native blur relayed once from either handle.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
@@ -189,6 +192,18 @@ export interface LyraTimeRangeEventMap {
  *   active preset button.
  * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
  *   preset button.
+ * @cssprop [--lr-time-range-preset-hover-border-color=var(--lr-color-brand)] - Border color of a
+ *   hovered preset button.
+ * @cssprop --lr-time-range-preset-pressed-border-color - Border color of a pressed preset button;
+ *   defaults to an active-state mix of `--lr-color-brand`.
+ * @cssprop --lr-time-range-preset-pressed-bg - Background of a pressed preset button; defaults to
+ *   an active-state mix of `--lr-color-surface`.
+ * @cssprop [--lr-time-range-handle-bg=var(--lr-color-brand)] - Resting handle background.
+ * @cssprop [--lr-time-range-handle-border-color=var(--lr-color-surface)] - Resting handle border.
+ * @cssprop --lr-time-range-handle-hover-bg - Hovered handle background; defaults to a hover-state
+ *   mix of `--lr-time-range-handle-bg`.
+ * @cssprop --lr-time-range-handle-pressed-bg - Pressed handle background; defaults to an
+ *   active-state mix of `--lr-time-range-handle-bg`.
  * @cssprop [--lr-time-range-size-scale=1] - Unitless multiplier applied proportionally to the handle,
  *   track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored
  *   at 24px (WCAG 2.5.8).
@@ -330,6 +345,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   };
 
   private onHandleBlur = (event: FocusEvent): void => {
+    this.finishKeyboardGesture();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
@@ -420,6 +436,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   set disabled(next: boolean) {
     const old = this._disabled;
     this._disabled = Boolean(next);
+    if (this._disabled) this.abortActiveGestures();
     // Reflected before the republish below, because `internals.willValidate` answers from the live
     // host attribute rather than from this field.
     this.toggleAttribute('disabled', this._disabled);
@@ -445,7 +462,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    if (disabled) this.keyboardChanged = false;
+    if (disabled) this.abortActiveGestures();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.reflectValidityStates();
     this.requestUpdate();
@@ -494,11 +511,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const end = finiteRange(declaredEnd, hi, lo, hi);
     this.start = Math.min(start, end);
     this.end = Math.max(start, end);
-    // An in-flight keyboard gesture is part of what the reset undoes: leaving `keyboardChanged` set
-    // would let the next keyup commit an `lr-change` for a step the reset has already discarded.
-    // `this.drags` is deliberately left alone -- its entries own the window-level pointer listeners,
-    // which only `endDrag()` may tear down.
-    this.keyboardChanged = false;
+    // In-flight keyboard and pointer gestures are part of what reset undoes. Retire them before a
+    // later physical release can commit a change for the now-restored value.
+    this.abortActiveGestures();
     this.hasInteracted = false;
     this.reflectValidityStates();
   }
@@ -715,13 +730,20 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     }
   };
 
+  /** Commit and retire the component-wide keyboard gesture latch. A handle can lose focus before
+   *  the physical key is released, so blur and supported keyup share this exact once-only path. */
+  private finishKeyboardGesture(): void {
+    if (!this.keyboardChanged) return;
+    this.keyboardChanged = false;
+    if (!this.effectiveDisabled) this.emitChange();
+  }
+
   private onKeyUp = (e: KeyboardEvent): void => {
     // Only commit on release of the keys that onKeyDown acts on — releasing
     // an unrelated key (Tab, Shift, ...) while a handle happens to be
     // focused must not emit a spurious lr-change.
-    if (this.effectiveDisabled || !isSliderKey(e.key) || !this.keyboardChanged) return;
-    this.keyboardChanged = false;
-    this.emitChange();
+    if (!isSliderKey(e.key)) return;
+    this.finishKeyboardGesture();
   };
 
   private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
@@ -780,8 +802,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    this.endDrag(e.pointerId, e.type === 'pointerup');
+    this.endDrag(e.pointerId, e.type === 'pointerup' && !this.effectiveDisabled);
   };
+
+  /** Retire every pending input generation without turning its current value into a commit. */
+  private abortActiveGestures(): void {
+    this.keyboardChanged = false;
+    for (const pointerId of [...this.drags.keys()]) this.endDrag(pointerId, false);
+  }
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {

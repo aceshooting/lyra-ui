@@ -172,6 +172,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart canvas - The box-plot canvas.
  * @csspart legend - The wrapping DOM legend rendered when `legend` is set.
  * @csspart legend-item - A keyboard-operable series visibility toggle.
+ * @csspart legend-item-hidden - Added to a `legend-item` while its box series is hidden.
  * @csspart legend-swatch - The resolved series-color swatch in a legend item.
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
@@ -643,7 +644,7 @@ export class LyraBoxPlot extends LyraElement {
           const visible = this.legendDatasetVisible(index);
           return html`
             <button
-              part="legend-item"
+              part=${visible ? 'legend-item' : 'legend-item legend-item-hidden'}
               type="button"
               aria-pressed=${visible ? 'true' : 'false'}
               @click=${() => this.toggleDataset(index)}

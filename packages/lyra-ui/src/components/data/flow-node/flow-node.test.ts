@@ -9,7 +9,7 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as MediaQueryList) as typeof window.matchMedia;
+    } as MediaQueryList)) as typeof window.matchMedia;
 
 it('defaults to empty heading, no status, in/out handles, horizontal orientation', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
@@ -23,7 +23,9 @@ it('defaults to empty heading, no status, in/out handles, horizontal orientation
 });
 
 it('renders the heading text and reflects selected/status', async () => {
-  const el = (await fixture(html`<lr-flow-node heading="Fetch data" status="running" selected></lr-flow-node>`)) as LyraFlowNode;
+  const el = (await fixture(
+    html`<lr-flow-node heading="Fetch data" status="running" selected></lr-flow-node>`
+  )) as LyraFlowNode;
   expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Fetch data');
   expect(el.getAttribute('status')).to.equal('running');
   expect(el.hasAttribute('selected')).to.be.true;
@@ -69,10 +71,28 @@ it('renders a determinate progress bar only when progress is set', async () => {
   expect(el.shadowRoot!.querySelector('[part="progress"]')).to.exist;
 });
 
+it('inherits independent progress track and fill color hooks from an ancestor', async () => {
+  const wrapper = (await fixture(html`
+    <div
+      style="
+        --lr-flow-node-progress-track-color: rgb(1, 2, 3);
+        --lr-flow-node-progress-fill-color: rgb(4, 5, 6);
+      "
+    >
+      <lr-flow-node heading="Fetch" progress="40"></lr-flow-node>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-flow-node') as LyraFlowNode;
+  await el.updateComplete;
+  const track = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
+  const fill = el.shadowRoot!.querySelector('.progress-fill') as HTMLElement;
+
+  expect(getComputedStyle(track).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
 it('exposes determinate progress semantics with its current value', async () => {
-  const el = (await fixture(
-    html`<lr-flow-node heading="Fetch" progress="40"></lr-flow-node>`,
-  )) as LyraFlowNode;
+  const el = (await fixture(html`<lr-flow-node heading="Fetch" progress="40"></lr-flow-node>`)) as LyraFlowNode;
   const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
   expect(progress.getAttribute('role')).to.equal('progressbar');
   expect(progress.getAttribute('aria-label')).to.equal('Progress');
@@ -83,7 +103,10 @@ it('exposes determinate progress semantics with its current value', async () => 
 
 it('renders one handle per input/output with data-handle-id/data-handle-kind and a native title', async () => {
   const el = (await fixture(
-    html`<lr-flow-node .inputs=${[{ id: 'a' }, { id: 'b', label: 'Second input' }]} .outputs=${[{ id: 'out' }]}></lr-flow-node>`,
+    html`<lr-flow-node
+      .inputs=${[{ id: 'a' }, { id: 'b', label: 'Second input' }]}
+      .outputs=${[{ id: 'out' }]}
+    ></lr-flow-node>`
   )) as LyraFlowNode;
   const inputHandles = el.shadowRoot!.querySelectorAll('[part~="handle-input"]');
   expect(inputHandles.length).to.equal(2);
@@ -95,9 +118,7 @@ it('renders one handle per input/output with data-handle-id/data-handle-kind and
 
 it('renders icon/header/toolbar slots and the default body slot', async () => {
   const el = (await fixture(
-    html`<lr-flow-node
-      ><span slot="icon">i</span><span slot="toolbar">t</span>body</lr-flow-node
-    >`,
+    html`<lr-flow-node><span slot="icon">i</span><span slot="toolbar">t</span>body</lr-flow-node>`
   )) as LyraFlowNode;
   expect(el.shadowRoot!.querySelector('slot[name="icon"]')).to.exist;
   expect(el.shadowRoot!.querySelector('slot[name="toolbar"]')).to.exist;
@@ -106,7 +127,7 @@ it('renders icon/header/toolbar slots and the default body slot', async () => {
 
 it('header slot replaces the built-in heading row entirely', async () => {
   const el = (await fixture(
-    html`<lr-flow-node heading="Ignored"><span slot="header">Custom header</span></lr-flow-node>`,
+    html`<lr-flow-node heading="Ignored"><span slot="header">Custom header</span></lr-flow-node>`
   )) as LyraFlowNode;
   // Removed from the DOM outright (not merely hidden), so it never visually stacks with the
   // slotted replacement -- an author stylesheet's unconditional `[part='header']{display:flex}`
@@ -188,7 +209,7 @@ it('resamples header-slot state after delayed detached mutations on reconnect', 
 
 it('is accessible with a status, progress, and handles', async () => {
   const el = (await fixture(
-    html`<lr-flow-node heading="Fetch" status="running" progress="40"></lr-flow-node>`,
+    html`<lr-flow-node heading="Fetch" status="running" progress="40"></lr-flow-node>`
   )) as LyraFlowNode;
   await expect(el).to.be.accessible();
 });
@@ -206,9 +227,11 @@ describe('duration composition', () => {
 
   it('locale-formats the numeric duration value', async () => {
     const el = (await fixture(
-      html`<lr-flow-node locale="ar" status="running" duration-ms="2500"></lr-flow-node>`,
+      html`<lr-flow-node locale="ar" status="running" duration-ms="2500"></lr-flow-node>`
     )) as LyraFlowNode;
-    const expected = new Intl.NumberFormat('ar', { maximumFractionDigits: 1 }).format(2.5);
+    const expected = new Intl.NumberFormat('ar', {
+      maximumFractionDigits: 1,
+    }).format(2.5);
     expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include(expected);
   });
 
@@ -218,11 +241,9 @@ describe('duration composition', () => {
         status="running"
         status-detail="fetching"
         .strings=${{ flowStatusWithDetail: '{detail} [{status}]' }}
-      ></lr-flow-node>`,
+      ></lr-flow-node>`
     )) as LyraFlowNode;
-    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal(
-      'fetching [Running]',
-    );
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('fetching [Running]');
   });
 
   it('falls back to the plain status label when durationMs is unset', async () => {
@@ -372,7 +393,7 @@ describe('--lr-flow-node-selected-border', () => {
 
   it('is accessible with a selected, retinted card', async () => {
     const el = (await fixture(
-      html`<lr-flow-node heading="Fetch" status="success" selected></lr-flow-node>`,
+      html`<lr-flow-node heading="Fetch" status="success" selected></lr-flow-node>`
     )) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-selected-border', 'var(--lr-color-brand)');
     await el.updateComplete;
@@ -382,7 +403,9 @@ describe('--lr-flow-node-selected-border', () => {
 
 describe('--lr-flow-node-running-border / --lr-flow-node-running-glow', () => {
   it('retints the running card border via --lr-flow-node-running-border, independent of --lr-flow-node-selected-border', async () => {
-    const el = (await fixture(html`<lr-flow-node heading="Fetch" status="running" selected></lr-flow-node>`)) as LyraFlowNode;
+    const el = (await fixture(
+      html`<lr-flow-node heading="Fetch" status="running" selected></lr-flow-node>`
+    )) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-running-border', 'rgb(10, 20, 30)');
     el.style.setProperty('--lr-flow-node-selected-border', 'rgb(40, 50, 60)');
     await el.updateComplete;
@@ -432,7 +455,7 @@ describe('compact density and the card part', () => {
   it('defaults to compact=false, rendering identically to that value restated', async () => {
     const implicit = (await fixture(html`<lr-flow-node heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
     const explicit = (await fixture(
-      html`<lr-flow-node heading="Fetch" .compact=${false}></lr-flow-node>`,
+      html`<lr-flow-node heading="Fetch" .compact=${false}></lr-flow-node>`
     )) as LyraFlowNode;
 
     expect(implicit.compact).to.be.false;
@@ -471,7 +494,7 @@ describe('compact density and the card part', () => {
 
   it('still applies the selected and running treatments under compact', async () => {
     const selected = (await fixture(
-      html`<lr-flow-node compact heading="Fetch" selected></lr-flow-node>`,
+      html`<lr-flow-node compact heading="Fetch" selected></lr-flow-node>`
     )) as LyraFlowNode;
     selected.style.setProperty('--lr-flow-node-selected-border', 'rgb(10, 20, 30)');
     await selected.updateComplete;
@@ -479,7 +502,7 @@ describe('compact density and the card part', () => {
     expect(getComputedStyle(cardOf(selected)).paddingTop).to.equal('4px');
 
     const running = (await fixture(
-      html`<lr-flow-node compact heading="Fetch" status="running"></lr-flow-node>`,
+      html`<lr-flow-node compact heading="Fetch" status="running"></lr-flow-node>`
     )) as LyraFlowNode;
     const runningShadow = getComputedStyle(cardOf(running)).boxShadow;
     const resting = (await fixture(html`<lr-flow-node compact heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
@@ -493,7 +516,7 @@ describe('compact density and the card part', () => {
     document.head.append(sheet);
     try {
       const el = (await fixture(
-        html`<lr-flow-node class="consumer-probe" heading="Fetch"></lr-flow-node>`,
+        html`<lr-flow-node class="consumer-probe" heading="Fetch"></lr-flow-node>`
       )) as LyraFlowNode;
       expect(getComputedStyle(cardOf(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
       // The class hook the component's own rules key off is still there for existing consumers.
@@ -526,7 +549,7 @@ describe('compact density and the card part', () => {
 
   it('is accessible in the compact, selected, running state', async () => {
     const el = (await fixture(
-      html`<lr-flow-node compact heading="Fetch" status="running" progress="40" selected></lr-flow-node>`,
+      html`<lr-flow-node compact heading="Fetch" status="running" progress="40" selected></lr-flow-node>`
     )) as LyraFlowNode;
     expect(el.shadowRoot!.querySelectorAll('[part="card"]')).to.have.lengthOf(1);
     await expect(el).to.be.accessible();

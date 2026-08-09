@@ -102,6 +102,15 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * from a single field — all of it the platform's own rules, shared with every other lyra text
  * control through `internal/submit-on-enter.ts`.
  *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override size, appearance, and pill fallbacks. A value set directly on
+ * the input still wins. The same inheritance contract applies to subclasses that reuse this
+ * stylesheet, including `<lr-number-input>` and `<lr-native-time-input>`.
+ *
+ * When a clear or password action is rendered, compact tiers grow only enough to contain its
+ * shared `--lr-icon-button-size` hit target. The `l` and `xl` tiers retain their larger shared
+ * control heights.
+ *
  * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
@@ -135,8 +144,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @csspart input-wrapper - The row wrapping the native input and built-in actions. It is the same
  *   node as `base`.
  * @csspart input - The native `<input>` element.
- * @csspart start - Wrapper around the `start` adornment slot.
- * @csspart end - Wrapper around the `end` adornment slot.
+ * @csspart start - Wrapper around the `start` adornment slot. Long content shrinks and ellipsizes
+ *   rather than widening the control allocation.
+ * @csspart end - Wrapper around the `end` adornment slot, with the same containment behavior.
  * @csspart prefix - Shoelace compatibility part on the `prefix` slot.
  * @csspart suffix - Shoelace compatibility part on the `suffix` slot.
  * @csspart clear-button - The clear action, rendered for non-empty clearable text/search inputs.
@@ -171,6 +181,15 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * `appearance`; the documented default is `appearance="outlined"`'s value.
  * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
  * swapped per `appearance` in the same way as `--lr-input-fill`.
+ * @cssprop [--lr-input-focus-border-color=var(--lr-color-brand)] - Control-row border color while
+ *   focus is within the field.
+ * @cssprop [--lr-input-action-color=var(--lr-color-text-quiet)] - Resting clear/password/number-
+ *   stepper action color.
+ * @cssprop [--lr-input-action-hover-color=var(--lr-color-text)] - Hovered action color.
+ * @cssprop [--lr-input-action-active-color=var(--lr-input-action-hover-color,var(--lr-color-text))] -
+ *   Pressed action color.
+ * @cssprop [--lr-input-action-active-bg=color-mix(in oklab,var(--lr-color-surface),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Pressed action background. The same hooks apply to `lr-number-input`'s stepper pair.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.

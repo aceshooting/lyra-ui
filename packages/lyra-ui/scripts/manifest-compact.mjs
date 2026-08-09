@@ -57,6 +57,23 @@ function mergeIdentity(key, entry) {
   return `${entry.kind}:${String(entry.name ?? '')}:${JSON.stringify(parameters)}`;
 }
 
+const SUBCLASS_ANNOTATION_KEYS = Object.freeze(['description', 'summary', 'default', 'deprecated']);
+
+/** The analyzer marks a subclass's explicit same-name annotation with `inheritedFrom` even when
+ * its authored prose/default differs from the base. Such an entry is an override, not a redundant
+ * inherited copy, and has to survive compaction so expansion can let it win. */
+function hasSubclassAnnotationOverride(key, entry, superclass) {
+  const inherited = (superclass[key] ?? []).find(
+    (candidate) => mergeIdentity(key, candidate) === mergeIdentity(key, entry),
+  );
+  if (!inherited) return true;
+  return SUBCLASS_ANNOTATION_KEYS.some(
+    (annotation) =>
+      Object.hasOwn(entry, annotation) &&
+      JSON.stringify(entry[annotation]) !== JSON.stringify(inherited[annotation]),
+  );
+}
+
 /**
  * Produces the published Custom Elements Manifest representation. Private/protected implementation
  * members are never public API, and standard-resolvable inherited surfaces belong on their base
@@ -66,16 +83,22 @@ function mergeIdentity(key, entry) {
  */
 export function compactManifest(manifest) {
   const output = structuredClone(manifest);
-  const index = declarationIndex(output);
+  // Compare overrides against the analyzer's complete, unpruned base declarations. Looking them
+  // up in `output` while compaction is in progress makes the result depend on module order: a base
+  // visited earlier may already have lost its own inherited entries, making a grandchild's exact
+  // copy look like a new override.
+  const sourceIndex = declarationIndex(manifest);
   for (const module of output.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
-      const superclassIsResolvable = resolveSuperclass(declaration, index) !== undefined;
+      const superclass = resolveSuperclass(declaration, sourceIndex);
       for (const key of INHERITABLE_ARRAYS) {
         if (!Array.isArray(declaration[key])) continue;
         declaration[key] = declaration[key].filter((entry) => {
           if (key === 'members' && ['private', 'protected'].includes(entry.privacy)) return false;
           if (NEVER_PRUNED_ARRAYS.includes(key)) return true;
-          if (superclassIsResolvable && entry.inheritedFrom) return false;
+          if (superclass && entry.inheritedFrom && !hasSubclassAnnotationOverride(key, entry, superclass)) {
+            return false;
+          }
           return true;
         });
         if (declaration[key].length === 0) delete declaration[key];

@@ -24,21 +24,24 @@ export const Vertical: Story = {
 };
 
 export const NarrowAllocation: Story = {
-  name: 'Narrow allocation (320px)',
+  name: 'Narrow RTL long content (320px)',
   parameters: {
     docs: {
       description: {
         story:
-          "At an explicit 320px allocation, the group's own container query (not the viewport) drives the @container rule that stretches the button row to fill the width. :host is an inline-flex, shrink-to-fit box with container-type: inline-size always on, so -- unlike a block-level component -- a wrapping div's width alone would not reach it; the group needs its own explicit inline-size, or it settles at its non-collapse floor (--lr-icon-button-size) instead of the allocation.",
+          "At an explicit 320px RTL allocation with long localized labels, the group's own container query (not the viewport) drives the @container rule that stretches and wraps the button row. :host is an inline-flex, shrink-to-fit box with container-type: inline-size always on, so the group needs its own explicit inline-size or it settles at its intrinsic fallback.",
       },
     },
   },
   render: () => html`
-    <div style="border:1px dashed var(--lr-color-border); padding:0.5rem; display:inline-block;">
-      <lr-button-group label="Document actions" style="inline-size:320px">
-        <lr-button variant="brand">Save</lr-button>
-        <lr-button>Preview</lr-button>
-        <lr-button>Share</lr-button>
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border); padding: var(--lr-space-s);"
+    >
+      <lr-button-group label="إجراءات المستند" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-button variant="brand">حفظ-المستند-بالتفاصيل-الكاملة</lr-button>
+        <lr-button>معاينة-الإصدار-قبل-النشر</lr-button>
+        <lr-button>مشاركة-النتيجة-مع-فريق-العمل</lr-button>
       </lr-button-group>
     </div>
   `,

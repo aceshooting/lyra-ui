@@ -15,11 +15,43 @@ function rows(el: LyraLocalePicker): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
+it('inherits public trigger geometry from an ancestor across a size tier', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-locale-picker-trigger-padding: 7px 11px; --lr-locale-picker-trigger-min-height: 49px; --lr-locale-picker-font-size: 18px; --lr-locale-picker-expand-size: 22px; --lr-locale-picker-gap: 13px; --lr-locale-picker-radius: 17px">
+      <lr-locale-picker size="2xs" .locales=${['en', 'fr']}></lr-locale-picker>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
+  await el.updateComplete;
+  const button = trigger(el);
+  const computed = getComputedStyle(button);
+  expect(computed.paddingTop).to.equal('7px');
+  expect(computed.paddingInlineStart).to.equal('11px');
+  expect(computed.minBlockSize).to.equal('49px');
+  expect(computed.fontSize).to.equal('18px');
+  expect(computed.gap).to.equal('13px');
+  expect(computed.borderTopLeftRadius).to.equal('17px');
+  const expand = el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
+  expect(getComputedStyle(expand).minInlineSize).to.equal('22px');
+});
+
+it('uses the scoped selected-option font weight inherited from an ancestor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-locale-picker-option-selected-font-weight: 350">
+      <lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][aria-selected="true"]')!;
+  expect(getComputedStyle(selected).fontWeight).to.equal('350');
+});
+
 // -- Baseline rendering / form participation --------------------------------
 
 it('renders a trigger button and a closed listbox by default', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
-  expect(trigger(el)).to.exist;
+  expect((trigger(el)) != null).to.equal(true);
   expect(el.open).to.be.false;
 });
 
@@ -240,7 +272,7 @@ it('shows the current value\'s flag in the trigger, not just in the open listbox
     html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   const flag = trigger(el).querySelector('lr-flag') as HTMLElement;
-  expect(flag).to.exist;
+  expect((flag) != null).to.equal(true);
   expect(flag.getAttribute('language')).to.equal('fr');
 });
 
@@ -378,6 +410,29 @@ it('Home/End jump to the first/last row', async () => {
   expect(el.value).to.equal('it');
 });
 
+it('rehomes the active option immediately when an open locale catalog shrinks', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  el.locales = ['fr'];
+  await el.updateComplete;
+
+  const optionIds = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]'), (row) => row.id);
+  expect(optionIds).to.have.length(1);
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(optionIds[0]);
+  expect(el.shadowRoot!.querySelectorAll('[part="option"][data-active]').length).to.equal(1);
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(optionIds[0]);
+});
+
 it('type-ahead by native-name first letter jumps the active row to the match while open', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
@@ -509,7 +564,7 @@ it('unset (only locales, or nothing) renders deterministically with no other new
   expect(el.open).to.be.false;
   expect(el.size).to.equal('m');
   expect(el.disabled).to.be.false;
-  expect(trigger(el)).to.exist;
+  expect((trigger(el)) != null).to.equal(true);
 });
 
 // -- Coverage backfill: attribute parsing, ElementInternals fallback/passthrough,
@@ -923,7 +978,7 @@ describe('ElementInternals fallback (lr-locale-picker)', () => {
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, async (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect((internals.form) === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;

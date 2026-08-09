@@ -424,7 +424,7 @@ it('blur() and click() delegate to the semantic dropzone contract', async () => 
   el.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 
   el.click();
   expect(pickerClicks).to.equal(1);
@@ -517,7 +517,7 @@ it('adds a :focus-visible outline to the dropzone base using the shared focus-ri
   probe.remove();
 
   base.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(base);
+  expect((el.shadowRoot!.activeElement) === (base)).to.equal(true);
   const baseStyle = getComputedStyle(base);
   expect(baseStyle.outlineStyle).to.equal('solid');
   expect(baseStyle.outlineWidth).to.equal(expectedWidth);
@@ -736,7 +736,7 @@ it('renders a visible, per-reason rejection region naming the rejected file (reg
   await el.updateComplete;
 
   const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
-  expect(rejection).to.exist;
+  expect((rejection) != null).to.equal(true);
   // Visible text, so it stays readable in the accessibility tree without a shadow live role; the
   // interrupting announcement goes through the shared light-DOM assertive region instead, which is
   // the one assistive tech actually observes.
@@ -976,7 +976,7 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     expect(el.validators).to.deep.equal([]);
     expect(el.withHint).to.be.false;
     expect(el.withLabel).to.be.false;
-    expect(el.validationTarget).to.equal(el.shadowRoot!.querySelector('[part="base"]'));
+    expect((el.validationTarget) === (el.shadowRoot!.querySelector('[part="base"]'))).to.equal(true);
   });
 
   it('keeps the published dragging and fileCount properties writable', async () => {
@@ -1003,17 +1003,17 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     const override = document.createElement('span');
     el.shadowRoot!.append(override);
 
-    expect(el.validationTarget).to.equal(defaultTarget);
-    expect(resolveValidityAnchor(el)).to.equal(el.validationTarget);
+    expect((el.validationTarget) === (defaultTarget)).to.equal(true);
+    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
 
     el.validationTarget = override;
-    expect(el.validationTarget).to.equal(override);
-    expect(resolveValidityAnchor(el)).to.equal(el.validationTarget);
+    expect((el.validationTarget) === (override)).to.equal(true);
+    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
     expect(() => el.setCustomValidity('Rejected')).to.not.throw();
 
     el.validationTarget = undefined;
-    expect(el.validationTarget).to.equal(defaultTarget);
-    expect(resolveValidityAnchor(el)).to.equal(el.validationTarget);
+    expect((el.validationTarget) === (defaultTarget)).to.equal(true);
+    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
   });
 
   it('stores accepted files, renders the full file-list parts, and emits native input/change before lr-files', async () => {
@@ -1176,8 +1176,8 @@ it('exposes the native form-association surface', async () => {
     </form>
   `);
   const el = form.querySelector<LyraFileInput>('lr-file-input')!;
-  expect(el.form).to.equal(form);
-  expect(el.getForm()).to.equal(form);
+  expect((el.form) === (form)).to.equal(true);
+  expect((el.getForm()) === (form)).to.equal(true);
   expect(el.willValidate).to.equal(true);
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['picker-label']);
 
@@ -1201,11 +1201,11 @@ it('detaches from its form owner when the form property is reassigned', async ()
   `);
   const el = root.querySelector<LyraFileInput>('lr-file-input')!;
   const one = root.querySelector<HTMLFormElement>('#one')!;
-  expect(el.form).to.equal(null);
+  expect((el.form) === (null)).to.equal(true);
   el.form = one;
   await el.updateComplete;
-  expect(el.form).to.equal(one);
-  expect(el.getForm()).to.equal(one);
+  expect((el.form) === (one)).to.equal(true);
+  expect((el.getForm()) === (one)).to.equal(true);
   el.form = null;
   await el.updateComplete;
   expect(el.form).to.equal(null);

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones-data.js';
-import type { LyraSwatchPickerSize } from './swatch-picker.js';
+import type { LyraSwatchPicker, LyraSwatchPickerSize } from './swatch-picker.js';
 import './swatch-picker.js';
 
 const accents = () => [
@@ -189,6 +189,58 @@ export const NoSelection: Story = {
   render: () => html`
     <lr-swatch-picker label="Accent color" .options=${accents()}></lr-swatch-picker>
   `,
+};
+
+export const LivePaletteChanges: Story = {
+  name: 'Live palette changes preserve focus',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Focus a swatch, then activate “Remove focused swatch” with a pointer. The control keeps focus inside the radiogroup on the nearest surviving option without changing the controlled value or firing `lr-change`. Reordering preserves the focused option by object identity.',
+      },
+    },
+  },
+  render: () => {
+    const palette = accents();
+    const pickerFor = (event: Event) =>
+      (event.currentTarget as HTMLElement)
+        .closest<HTMLElement>('[data-live-palette]')!
+        .querySelector<LyraSwatchPicker>('lr-swatch-picker')!;
+    const keepSwatchFocused = (event: PointerEvent) => event.preventDefault();
+    return html`
+      <div data-live-palette style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+        <lr-swatch-picker
+          label="Dynamic accent color"
+          .options=${palette}
+          value="purple"
+        ></lr-swatch-picker>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs);">
+          <button
+            @pointerdown=${keepSwatchFocused}
+            @click=${(event: Event) => {
+              const picker = pickerFor(event);
+              const focusedValue = picker.shadowRoot?.activeElement?.getAttribute('data-value');
+              picker.options = picker.options.filter((option) => option.value !== focusedValue);
+            }}
+          >Remove focused swatch</button>
+          <button
+            @pointerdown=${keepSwatchFocused}
+            @click=${(event: Event) => {
+              const picker = pickerFor(event);
+              picker.options = [...picker.options].reverse();
+            }}
+          >Reverse palette</button>
+          <button
+            @pointerdown=${keepSwatchFocused}
+            @click=${(event: Event) => {
+              pickerFor(event).options = palette;
+            }}
+          >Restore palette</button>
+        </div>
+      </div>
+    `;
+  },
 };
 
 export const Rethemed: Story = {

@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
@@ -100,7 +100,9 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
-  /** Display name associated with the calendar. Used as the accessible name of `[part='base']` after an explicit host `aria-label`, and before the localized `calendarViewerLabel` default. */
+  /** Display name associated with the calendar. Used as the accessible name of `[part='base']`
+   *  when the host has no `aria-label`, and before the localized `calendarViewerLabel` default.
+   *  Host `aria-label` wins by attribute presence, including an empty value. */
   @property() name = '';
   /** CSS length that caps the scrollable event body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -212,7 +214,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('calendarViewerLabel'))}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

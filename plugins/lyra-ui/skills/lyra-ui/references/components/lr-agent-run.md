@@ -75,7 +75,7 @@ this component's own retry counter, reset when `run.id` changes).
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,
 `usage`, `current-step`, `current-step-icon`, `current-step-label`, `body`, `tasks`, `tools`,
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
-(carries `data-variant`), `empty`.
+(carries `data-variant`), `metric` (one metric label/value pair), `empty`.
 
 **Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the

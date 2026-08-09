@@ -4,24 +4,22 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --lr-timeline-marker-size: var(--lr-size-1-25rem);
-    --lr-timeline-rail-width: var(--lr-border-width-medium);
-    --lr-timeline-rail-color: var(--lr-color-border);
-    /* Swapped per-variant by the :host([variant]) rules below -- same one-custom-property-per-tone
-       shape as lr-stream-status's --lr-stream-status-dot-color. */
-    --lr-timeline-marker-color: var(--lr-color-text-quiet);
+    /* The public marker/rail hooks stay undeclared here so a theme wrapper can supply them. This
+       private marker default is swapped per variant and consumed only when no public value
+       inherits from an ancestor or is set directly on the item. */
+    --_lr-timeline-marker-color-default: var(--lr-color-text-quiet);
   }
   :host([variant='brand']) {
-    --lr-timeline-marker-color: var(--lr-color-brand);
+    --_lr-timeline-marker-color-default: var(--lr-color-brand);
   }
   :host([variant='success']) {
-    --lr-timeline-marker-color: var(--lr-color-success);
+    --_lr-timeline-marker-color-default: var(--lr-color-success);
   }
   :host([variant='warning']) {
-    --lr-timeline-marker-color: var(--lr-color-warning);
+    --_lr-timeline-marker-color-default: var(--lr-color-warning);
   }
   :host([variant='danger']) {
-    --lr-timeline-marker-color: var(--lr-color-danger);
+    --_lr-timeline-marker-color-default: var(--lr-color-danger);
   }
 
   [part='base'] {
@@ -46,14 +44,14 @@ export const styles = css`
   }
 
   [part='marker'] {
-    inline-size: var(--lr-timeline-marker-size);
-    block-size: var(--lr-timeline-marker-size);
+    inline-size: var(--lr-timeline-marker-size, var(--lr-size-1-25rem));
+    block-size: var(--lr-timeline-marker-size, var(--lr-size-1-25rem));
     border-radius: 50%;
     flex: 0 0 auto;
-    background: var(--lr-timeline-marker-color);
+    background: var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
     /* A slotted <lr-icon> (or any currentColor-stroked glyph) automatically inherits the correct
        variant tint with no extra wiring. */
-    color: var(--lr-timeline-marker-color);
+    color: var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -95,9 +93,9 @@ export const styles = css`
        dimension is just flex-basis's starting point, immediately overridden by flex-grow filling
        whatever length [part='content']'s own padding/height creates (see the class doc's rail
        mechanism). One declaration handles both orientations with no extra conditional. */
-    inline-size: var(--lr-timeline-rail-width);
-    block-size: var(--lr-timeline-rail-width);
-    background: var(--lr-timeline-rail-color);
+    inline-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
+    block-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
+    background: var(--lr-timeline-rail-color, var(--lr-color-border));
     /* Suppressed for the last item in a <lr-timeline> via this custom property, set by
        <lr-timeline>'s own ::slotted(:last-child) rule -- visibility (not display) keeps the same
        layout box every other item's track has, so marker alignment stays consistent down the list. */

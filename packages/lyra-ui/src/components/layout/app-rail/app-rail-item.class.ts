@@ -26,6 +26,11 @@ import { styles } from "./app-rail-item.styles.js";
  *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
  *   `active`/`aria-current="page"` item.
+ * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
+ * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
+ * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
+ *   active mix.
+ * @cssprop [--lr-app-rail-item-active-color=var(--lr-color-brand)] - Pressed text/icon color.
  * @status stable
  * @since 4.0.0
  */
@@ -133,6 +138,14 @@ export class LyraAppRailItem extends LyraElement {
     this.stopPositioning?.();
     this.stopPositioning = undefined;
     this.showTooltip = false;
+  }
+
+  /** Activates the internal link or button. Disabled items remain inert. */
+  override click(): void {
+    if (this.disabled) return;
+    this.renderRoot
+      .querySelector<HTMLAnchorElement | HTMLButtonElement>('[part~="base"]')
+      ?.click();
   }
 
   override render(): TemplateResult {

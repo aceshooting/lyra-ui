@@ -200,7 +200,7 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
 
     const confirmBar = (await readyConfirmBar(row)) as HTMLElement & { tone: string; heading: string };
-    expect(confirmBar).to.exist;
+    expect((confirmBar) != null).to.equal(true);
     expect(confirmBar.variant).to.equal('neutral');
     expect(confirmBar.heading).to.equal('Add this to long-term memory?');
     expect(row.querySelector('[part="add-button"]')).to.not.exist;
@@ -395,7 +395,7 @@ describe('lr-memory-panel', () => {
     (confirmBar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
-    expect(el.shadowRoot!.activeElement).to.exist;
+    expect((el.shadowRoot!.activeElement) != null).to.equal(true);
     expect(row.contains(el.shadowRoot!.activeElement)).to.be.true;
   });
 
@@ -938,7 +938,7 @@ describe('lr-memory-panel controlled-list focus restoration', () => {
   it('keeps focus in the same section when the focused row disappears', async () => {
     const el = await controlled();
     focusRowAction(el, 's2');
-    expect(el.shadowRoot!.activeElement).to.exist;
+    expect((el.shadowRoot!.activeElement) != null).to.equal(true);
 
     el.shortTerm = [shortTerm[0]!, shortTerm[2]!];
     await settleFocus(el);
@@ -991,6 +991,6 @@ describe('lr-memory-panel controlled-list focus restoration', () => {
     const before = el.shadowRoot!.activeElement;
     el.longTerm = [];
     await settleFocus(el);
-    expect(el.shadowRoot!.activeElement).to.equal(before);
+    expect((el.shadowRoot!.activeElement) === (before)).to.equal(true);
   });
 });

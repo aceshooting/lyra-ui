@@ -154,6 +154,10 @@ export interface LyraLocalePickerEventMap {
  * `lr-change` to do that itself: the detail carries the resolved `direction` alongside `value`,
  * so `document.documentElement.dir = event.detail.direction` is the whole of it.
  *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override the active size tier. A value set directly on the locale picker
+ * still wins through normal custom-property inheritance.
+ *
  * @customElement lr-locale-picker
  * @event lr-change - The selection changed. `detail: { value, previousValue, direction }`, where
  *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Cancelable —
@@ -196,6 +200,8 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-open-border-color=var(--lr-color-brand)] - Open trigger border color.
  * @cssprop [--lr-locale-picker-option-selected-border-color=var(--lr-color-brand)] - Selected option border.
  * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
+ * @cssprop [--lr-locale-picker-option-selected-font-weight=var(--lr-font-weight-semibold)] -
+ *   Selected option font weight.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
@@ -252,7 +258,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   /** The offered locale list. Empty (the default) auto-discovers every locale registered via
    *  `registerLyraLocale()` (plus `'en'`) through `getRegisteredLyraLocales()`, kept live via
    *  `subscribeLyraLocaleRegistry()`. An explicit array overrides the auto-discovered list
-   *  entirely. */
+   *  entirely. If the catalog changes while the listbox is open, an active row beyond the new
+   *  end is rehomed to the last remaining row. */
   @property({ attribute: false }) locales: LyraLocaleCatalog = [];
 
   /** Each row's leading `<lr-flag>`. The composition recipe this component supersedes
@@ -392,6 +399,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.open && (changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
+      this.activeIndex = Math.min(this.activeIndex, this.normalizedEntries.length - 1);
+    }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');

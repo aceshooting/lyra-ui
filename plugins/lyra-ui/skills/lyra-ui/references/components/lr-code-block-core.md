@@ -21,13 +21,13 @@ covers every language it will ever render. Where `<lr-code-block>` unconditional
 lookup table a bundler can't statically narrow away even when a consumer never actually uses it —
 this component's own module never imports or calls that function at all. It only ever calls
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
-plus an explicit oniguruma engine, seeded with *only* the grammars in `languages`), so a consumer
+plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
 A `language` value absent from `languages` always renders the plain `<pre><code>` fallback — there is
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
-path for an unmapped language. That fallback is the *default* rendering path, not a degraded one,
+path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
 same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/`language`/
 `filename`/`copyable`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
@@ -35,6 +35,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 (this component reuses `code-block.styles.ts` directly).
 
 **Properties:**
+
 - `code: string = ''` — the raw source text.
 - `language: string = ''` — a shiki-recognized language id or alias; when unset, or when it isn't a
   key in `languages`, the code renders as plain unhighlighted text — this component has no
@@ -55,7 +56,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   with, and renders identically to, any `line-range` entries there.
 - `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
-  Has no effect while `lineNumbers` is unset.
+  Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
+  focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
 - `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -65,6 +67,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
+  Replacing the map while connected starts a new loading generation; an older map that settles
+  later cannot clear the current map's loading state or replace its highlighted output.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
@@ -109,6 +113,7 @@ module-level `languages` constant on every render builds it only once.
 ```
 
 **Known gotchas:**
+
 - there is no default highlighter and no dynamic-import fallback table — a `language` you haven't
   added to `languages` will never highlight, no matter how common that language is elsewhere. Reach
   for `<lr-code-block>` instead if you need to support an open-ended set of languages without

@@ -1,9 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './selection-toolbar.js';
-import type {
-  LyraSelectionToolbar,
-  SelectionActionDetail,
-} from './selection-toolbar.class.js';
+import type { LyraSelectionToolbar, SelectionActionDetail } from './selection-toolbar.class.js';
 
 it('renders a named toolbar at a supplied selection rectangle', async () => {
   const rect = new DOMRect(20, 30, 100, 20);
@@ -31,14 +28,16 @@ it('emits the selected text and document anchor for an action', async () => {
   ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
   const activated = oneEvent(el, 'lr-selection-action');
   (el.shadowRoot!.querySelector('[data-action="ask"]') as HTMLElement).click();
-  const event = await activated as CustomEvent<SelectionActionDetail>;
+  const event = (await activated) as CustomEvent<SelectionActionDetail>;
   expect(event.detail.action).to.equal('ask');
   expect(event.detail.text).to.equal('selected passage');
   expect(event.detail.anchor).to.deep.equal(anchor);
 });
 
 it('dismisses on Escape through the shared overlay manager', async () => {
-  const el = (await fixture(html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  const el = (await fixture(
+    html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`
+  )) as LyraSelectionToolbar;
   await el.updateComplete;
   const dismissed = oneEvent(el, 'lr-dismiss');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -58,7 +57,9 @@ it('applies per-instance localized strings', async () => {
     text="selected"
     .strings=${{ selectionToolbarLabel: 'Localized selection actions' }}
   ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
-  expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label')).to.equal('Localized selection actions');
+  expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label')).to.equal(
+    'Localized selection actions'
+  );
 });
 
 it('keeps every viewport-edge placement inside the visible viewport', async () => {
@@ -107,25 +108,18 @@ it('contains long localized action labels inside a 375px toolbar allocation', as
 
 it('keeps an otherwise-fitting RTL edge toolbar in one row before collision shifting', async () => {
   const el = (await fixture(html`
-    <lr-selection-toolbar
-      dir="rtl"
-      open
-      text="selected"
-      .rect=${new DOMRect(0, 200, 1, 20)}
-    ></lr-selection-toolbar>
+    <lr-selection-toolbar dir="rtl" open text="selected" .rect=${new DOMRect(0, 200, 1, 20)}></lr-selection-toolbar>
   `)) as LyraSelectionToolbar;
   const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
   await waitUntil(() => toolbar.hasAttribute('data-positioned'));
-  const tops = [...toolbar.querySelectorAll<HTMLElement>('lr-button')].map(
-    (button) => Math.round(button.getBoundingClientRect().top),
+  const tops = [...toolbar.querySelectorAll<HTMLElement>('lr-button')].map((button) =>
+    Math.round(button.getBoundingClientRect().top)
   );
   expect(new Set(tops).size).to.equal(1);
 });
 
 it('starts positioning when text becomes nonempty while open', async () => {
-  const el = (await fixture(html`
-    <lr-selection-toolbar open></lr-selection-toolbar>
-  `)) as LyraSelectionToolbar;
+  const el = (await fixture(html` <lr-selection-toolbar open></lr-selection-toolbar> `)) as LyraSelectionToolbar;
   expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.not.exist;
 
   el.text = 'selected';
@@ -160,19 +154,88 @@ it('maintains one roving toolbar stop and moves it from the directly focused act
     HTMLElement & { updateComplete: Promise<unknown> }
   >;
   await Promise.all(actions.map((action) => action.updateComplete));
-  const controls = actions.map(
-    (action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement,
-  );
+  const controls = actions.map((action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement);
   expect(controls.map((control) => control.tabIndex)).to.deep.equal([0, -1, -1, -1]);
 
   actions[2]!.focus();
   await aTimeout(0);
   controls[2]!.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }),
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      composed: true,
+    })
   );
   await aTimeout(0);
   expect(controls.map((control) => control.tabIndex)).to.deep.equal([-1, -1, -1, 0]);
   expect(actions[3]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base button');
+});
+
+it('moves real focus to the nearest surviving action when the controlled action list shrinks', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const quote = el.shadowRoot!.querySelector<HTMLElement>('[data-action="quote"]')!;
+  quote.focus();
+
+  el.actions = ['ask'];
+  await el.updateComplete;
+  await aTimeout(0);
+
+  const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(focused?.dataset['action']).to.equal('ask');
+  const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('lr-button[data-action]')].map(
+    (button) => button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!.tabIndex
+  );
+  expect(controls).to.deep.equal([0]);
+});
+
+it('preserves a focused action by id when controlled actions reorder', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  el.shadowRoot!.querySelector<HTMLElement>('[data-action="cite"]')!.focus();
+
+  el.actions = ['cite', 'ask'];
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['action']).to.equal('cite');
+});
+
+it('focuses the stable toolbar when the focused final action is removed', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${['ask']}></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  el.shadowRoot!.querySelector<HTMLElement>('[data-action="ask"]')!.focus();
+
+  el.actions = [];
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toolbar');
+});
+
+it('does not steal a newer external focus destination while actions shrink', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside-selection-toolbar">Outside</button>
+      <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
+  await aTimeout(0);
+  el.shadowRoot!.querySelector<HTMLElement>('[data-action="quote"]')!.focus();
+
+  el.actions = ['ask'];
+  wrapper.querySelector<HTMLElement>('#outside-selection-toolbar')!.focus();
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-selection-toolbar');
 });
 
 it('restarts positioning after a disconnect/reconnect while open', async () => {
@@ -252,9 +315,7 @@ it('does not re-arm its former document during a detached update and reconnects 
     expect(el.open).to.be.true;
     expect(dismissals).to.equal(0);
 
-    frameDocument.dispatchEvent(
-      new frameWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
-    );
+    frameDocument.dispatchEvent(new frameWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await el.updateComplete;
     expect(el.open).to.be.false;
     expect(dismissals).to.equal(1);
@@ -334,7 +395,10 @@ it('uses owner-window geometry and observers, and retires an adopted positioning
     configurable: true,
     value: recordsFor(frameRecords),
   });
-  Object.defineProperty(frameWindow, 'innerWidth', { configurable: true, value: 420 });
+  Object.defineProperty(frameWindow, 'innerWidth', {
+    configurable: true,
+    value: 420,
+  });
   const el = (await fixture(html`
     <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
   `)) as LyraSelectionToolbar;
@@ -380,11 +444,19 @@ it('uses owner-window geometry and observers, and retires an adopted positioning
 });
 
 it('never lets a non-finite rect reach the styleMap-bound coordinates (CSS injection/NaN hardening)', async () => {
-  const el = (await fixture(html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  const el = (await fixture(
+    html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`
+  )) as LyraSelectionToolbar;
   // `rect` is typed `DOMRectReadOnly`, but a caller passing a plain object (or a Range computed
   // over a collapsed/detached selection) can hand this a non-finite value at runtime; TS cannot
   // enforce the type across the property boundary.
-  el.rect = { left: NaN, top: Infinity, width: -Infinity, height: 0, bottom: NaN } as unknown as DOMRectReadOnly;
+  el.rect = {
+    left: NaN,
+    top: Infinity,
+    width: -Infinity,
+    height: 0,
+    bottom: NaN,
+  } as unknown as DOMRectReadOnly;
   await el.updateComplete;
   const coordinates = (el as unknown as { coordinates(): Record<string, string> }).coordinates();
   expect(coordinates['--lr-selection-toolbar-inline-start']).to.match(/^-?\d+(\.\d+)?px$/);
@@ -431,11 +503,21 @@ it('uses the current owner clipboard and suppresses adopted or ownerless async c
   let frameWrites = 0;
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
-    value: { writeText: () => { mainWrites++; return pending; } },
+    value: {
+      writeText: () => {
+        mainWrites++;
+        return pending;
+      },
+    },
   });
   Object.defineProperty(frameWindow.navigator, 'clipboard', {
     configurable: true,
-    value: { writeText: () => { frameWrites++; return pending; } },
+    value: {
+      writeText: () => {
+        frameWrites++;
+        return pending;
+      },
+    },
   });
   const el = (await fixture(html`
     <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
@@ -490,15 +572,16 @@ it('does not mutate or focus stale roving buttons after adoption', async () => {
     HTMLElement & { updateComplete: Promise<unknown> }
   >;
   await Promise.all(actions.map((action) => action.updateComplete));
-  const controls = actions.map(
-    (action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement,
-  );
+  const controls = actions.map((action) => action.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement);
   let release!: () => void;
   const pending = new Promise<void>((resolve) => {
     release = resolve;
   });
   actions.forEach((action) => {
-    Object.defineProperty(action, 'updateComplete', { configurable: true, value: pending });
+    Object.defineProperty(action, 'updateComplete', {
+      configurable: true,
+      value: pending,
+    });
   });
   let focusCalls = 0;
   actions[1]!.focus = () => {

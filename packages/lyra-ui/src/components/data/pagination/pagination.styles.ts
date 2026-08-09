@@ -25,30 +25,30 @@ export const styles = css`
        properties rather than one rule per appearance so the rule that consumes them stays at the
        specificity of a bare [part] selector -- a consumer's ::part(page) override has to be able
        to win, and an :host([appearance=...]) [part=...] rule would out-specify it. */
-    --lr-pagination-control-bg: var(--lr-color-surface);
-    --lr-pagination-control-border-color: var(--lr-color-border);
+    --_lr-pagination-control-bg-default: var(--lr-color-surface);
+    --_lr-pagination-control-border-color-default: var(--lr-color-border);
   }
   :host([appearance='filled']) {
-    --lr-pagination-control-bg: var(--lr-color-surface-raised);
-    --lr-pagination-control-border-color: transparent;
+    --_lr-pagination-control-bg-default: var(--lr-color-surface-raised);
+    --_lr-pagination-control-border-color-default: transparent;
   }
   :host([appearance='filled-outlined']) {
-    --lr-pagination-control-bg: var(--lr-color-surface-raised);
-    --lr-pagination-control-border-color: var(--lr-color-border);
+    --_lr-pagination-control-bg-default: var(--lr-color-surface-raised);
+    --_lr-pagination-control-border-color-default: var(--lr-color-border);
   }
   :host([appearance='plain']) {
-    --lr-pagination-control-bg: transparent;
-    --lr-pagination-control-border-color: transparent;
+    --_lr-pagination-control-bg-default: transparent;
+    --_lr-pagination-control-border-color-default: transparent;
   }
   :host([appearance='accent']) {
-    --lr-pagination-control-bg: var(--lr-color-brand-quiet);
-    --lr-pagination-control-border-color: var(--lr-color-brand);
+    --_lr-pagination-control-bg-default: var(--lr-color-brand-quiet);
+    --_lr-pagination-control-border-color-default: var(--lr-color-brand);
   }
   [part~='base'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-m);
+    gap: var(--lr-pagination-base-gap, var(--lr-space-m));
     min-inline-size: 0;
     font-size: var(--lr-pagination-font-size);
   }
@@ -62,13 +62,13 @@ export const styles = css`
     flex: 0 0 auto;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-pagination-controls-gap, var(--lr-space-xs));
   }
   [part='pages'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-pagination-pages-gap, var(--lr-space-xs));
     min-inline-size: 0;
     margin: 0;
     padding: 0;
@@ -92,10 +92,11 @@ export const styles = css`
     block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
     min-block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
     padding: var(--lr-pagination-control-padding);
-    border: var(--lr-border-width-thin) solid var(--lr-pagination-control-border-color);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-pagination-control-border-color, var(--_lr-pagination-control-border-color-default));
     border-radius: var(--lr-pagination-control-radius);
-    background: var(--lr-pagination-control-bg);
-    color: var(--lr-color-text);
+    background: var(--lr-pagination-control-bg, var(--_lr-pagination-control-bg-default));
+    color: var(--lr-pagination-control-color, var(--lr-color-text));
     font: inherit;
     text-decoration: none;
     cursor: pointer;
@@ -109,9 +110,9 @@ export const styles = css`
      depend on which look the consumer picked. Declared after the appearance-driven rule above and
      at the same specificity, so a consumer ::part(page-current) override still wins. */
   [part~='page-current'] {
-    border-color: transparent;
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    border-color: var(--lr-pagination-current-border-color, transparent);
+    background: var(--lr-pagination-current-bg, var(--lr-color-brand));
+    color: var(--lr-pagination-current-color, var(--lr-color-on-brand));
     font-weight: var(--lr-font-weight-bold);
   }
   [part~='ellipsis'] {
@@ -124,10 +125,12 @@ export const styles = css`
   [part~='next-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
   [part~='last-button']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
   [part~='ellipsis']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])),
-  [part~='page']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(:not([part~='page-current'])),
+  [part~='page']:where(:hover):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(
+      :not([part~='page-current'])
+    ),
   [part='page-input']:where(:hover):where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-pagination-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-pagination-hover-border-color, var(--lr-color-brand));
   }
   /* Same selectors, same zeroed specificity, one step further toward --lr-color-mix-partner (which
      follows the text colour) -- so the pressed fill is unmistakably deeper than the hovered one in
@@ -137,23 +140,31 @@ export const styles = css`
   [part~='next-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
   [part~='last-button']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
   [part~='ellipsis']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])),
-  [part~='page']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(:not([part~='page-current'])),
+  [part~='page']:where(:active):where(:not(:disabled)):where(:not([aria-disabled='true'])):where(
+      :not([part~='page-current'])
+    ),
   [part='page-input']:where(:active):where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    border-color: var(--lr-color-brand);
+    background: var(
+      --lr-pagination-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    border-color: var(--lr-pagination-active-border-color, var(--lr-color-brand));
   }
   /* The current page is already a brand chip; without its own :hover arm it would fall back to the
      rule above and visibly lighten under the pointer, reading as "not selected". */
   [part~='page-current']:where(:hover) {
-    background: var(--lr-color-brand);
-    border-color: transparent;
+    background: var(--lr-pagination-current-hover-bg, var(--lr-color-brand));
+    border-color: var(--lr-pagination-current-hover-border-color, transparent);
   }
   /* Pressing the page you are already on is a no-op, but it still has to acknowledge the click --
      the chip deepens rather than lightening, so it never momentarily reads as deselected. MUST stay
      after the generic :active rule above: both are (0,1,0) after :where(), so source order decides. */
   [part~='page-current']:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    border-color: transparent;
+    background: var(
+      --lr-pagination-current-active-bg,
+      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    border-color: var(--lr-pagination-current-active-border-color, transparent);
   }
   [part~='first-button']:where(:focus-visible),
   [part~='previous-button']:where(:focus-visible),
@@ -228,7 +239,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-pagination-control-radius);
     background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    color: var(--lr-pagination-control-color, var(--lr-color-text));
     font: inherit;
     text-align: center;
   }

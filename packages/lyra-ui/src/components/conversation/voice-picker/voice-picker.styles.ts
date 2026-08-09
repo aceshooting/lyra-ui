@@ -39,14 +39,15 @@ export const styles = css`
     gap: var(--lr-space-xs);
     flex: 1 1 auto;
     min-inline-size: 0;
-    min-block-size: var(--lr-size-2-5rem);
+    min-block-size: var(--lr-form-control-height);
     box-sizing: border-box;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-form-control-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
+    font-size: var(--lr-form-control-font-size);
   }
   [part='trigger'] {
     cursor: pointer;
@@ -126,8 +127,8 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {
@@ -139,12 +140,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-size-2-5rem);
-    block-size: var(--lr-size-2-5rem);
-    /* Already exactly the shared floor via inline-size/block-size above (--lr-size-2-5rem
-       == --lr-icon-button-size == 40px) -- min-inline-size/min-block-size are added
-       alongside so a later, more specific override can never shrink this box below that
-       floor, matching every other icon-button-shaped part in this library. */
+    inline-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+    block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+    /* Compact picker chrome may be smaller than the WCAG interaction floor; the independent
+       preview action never is. Large tiers grow the action with the field. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

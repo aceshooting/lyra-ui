@@ -103,4 +103,34 @@ assert.throws(
   /must be a TypeScript module below src\//,
 );
 
+const packageDir = path.resolve(scriptsDir, '..');
+const currentManifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
+const flowCanvas = currentManifest.modules
+  .flatMap(({ declarations = [] }) => declarations)
+  .find(({ tagName }) => tagName === 'lr-flow-canvas');
+assert.ok(flowCanvas, 'current manifest must contain lr-flow-canvas');
+for (const name of ['zoomIn', 'zoomOut', 'resetZoom']) {
+  assert.equal(
+    flowCanvas.members.find((member) => member.name === name)?.kind,
+    'method',
+    `lr-flow-canvas#${name} must remain callable method metadata`,
+  );
+}
+for (const [relative, typeName] of [
+  ['src/custom-elements-jsx.ts', 'React'],
+  ['src/svelte.ts', 'Svelte'],
+  ['src/vue.ts', 'Vue'],
+]) {
+  const declarations = readFileSync(path.join(packageDir, relative), 'utf8');
+  const block = declarations.match(
+    new RegExp(`export type LyraFlowCanvas${typeName}Props[\\s\\S]*?(?=\\nexport type LyraFlowControls)`),
+  )?.[0];
+  assert.ok(block, `${relative}: missing LyraFlowCanvas props block`);
+  assert.doesNotMatch(
+    block,
+    /'zoomIn'|'zoomOut'|'resetZoom'/,
+    `${relative}: methods must not be emitted as assignable framework props`,
+  );
+}
+
 console.log('Framework declaration generator fixture tests passed.');

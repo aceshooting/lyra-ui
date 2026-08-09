@@ -3,6 +3,20 @@ import type { LyraNumberInput } from './number-input.class.js';
 import './number-input.js';
 import './native-time-input.js';
 
+it('inherits the shared input radius in number and native-time subclasses', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-input-radius: 18px">
+      <lr-number-input></lr-number-input>
+      <lr-native-time-input></lr-native-time-input>
+    </div>
+  `);
+  for (const tagName of ['lr-number-input', 'lr-native-time-input']) {
+    const el = wrapper.querySelector(tagName)!;
+    const row = el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
+    expect(getComputedStyle(row).borderTopLeftRadius, tagName).to.equal('18px');
+  }
+});
+
 it('forces number-input to native number semantics and preserves range validation', async () => {
   const el = await fixture(html`<lr-number-input min="1" max="10" step="1"></lr-number-input>`);
   expect(el.type).to.equal('number');
@@ -93,6 +107,60 @@ describe('lr-number-input steppers', () => {
       expect(box.width).to.be.at.least(40);
       expect(box.height).to.be.at.least(40);
     }
+  });
+
+  it('keeps stepper-bearing rows on the shared hit-floor-aware height ladder', async () => {
+    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+    for (const [size, height] of Object.entries(expected)) {
+      const el = (await fixture(html`<lr-number-input size=${size} label="Qty"></lr-number-input>`)) as LyraNumberInput;
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+      expect(row.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+    }
+  });
+
+  it('renders upstream size aliases at the canonical number-input geometry', async () => {
+    for (const [alias, canonical] of [['small', 's'], ['medium', 'm'], ['large', 'l']] as const) {
+      const aliasEl = (await fixture(
+        html`<lr-number-input size=${alias} label="Alias"></lr-number-input>`,
+      )) as LyraNumberInput;
+      const canonicalEl = (await fixture(
+        html`<lr-number-input size=${canonical} label="Canonical"></lr-number-input>`,
+      )) as LyraNumberInput;
+      const rowOf = (host: LyraNumberInput) =>
+        host.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+      const inputOf = (host: LyraNumberInput) =>
+        host.shadowRoot!.querySelector<HTMLElement>('[part="input"]')!;
+      const aliasRowStyle = getComputedStyle(rowOf(aliasEl));
+      const canonicalRowStyle = getComputedStyle(rowOf(canonicalEl));
+
+      expect(rowOf(aliasEl).getBoundingClientRect().height, `size=${alias} height`).to.equal(
+        rowOf(canonicalEl).getBoundingClientRect().height,
+      );
+      expect(getComputedStyle(inputOf(aliasEl)).fontSize, `size=${alias} font-size`).to.equal(
+        getComputedStyle(inputOf(canonicalEl)).fontSize,
+      );
+      expect(aliasRowStyle.paddingInlineStart, `size=${alias} padding-inline`).to.equal(
+        canonicalRowStyle.paddingInlineStart,
+      );
+      expect(aliasRowStyle.paddingBlockStart, `size=${alias} padding-block`).to.equal(
+        canonicalRowStyle.paddingBlockStart,
+      );
+    }
+  });
+
+  it('contains long RTL stepper content in an exact 320px allocation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">
+        <lr-number-input
+          value="2"
+          label="InternationalizedUnbrokenQuantityLabelThatMustRemainInsideTheAllocation"
+          hint="Supporting copy wraps within the same narrow allocation."
+        ></lr-number-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-number-input') as LyraNumberInput;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
   });
 
   it('localizes both stepper labels', async () => {

@@ -71,7 +71,7 @@ describe('withRemove', () => {
     el.removable = false;
     await el.updateComplete;
     expect(el.withRemove).to.be.false;
-    expect(removeButton(el)).to.equal(null);
+    expect((removeButton(el)) === (null)).to.equal(true);
   });
 
   it('names the remove button with the tag label, localized', async () => {

@@ -8,17 +8,22 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-code-editor`
 
+Long translated form chrome wraps within the host, while long source stays reachable through the
+editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
+(320px)` story covers both boundaries together.
+
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
 optional line-number gutter. No syntax highlighting: `language` is metadata only.
 
 **Properties:**
+
 - `language: string = ''` — reflected onto the `editor` part as `data-language`; purely a styling/
   metadata hook, nothing tokenizes the text
 - `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
@@ -77,12 +82,16 @@ the `:host` default of `2`. The component writes the token inline on the `textar
 `tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
 still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
 spaces — the Tab key keeps inserting `tabSize` spaces in that case.
+`--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
+`--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
+without changing brand/danger paint in sibling components.
 
 **Known gotchas:**
+
 - Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
   caret (see the tab-width precedence above);
   Shift+Tab is never captured, so reverse focus traversal always works; pressing Escape releases
-  the *next* Tab for forward traversal instead, and any other keypress (or focus leaving the
+  the _next_ Tab for forward traversal instead, and any other keypress (or focus leaving the
   editor) re-arms Tab indentation.
 - The host gets a `data-invalid` attribute once the field has been blurred at least once and
   validity fails; the styles hang the danger border off it.

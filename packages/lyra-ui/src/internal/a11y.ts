@@ -15,6 +15,12 @@ let counter = 0;
 /** Monotonic unique id, scoped by a short label (e.g. `nextId('listbox')`). */
 export const nextId = (scope: string): string => `${tag(scope)}-${++counter}`;
 
+/** Returns the host's authored `aria-label` by attribute presence, including the empty string.
+ * `null` means the attribute is absent and the caller may use its computed fallback. */
+export function hostAriaLabel(host: Element): string | null {
+  return host.hasAttribute('aria-label') ? (host.getAttribute('aria-label') ?? '') : null;
+}
+
 // The one "is there real content" predicate for a set of light-DOM/assigned
 // nodes -- reused by the initial synchronous seed (reading light-DOM
 // childNodes) and the runtime slotchange handler (reading assignedNodes()) of

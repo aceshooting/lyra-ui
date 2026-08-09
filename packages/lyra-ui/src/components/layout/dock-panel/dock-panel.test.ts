@@ -95,7 +95,7 @@ it("renders with defaults: docked to the end edge, a resizable handle, no collap
   expect(el.resizable).to.equal(true);
   expect(el.collapsible).to.equal(false);
   const handle = el.shadowRoot!.querySelector('[part="handle"]');
-  expect(handle).to.not.equal(null);
+  expect((handle) !== (null)).to.equal(true);
   expect(handle!.getAttribute("role")).to.equal("separator");
   expect(handle!.getAttribute("aria-orientation")).to.equal("vertical");
   expect(el.shadowRoot!.querySelector('[part="collapse-toggle"]')).to.equal(
@@ -111,6 +111,78 @@ it("floors the collapse toggle at the shared minimum hit target", async () => {
   ) as HTMLButtonElement;
   expect(toggle.getBoundingClientRect().width).to.be.at.least(40);
   expect(toggle.getBoundingClientRect().height).to.be.at.least(40);
+});
+
+it("contains long RTL dock and main content through collapse/expand in an exact 320px allocation", async () => {
+  const longText = "UnbrokenLocalizedDockPanelContent".repeat(20);
+  const wrapper = await fixture<HTMLElement>(html`
+    <div
+      dir="rtl"
+      style="display:flex;inline-size:320px;max-inline-size:320px;block-size:12rem;overflow:hidden"
+    >
+      <main style="flex:1 1 0;min-inline-size:0;overflow:auto">${longText}</main>
+      <lr-dock-panel
+        edge="end"
+        extent="240px"
+        min-extent="160px"
+        max-extent="280px"
+        collapsible
+      >
+        <div style="white-space:nowrap">${longText}</div>
+      </lr-dock-panel>
+    </div>
+  `);
+  const panel = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+  await elementUpdated(panel);
+  const main = wrapper.querySelector("main")!;
+  const toggle = panel.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="collapse-toggle"]'
+  )!;
+
+  const assertContained = (): void => {
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const baseRect = panel.shadowRoot!
+      .querySelector<HTMLElement>('[part="base"]')!
+      .getBoundingClientRect();
+    const contentRect = panel.shadowRoot!
+      .querySelector<HTMLElement>('[part="content"]')!
+      .getBoundingClientRect();
+    const containedRects: Array<readonly [string, DOMRect]> = [
+      ["panel", panelRect],
+      ["main", mainRect],
+      ["base", baseRect],
+    ];
+    if (!panel.collapsed) containedRects.push(["content", contentRect]);
+    for (const [label, rect] of containedRects) {
+      expect(rect.left, `${label} left edge`).to.be.at.least(wrapperRect.left - 1);
+      expect(rect.right, `${label} right edge`).to.be.at.most(wrapperRect.right + 1);
+    }
+    expect(panelRect.right, "RTL end panel stays physically before main").to.be.at.most(
+      mainRect.left + 1
+    );
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  };
+
+  expect(wrapper.clientWidth).to.equal(320);
+  expect(panel.getBoundingClientRect().width).to.be.closeTo(240, 1);
+  expect(main.scrollWidth).to.be.greaterThan(main.clientWidth);
+  const content = panel.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+  expect(content.scrollWidth).to.be.greaterThan(content.clientWidth);
+  assertContained();
+
+  toggle.click();
+  await elementUpdated(panel);
+  expect(panel.collapsed).to.equal(true);
+  expect(panel.getBoundingClientRect().width).to.be.closeTo(40, 1);
+  assertContained();
+
+  toggle.click();
+  await elementUpdated(panel);
+  expect(panel.collapsed).to.equal(false);
+  expect(panel.getBoundingClientRect().width).to.be.closeTo(240, 1);
+  assertContained();
 });
 
 it("renders no drag handle at all when resizable is false", async () => {
@@ -527,7 +599,7 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   const toggle = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"]'
   ) as HTMLElement;
-  expect(toggle).to.not.equal(null);
+  expect((toggle) !== (null)).to.equal(true);
   expect(toggle.getAttribute("aria-expanded")).to.equal("true");
 
   let detail: DockPanelCollapseChangeDetail | undefined;

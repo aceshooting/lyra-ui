@@ -115,3 +115,31 @@ export const NarrowLongContent: StoryObj = {
     </div>
   `,
 };
+
+export const LocalizedAnnouncementTemplate: StoryObj = {
+  name: 'Localized announcement order',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A labeled callout announces later updates through the complete `calloutAnnouncementWithContext` message. This deliberately reversed override proves locales can reorder `{context}` and `{content}` and choose their own punctuation.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <lr-callout
+        aria-label="Storage warning"
+        .strings=${{ calloutAnnouncementWithContext: '{content} ← {context}' }}
+      ><span data-callout-message>Initial storage status</span></lr-callout>
+      <button
+        @click=${(event: Event) => {
+          const message = (event.currentTarget as HTMLElement)
+            .parentElement!
+            .querySelector<HTMLElement>('[data-callout-message]')!;
+          message.textContent = 'Disk is nearly full';
+        }}
+      >Announce updated storage status</button>
+    </div>
+  `,
+};

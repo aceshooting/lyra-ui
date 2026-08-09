@@ -65,7 +65,7 @@ export const styles = css`
     max-inline-size: 100%;
     padding-block: var(--lr-space-xs);
   }
-  [part='legend-item'] {
+  [part~='legend-item'] {
     display: inline-flex;
     align-items: center;
     /* Both axes: a short series name leaves the swatch+label pair narrower than the
@@ -88,17 +88,24 @@ export const styles = css`
     overflow-wrap: anywhere;
     cursor: pointer;
   }
-  [part='legend-item']:where(:hover) {
-    background: var(--lr-color-brand-quiet);
+  [part~='legend-item']:where(:hover) {
+    background: var(--lr-chart-legend-item-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressed: the same quiet brand tint pushed further toward the text colour, so the
      mousedown that toggles the series is visibly distinct from merely pointing at it. */
-  [part='legend-item']:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part~='legend-item']:where(:active) {
+    background: var(
+      --lr-chart-legend-item-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
-  [part='legend-item']:where(:focus-visible) {
+  [part~='legend-item']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~='legend-item']:where([part~='legend-item-hidden']) {
+    text-decoration-line: line-through;
+    text-decoration-thickness: var(--lr-border-width-medium);
   }
   [part='legend-swatch'] {
     inline-size: var(--lr-space-s);
@@ -246,10 +253,13 @@ export const styles = css`
     cursor: pointer;
   }
   [part='data-table'] button:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-chart-data-table-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='data-table'] button:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-chart-data-table-button-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='data-table'] button:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -278,10 +288,13 @@ export const styles = css`
     cursor: pointer;
   }
   [part='reset-zoom-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-chart-reset-zoom-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='reset-zoom-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-chart-reset-zoom-button-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='reset-zoom-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

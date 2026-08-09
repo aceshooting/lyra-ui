@@ -23,12 +23,31 @@ interface Row {
 
 const columns: TableColumn<Row>[] = [
   { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
-  { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+  {
+    key: 'score',
+    label: 'Score',
+    sortable: true,
+    align: 'end',
+    cell: (r) => r.score,
+  },
 ];
 
 const editableColumns: TableColumn<Row>[] = [
-  { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
-  { key: 'score', label: 'Score', editable: true, editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+  {
+    key: 'name',
+    label: 'Name',
+    editable: true,
+    editValue: (r) => r.name,
+    cell: (r) => r.name,
+  },
+  {
+    key: 'score',
+    label: 'Score',
+    editable: true,
+    editType: 'number',
+    editValue: (r) => r.score,
+    cell: (r) => r.score,
+  },
 ];
 const rows: Row[] = [
   { id: 'a', name: 'Alpha', score: 3 },
@@ -61,9 +80,7 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
   el.rows = rows;
   el.rowKey = (r) => r.id;
   await el.updateComplete;
-  const headers = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map(
-    (h) => h.textContent!.trim(),
-  );
+  const headers = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map((h) => h.textContent!.trim());
   expect(headers).to.deep.equal(['Name', 'Score']);
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
 });
@@ -71,7 +88,14 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
 it('resizes a resizable column through its native pointer handle and emits live widths', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
     columns[1]!,
   ];
   el.rows = rows;
@@ -88,7 +112,13 @@ it('resizes a resizable column through its native pointer handle and emits live 
   let detail: { key: string; width: number } | undefined;
   el.addEventListener('lr-column-resize', (event) => (detail = (event as CustomEvent).detail));
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 1,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 140 }));
   await el.updateComplete;
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 140 }));
@@ -100,9 +130,7 @@ it('resizes a resizable column through its native pointer handle and emits live 
 
 it('keeps an adopted iframe resize drag in its owner window and releases that window on teardown', async () => {
   const iframe = document.createElement('iframe');
-  const loaded = new Promise<void>((resolve) =>
-    iframe.addEventListener('load', () => resolve(), { once: true }),
-  );
+  const loaded = new Promise<void>((resolve) => iframe.addEventListener('load', () => resolve(), { once: true }));
   document.body.append(iframe);
   await loaded;
   const frameDocument = iframe.contentDocument!;
@@ -128,9 +156,13 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
       frameResizeObserverConstructions += 1;
       frameResizeObserverCallback = callback;
     }
-    observe(target: Element) { frameObservedTargets.push(target); }
+    observe(target: Element) {
+      frameObservedTargets.push(target);
+    }
     unobserve() {}
-    disconnect() { frameResizeObserverDisconnects += 1; }
+    disconnect() {
+      frameResizeObserverDisconnects += 1;
+    }
   }
   window.ResizeObserver = MainInertResizeObserver as unknown as typeof ResizeObserver;
   frameWindow.ResizeObserver = FrameResizeObserver as unknown as typeof ResizeObserver;
@@ -150,7 +182,13 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
     el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.style.setProperty('--lr-table-resize-min-width', '3rem');
     el.columns = [
-      { key: 'name', label: 'Name', width: '120px', resizable: true, cell: (row) => row.name },
+      {
+        key: 'name',
+        label: 'Name',
+        width: '120px',
+        resizable: true,
+        cell: (row) => row.name,
+      },
       columns[1]!,
     ];
     el.rows = rows;
@@ -168,43 +206,51 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
       if (!event.cancelable) liveEvents += 1;
     });
 
-    handle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 71,
-      clientX: 100,
-    }));
+    handle.dispatchEvent(
+      new frameWindow.PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 71,
+        clientX: 100,
+      })
+    );
     expect(
       (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === frameWindow,
-      'the drag retains the iframe window that owns the handle',
+      'the drag retains the iframe window that owns the handle'
     ).to.be.true;
-    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
-      pointerId: 71,
-      clientX: -10000,
-    }));
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent('pointermove', {
+        pointerId: 71,
+        clientX: -10000,
+      })
+    );
     expect(liveEvents, 'pointer movement from the iframe window reaches the drag').to.equal(1);
     expect(
       (el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name'),
-      'rem minimum width resolves from the iframe document root',
+      'rem minimum width resolves from the iframe document root'
     ).to.equal(30);
-    frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointerup', {
-      pointerId: 71,
-      clientX: -10000,
-    }));
+    frameWindow.dispatchEvent(
+      new frameWindow.PointerEvent('pointerup', {
+        pointerId: 71,
+        clientX: -10000,
+      })
+    );
     expect((el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined).to.be.true;
 
     frameResizeObserverCallback!([], {} as ResizeObserver);
     expect(frameCallbacks.size, 'layout sync uses the iframe animation clock').to.equal(1);
     const pendingFrameIds = [...frameCallbacks.keys()];
 
-    handle.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 72,
-      clientX: 100,
-    }));
+    handle.dispatchEvent(
+      new frameWindow.PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 72,
+        clientX: 100,
+      })
+    );
     el.remove();
     expect(
       (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined,
-      'disconnect releases the exact retained window',
+      'disconnect releases the exact retained window'
     ).to.be.true;
     expect(frameResizeObserverDisconnects, 'disconnect tears down the iframe observer').to.equal(1);
     expect(canceledFrameIds).to.include.members(pendingFrameIds);
@@ -223,7 +269,14 @@ it('rolls back an uncommitted resize preview when another drag replaces it or th
   const wrapper = (await fixture(html`<div><lr-table></lr-table></div>`)) as HTMLElement;
   const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
   ];
   el.rows = rows;
   el.rowKey = (row) => row.id;
@@ -231,33 +284,38 @@ it('rolls back an uncommitted resize preview when another drag replaces it or th
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
-  const widths = (): Map<string, number> => (
-    el as unknown as { resizedColumnWidths: Map<string, number> }
-  ).resizedColumnWidths;
+  const widths = (): Map<string, number> =>
+    (el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths;
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', {
-    bubbles: true,
-    pointerId: 75,
-    clientX: 100,
-  }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 75,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 75, clientX: 150 }));
   expect(widths().get('name')).to.be.greaterThan(120);
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', {
-    bubbles: true,
-    pointerId: 76,
-    clientX: 100,
-  }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 76,
+      clientX: 100,
+    })
+  );
   expect(widths().has('name'), 'replacing a drag rolls back its live-only width').to.be.false;
   window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 76 }));
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal('120px');
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', {
-    bubbles: true,
-    pointerId: 77,
-    clientX: 100,
-  }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 77,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 77, clientX: 160 }));
   expect(widths().get('name')).to.be.greaterThan(120);
   el.remove();
@@ -271,7 +329,14 @@ it('does not throw when releasePointerCapture rejects the release while cancelin
   const wrapper = (await fixture(html`<div><lr-table></lr-table></div>`)) as HTMLElement;
   const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
@@ -281,7 +346,13 @@ it('does not throw when releasePointerCapture rejects the release while cancelin
     throw new DOMException('already released', 'InvalidStateError');
   };
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 80, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 80,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 80, clientX: 150 }));
   // Disconnecting mid-drag cancels the in-flight gesture, which tries to release native pointer
   // capture as a courtesy -- a browser that has already invalidated it (or never granted it to a
@@ -293,7 +364,14 @@ it('does not throw when releasePointerCapture rejects the release while cancelin
 it('fires exactly one cancelable lr-column-resize, at drag-end, for the committed width -- not per pixel', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
     columns[1]!,
   ];
   el.rows = rows;
@@ -311,7 +389,13 @@ it('fires exactly one cancelable lr-column-resize, at drag-end, for the committe
     else nonCancelableCount.value += 1;
   });
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 8,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 120 }));
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 140 }));
   await el.updateComplete;
@@ -328,7 +412,14 @@ it('fires exactly one cancelable lr-column-resize, at drag-end, for the committe
 it('honors preventDefault() on the drag-end lr-column-resize commit by reverting the rendered width', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
     columns[1]!,
   ];
   el.rows = rows;
@@ -346,7 +437,13 @@ it('honors preventDefault() on the drag-end lr-column-resize commit by reverting
   const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
   const originalWidth = col().style.inlineSize; // the declared '120px', pre-drag
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 9, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 9,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 9, clientX: 140 }));
   await el.updateComplete;
   // Mid-drag the (non-cancelable) live preview still applies, matching existing behavior.
@@ -362,7 +459,14 @@ it('rolls back the live column-width preview without a terminal commit when poin
   for (const [index, endType] of (['pointercancel', 'lostpointercapture'] as const).entries()) {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = [
-      { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        width: '120px',
+        minWidth: '80px',
+        resizable: true,
+        cell: (r) => r.name,
+      },
       columns[1]!,
     ];
     el.rows = rows;
@@ -383,7 +487,11 @@ it('rolls back the live column-width preview without a terminal commit when poin
     const pointerId = 40 + index;
 
     handle.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX: 100 }),
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId,
+        clientX: 100,
+      })
     );
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 140 }));
     await el.updateComplete;
@@ -401,7 +509,14 @@ it('rolls back the live column-width preview without a terminal commit when poin
 it('does not throw when releasePointerCapture rejects the release at drag-end (pointerup)', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
@@ -412,11 +527,15 @@ it('does not throw when releasePointerCapture rejects the release at drag-end (p
     throw new DOMException('already released', 'InvalidStateError');
   };
 
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 70, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 70,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 70, clientX: 150 }));
-  expect(() =>
-    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 70, clientX: 150 })),
-  ).to.not.throw();
+  expect(() => window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 70, clientX: 150 }))).to.not.throw();
   await el.updateComplete;
   // The drag still completes normally (state cleared) despite the native release failing.
   expect((el as unknown as { resizeState: unknown }).resizeState).to.be.undefined;
@@ -425,7 +544,14 @@ it('does not throw when releasePointerCapture rejects the release at drag-end (p
 it("rolls back a second drag's preview to the first drag's committed width (not the declared one) on pointercancel", async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
@@ -436,7 +562,13 @@ it("rolls back a second drag's preview to the first drag's committed width (not 
 
   // First drag commits normally (pointerup, no veto), establishing a resizedColumnWidths entry
   // distinct from the declared 120px -- the value a later cancel below must roll back to.
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 60, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 60,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 60, clientX: 150 }));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 60, clientX: 150 }));
   await el.updateComplete;
@@ -445,7 +577,13 @@ it("rolls back a second drag's preview to the first drag's committed width (not 
 
   // Second drag previews a different width, then is interrupted by pointercancel -- it must roll
   // back to the first drag's committed width, not delete the entry back to the declared 120px.
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 61, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 61,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 61, clientX: 250 }));
   await el.updateComplete;
   expect(col().style.inlineSize).to.not.equal(committedWidth);
@@ -457,7 +595,14 @@ it("rolls back a second drag's preview to the first drag's committed width (not 
 it("reverts to the first drag's committed width (not the declared one) when a second drag's pointerup commit is vetoed", async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
@@ -467,7 +612,13 @@ it("reverts to the first drag's committed width (not the declared one) when a se
   const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
 
   // First drag commits normally (pointerup, no listener yet).
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 62, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 62,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 62, clientX: 150 }));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 62, clientX: 150 }));
   await el.updateComplete;
@@ -479,7 +630,13 @@ it("reverts to the first drag's committed width (not the declared one) when a se
     const custom = event as CustomEvent<{ key: string; width: number }>;
     if (custom.cancelable) custom.preventDefault();
   });
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 63, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 63,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 63, clientX: 250 }));
   await el.updateComplete;
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 63, clientX: 250 }));
@@ -488,28 +645,79 @@ it("reverts to the first drag's committed width (not the declared one) when a se
 });
 
 it('uses the themed minimum width when a resizable column has no explicit minimum', async () => {
-  const el = (await fixture(
-    html`<lr-table style="--lr-table-resize-min-width:90px"></lr-table>`,
-  )) as LyraTable<Row>;
-  el.columns = [{ key: 'name', label: 'Name', width: '120px', resizable: true, cell: (r) => r.name }];
+  const el = (await fixture(html`<lr-table style="--lr-table-resize-min-width:90px"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+  ];
   el.rows = rows;
   await el.updateComplete;
 
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 2,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: -10000 }));
 
   expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(90);
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, clientX: -10000 }));
 });
 
+it('inherits resize theme hooks from an ancestor while direct host values still win', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-table-resize-min-width:77px; --lr-table-resize-handle-opacity:0.37">
+      <lr-table></lr-table>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  expect(getComputedStyle(handle).getPropertyValue('--lr-table-resize-handle-opacity').trim()).to.equal('0.37');
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 22, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 22, clientX: -10000 }));
+  expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(77);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 22, clientX: -10000 }));
+
+  el.style.setProperty('--lr-table-resize-min-width', '91px');
+  el.style.setProperty('--lr-table-resize-handle-opacity', '0.21');
+  expect(getComputedStyle(handle).getPropertyValue('--lr-table-resize-handle-opacity').trim()).to.equal('0.21');
+});
+
 it('resolves a rem-unit themed minimum width against the root font size', async () => {
-  const el = (await fixture(
-    html`<lr-table style="--lr-table-resize-min-width:5rem"></lr-table>`,
-  )) as LyraTable<Row>;
-  el.columns = [{ key: 'name', label: 'Name', width: '400px', resizable: true, cell: (r) => r.name }];
+  const el = (await fixture(html`<lr-table style="--lr-table-resize-min-width:5rem"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '400px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+  ];
   el.rows = rows;
   await el.updateComplete;
 
@@ -517,20 +725,32 @@ it('resolves a rem-unit themed minimum width against the root font size', async 
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 3,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: -10000 }));
 
   expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(
-    5 * rootFontSize,
+    5 * rootFontSize
   );
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3, clientX: -10000 }));
 });
 
-it('resolves an em-unit themed minimum width against the table\'s own font size', async () => {
-  const el = (await fixture(
-    html`<lr-table style="--lr-table-resize-min-width:3em"></lr-table>`,
-  )) as LyraTable<Row>;
-  el.columns = [{ key: 'name', label: 'Name', width: '400px', resizable: true, cell: (r) => r.name }];
+it("resolves an em-unit themed minimum width against the table's own font size", async () => {
+  const el = (await fixture(html`<lr-table style="--lr-table-resize-min-width:3em"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '400px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+  ];
   el.rows = rows;
   await el.updateComplete;
 
@@ -538,11 +758,17 @@ it('resolves an em-unit themed minimum width against the table\'s own font size'
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
-  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 4, clientX: 100 }));
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 4,
+      clientX: 100,
+    })
+  );
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 4, clientX: -10000 }));
 
   expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(
-    3 * ownFontSize,
+    3 * ownFontSize
   );
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, clientX: -10000 }));
 });
@@ -576,7 +802,13 @@ it('exposes focusable separator state and resizes by keyboard without sorting th
   const widths: number[] = [];
   el.addEventListener('lr-column-resize', (event) => widths.push(event.detail.width));
   const press = async (key: string, shiftKey = false): Promise<KeyboardEvent> => {
-    const event = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, composed: true, cancelable: true });
+    const event = new KeyboardEvent('keydown', {
+      key,
+      shiftKey,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
     handle.dispatchEvent(event);
     await el.updateComplete;
     return event;
@@ -597,14 +829,28 @@ it('exposes focusable separator state and resizes by keyboard without sorting th
 it('honors preventDefault() on a keyboard resize commit, reverting to the pre-press width', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', maxWidth: '160px', resizable: true, cell: (row) => row.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      maxWidth: '160px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
 
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   el.addEventListener('lr-column-resize', (event) => (event as CustomEvent).preventDefault());
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
 
   expect(handle.getAttribute('aria-valuenow')).to.equal('120');
@@ -613,7 +859,15 @@ it('honors preventDefault() on a keyboard resize commit, reverting to the pre-pr
 it('reverts to a previously-committed width (not the originally-declared one) when a later keyboard resize is vetoed', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', maxWidth: '200px', resizable: true, cell: (row) => row.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      maxWidth: '200px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
@@ -621,12 +875,24 @@ it('reverts to a previously-committed width (not the originally-declared one) wh
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
   // First resize succeeds (no listener yet), establishing a committed width distinct from the
   // originally-declared 120px -- the value a later veto below must roll back to.
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(handle.getAttribute('aria-valuenow')).to.equal('130');
 
   el.addEventListener('lr-column-resize', (event) => (event as CustomEvent).preventDefault());
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   // Reverts to the first resize's 130px, not the originally-declared 120px.
   expect(handle.getAttribute('aria-valuenow')).to.equal('130');
@@ -635,16 +901,35 @@ it('reverts to a previously-committed width (not the originally-declared one) wh
 it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', async () => {
   const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (row) => row.name },
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
   ];
   el.rows = rows;
   await el.updateComplete;
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
 
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(handle.getAttribute('aria-valuenow')).to.equal('110');
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(handle.getAttribute('aria-valuenow')).to.equal('120');
   await expect(el).to.be.accessible();
@@ -652,12 +937,20 @@ it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', asy
 
 it('announces the rendered width when a resizable column has no pixel width', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
-  el.columns = [{ key: 'name', label: 'Name', width: '12rem', resizable: true, cell: (row) => row.name }];
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '12rem',
+      resizable: true,
+      cell: (row) => row.name,
+    },
+  ];
   el.rows = rows;
   await el.updateComplete;
 
   const header = el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement;
-  header.getBoundingClientRect = () => ({ width: 192 }) as DOMRect;
+  header.getBoundingClientRect = () => ({ width: 192 } as DOMRect);
   el.requestUpdate();
   await el.updateComplete;
 
@@ -666,14 +959,28 @@ it('announces the rendered width when a resizable column has no pixel width', as
 
 it('starts a keyboard resize from the live rendered width when a column has no pixel width yet', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
-  el.columns = [{ key: 'name', label: 'Name', width: '12rem', resizable: true, cell: (row) => row.name }];
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '12rem',
+      resizable: true,
+      cell: (row) => row.name,
+    },
+  ];
   el.rows = rows;
   await el.updateComplete;
 
   const header = el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement;
-  header.getBoundingClientRect = () => ({ width: 192 }) as DOMRect;
+  header.getBoundingClientRect = () => ({ width: 192 } as DOMRect);
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
-  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  handle.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
 
   // 192 (the live rendered width, not the 12rem CSS length nor minimumResizeWidth's fallback) + the 10px step.
@@ -697,24 +1004,24 @@ it('skips a resize handle whose data-col-key was removed, without breaking sibli
   handles[0]!.removeAttribute('data-col-key');
 
   const secondHeader = el.shadowRoot!.querySelector('th[data-col-key="score"]') as HTMLElement;
-  secondHeader.getBoundingClientRect = () => ({ width: 222 }) as DOMRect;
+  secondHeader.getBoundingClientRect = () => ({ width: 222 } as DOMRect);
   // Any property change re-runs syncResizeHandleValues() from updated() -- force one.
   el.requestUpdate();
   await el.updateComplete;
 
   expect(handles[1]!.getAttribute('aria-valuenow'), 'the sibling handle still updates').to.equal('222');
-  expect(handles[0]!.getAttribute('aria-valuenow'), 'the handle with no key is left untouched').to.equal(
-    beforeValue,
-  );
+  expect(handles[0]!.getAttribute('aria-valuenow'), 'the handle with no key is left untouched').to.equal(beforeValue);
 });
 
 it('reflects spellcheck=false when assigned as a property', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.spellcheck = false;
   await el.updateComplete;
-  const property = (el.constructor as typeof LyraTable & {
-    elementProperties: Map<string, { converter?: { toAttribute?: (value: boolean) => string | null } }>;
-  }).elementProperties.get('spellcheck');
+  const property = (
+    el.constructor as typeof LyraTable & {
+      elementProperties: Map<string, { converter?: { toAttribute?: (value: boolean) => string | null } }>;
+    }
+  ).elementProperties.get('spellcheck');
   expect(property?.converter?.toAttribute?.(false)).to.equal('false');
 
   el.spellcheck = true;
@@ -733,7 +1040,7 @@ it('opens an editable cell on double-click and emits a typed edit intent', async
   cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
   await el.updateComplete;
   const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
-  expect(input).to.exist;
+  expect(input != null).to.equal(true);
   input.value = 'Renamed';
   const eventPromise = oneEvent(el, 'lr-cell-edit');
   input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
@@ -759,7 +1066,14 @@ it('commits an inline edit with Enter', async () => {
   const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
   input.value = 'Enter name';
   const eventPromise = oneEvent(el, 'lr-cell-edit');
-  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }));
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    })
+  );
   const event = await eventPromise;
   expect(event.detail.value).to.equal('Enter name');
   expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
@@ -858,7 +1172,7 @@ it('clears editingCell (without emitting) instead of throwing when the transient
   cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
-  expect(input).to.exist;
+  expect(input != null).to.equal(true);
 
   // Simulate the row vanishing from the lookup map out of band -- with no reactive update in
   // between (so willUpdate() hasn't already cleared editingCell itself) -- the way it would if a
@@ -1022,7 +1336,13 @@ it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not
   expect(textInput.spellcheck).to.be.false;
   expect(textInput.getAttribute('autocapitalize')).to.equal('off');
   expect(textInput.getAttribute('autocorrect')).to.equal('off');
-  textInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  textInput.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+    })
+  );
   await el.updateComplete;
 
   cells[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
@@ -1034,7 +1354,11 @@ it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not
 });
 
 it('filters without throwing over rows containing a circular reference or a BigInt', async () => {
-  const cyclic: Record<string, unknown> = { id: 'c', name: 'Circular', score: 5n as unknown as number };
+  const cyclic: Record<string, unknown> = {
+    id: 'c',
+    name: 'Circular',
+    score: 5n as unknown as number,
+  };
   cyclic.self = cyclic;
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -1052,7 +1376,14 @@ it('filters without throwing over rows containing a circular reference or a BigI
 });
 
 it('does not throw when the default filter encounters a row with a throwing toJSON method', async () => {
-  const hostile = { id: 'bad', name: 'Hostile', score: 0, toJSON: () => { throw new Error('nope'); } };
+  const hostile = {
+    id: 'bad',
+    name: 'Hostile',
+    score: 0,
+    toJSON: () => {
+      throw new Error('nope');
+    },
+  };
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = [...rows, hostile as unknown as Row];
@@ -1089,9 +1420,9 @@ it('paginates client-side rows and emits controlled page requests', async () => 
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Alpha');
 
-  const next = el.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector(
-    '[part~="next-button"]',
-  ) as HTMLButtonElement;
+  const next = el
+    .shadowRoot!.querySelector('lr-pagination')!
+    .shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
   const eventPromise = oneEvent(el, 'lr-page-change');
   next.click();
   const event = await eventPromise;
@@ -1277,7 +1608,7 @@ it('has part="head" on the thead element', async () => {
   el.rows = rows;
   await el.updateComplete;
   const thead = el.shadowRoot!.querySelector('[part="head"]');
-  expect(thead).to.exist;
+  expect(thead != null).to.equal(true);
   expect(thead!.tagName).to.equal('THEAD');
 });
 
@@ -1289,7 +1620,7 @@ it('renders lr-empty when columns is empty, even with non-empty rows', async () 
   const empty = el.shadowRoot!.querySelector('lr-empty');
   expect(empty).to.exist;
   expect(empty!.getAttribute('heading')).to.equal('No columns configured');
-  expect(el.shadowRoot!.querySelector('table')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('table') == null).to.equal(true);
 });
 
 it('emits lr-sort via keydown (Enter) on a sortable header, not just click', async () => {
@@ -1330,10 +1661,10 @@ it('renders a visual sort-direction chevron only in the active sort column, mark
   const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
   expect(nameHeader.querySelector('[part="sort-icon"]')).to.not.exist;
   const icon = scoreHeader.querySelector('[part="sort-icon"]');
-  expect(icon).to.exist;
+  expect(icon != null).to.equal(true);
   expect(icon!.getAttribute('aria-hidden')).to.equal('true');
   expect(icon!.getAttribute('data-dir')).to.equal('desc');
-  expect(icon!.querySelector('svg')).to.exist;
+  expect(icon!.querySelector('svg') != null).to.equal(true);
 });
 
 it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc', async () => {
@@ -1389,14 +1720,18 @@ it('applies the shared focus-ring outline to a sortable header cell, a row, and 
 
 const priorityColumns: TableColumn<Row>[] = [
   { key: 'name', label: 'Name', cell: (r) => r.name },
-  { key: 'score', label: 'Score', align: 'end', priority: 'medium', cell: (r) => r.score },
+  {
+    key: 'score',
+    label: 'Score',
+    align: 'end',
+    priority: 'medium',
+    cell: (r) => r.score,
+  },
   { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
 ];
 
 it('renders [part="reveal-columns-button"] only when at least one column declares a priority and a priority column is actually hidden', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = columns; // no priority columns
   el.rows = rows;
   await el.updateComplete;
@@ -1412,21 +1747,17 @@ it('renders [part="reveal-columns-button"] only when at least one column declare
 });
 
 it('hides low- and medium-priority columns in a narrow container, and reveals them via the toggle button', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
   await waitUntil(() => el.columnsHidden === true);
 
   const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
-  const mediumHeader = el.shadowRoot!.querySelector(
-    '[part="header-cell"][data-priority="medium"]',
-  ) as HTMLElement;
+  const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
   const lowCell = el.shadowRoot!.querySelector('[part="cell"][data-priority="low"]') as HTMLElement;
-  expect(lowHeader).to.exist;
-  expect(mediumHeader).to.exist;
+  expect(lowHeader != null).to.equal(true);
+  expect(mediumHeader != null).to.equal(true);
   expect(getComputedStyle(lowHeader).display).to.equal('none');
   expect(getComputedStyle(mediumHeader).display).to.equal('none');
   expect(getComputedStyle(lowCell).display).to.equal('none');
@@ -1448,25 +1779,19 @@ it('hides low- and medium-priority columns in a narrow container, and reveals th
 });
 
 it('hides only the low-priority column (not medium) in a mid-width container', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 700px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 700px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
 
   const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
-  const mediumHeader = el.shadowRoot!.querySelector(
-    '[part="header-cell"][data-priority="medium"]',
-  ) as HTMLElement;
+  const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
   expect(getComputedStyle(lowHeader).display).to.equal('none');
   expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
 });
 
 it('swaps the reveal-columns-button label between revealColumnsLabel and hideColumnsLabel on toggle', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -1485,9 +1810,7 @@ it('swaps the reveal-columns-button label between revealColumnsLabel and hideCol
 });
 
 it('honors custom revealColumnsLabel and hideColumnsLabel property values', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   el.revealColumnsLabel = 'More columns';
@@ -1504,9 +1827,7 @@ it('honors custom revealColumnsLabel and hideColumnsLabel property values', asyn
 });
 
 it('never hides a column with no priority declared', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -1516,9 +1837,7 @@ it('never hides a column with no priority declared', async () => {
 });
 
 it('does not render [part="reveal-columns-button"] and keeps columnsHidden false (no event) when a priority column is configured but a wide container never actually hides it', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 1000px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 1000px;"></lr-table>`)) as LyraTable<Row>;
   const events: unknown[] = [];
   el.addEventListener('lr-columns-hidden-change', (e) => events.push(e));
   el.columns = priorityColumns;
@@ -1534,9 +1853,7 @@ it('does not render [part="reveal-columns-button"] and keeps columnsHidden false
 });
 
 it('renders [part="reveal-columns-button"], sets columnsHidden=true, and fires lr-columns-hidden-change once when a priority column is actually hidden by a narrow container', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   const events: boolean[] = [];
   el.addEventListener('lr-columns-hidden-change', (e) => events.push((e as CustomEvent).detail.hidden));
   el.columns = priorityColumns;
@@ -1555,9 +1872,7 @@ it('renders [part="reveal-columns-button"], sets columnsHidden=true, and fires l
 });
 
 it('keeps [part="reveal-columns-button"] visible and columnsHidden=true (no extra event) when showAllColumns force-visible mode is toggled on while narrow', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -1577,9 +1892,7 @@ it('keeps [part="reveal-columns-button"] visible and columnsHidden=true (no extr
 });
 
 it('showAllColumns is a public, reflected property that stays in sync with the reveal button', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -1601,9 +1914,7 @@ it('showAllColumns is a public, reflected property that stays in sync with the r
 });
 
 it('emits lr-columns-revealed with the new state whenever the reveal button is toggled', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -1622,7 +1933,7 @@ it('emits lr-columns-revealed with the new state whenever the reveal button is t
 
 it('restores a previously-persisted showAllColumns preference from the initial property/attribute', async () => {
   const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;" show-all-columns></lr-table>`,
+    html`<lr-table style="display: block; width: 300px;" show-all-columns></lr-table>`
   )) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
@@ -1668,9 +1979,7 @@ it('writes nothing to storage when storage-key is unset (unset-regression)', asy
 });
 
 it('never renders [part="reveal-columns-button"] and keeps columnsHidden false regardless of container width when no column declares a priority (regression)', async () => {
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   const events: unknown[] = [];
   el.addEventListener('lr-columns-hidden-change', (e) => events.push(e));
   el.columns = columns; // no priority columns
@@ -1707,9 +2016,7 @@ it("gives a sticky column's header and cell the sticky positioning attribute and
 });
 
 it("normalizes the legacy sticky: true to data-sticky='start' for backward compatibility", async () => {
-  const stickyColumns: TableColumn<Row>[] = [
-    { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
-  ];
+  const stickyColumns: TableColumn<Row>[] = [{ key: 'name', label: 'Name', sticky: true, cell: (r) => r.name }];
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = stickyColumns;
   el.rows = rows;
@@ -1721,7 +2028,13 @@ it("normalizes the legacy sticky: true to data-sticky='start' for backward compa
 it("pins a sticky: 'end' column's header and cell to the inline-end edge instead of inline-start", async () => {
   const stickyEndColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', align: 'end', sticky: 'end', cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      align: 'end',
+      sticky: 'end',
+      cell: (r) => r.score,
+    },
   ];
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = stickyEndColumns;
@@ -1821,7 +2134,13 @@ it('emits lr-row-click via keydown (Enter and Space) on a focused row', async ()
 it('does not emit lr-sort when a non-sortable header is clicked or activated via keyboard', async () => {
   const mixedColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      sortable: true,
+      align: 'end',
+      cell: (r) => r.score,
+    },
   ];
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = mixedColumns;
@@ -1842,7 +2161,13 @@ it('does not emit lr-sort when a non-sortable header is clicked or activated via
 it('exposes aria-sort as ascending/descending on the active sortable column, "none" once deactivated, and omits it on non-sortable columns', async () => {
   const mixedColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      sortable: true,
+      align: 'end',
+      cell: (r) => r.score,
+    },
   ];
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = mixedColumns;
@@ -1897,66 +2222,112 @@ it('uses selectedKey as the default roving-tabindex row when no row has been foc
   expect(secondRow.getAttribute('tabindex')).to.equal('0');
 });
 
+it('keeps focus in the grid when controlled rows shrink past the focused row', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  await el.updateComplete;
+
+  const renderedRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  renderedRows[1]!.focus();
+  el.rows = [rows[0]!];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:a');
+  expect(el.shadowRoot!.activeElement?.getAttribute('tabindex')).to.equal('0');
+});
+
+it('keeps focus in the grid when controlled columns shrink past the focused header', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  const headers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]')];
+  headers[1]!.focus();
+  el.columns = [columns[0]!];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal('name');
+  expect(el.shadowRoot!.activeElement?.getAttribute('tabindex')).to.equal('0');
+});
+
+it('does not restore controlled-collection focus after the user moves focus outside the table', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-table></lr-table>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  await el.updateComplete;
+
+  const renderedRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  renderedRows[1]!.focus();
+  el.rows = [rows[0]!];
+  outside.focus();
+  await el.updateComplete;
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('moves the roving tabindex between header cells with ArrowRight/ArrowLeft and Home/End', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [
-    ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
-  ] as HTMLElement[];
+  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
 
   nameHeader.focus();
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(scoreHeader);
+  expect(el.shadowRoot!.activeElement === scoreHeader).to.equal(true);
   expect(scoreHeader.getAttribute('tabindex')).to.equal('0');
   expect(nameHeader.getAttribute('tabindex')).to.equal('-1');
 
   scoreHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+  expect(el.shadowRoot!.activeElement === nameHeader).to.equal(true);
 
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(scoreHeader);
+  expect(el.shadowRoot!.activeElement === scoreHeader).to.equal(true);
 
   scoreHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+  expect(el.shadowRoot!.activeElement === nameHeader).to.equal(true);
 });
 
 it('swaps ArrowLeft/ArrowRight header navigation under dir="rtl", matching a native table\'s own mirrored column order', async () => {
-  const el = (await fixture(
-    html`<lr-table dir="rtl"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [
-    ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
-  ] as HTMLElement[];
+  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
 
   // Under RTL, ArrowRight moves toward the *start* of DOM order (the visual
   // right edge, since the table mirrors columns) -- the opposite of LTR.
   nameHeader.focus();
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+  expect(el.shadowRoot!.activeElement === nameHeader).to.equal(true);
 
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(scoreHeader);
+  expect(el.shadowRoot!.activeElement === scoreHeader).to.equal(true);
 
   scoreHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+  expect(el.shadowRoot!.activeElement === nameHeader).to.equal(true);
 });
 
 it('does not swap ArrowUp/ArrowDown row navigation under dir="rtl" (direction only affects the horizontal column axis)', async () => {
-  const el = (await fixture(
-    html`<lr-table dir="rtl"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   el.rowKey = (r) => r.id;
@@ -1966,11 +2337,11 @@ it('does not swap ArrowUp/ArrowDown row navigation under dir="rtl" (direction on
   firstRow.focus();
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(secondRow);
+  expect(el.shadowRoot!.activeElement === secondRow).to.equal(true);
 
   secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(firstRow);
+  expect(el.shadowRoot!.activeElement === firstRow).to.equal(true);
 });
 
 it('moves the roving tabindex between rows with ArrowDown/ArrowUp, and ArrowUp from the first row returns focus to the header', async () => {
@@ -1984,18 +2355,18 @@ it('moves the roving tabindex between rows with ArrowDown/ArrowUp, and ArrowUp f
   firstRow.focus();
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(secondRow);
+  expect(el.shadowRoot!.activeElement === secondRow).to.equal(true);
   expect(secondRow.getAttribute('tabindex')).to.equal('0');
   expect(firstRow.getAttribute('tabindex')).to.equal('-1');
 
   secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(firstRow);
+  expect(el.shadowRoot!.activeElement === firstRow).to.equal(true);
 
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
   await el.updateComplete;
   const nameHeader = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
-  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+  expect(el.shadowRoot!.activeElement === nameHeader).to.equal(true);
 });
 
 it('supports Home/End row navigation and ignores unknown keyboard commands', async () => {
@@ -2039,9 +2410,7 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
     { key: 'score', label: 'Score', priority: 'low', cell: (r) => r.score },
     { key: 'id', label: 'Id', cell: (r) => r.id },
   ];
-  const el = (await fixture(
-    html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = skipColumns;
   el.rows = rows;
   await el.updateComplete;
@@ -2054,7 +2423,7 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
   nameHeader.focus();
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(idHeader);
+  expect(el.shadowRoot!.activeElement === idHeader).to.equal(true);
   expect(idHeader.getAttribute('tabindex')).to.equal('0');
 });
 
@@ -2098,7 +2467,7 @@ it('moves focus from the header into the body row with ArrowDown', async () => {
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await el.updateComplete;
   const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
-  expect(el.shadowRoot!.activeElement).to.equal(firstRow);
+  expect(el.shadowRoot!.activeElement === firstRow).to.equal(true);
 });
 
 it('offsets a second sticky column past the first instead of overlapping at inset 0', async () => {
@@ -2119,15 +2488,15 @@ it('offsets a second sticky column past the first instead of overlapping at inse
 it('does not treat a custom interactive element inside a cell as a row-activation target', async () => {
   const actionColumns: TableColumn<Row>[] = [
     ...columns,
-    { key: 'actions', label: '', cell: () => html`<lr-select data-testid="cell-select"></lr-select>` },
+    {
+      key: 'actions',
+      label: '',
+      cell: () => html`<lr-select data-testid="cell-select"></lr-select>`,
+    },
   ];
   let rowClicked = false;
   const el = (await fixture(
-    html`<lr-table
-      .columns=${actionColumns}
-      .rows=${rows}
-      @lr-row-click=${() => (rowClicked = true)}
-    ></lr-table>`,
+    html`<lr-table .columns=${actionColumns} .rows=${rows} @lr-row-click=${() => (rowClicked = true)}></lr-table>`
   )) as LyraTable<Row>;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('lr-select')!;
@@ -2140,15 +2509,13 @@ it('keeps a numeric-key row and a string-key row distinct instead of colliding',
     { id: 1, name: 'Numeric', email: 'n@example.com' },
     { id: '1', name: 'String', email: 's@example.com' },
   ];
-  const mixedColumns: TableColumn<(typeof mixedRows)[number]>[] = [
-    { key: 'name', label: 'Name', cell: (r) => r.name },
-  ];
+  const mixedColumns: TableColumn<(typeof mixedRows)[number]>[] = [{ key: 'name', label: 'Name', cell: (r) => r.name }];
   const el = (await fixture(
     html`<lr-table
       .columns=${mixedColumns}
       .rows=${mixedRows}
       .rowKey=${(r: (typeof mixedRows)[number]) => r.id}
-    ></lr-table>`,
+    ></lr-table>`
   )) as LyraTable<(typeof mixedRows)[number]>;
   await el.updateComplete;
   const rowEls = el.shadowRoot!.querySelectorAll('[data-row-key]');
@@ -2157,9 +2524,7 @@ it('keeps a numeric-key row and a string-key row distinct instead of colliding',
 });
 
 it('forwards a host aria-label into the shadow-DOM grid element', async () => {
-  const el = (await fixture(
-    html`<lr-table aria-label="Scores"></lr-table>`,
-  )) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
@@ -2214,7 +2579,7 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
     const cap = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
-    expect(cap).to.exist;
+    expect(cap != null).to.equal(true);
     expect(cap.textContent).to.equal('Quarterly results');
     expect(grid.getAttribute('aria-labelledby')).to.equal(cap.id);
     expect(warnings.length).to.equal(0);
@@ -2263,18 +2628,14 @@ it('does not trigger a Lit "scheduled an update after an update completed" dev w
   // equivalent tests use.
   const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
   if (globalWarnings) {
-    [...globalWarnings]
-      .filter((w) => w.includes('scheduled an update'))
-      .forEach((w) => globalWarnings.delete(w));
+    [...globalWarnings].filter((w) => w.includes('scheduled an update')).forEach((w) => globalWarnings.delete(w));
   }
 
   const originalWarn = console.warn;
   const calls: unknown[][] = [];
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
-    const el = (await fixture(
-      html`<lr-table style="display: block; width: 300px;"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
     el.columns = priorityColumns;
     el.rows = rows;
     await el.updateComplete;
@@ -2311,7 +2672,11 @@ it('does not trigger row activation or preventDefault when Enter is pressed on a
 
   const actionButton = el.shadowRoot!.querySelector('[data-action]') as HTMLButtonElement;
   actionButton.focus();
-  const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  const event = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    cancelable: true,
+  });
   const notPrevented = actionButton.dispatchEvent(event);
 
   expect(rowClicked).to.be.false;
@@ -2322,14 +2687,19 @@ describe('footer column hook', () => {
   it('renders a real tfoot when any column has a footer hook', async () => {
     const withFooter: TableColumn<Row>[] = [
       ...columns,
-      { key: 'total', label: 'Total', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: () => '' },
+      {
+        key: 'total',
+        label: 'Total',
+        footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0),
+        cell: () => '',
+      },
     ];
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = withFooter;
     el.rows = rows;
     await el.updateComplete;
     const foot = el.shadowRoot!.querySelector('tfoot[part="foot"]');
-    expect(foot).to.exist;
+    expect(foot != null).to.equal(true);
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
     expect(footerCells).to.have.length(withFooter.length);
     expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4');
@@ -2340,14 +2710,19 @@ describe('footer column hook', () => {
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('tfoot')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('tfoot') == null).to.equal(true);
   });
 });
 
 describe('cellStyle column hook', () => {
   it('applies cellStyle to the generated td via styleMap', async () => {
     const withStyle: TableColumn<Row>[] = [
-      { key: 'name', label: 'Name', cell: (r) => r.name, cellStyle: (r) => ({ background: r.score > 2 ? 'red' : 'blue' }) },
+      {
+        key: 'name',
+        label: 'Name',
+        cell: (r) => r.name,
+        cellStyle: (r) => ({ background: r.score > 2 ? 'red' : 'blue' }),
+      },
     ];
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = withStyle;
@@ -2360,7 +2735,13 @@ describe('cellStyle column hook', () => {
 
   it('coexists with sticky-column offset styling without clobbering it', async () => {
     const withBoth: TableColumn<Row>[] = [
-      { key: 'name', label: 'Name', sticky: true, cellStyle: () => ({ background: 'green' }), cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        sticky: true,
+        cellStyle: () => ({ background: 'green' }),
+        cell: (r) => r.name,
+      },
     ];
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = withBoth;
@@ -2449,7 +2830,7 @@ describe('expandable rows', () => {
     expect(el.shadowRoot!.querySelector('[data-row-expand-toggle]')).to.exist;
     const toggleCells = el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]');
     expect(toggleCells.length).to.equal(rows.length);
-    expect(toggleCells[0].querySelector('button')).to.exist;
+    expect(toggleCells[0].querySelector('button') != null).to.equal(true);
   });
 
   it('gives the row-expand toggle button the shared minimum hit area', async () => {
@@ -2473,8 +2854,8 @@ describe('expandable rows', () => {
     el.canExpand = (r) => r.id !== 'a';
     await el.updateComplete;
     const toggleCells = [...el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]')];
-    expect(toggleCells[0].querySelector('button')).to.not.exist; // row 'a' (Alpha) opted out
-    expect(toggleCells[1].querySelector('button')).to.exist; // row 'b' (Beta)
+    expect(toggleCells[0].querySelector('button') == null).to.equal(true); // row 'a' (Alpha) opted out
+    expect(toggleCells[1].querySelector('button') != null).to.equal(true); // row 'b' (Beta)
   });
 
   it('emits lr-row-expand-toggle with { row, key } when the chevron button is clicked, and does not also emit lr-row-click', async () => {
@@ -2524,7 +2905,7 @@ describe('expandable rows', () => {
     await el.updateComplete;
 
     const expandedRow = el.shadowRoot!.querySelector('[part="expanded-row"]');
-    expect(expandedRow).to.exist;
+    expect(expandedRow != null).to.equal(true);
     const expandedCell = expandedRow!.querySelector('[part="expanded-cell"]') as HTMLElement;
     expect(expandedCell.getAttribute('colspan')).to.equal('3'); // 2 columns + 1 toggle column
     expect(expandedCell.querySelector('.panel')!.textContent).to.equal('Alpha details');
@@ -2573,7 +2954,11 @@ describe('expandable rows', () => {
 
     const toggleButton = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
     toggleButton.focus();
-    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
     const notPrevented = toggleButton.dispatchEvent(event);
 
     expect(rowClicked).to.be.false;
@@ -2594,7 +2979,12 @@ describe('expandable rows', () => {
   it('grows a matching leading spacer cell in the footer row when combined with a footer column, keeping real footer cells aligned', async () => {
     const withFooter: TableColumn<Row>[] = [
       ...expandableColumns,
-      { key: 'total', label: 'Total', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: () => '' },
+      {
+        key: 'total',
+        label: 'Total',
+        footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0),
+        cell: () => '',
+      },
     ];
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = withFooter;
@@ -2604,7 +2994,7 @@ describe('expandable rows', () => {
     await el.updateComplete;
 
     const foot = el.shadowRoot!.querySelector('tfoot[part="foot"]');
-    expect(foot).to.exist;
+    expect(foot != null).to.equal(true);
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')] as HTMLElement[];
     // 3 real columns + 1 leading spacer cell for the expand-toggle column.
     expect(footerCells).to.have.length(withFooter.length + 1);
@@ -2626,7 +3016,7 @@ describe('expandable rows', () => {
 describe('localization', () => {
   it('localizes the no-columns empty-state heading', async () => {
     const el = (await fixture(
-      html`<lr-table .strings=${{ noColumns: 'Aucune colonne' }}></lr-table>`,
+      html`<lr-table .strings=${{ noColumns: 'Aucune colonne' }}></lr-table>`
     )) as LyraTable<Row>;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Aucune colonne');
@@ -2634,7 +3024,7 @@ describe('localization', () => {
 
   it('localizes the loading spinner label', async () => {
     const el = (await fixture(
-      html`<lr-table loading .strings=${{ tableLoading: 'Chargement des lignes' }}></lr-table>`,
+      html`<lr-table loading .strings=${{ tableLoading: 'Chargement des lignes' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -2646,14 +3036,14 @@ describe('localization', () => {
 
   it('localizes the no-data empty-state heading (both the whole-table and filtered-to-empty variants)', async () => {
     const whole = (await fixture(
-      html`<lr-table .strings=${{ noData: 'Aucune donnée' }}></lr-table>`,
+      html`<lr-table .strings=${{ noData: 'Aucune donnée' }}></lr-table>`
     )) as LyraTable<Row>;
     whole.columns = columns; // rows left empty -- exercises the whole-table (not no-columns) empty state
     await whole.updateComplete;
     expect(whole.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Aucune donnée');
 
     const filtered = (await fixture(
-      html`<lr-table filterable .strings=${{ noData: 'Aucune correspondance' }}></lr-table>`,
+      html`<lr-table filterable .strings=${{ noData: 'Aucune correspondance' }}></lr-table>`
     )) as LyraTable<Row>;
     filtered.columns = columns;
     filtered.rows = rows;
@@ -2661,17 +3051,18 @@ describe('localization', () => {
     await filtered.updateComplete;
     filtered.filterText = 'nonexistent-xyz';
     await filtered.updateComplete;
-    expect(filtered.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal(
-      'Aucune correspondance',
-    );
+    expect(filtered.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Aucune correspondance');
   });
 
   it('localizes the filter label and placeholder', async () => {
     const el = (await fixture(
       html`<lr-table
         filterable
-        .strings=${{ tableFilterLabel: 'Filtrer', tableFilterPlaceholder: 'Rechercher…' }}
-      ></lr-table>`,
+        .strings=${{
+          tableFilterLabel: 'Filtrer',
+          tableFilterPlaceholder: 'Rechercher…',
+        }}
+      ></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -2689,7 +3080,7 @@ describe('localization', () => {
       { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
     ];
     const el = (await fixture(
-      html`<lr-table .strings=${{ expand: 'Développer', collapse: 'Réduire' }}></lr-table>`,
+      html`<lr-table .strings=${{ expand: 'Développer', collapse: 'Réduire' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -2710,7 +3101,7 @@ describe('localization', () => {
 
   it('localizes the inline cell editor aria-label, interpolating the column label', async () => {
     const el = (await fixture(
-      html`<lr-table .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`,
+      html`<lr-table .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = editableColumns;
     el.rows = rows;
@@ -2727,14 +3118,23 @@ describe('localization', () => {
   it('localizes the reveal/hide-columns button label', async () => {
     const priorityColumns: TableColumn<Row>[] = [
       { key: 'name', label: 'Name', cell: (r) => r.name },
-      { key: 'score', label: 'Score', align: 'end', priority: 'medium', cell: (r) => r.score },
+      {
+        key: 'score',
+        label: 'Score',
+        align: 'end',
+        priority: 'medium',
+        cell: (r) => r.score,
+      },
       { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
     ];
     const el = (await fixture(
       html`<lr-table
         style="display: block; width: 300px;"
-        .strings=${{ showAllColumns: 'Tout afficher', showFewerColumns: 'Afficher moins' }}
-      ></lr-table>`,
+        .strings=${{
+          showAllColumns: 'Tout afficher',
+          showFewerColumns: 'Afficher moins',
+        }}
+      ></lr-table>`
     )) as LyraTable<Row>;
     el.columns = priorityColumns;
     el.rows = rows;
@@ -2749,9 +3149,7 @@ describe('localization', () => {
   });
 
   it('localizes the load-more button label', async () => {
-    const el = (await fixture(
-      html`<lr-table .strings=${{ loadMore: 'Charger plus' }}></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table .strings=${{ loadMore: 'Charger plus' }}></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     el.hasMore = true;
@@ -2763,7 +3161,13 @@ describe('localization', () => {
 describe('heat-tint mode', () => {
   const heatColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', align: 'end', heatValue: (r) => r.score, cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      align: 'end',
+      heatValue: (r) => r.score,
+      cell: (r) => r.score,
+    },
   ];
 
   it('renders no data-heat cells when no column defines heatValue (unchanged default)', async () => {
@@ -2863,9 +3267,9 @@ describe('heat-tint mode', () => {
     el.rowKey = (r) => r.id;
     await el.updateComplete;
 
-    const shares = [
-      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][data-col-key="score"]'),
-    ].map((cell) => cell.style.getPropertyValue('--lr-table-heat-t'));
+    const shares = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][data-col-key="score"]')].map(
+      (cell) => cell.style.getPropertyValue('--lr-table-heat-t')
+    );
     expect(shares).to.deep.equal(['0.00%', '50.00%', '100.00%']);
   });
 
@@ -2881,7 +3285,12 @@ describe('heat-tint mode', () => {
     ];
     const nullCols: TableColumn<RowN>[] = [
       { key: 'name', label: 'Name', cell: (r) => r.name },
-      { key: 'score', label: 'Score', heatValue: (r) => r.score, cell: (r) => r.score ?? '' },
+      {
+        key: 'score',
+        label: 'Score',
+        heatValue: (r) => r.score,
+        cell: (r) => r.score ?? '',
+      },
     ];
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<RowN>;
     el.columns = nullCols;
@@ -2895,8 +3304,10 @@ describe('heat-tint mode', () => {
 
   it('declares the heat-tint ramp CSS with retheme-able tokens matching lr-heatmap defaults', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-table-heat-tint-lo: var(--lr-color-brand-quiet);');
-    expect(css).to.include('--lr-table-heat-tint-hi: var(--lr-color-brand);');
+    expect(css).to.include('--_lr-table-heat-tint-lo-default: var(--lr-color-brand-quiet);');
+    expect(css).to.include('--_lr-table-heat-tint-hi-default: var(--lr-color-brand);');
+    expect(css).to.not.include('--lr-table-heat-tint-lo:');
+    expect(css).to.not.include('--lr-table-heat-tint-hi:');
     expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
   });
 
@@ -2916,6 +3327,30 @@ describe('heat-tint mode', () => {
     const untintedBackground = getComputedStyle(untintedCell).backgroundColor;
     expect(tintedBackground).to.not.equal(untintedBackground);
     expect(tintedBackground).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('inherits heat-tint endpoints from an ancestor and paints them on cells', async () => {
+    const wrapper = await fixture(html`
+      <div style="--lr-table-heat-tint-lo:rgb(1, 2, 3); --lr-table-heat-tint-hi:rgb(1, 2, 3)">
+        <lr-table></lr-table>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const tintedCell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    expect(getComputedStyle(tintedCell).getPropertyValue('--lr-table-heat-tint-lo').trim()).to.equal('rgb(1, 2, 3)');
+
+    const baseline = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    baseline.columns = heatColumns;
+    baseline.rows = rows;
+    baseline.rowKey = (r) => r.id;
+    await baseline.updateComplete;
+    const baselineCell = baseline.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    expect(getComputedStyle(tintedCell).backgroundColor).to.not.equal(getComputedStyle(baselineCell).backgroundColor);
   });
 
   it('applies both cellStyle and the heat-tint custom property to the same cell when both are set', async () => {
@@ -2970,7 +3405,13 @@ describe('heat-tint mode', () => {
 describe('rowTotal / grandTotal', () => {
   const totalsColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', align: 'end', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      align: 'end',
+      footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0),
+      cell: (r) => r.score,
+    },
   ];
 
   it('renders no trailing column when rowTotal is unset (unchanged default)', async () => {
@@ -3006,7 +3447,7 @@ describe('rowTotal / grandTotal', () => {
     el.grandTotal = (rs) => rs.reduce((sum, r) => sum + r.score, 0);
     await el.updateComplete;
     const foot = el.shadowRoot!.querySelector('[part="foot"]');
-    expect(foot).to.exist;
+    expect(foot != null).to.equal(true);
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
     expect(footerCells[footerCells.length - 1].textContent!.trim()).to.equal('4'); // 3 + 1
   });
@@ -3020,7 +3461,7 @@ describe('rowTotal / grandTotal', () => {
     // grandTotal deliberately left unset.
     await el.updateComplete;
     const foot = el.shadowRoot!.querySelector('[part="foot"]');
-    expect(foot).to.exist;
+    expect(foot != null).to.equal(true);
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
     expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('');
   });
@@ -3144,9 +3585,7 @@ describe('sticky-offset observation across reconnect', () => {
       { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
       { key: 'score', label: 'Score', sticky: true, cell: (r) => r.score },
     ];
-    const el = (await fixture(
-      html`<lr-table style="inline-size: 600px"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table style="inline-size: 600px"></lr-table>`)) as LyraTable<Row>;
     el.columns = stickyColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
@@ -3155,7 +3594,7 @@ describe('sticky-offset observation across reconnect', () => {
     const headers = () => el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]');
     await waitUntil(
       () => headers()[1].style.getPropertyValue('--lr-table-sticky-offset') !== '',
-      'expected an initial sticky offset on the second sticky column',
+      'expected an initial sticky offset on the second sticky column'
     );
     const initialOffset = headers()[1].style.getPropertyValue('--lr-table-sticky-offset');
 
@@ -3181,7 +3620,7 @@ describe('sticky-offset observation across reconnect', () => {
         return offset === `${first.offsetWidth}px` && offset !== initialOffset;
       },
       'expected the second sticky column offset to track the resized first header after reconnect',
-      { timeout: 2000 },
+      { timeout: 2000 }
     );
   });
 });
@@ -3238,13 +3677,13 @@ describe('empty-state addressability', () => {
 
   it('replaces the built-in empty with an `empty`-slotted node on the data-empty branches', async () => {
     const el = (await fixture(
-      html`<lr-table><div slot="empty" style="block-size: 40px">Nothing here</div></lr-table>`,
+      html`<lr-table><div slot="empty" style="block-size: 40px">Nothing here</div></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
     await el.updateComplete;
     const slot = el.shadowRoot!.querySelector('slot[name="empty"]') as HTMLSlotElement;
-    expect(slot, 'expected an `empty` slot on the zero-rows branch').to.exist;
+    expect(slot != null, 'expected an `empty` slot on the zero-rows branch').to.equal(true);
     expect(slot.assignedElements().map((node) => node.textContent)).to.deep.equal(['Nothing here']);
     // Slotted content replaces the fallback: the built-in <lr-empty> generates no boxes.
     const builtIn = el.shadowRoot!.querySelector('[part~="empty"]') as HTMLElement;
@@ -3253,7 +3692,7 @@ describe('empty-state addressability', () => {
 
   it('replaces the built-in empty on the filtered-to-zero branch too', async () => {
     const el = (await fixture(
-      html`<lr-table filterable><div slot="empty">Nothing here</div></lr-table>`,
+      html`<lr-table filterable><div slot="empty">Nothing here</div></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -3261,20 +3700,18 @@ describe('empty-state addressability', () => {
     el.filterText = 'nonexistent-xyz';
     await el.updateComplete;
     const slot = el.shadowRoot!.querySelector('slot[name="empty"]') as HTMLSlotElement;
-    expect(slot, 'expected an `empty` slot on the filtered-to-zero branch').to.exist;
+    expect(slot != null, 'expected an `empty` slot on the filtered-to-zero branch').to.equal(true);
     expect(slot.assignedElements().length).to.equal(1);
     expect((el.shadowRoot!.querySelector('[part~="empty"]') as HTMLElement).getClientRects().length).to.equal(0);
   });
 
   it('keeps the distinct no-columns heading even when an `empty` node is slotted', async () => {
-    const el = (await fixture(
-      html`<lr-table><div slot="empty">Nothing here</div></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table><div slot="empty">Nothing here</div></lr-table>`)) as LyraTable<Row>;
     el.columns = [];
     el.rows = rows;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('slot[name="empty"]'), 'the no-columns branch is not slot-replaceable').to
-      .not.exist;
+    expect(el.shadowRoot!.querySelector('slot[name="empty"]'), 'the no-columns branch is not slot-replaceable').to.not
+      .exist;
     const builtIn = el.shadowRoot!.querySelector('[part~="empty"]')!;
     expect(builtIn.getAttribute('heading')).to.equal('No columns configured');
     expect((builtIn as HTMLElement).getClientRects().length).to.be.greaterThan(0);
@@ -3305,9 +3742,7 @@ describe('empty-state addressability', () => {
   });
 
   it('parses the literal empty-compact="false" attribute as false, not as mere presence', async () => {
-    const el = (await fixture(
-      html`<lr-table filterable empty-compact="false"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table filterable empty-compact="false"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
@@ -3319,9 +3754,7 @@ describe('empty-state addressability', () => {
   });
 
   it('parses a removed empty-compact attribute back to undefined, not false', async () => {
-    const el = (await fixture(
-      html`<lr-table empty-compact="false"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table empty-compact="false"></lr-table>`)) as LyraTable<Row>;
     expect(el.emptyCompact).to.be.false;
     el.removeAttribute('empty-compact');
     await el.updateComplete;
@@ -3330,7 +3763,7 @@ describe('empty-state addressability', () => {
 
   it('is accessible with a slotted empty state', async () => {
     const el = (await fixture(
-      html`<lr-table aria-label="Scores"><p slot="empty">No scores recorded yet.</p></lr-table>`,
+      html`<lr-table aria-label="Scores"><p slot="empty">No scores recorded yet.</p></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
@@ -3342,7 +3775,12 @@ describe('empty-state addressability', () => {
 
 describe('TableColumn.cellTitle', () => {
   const titledColumns: TableColumn<Row>[] = [
-    { key: 'name', label: 'Name', cellTitle: (r) => `Full name: ${r.name}`, cell: (r) => r.name },
+    {
+      key: 'name',
+      label: 'Name',
+      cellTitle: (r) => `Full name: ${r.name}`,
+      cell: (r) => r.name,
+    },
     { key: 'score', label: 'Score', cell: (r) => r.score },
   ];
 
@@ -3361,7 +3799,12 @@ describe('TableColumn.cellTitle', () => {
     el.columns = [
       ...titledColumns,
       { key: 'blank', label: 'Blank', cellTitle: () => '', cell: () => 'x' },
-      { key: 'undef', label: 'Undef', cellTitle: () => undefined, cell: () => 'x' },
+      {
+        key: 'undef',
+        label: 'Undef',
+        cellTitle: () => undefined,
+        cell: () => 'x',
+      },
     ];
     el.rows = rows;
     el.rowKey = (r) => r.id;
@@ -3450,14 +3893,30 @@ describe('layout', () => {
     const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
     handle.setPointerCapture = () => {};
     handle.releasePointerCapture = () => {};
-    handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: 100 }));
-    window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: 180 }));
+    handle.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 7,
+        clientX: 100,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerId: 7,
+        clientX: 180,
+      })
+    );
     await el.updateComplete;
     const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
-    expect(getComputedStyle(table).tableLayout, 'resizing does not work without table-layout: fixed').to.equal(
-      'fixed',
+    expect(getComputedStyle(table).tableLayout, 'resizing does not work without table-layout: fixed').to.equal('fixed');
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 7,
+        clientX: 180,
+      })
     );
-    window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: 180 }));
   });
 });
 
@@ -3498,10 +3957,7 @@ describe('--lr-table-row-selected-bg', () => {
     selected.scrollIntoView();
     const resting = getComputedStyle(selected).backgroundColor;
     const rect = selected.getBoundingClientRect();
-    const position: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
+    const position: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
     try {
       await sendMouse({ type: 'move', position });
       await sendMouse({ type: 'down' });
@@ -3522,10 +3978,7 @@ describe('--lr-table-row-selected-bg', () => {
     selected.scrollIntoView();
     const resting = getComputedStyle(selected).backgroundColor;
     const rect = selected.getBoundingClientRect();
-    const position: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
+    const position: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
     try {
       await sendMouse({ type: 'move', position });
       expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
@@ -3558,7 +4011,13 @@ describe('--lr-table-row-stripe-bg', () => {
 describe('loadingAppearance="skeleton"', () => {
   const widthColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', width: '160px', cell: (r) => r.name },
-    { key: 'score', label: 'Score', width: '80px', align: 'end', cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      width: '80px',
+      align: 'end',
+      cell: (r) => r.score,
+    },
   ];
 
   const skeletonRowsOf = (el: LyraTable<Row>): HTMLElement[] => [
@@ -3566,16 +4025,14 @@ describe('loadingAppearance="skeleton"', () => {
   ];
 
   it('keeps the header row and renders skeleton body rows instead of the spinner or the empty state', async () => {
-    const el = (await fixture(
-      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table loading loading-appearance="skeleton"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = []; // a cold load: no rows have arrived yet
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(1);
     expect(
-      [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map((h) => h.textContent!.trim()),
+      [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map((h) => h.textContent!.trim())
     ).to.deep.equal(['Name', 'Score']);
     expect(el.shadowRoot!.querySelectorAll('[part="loading"] lr-spinner').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-empty').length).to.equal(0);
@@ -3615,9 +4072,7 @@ describe('loadingAppearance="skeleton"', () => {
   });
 
   it('derives the placeholder row count from pageSize and lets skeletonRows override it', async () => {
-    const el = (await fixture(
-      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table loading loading-appearance="skeleton"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
     await el.updateComplete;
@@ -3643,14 +4098,14 @@ describe('loadingAppearance="skeleton"', () => {
 
   it('keeps column geometry stable across the load', async () => {
     const el = (await fixture(
-      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`,
+      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = widthColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     await el.updateComplete;
     const loaded = [...el.shadowRoot!.querySelectorAll('th[data-col-key]')].map(
-      (th) => th.getBoundingClientRect().width,
+      (th) => th.getBoundingClientRect().width
     );
     expect(loaded.length).to.equal(2);
 
@@ -3659,17 +4114,24 @@ describe('loadingAppearance="skeleton"', () => {
     await el.updateComplete;
     expect(skeletonRowsOf(el).length).to.equal(3);
     const loadingWidths = [...el.shadowRoot!.querySelectorAll('th[data-col-key]')].map(
-      (th) => th.getBoundingClientRect().width,
+      (th) => th.getBoundingClientRect().width
     );
     expect(loadingWidths).to.deep.equal(loaded);
   });
 
   it('keeps a resized column at its resized width in skeleton mode', async () => {
     const el = (await fixture(
-      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`,
+      html`<lr-table style="display: block; width: 400px;" loading-appearance="skeleton"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = [
-      { key: 'name', label: 'Name', width: '160px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        width: '160px',
+        minWidth: '80px',
+        resizable: true,
+        cell: (r) => r.name,
+      },
       widthColumns[1]!,
     ];
     el.rows = rows;
@@ -3677,28 +4139,30 @@ describe('loadingAppearance="skeleton"', () => {
     await el.updateComplete;
 
     const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
-    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    handle.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    const resized = (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement)
-      .getBoundingClientRect().width;
+    const resized = (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement).getBoundingClientRect()
+      .width;
 
     el.loading = true;
     el.rows = [];
     await el.updateComplete;
     const cols = [...el.shadowRoot!.querySelectorAll<HTMLElement>('colgroup col')];
     expect(cols.length).to.equal(2);
-    expect(cols[0]!.style.inlineSize, 'the resized width survives into the placeholder render').to.equal(
-      '170px',
-    );
+    expect(cols[0]!.style.inlineSize, 'the resized width survives into the placeholder render').to.equal('170px');
     expect(
-      (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement).getBoundingClientRect().width,
+      (el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement).getBoundingClientRect().width
     ).to.equal(resized);
   });
 
   it('exposes one aria-hidden loading mirror, not one live region per placeholder cell', async () => {
-    const el = (await fixture(
-      html`<lr-table loading loading-appearance="skeleton"></lr-table>`,
-    )) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table loading loading-appearance="skeleton"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
     await el.updateComplete;
@@ -3710,7 +4174,7 @@ describe('loadingAppearance="skeleton"', () => {
     expect(status.textContent!.trim()).to.equal('Loading rows');
     expect(
       [...el.shadowRoot!.querySelectorAll('lr-skeleton')].filter((s) => s.hasAttribute('role')).length,
-      'every placeholder opts out of its own announcement',
+      'every placeholder opts out of its own announcement'
     ).to.equal(0);
   });
 
@@ -3730,7 +4194,7 @@ describe('loadingAppearance="skeleton"', () => {
 
   it('gives a priority-hidden column no visible placeholder cell', async () => {
     const el = (await fixture(
-      html`<lr-table style="display: block; width: 300px;" loading loading-appearance="skeleton"></lr-table>`,
+      html`<lr-table style="display: block; width: 300px;" loading loading-appearance="skeleton"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = priorityColumns;
     el.rows = [];
@@ -3741,10 +4205,10 @@ describe('loadingAppearance="skeleton"', () => {
     const lowCell = row.querySelector('[part="cell"][data-priority="low"]') as HTMLElement;
     expect(getComputedStyle(lowCell).display).to.equal('none');
     const visibleCells = [...row.querySelectorAll<HTMLElement>('[part="cell"]')].filter(
-      (cell) => cell.offsetParent !== null,
+      (cell) => cell.offsetParent !== null
     );
     const visibleHeaders = [...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
-      (th) => th.offsetParent !== null,
+      (th) => th.offsetParent !== null
     );
     expect(visibleCells.length).to.equal(1);
     expect(visibleCells.length).to.equal(visibleHeaders.length);
@@ -3752,7 +4216,7 @@ describe('loadingAppearance="skeleton"', () => {
 
   it('keeps the filter field and the pagination footer in place while loading', async () => {
     const el = (await fixture(
-      html`<lr-table filterable page-size="4" loading loading-appearance="skeleton"></lr-table>`,
+      html`<lr-table filterable page-size="4" loading loading-appearance="skeleton"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
@@ -3769,21 +4233,19 @@ describe('loadingAppearance="skeleton"', () => {
         loading
         loading-appearance="skeleton"
         .strings=${{ tableLoading: 'Chargement des lignes' }}
-      ></lr-table>`,
+      ></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
     await el.updateComplete;
     // Guards against passing against the spinner branch's own status node instead.
     expect(skeletonRowsOf(el).length).to.equal(3);
-    expect(el.shadowRoot!.querySelector('[part="loading"]')!.textContent!.trim()).to.equal(
-      'Chargement des lignes',
-    );
+    expect(el.shadowRoot!.querySelector('[part="loading"]')!.textContent!.trim()).to.equal('Chargement des lignes');
   });
 
   it('is accessible in skeleton mode', async () => {
     const el = (await fixture(
-      html`<lr-table aria-label="Scores" loading loading-appearance="skeleton"></lr-table>`,
+      html`<lr-table aria-label="Scores" loading loading-appearance="skeleton"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
@@ -3795,16 +4257,18 @@ describe('loadingAppearance="skeleton"', () => {
 
 it("colors the filter's placeholder and undoes Firefox's reduced default opacity", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
+  expect(css).to.match(
+    /\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/
+  );
 });
 
-it('resets the native search-cancel glyph on the filter field (matches lr-input\'s own unconditional reset)', () => {
+it("resets the native search-cancel glyph on the filter field (matches lr-input's own unconditional reset)", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-cancel-button/);
   expect(css).to.match(/\[part='filter'\]\[type='search'\]::-webkit-search-decoration/);
 });
 
-it('resets the native number-spinner chrome on the cell editor (editType: \'number\')', () => {
+it("resets the native number-spinner chrome on the cell editor (editType: 'number')", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]\s*\{[^}]*appearance:\s*textfield/);
   expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-inner-spin-button/);
@@ -3814,7 +4278,7 @@ it('resets the native number-spinner chrome on the cell editor (editType: \'numb
 it('wraps the sortable-header hover selector in :where() so a consumer ::part(header-cell):hover can win without !important', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(
-    /:where\(\[part='header-cell'\]\[data-sortable\]\):hover\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/,
+    /:where\(\[part='header-cell'\]\[data-sortable\]\):hover\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/
   );
   // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
   expect(css).to.not.include("[part='header-cell'][data-sortable]:hover {");
@@ -3853,7 +4317,7 @@ describe("editable: 'always'", () => {
     expect(el.shadowRoot!.querySelectorAll('td[data-col-key="score"] [part="cell-editor"]')).to.have.lengthOf(2);
     expect(el.shadowRoot!.querySelectorAll('td[data-col-key="name"] [part="cell-editor"]')).to.have.lengthOf(0);
     const values = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="cell-editor"]')].map(
-      (input) => input.value,
+      (input) => input.value
     );
     expect(values).to.deep.equal(['3', '1']);
   });
@@ -3861,7 +4325,7 @@ describe("editable: 'always'", () => {
   it('names every persistent editor individually through the tableEditCell key', async () => {
     const el = await alwaysTable();
     const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
-      input.getAttribute('aria-label'),
+      input.getAttribute('aria-label')
     );
     expect(labels).to.deep.equal(['Edit Score', 'Edit Score']);
   });
@@ -3874,7 +4338,13 @@ describe("editable: 'always'", () => {
 
   it('leaves an editable: true column closed until double-click (regression)', async () => {
     const el = await alwaysTable([
-      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        editable: true,
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
     ]);
     expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
     const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
@@ -3933,7 +4403,13 @@ describe("editable: 'always'", () => {
 
   it('keeps re-asserting the source value in a double-click editor (unchanged property binding)', async () => {
     const el = await alwaysTable([
-      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        editable: true,
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
     ]);
     const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
     cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
@@ -4026,7 +4502,13 @@ describe("editable: 'always'", () => {
     // land on row a's score editor instead of the cell that was actually double-clicked.
     const el = await alwaysTable([
       alwaysColumns[1]!,
-      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        editable: true,
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
     ]);
     const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
     const target = rowEls[1]!.querySelector('td[data-col-key="name"]') as HTMLElement;
@@ -4037,7 +4519,13 @@ describe("editable: 'always'", () => {
 
   it('autofocuses the double-clicked cell when no always-on column exists (unchanged)', async () => {
     const el = await alwaysTable([
-      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        editable: true,
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
       { key: 'score', label: 'Score', cell: (r) => r.score },
     ]);
     const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
@@ -4069,7 +4557,12 @@ describe("editable: 'always'", () => {
     input.value = '42';
     const eventPromise = oneEvent(el, 'lr-cell-edit');
     input.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
     const event = await eventPromise;
     expect(event.detail.value).to.equal(42);
@@ -4084,7 +4577,12 @@ describe("editable: 'always'", () => {
     const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
     input.focus();
     const notPrevented = input.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
     expect(notPrevented).to.be.true;
@@ -4095,14 +4593,25 @@ describe("editable: 'always'", () => {
 
   it('still cancels Escape on a double-click editor and closes it (regression)', async () => {
     const el = await alwaysTable([
-      { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        editable: true,
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
     ]);
     const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
     cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
     await el.updateComplete;
     const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
     const notPrevented = input.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
     expect(notPrevented).to.be.false;
@@ -4113,7 +4622,13 @@ describe("editable: 'always'", () => {
     const el = await alwaysTable();
     const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
     input.focus();
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        composed: true,
+      })
+    );
     await el.updateComplete;
     expect(focusedEditorCell(el)).to.equal('string:a/score');
   });
@@ -4125,7 +4640,12 @@ describe("editable: 'always'", () => {
     const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
     input.focus();
     input.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
     expect(rowClicked).to.be.false;
@@ -4133,9 +4653,7 @@ describe("editable: 'always'", () => {
 
   it('leaves roving header and row navigation untouched with an always-on column present', async () => {
     const el = await alwaysTable();
-    const [nameHeader, scoreHeader] = [
-      ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
-    ] as HTMLElement[];
+    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
     const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
 
     nameHeader.focus();
@@ -4182,14 +4700,14 @@ describe("editable: 'always'", () => {
 
   it('localizes every persistent editor through a strings override', async () => {
     const el = (await fixture(
-      html`<lr-table aria-label="Scores" .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`,
+      html`<lr-table aria-label="Scores" .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = alwaysColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     await el.updateComplete;
     const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
-      input.getAttribute('aria-label'),
+      input.getAttribute('aria-label')
     );
     expect(labels).to.deep.equal(['Modifier Score', 'Modifier Score']);
   });
@@ -4237,8 +4755,8 @@ describe('announcement sink lifecycle', () => {
     expect((el as unknown as { announcementSink?: unknown }).announcementSink).to.exist;
 
     el.remove();
-    expect((el as unknown as { announcementSink?: unknown }).announcementSink, 'disconnect already released it').to
-      .be.undefined;
+    expect((el as unknown as { announcementSink?: unknown }).announcementSink, 'disconnect already released it').to.be
+      .undefined;
     // syncAnnouncementSink is only ever invoked from connectedCallback in normal operation; calling
     // it directly here exercises its own "not connected" guard without re-entering the full public
     // lifecycle (which would also re-subscribe locale/ResizeObserver machinery with no matching
@@ -4385,9 +4903,7 @@ describe('lr-table sorted-header theming and specificity', () => {
   });
 
   it('lets a consumer ::part(header-cell) cursor override win over the internal sort/cursor rule', async () => {
-    const el = (await fixture(html`
-      <lr-table></lr-table>
-    `)) as LyraTable<Row>;
+    const el = (await fixture(html` <lr-table></lr-table> `)) as LyraTable<Row>;
     // Consumer stylesheet targeting the part from the light DOM.
     const consumerStyle = document.createElement('style');
     consumerStyle.textContent = `lr-table::part(header-cell) { cursor: text; }`;
@@ -4415,7 +4931,13 @@ describe('lr-table client-side sorting', () => {
 
   const sortColumns: TableColumn<SortRow>[] = [
     { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
-    { key: 'score', label: 'Score', sortable: true, sortValue: (r) => r.score, cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      sortable: true,
+      sortValue: (r) => r.score,
+      cell: (r) => r.score,
+    },
   ];
 
   const sortRows: SortRow[] = [
@@ -4434,9 +4956,7 @@ describe('lr-table client-side sorting', () => {
   };
 
   const columnText = (el: LyraTable<SortRow>, key: string): string[] =>
-    [...el.shadowRoot!.querySelectorAll(`tbody [data-col-key="${key}"]`)].map(
-      (cell) => cell.textContent!.trim(),
-    );
+    [...el.shadowRoot!.querySelectorAll(`tbody [data-col-key="${key}"]`)].map((cell) => cell.textContent!.trim());
 
   it('sorts rows client-side by the active column when sortMode is client', async () => {
     const el = await sortTable();
@@ -4500,7 +5020,12 @@ describe('lr-table client-side sorting', () => {
     const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = [
       { key: 'name', label: 'Name', cell: (r) => r.name },
-      { key: 'score', label: 'Score', sortValue: (r) => r.score, cell: (r) => r.score },
+      {
+        key: 'score',
+        label: 'Score',
+        sortValue: (r) => r.score,
+        cell: (r) => r.score,
+      },
     ];
     el.rows = sortRows;
     el.rowKey = (r) => r.id;
@@ -4560,9 +5085,7 @@ describe('lr-table client-side sorting', () => {
   it('keeps row identity across a client sort with no rowKey set', async () => {
     // keyOf() falls back to the row's index in `rows`, and the sort permutes entries while each
     // entry keeps that original index -- so identity survives a re-sort even without rowKey.
-    const el = (await fixture(
-      html`<lr-table accessible-label="Scores"></lr-table>`,
-    )) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = sortColumns;
     el.rows = sortRows;
     el.selectionMode = 'single';
@@ -4585,9 +5108,7 @@ describe('lr-table client-side sorting', () => {
       { id: 'a', name: '\u00e4pple', score: 0 },
     ];
     const localeTable = async (locale: string): Promise<LyraTable<SortRow>> => {
-      const el = (await fixture(
-        html`<lr-table accessible-label="Scores"></lr-table>`,
-      )) as LyraTable<SortRow>;
+      const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
       el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r) => r.name }];
       el.rows = localeRows;
       el.rowKey = (r) => r.id;
@@ -4639,7 +5160,13 @@ describe('lr-table client-side sorting with groupBy', () => {
 
   const groupSortColumns: TableColumn<GroupSortRow>[] = [
     { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
-    { key: 'score', label: 'Score', sortable: true, sortValue: (r) => r.score, cell: (r) => r.score },
+    {
+      key: 'score',
+      label: 'Score',
+      sortable: true,
+      sortValue: (r) => r.score,
+      cell: (r) => r.score,
+    },
   ];
 
   // Groups are contiguous in input order, and 'Zeta' appears before 'Alpha' so a group ordering
@@ -4785,7 +5312,11 @@ describe('grid keyboard navigation edges', () => {
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-row-key]'),
   ];
   const key = async (el: LyraTable<Row>, target: HTMLElement, k: string): Promise<KeyboardEvent> => {
-    const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+    const event = new KeyboardEvent('keydown', {
+      key: k,
+      bubbles: true,
+      cancelable: true,
+    });
     target.dispatchEvent(event);
     await el.updateComplete;
     return event;
@@ -4883,7 +5414,7 @@ describe('grid keyboard navigation edges', () => {
     const th = headers(el);
     expect(
       el.shadowRoot!.querySelectorAll('[data-row-key]').length,
-      'skeleton placeholders carry no data-row-key',
+      'skeleton placeholders carry no data-row-key'
     ).to.equal(0);
 
     th[0]!.focus();
@@ -4896,19 +5427,22 @@ describe('grid keyboard navigation edges', () => {
 
   it('does not move focus (no crash) on ArrowUp from the first row when every column is priority-hidden', async () => {
     const el = (await fixture(
-      html`<lr-table accessible-label="Scores" style="display:block;width:300px;"></lr-table>`,
+      html`<lr-table accessible-label="Scores" style="display:block;width:300px;"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = [
       { key: 'name', label: 'Name', priority: 'low', cell: (r: Row) => r.name },
-      { key: 'score', label: 'Score', priority: 'medium', cell: (r: Row) => r.score },
+      {
+        key: 'score',
+        label: 'Score',
+        priority: 'medium',
+        cell: (r: Row) => r.score,
+      },
     ];
     el.rows = rows;
     el.rowKey = (r) => r.id;
     await el.updateComplete;
     await waitUntil(() =>
-      [...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]')].every(
-        (h) => h.offsetParent === null,
-      ),
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]')].every((h) => h.offsetParent === null)
     );
 
     const row = bodyRows(el)[0]!;
@@ -4944,8 +5478,18 @@ it('renders grouped rows with per-group and grand totals', async () => {
     <lr-table
       accessible-label="Scores"
       .columns=${[
-        { key: 'name', label: 'Name', cell: (r: Row) => r.name, footer: (all: Row[]) => `${all.length} rows` },
-        { key: 'score', label: 'Score', align: 'end', cell: (r: Row) => r.score },
+        {
+          key: 'name',
+          label: 'Name',
+          cell: (r: Row) => r.name,
+          footer: (all: Row[]) => `${all.length} rows`,
+        },
+        {
+          key: 'score',
+          label: 'Score',
+          align: 'end',
+          cell: (r: Row) => r.score,
+        },
       ]}
       .rows=${[...rows, { id: 'c', name: 'Gamma', score: 5 }]}
       .groupBy=${(row: Row) => (row.score > 2 ? 'high' : 'low')}
@@ -4964,7 +5508,12 @@ it('renders grouped rows with per-group and grand totals', async () => {
 it('rejects a column width that would inject extra declarations into the col element', async () => {
   const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
   el.columns = [
-    { key: 'name', label: 'Name', cell: (r: Row) => r.name, width: '10rem;background-image:url(https://example.test/b.png)' },
+    {
+      key: 'name',
+      label: 'Name',
+      cell: (r: Row) => r.name,
+      width: '10rem;background-image:url(https://example.test/b.png)',
+    },
     { key: 'score', label: 'Score', cell: (r: Row) => r.score, width: '8rem' },
   ];
   el.rows = rows;
@@ -4987,35 +5536,39 @@ it('moves the roving tabindex between body rows and back up into the header', as
   headers[0]!.focus();
   headers[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+  expect(el.shadowRoot!.activeElement === bodyRows[0]).to.equal(true);
 
   bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[1]);
+  expect(el.shadowRoot!.activeElement === bodyRows[1]).to.equal(true);
 
   bodyRows[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+  expect(el.shadowRoot!.activeElement === bodyRows[0]).to.equal(true);
 
   bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(headers[0]);
+  expect(el.shadowRoot!.activeElement === headers[0]).to.equal(true);
 
   bodyRows[0]!.focus();
   bodyRows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows.at(-1));
+  expect(el.shadowRoot!.activeElement === bodyRows.at(-1)).to.equal(true);
 
   bodyRows.at(-1)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+  expect(el.shadowRoot!.activeElement === bodyRows[0]).to.equal(true);
 
   // Keys the grid does not own are left entirely alone.
-  const ignored = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });
+  const ignored = new KeyboardEvent('keydown', {
+    key: 'x',
+    bubbles: true,
+    cancelable: true,
+  });
   bodyRows[0]!.dispatchEvent(ignored);
   await el.updateComplete;
   expect(ignored.defaultPrevented).to.equal(false);
-  expect(el.shadowRoot!.activeElement).to.equal(bodyRows[0]);
+  expect(el.shadowRoot!.activeElement === bodyRows[0]).to.equal(true);
 });
 
 it('activates the focused row from Enter and Space', async () => {
@@ -5027,7 +5580,13 @@ it('activates the focused row from Enter and Space', async () => {
   first.focus();
 
   const activated = oneEvent(el, 'lr-row-click');
-  first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  first.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   expect((await activated).detail.row.id).to.equal(rows[0]!.id);
 
   const spaceActivated = oneEvent(el, 'lr-row-click');

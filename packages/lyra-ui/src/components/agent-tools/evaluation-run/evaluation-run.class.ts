@@ -130,7 +130,8 @@ function isTerminal(kind: AgentStatusKind): boolean {
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
  *   was activated. `detail: { exampleId, citation }`.
  * @event lr-example-tool-approval-decide - A pending tool call in a nested `<lr-tool-timeline>`
- *   was approved or denied. `detail: { exampleId, invocationId, approved, args? }`.
+ *   was approved or denied. `detail: { exampleId, invocationId, approved, args? }`. Cancelable:
+ *   preventing this correlated event vetoes the nested decision and preserves its pending dialog.
  * @csspart base - The root wrapper.
  * @csspart header - The batch-progress header row.
  * @csspart header-label - The run's label, defaulting to a localized "Evaluation run".
@@ -329,7 +330,12 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
 
   private onToolApprovalDecide(exampleId: string, event: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>): void {
     event.stopPropagation();
-    this.emit('lr-example-tool-approval-decide', { exampleId, ...event.detail });
+    const correlatedEvent = this.emit(
+      'lr-example-tool-approval-decide',
+      { exampleId, ...event.detail },
+      { cancelable: true },
+    );
+    if (correlatedEvent.defaultPrevented) event.preventDefault();
   }
 
   private renderContent(

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './details.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'Disclosure/Details', component: 'lr-details', tags: ['autodocs'] };
 export default meta;
@@ -60,6 +61,66 @@ export const Sizes: StoryObj = {
             >The panel and its summary both take the tier's rhythm.</lr-details
           >`,
       )}
+    </div>
+  `,
+};
+
+export const ThemedAppearancesAndStates: StoryObj = {
+  name: 'Themed appearances and states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Appearance, hover, and pressed paint use inheritable component-scoped hooks, so one disclosure family can be themed without changing shared surface or brand tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        display: grid;
+        gap: var(--lr-space-s);
+        --lr-details-outlined-bg: ${storyColor('surface')};
+        --lr-details-outlined-border-color: ${storyColor('border')};
+        --lr-details-filled-bg: ${storyColor('successQuiet')};
+        --lr-details-filled-border-color: ${storyColor('success')};
+        --lr-details-filled-outlined-bg: ${storyColor('warningQuiet')};
+        --lr-details-filled-outlined-border-color: ${storyColor('warning')};
+        --lr-details-summary-hover-bg: ${storyColor('dangerQuiet')};
+        --lr-details-summary-active-bg: ${storyColor('danger')};
+        --lr-details-gap: var(--lr-space-l);
+        --lr-details-radius: var(--lr-radius-pill);
+      "
+    >
+      <lr-details appearance="outlined" summary="Outlined">Outlined content.</lr-details>
+      <lr-details appearance="filled" summary="Filled">Filled content.</lr-details>
+      <lr-details appearance="filled-outlined" summary="Filled outlined">
+        Hover and press this summary to exercise the scoped state hooks.
+      </lr-details>
+    </div>
+  `,
+};
+
+export const NarrowRtlLongContent: StoryObj = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An exact 320px RTL allocation keeps an expanded long localized summary, content block, and action inside the disclosure surface.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border);"
+    >
+      <lr-details open>
+        <span slot="summary">عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span>
+        <p>محتوىتفصيليمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+        <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
+      </lr-details>
     </div>
   `,
 };

@@ -38,7 +38,7 @@ describe('lr-embedding-explorer', () => {
     await el.updateComplete;
     const point = el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement;
     point.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(point).to.exist;
+    expect((point) != null).to.equal(true);
   });
 
   it('exposes selectable points as listbox options with explicit selected state', async () => {
@@ -127,10 +127,7 @@ describe('lr-embedding-explorer', () => {
         24,
       );
       const center = new DOMPoint(0, 0).matrixTransform(matrix);
-      expect(
-        hit.getRootNode<ShadowRoot>().elementFromPoint(center.x + 11, center.y),
-        `${width}px allocation pointer edge`,
-      ).to.equal(hit);
+      expect((hit.getRootNode<ShadowRoot>().elementFromPoint(center.x + 11, center.y)) === (hit), `${width}px allocation pointer edge`).to.equal(true);
     }
   });
 

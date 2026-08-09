@@ -288,7 +288,7 @@ describe('lr-trace-tree', () => {
     child.focus();
     (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[data-id="root"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[data-id="root"]'))).to.equal(true);
   });
 
   it('normalizes duplicate/cyclic/non-finite data and bounds deep rendering', async () => {
@@ -695,7 +695,7 @@ describe('lr-trace-tree', () => {
       el.style.setProperty('--lr-trace-tree-row-active-bg', 'rgb(10, 20, 30)');
       const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
       const inactive = el.shadowRoot!.querySelector('[part="row"]:not([data-active])') as HTMLElement;
-      expect(active).to.exist;
+      expect((active) != null).to.equal(true);
       expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
       expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
     });

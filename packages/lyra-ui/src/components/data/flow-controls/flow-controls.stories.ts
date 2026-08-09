@@ -33,6 +33,20 @@ export const HorizontalHideLock: Story = {
   `,
 };
 
+/** Raw swapped bounds are normalized to `0.5…4`; both zoom directions remain available at 1×. */
+export const SwappedZoomBounds: Story = {
+  render: () => html`
+    <lr-flow-canvas
+      min-zoom="4"
+      max-zoom="0.5"
+      style="width:100%;height:20rem"
+      .nodes=${nodes}
+    >
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+    </lr-flow-canvas>
+  `,
+};
+
 export const PlainInToolbar: Story = {
   name: 'frame="plain" (inside a host toolbar)',
   parameters: {

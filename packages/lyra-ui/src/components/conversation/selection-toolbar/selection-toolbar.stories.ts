@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraSelectionToolbar, SelectionAction } from './selection-toolbar.class.js';
 import './selection-toolbar.js';
 
 const meta: Meta = {
@@ -9,6 +10,8 @@ const meta: Meta = {
 };
 export default meta;
 type Story = StoryObj;
+
+const refreshActions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy'];
 
 export const Default: Story = {
   render: () => html`
@@ -43,6 +46,25 @@ export const Narrow320: Story = {
           quote: 'A deliberately long selected passage with an unbroken locator',
         }}
         .rect=${new DOMRect(300, 150, 80, 28)}
+      ></lr-selection-toolbar>
+    </div>
+  `,
+};
+
+export const ControlledActionRefreshFocus: Story = {
+  name: 'Controlled action refresh focus',
+  render: () => html`
+    <div style="min-block-size: 12rem; max-inline-size: 40rem;">
+      <p>Focus Quote, then press R. The controlled refresh keeps keyboard focus on Ask.</p>
+      <lr-selection-toolbar
+        open
+        text="A controlled action refresh removes the focused action."
+        .actions=${refreshActions}
+        .rect=${new DOMRect(60, 150, 280, 28)}
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key.toLocaleLowerCase() !== 'r') return;
+          (event.currentTarget as LyraSelectionToolbar).actions = ['ask'];
+        }}
       ></lr-selection-toolbar>
     </div>
   `,

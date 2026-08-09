@@ -138,7 +138,7 @@ describe('showTimestamps', () => {
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const time = withFlag.shadowRoot!.querySelector('[part="entry-timestamp"]') as HTMLTimeElement;
-    expect(time).to.exist;
+    expect((time) != null).to.equal(true);
     expect(time.getAttribute('datetime')).to.equal(ts.toISOString());
   });
 

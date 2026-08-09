@@ -34,7 +34,7 @@ afterEach(function () {
   console.warn = originalWarn;
   expect(
     scheduledUpdateWarnings,
-    `${this.currentTest?.title ?? 'model-select'} should not schedule a redundant update`,
+    `${this.currentTest?.title ?? 'model-select'} should not schedule a redundant update`
   ).to.be.empty;
 });
 
@@ -44,6 +44,16 @@ function trigger(el: LyraModelSelect): HTMLButtonElement {
 function input(el: LyraModelSelect): HTMLInputElement {
   return el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
 }
+interface ModelSelectEditingFacade {
+  readonly input: HTMLInputElement | null;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  selectionDirection: 'forward' | 'backward' | 'none' | null;
+  select(): void;
+  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void;
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+}
 function rows(el: LyraModelSelect): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
@@ -52,22 +62,88 @@ function rows(el: LyraModelSelect): NodeListOf<HTMLElement> {
 
 it('renders a closed dropdown (trigger button) when catalog is non-empty and allow-custom is unset', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
-  expect(trigger(el)).to.exist;
+  expect(trigger(el) != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="combobox-input"]')).to.be.null;
 });
 
 it('renders a free-text input when catalog is empty/undefined', async () => {
   const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
-  expect(input(el)).to.exist;
+  expect(input(el) != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="trigger"]')).to.be.null;
 });
 
 it('renders a free-text input when allow-custom is set, even with a non-empty catalog', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
-  expect(input(el)).to.exist;
+  expect(input(el) != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="trigger"]')).to.be.null;
+});
+
+it('forwards selection and range editing in free-text mode while synchronizing form state', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-model-select name="model" required value="mistral"></lr-model-select>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-model-select') as LyraModelSelect;
+  const facade = el as unknown as LyraModelSelect & ModelSelectEditingFacade;
+  const native = input(el);
+  const valueEvents: string[] = [];
+  el.addEventListener('input', (event) => valueEvents.push(event.type));
+  el.addEventListener('change', (event) => valueEvents.push(event.type));
+
+  expect(facade.input === native).to.be.true;
+  facade.select();
+  expect(facade.selectionStart).to.equal(0);
+  expect(facade.selectionEnd).to.equal('mistral'.length);
+
+  facade.setSelectionRange(1, 4, 'forward');
+  expect(facade.selectionStart).to.equal(1);
+  expect(facade.selectionEnd).to.equal(4);
+  expect(facade.selectionDirection).to.equal('forward');
+
+  facade.selectionStart = 0;
+  facade.selectionEnd = native.value.length;
+  facade.selectionDirection = 'backward';
+  expect(native.selectionStart).to.equal(0);
+  expect(native.selectionEnd).to.equal('mistral'.length);
+  expect(native.selectionDirection).to.equal('backward');
+
+  facade.setRangeText('', 0, native.value.length, 'end');
+  expect(el.value).to.equal('');
+  expect(el.validity.valueMissing).to.be.true;
+  expect(new FormData(form).get('model')).to.equal('');
+
+  facade.setRangeText('custom-model');
+  expect(el.value).to.equal('custom-model');
+  expect(el.validity.valid).to.be.true;
+  expect(new FormData(form).get('model')).to.equal('custom-model');
+  expect(valueEvents).to.deep.equal([]);
+});
+
+it('keeps the free-text editing facade inert outside free-text mode and before render', async () => {
+  const closed = (await fixture(html`
+    <lr-model-select value="mistral" .catalog=${CATALOG}></lr-model-select>
+  `)) as LyraModelSelect;
+  const closedFacade = closed as unknown as LyraModelSelect & ModelSelectEditingFacade;
+  const detached = document.createElement('lr-model-select') as LyraModelSelect & ModelSelectEditingFacade;
+
+  for (const facade of [closedFacade, detached]) {
+    expect(facade.input === null).to.be.true;
+    expect(facade.selectionStart).to.equal(null);
+    expect(facade.selectionEnd).to.equal(null);
+    expect(facade.selectionDirection).to.equal(null);
+    expect(() => {
+      facade.selectionStart = 0;
+      facade.selectionEnd = 0;
+      facade.selectionDirection = 'forward';
+      facade.select();
+      facade.setSelectionRange(0, 0);
+      facade.setRangeText('ignored');
+    }).to.not.throw();
+  }
+  expect(closed.value).to.equal('mistral');
 });
 
 it('treats each string in a plain string[] catalog as both id and label', async () => {
@@ -78,9 +154,7 @@ it('treats each string in a plain string[] catalog as both id and label', async 
 });
 
 it('renders id/label object catalog rows by their label', async () => {
-  const el = (await fixture(
-    html`<lr-model-select .catalog=${OBJECT_CATALOG}></lr-model-select>`,
-  )) as LyraModelSelect;
+  const el = (await fixture(html`<lr-model-select .catalog=${OBJECT_CATALOG}></lr-model-select>`)) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
   expect(rows(el)[0].textContent).to.contain('GPT-4.1');
@@ -107,13 +181,33 @@ it('opens the closed dropdown by clicking the trigger and selects an option, emi
 it('navigates the closed dropdown with ArrowDown and commits with Enter', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const btn = trigger(el);
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
-  setTimeout(() => btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+  setTimeout(() =>
+    btn.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+  );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('llama3.1');
 });
@@ -124,9 +218,23 @@ it('jumps to the last row with End and commits it', async () => {
   el.open = true;
   await el.updateComplete;
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'End',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
-  setTimeout(() => btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+  setTimeout(() =>
+    btn.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+  );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('qwen2.5-coder');
 });
@@ -138,9 +246,21 @@ it('closes the closed dropdown on Escape without changing the value', async () =
   el.open = true;
   await el.updateComplete;
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(el.value).to.equal('mistral');
@@ -149,11 +269,23 @@ it('closes the closed dropdown on Escape without changing the value', async () =
 it('navigates the closed dropdown with ArrowUp (opens when closed, moves the active index up while open, floored at 0)', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const btn = trigger(el);
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open, 'ArrowUp must open the dropdown when it starts closed').to.be.true;
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex, 'floored at 0, not negative').to.equal(0);
 });
@@ -164,11 +296,23 @@ it('jumps to the first row with Home in the closed dropdown', async () => {
   el.open = true;
   await el.updateComplete;
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'End',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(CATALOG.length - 1);
 
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Home',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(0);
 });
@@ -176,14 +320,28 @@ it('jumps to the first row with Home in the closed dropdown', async () => {
 it('Enter with no active row simply closes the closed dropdown without selecting anything', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const btn = trigger(el);
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.true;
-  expect((el as unknown as { activeIndex: number }).activeIndex, 'opening via ArrowDown leaves no row active').to.equal(-1);
+  expect((el as unknown as { activeIndex: number }).activeIndex, 'opening via ArrowDown leaves no row active').to.equal(
+    -1
+  );
 
   let changeFired = false;
   el.addEventListener('lr-change', () => (changeFired = true));
-  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  btn.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(changeFired, 'no row was active, so Enter must not commit a value').to.be.false;
@@ -210,7 +368,7 @@ it('onTriggerClick guards against a stale effectiveDisabled state (defensive bra
 
 it('shows a synthetic, distinctly-marked row for a stale value not present in the catalog', async () => {
   const el = (await fixture(
-    html`<lr-model-select value="ancient-model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select value="ancient-model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
@@ -231,7 +389,7 @@ it('localizes the synthetic-row "not in catalog" badge via this.localize(), not 
       value="ancient-model"
       .catalog=${CATALOG}
       .strings=${{ notInCatalog: 'absent du catalogue' }}
-    ></lr-model-select>`,
+    ></lr-model-select>`
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
@@ -241,7 +399,7 @@ it('localizes the synthetic-row "not in catalog" badge via this.localize(), not 
 
 it('defaults to English "not in catalog" when no strings override is set', async () => {
   const el = (await fixture(
-    html`<lr-model-select value="ancient-model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select value="ancient-model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
@@ -260,7 +418,7 @@ it('does not append a synthetic row when catalog is empty, even for a set value'
 
 it('filters suggestions by id/label substring, case-insensitively, as the user types', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -275,7 +433,7 @@ it('filters suggestions by id/label substring, case-insensitively, as the user t
 
 it('shows the localized empty-listbox message when no suggestions match the typed query', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -284,7 +442,7 @@ it('shows the localized empty-listbox message when no suggestions match the type
   await el.updateComplete;
 
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
-  expect(empty).to.exist;
+  expect(empty != null).to.equal(true);
   expect(empty.textContent).to.equal('No matches');
 });
 
@@ -294,7 +452,7 @@ it('localizes the empty-listbox message via this.localize() when .strings overri
       allow-custom
       .catalog=${CATALOG}
       .strings=${{ noMatches: 'Aucun résultat' }}
-    ></lr-model-select>`,
+    ></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -308,18 +466,30 @@ it('localizes the empty-listbox message via this.localize() when .strings overri
 
 it('commits a highlighted suggestion with Enter, emitting lr-change with inCatalog true', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
   await el.updateComplete;
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
 
   let detail: { value: string; inCatalog: boolean } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
   setTimeout(() =>
-    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+    inp.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+    )
   );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('llama3.1');
@@ -328,7 +498,7 @@ it('commits a highlighted suggestion with Enter, emitting lr-change with inCatal
 
 it('commits raw typed text not in the catalog when allow-custom is set, with inCatalog false', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -339,7 +509,13 @@ it('commits raw typed text not in the catalog when allow-custom is set, with inC
   let detail: { value: string; inCatalog: boolean } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
   setTimeout(() =>
-    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+    inp.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+    )
   );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('my-custom-model');
@@ -355,7 +531,13 @@ it('commits arbitrary typed text when there is no catalog at all', async () => {
   await el.updateComplete;
 
   setTimeout(() =>
-    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+    inp.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+    )
   );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('whatever-i-want');
@@ -363,7 +545,7 @@ it('commits arbitrary typed text when there is no catalog at all', async () => {
 
 it('reverts typed text back to the current value on Escape, without committing', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -373,7 +555,13 @@ it('reverts typed text back to the current value on Escape, without committing',
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(el.value).to.equal('mistral');
@@ -382,7 +570,7 @@ it('reverts typed text back to the current value on Escape, without committing',
 
 it('shows a synthetic suggestion for a stale value in free-text mode', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom value="ancient-model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom value="ancient-model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -390,55 +578,85 @@ it('shows a synthetic suggestion for a stale value in free-text mode', async () 
 
   const all = rows(el);
   const synthetic = Array.from(all).find((r) => r.dataset.value === 'ancient-model');
-  expect(synthetic).to.exist;
+  expect(synthetic != null).to.equal(true);
   expect(synthetic!.hasAttribute('data-synthetic')).to.be.true;
 });
 
 it('opens the free-text suggestion popup on ArrowDown when not yet open', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   expect(el.open).to.be.false;
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open).to.be.true;
 });
 
 it('navigates free-text suggestions with ArrowUp (opens when closed, moves the active index up while open, floored at 0)', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect(el.open, 'ArrowUp must open the popup when it starts closed').to.be.true;
 
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex, 'floored at 0, not negative').to.equal(0);
 });
 
 it('jumps to the first and last suggestion rows with Home/End in free-text mode', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   el.open = true;
   await el.updateComplete;
 
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'End',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(CATALOG.length - 1);
 
-  inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  inp.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Home',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(0);
 });
 
 it('suppresses the free-text input blur handler during a mode switch back to the closed dropdown', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -450,7 +668,7 @@ it('suppresses the free-text input blur handler during a mode switch back to the
   await el.updateComplete;
   expect(
     (el as unknown as { touched: boolean }).touched,
-    'the structural blur during the mode switch must not mark the control touched',
+    'the structural blur during the mode switch must not mark the control touched'
   ).to.be.false;
 });
 
@@ -459,18 +677,16 @@ describe('touched state (disabled-forced blur)', () => {
   // platform behavior, not a user interaction. Marking `touched` for it too was capable of
   // reentering the very update that disabled the control (fr_asxOgk4UhNB07xevCWwFVQ).
   it('does not mark touched from a blur caused by the trigger itself becoming disabled (closed-dropdown mode)', async () => {
-    const el = (await fixture(
-      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
-    )) as LyraModelSelect;
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
     trigger(el).focus();
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement, 'the trigger is focused before disabling').to.exist;
+    expect(el.shadowRoot!.activeElement != null, 'the trigger is focused before disabling').to.equal(true);
 
     el.disabled = true; // forces the native blur once `disabled` reaches the trigger button
     await el.updateComplete;
     expect(
       (el as unknown as { touched: boolean }).touched,
-      'a blur the platform forces by disabling the control must not mark it touched',
+      'a blur the platform forces by disabling the control must not mark it touched'
     ).to.be.false;
   });
 
@@ -478,20 +694,18 @@ describe('touched state (disabled-forced blur)', () => {
     const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
     input(el).focus();
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement, 'the combobox input is focused before disabling').to.exist;
+    expect(el.shadowRoot!.activeElement != null, 'the combobox input is focused before disabling').to.equal(true);
 
     el.disabled = true; // forces the native blur once `disabled` reaches the combobox input
     await el.updateComplete;
     expect(
       (el as unknown as { touched: boolean }).touched,
-      'a blur the platform forces by disabling the control must not mark it touched',
+      'a blur the platform forces by disabling the control must not mark it touched'
     ).to.be.false;
   });
 
   it('still marks touched from a real (non-disabled) blur of the trigger, unchanged', async () => {
-    const el = (await fixture(
-      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
-    )) as LyraModelSelect;
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
     const control = trigger(el);
     control.focus();
     await el.updateComplete;
@@ -512,13 +726,15 @@ describe('touched state (disabled-forced blur)', () => {
 });
 
 it('clears a stale active row when an open catalog is replaced', async () => {
-  const el = (await fixture(
-    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
-  )) as LyraModelSelect;
+  const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
   trigger(el).dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
   );
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(0);
@@ -528,7 +744,11 @@ it('clears a stale active row when an open catalog is replaced', async () => {
   let changed = false;
   el.addEventListener('lr-change', () => (changed = true));
   trigger(el).dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    })
   );
 
   expect(changed).to.be.false;
@@ -537,7 +757,7 @@ it('clears a stale active row when an open catalog is replaced', async () => {
 
 it('preserves an open free-text draft while a replacement catalog is refiltered', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -556,7 +776,7 @@ it('preserves an open free-text draft while a replacement catalog is refiltered'
 
 it('rebases an open free-text query when the controlled value changes', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -573,7 +793,7 @@ it('rebases an open free-text query when the controlled value changes', async ()
 
 it('does not revive a stale free-text query after an open mode round trip', async () => {
   const el = (await fixture(
-    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const inp = input(el);
   inp.focus();
@@ -593,7 +813,7 @@ it('does not revive a stale free-text query after an open mode round trip', asyn
 describe('shared listbox (onListboxClick)', () => {
   it('selects a suggestion by clicking it in free-text mode (filteredEntries lookup path)', async () => {
     const el = (await fixture(
-      html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     const inp = input(el);
     inp.focus();
@@ -626,8 +846,13 @@ describe('shared listbox (onListboxClick)', () => {
     await el.updateComplete;
     const row = rows(el)[0];
     el.disabled = true;
-    (el as unknown as { onListboxClick(e: MouseEvent): void }).onListboxClick({ target: row } as unknown as MouseEvent);
-    expect(el.value, 'a disabled control must not commit a click that arrived while effectiveDisabled flipped true').to.equal('');
+    (el as unknown as { onListboxClick(e: MouseEvent): void }).onListboxClick({
+      target: row,
+    } as unknown as MouseEvent);
+    expect(
+      el.value,
+      'a disabled control must not commit a click that arrived while effectiveDisabled flipped true'
+    ).to.equal('');
   });
 });
 
@@ -658,7 +883,9 @@ it('participates in a form: value reflects in FormData on submit', async () => {
 
 it('updates disabled form participation synchronously without awaiting a Lit update', async () => {
   const form = (await fixture(html`
-    <form><lr-model-select name="model" .catalog=${CATALOG}></lr-model-select></form>
+    <form>
+      <lr-model-select name="model" .catalog=${CATALOG}></lr-model-select>
+    </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-model-select') as LyraModelSelect;
   el.value = 'mistral';
@@ -675,7 +902,9 @@ it('updates disabled form participation synchronously without awaiting a Lit upd
 
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
-    <form><lr-model-select value="mistral" .catalog=${CATALOG}></lr-model-select></form>
+    <form>
+      <lr-model-select value="mistral" .catalog=${CATALOG}></lr-model-select>
+    </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-model-select') as LyraModelSelect;
 
@@ -725,7 +954,7 @@ it('allows a required model-select to submit once a value is set', async () => {
 describe('validationMessage localization', () => {
   it('defaults to the built-in English validationMessage for a required, unset model-select', async () => {
     const el = (await fixture(
-      html`<lr-model-select required .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select required .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     expect(el.validationMessage).to.equal('Please choose a model.');
   });
@@ -736,7 +965,7 @@ describe('validationMessage localization', () => {
         required
         .catalog=${CATALOG}
         .strings=${{ modelSelectRequired: 'Veuillez choisir un modèle.' }}
-      ></lr-model-select>`,
+      ></lr-model-select>`
     )) as LyraModelSelect;
     expect(el.validationMessage).to.equal('Veuillez choisir un modèle.');
 
@@ -777,7 +1006,9 @@ it('rebinds the validity focus anchor when switching from trigger to free-text m
 
 it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
   const form = (await fixture(html`
-    <form><lr-model-select name="model" .catalog=${CATALOG}></lr-model-select></form>
+    <form>
+      <lr-model-select name="model" .catalog=${CATALOG}></lr-model-select>
+    </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-model-select') as LyraModelSelect;
   expect(el.checkValidity()).to.be.true;
@@ -820,8 +1051,10 @@ it('dispatches one native Event input/change pair even from a detached/adopted d
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const detachedDoc = document.implementation.createHTMLDocument('detached');
   detachedDoc.adoptNode(el);
-  expect(el.ownerDocument).to.equal(detachedDoc);
-  expect(detachedDoc.defaultView, 'precondition: a document created via createHTMLDocument() has no window').to.equal(null);
+  expect(el.ownerDocument === detachedDoc).to.equal(true);
+  expect(detachedDoc.defaultView, 'precondition: a document created via createHTMLDocument() has no window').to.equal(
+    null
+  );
 
   const events: Event[] = [];
   el.addEventListener('input', (event) => events.push(event));
@@ -883,10 +1116,18 @@ it('temporarily disables both modes through a fieldset without overwriting autho
   expect(new FormData(form).get('custom-model')).to.equal(null);
 
   let delegatedCalls = 0;
-  trigger(el).click = () => { delegatedCalls += 1; };
-  trigger(el).focus = () => { delegatedCalls += 1; };
-  input(freeText).click = () => { delegatedCalls += 1; };
-  input(freeText).focus = () => { delegatedCalls += 1; };
+  trigger(el).click = () => {
+    delegatedCalls += 1;
+  };
+  trigger(el).focus = () => {
+    delegatedCalls += 1;
+  };
+  input(freeText).click = () => {
+    delegatedCalls += 1;
+  };
+  input(freeText).focus = () => {
+    delegatedCalls += 1;
+  };
   el.click();
   el.focus();
   freeText.click();
@@ -912,7 +1153,7 @@ it('temporarily disables both modes through a fieldset without overwriting autho
 
 it('renders the provider badge when provider is set', async () => {
   const el = (await fixture(
-    html`<lr-model-select provider="ollama" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select provider="ollama" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   expect(el.shadowRoot!.querySelector('[part="provider-badge"]')!.textContent).to.equal('ollama');
 });
@@ -943,15 +1184,76 @@ it('re-binds positioning after a disconnect+reconnect while open, ending up clos
 });
 
 it('does not open when disabled', async () => {
-  const el = (await fixture(
-    html`<lr-model-select disabled .catalog=${CATALOG}></lr-model-select>`,
-  )) as LyraModelSelect;
+  const el = (await fixture(html`<lr-model-select disabled .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   trigger(el).click();
   await el.updateComplete;
   expect(el.open).to.be.false;
 });
 
 // -- Label -----------------------------------------------------------------
+
+it('renders initial slotted label content in the standard form-control frame', async () => {
+  const el = (await fixture(html`
+    <lr-model-select required .catalog=${CATALOG}>
+      <span slot="label">Deployment model</span>
+    </lr-model-select>
+  `)) as LyraModelSelect;
+  const root = el.shadowRoot!;
+
+  expect(root.querySelectorAll('[part="form-control"]').length).to.equal(1);
+  expect(root.querySelectorAll('[part="form-control-label"] slot[name="label"]').length).to.equal(1);
+
+  const label = root.querySelector<HTMLLabelElement>('[part="form-control-label"]')!;
+  const labelSlot = label.querySelector<HTMLSlotElement>('slot[name="label"]')!;
+  expect(label.hidden).to.be.false;
+  expect(labelSlot.assignedElements().length).to.equal(1);
+  expect(labelSlot.assignedElements()[0]?.textContent?.trim()).to.equal('Deployment model');
+  expect(label.htmlFor).to.equal(trigger(el).id);
+  expect(trigger(el).hasAttribute('aria-label')).to.be.false;
+  expect(getComputedStyle(label, '::after').content).to.contain('*');
+});
+
+it('updates free-text naming when slotted label content is added and removed', async () => {
+  const el = (await fixture(html`
+    <lr-model-select allow-custom placeholder="Choose a model"></lr-model-select>
+  `)) as LyraModelSelect;
+  const label = el.shadowRoot!.querySelector<HTMLLabelElement>('[part="form-control-label"]')!;
+  expect(label.querySelectorAll('slot[name="label"]').length).to.equal(1);
+  const labelSlot = label.querySelector<HTMLSlotElement>('slot[name="label"]')!;
+
+  expect(label.hidden).to.be.true;
+  expect(input(el).getAttribute('aria-label')).to.equal('Choose a model');
+
+  const added = oneEvent(labelSlot, 'slotchange');
+  const slotted = document.createElement('span');
+  slotted.slot = 'label';
+  slotted.textContent = 'Generation model';
+  el.append(slotted);
+  await added;
+  await el.updateComplete;
+
+  expect(label.hidden).to.be.false;
+  expect(label.htmlFor).to.equal(input(el).id);
+  expect(input(el).hasAttribute('aria-label')).to.be.false;
+
+  const removed = oneEvent(labelSlot, 'slotchange');
+  slotted.remove();
+  await removed;
+  await el.updateComplete;
+
+  expect(label.hidden).to.be.true;
+  expect(input(el).getAttribute('aria-label')).to.equal('Choose a model');
+});
+
+it('keeps an explicit host aria-label ahead of slotted label content', async () => {
+  const el = (await fixture(html`
+    <lr-model-select aria-label="Inference model" .catalog=${CATALOG}>
+      <span slot="label">Model</span>
+    </lr-model-select>
+  `)) as LyraModelSelect;
+
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Inference model');
+});
 
 it('renders a visible form-control-label element once label is set', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
@@ -975,27 +1277,26 @@ it('renders the visible label in free-text mode too, paired with the combobox in
 
 it('derives the accessible name from label when set, omitting the redundant aria-label', async () => {
   const el = (await fixture(
-    html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
-  expect(trigger(el).hasAttribute('aria-label'), 'aria-label is unnecessary once a visible label exists').to.be
-    .false;
+  expect(trigger(el).hasAttribute('aria-label'), 'aria-label is unnecessary once a visible label exists').to.be.false;
 });
 
 it('prefers an explicit host aria-label over label, same precedence as lr-select', async () => {
   const el = (await fixture(
-    html`<lr-model-select aria-label="Sort order" label="Model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select aria-label="Sort order" label="Model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Sort order');
 });
 
 it('preserves the exact aria-label/placeholder/"Model" fallback chain when label is unset', async () => {
   const withAriaLabel = (await fixture(
-    html`<lr-model-select aria-label="Sort order" placeholder="Choose…" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select aria-label="Sort order" placeholder="Choose…" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   expect(trigger(withAriaLabel).getAttribute('aria-label')).to.equal('Sort order');
 
   const withPlaceholder = (await fixture(
-    html`<lr-model-select placeholder="Choose…" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select placeholder="Choose…" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   expect(trigger(withPlaceholder).getAttribute('aria-label')).to.equal('Choose…');
 
@@ -1005,14 +1306,14 @@ it('preserves the exact aria-label/placeholder/"Model" fallback chain when label
 
 it('localizes the "Model" aria-label fallback via this.localize() when .strings overrides model', async () => {
   const el = (await fixture(
-    html`<lr-model-select .catalog=${CATALOG} .strings=${{ model: 'Modèle' }}></lr-model-select>`,
+    html`<lr-model-select .catalog=${CATALOG} .strings=${{ model: 'Modèle' }}></lr-model-select>`
   )) as LyraModelSelect;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Modèle');
 });
 
 it('is accessible with a visible label set', async () => {
   const el = (await fixture(
-    html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   await expect(el).to.be.accessible();
 });
@@ -1021,7 +1322,7 @@ it('is accessible with a visible label set', async () => {
 
 it('is accessible (closed dropdown, default and open)', async () => {
   const el = (await fixture(
-    html`<lr-model-select placeholder="Pick a model" .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select placeholder="Pick a model" .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   await expect(el).to.be.accessible();
 
@@ -1032,13 +1333,15 @@ it('is accessible (closed dropdown, default and open)', async () => {
   // listbox's current (transitional) opacity, so sampling mid-fade blends its text and background
   // toward each other and reports a false "serious" violation. Finishing it outright matches the
   // idiom overlay.test.ts already uses for this same kind of reveal animation.
-  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
+  el.shadowRoot!.querySelector('[part="listbox"]')
+    ?.getAnimations()
+    .forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 
 it('is accessible (free-text mode, default and open)', async () => {
   const el = (await fixture(
-    html`<lr-model-select placeholder="Type a model" allow-custom .catalog=${CATALOG}></lr-model-select>`,
+    html`<lr-model-select placeholder="Type a model" allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   await expect(el).to.be.accessible();
 
@@ -1046,14 +1349,16 @@ it('is accessible (free-text mode, default and open)', async () => {
   await el.updateComplete;
   // See the identical comment in the test above -- `[part='listbox']`'s opacity transition is
   // still running at this point.
-  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
+  el.shadowRoot!.querySelector('[part="listbox"]')
+    ?.getAnimations()
+    .forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 
 // -- Hint/error chrome -------------------------------------------------------
 
 describe('hint/error chrome', () => {
-  it('renders no hint/error chrome when hint/errorText are unset (today\'s exact bare output, closed dropdown mode)', async () => {
+  it("renders no hint/error chrome when hint/errorText are unset (today's exact bare output, closed dropdown mode)", async () => {
     const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
     const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
@@ -1071,7 +1376,7 @@ describe('hint/error chrome', () => {
 
   it('renders hint/errorText text and un-hides the matching parts (closed dropdown mode)', async () => {
     const el = (await fixture(
-      html`<lr-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
@@ -1088,7 +1393,7 @@ describe('hint/error chrome', () => {
         hint="Pick a model"
         error-text="Required"
         .catalog=${CATALOG}
-      ></lr-model-select>`,
+      ></lr-model-select>`
     )) as LyraModelSelect;
     const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
@@ -1113,7 +1418,7 @@ describe('hint/error chrome', () => {
 
   it('wires aria-describedby on the trigger to the rendered hint/error ids', async () => {
     const el = (await fixture(
-      html`<lr-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     const describedBy = trigger(el).getAttribute('aria-describedby') ?? '';
     expect(describedBy).to.contain('error');
@@ -1122,7 +1427,7 @@ describe('hint/error chrome', () => {
 
   it('wires aria-describedby on the combobox input to the rendered hint/error ids', async () => {
     const el = (await fixture(
-      html`<lr-model-select allow-custom hint="Pick a model" error-text="Required"></lr-model-select>`,
+      html`<lr-model-select allow-custom hint="Pick a model" error-text="Required"></lr-model-select>`
     )) as LyraModelSelect;
     const describedBy = input(el).getAttribute('aria-describedby') ?? '';
     expect(describedBy).to.contain('error');
@@ -1155,7 +1460,7 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
   it('forwards autocomplete, inputmode, and enterkeyhint onto the free-text input', async () => {
     const el = (await fixture(
-      html`<lr-model-select autocomplete="off" inputmode="text" enterkeyhint="done"></lr-model-select>`,
+      html`<lr-model-select autocomplete="off" inputmode="text" enterkeyhint="done"></lr-model-select>`
     )) as LyraModelSelect;
     const inp = input(el);
     expect(inp.getAttribute('autocomplete')).to.equal('off');
@@ -1207,13 +1512,15 @@ describe('native event relays', () => {
     wrapper.addEventListener('input', (event) => events.push(event as InputEvent));
 
     control.value = 'm';
-    control.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      composed: true,
-      data: 'm',
-      inputType: 'insertText',
-      isComposing: true,
-    }));
+    control.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        composed: true,
+        data: 'm',
+        inputType: 'insertText',
+        isComposing: true,
+      })
+    );
 
     expect(events).to.have.lengthOf(1);
     expect(events[0] instanceof InputEvent).to.be.true;
@@ -1258,9 +1565,14 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
 });
 
-it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+it("renders the combobox-input's placeholder in the live quiet-text token color", async () => {
+  const el = (await fixture(html`
+    <lr-model-select style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-model-select>
+  `)) as LyraModelSelect;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+  expect(getComputedStyle(input, '::placeholder').color).to.equal('rgb(12, 34, 56)');
 });
 
 // -- Hover states (mouse-modality parity with the focus ring) --------------
@@ -1315,9 +1627,7 @@ it('forwards a host-level .click() to the internal combobox input (free-text mod
 });
 
 it('host .click() is a no-op while disabled, matching native disabled-control semantics', async () => {
-  const el = (await fixture(
-    html`<lr-model-select disabled .catalog=${CATALOG}></lr-model-select>`,
-  )) as LyraModelSelect;
+  const el = (await fixture(html`<lr-model-select disabled .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   el.click();
   await el.updateComplete;
   expect(el.open).to.be.false;
@@ -1338,7 +1648,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect(el!.form === null).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -1356,7 +1666,7 @@ describe('ElementInternals availability', () => {
       }).to.not.throw();
       expect(el!.checkValidity()).to.be.true;
       expect(el!.reportValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect(el!.form === null).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -1373,17 +1683,23 @@ describe('size', () => {
 
   it('reflects a size attribute set as a plain HTML attribute', async () => {
     const el = (await fixture(
-      html`<lr-model-select size="s" .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select size="s" .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     expect(el.getAttribute('size')).to.equal('s');
     expect(el.size).to.equal('s');
   });
 
   it('enforces --lr-model-select-trigger-min-height at each non-default size (closed-dropdown mode)', async () => {
-    const expected: Record<string, string> = { '2xs': '20px', xs: '24px', s: '30px', l: '48px', xl: '56px' };
+    const expected: Record<string, string> = {
+      '2xs': '20px',
+      xs: '24px',
+      s: '30px',
+      l: '48px',
+      xl: '56px',
+    };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(
-        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`,
+        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`
       )) as LyraModelSelect;
       expect(getComputedStyle(trigger(el)).minBlockSize, `size=${size}`).to.equal(px);
     }
@@ -1400,7 +1716,7 @@ describe('size', () => {
     // a spelling the type accepts and the stylesheet ignores would fall back to the default tier.
     const heightAt = async (size: string): Promise<string> => {
       const el = (await fixture(
-        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`,
+        html`<lr-model-select size=${size} .catalog=${CATALOG}></lr-model-select>`
       )) as LyraModelSelect;
       return getComputedStyle(trigger(el)).minBlockSize;
     };
@@ -1412,14 +1728,14 @@ describe('size', () => {
 
   it('sizes its trigger off the shared --lr-form-control-* ladder rather than a private copy', async () => {
     const el = (await fixture(
-      html`<lr-model-select size="l" .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select size="l" .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     const hostStyle = getComputedStyle(el);
     expect(hostStyle.getPropertyValue('--lr-model-select-trigger-min-height').trim()).to.equal(
-      hostStyle.getPropertyValue('--lr-form-control-height').trim(),
+      hostStyle.getPropertyValue('--lr-form-control-height').trim()
     );
     expect(hostStyle.getPropertyValue('--lr-model-select-font-size').trim()).to.equal(
-      hostStyle.getPropertyValue('--lr-form-control-font-size').trim(),
+      hostStyle.getPropertyValue('--lr-form-control-font-size').trim()
     );
     // The public knob is still an override point -- adopting the shared ladder moved the values,
     // not the surface.
@@ -1432,7 +1748,10 @@ describe('size', () => {
 describe('selected-state theming tokens', () => {
   it('honours --lr-model-select-option-selected-color on the selected row', async () => {
     const el = (await fixture(html`
-      <lr-model-select .catalog=${CATALOG} style="--lr-model-select-option-selected-color: rgb(1, 2, 3);"></lr-model-select>
+      <lr-model-select
+        .catalog=${CATALOG}
+        style="--lr-model-select-option-selected-color: rgb(1, 2, 3);"
+      ></lr-model-select>
     `)) as LyraModelSelect;
     el.value = 'mistral';
     el.open = true;
@@ -1443,7 +1762,10 @@ describe('selected-state theming tokens', () => {
 
   it('honours --lr-model-select-option-selected-bg on the selected row', async () => {
     const el = (await fixture(html`
-      <lr-model-select .catalog=${CATALOG} style="--lr-model-select-option-selected-bg: rgb(4, 5, 6);"></lr-model-select>
+      <lr-model-select
+        .catalog=${CATALOG}
+        style="--lr-model-select-option-selected-bg: rgb(4, 5, 6);"
+      ></lr-model-select>
     `)) as LyraModelSelect;
     el.value = 'mistral';
     el.open = true;
@@ -1472,22 +1794,28 @@ describe('selected-state theming tokens', () => {
 
 it('mousedown on the combobox shell focuses the input instead of letting the shell take selection', async () => {
   const el = (await fixture(
-    html`<lr-model-select .catalog=${CATALOG} allow-custom></lr-model-select>`,
+    html`<lr-model-select .catalog=${CATALOG} allow-custom></lr-model-select>`
   )) as LyraModelSelect;
   const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
-  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  const event = new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+  });
   shell.dispatchEvent(event);
   await el.updateComplete;
   expect(event.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="combobox-input"]'));
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="combobox-input"]')).to.equal(true);
 });
 
 it('mousedown on the combobox shell is inert while disabled', async () => {
   const el = (await fixture(
-    html`<lr-model-select .catalog=${CATALOG} allow-custom disabled></lr-model-select>`,
+    html`<lr-model-select .catalog=${CATALOG} allow-custom disabled></lr-model-select>`
   )) as LyraModelSelect;
   const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
-  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  const event = new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+  });
   shell.dispatchEvent(event);
   await el.updateComplete;
   expect(event.defaultPrevented).to.be.false;
@@ -1497,15 +1825,20 @@ it('prevents mousedown on a listbox option but not on listbox chrome', async () 
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
-  const onOption = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  const onOption = new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+  });
   el.shadowRoot!.querySelector('[part="option"]')!.dispatchEvent(onOption);
   expect(onOption.defaultPrevented).to.be.true;
 
-  const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  const onChrome = new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+  });
   el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
   expect(onChrome.defaultPrevented).to.be.false;
 });
-
 
 // -- Degraded-DOM form-association fallback ---------------------------------
 
@@ -1516,9 +1849,11 @@ describe('ElementInternals fallback (lr-model-select)', () => {
    *  still work with form participation simply unavailable. */
   const withoutAttachInternals = async (
     impl: undefined | (() => never),
-    assertion: (el: LyraModelSelect) => void | Promise<void>,
+    assertion: (el: LyraModelSelect) => void | Promise<void>
   ): Promise<void> => {
-    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const proto = HTMLElement.prototype as unknown as {
+      attachInternals?: unknown;
+    };
     const original = proto.attachInternals;
     if (impl === undefined) delete proto.attachInternals;
     else proto.attachInternals = impl;
@@ -1534,7 +1869,7 @@ describe('ElementInternals fallback (lr-model-select)', () => {
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, async (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect(internals.form === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;
@@ -1556,7 +1891,7 @@ describe('ElementInternals fallback (lr-model-select)', () => {
         expect(internals.willValidate).to.be.false;
         expect(internals.reportValidity()).to.be.true;
         expect(internals.checkValidity()).to.be.true;
-      },
+      }
     );
   });
 });
@@ -1584,7 +1919,7 @@ describe('validity custom states', () => {
   it('publishes required/optional and valid/invalid, matchable with :state()', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(
-      html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     expect(el.matches(':state(optional)'), 'pristine and not required').to.be.true;
@@ -1608,7 +1943,7 @@ describe('validity custom states', () => {
   it('withholds user-valid/user-invalid until the user has actually interacted', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(
-      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     // A pristine required picker really is invalid -- but painting it red before the user has done
@@ -1633,7 +1968,7 @@ describe('validity custom states', () => {
   it('counts a reportValidity() call — what a submit attempt runs — as interaction', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(
-      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     expect(el.matches(':state(user-invalid)')).to.be.false;
@@ -1644,7 +1979,9 @@ describe('validity custom states', () => {
   it('goes pristine again after a form reset', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const form = await fixture<HTMLFormElement>(
-      html`<form><lr-model-select name="model" label="Model" required .catalog=${CATALOG}></lr-model-select></form>`,
+      html`<form>
+        <lr-model-select name="model" label="Model" required .catalog=${CATALOG}></lr-model-select>
+      </form>`
     );
     const el = form.querySelector('lr-model-select') as LyraModelSelect;
     await el.updateComplete;
@@ -1660,7 +1997,9 @@ describe('validity custom states', () => {
 describe('setCustomValidity()', () => {
   it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
     const form = await fixture<HTMLFormElement>(
-      html`<form><lr-model-select name="model" label="Model" .catalog=${CATALOG}></lr-model-select></form>`,
+      html`<form>
+        <lr-model-select name="model" label="Model" .catalog=${CATALOG}></lr-model-select>
+      </form>`
     );
     const el = form.querySelector('lr-model-select') as LyraModelSelect;
     await el.updateComplete;
@@ -1690,7 +2029,7 @@ describe('setCustomValidity()', () => {
 
   it('keeps a custom error through an intrinsic revalidation', async () => {
     const el = (await fixture(
-      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     el.setCustomValidity('Rejected by the server.');
@@ -1712,7 +2051,7 @@ describe('setCustomValidity()', () => {
     const form = await fixture<HTMLFormElement>(
       html`<form>
         <lr-model-select name="model" label="Model" value="mistral" .catalog=${CATALOG}></lr-model-select>
-      </form>`,
+      </form>`
     );
     const el = form.querySelector('lr-model-select') as LyraModelSelect;
     await el.updateComplete;
@@ -1729,7 +2068,7 @@ describe('setCustomValidity()', () => {
 
   it('restores the computed validity when a custom error is cleared, rather than forcing the control valid', async () => {
     const el = (await fixture(
-      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`,
+      html`<lr-model-select label="Model" required .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     expect(el.validity.valueMissing, 'required and empty to begin with').to.be.true;
@@ -1747,7 +2086,7 @@ describe('setCustomValidity()', () => {
   it('publishes a custom error through the validity custom states', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(
-      html`<lr-model-select label="Model" .catalog=${CATALOG} value="mistral"></lr-model-select>`,
+      html`<lr-model-select label="Model" .catalog=${CATALOG} value="mistral"></lr-model-select>`
     )) as LyraModelSelect;
     await el.updateComplete;
     expect(el.matches(':state(valid)'), 'valid before the custom error').to.be.true;
@@ -1773,18 +2112,18 @@ it('forwards focus and blur to the semantic control in both rendering modes', as
   `)) as LyraModelSelect;
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.exist;
+  expect(el.shadowRoot!.activeElement != null).to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 
   const disabled = (await fixture(html`
     <lr-model-select label="Model" disabled .models=${CATALOG}></lr-model-select>
   `)) as LyraModelSelect;
   await disabled.updateComplete;
   disabled.focus();
-  expect(disabled.shadowRoot!.activeElement).to.equal(null);
+  expect(disabled.shadowRoot!.activeElement === null).to.equal(true);
   disabled.blur();
-  expect(disabled.shadowRoot!.activeElement).to.equal(null);
+  expect(disabled.shadowRoot!.activeElement === null).to.equal(true);
 });
 
 it('paints the shared required marker on the label, and lets a consumer retune or suppress it', async () => {
@@ -1829,8 +2168,7 @@ it('bars constraint validation while disabled, natively and in the published sta
   expect(el.matches(':state(invalid)')).to.be.false;
   expect(el.matches(':state(user-invalid)')).to.be.false;
   expect(el.matches(':state(valid)')).to.be.false;
-  expect(el.matches(':state(required)'), 'required/optional describe the attribute, not the outcome')
-    .to.be.true;
+  expect(el.matches(':state(required)'), 'required/optional describe the attribute, not the outcome').to.be.true;
 
   el.disabled = false;
   await el.updateComplete;
@@ -1855,10 +2193,12 @@ it('emits a cancelable lr-invalid alias whose cancellation cancels the native in
   expect(aliases[0].cancelable, 'lr-invalid is a real veto point').to.be.true;
   expect(nativePrevented).to.deep.equal([false]);
 
-  el.addEventListener('lr-invalid', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-invalid', (event) => event.preventDefault(), {
+    once: true,
+  });
   expect(el.checkValidity()).to.be.false;
-  expect(
-    nativePrevented,
-    'preventDefault() on lr-invalid suppresses the native validation bubble',
-  ).to.deep.equal([false, true]);
+  expect(nativePrevented, 'preventDefault() on lr-invalid suppresses the native validation bubble').to.deep.equal([
+    false,
+    true,
+  ]);
 });

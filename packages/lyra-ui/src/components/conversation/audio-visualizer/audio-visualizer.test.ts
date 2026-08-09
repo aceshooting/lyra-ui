@@ -117,7 +117,7 @@ it('renders an aria-hidden canvas inside a role="img" host with an auto-generate
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Voice activity: Listening');
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-  expect(canvas).to.exist;
+  expect((canvas) != null).to.equal(true);
   expect(canvas.getAttribute('aria-hidden')).to.equal('true');
 });
 
@@ -229,7 +229,7 @@ describe('reduced motion behaves at 320px', () => {
         style="inline-size: 320px"
       ></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   });
 });
 

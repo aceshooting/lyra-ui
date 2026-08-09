@@ -16,7 +16,9 @@
 ## `lr-terminal`
 
 A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/keystroke handling, no
-cursor-addressed full-screen apps.
+cursor-addressed full-screen apps. An ANSI sequence split across chunks retains at most 4,096
+characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
+clean parser boundary.
 
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
 codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
@@ -30,7 +32,8 @@ only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to th
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
 is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.
 
-**Methods:** `write(text)` appends ANSI-parsed text to the buffer. `clear()` empties the buffer.
+**Methods:** `write(text)` appends ANSI-parsed text to the buffer, subject to the bounded partial
+sequence behavior above. `clear()` empties the buffer.
 `scrollToBottom()` and `scrollToAnchor(anchor): Promise<boolean>` control scroll position.
 `search(query): Promise<number>` (resolves the match count after the resulting render),
 `searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search — matching is

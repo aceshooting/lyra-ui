@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './dataset-viewer.js';
 
-const meta: Meta = { title: 'DocumentViewer/DatasetViewer', component: 'lr-dataset-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'DocumentViewer/DatasetViewer',
+  component: 'lr-dataset-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A host `aria-label` names the loaded table by attribute presence, including an explicitly empty value; `name` and the localized row-count caption are fallbacks. Highlight actions localize their complete cell value and annotation through separate `{value}` and `{label}` placeholders.' } } },
+};
 export default meta;
 type Story = StoryObj;
 

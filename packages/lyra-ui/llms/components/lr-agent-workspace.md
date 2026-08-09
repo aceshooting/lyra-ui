@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -27,9 +27,10 @@ This is the single component that binds the most of the provider-neutral vocabul
 adapters.
 
 **Properties (transcript):**
+
 - `messages: ChatMessage[] = []` (attribute: false) — **`ChatMessage` from
   `@aceshooting/lyra-ui/ai`**: `{ id: string; role: ChatMessageRole; status?: ChatMessageStatus;
-  timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
+timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
   `lr-chat-message` whose `role`/`status`/`timestamp` come straight across, with `text` rendered as
   sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
   richer bodies. Host owns ordering, updates, and persistence
@@ -37,42 +38,44 @@ adapters.
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
 
 **Properties (details pane):**
+
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; status: AgentStatus; startedAt?: number; endedAt?: number; model?: string;
-  costEstimate?: number; steps: AgentStep[] }` (epoch-ms timestamps). `null` omits the run section
+costEstimate?: number; steps: AgentStep[] }` (epoch-ms timestamps). `null` omits the run section
 - `metrics: AgentRunMetric[] = []` (attribute: false) — `lr-agent-run`'s own
   `AgentRunMetric { id: string; label: string; value: string | number; variant?: BadgeVariant }`,
   e.g. token counts or latency
 - `tools: ToolTimelineEntry[] = []` (attribute: false) — `lr-tool-timeline`'s
   `ToolTimelineEntry extends ToolInvocation` (i.e. `{ id, name, args, status, result?, error? }` from
   `@aceshooting/lyra-ui/ai`) plus `{ startedAt?: number; endedAt?: number; retryCount?: number;
-  redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
+redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
 - `retrievalChunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk` from
   `@aceshooting/lyra-ui/ai`**: `{ id, text, score, source: DocumentRef, metadata? }`, forwarded to
   `lr-retrieval-results`
 - `selectedRetrievalIds: string[] = []` (attribute: false) — controlled selection forwarded to
   `lr-retrieval-results.selectedIds`
 - `retrievalLoading: boolean = false` (attribute `retrieval-loading`), `retrievalHasMore: boolean =
-  false` (attribute `retrieval-has-more`), `retrievalError: string = ''` (attribute
+false` (attribute `retrieval-has-more`), `retrievalError: string = ''` (attribute
   `retrieval-error`, caller-supplied text) — all forwarded to `lr-retrieval-results`
 - `groundingAssessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`
   from `@aceshooting/lyra-ui/ai`**: `{ supportedClaims, unsupportedClaims, coverage, confidence?,
-  warnings? }`
+warnings? }`
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**,
   shown alongside the grounding summary
 - `contextSegments: ContextInspectorSegment[] = []` (attribute: false) — `lr-context-inspector`'s
   `{ id: string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?:
-  Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
+Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
 - `contextTotal: number = 0` (attribute `context-total`) — the overall context-window token budget
 - `showDetails: boolean = true` (attribute `show-details`, reflected) — whether the details pane is
   available at all when data is present
 
 **Properties (composer / chrome):**
+
 - `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
   composer renders when no `composer` slot is supplied
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
-  'streaming'`, `lr-chat-composer`'s own union
+'streaming'`, `lr-chat-composer`'s own union
 - `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
@@ -81,20 +84,21 @@ adapters.
   override for the internal `role="region"` root
 
 **Events:**
+
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: undefined`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks:
-  RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
+RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.
 - `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
-  { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
+{ args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step).
 - `lr-cancel` (`detail: undefined`) / `lr-retry` (`detail: RetryEventDetail` = `{ attempt: number;
-  messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the built-in agent run.
+messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the built-in agent run.
 
 **Slots:** `messages` (replaces the data-driven transcript message list), `details` (replaces the
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),

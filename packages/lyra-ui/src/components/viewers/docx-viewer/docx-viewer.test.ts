@@ -97,7 +97,7 @@ describe('lr-docx-viewer', () => {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Report');
-      expect(el.shadowRoot!.querySelector('script')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('script')) == null).to.equal(true);
     } finally {
       restore();
     }
@@ -220,6 +220,21 @@ describe('lr-docx-viewer', () => {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Q3 report');
+    } finally {
+      restore();
+    }
+  });
+
+  it('preserves an explicitly empty host aria-label ahead of name on the document owner', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer name="Named report" aria-label=""></lr-docx-viewer>`);
+    useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(content.hasAttribute('aria-label')).to.be.true;
+      expect(content.getAttribute('aria-label')).to.equal('');
     } finally {
       restore();
     }

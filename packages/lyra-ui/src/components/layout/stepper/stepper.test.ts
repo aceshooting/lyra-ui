@@ -333,10 +333,7 @@ describe("lr-stepper", () => {
     const buttons = stepButtons(el);
 
     const paymentIcon = buttons[0]!.querySelector('[part="step-icon"]');
-    expect(
-      paymentIcon,
-      "expected a step-icon part for the icon-bearing current step"
-    ).to.not.equal(null);
+    expect((paymentIcon) !== (null), "expected a step-icon part for the icon-bearing current step").to.equal(true);
     expect(paymentIcon!.textContent).to.equal("\u{1F4B3}");
     expect(paymentIcon!.getAttribute("aria-hidden")).to.equal("true");
     // The state chip still renders alongside the icon -- the icon identifies the topic, the chip
@@ -344,10 +341,7 @@ describe("lr-stepper", () => {
     expect(buttons[0]!.querySelector('[part="step-index"]')).to.not.equal(null);
 
     const shippingIcon = buttons[1]!.querySelector('[part="step-icon"]');
-    expect(
-      shippingIcon,
-      "expected a step-icon part for the icon-bearing completed step"
-    ).to.not.equal(null);
+    expect((shippingIcon) !== (null), "expected a step-icon part for the icon-bearing completed step").to.equal(true);
     expect(buttons[1]!.querySelector('[part="step-check"]')).to.not.equal(null);
 
     // No icon field at all -- no step-icon part rendered, byte-for-byte unaffected.
@@ -385,8 +379,7 @@ describe("lr-stepper", () => {
       })
     );
     await el.updateComplete;
-    expect(document.activeElement === el || el.shadowRoot!.activeElement).to
-      .exist;
+    expect((document.activeElement === el || el.shadowRoot!.activeElement) != null).to.equal(true);
   });
 
   it("navigates to a step whose id contains characters that would break an unescaped CSS attribute selector", async () => {
@@ -410,7 +403,7 @@ describe("lr-stepper", () => {
       )
     ).not.to.throw();
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
   });
 
   it("is accessible", async () => {
@@ -497,7 +490,7 @@ describe("lr-stepper", () => {
     );
     await el.updateComplete;
     buttons = stepButtons(el);
-    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
   });
 
   it("formats numbered step chips with the effective locale", async () => {
@@ -551,7 +544,7 @@ describe("lr-stepper", () => {
         })
       );
       await elementUpdated(el);
-      expect(el.shadowRoot!.activeElement).to.equal(buttons[2]);
+      expect((el.shadowRoot!.activeElement) === (buttons[2])).to.equal(true);
 
       const changed = oneEvent(el, "lr-stepper-orientation-change");
       fireResizeAll(spy.callbacks, 700);

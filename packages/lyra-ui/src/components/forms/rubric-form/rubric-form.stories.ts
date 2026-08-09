@@ -40,6 +40,48 @@ export const Default: Story = {
   render: () => html`<lr-rubric-form style="max-width: 28rem" .keys=${keys}></lr-rubric-form>`,
 };
 
+/** Native form reset restores the structured value supplied before the component's first render,
+ * rather than blanking the rubric. Later live edits do not rewrite that snapshot. */
+export const FormResetBaseline: Story = {
+  render: () => html`
+    <form style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-28rem);">
+      <lr-rubric-form
+        name="review"
+        .keys=${keys}
+        .value=${{ accuracy: 4, comment: 'Seeded review' } satisfies RubricValue}
+      ></lr-rubric-form>
+      <button type="reset" style="justify-self: start;">Reset to seeded review</button>
+    </form>
+  `,
+};
+
+/** Aggregate form chrome names and describes the complete rubric independently from each field's
+ * own label, hint, and error. The error property also demonstrates the region used by a blocking
+ * `setCustomValidity()` message when `error-text` is empty. */
+export const AggregateFormChrome: Story = {
+  render: () => html`
+    <lr-rubric-form
+      label="Response-quality review"
+      error-text="Resolve the review-policy conflict before submitting."
+      style="max-inline-size: var(--lr-size-28rem)"
+      .keys=${keys}
+    >
+      <span slot="hint">Complete every required dimension, then submit the aggregate review.</span>
+    </lr-rubric-form>
+  `,
+};
+
+export const IndependentActionTheme: Story = {
+  name: 'Independent submit and skip themes',
+  render: () => html`
+    <lr-rubric-form
+      skippable
+      style="max-inline-size: var(--lr-size-28rem); --lr-rubric-form-submit-bg: var(--lr-color-success); --lr-rubric-form-submit-border-color: var(--lr-color-success); --lr-rubric-form-submit-color: var(--lr-color-on-success); --lr-rubric-form-submit-hover-bg: var(--lr-color-warning); --lr-rubric-form-submit-active-bg: var(--lr-color-danger); --lr-rubric-form-skip-hover-bg: var(--lr-color-warning-quiet); --lr-rubric-form-skip-active-bg: var(--lr-color-danger-quiet);"
+      .keys=${keys}
+    ></lr-rubric-form>
+  `,
+};
+
 /** A submit-and-next flow for working through a queue of items: `has-next` and `skippable` are
  *  set, and each `lr-submit`/`lr-skip` advances to the next item by resetting `value` and
  *  changing `item-id` (which also resets which fields have been visited/error-revealed). */
@@ -81,7 +123,51 @@ export const Empty: Story = {
   render: () => html`<lr-rubric-form style="max-width: 28rem"></lr-rubric-form>`,
 };
 
-/** 320px container — the single-column field stack needs no special narrow handling. */
+/** Exact-320px long/localized allocation in both directions. */
 export const Narrow: Story = {
-  render: () => html`<lr-rubric-form style="max-width: 320px" .keys=${keys}></lr-rubric-form>`,
+  name: 'Narrow long content LTR/RTL (320px)',
+  render: () => {
+    const label = 'InternationalizedRubricContentWithoutAnyNaturalBreakOpportunity';
+    const narrowKeys: RubricKey[] = [
+      { key: 'comment', type: 'comment', label, description: label, placeholder: label },
+    ];
+    return html`
+      <div style="display: grid; gap: var(--lr-space-m)">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+              <lr-rubric-form
+                skippable
+                .keys=${narrowKeys}
+                .strings=${{ rubricSubmit: label, rubricSkip: label }}
+              ></lr-rubric-form>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
+};
+
+export const LocalizedScores: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Arabic-Egyptian digits are used consistently by compact segmented and wide slider score branches while submitted values stay numeric.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-rubric-form
+      dir="rtl"
+      locale="ar-EG"
+      style="max-inline-size: var(--lr-size-28rem)"
+      .keys=${[
+        { key: 'compact', type: 'score', label: 'تقييم مختصر', min: 0, max: 5, step: 1 },
+        { key: 'wide', type: 'score', label: 'تقييم تفصيلي', min: 0, max: 2000, step: 1 },
+      ] satisfies RubricKey[]}
+      .value=${{ compact: 3, wide: 1234 }}
+    ></lr-rubric-form>
+  `,
 };

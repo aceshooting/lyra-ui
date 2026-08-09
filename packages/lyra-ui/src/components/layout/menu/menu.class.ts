@@ -59,12 +59,12 @@ export interface LyraMenuEventMap {
   "lr-select": CustomEvent<MenuItemSelectDetail>;
 }
 /**
- * `<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened
- * from a consumer-supplied trigger (typically an icon button). A close, drop-
- * in-shaped replacement for reaching outside this library for a third-party
- * dropdown to build a gear menu, an avatar menu, or a history row's overflow
- * menu: click the trigger, a positioned menu appears, clicking an item both
- * performs the action *and* closes the menu.
+ * `<lr-menu>` — a menu of `<lr-menu-item>` actions. With a consumer-supplied
+ * `trigger` (typically an icon button), it is an anchored dropdown: click the
+ * trigger, a positioned menu appears, and clicking an item both performs the
+ * action *and* closes the menu. With no trigger or `anchor`, the exact mapped
+ * `<sl-menu>` authoring shape instead renders as an inline, always-visible
+ * standalone menu with one roving keyboard entry point.
  *
  * **ARIA pattern — `role="menu"`/`role="menuitem"` with real roving DOM
  * focus, not a listbox.** Two coherent, mutually-exclusive shapes were
@@ -222,7 +222,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Whether the menu is open. */
+  /** Whether an anchored/trigger-owned popup is open. A triggerless, unanchored standalone menu
+   * remains visible so an exact `<sl-menu>` to `<lr-menu>` tag rename preserves its presentation. */
   @property({ type: Boolean, reflect: true }) open = false;
 
   /**
@@ -357,6 +358,33 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // header/footer wrappers and the divider borders are driven off these
     // attributes, so seed them once from the real slots after the first render.
     this.syncRegionState();
+    this.syncPresentationState();
+  }
+
+  /** A mapped Shoelace menu without a trigger is an inline menu, not a closed popup. */
+  private get hasStandalonePresentation(): boolean {
+    return (
+      !this.dropdownContained &&
+      !this.anchor &&
+      this.getAttribute("slot") !== "submenu" &&
+      !this.triggerEl
+    );
+  }
+
+  /** Keeps the inline mapped shape visible and gives it one keyboard entry point. */
+  private syncPresentationState(): void {
+    const standalone = this.hasStandalonePresentation;
+    this.toggleAttribute("data-standalone", standalone);
+    if (standalone) {
+      const active = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+      if (!active || !this.isNavigable(active)) {
+        const first = this.items.find((item) => this.isNavigable(item));
+        this.activeIndex = first ? this.items.indexOf(first) : -1;
+      }
+    } else if (!this.open) {
+      this.activeIndex = -1;
+    }
+    this.applyRovingTabIndex();
   }
 
   private onRegionSlotChange = (): void => {
@@ -443,6 +471,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // and the new value only takes effect on the *next* open. reposition()
       // tears down and re-subscribes, so re-invoking it here is safe.
       this.reposition();
+    }
+    if (changed.has("anchor") || changed.has("dropdownContained")) {
+      this.syncPresentationState();
     }
     if (changed.has("dropdownSize")) this.applyDropdownSize();
   }
@@ -610,6 +641,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.triggerEl.removeAttribute("aria-controls");
     }
     this.triggerEl = next;
+    this.syncPresentationState();
     this.syncTriggerA11y();
     // Covers the "open from the start" race documented on reposition()'s
     // call in updated() -- a no-op resubscribe once already positioned.
@@ -662,7 +694,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.activeIndex = previouslyActive
       ? this.items.indexOf(previouslyActive)
       : -1;
-    this.applyRovingTabIndex();
+    this.syncPresentationState();
     this.syncRegionState();
     if (this.open) {
       if (this.activeIndex === -1) {

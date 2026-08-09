@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -44,7 +44,9 @@ export interface LyraSwatchPickerEventMap {
  *
  * `mode="gemstone"` uses the shared faceted gemstone glyph for options carrying a `gemstone`
  * key and opts into the gemstone glow/shine defaults. The `options` array still controls display
- * order and `value` still controls the initial selection.
+ * order and `value` still controls the initial selection. Live option reorders preserve focus by
+ * option identity; removing the focused option moves focus to the nearest surviving swatch without
+ * changing the controlled `value` or emitting `lr-change`.
  *
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
@@ -108,6 +110,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   // not create multiple checked/tabbable radios or collapse repeat keys.
   private selectedOption?: SwatchOption;
   private selectedIndex = -1;
+  private fallbackTabbableIndex = 0;
+  private pendingFocusIndex?: number;
 
   private resolveSelectedIndex(): number {
     if (this.value === null) {
@@ -150,12 +154,47 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     button?.focus();
   }
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!changed.has('options')) return;
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    if (active?.getAttribute('part') !== 'swatch') return;
+    const previousOptions = changed.get('options') as SwatchOption[] | undefined;
+    const previousIndex = Number(active.dataset['index']);
+    if (!Number.isInteger(previousIndex) || previousIndex < 0) return;
+    const focusedOption = previousOptions?.[previousIndex];
+    const identityIndex = focusedOption === undefined ? -1 : this.options.indexOf(focusedOption);
+    const nextIndex =
+      identityIndex >= 0 ? identityIndex : Math.min(previousIndex, this.options.length - 1);
+    if (nextIndex < 0) {
+      this.pendingFocusIndex = undefined;
+      this.fallbackTabbableIndex = 0;
+      return;
+    }
+    this.pendingFocusIndex = nextIndex;
+    this.fallbackTabbableIndex = nextIndex;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!changed.has('options') || this.pendingFocusIndex === undefined) return;
+    this.scheduleAfterUpdate(() => {
+      const pendingIndex = this.pendingFocusIndex;
+      this.pendingFocusIndex = undefined;
+      if (pendingIndex === undefined || this.options.length === 0) return;
+      this.focusSwatch(Math.min(pendingIndex, this.options.length - 1));
+    }, 'restore-swatch-picker-focus');
+  }
+
   /** The single `role="radio"` swatch that is currently in the roving tab sequence -- the
-   *  selected one, or the first swatch when nothing is selected yet. Mirrors the identical
-   *  `tabbableIndex` fallback in `render()`. */
+   *  selected one, the nearest survivor of a live palette mutation, or the first swatch when
+   *  nothing has been selected yet. Mirrors the identical `tabbableIndex` fallback in `render()`. */
   private tabbableSwatch(): HTMLElement | null {
     const selectedIndex = this.resolveSelectedIndex();
-    const tabbableIndex = selectedIndex !== -1 ? selectedIndex : 0;
+    const tabbableIndex =
+      selectedIndex !== -1
+        ? selectedIndex
+        : Math.min(this.fallbackTabbableIndex, Math.max(0, this.options.length - 1));
     return this.renderRoot?.querySelector(`[part="swatch"][data-index="${tabbableIndex}"]`) ?? null;
   }
 
@@ -211,14 +250,18 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     const ariaLabel = this.getAttribute('aria-label') || this.label || nothing;
     // WAI-ARIA APG radiogroup: exactly one radio is ever tabbable. That's normally the checked
     // swatch, but a fresh/cleared picker (value === null) has no checked swatch -- fall back to
-    // the first swatch so the radiogroup stays keyboard-reachable.
+    // the most recently preserved live-palette position, initially the first swatch, so the
+    // radiogroup stays keyboard-reachable.
     const selectedIndex = this.resolveSelectedIndex();
-    const tabbableIndex = selectedIndex !== -1 ? selectedIndex : 0;
+    const tabbableIndex =
+      selectedIndex !== -1
+        ? selectedIndex
+        : Math.min(this.fallbackTabbableIndex, Math.max(0, this.options.length - 1));
     return html`
       <div part="base" role="radiogroup" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${repeat(
           this.options,
-          (_option, index) => index,
+          (option) => option,
           (option, index) => {
             const color = sanitizeCssColor(option.color);
             const icon =

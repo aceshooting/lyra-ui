@@ -420,7 +420,7 @@ describe('focus management', () => {
     el.open = true;
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement).to.equal(denyButton(el));
+    expect((el.shadowRoot!.activeElement) === (denyButton(el))).to.equal(true);
   });
 
   it('moves focus into the textarea when Edit is clicked', async () => {
@@ -430,7 +430,7 @@ describe('focus management', () => {
     editButton(el).click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
+    expect((el.shadowRoot!.activeElement) === (textarea(el))).to.equal(true);
   });
 
   it('bridges editor focus and blur as bubbling, composed host events', async () => {
@@ -461,14 +461,14 @@ describe('focus management', () => {
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
+    expect((el.shadowRoot!.activeElement) === (textarea(el))).to.equal(true);
 
     el.editable = false;
     await el.updateComplete;
 
     // Focus lands back on Deny instead of falling through to <body> -- see
     // updated()'s editing-turned-off branch.
-    expect(el.shadowRoot!.activeElement).to.equal(denyButton(el));
+    expect((el.shadowRoot!.activeElement) === (denyButton(el))).to.equal(true);
 
     // And the trap as a whole is still fully engaged afterwards: Tab from
     // the last focusable element still wraps back to the first. That would
@@ -493,11 +493,11 @@ describe('focus management', () => {
     )) as LyraToolApprovalDialog;
     el.open = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(denyButton(el));
+    expect((el.shadowRoot!.activeElement) === (denyButton(el))).to.equal(true);
 
     el.close('api');
     await el.updateComplete;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
 
     trigger.remove();
   });
@@ -517,7 +517,7 @@ describe('focus management', () => {
     const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     document.dispatchEvent(tabForward);
     expect(tabForward.defaultPrevented).to.be.true;
-    expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
+    expect((el.shadowRoot!.activeElement) === (textarea(el))).to.equal(true);
 
     const tabBackward = new KeyboardEvent('keydown', {
       key: 'Tab',
@@ -527,7 +527,7 @@ describe('focus management', () => {
     });
     document.dispatchEvent(tabBackward);
     expect(tabBackward.defaultPrevented).to.be.true;
-    expect(el.shadowRoot!.activeElement).to.equal(last);
+    expect((el.shadowRoot!.activeElement) === (last)).to.equal(true);
   });
 
   it('includes the Approve button in the trap once its content is valid JSON again', async () => {
@@ -544,7 +544,7 @@ describe('focus management', () => {
     document.dispatchEvent(tabForward);
     expect(tabForward.defaultPrevented).to.be.true;
     // Approve is the last focusable element while editing, so forward-Tab from it wraps to the first (the textarea).
-    expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
+    expect((el.shadowRoot!.activeElement) === (textarea(el))).to.equal(true);
   });
 
   it('traps Tab/Shift+Tab at the json-viewer body content, whose real focusable target lives in its own shadow root', async () => {
@@ -559,7 +559,7 @@ describe('focus management', () => {
     document.dispatchEvent(tabBackward);
     expect(tabBackward.defaultPrevented).to.be.true;
     // The json-viewer's own toggle button is the first focusable element in the panel, so Shift+Tab from it wraps to the last (Approve).
-    expect(el.shadowRoot!.activeElement).to.equal(approveButton(el));
+    expect((el.shadowRoot!.activeElement) === (approveButton(el))).to.equal(true);
 
     const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     document.dispatchEvent(tabForward);
@@ -569,7 +569,7 @@ describe('focus management', () => {
     // real focus target (`viewer`), not `rootToggle` itself, even though the
     // component's own getActiveElement() (used for the actual Tab-trap logic)
     // does drill all the way down.
-    expect(el.shadowRoot!.activeElement).to.equal(viewer);
+    expect((el.shadowRoot!.activeElement) === (viewer)).to.equal(true);
   });
 });
 

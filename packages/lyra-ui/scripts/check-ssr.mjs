@@ -124,6 +124,19 @@ assert.match(
   'lr-tree-item must render before declarative label assignment is observable',
 );
 
+// Table captures a browser roving-focus owner before collection updates. Server rendering has no
+// HTMLElement constructor or active element, so the first reactive update must skip that browser-
+// only focus snapshot without aborting the otherwise server-renderable table.
+const tableHtml = await renderSsrProbe(
+  'lr-table',
+  animatedImageContext.elementRenderers,
+);
+assert.match(
+  tableHtml,
+  /part="base"/,
+  'lr-table must render without a browser HTMLElement constructor',
+);
+
 const { entries, inventory, loader } = await renderSsrMatrix();
 const inventoryTags = inventory.components.map(({ tag }) => tag).sort();
 const declaredTags = [

@@ -8,14 +8,14 @@ export const styles = css`
        Data-driven literals, same rationale as lr-heatmap's
        --lr-heatmap-scale-lo/-hi -- exposed as retheme-able custom
        properties instead of hardcoded in word-cloud.ts. */
-    --lr-word-cloud-color-1: var(--lr-color-brand);
-    --lr-word-cloud-color-2: var(--lr-color-success);
-    --lr-word-cloud-color-3: var(--lr-color-warning);
-    --lr-word-cloud-color-4: var(--lr-color-danger);
-    --lr-word-cloud-color-5: var(--lr-color-chart-1);
-    --lr-word-cloud-color-6: var(--lr-color-chart-2);
-    --lr-word-cloud-color-7: var(--lr-color-chart-3);
-    --lr-word-cloud-color-8: var(--lr-color-chart-4);
+    --_lr-word-cloud-color-1-default: var(--lr-color-brand);
+    --_lr-word-cloud-color-2-default: var(--lr-color-success);
+    --_lr-word-cloud-color-3-default: var(--lr-color-warning);
+    --_lr-word-cloud-color-4-default: var(--lr-color-danger);
+    --_lr-word-cloud-color-5-default: var(--lr-color-chart-1);
+    --_lr-word-cloud-color-6-default: var(--lr-color-chart-2);
+    --_lr-word-cloud-color-7-default: var(--lr-color-chart-3);
+    --_lr-word-cloud-color-8-default: var(--lr-color-chart-4);
   }
   [part='base'] {
     display: flex;

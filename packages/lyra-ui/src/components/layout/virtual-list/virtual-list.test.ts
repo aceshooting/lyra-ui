@@ -2104,7 +2104,7 @@ describe("sticky group overlay", () => {
     await aTimeout(0);
     const replacementButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
-    expect(replacementButton).to.not.equal(firstButton);
+    expect((replacementButton) !== (firstButton)).to.equal(true);
     expect(replacementButton.tabIndex).to.equal(-1);
   });
 

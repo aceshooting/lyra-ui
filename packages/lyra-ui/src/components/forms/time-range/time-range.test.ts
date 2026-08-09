@@ -6,6 +6,31 @@ import { styles } from './time-range.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const startHandle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+  startHandle.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX: 40 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 100 }));
+  expect(el.start).to.equal(50);
+}
+
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
@@ -62,7 +87,7 @@ it('forwards host focus()/blur() to the start handle', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement === startHandle).to.be.true;
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('relays each handle focus/blur as one native pair plus one prefixed alias pair', async () => {
@@ -173,6 +198,29 @@ it('does not emit lr-change on keyup of a non-arrow key', async () => {
   el.addEventListener('lr-change', () => (changeFired = true));
   startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'Tab', bubbles: true }));
   expect(changeFired).to.be.false;
+});
+
+it('commits a pending keyboard change exactly once when its handle blurs before keyup', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="5"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  const endHandle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-end"]')!;
+  const changes: Array<{ start: number; end: number }> = [];
+  el.addEventListener('lr-change', (event) => {
+    changes.push((event as CustomEvent<{ start: number; end: number }>).detail);
+  });
+
+  startHandle.focus();
+  startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.start).to.equal(25);
+
+  endHandle.focus();
+  expect(changes).to.deep.equal([{ start: 25, end: 80 }]);
+
+  startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  endHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(changes).to.deep.equal([{ start: 25, end: 80 }]);
 });
 
 it('removes the window pointermove/pointerup listeners on disconnect so a detached drag cannot leak', async () => {
@@ -335,6 +383,42 @@ it('stops an in-progress drag without mutating start/end once disabled mid-drag'
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(inputFired).to.be.false;
   expect(changeFired).to.be.false;
+});
+
+it('does not commit an already-changed drag when directly disabled before pointerup', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  beginChangedStartDrag(el, 101);
+  const changes: Array<{ start: number; end: number }> = [];
+  el.addEventListener('lr-change', (event) => {
+    changes.push((event as CustomEvent<{ start: number; end: number }>).detail);
+  });
+
+  el.disabled = true;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 101 }));
+  expect(changes).to.deep.equal([]);
+});
+
+it('does not commit an already-changed drag when fieldset-disabled before pointerup', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector('fieldset')!;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
+  beginChangedStartDrag(el, 102);
+  const changes: Array<{ start: number; end: number }> = [];
+  el.addEventListener('lr-change', (event) => {
+    changes.push((event as CustomEvent<{ start: number; end: number }>).detail);
+  });
+
+  fieldset.disabled = true;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 102 }));
+  expect(changes).to.deep.equal([]);
 });
 
 it('drags the start handle with pointer events and emits lr-input then lr-change on release', async () => {
@@ -707,6 +791,49 @@ it('moves a drag handle’s painted fill on hover, and further again while it is
   }
 });
 
+it('themes preset and handle hover/pressed paint through independent component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-time-range
+      min="0"
+      max="100"
+      start="10"
+      end="90"
+      style="
+        --lr-transition-fast: 0s;
+        --lr-time-range-preset-hover-border-color: rgb(1, 2, 3);
+        --lr-time-range-preset-pressed-border-color: rgb(4, 5, 6);
+        --lr-time-range-preset-pressed-bg: rgb(7, 8, 9);
+        --lr-time-range-handle-hover-bg: rgb(10, 11, 12);
+        --lr-time-range-handle-pressed-bg: rgb(13, 14, 15);
+      "
+    ></lr-time-range>
+  `)) as LyraTimeRange;
+  el.presets = PRESETS;
+  await el.updateComplete;
+  const preset = el.shadowRoot!.querySelector('[part="preset-button"]') as HTMLElement;
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const center = (target: HTMLElement): [number, number] => {
+    const rect = target.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+  try {
+    await sendMouse({ type: 'move', position: center(preset) });
+    expect(getComputedStyle(preset).borderTopColor).to.equal('rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(preset).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(preset).backgroundColor).to.equal('rgb(7, 8, 9)');
+    await sendMouse({ type: 'up' });
+
+    await sendMouse({ type: 'move', position: center(handle) });
+    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(10, 11, 12)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(13, 14, 15)');
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
+});
+
 describe('preset-button hover specificity', () => {
   it('wraps the internal :hover:not(:disabled) rule in :where() so a consumer ::part(preset-button):hover override does not need !important', async () => {
     const el = (await fixture(html`
@@ -780,7 +907,7 @@ it('targets the real preset-button part in the reduced-motion override, not a no
     ></lr-time-range>`,
   )) as LyraTimeRange;
   const presetButton = el.shadowRoot!.querySelector('[part="preset-button"]');
-  expect(presetButton, 'the rendered preset button must actually carry part="preset-button"').to.exist;
+  expect((presetButton) != null, 'the rendered preset button must actually carry part="preset-button"').to.equal(true);
 
   const reducedMotionBlock = styles.cssText.match(/@media \(prefers-reduced-motion: reduce\)[\s\S]*/)?.[0] ?? '';
   expect(reducedMotionBlock).to.include("[part='preset-button']");
@@ -1331,7 +1458,7 @@ it('renders a [part="presets"] row of [part="preset-button"] buttons when preset
   el.presets = PRESETS;
   await el.updateComplete;
   const row = el.shadowRoot!.querySelector('[part="presets"]');
-  expect(row).to.not.equal(null);
+  expect((row) !== (null)).to.equal(true);
   const buttons = el.shadowRoot!.querySelectorAll('[part="preset-button"]');
   expect(buttons.length).to.equal(3);
   expect(buttons[1].textContent).to.include('Last 30 days');
@@ -1536,7 +1663,7 @@ describe('active-preset cssprops', () => {
   it('recolors the active preset from an ancestor, not a :host-declared prop', async () => {
     const el = await themed(overrides);
     const active = el.shadowRoot!.querySelector('[part="preset-button"][data-active]') as HTMLElement;
-    expect(active).to.exist;
+    expect((active) != null).to.equal(true);
     expect(active.textContent).to.include('Last 30 days');
     const rendered = getComputedStyle(active);
     expect(rendered.backgroundColor).to.equal('rgb(0, 51, 102)');
@@ -1961,6 +2088,27 @@ describe('lr-time-range form reset', () => {
     expect(el.start, 'the reset value stands').to.equal(20);
     expect(changes, 'the in-flight keyboard gesture was dropped by the reset').to.deep.equal([]);
   });
+
+  it('does not commit an already-changed drag after the reset restores its value', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-time-range') as LyraTimeRange;
+    beginChangedStartDrag(el, 103);
+    const changes: Array<{ start: number; end: number }> = [];
+    el.addEventListener('lr-change', (event) => {
+      changes.push((event as CustomEvent<{ start: number; end: number }>).detail);
+    });
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.start).to.equal(20);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 103 }));
+    expect(changes).to.deep.equal([]);
+    expect(el.start).to.equal(20);
+  });
 });
 
 it('exposes the native label and validation surface of its form association', async () => {
@@ -1971,8 +2119,8 @@ it('exposes the native label and validation surface of its form association', as
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-time-range') as LyraTimeRange;
-  expect(el.form).to.equal(form);
-  expect(el.getForm()).to.equal(form);
+  expect((el.form) === (form)).to.equal(true);
+  expect((el.getForm()) === (form)).to.equal(true);
   expect(el.willValidate).to.equal(true);
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['window-label']);
   expect(el.validationMessage).to.equal('');

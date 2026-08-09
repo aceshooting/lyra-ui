@@ -217,6 +217,24 @@ describe('follow / stick-to-bottom contract', () => {
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
   });
 
+  it('scrollToBottom is a plain instant scroll and does not re-engage follow', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed follow="false" style="block-size: 80px"></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    el.entries = Array.from({ length: 20 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.scrollTop = 0;
+    let followChanges = 0;
+    el.addEventListener('lr-follow-change', () => { followChanges += 1; });
+
+    el.scrollToBottom();
+
+    expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
+    expect(el.follow).to.be.false;
+    expect(followChanges).to.equal(0);
+  });
+
   it('emits lr-follow-change for a direct programmatic assignment too, but never for the value already in effect on first render', async () => {
     const el = document.createElement('lr-transcript-feed') as LyraTranscriptFeed;
     let fired = false;
@@ -273,7 +291,7 @@ it('exposes its scroll surface as the keyboard focus target', async () => {
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.tabIndex).to.equal(0);
   base.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(base);
+  expect((el.shadowRoot!.activeElement) === (base)).to.equal(true);
 });
 
 it('contains long speaker and transcript text in a 320px allocation', async () => {

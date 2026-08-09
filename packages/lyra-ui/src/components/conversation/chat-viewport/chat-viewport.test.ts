@@ -693,7 +693,7 @@ describe('jump pill', () => {
     el.follow = false;
     await el.updateComplete;
     const pill = el.shadowRoot!.querySelector('[part="jump-pill"]');
-    expect(pill).to.exist;
+    expect((pill) != null).to.equal(true);
   });
 
   it('shows a pluralized unread count once unreadStartIndex yields a positive count', async () => {
@@ -754,7 +754,7 @@ describe('unread divider (slotted mode)', () => {
     await el.updateComplete;
     await nextFrame();
     const divider = el.shadowRoot!.querySelector('[part="unread-divider"]') as HTMLElement;
-    expect(divider).to.exist;
+    expect((divider) != null).to.equal(true);
     expect(divider.getAttribute('role')).to.equal('separator');
     expect(parseFloat(divider.style.top)).to.equal(80); // 2 rows * 40px
   });
@@ -782,7 +782,7 @@ describe('unread divider (slotted mode)', () => {
     await negative.updateComplete;
     await nextFrame();
     const negativeDivider = negative.shadowRoot!.querySelector('[part="unread-divider"]') as HTMLElement;
-    expect(negativeDivider, 'a negative index must clamp to 0, not silently disable the divider').to.exist;
+    expect((negativeDivider) != null, 'a negative index must clamp to 0, not silently disable the divider').to.equal(true);
     expect(parseFloat(negativeDivider.style.top)).to.equal(0);
 
     const nonFinite = (await fixture(

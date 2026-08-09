@@ -1,7 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './prompt-studio.js';
 import type { LyraPromptStudio, PromptStudioMessage, PromptStudioVersion } from './prompt-studio.js';
-import { styles } from './prompt-studio.styles.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -147,19 +146,30 @@ it('bridges focus/blur from the message textarea and variable inputs to the host
   await blurPending;
 });
 
-it('resets native appearance on the message-role select, themes its option list, and adds a chevron', async () => {
-  const el = (await fixture(html`<lr-prompt-studio .messages=${messages}></lr-prompt-studio>`)) as LyraPromptStudio;
-  const select = el.shadowRoot!.querySelector('[part="message-role"]') as HTMLSelectElement;
+it('renders light and dark native option palettes, resets select appearance, and adds a chevron', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-prompt-studio data-lr-theme="light" .messages=${messages}></lr-prompt-studio>
+      <lr-prompt-studio data-lr-theme="dark" .messages=${messages}></lr-prompt-studio>
+    </div>
+  `);
+  const [light, dark] = [...wrapper.querySelectorAll<LyraPromptStudio>('lr-prompt-studio')];
+  const select = light!.shadowRoot!.querySelector('[part="message-role"]') as HTMLSelectElement;
   expect(getComputedStyle(select).appearance).to.equal('none');
   expect(getComputedStyle(select).cursor).to.equal('pointer');
-  const wrapper = select.closest('.message-role-wrapper');
-  expect(wrapper, 'the select must be wrapped so a decorative chevron can be positioned over it').to.exist;
+  const selectWrapper = select.closest('.message-role-wrapper');
+  expect((selectWrapper) != null, 'the select must be wrapped so a decorative chevron can be positioned over it').to.equal(true);
   expect(
-    wrapper!.querySelector('.message-role-chevron svg'),
+    selectWrapper!.querySelector('.message-role-chevron svg') != null,
     'a decorative chevron must render since appearance:none removes the native one',
-  ).to.exist;
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='message-role'\] option[^{]*\{[^}]*background:/);
+  ).to.equal(true);
+
+  const lightOption = select.querySelector('option')!;
+  const darkOption = dark!.shadowRoot!.querySelector<HTMLSelectElement>('[part="message-role"]')!.querySelector('option')!;
+  expect(getComputedStyle(lightOption).backgroundColor).to.equal('rgb(255, 255, 255)');
+  expect(getComputedStyle(lightOption).color).to.equal('rgb(26, 26, 26)');
+  expect(getComputedStyle(darkOption).backgroundColor).to.equal('rgb(26, 26, 26)');
+  expect(getComputedStyle(darkOption).color).to.equal('rgb(242, 242, 242)');
 });
 
 it('renders and exposes a component-scoped theme hook for the selected version', async () => {

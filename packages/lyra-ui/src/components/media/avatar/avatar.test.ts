@@ -103,7 +103,7 @@ describe('lr-avatar', () => {
     el.image = TEST_IMAGE_SRC_REPLACEMENT;
     await el.updateComplete;
     const replacement = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
-    expect(replacement).to.exist;
+    expect((replacement) != null).to.equal(true);
     expect(replacement.getAttribute('src')).to.equal(TEST_IMAGE_SRC_REPLACEMENT);
   });
 

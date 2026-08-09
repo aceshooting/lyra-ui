@@ -179,13 +179,15 @@ function unsupportedPromise(message: string): Promise<never> {
  *   allowlisted clones are inserted into the private native video.
  * @slot controls-after-play - Content immediately after the play/pause control.
  * @slot controls-start - Content at the start of the control bar.
- * @slot exit-fullscreen-icon - Fullscreen-exit icon override.
- * @slot fullscreen-icon - Fullscreen-enter icon override.
- * @slot mute-icon - Muted-state icon override.
- * @slot pause-icon - Pause icon override.
- * @slot play-icon - Play icon override.
- * @slot poster-icon - Poster play-button icon override.
- * @slot volume-icon - Audible-state icon override.
+ * @slot exit-fullscreen-icon - Decorative fullscreen-exit glyph override. Assigned content is
+ *   rendered inert and accessibility-hidden beside, never inside, the named native button.
+ * @slot fullscreen-icon - Decorative fullscreen-enter glyph override; rendered through the same
+ *   inert sibling layer.
+ * @slot mute-icon - Decorative muted-state glyph override; rendered through the same inert sibling layer.
+ * @slot pause-icon - Decorative pause glyph override; rendered through the same inert sibling layer.
+ * @slot play-icon - Decorative play glyph override; rendered through the same inert sibling layer.
+ * @slot poster-icon - Decorative poster-play glyph override; rendered through the same inert sibling layer.
+ * @slot volume-icon - Decorative audible-state glyph override; rendered through the same inert sibling layer.
  * @event {Event} ended - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} error - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} loadedmetadata - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
@@ -752,6 +754,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     </lr-icon>`;
   }
 
+  /** Keeps consumer glyph markup out of the real button's flat-tree descendants. An author may
+   * accidentally provide a link, button, or other focusable node for an icon slot; the visual
+   * layer remains decorative and inert while the adjacent native button owns the sole action. */
+  private renderDecorativeIconLayer(content: TemplateResult): TemplateResult {
+    return html`<span class="control-icon-layer" aria-hidden="true" inert>${content}</span>`;
+  }
+
   private renderPlaySlots(): TemplateResult {
     return html`
       <slot name="play-icon" ?hidden=${this.playing}>
@@ -828,12 +837,15 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       <div part="controls-overlay">
         <div part="controls">
           <slot name="controls-start"></slot>
-          <button
-            type="button"
-            data-control="play"
-            aria-label=${this.localize(this.playing ? 'pause' : 'play')}
-            @click=${this.togglePlay}
-          >${this.renderPlaySlots()}</button>
+          <span class="icon-button-stack">
+            <button
+              type="button"
+              data-control="play"
+              aria-label=${this.localize(this.playing ? 'pause' : 'play')}
+              @click=${this.togglePlay}
+            ></button>
+            ${this.renderDecorativeIconLayer(this.renderPlaySlots())}
+          </span>
           <slot name="controls-after-play"></slot>
           <div
             part="timeline"
@@ -859,12 +871,15 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           <span data-time>${formatTime(this.currentTime, this.effectiveLocale)}</span>
           <span aria-hidden="true">/</span>
           <span data-time>${formatTime(this.duration, this.effectiveLocale)}</span>
-          <button
-            type="button"
-            data-control="mute"
-            aria-label=${this.localize(this.mediaController.muted ? 'videoUnmute' : 'videoMute')}
-            @click=${this.toggleMute}
-          >${this.renderVolumeSlots()}</button>
+          <span class="icon-button-stack">
+            <button
+              type="button"
+              data-control="mute"
+              aria-label=${this.localize(this.mediaController.muted ? 'videoUnmute' : 'videoMute')}
+              @click=${this.toggleMute}
+            ></button>
+            ${this.renderDecorativeIconLayer(this.renderVolumeSlots())}
+          </span>
           <input
             data-control="volume"
             type="range"
@@ -915,14 +930,17 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               >${this.renderIcon('video-picture-in-picture', 'M3 5h18v14H3Zm10 6h6v5h-6z')}</button>`
             : nothing}
           ${canFullscreen
-            ? html`<button
-                type="button"
-                data-control="fullscreen"
-                aria-label=${this.localize(
-                  this.fullscreen ? 'videoExitFullscreen' : 'videoEnterFullscreen',
-                )}
-                @click=${this.onFullscreenButton}
-              >${this.renderFullscreenSlots()}</button>`
+            ? html`<span class="icon-button-stack">
+                <button
+                  type="button"
+                  data-control="fullscreen"
+                  aria-label=${this.localize(
+                    this.fullscreen ? 'videoExitFullscreen' : 'videoEnterFullscreen',
+                  )}
+                  @click=${this.onFullscreenButton}
+                ></button>
+                ${this.renderDecorativeIconLayer(this.renderFullscreenSlots())}
+              </span>`
             : nothing}
         </div>
       </div>
@@ -949,12 +967,17 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         ${safePoster && this.posterVisible
           ? html`<div part="poster-overlay">
               <img src=${safePoster} alt="">
-              <button
-                part="poster-play-button"
-                type="button"
-                aria-label=${this.localize('play')}
-                @click=${this.onPosterPlay}
-              ><slot name="poster-icon">${this.renderIcon('video-poster-play', 'M8 5v14l11-7Z')}</slot></button>
+              <span class="icon-button-stack">
+                <button
+                  part="poster-play-button"
+                  type="button"
+                  aria-label=${this.localize('play')}
+                  @click=${this.onPosterPlay}
+                ></button>
+                ${this.renderDecorativeIconLayer(html`
+                  <slot name="poster-icon">${this.renderIcon('video-poster-play', 'M8 5v14l11-7Z')}</slot>
+                `)}
+              </span>
             </div>`
           : nothing}
         ${this.title ? html`<div part="video-title-overlay">${this.title}</div>` : nothing}

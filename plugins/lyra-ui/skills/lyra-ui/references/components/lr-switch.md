@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,6 +25,7 @@ Deliberately no separate top-of-field `label` prop/slot/part: the default slot a
 control's visible, clickable label (same as `<lr-checkbox>`).
 
 **Properties:**
+
 - `checked: boolean = false` — the live, non-reflecting state
 - `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
   `default-checked`) — the current reset default; changing it updates `checked` only while the live
@@ -74,6 +75,7 @@ never reflect, default/attribute changes cannot overwrite a dirty live state, an
 restores the current default before making the control pristine again.
 
 **Slots:**
+
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
   control still has an accessible name. Flattened forwarding-slot assignment and later mutations
@@ -96,12 +98,14 @@ on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared
 default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
 resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
 WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
+`--lr-switch-gap` (default `var(--lr-space-s)`) independently controls the track-to-label gap.
 
-`--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s resting fill,
-re-pointed at `--lr-color-brand` while `checked`. Hover and press are colour **mixes** away from
-whichever of the two is current — `--lr-color-mix-partner` at the `--lr-color-mix-hover` and
-`--lr-color-mix-active` shares — so retinting this one property retints all four renderings at
-once, and neither state touches the label text beside the track. Plus shared tokens
+`--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
+fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
+checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
+retint the pointer states (their defaults remain mixes from the current resting fill).
+`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb in either state. None of
+these hooks touches the label text beside the track. Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -113,7 +117,7 @@ once, and neither state touches the label text beside the track. Plus shared tok
   import '@aceshooting/lyra-ui/components/forms/switch/switch.js';
   const sw = document.querySelector('lr-switch');
   sw.addEventListener('lr-change', (e) => console.log(e.detail.checked)); // prefixed alias
-  sw.addEventListener('change', (e) => console.log(e.target.checked));    // native-style, no detail
+  sw.addEventListener('change', (e) => console.log(e.target.checked)); // native-style, no detail
 </script>
 ```
 
@@ -125,6 +129,7 @@ Session-history/autofill restoration uses the same explicit `checked`/`unchecked
 checkbox and does not emit `lr-change`.
 
 **Known gotchas:**
+
 - `checked` is live and dirty; `defaultChecked`/the `checked` attribute is the current reset default.
   A later `.checked = true` never redefines what `form.reset()` restores to. Shoelace's
   `default-checked` attribute is accepted as an alias for that reset default.

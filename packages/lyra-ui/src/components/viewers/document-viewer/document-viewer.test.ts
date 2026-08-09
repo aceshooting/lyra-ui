@@ -27,7 +27,7 @@ describe('registry dispatch', () => {
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     const matched = el.shadowRoot!.querySelector('[part="body"] #matched');
-    expect(matched).to.exist;
+    expect((matched) != null).to.equal(true);
     expect(matched!.textContent).to.equal('report.pdf');
   });
 
@@ -37,7 +37,7 @@ describe('registry dispatch', () => {
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     const preview = el.shadowRoot!.querySelector('[part="body"] lr-document-preview');
-    expect(preview).to.exist;
+    expect((preview) != null).to.equal(true);
     expect(preview!.getAttribute('filename')).to.equal('report.pdf');
   });
 
@@ -73,7 +73,7 @@ describe('registry dispatch', () => {
     await aTimeout(20);
     await el.updateComplete;
     const lazy = el.shadowRoot!.querySelector('[part="body"] #lazy');
-    expect(lazy).to.exist;
+    expect((lazy) != null).to.equal(true);
     expect(lazy!.textContent).to.equal('report.pdf');
   });
 
@@ -264,7 +264,7 @@ describe('dialog wiring', () => {
       <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
     `)) as LyraDocumentViewer;
     const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
-    expect(link).to.exist;
+    expect((link) != null).to.equal(true);
     expect(link.href).to.equal('https://example.test/report.pdf');
     expect(link.download).to.equal('report.pdf');
 
@@ -325,6 +325,18 @@ describe('accessible name override', () => {
     await (dialog as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     const panel = dialog.shadowRoot!.querySelector('[part~="panel"]')!;
     expect(panel.getAttribute('aria-label')).to.equal('Custom label');
+  });
+
+  it('preserves an explicitly empty host aria-label ahead of the localized dialog label', async () => {
+    const el = (await fixture(html`
+      <lr-document-viewer open name="report.pdf" aria-label=""></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
+    await (dialog as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const panel = dialog.shadowRoot!.querySelector('[part~="panel"]')!;
+    expect(panel.hasAttribute('aria-label')).to.be.true;
+    expect(panel.getAttribute('aria-label')).to.equal('');
   });
 });
 

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,12 +22,26 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 - `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
 - `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
   writes are shallow-copied.
-- `label: string = ''` — accessible name for the internal `role="group"`.
+- `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
+  `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
 - `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+
+The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
+height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
+inside the same controls row.
+The host, root, controls, active-filter row, composed chip group, and chips all zero nested flex
+auto minima and cap themselves to the allocated inline size. A single unbroken localized active
+value therefore stays inside a 320px LTR or RTL bar, with the chip's own label ellipsis retaining
+overflow ownership rather than widening the page.
+
+Each edit exposes one filter-bar `lr-input` carrying the complete value object. A built-in or
+custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
+detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
+composed controls continue bubbling normally.
 
 **Methods:** `checkValidity(): boolean` returns whether every required filter is set without
 revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
@@ -35,7 +49,19 @@ required-field error; `reset(): void` restores each definition's `defaultValue` 
 unless the bar is disabled.
 
 **Events:** `lr-input`, `lr-reset`, `lr-validity-change`. **CSS parts:** `base`, `controls`,
-`filter-control`, `active-filters`, `chips`, `chip`, `reset-button`, `status`.
+`filter-control`, `filter-control-label`, `filter-control-field`, `filter-control-input`,
+`filter-control-start`, `filter-control-end`, `filter-control-listbox`, `filter-control-option`,
+`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
+`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
+`chip`, `reset-button`, `status`.
+
+The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
+surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
+text/date input wrapper; `filter-control-input` reaches the corresponding display or editable input.
+Listbox/option aliases apply to select and combobox filters, while expand-button/popup apply to date
+filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(...)` without
+depending on the built-in control type selected by a filter definition. Custom renderers retain
+ownership of their own part forwarding.
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their
@@ -44,6 +70,11 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
+
+Date and date-range chips localize only round-trip-valid ISO `YYYY-MM-DD` segments. Four-digit
+years `0000`–`0099` retain those literal years rather than inheriting JavaScript's 1900 offset;
+impossible days/months, malformed values, and a range with either invalid endpoint stay verbatim
+instead of silently rolling into another date.
 
 A `'text'` filter is the one control that is **not** a fully controlled `.value=` binding.
 Re-rendering a text field from `value` mid-typing would push a stale value back in and drop the

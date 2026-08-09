@@ -96,14 +96,14 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   const a = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
-  expect(deepActiveElement()).to.equal(a as unknown as Element);
+  expect((deepActiveElement()) === (a as unknown as Element)).to.equal(true);
 
   (a as unknown as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
   );
   await el.updateComplete;
   const b = root.shadowRoot!.querySelectorAll('lr-tree-item')[1] as unknown as LyraTreeItem;
-  expect(deepActiveElement()).to.equal(b as unknown as Element);
+  expect((deepActiveElement()) === (b as unknown as Element)).to.equal(true);
 
   // Legitimate direct write path (also used by this file's own
   // "reorders a nested children array" test above) -- no `data`
@@ -116,7 +116,7 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
   );
   await el.updateComplete;
   const c = root.shadowRoot!.querySelectorAll('lr-tree-item')[2] as unknown as LyraTreeItem;
-  expect(deepActiveElement()).to.equal(c as unknown as Element);
+  expect((deepActiveElement()) === (c as unknown as Element)).to.equal(true);
 });
 
 it('keeps arrow-key navigation correct after expandAll() reveals nodes that were not previously visible', async () => {
@@ -132,7 +132,7 @@ it('keeps arrow-key navigation correct after expandAll() reveals nodes that were
   await el.updateComplete;
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 
   el.expandAll();
   await el.updateComplete;
@@ -140,7 +140,7 @@ it('keeps arrow-key navigation correct after expandAll() reveals nodes that were
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   const childA = root.shadowRoot!.querySelector('lr-tree-item');
-  expect(deepActiveElement()).to.equal(childA);
+  expect((deepActiveElement()) === (childA)).to.equal(true);
 });
 
 it('removes a stale accessible label when reassigned row data no longer supplies one', async () => {

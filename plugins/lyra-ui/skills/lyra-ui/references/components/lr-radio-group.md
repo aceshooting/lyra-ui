@@ -24,7 +24,8 @@ horizontal. Horizontal direction mirrors under RTL, and disabled options are ski
 `defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
 (`custom-error`), `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
 `withLabel`/`withHint` (`with-label`/`with-hint` SSR presence hints), `aria-label` (through
-`accessibleLabel`), and `size: LyraSize = 'm'` (reflected) — the size of the
+`accessibleLabel`; attribute presence wins, including `aria-label=""`, and suppresses the
+visible-label `aria-labelledby` fallback), and `size: LyraSize = 'm'` (reflected) — the size of the
 group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
 options off the same values the controls themselves use, and propagates the selected tier to every

@@ -17,6 +17,10 @@
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
+Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint, coalescing
+parse/highlight work; replacing that same-id part with `state: 'complete'` flushes the final content.
+Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
+allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
 (attribute `render-markdown`, reflected) and `showReasoning: boolean = true` (attribute
@@ -47,7 +51,7 @@ message or the localized fallback. Existing history and reconnect renders stay s
 error id and later adding it again creates a new announcement.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
+import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
 **Additional API surface:**

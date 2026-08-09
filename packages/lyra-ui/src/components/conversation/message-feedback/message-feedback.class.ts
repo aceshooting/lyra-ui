@@ -9,7 +9,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface MessageFeedbackReason {
   id: string;
   label: string;
@@ -73,6 +72,9 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  *   thumb (with no panel open) clears it to `null`. The terminal signal when no detail panel is
  *   configured for that thumb.
  * @event lr-submit - `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
+ *   Cancelable: `preventDefault()` holds the panel in its reflected `pending` state until the host
+ *   calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it
+ *   fails. An uncanceled submit retains the synchronous close/announce/focus behavior.
  * @event blur - Re-dispatched from the comment `<textarea>`'s own native `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it. Mirrors `<lr-model-select>`'s identical re-dispatch for its own free-text
@@ -143,6 +145,11 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   /** Read-only display of a recorded rating -- both thumbs become inert. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
+  /** A canceled `lr-submit` is awaiting host persistence. While true, every feedback control is
+   *  disabled and the open panel is busy. Resolve through `finalizePendingSubmit()` or
+   *  `revertPendingSubmit()`; the component sets this state automatically. */
+  @property({ type: Boolean, reflect: true }) pending = false;
+
   @state() private panelOpen = false;
   @state() private selectedReasonIds: string[] = [];
   @state() private commentDraft = '';
@@ -150,6 +157,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
+  @query('[part="submit-button"]') private submitButtonEl?: HTMLButtonElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private readonly panelId = nextId('message-feedback-panel');
@@ -168,7 +176,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   /** Activates the thumb matching the current value (the up thumb when unset). */
   override click(): void {
-    if (this.disabled) return;
+    if (this.disabled || this.pending) return;
     (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.click();
   }
 
@@ -185,6 +193,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
       const internal = this.pendingInternalValue?.value === this.value;
       this.pendingInternalValue = undefined;
       if (!internal) {
+        this.pending = false;
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
@@ -195,10 +204,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
       this.selectedReasonIds = this.selectedReasonIds.filter((id) => validIds.has(id));
     }
     if (changed.has('commentable') && !this.commentable) this.commentDraft = '';
-    if (
-      this.panelOpen &&
-      (!this.value || !this.detailApplies(this.value) || !this.hasDetailContent)
-    ) {
+    if (this.panelOpen && (!this.value || !this.detailApplies(this.value) || !this.hasDetailContent)) {
+      this.pending = false;
       this.panelOpen = false;
       if (changed.has('detailFor')) {
         this.selectedReasonIds = [];
@@ -213,7 +220,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   }
 
   private activateThumb(next: MessageFeedbackRating): void {
-    if (this.disabled) return;
+    if (this.disabled || this.pending) return;
     if (this.value === next) {
       if (this.panelOpen) {
         this.setValueFromActivation(null);
@@ -257,7 +264,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   };
 
   private toggleReason(id: string): void {
-    if (this.disabled) return;
+    if (this.disabled || this.pending) return;
     this.selectedReasonIds = this.selectedReasonIds.includes(id)
       ? this.selectedReasonIds.filter((r) => r !== id)
       : [...this.selectedReasonIds, id];
@@ -279,17 +286,49 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.emit('blur');
   };
 
-  private onSubmit = (): void => {
-    if (this.disabled || !this.value || !this.panelOpen) return;
-    const validReasonIds = new Set(this.reasons.map((reason) => reason.id));
-    this.emit('lr-submit', {
-      value: this.value,
-      reasonIds: this.selectedReasonIds.filter((id) => validReasonIds.has(id)),
-      comment: this.commentable ? this.commentDraft.trim() : '',
-    });
+  private completeSubmission(): void {
     this.panelOpen = false;
     this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
     this.focusActiveThumb();
+  }
+
+  /** Completes a submit held by `preventDefault()`, closing and announcing success. */
+  finalizePendingSubmit(): void {
+    if (!this.pending) return;
+    this.pending = false;
+    this.panelOpen = false;
+    this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
+    void this.updateComplete.then(() => {
+      if (this.isConnected && !this.pending) this.focusActiveThumb();
+    });
+  }
+
+  /** Releases a submit held by `preventDefault()` without announcing success or clearing its draft. */
+  revertPendingSubmit(): void {
+    if (!this.pending) return;
+    this.pending = false;
+    void this.updateComplete.then(() => {
+      if (this.isConnected && !this.pending && this.panelOpen) this.submitButtonEl?.focus();
+    });
+  }
+
+  private onSubmit = (): void => {
+    if (this.disabled || this.pending || !this.value || !this.panelOpen) return;
+    const validReasonIds = new Set(this.reasons.map((reason) => reason.id));
+    const event = this.emit(
+      'lr-submit',
+      {
+        value: this.value,
+        reasonIds: this.selectedReasonIds.filter((id) => validReasonIds.has(id)),
+        comment: this.commentable ? this.commentDraft.trim() : '',
+      },
+      { cancelable: true }
+    );
+    if (event.defaultPrevented) {
+      this.pending = true;
+      return;
+    }
+    this.completeSubmission();
   };
 
   private renderThumb(direction: MessageFeedbackRating): TemplateResult {
@@ -303,7 +342,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         aria-label=${this.localize(direction === 'up' ? 'feedbackPositive' : 'feedbackNegative')}
         aria-expanded=${canExpand ? (pressed && this.panelOpen ? 'true' : 'false') : nothing}
         aria-controls=${canExpand ? this.panelId : nothing}
-        ?disabled=${this.disabled}
+        ?disabled=${this.disabled || this.pending}
         @click=${() => this.activateThumb(direction)}
       >
         ${thumbIcon(direction, pressed)}
@@ -323,6 +362,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                 ?data-open=${this.panelOpen}
                 ?inert=${!this.panelOpen}
                 aria-hidden=${this.panelOpen ? 'false' : 'true'}
+                aria-busy=${this.pending ? 'true' : 'false'}
                 @keydown=${this.onPanelKeyDown}
               >
                 <div class="panel-inner">
@@ -334,14 +374,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                               <lr-chip
                                 toggleable
                                 ?selected=${this.selectedReasonIds.includes(reason.id)}
-                                .disabled=${this.disabled}
+                                .disabled=${this.disabled || this.pending}
                                 @lr-chip-select=${(event: Event) => {
                                   event.stopPropagation();
                                   this.toggleReason(reason.id);
                                 }}
                                 >${reason.label}</lr-chip
                               >
-                            `,
+                            `
                           )}
                         </div>
                       `
@@ -353,14 +393,19 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                           aria-label=${this.localize('feedbackCommentLabel')}
                           placeholder=${this.localize('feedbackCommentPlaceholder')}
                           .value=${this.commentDraft}
-                          ?disabled=${this.disabled}
+                          ?disabled=${this.disabled || this.pending}
                           @input=${this.onCommentInput}
                           @focus=${this.onCommentFocus}
                           @blur=${this.onCommentBlur}
                         ></textarea>
                       `
                     : nothing}
-                  <button part="submit-button" type="button" ?disabled=${this.disabled} @click=${this.onSubmit}>
+                  <button
+                    part="submit-button"
+                    type="button"
+                    ?disabled=${this.disabled || this.pending}
+                    @click=${this.onSubmit}
+                  >
                     ${this.localize('feedbackSubmit')}
                   </button>
                 </div>

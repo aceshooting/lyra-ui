@@ -26,6 +26,16 @@ export const Checked: Story = {
   render: () => html`<lr-switch checked>Enable notifications</lr-switch>`,
 };
 
+export const IndependentStateTheme: Story = {
+  name: 'Independent checked and pointer theme',
+  render: () => html`
+    <lr-switch
+      checked
+      style="--lr-switch-gap: var(--lr-space-l); --lr-switch-checked-track-fill: var(--lr-color-success); --lr-switch-thumb-fill: var(--lr-color-on-success); --lr-switch-track-hover-fill: var(--lr-color-warning); --lr-switch-track-active-fill: var(--lr-color-danger);"
+    >Hover and press me</lr-switch>
+  `,
+};
+
 export const SupportingTextAliases: Story = {
   name: 'WA hint and Shoelace help text',
   render: () => html`
@@ -46,6 +56,24 @@ export const Disabled: Story = {
       <lr-switch disabled checked>On, disabled</lr-switch>
     </div>
   `,
+};
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  render: () => {
+    const label = 'InternationalizedSwitchLabelWithoutAnyNaturalBreakOpportunity';
+    return html`
+      <div style="display: grid; gap: var(--lr-space-m)">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+              <lr-switch hint=${label}>${label}</lr-switch>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
 };
 
 export const NoLabelSlot: Story = {

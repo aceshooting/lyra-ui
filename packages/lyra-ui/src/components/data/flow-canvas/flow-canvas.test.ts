@@ -1,6 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './flow-canvas.js';
 import '../../overlays/empty/empty.js';
+import '../flow-controls/flow-controls.js';
+import '../flow-minimap/flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { styles } from './flow-canvas.styles.js';
@@ -52,7 +54,7 @@ it('exports the FLOW_PALETTE_MIME_TYPE constant used by the drop/palette handsha
 it('renders lr-empty with the noData message when nodes is empty', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.tagName.toLowerCase()).to.equal('lr-empty');
   expect(empty!.getAttribute('heading')).to.equal('No data');
 });
@@ -407,7 +409,7 @@ describe('static rendering', () => {
     el.nodes = nodes;
     await el.updateComplete;
     const a = el.querySelector('[node-id="a"]') as HTMLElement;
-    expect(a).to.exist;
+    expect((a) != null).to.equal(true);
     expect(a.tagName.toLowerCase()).to.equal('lr-flow-node');
     expect(a.getAttribute('slot')).to.equal('node-a');
     expect((a as unknown as { heading: string }).heading).to.equal('Fetch');
@@ -468,7 +470,7 @@ describe('static rendering', () => {
     el.edges = edges;
     await el.updateComplete;
     const path = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
-    expect(path).to.exist;
+    expect((path) != null).to.equal(true);
     expect(path.getAttribute('marker-end')).to.include('#');
     expect(el.shadowRoot!.querySelector('[part="edge-label"]')!.textContent).to.equal('then');
   });
@@ -518,13 +520,57 @@ describe('static rendering', () => {
     );
   });
 
-  it('reflects grid onto the background layer as --lr-flow-canvas-grid-size', async () => {
-    const el = (await fixture(html`<lr-flow-canvas grid="16"></lr-flow-canvas>`)) as LyraFlowCanvas;
+  it('uses grid as the background fallback without shadowing host or ancestor cssprop overrides', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-flow-canvas-grid-size: 32px">
+        <lr-flow-canvas grid="16"></lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
     const bg = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
-    expect(bg.style.getPropertyValue('--lr-flow-canvas-grid-size')).to.equal('16px');
+    expect(getComputedStyle(bg).backgroundSize).to.equal('32px 32px');
+
+    el.style.setProperty('--lr-flow-canvas-grid-size', '24px');
+    expect(getComputedStyle(bg).backgroundSize).to.equal('24px 24px');
+
+    el.style.removeProperty('--lr-flow-canvas-grid-size');
+    wrapper.style.removeProperty('--lr-flow-canvas-grid-size');
+    expect(getComputedStyle(bg).backgroundSize).to.equal('16px 16px');
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`wraps bottom corner companions without overlap at 320px in ${direction}`, async () => {
+      const el = (await fixture(html`
+        <lr-flow-canvas dir=${direction} style="inline-size:320px;block-size:20rem">
+          <lr-flow-controls slot="bottom-start" orientation="horizontal"></lr-flow-controls>
+          <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+        </lr-flow-canvas>
+      `)) as LyraFlowCanvas;
+      el.nodes = nodes;
+      await el.updateComplete;
+      const controls = el.querySelector('lr-flow-controls') as HTMLElement & { updateComplete: Promise<unknown> };
+      const minimap = el.querySelector('lr-flow-minimap') as HTMLElement & { updateComplete: Promise<unknown> };
+      await Promise.all([controls.updateComplete, minimap.updateComplete]);
+      const controlRect = controls.getBoundingClientRect();
+      const minimapRect = minimap.getBoundingClientRect();
+      const overlapInline = Math.max(
+        0,
+        Math.min(controlRect.right, minimapRect.right) - Math.max(controlRect.left, minimapRect.left),
+      );
+      const overlapBlock = Math.max(
+        0,
+        Math.min(controlRect.bottom, minimapRect.bottom) - Math.max(controlRect.top, minimapRect.top),
+      );
+      expect(overlapInline * overlapBlock).to.equal(0);
+      const canvasRect = el.getBoundingClientRect();
+      expect(controlRect.left).to.be.at.least(canvasRect.left);
+      expect(controlRect.right).to.be.at.most(canvasRect.right);
+      expect(minimapRect.left).to.be.at.least(canvasRect.left);
+      expect(minimapRect.right).to.be.at.most(canvasRect.right);
+    });
+  }
 
   it('sets the default card textContent from node.data.description when present', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -634,11 +680,26 @@ describe('auto-layout', () => {
     ];
     await el.updateComplete;
     const after = el.shadowRoot!.querySelector('[data-node-id="b"]');
-    expect(before).to.equal(after);
+    expect((before) === (after)).to.equal(true);
   });
 });
 
 describe('pan & zoom', () => {
+  it('exposes zoomIn/zoomOut/resetZoom as prototype methods for generated API metadata', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    const prototype = Object.getPrototypeOf(el) as object;
+    for (const name of ['zoomIn', 'zoomOut', 'resetZoom'] as const) {
+      expect(
+        Object.prototype.hasOwnProperty.call(el, name),
+        `${name} must not be an assignable field`,
+      ).to.equal(false);
+      expect(
+        typeof Object.getOwnPropertyDescriptor(prototype, name)?.value,
+        `${name} must be discoverable as a method`,
+      ).to.equal('function');
+    }
+  });
+
   it('renders a visible focus indicator on the keyboard-operable viewport', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -788,6 +849,27 @@ describe('pan & zoom', () => {
     expect(el.viewport.zoom).to.equal(1);
   });
 
+  it('a live locked transition rolls back and retires an active background pan', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const bg = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    bg.setPointerCapture = () => {};
+    bg.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 51, clientX: 100, clientY: 100, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 51, clientX: 140, clientY: 90 }));
+    expect(el.viewport.x).to.equal(40);
+
+    el.locked = true;
+    await el.updateComplete;
+    expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
+    expect(viewportEl.hasAttribute('data-panning')).to.equal(false);
+
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 51, clientX: 200, clientY: 200 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 51, clientX: 200, clientY: 200 }));
+    expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
+  });
+
   it('mirrors the pan/zoom surface under orientation="horizontal" + dir="rtl"', async () => {
     const el = (await fixture(
       html`<div dir="rtl"><lr-flow-canvas></lr-flow-canvas></div>`,
@@ -832,7 +914,7 @@ describe('selection & roving focus', () => {
     const control = wrapper.querySelector('[part="node-control"]') as HTMLButtonElement;
     expect(wrapper.getAttribute('role')).to.equal('group');
     expect(wrapper.hasAttribute('aria-current')).to.be.false;
-    expect(control).to.exist;
+    expect((control) != null).to.equal(true);
     expect(control.tagName).to.equal('BUTTON');
     expect(control.getAttribute('aria-pressed')).to.equal('true');
     expect(control.tabIndex).to.equal(0);
@@ -973,6 +1055,23 @@ describe('selection & roving focus', () => {
     expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
 
+  it('focusNode() cannot mutate viewport or roving focus while locked', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.setViewport({ x: 12, y: 18, zoom: 1.25 });
+    el.locked = true;
+    await el.updateComplete;
+    const before = el.viewport;
+
+    el.focusNode('b', { zoom: 2 });
+    await el.updateComplete;
+
+    expect(el.viewport).to.deep.equal(before);
+    expect(nodeControl(el, 'a').getAttribute('tabindex')).to.equal('0');
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('-1');
+  });
+
   it('ArrowRight resolves the roving focus target by node id, not DOM order, when nodes are not spatially pre-sorted', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     // `nodes` array/DOM order is [a, b], but "a" sits to the right of "b" -- roving nav order
@@ -992,7 +1091,7 @@ describe('selection & roving focus', () => {
 
     expect(aEl.getAttribute('tabindex')).to.equal('0');
     expect(bEl.getAttribute('tabindex')).to.equal('-1');
-    expect(el.shadowRoot!.activeElement).to.equal(aEl);
+    expect((el.shadowRoot!.activeElement) === (aEl)).to.equal(true);
   });
 
   it('focusNode() resolves the target element by id even when nodes are not spatially pre-sorted', async () => {
@@ -1006,7 +1105,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     const aEl = nodeControl(el, 'a');
     expect(aEl.getAttribute('tabindex')).to.equal('0');
-    expect(el.shadowRoot!.activeElement).to.equal(aEl);
+    expect((el.shadowRoot!.activeElement) === (aEl)).to.equal(true);
   });
 
   it('excludes a dangling edge (missing source or target) from roving nav order and count', async () => {
@@ -1125,6 +1224,56 @@ describe('node drag', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
     expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
+  });
+
+  it('a live locked transition rolls back and retires an active node drag', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    let moves = 0;
+    el.addEventListener('lr-node-move', () => moves++);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 52, clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 52, clientX: 40, clientY: 0 }));
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([40, 0]);
+
+    el.locked = true;
+    await el.updateComplete;
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 52, clientX: 80, clientY: 0 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 52, clientX: 80, clientY: 0 }));
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
+    expect(moves).to.equal(0);
+  });
+
+  it('replacing the controlled node model rolls back and retires an active node drag', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    const staleWrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    staleWrapper.setPointerCapture = () => {};
+    let moves = 0;
+    el.addEventListener('lr-node-move', () => moves++);
+    staleWrapper.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 54, clientX: 0, clientY: 0, bubbles: true,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId: 54, clientX: 40, clientY: 0,
+    }));
+    expect(transformCoordinates(staleWrapper.style.transform)).to.deep.equal([40, 0]);
+
+    el.nodes = [{ id: 'b', position: { x: 200, y: 0 } }];
+    await el.updateComplete;
+    expect(transformCoordinates(staleWrapper.style.transform)).to.deep.equal([0, 0]);
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId: 54, clientX: 80, clientY: 0,
+    }));
+    window.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId: 54, clientX: 80, clientY: 0,
+    }));
+    expect(transformCoordinates(staleWrapper.style.transform)).to.deep.equal([0, 0]);
+    expect(moves).to.equal(0);
   });
 
   it('Ctrl/Cmd+Arrow nudges the focused node by grid and emits lr-node-move', async () => {
@@ -1259,6 +1408,66 @@ describe('connect gesture', () => {
     wrapperA.appendChild(outputHandle);
     outputHandle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }));
     expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.not.exist;
+  });
+
+  it('a live locked transition retires an active pointer connect without committing', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    const inputHandle = makeHandle('input', 'in');
+    wrapperA.append(outputHandle);
+    wrapperB.append(inputHandle);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 53, clientX: 0, clientY: 0, bubbles: true, composed: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
+
+    el.locked = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
+    inputHandle.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId: 53, clientX: 200, clientY: 0, bubbles: true, composed: true,
+    }));
+    expect(connects).to.equal(0);
+  });
+
+  it('replacing the controlled node model retires an active pointer connect', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const sourceWrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    sourceWrapper.append(outputHandle);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 55, clientX: 0, clientY: 0, bubbles: true, composed: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
+
+    el.nodes = [{ id: 'b', position: { x: 200, y: 0 } }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
+    const targetWrapper = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const inputHandle = makeHandle('input', 'in');
+    targetWrapper.append(inputHandle);
+    inputHandle.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId: 55, clientX: 200, clientY: 0, bubbles: true, composed: true,
+    }));
+    expect(connects).to.equal(0);
   });
 
   it('keyboard: "c" on a focused node starts connect mode, arrows cycle targets, Enter commits', async () => {
@@ -1618,6 +1827,25 @@ describe('registerCompanion & decorations', () => {
     expect(snapshots.length).to.equal(1);
   });
 
+  it('publishes effective sorted zoom bounds and refreshes companions when raw bounds change', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas min-zoom="4" max-zoom="0.5" style="width:400px;height:300px"></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    const snapshots: FlowStructureSnapshot[] = [];
+    const unsubscribe = el.registerCompanion((snapshot) => snapshots.push(snapshot));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(snapshots.at(-1)!.viewport.minZoom).to.equal(0.5);
+    expect(snapshots.at(-1)!.viewport.maxZoom).to.equal(4);
+
+    el.minZoom = Number.POSITIVE_INFINITY;
+    el.maxZoom = Number.NaN;
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    unsubscribe();
+    expect(snapshots.at(-1)!.viewport.minZoom).to.equal(0.25);
+    expect(snapshots.at(-1)!.viewport.maxZoom).to.equal(2);
+  });
+
   it('pushes decoration status/progress/detail onto the adopted card for each node', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a' }];
@@ -1670,8 +1898,50 @@ describe('registerCompanion & decorations', () => {
     expect(path().getAttribute('data-tone')).to.equal('neutral');
   });
 
+  it('keeps differently toned edge strokes and their referenced arrowheads independently themeable', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-flow-canvas-edge-success-color: rgb(1, 2, 3);
+          --lr-flow-canvas-edge-danger-color: rgb(4, 5, 6);
+        "
+      >
+        <lr-flow-canvas></lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 200, y: 120 } },
+    ];
+    el.edges = [
+      { id: 'success', source: 'a', target: 'b', tone: 'success' },
+      { id: 'danger', source: 'a', target: 'c', tone: 'danger' },
+    ];
+    await el.updateComplete;
+
+    const paths = [...el.shadowRoot!.querySelectorAll<SVGPathElement>('[part="edge"]')];
+    for (const [tone, color] of [
+      ['success', 'rgb(1, 2, 3)'],
+      ['danger', 'rgb(4, 5, 6)'],
+    ] as const) {
+      const path = paths.find((candidate) => candidate.dataset['tone'] === tone)!;
+      expect(getComputedStyle(path).stroke).to.equal(color);
+      const markerId = /#([^\)]+)/.exec(path.getAttribute('marker-end') ?? '')?.[1] ?? '';
+      const marker = el.shadowRoot!.getElementById(markerId)!;
+      const arrowhead = marker.querySelector<SVGPathElement>('[part~="arrowhead"]')!;
+      expect(arrowhead.dataset['tone']).to.equal(tone);
+      expect(getComputedStyle(arrowhead).fill).to.equal(color);
+    }
+  });
+
   it('a running decorated edge gets an animated march unless prefers-reduced-motion', async () => {
-    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    const el = (await fixture(html`
+      <lr-flow-canvas
+        style="--lr-duration-ambient: 1.234s; --lr-transition-ambient: 9s steps(2, end)"
+      ></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
     el.nodes = nodes;
     el.edges = edges;
     el.decorations = { 'a-b': { status: 'running' } };
@@ -1679,6 +1949,10 @@ describe('registerCompanion & decorations', () => {
     const path = el.shadowRoot!.querySelector('[part="edge"]')!;
     expect(path.hasAttribute('data-running')).to.be.true;
     expect(path.hasAttribute('data-running-static')).to.be.false;
+    const animation = getComputedStyle(path);
+    expect(animation.animationName).to.equal('lr-flow-canvas-march');
+    expect(animation.animationDuration).to.equal('1.234s');
+    expect(animation.animationTimingFunction).to.equal('linear');
   });
 
   it('renders a static dash instead of animating a running edge under prefers-reduced-motion', async () => {
@@ -1960,7 +2234,7 @@ describe('edge interaction target', () => {
     const el = (await fixture(html`<lr-flow-canvas .nodes=${nodes} .edges=${edges}></lr-flow-canvas>`)) as LyraFlowCanvas;
     await el.updateComplete;
     const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
-    expect(hitArea).to.exist;
+    expect((hitArea) != null).to.equal(true);
     expect(Number.parseFloat(getComputedStyle(hitArea).strokeWidth)).to.be.at.least(40);
     let detail: { id: string } | undefined;
     el.addEventListener('lr-edge-click', (event) => {
@@ -2024,7 +2298,7 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
     const el = await currentFixture();
     el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'rgb(10, 20, 30)');
     const node = el.shadowRoot!.querySelector('[part="node"][data-selected]') as HTMLElement;
-    expect(node).to.exist;
+    expect((node) != null).to.equal(true);
     expect(getComputedStyle(node).outlineColor).to.equal('rgb(10, 20, 30)');
   });
 

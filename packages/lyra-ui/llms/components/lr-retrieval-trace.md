@@ -32,8 +32,9 @@ fetches, ranks, or computes retrieval results itself.
   `rerank`/`filter` → `'tool'`
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
   unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
-  through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`); `text` is free-form
-  (e.g. the rewritten query, an embedding model id); `metadata` renders as a plain key/value list. A
+  through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
+  page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
+  embedding model id); `metadata` renders as a plain key/value list. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`

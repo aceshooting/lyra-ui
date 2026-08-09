@@ -187,8 +187,9 @@ export const Selection: Story = {
 };
 
 /**
- * `cellText` overrides the built-in English tooltip/keyboard-announcement template —
- * here with a French translation — for both matrix and calendar modes.
+ * `cellText` overrides the built-in localized tooltip/keyboard-announcement template — here with
+ * application-specific French phrasing — for both matrix and calendar modes. Ordinary translation
+ * can instead provide the heatmap locale keys through `registerLyraLocale()` or `.strings`.
  */
 export const CustomCellText: Story = {
   render: () => html`

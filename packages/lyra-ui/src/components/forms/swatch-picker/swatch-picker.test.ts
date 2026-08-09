@@ -73,6 +73,39 @@ describe('lr-swatch-picker', () => {
     expect(swatches(el).map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1', '-1']);
   });
 
+  it('moves focus and the roving tab stop to the nearest survivor when the focused option is removed', async () => {
+    const palette = options();
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${palette} value="red"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    let changes = 0;
+    el.addEventListener('lr-change', () => (changes += 1));
+    swatches(el)[2]!.focus();
+
+    el.options = palette.slice(0, 2);
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-value')).to.equal('green');
+    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+    expect(el.value).to.equal('red');
+    expect(changes).to.equal(0);
+  });
+
+  it('keeps focus on the same option identity when a live palette is reordered', async () => {
+    const palette = options();
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${palette} value="green"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    swatches(el)[1]!.focus();
+
+    el.options = [palette[1]!, palette[2]!, palette[0]!];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-value')).to.equal('green');
+    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
+    expect(el.value).to.equal('green');
+  });
+
   it('selects on click and emits lr-change with the option value', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
@@ -94,7 +127,7 @@ describe('lr-swatch-picker', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement === tabbable).to.be.true;
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('forwards host click() to the tabbable swatch, selecting its option', async () => {
@@ -222,7 +255,7 @@ describe('lr-swatch-picker', () => {
     const buttons = swatches(el);
     expect(buttons[0]!.querySelector('[part="swatch-icon"]')).to.equal(null);
     const iconSpan = buttons[1]!.querySelector('[part="swatch-icon"]');
-    expect(iconSpan).to.not.equal(null);
+    expect((iconSpan) !== (null)).to.equal(true);
     expect(iconSpan!.getAttribute('aria-hidden')).to.equal('true');
     expect(iconSpan!.querySelector('[data-testid="gem-icon"]')).to.not.equal(null);
     // Still wired for currentColor: the option's color stays on the custom property the icon inherits.
@@ -263,11 +296,26 @@ describe('lr-swatch-picker', () => {
     expect(glyph.getBoundingClientRect().height).to.equal(24);
   });
 
-  it('exposes the swatch color through `color` for currentColor icons, and paints the fill circle\'s background from it', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('color: var(--lr-swatch-color); cursor: pointer;');
-    expect(css).to.include("[part='swatch-fill'] { box-sizing: border-box; display: block;");
-    expect(css).to.match(/\[part='swatch-fill'\]\s*\{[^}]*background-color:\s*var\(--lr-swatch-color\)/);
+  it('resolves the option color through currentColor for a rendered custom glyph', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .options=${[
+          {
+            value: 'blue',
+            color: '#0969da',
+            label: 'Blue',
+            icon: html`<svg viewBox="0 0 10 10"><path d="M0 0h10v10H0z" fill="currentColor"></path></svg>`,
+          },
+        ]}
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const swatch = swatches(el)[0]!;
+    const icon = swatch.querySelector<HTMLElement>('[part="swatch-icon"]')!;
+    const path = icon.querySelector<SVGPathElement>('path')!;
+
+    expect(getComputedStyle(swatch).color).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(icon).color).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(path).fill).to.equal('rgb(9, 105, 218)');
   });
 
   it('actually paints the rendered fill circle background-color from the option color (not just declared in the stylesheet source)', async () => {

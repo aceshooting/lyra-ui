@@ -5,6 +5,18 @@ import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
 describe('lr-input', () => {
+  it('uses the component-scoped focus border hook inherited from an ancestor', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="--lr-input-focus-border-color: rgb(1, 2, 3)">
+        <lr-input aria-label="Name"></lr-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-input') as LyraInput;
+    el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!.focus();
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+    expect(getComputedStyle(row).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('emits one cancelable lr-invalid for a failed check and stays silent once valid', async () => {
     const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
     const aliases: CustomEvent[] = [];
@@ -735,7 +747,7 @@ describe('lr-input', () => {
 
     it('exposes the native input via the public input getter', async () => {
       const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
-      expect(el.input).to.equal(el.shadowRoot!.querySelector('input'));
+      expect((el.input) === (el.shadowRoot!.querySelector('input'))).to.equal(true);
     });
 
     it('forwards focus() and blur() to the native input', async () => {
@@ -743,7 +755,7 @@ describe('lr-input', () => {
       el.focus();
       expect(el.shadowRoot!.activeElement === el.input).to.be.true;
       el.blur();
-      expect(el.shadowRoot!.activeElement).to.equal(null);
+      expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
     });
 
     it('forwards select() to select the full native input value', async () => {
@@ -757,7 +769,7 @@ describe('lr-input', () => {
   describe('forwarding getters/setters/methods before first render', () => {
     it('returns null / no-ops instead of throwing when called before the native input has rendered', () => {
       const el = document.createElement('lr-input') as LyraInput;
-      expect(el.input).to.equal(null);
+      expect((el.input) === (null)).to.equal(true);
       expect(el.selectionStart).to.equal(null);
       expect(el.selectionEnd).to.equal(null);
       expect(() => {
@@ -823,6 +835,36 @@ describe('lr-input', () => {
       parseFloat(getComputedStyle(row(xsEl)).paddingInlineStart),
     );
     expect(getComputedStyle(row(el)).minBlockSize).to.equal('20px');
+  });
+
+  it('keeps an action-bearing row on the shared hit-floor-aware height ladder', async () => {
+    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+    for (const [size, height] of Object.entries(expected)) {
+      const el = (await fixture(html`
+        <lr-input size=${size} clearable value="content" aria-label="Name"></lr-input>
+      `)) as LyraInput;
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+      expect(row.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+    }
+  });
+
+  it('contains long RTL action/adornment content in an exact 320px allocation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">
+        <lr-input
+          clearable
+          value="content"
+          label="InternationalizedUnbrokenFieldLabelThatMustRemainInsideTheAllocation"
+          hint="Supporting copy wraps within the same narrow allocation."
+        >
+          <span slot="start">VeryLongLeadingAdornment</span>
+          <span slot="end">VeryLongTrailingAdornment</span>
+        </lr-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-input') as LyraInput;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
   });
 
   it('reflects size="2xs" as a host attribute', async () => {
@@ -1554,4 +1596,25 @@ describe('lr-input native value views', () => {
     number.value = '7';
     expect(number.valueAsNumber).to.equal(7);
   });
+});
+
+it('inherits public row geometry and paint hooks across size, appearance, and pill fallbacks', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-input-control-min-height: 47px; --lr-input-padding-inline: 17px; --lr-input-font-size: 18px; --lr-input-gap: 13px; --lr-input-radius: 21px; --lr-input-fill: rgb(1, 2, 3); --lr-input-border-color: rgb(4, 5, 6)">
+      <lr-input size="xs" appearance="filled" pill>
+        <span slot="start">start</span>
+      </lr-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-input') as LyraInput;
+  const row = el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const computed = getComputedStyle(row);
+  expect(computed.minBlockSize).to.equal('47px');
+  expect(computed.paddingInlineStart).to.equal('17px');
+  expect(computed.gap).to.equal('13px');
+  expect(computed.borderTopLeftRadius).to.equal('21px');
+  expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(computed.borderTopColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(input).fontSize).to.equal('18px');
 });

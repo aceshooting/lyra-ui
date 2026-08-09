@@ -1,10 +1,10 @@
 import { css } from 'lit';
 export const styles = css`
-  :host { display: inline-flex; --lr-icon-button-radius: var(--lr-radius); }
+  :host { display: inline-flex; --_lr-icon-button-radius-default: var(--lr-radius); }
   /* --lr-icon-button-size is a minimum tappable box, not a fixed one: floor both axes so a small
      glyph still pads out to a full target, while slotted content larger than it grows the button
      and keeps its own aspect ratio instead of being squashed to 1:1. */
-  [part~='button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; text-decoration: none; }
+  [part~='button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default)); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; text-decoration: none; }
   /* The hover fallback used to be var(--lr-color-surface) -- the PAGE background -- so hovering an
      icon button on a default page changed nothing at all. It mixes the page surface toward
      --lr-color-mix-partner (which follows the text colour) instead, which always moves, and always

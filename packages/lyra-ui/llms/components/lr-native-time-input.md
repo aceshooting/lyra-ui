@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,10 +27,15 @@ All `lr-input` properties, form methods, events, label/hint/error/start/end slot
 properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `stepDown()` keep their
 native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
 node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
+The inherited `--lr-input-*` theme inputs therefore remain configurable from an ancestor theme
+wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
 `lr-input` / `lr-change` aliases with `{ value }`; `lr-focus` / `lr-blur` aliases with no detail;
 `lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
+
+**CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
+`base` and `input-wrapper`.
 
 ```html
 <lr-native-time-input label="Start time" min="09:00" max="17:00" value="09:30"></lr-native-time-input>

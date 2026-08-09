@@ -213,14 +213,14 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 </lr-dialog>
 ```
 
-Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, (2)
-`accessible-label`, (3) the copied text of an unslotted direct light-DOM heading, then (4) the
-shadow-owned visible title wrapper. Visible-title precedence is the rich `label` slot, then the
-mapped `label` property, then legacy `heading`. The direct-heading case copies text because an IDREF
-cannot cross from the panel's shadow tree to a light-DOM heading; the mapped title wrapper can use
-`aria-labelledby` because it lives in the same shadow root. `no-header`/`without-header` removes the
-mapped title, so custom-chrome dialogs should provide a direct heading, `accessible-label`, or host
-`aria-label`.
+Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, by
+attribute presence including an explicitly empty value, (2) `accessible-label`, (3) the copied text
+of an unslotted direct light-DOM heading, then (4) the shadow-owned visible title wrapper.
+Visible-title precedence is the rich `label` slot, then the mapped `label` property, then legacy
+`heading`. The direct-heading case copies text because an IDREF cannot cross from the panel's shadow
+tree to a light-DOM heading; the mapped title wrapper can use `aria-labelledby` because it lives in
+the same shadow root. `no-header`/`without-header` removes the mapped title, so custom-chrome dialogs
+should provide a direct heading, `accessible-label`, or host `aria-label`.
 
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —

@@ -50,7 +50,7 @@ it('defaults to inactive with no optional segments, and a stop button with a cle
   expect(throughputText(el)).to.be.null;
 
   const stopButton = el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLButtonElement;
-  expect(stopButton).to.exist;
+  expect((stopButton) != null).to.equal(true);
   expect(stopButton.getAttribute('aria-label')).to.equal('Stop generating');
 });
 

@@ -8,6 +8,7 @@ const meta: Meta = {
   title: 'DocxViewer',
   component: 'lr-docx-viewer',
   tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A host `aria-label` names the rendered document by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks.' } } },
 };
 
 export default meta;

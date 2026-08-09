@@ -560,7 +560,7 @@ it('re-synchronizes its split when the window resizes', async () => {
   el.style.inlineSize = '800px';
   window.dispatchEvent(new Event('resize'));
   await elementUpdated(el);
-  expect(divider(el)).to.exist;
+  expect((divider(el)) != null).to.equal(true);
   expect(el.position).to.be.a('number');
 });
 

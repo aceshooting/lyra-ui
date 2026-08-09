@@ -701,7 +701,7 @@ describe("roving keyboard navigation", () => {
     await el.updateComplete;
     expect(a.getAttribute("tabindex")).to.equal("-1");
     expect(b.getAttribute("tabindex")).to.equal("0");
-    expect(el.shadowRoot!.activeElement).to.equal(b);
+    expect((el.shadowRoot!.activeElement) === (b)).to.equal(true);
   });
 
   it("uses the adopted owner realm CSS escape when keyboard focus targets a special cell id", async () => {
@@ -1716,6 +1716,82 @@ describe("narrow allocation", () => {
       (el as unknown as HTMLElement).getBoundingClientRect().width
     ).to.be.at.most(320);
   });
+
+  for (const direction of ["ltr", "rtl"] as const) {
+    it(`keeps short resizable custom cells at least as tall as their 40px handle in ${direction.toUpperCase()}`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-dashboard-grid
+            cells-resizable
+            style="inline-size: 100%;"
+            .layout=${twoCells()}
+          >
+            <div cell-id="a">A</div>
+            <div cell-id="b">B</div>
+          </lr-dashboard-grid>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+      await el.updateComplete;
+      const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+      const handles = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="resize-handle"]')];
+
+      expect(cells.length).to.equal(2);
+      expect(handles.length).to.equal(2);
+      for (let index = 0; index < cells.length; index += 1) {
+        expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(40);
+        expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(
+          handles[index]!.getBoundingClientRect().height,
+        );
+      }
+      expect(cells[1]!.getBoundingClientRect().top).to.be.at.least(
+        cells[0]!.getBoundingClientRect().bottom + el.gap - 1,
+      );
+      expect(getComputedStyle(cells[0]!).direction).to.equal(direction);
+    });
+
+    it(`contains unbroken custom-cell text inside a 320px ${direction.toUpperCase()} stack`, async () => {
+      const longText = "LocalizationWithoutBreakOpportunity".repeat(100);
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-dashboard-grid style="inline-size: 100%;" .layout=${twoCells()}>
+            <div cell-id="a">${longText}</div>
+            <div cell-id="b">B</div>
+          </lr-dashboard-grid>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+      const custom = el.querySelector<HTMLElement>('[cell-id="a"]')!;
+
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+      expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+      expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+      expect(custom.scrollWidth).to.be.at.most(custom.clientWidth);
+      expect(cells.every((cell) => cell.scrollWidth <= cell.clientWidth)).to.equal(true);
+      expect(getComputedStyle(custom).direction).to.equal(direction);
+    });
+  }
+
+  it("preserves an explicit custom-cell scrollport while containing it inside the stack", async () => {
+    const longText = "ChildOwnedHorizontalScrollContent".repeat(100);
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-dashboard-grid style="inline-size: 100%;" .layout=${[twoCells()[0]!]}>
+          <div cell-id="a" style="overflow: auto; white-space: nowrap;">${longText}</div>
+        </lr-dashboard-grid>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+    await el.updateComplete;
+    const custom = el.querySelector<HTMLElement>('[cell-id="a"]')!;
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(custom.scrollWidth).to.be.greaterThan(custom.clientWidth);
+    expect(getComputedStyle(custom).overflowX).to.equal("auto");
+  });
 });
 
 describe("accessibility", () => {
@@ -2210,10 +2286,7 @@ describe("defensive edge cases", () => {
     await Promise.resolve();
 
     expect(el.shadowRoot!.querySelector('[data-cell-id="b"]')).to.equal(null);
-    expect(
-      el.shadowRoot!.activeElement,
-      "cellElement(\"b\") found nothing, so the scheduled focus() was skipped"
-    ).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null), "cellElement(\"b\") found nothing, so the scheduled focus() was skipped").to.equal(true);
   });
 
   it("ignores a key that is neither an arrow, Home/End, nor part of a modified-arrow shortcut", async () => {
@@ -2237,7 +2310,7 @@ describe("defensive edge cases", () => {
     await el.updateComplete;
 
     expect(first.getAttribute("tabindex")).to.equal("0");
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it("moves the focused cell for the remaining Ctrl+Arrow directions (left/down/up)", async () => {

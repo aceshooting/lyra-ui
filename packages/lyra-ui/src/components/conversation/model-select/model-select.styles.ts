@@ -40,10 +40,8 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always renders a literal label
-     element regardless of label content -- so real emptiness is tracked via
-     the label property length and reflected through the hidden attribute
-     instead (same fix as lr-select's own form-control-label). */
+  /* :empty never matches here because the part always contains a slot element. Visible-label
+     presence is tracked from both the property and named slot, then reflected through hidden. */
   [part='form-control-label'][hidden] {
     display: none;
   }

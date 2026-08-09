@@ -416,13 +416,13 @@ it('keeps the manual WA label distinct from the generated default label', async 
 it('renders the complete WA and Shoelace slot and part anatomy', async () => {
   const el = (await fixture(html`<lr-option value="a">Alpha</lr-option>`)) as LyraOption;
 
-  expect(part(el, 'base')).to.exist;
-  expect(part(el, 'checked-icon')).to.exist;
+  expect((part(el, 'base')) != null).to.equal(true);
+  expect((part(el, 'checked-icon')) != null).to.equal(true);
   expect(part(el, 'label').querySelector('slot:not([name])')).to.exist;
-  expect(part(el, 'start')).to.equal(part(el, 'prefix'));
+  expect((part(el, 'start')) === (part(el, 'prefix'))).to.equal(true);
   expect(part(el, 'start').querySelector('slot[name="start"]')).to.exist;
   expect(part(el, 'start').querySelector('slot[name="prefix"]')).to.exist;
-  expect(part(el, 'end')).to.equal(part(el, 'suffix'));
+  expect((part(el, 'end')) === (part(el, 'suffix'))).to.equal(true);
   expect(part(el, 'end').querySelector('slot[name="end"]')).to.exist;
   expect(part(el, 'end').querySelector('slot[name="suffix"]')).to.exist;
 });
@@ -535,6 +535,24 @@ it('uses --current-text-color for the keyboard-current state', async function ()
   expect(getComputedStyle(part(el, 'base')).color).to.equal('rgb(1, 2, 3)');
 });
 
+it('lets a consumer retint current and selected option paint independently', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const el = (await fixture(html`
+    <lr-option
+      value="a"
+      style="--lr-option-current-bg: rgb(1, 2, 3); --lr-option-current-color: rgb(4, 5, 6); --lr-option-selected-font-weight: 800; --lr-option-checked-icon-color: rgb(7, 8, 9)"
+    >Alpha</lr-option>
+  `)) as LyraOption;
+  el.selected = true;
+  el.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
+  const base = part(el, 'base');
+  const checkedIcon = part(el, 'checked-icon');
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(base).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base).fontWeight).to.equal('800');
+  expect(getComputedStyle(checkedIcon).color).to.equal('rgb(7, 8, 9)');
+});
+
 it('resets transient current and hover states across disconnect/reconnect', async function () {
   if (!supportsCustomStates || !supportsStateSelector) this.skip();
   const el = (await fixture(html`<lr-option value="a">Alpha</lr-option>`)) as LyraOption;
@@ -576,4 +594,20 @@ it('is accessible', async () => {
     </div>
   `);
   await expect(listbox).to.be.accessible();
+});
+
+it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation', async () => {
+  const unbroken = 'LocalizedOptionLabel'.repeat(48);
+  const adornment = 'OptionMetadata'.repeat(48);
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px; overflow: auto">
+        <lr-option value="narrow">${unbroken}<span slot="end">${adornment}</span></lr-option>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-option') as LyraOption;
+    const base = part(el, 'base');
+    expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(base.scrollWidth, `${direction} base scroll width`).to.be.at.most(base.clientWidth);
+  }
 });

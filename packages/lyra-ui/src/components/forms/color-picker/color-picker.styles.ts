@@ -468,7 +468,7 @@ export const styles = css`
      on colour alone. Encoded in the part name (not an attribute selector after ::part(), which
      never matches) so consumers can restyle the selected state too. */
   [part~='swatch-selected'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-color-picker-selected-border, var(--lr-color-brand));
     border-width: var(--lr-border-width-medium);
   }
   [part~='swatch-selected']::before {
@@ -478,7 +478,7 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--lr-color-surface);
+    color: var(--lr-color-picker-selected-check-color, var(--lr-color-surface));
     font-size: var(--lr-font-size-xs);
     text-shadow: 0 0 var(--lr-size-2px) var(--lr-color-shadow);
     z-index: var(--lr-layer-content);

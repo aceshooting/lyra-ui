@@ -20,6 +20,7 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default a
 both dimensions through the aspect ratio.
 
 **Properties:**
+
 - `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the
   stroke, `gradient` fades that fill toward the baseline, and `line` renders only the stroke
 - `curve: 'linear'|'natural'|'step' = 'linear'` (reflected) — straight segments, smooth cubic
@@ -32,6 +33,7 @@ both dimensions through the aspect ratio.
   the line and fill. The public color custom properties below always override it
 
 **Additive Lyra extensions:**
+
 - `values: number[] = []` — programmatic data source used while `data` is empty
 - `type?: 'line'|'bar'|'area'` — `bar` renders bounded rectangles; `line`/`area` retain the older
   explicit unfilled/filled modes. Omit it for the mirrored `appearance` surface
@@ -67,6 +69,7 @@ manual refresh is needed.
 ```
 
 **Known gotchas:**
+
 - The semantic `role="img"` and accessible name live on the SVG that owns the graphic. `label` is
   applied exactly. The additive `values` path retains its localized, effective-locale summary when
   neither naming property is present; a `data` chart without a label is left presentational rather
@@ -80,7 +83,7 @@ manual refresh is needed.
   aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
   point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
   grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
-  scanned from the *full* pre-decimation `values` array, so a real extreme value that decimation
+  scanned from the _full_ pre-decimation `values` array, so a real extreme value that decimation
   happens to drop can't silently narrow the rendered scale.
 - Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
   animations, so reduced-motion mode needs no alternate timing branch.

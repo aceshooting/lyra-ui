@@ -38,7 +38,7 @@ it('renders default-slot content as the title; an item with no default-slot cont
   const el = (await fixture(html`<lr-timeline-item>Build started</lr-timeline-item>`)) as LyraTimelineItem;
   const title = el.shadowRoot!.querySelector('[part="title"]')!;
   expect((title.querySelector('slot') as HTMLSlotElement).assignedNodes({ flatten: true })[0]!.textContent).to.equal(
-    'Build started',
+    'Build started'
   );
 
   const empty = await fixture(html`<lr-timeline-item></lr-timeline-item>`);
@@ -52,7 +52,6 @@ it('renders the default color-coded dot marker when the icon slot is empty', asy
   expect(iconSlot.assignedElements({ flatten: true })).to.have.length(0);
   const success = resolve(marker, '--lr-color-success');
   expect(success).to.not.equal('');
-  expect(resolve(marker, '--lr-timeline-marker-color')).to.equal(success);
   // The dot is actually painted with it (background: var(--lr-timeline-marker-color)), rather than
   // left transparent the way the [data-has-icon] branch leaves it.
   expect(getComputedStyle(marker).backgroundColor).to.equal(toRgb(success));
@@ -60,7 +59,7 @@ it('renders the default color-coded dot marker when the icon slot is empty', asy
 
 it('shows only the slotted icon content once the icon slot is populated, at parse time and via a later slotchange', async () => {
   const el = (await fixture(
-    html`<lr-timeline-item><span slot="icon">🚀</span>Launched</lr-timeline-item>`,
+    html`<lr-timeline-item><span slot="icon">🚀</span>Launched</lr-timeline-item>`
   )) as LyraTimelineItem;
   const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
   expect(iconSlot.assignedElements({ flatten: true })).to.have.length(1);
@@ -79,13 +78,43 @@ it('shows only the slotted icon content once the icon slot is populated, at pars
   expect(bareSlot.assignedElements({ flatten: true })).to.have.length(1);
 });
 
+it('renders marker-icon ahead of the legacy icon slot and falls back live', async () => {
+  const el = (await fixture(html`
+    <lr-timeline-item>
+      <span id="legacy-marker" slot="icon">legacy</span>
+      <span id="canonical-marker" slot="marker-icon">canonical</span>
+      Deployed
+    </lr-timeline-item>
+  `)) as LyraTimelineItem;
+  const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+  const canonicalSlot = marker.querySelector('slot[name="marker-icon"]') as HTMLSlotElement | null;
+  const legacySlot = marker.querySelector('slot[name="icon"]') as HTMLSlotElement | null;
+  const canonicalMarker = el.querySelector('#canonical-marker') as HTMLElement;
+  const legacyMarker = el.querySelector('#legacy-marker') as HTMLElement;
+
+  expect(canonicalSlot?.localName).to.equal('slot');
+  expect(legacySlot?.localName).to.equal('slot');
+  expect(canonicalSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['canonical-marker']);
+  expect(legacySlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['legacy-marker']);
+  expect(marker.hasAttribute('data-has-icon')).to.be.true;
+  expect(canonicalMarker.getClientRects().length > 0).to.be.true;
+  expect(legacyMarker.getClientRects().length).to.equal(0);
+
+  const changed = oneEvent(canonicalSlot!, 'slotchange');
+  canonicalMarker.remove();
+  await changed;
+  await el.updateComplete;
+  expect(marker.hasAttribute('data-has-icon')).to.be.true;
+  expect(legacyMarker.getClientRects().length > 0).to.be.true;
+});
+
 it('renders the internal <lr-relative-time> fallback, wrapped in a <time> with the correct datetime/title, when timestamp is set and the slot is empty', async () => {
   const date = new Date('2024-06-15T12:00:00Z');
   const el = (await fixture(
-    html`<lr-timeline-item .timestamp=${date}>Deployed</lr-timeline-item>`,
+    html`<lr-timeline-item .timestamp=${date}>Deployed</lr-timeline-item>`
   )) as LyraTimelineItem;
   const time = el.shadowRoot!.querySelector('[part="timestamp"] time') as HTMLTimeElement;
-  expect(time).to.exist;
+  expect(time != null).to.equal(true);
   expect(time.getAttribute('datetime')).to.equal(date.toISOString());
   const expectedTitle = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeStyle: 'short' }).format(date);
   expect(time.getAttribute('title')).to.equal(expectedTitle);
@@ -97,11 +126,11 @@ it('renders the internal <lr-relative-time> fallback, wrapped in a <time> with t
 
 it('hides [part="timestamp"] entirely when timestamp is an invalid/unparseable value, same as unset', async () => {
   const el = (await fixture(
-    html`<lr-timeline-item .timestamp=${'not a real date'}>Deployed</lr-timeline-item>`,
+    html`<lr-timeline-item .timestamp=${'not a real date'}>Deployed</lr-timeline-item>`
   )) as LyraTimelineItem;
   const timestampPart = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
   expect(timestampPart.hidden).to.be.true;
-  expect(timestampPart.querySelector('time')).to.not.exist;
+  expect(timestampPart.querySelector('time') == null).to.equal(true);
 
   const unset = (await fixture(html`<lr-timeline-item>Deployed</lr-timeline-item>`)) as LyraTimelineItem;
   expect((unset.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement).hidden).to.be.true;
@@ -121,15 +150,15 @@ it('the timestamp slot wins outright over the timestamp property -- the internal
   expect(slot.assignedElements({ flatten: true })).to.have.length(1);
 });
 
-it('forwards sync to the internal <lr-relative-time>\'s own sync property', async () => {
+it("forwards sync to the internal <lr-relative-time>'s own sync property", async () => {
   const syncEl = (await fixture(
-    html`<lr-timeline-item .timestamp=${new Date()} sync>Deployed</lr-timeline-item>`,
+    html`<lr-timeline-item .timestamp=${new Date()} sync>Deployed</lr-timeline-item>`
   )) as LyraTimelineItem;
   const relative = syncEl.shadowRoot!.querySelector('lr-relative-time') as LyraRelativeTime;
   expect(relative.sync).to.be.true;
 
   const noSyncEl = (await fixture(
-    html`<lr-timeline-item .timestamp=${new Date()}>Deployed</lr-timeline-item>`,
+    html`<lr-timeline-item .timestamp=${new Date()}>Deployed</lr-timeline-item>`
   )) as LyraTimelineItem;
   const relative2 = noSyncEl.shadowRoot!.querySelector('lr-relative-time') as LyraRelativeTime;
   expect(relative2.sync).to.be.false;
@@ -141,7 +170,7 @@ it('hides [part="description"] when the slot is empty, shows it with content, an
   expect(descPart.hidden).to.be.true;
 
   const withDesc = (await fixture(
-    html`<lr-timeline-item>Has one<span slot="description">Details here.</span></lr-timeline-item>`,
+    html`<lr-timeline-item>Has one<span slot="description">Details here.</span></lr-timeline-item>`
   )) as LyraTimelineItem;
   expect((withDesc.shadowRoot!.querySelector('[part="description"]') as HTMLElement).hidden).to.be.false;
 
@@ -164,24 +193,47 @@ it('variant reflects the attribute, defaults to "neutral", and drives --lr-timel
   // The unset/"neutral" default resolves to the quiet text tone, not to a variant tone.
   const neutralColor = resolve(neutralMarker, '--lr-color-text-quiet');
   expect(neutralColor).to.not.equal('');
-  expect(resolve(neutralMarker, '--lr-timeline-marker-color')).to.equal(neutralColor);
+  expect(getComputedStyle(neutralMarker).backgroundColor).to.equal(toRgb(neutralColor));
 
-  const success = (await fixture(html`<lr-timeline-item variant="success">Event</lr-timeline-item>`)) as LyraTimelineItem;
+  const success = (await fixture(
+    html`<lr-timeline-item variant="success">Event</lr-timeline-item>`
+  )) as LyraTimelineItem;
   expect(success.getAttribute('variant')).to.equal('success');
   const successMarker = success.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
   const successColor = resolve(successMarker, '--lr-color-success');
   expect(successColor).to.not.equal('');
-  expect(resolve(successMarker, '--lr-timeline-marker-color')).to.equal(successColor);
+  expect(getComputedStyle(successMarker).backgroundColor).to.equal(toRgb(successColor));
 
   const danger = (await fixture(html`<lr-timeline-item variant="danger">Event</lr-timeline-item>`)) as LyraTimelineItem;
   const dangerMarker = danger.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
   const dangerColor = resolve(dangerMarker, '--lr-color-danger');
   expect(dangerColor).to.not.equal('');
-  expect(resolve(dangerMarker, '--lr-timeline-marker-color')).to.equal(dangerColor);
+  expect(getComputedStyle(dangerMarker).backgroundColor).to.equal(toRgb(dangerColor));
 
   // Colour-coded: the three tones are three genuinely different colours, not one token reused --
   // this is what a per-variant marker buys, and it survives any palette regeneration.
   expect(new Set([neutralColor, successColor, dangerColor]).size).to.equal(3);
+});
+
+it('inherits marker and rail theme hooks from an ancestor while direct item overrides win', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-timeline-marker-size:31px; --lr-timeline-marker-color:rgb(1, 2, 3); --lr-timeline-rail-width:7px; --lr-timeline-rail-color:rgb(4, 5, 6)"
+    >
+      <lr-timeline-item variant="success">Event</lr-timeline-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-timeline-item') as LyraTimelineItem;
+  await el.updateComplete;
+  const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+  const rail = el.shadowRoot!.querySelector('[part="rail"]') as HTMLElement;
+  expect(getComputedStyle(marker).inlineSize).to.equal('31px');
+  expect(getComputedStyle(marker).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(rail).inlineSize).to.equal('7px');
+  expect(getComputedStyle(rail).backgroundColor).to.equal('rgb(4, 5, 6)');
+
+  el.style.setProperty('--lr-timeline-marker-color', 'rgb(7, 8, 9)');
+  expect(getComputedStyle(marker).backgroundColor).to.equal('rgb(7, 8, 9)');
 });
 
 it('active reflects and drives an explicit aria-current true/false state', async () => {
@@ -208,7 +260,7 @@ it('pulses the marker while active, and disables the animation under prefers-red
   expect(getComputedStyle(inactiveMarker).animationName).to.equal('none');
 
   expect(styles.cssText).to.match(
-    /@media \(prefers-reduced-motion: reduce\) \{[^}]*\[part='marker'\][^}]*animation: none !important/,
+    /@media \(prefers-reduced-motion: reduce\) \{[^}]*\[part='marker'\][^}]*animation: none !important/
   );
 });
 

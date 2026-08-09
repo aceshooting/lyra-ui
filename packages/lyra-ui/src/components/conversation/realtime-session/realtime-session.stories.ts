@@ -7,6 +7,8 @@ const meta: Meta = { title: 'Conversation/Realtime Session', component: 'lr-real
 export default meta;
 type Story = StoryObj;
 
+/** The composed capture keeps its seven `lr-record-*`/`lr-level`/`lr-state-change` events intact;
+ * use Storybook's Actions panel while operating the push-to-talk control to inspect them. */
 export const Connected: Story = {
   render: () => html`<lr-realtime-session
     state="connected"
@@ -17,6 +19,16 @@ export const Connected: Story = {
       { id: '2', speaker: 'Assistant', text: 'The sources agree on three findings.' },
     ]}
   ></lr-realtime-session>`,
+};
+
+/**
+ * `errorCode` remains host-readable provider metadata. The shell deliberately renders one
+ * localized generic failure instead of exposing provider-specific codes as user-facing text.
+ */
+export const ErrorMetadata: Story = {
+  render: () => html`
+    <lr-realtime-session state="error" error-code="provider-authentication-expired"></lr-realtime-session>
+  `,
 };
 
 /** Tab to the capture control and press V. The host hides capture from the composed key event, and

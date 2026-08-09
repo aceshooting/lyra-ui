@@ -108,7 +108,7 @@ it('renders a show-more toggle when the full slot has content, and it starts col
     </lr-source-card>`,
   )) as LyraSourceCard;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-  expect(toggle).to.exist;
+  expect((toggle) != null).to.equal(true);
   expect(toggle.textContent!.trim()).to.equal('Show more');
   expect(toggle.getAttribute('aria-expanded')).to.equal('false');
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
@@ -390,7 +390,7 @@ it('keeps the title/toggle affordances under plain (they never depended on the c
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   // Brand-colored, and still hover-underlined -- the affordance is the text itself, not a border.
   expect(getComputedStyle(title).color).to.not.equal(getComputedStyle(el).color);
-  expect(toggle).to.exist;
+  expect((toggle) != null).to.equal(true);
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include("[part='title']:hover { text-decoration: underline; }");
   expect(css).to.include("[part='toggle']:hover { text-decoration: underline; }");

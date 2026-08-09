@@ -109,6 +109,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * The transcript virtualizes through `<lr-virtual-list>` the same way `pdf-viewer.class.ts`
  * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props, and the active cue's
  * scroll-into-view comes for free from `activeId` rather than any custom follow logic.
+ * `[part="base"]` remains a named `role="region"` in every render branch, including an unsafe
+ * initial source and a later transition into the visible error state.
  *
  * @customElement lr-av-player
  * @event ended - Relayed native media event; non-bubbling and non-composed.
@@ -217,9 +219,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   /** Media URL; validated with `safeMediaSrc` before it ever reaches the `<audio>`/`<video>` `src`. */
   @property() src = '';
-  /** Accessible name of `[part="base"]` and of the native `[part="media"]` element (the actual
-   *  keyboard tab stop, which would otherwise be nameless); a host `aria-label` wins, then the
-   *  localized `avPlayerLabel` fallback. */
+  /** Accessible name of the stable `[part="base"]` region and of the native `[part="media"]`
+   *  element (the actual keyboard tab stop, which would otherwise be nameless); a host
+   *  `aria-label` wins, then the localized `avPlayerLabel` fallback. */
   @property() name = '';
   /** Forces `audio`/`video` rendering, overriding the `mime-type`-based auto-detection. */
   @property() kind?: AvKind;
@@ -778,7 +780,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const safeSrc = this.src ? safeMediaSrc(this.src) : null;
     const kind = this.detectedKind();
     if (!safeSrc && this.src) {
-      return html`<div part="base" aria-label=${label}>
+      return html`<div part="base" role="region" aria-label=${label}>
         <div part="error">${this.localize('avPlayerFailedToLoad')}</div>
         ${this.renderAnchorLiveRegion()}
       </div>`;

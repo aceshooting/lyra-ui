@@ -16,8 +16,6 @@ interface FlowCanvasLike extends HTMLElement {
   zoomIn(): void;
   zoomOut(): void;
   fit(options?: { padding?: number }): void;
-  minZoom: number;
-  maxZoom: number;
   locked: boolean;
 }
 
@@ -70,7 +68,9 @@ export type FlowControlsAppearance = LyraFrame;
 /**
  * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
  * every flow surface ships the same affordances without hosts rebuilding them. Manipulates only
- * view state, never `nodes`/`edges` — no editing commands live here.
+ * view state, never `nodes`/`edges` — no editing commands live here. Zoom-button availability comes
+ * from the canvas companion snapshot's finite, sorted effective bounds, never its raw public bound
+ * inputs.
  *
  * @customElement lr-flow-controls
  * @slot - Extra host buttons appended to the cluster, styled by the same group.
@@ -255,9 +255,9 @@ export class LyraFlowControls extends LyraElement {
 
   override render(): TemplateResult {
     const disabled = !this.canvasEl;
-    const zoom = this.snapshot?.viewport.zoom ?? 1;
-    const atMin = this.canvasEl ? zoom <= this.canvasEl.minZoom : false;
-    const atMax = this.canvasEl ? zoom >= this.canvasEl.maxZoom : false;
+    const viewport = this.snapshot?.viewport;
+    const atMin = viewport ? viewport.zoom <= viewport.minZoom : false;
+    const atMax = viewport ? viewport.zoom >= viewport.maxZoom : false;
     return html`<div
       part="base"
       role="group"

@@ -1,33 +1,24 @@
-import { GREYCAT_LANGUAGE } from './greycat-language.js';
-import type {
-  ShikiHighlighter,
-  ShikiHighlighterCore,
-  ShikiLanguageInput,
-} from './shiki-types.js';
+import { GREYCAT_LANGUAGE } from "./greycat-language.js";
+import {
+  SHIKI_DARK_THEME,
+  SHIKI_LIGHT_THEME,
+  normalizeShikiLanguage,
+  type ShikiHighlighter,
+  type ShikiLanguageInput,
+} from "./shiki-types.js";
 
-// Preserve the established loader-module type surface while keeping the owned capability types in
-// a dependency leaf. GreyCat's built-in grammar imports that leaf directly, avoiding a loader ↔
-// grammar cycle in the shipped module graph.
-export type { ShikiHighlighter, ShikiHighlighterCore, ShikiLanguageInput } from './shiki-types.js';
-
-/**
- * The two bundled themes every highlighter instance is seeded with, so a
- * single `codeToHtml()` call can emit a light *and* dark rendering at once
- * (shiki's "dual themes" feature — https://shiki.style/guide/dual-themes —
- * rather than maintaining two separately-highlighted copies). `github-light`/
- * `github-dark` are well-known, reasonably neutral, and already part of
- * shiki's bundled theme set, so picking them costs no extra install. See the
- * `prefers-color-scheme` block in `code-block.styles.ts` for how the dark
- * variant actually activates.
- */
-export const SHIKI_LIGHT_THEME: string = 'github-light';
-export const SHIKI_DARK_THEME: string = 'github-dark';
-
-/** Passed directly as `codeToHtml()`'s `themes` option — see `tokenize()` in `code-block.ts`. */
-export const SHIKI_THEMES: Record<'light' | 'dark', string> = {
-  light: SHIKI_LIGHT_THEME,
-  dark: SHIKI_DARK_THEME,
-};
+// Preserve the established full-loader module surface. Lean components import the peer-neutral
+// and fine-grained leaves directly so this module's `import('shiki')` cannot enter their graph.
+export {
+  SHIKI_DARK_THEME,
+  SHIKI_LIGHT_THEME,
+  SHIKI_THEMES,
+  normalizeShikiLanguage,
+  type ShikiHighlighter,
+  type ShikiHighlighterCore,
+  type ShikiLanguageInput,
+} from "./shiki-types.js";
+export { loadShikiHighlighterCore } from "./shiki-types.js";
 
 let highlighter: Promise<ShikiHighlighter | null> | undefined;
 
@@ -43,11 +34,6 @@ const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
   gcl: GREYCAT_LANGUAGE,
   greycat: GREYCAT_LANGUAGE,
 };
-
-/** Normalizes ids supplied by filename-oriented integrations and templates. */
-export function normalizeShikiLanguage(lang: string): string {
-  return lang.trim().toLowerCase().replace(/^\./, '');
-}
 
 /**
  * Lazily loads the optional peer dependency `shiki` once per page and builds
@@ -65,16 +51,19 @@ export function normalizeShikiLanguage(lang: string): string {
  */
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
   if (!highlighter) {
-    highlighter = import('shiki')
-      .then((mod) => mod.createHighlighter({
-        themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
-        langs: [],
-      }) as unknown as ShikiHighlighter)
+    highlighter = import("shiki")
+      .then(
+        (mod) =>
+          mod.createHighlighter({
+            themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
+            langs: [],
+          }) as unknown as ShikiHighlighter
+      )
       .catch((err) => {
         console.warn(
-          '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
-            'with `pnpm add shiki`. Code still renders, just unhighlighted, without it:',
-          err,
+          "<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it " +
+            "with `pnpm add shiki`. Code still renders, just unhighlighted, without it:",
+          err
         );
         return null;
       });
@@ -92,12 +81,17 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
  * back to plain-text rendering instead of retrying an id that can never
  * succeed on every future render.
  */
-export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Promise<boolean> {
+export async function loadShikiLanguage(
+  hl: ShikiHighlighter,
+  lang: string
+): Promise<boolean> {
   const normalizedLanguage = normalizeShikiLanguage(lang);
   if (hl.getLoadedLanguages().includes(normalizedLanguage)) return true;
   if (unsupportedLanguages.has(normalizedLanguage)) return false;
   try {
-    await hl.loadLanguage(CUSTOM_LANGUAGES[normalizedLanguage] ?? normalizedLanguage);
+    await hl.loadLanguage(
+      CUSTOM_LANGUAGES[normalizedLanguage] ?? normalizedLanguage
+    );
     return true;
   } catch {
     // Not a shiki-recognized grammar id/alias, or the grammar failed to
@@ -107,76 +101,4 @@ export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Pro
     unsupportedLanguages.add(normalizedLanguage);
     return false;
   }
-}
-
-/** One cached `ShikiHighlighterCore` promise per distinct `languages` object
- *  a caller has passed in — keyed by object identity (not content), so a
- *  consumer that keeps passing the *same* `languages` map reference (the
- *  normal case: a module-level constant, not a fresh object literal on every
- *  render) only ever builds one highlighter for it, same "the highlighter
- *  itself is the expensive part" rationale as `loadShikiHighlighter()`'s
- *  single cached instance above. A `WeakMap` lets an abandoned `languages`
- *  object (and its highlighter) be garbage-collected once nothing else
- *  references it. */
-const highlighterCores = new WeakMap<Record<string, ShikiLanguageInput>, Promise<ShikiHighlighterCore | null>>();
-
-/**
- * Builds (and caches — see `highlighterCores` above) a fine-grained
- * `HighlighterCore` seeded with `SHIKI_THEMES` and *only* the grammars in
- * `languages`, via shiki's own "fine-grained bundle" recipe:
- * `createHighlighterCore()` (`shiki/core`) plus an explicit oniguruma engine
- * (`shiki/engine/oniguruma` + the `shiki/wasm` binary) instead of
- * `loadShikiHighlighter()`'s `createHighlighter()` (plain `shiki`).
- *
- * The point isn't runtime cost — `loadShikiHighlighter()`'s per-language
- * `loadLanguage()` dynamic import is already well-optimized for that (see its
- * doc comment). It's *build output*: `shiki`'s main entry point (what
- * `loadShikiHighlighter()` imports) bundles a lookup table of dynamic
- * `import()` calls, one per shiki-supported language (~200 of them), because
- * `loadLanguage(lang: string)` resolves that string against the table at
- * runtime — a bundler can't statically narrow which of those ~200 entries a
- * given app will ever actually request, so it conservatively emits a
- * build-output chunk for every one of them. `shiki/core` has no such
- * table — a bundler only ever sees the exact grammar modules a caller
- * `import`s for `languages` itself, so a consumer with a known, fixed
- * language set gets a build output scoped to just those languages instead of
- * shiki's full bundled set.
- *
- * This is *only* ever consulted for languages present in `languages` — see
- * `<lr-code-block>`'s `syncHighlight()`. A language absent from it still
- * falls back to the ordinary `loadShikiHighlighter()` + `loadShikiLanguage()`
- * dynamic-import path entirely unchanged, so a caller can pin its own known
- * set while still letting an unexpected language through. Resolves to `null`
- * (with a one-time `console.warn`, same convention as `loadShikiHighlighter()`)
- * if building the fine-grained highlighter fails for any reason.
- */
-export function loadShikiHighlighterCore(
-  languages: Record<string, ShikiLanguageInput>,
-): Promise<ShikiHighlighterCore | null> {
-  let cached = highlighterCores.get(languages);
-  if (!cached) {
-    cached = Promise.all([
-      import('shiki/core'),
-      import('shiki/engine/oniguruma'),
-      import('shiki/themes/github-light.mjs'),
-      import('shiki/themes/github-dark.mjs'),
-    ])
-      .then(([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) =>
-        createHighlighterCore({
-          themes: [light.default, dark.default],
-          langs: Object.values(languages) as never,
-          engine: createOnigurumaEngine(import('shiki/wasm')),
-        }) as unknown as ShikiHighlighterCore,
-      )
-      .catch((err) => {
-        console.warn(
-          "<lr-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
-            'falling back to plain unhighlighted text for the languages it covers:',
-          err,
-        );
-        return null;
-      });
-    highlighterCores.set(languages, cached);
-  }
-  return cached;
 }

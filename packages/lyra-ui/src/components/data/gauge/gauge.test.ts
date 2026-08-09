@@ -60,7 +60,7 @@ it('normalizes a reversed min > max domain in aria-value* so it agrees with the 
 it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep end', async () => {
   const el = (await fixture(html`<lr-gauge value="200" max="100"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement | HTMLElement;
-  expect(fill).to.exist;
+  expect((fill) != null).to.equal(true);
   // ratio clamps to 1, so the dash pattern must be fully revealed (offset 0) —
   // i.e. the fill arc actually stops at the sweep's end point, not just "exists".
   expect(Number(fill.getAttribute('stroke-dashoffset'))).to.equal(0);
@@ -228,9 +228,9 @@ it('renders a linear track when type is linear', async () => {
   expect(el.shadowRoot!.querySelector('[part="track"]')).to.exist;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]');
   const labelEl = el.shadowRoot!.querySelector('[part="label"]');
-  expect(valueEl).to.exist;
+  expect((valueEl) != null).to.equal(true);
   expect(valueEl!.textContent).to.equal('10');
-  expect(labelEl).to.exist;
+  expect((labelEl) != null).to.equal(true);
   expect(labelEl!.textContent).to.equal('Battery');
 });
 

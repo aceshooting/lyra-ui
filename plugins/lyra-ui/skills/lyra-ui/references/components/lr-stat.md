@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,11 +23,16 @@ this property was always the second. There is no alias — `appearance` on `<lr-
 attribute now, so a stat left on `appearance="plain"` silently renders full card chrome again.
 
 **Properties:**
+
 - `label: string = ''`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — when `href` is safe, this
+  host-level override names the real whole-card anchor; removing it restores the natural
+  label/value/unit name
 - `value: string = ''`
 - `unit: string = ''`
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
-  URL schemes keep the stat non-interactive
+  URL schemes keep the stat non-interactive. The anchor is stretched behind the visible content,
+  so public slots remain semantic siblings rather than interactive descendants of the link
 - `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
   `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
 - `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected) — the library's
@@ -39,9 +44,9 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 - `caption: string = ''`
 - `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
-  *decrease* is the win.
+  _decrease_ is the win.
 - `rows: StatRow[] = []` (attribute: false) — `StatRow { label: string; value: string; exactValue?:
-  string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
+string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
   tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
@@ -76,11 +81,13 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 
 **Events:** none.
 
-**Slots:** default (leading icon), `caption` (rich caption content — overrides the `caption`
-attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
+**Slots:** `start` (canonical leading icon), default (legacy leading-icon alias, retained as the
+fallback; `start` takes precedence when both are filled), `caption` (rich caption content —
+overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
-is provided)
+is provided). In a linked stat, an interactive slotted descendant keeps its own focus and action;
+clicking non-interactive slotted content still follows the whole-card link.
 
 **CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label` (carries `hidden`,
 and is collapsed, whenever `label` is empty — a label-less stat leaves no blank line above the
@@ -101,21 +108,26 @@ so retinting the trend pill doesn't also recolor the value, and vice versa.
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
-value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
-its own value tint.
+value for each non-neutral `variant`. `--lr-stat-emphasis-border-color` and
+`--lr-stat-emphasis-value-color` (both default `var(--lr-color-brand)`) independently color the
+emphasis accent edge and a neutral emphasized headline without retinting `variant="brand"`.
 
 **Optional peer deps:** none.
 
 ```html
 <lr-stat label="Active users" value="1,204" trend="4.2" variant="success">
-  <svg slot="">...</svg>
+  <svg slot="start">...</svg>
 </lr-stat>
 <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
 ```
 
 **Known gotchas:**
+
 - When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
   their own `tabindex` to avoid nesting focus targets inside the anchor.
+- Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
+  actions never also navigate the stat; use a host `aria-label` when the link destination needs a
+  more specific name than the visible label/value/unit.
 - no `aria-live` region wraps `value`/`trend` — an in-place update after first render still isn't
   proactively announced to screen readers. The trend pill's direction/polarity is no longer
   conveyed by icon rotation/color alone, though: a visually-hidden span now spells it out in plain

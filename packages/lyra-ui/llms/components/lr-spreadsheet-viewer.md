@@ -42,7 +42,9 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 
 **CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
-filling a highlighted cell; focusable and emits `lr-highlight-activate`), `rows`, `spinner`, and
+filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
+name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
+placeholders), `rows`, `spinner`, and
 `error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
 internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.

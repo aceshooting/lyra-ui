@@ -726,7 +726,7 @@ describe('lr-terminal', () => {
     el.follow = false;
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="jump-to-latest"]') as HTMLButtonElement;
-    expect(button).to.exist;
+    expect((button) != null).to.equal(true);
     const listener = oneEvent(el, 'lr-follow-change');
     button.click();
     const event = (await listener) as CustomEvent<{ following: boolean }>;
@@ -998,7 +998,7 @@ describe('lr-terminal', () => {
       // property -- which reads as "hover did nothing" instead of failing honestly.
       const button = (): HTMLButtonElement =>
         el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
-      expect(button(), `${part} must be rendered for this fixture`).to.exist;
+      expect((button()) != null, `${part} must be rendered for this fixture`).to.equal(true);
       // sendMouse positions are window coordinates, so a target below the fold is simply
       // unreachable — the pointer lands on nothing and the test reports "hover did nothing". The
       // jump-to-latest pill sits at the far bottom of a 20rem viewport and hits exactly that.

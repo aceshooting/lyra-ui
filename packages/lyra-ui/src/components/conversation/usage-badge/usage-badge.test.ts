@@ -232,7 +232,7 @@ describe('tooltip breakdown', () => {
     expect(wrapper.inert).to.be.true;
 
     action.focus();
-    expect(document.activeElement).to.not.equal(action);
+    expect((document.activeElement) !== (action)).to.equal(true);
   });
 
   it('closes and removes the tooltip focus stop when the last prop-driven row is cleared', async () => {

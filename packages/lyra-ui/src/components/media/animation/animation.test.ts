@@ -532,7 +532,7 @@ it('ignores a malformed `root` value instead of throwing (falls back to the defa
     try {
       document.body.append(el);
       await el.updateComplete;
-      expect(io.instances.at(-1)?.options?.root).to.equal(null);
+      expect((io.instances.at(-1)?.options?.root) === (null)).to.equal(true);
     } finally {
       el.remove();
     }
@@ -1033,7 +1033,7 @@ it('play-on-visible: passes a custom Element `root` through, and re-observes (di
     await el.updateComplete;
 
     const first = io.instances[io.instances.length - 1];
-    expect(first.options?.root).to.equal(rootEl);
+    expect((first.options?.root) === (rootEl)).to.equal(true);
 
     el.rootMargin = '20px';
     await el.updateComplete;

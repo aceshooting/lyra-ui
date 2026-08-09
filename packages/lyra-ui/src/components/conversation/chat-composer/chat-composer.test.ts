@@ -374,6 +374,37 @@ it('re-hides the chips wrapper once its slot becomes empty again', async () => {
   expect(chips.hidden).to.be.true;
 });
 
+it('accepts start/end aliases alongside leading/trailing and suppresses the built-in action while either end slot is populated', async () => {
+  const el = (await fixture(html`
+    <lr-chat-composer>
+      <button id="start" slot="start">Start</button>
+      <button id="leading" slot="leading">Leading</button>
+      <button id="end" slot="end">End</button>
+      <button id="trailing" slot="trailing">Trailing</button>
+    </lr-chat-composer>
+  `)) as LyraChatComposer;
+  const leading = el.shadowRoot!.querySelector<HTMLElement>('[part="leading"]')!;
+  const startSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
+  const endSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="end"]')!;
+  expect(leading.hidden).to.be.false;
+  expect(startSlot.assignedElements().map((item) => item.id)).to.deep.equal(['start']);
+  expect(endSlot.assignedElements().map((item) => item.id)).to.deep.equal(['end']);
+  expect(actionButtonOf(el) === null).to.be.true;
+
+  let slotChanged = oneEvent(endSlot, 'slotchange');
+  el.querySelector('#end')!.remove();
+  await slotChanged;
+  await el.updateComplete;
+  expect(actionButtonOf(el) === null).to.be.true;
+
+  const trailingSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="trailing"]')!;
+  slotChanged = oneEvent(trailingSlot, 'slotchange');
+  el.querySelector('#trailing')!.remove();
+  await slotChanged;
+  await el.updateComplete;
+  expect(actionButtonOf(el) !== null).to.be.true;
+});
+
 it('hides the leading wrapper when the leading slot is empty, shows it once populated', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
@@ -430,13 +461,13 @@ it('hides the built-in button entirely once the trailing slot has assigned conte
       <button slot="trailing">Custom send</button>
     </lr-chat-composer>
   `)) as LyraChatComposer;
-  expect(actionButtonOf(el)).to.equal(null);
+  expect((actionButtonOf(el)) === (null)).to.equal(true);
 });
 
 it('shows the built-in button again if the trailing slot becomes empty', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   const slot = el.shadowRoot!.querySelector('slot[name="trailing"]') as HTMLSlotElement;
-  expect(actionButtonOf(el)).to.not.equal(null);
+  expect((actionButtonOf(el)) !== (null)).to.equal(true);
 
   const custom = document.createElement('button');
   custom.slot = 'trailing';
@@ -444,13 +475,13 @@ it('shows the built-in button again if the trailing slot becomes empty', async (
   el.appendChild(custom);
   await slotChanged;
   await el.updateComplete;
-  expect(actionButtonOf(el)).to.equal(null);
+  expect((actionButtonOf(el)) === (null)).to.equal(true);
 
   slotChanged = oneEvent(slot, 'slotchange');
   el.removeChild(custom);
   await slotChanged;
   await el.updateComplete;
-  expect(actionButtonOf(el)).to.not.equal(null);
+  expect((actionButtonOf(el)) !== (null)).to.equal(true);
 });
 
 it('disables both the textarea and the built-in button when disabled', async () => {
@@ -992,7 +1023,7 @@ describe('native textarea surface', () => {
     expect(el.selectionStart).to.equal(0);
     expect(el.selectionEnd).to.equal(el.value.length);
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('forwards host click() to the textarea unless effectively disabled', async () => {

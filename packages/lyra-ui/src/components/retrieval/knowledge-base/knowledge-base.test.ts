@@ -134,7 +134,7 @@ describe('lr-knowledge-base', () => {
   it('clicking "Add source" emits lr-kb-create with no detail; hide-create removes the button', async () => {
     const el = (await fixture(html`<lr-knowledge-base></lr-knowledge-base>`)) as LyraKnowledgeBase;
     const button = el.shadowRoot!.querySelector('[part="create-button"]') as HTMLElement;
-    expect(button).to.exist;
+    expect((button) != null).to.equal(true);
     const listener = oneEvent(el, 'lr-kb-create');
     button.click();
     const event = (await listener) as CustomEvent<undefined>;

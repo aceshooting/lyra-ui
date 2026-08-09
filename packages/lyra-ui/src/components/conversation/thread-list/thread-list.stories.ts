@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './thread-list.js';
-import type { ChatThread } from './thread-list.class.js';
+import type { ChatThread, LyraThreadList } from './thread-list.class.js';
 import '../../layout/menu/menu.js';
 import '../../layout/menu/menu-item.js';
 import '../../overlays/badge/badge.js';
@@ -29,12 +29,27 @@ const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
 
 const threads: ChatThread[] = [
   { id: '1', title: 'Deploy pipeline investigation', pinned: true, timestamp: hoursAgo(2) },
-  { id: '2', title: 'Refactor the auth module', excerpt: 'Can you check why the token refresh…', timestamp: hoursAgo(1) },
+  {
+    id: '2',
+    title: 'Refactor the auth module',
+    excerpt: 'Can you check why the token refresh…',
+    timestamp: hoursAgo(1),
+  },
   { id: '3', title: 'Weekly summary draft', timestamp: hoursAgo(20) },
   { id: '4', title: 'Onboarding doc review', timestamp: daysAgo(3) },
   { id: '5', title: 'Old Q1 planning thread', timestamp: daysAgo(45) },
   { id: '6', title: 'Archived spike', archived: true, timestamp: daysAgo(10) },
 ];
+const boundaryThreads: ChatThread[] = Array.from({ length: 40 }, (_, index) => ({
+  id: `boundary-${index}`,
+  title: `Virtualized conversation ${index + 1}`,
+  timestamp: hoursAgo(index),
+}));
+const collidingIdentityThreads: Array<ChatThread & { group: string }> = Array.from({ length: 30 }, (_, index) => ({
+  id: index === 29 ? 'group:today' : `ordinary-${index}`,
+  title: `Grouped conversation ${index + 1}`,
+  group: 'today',
+}));
 
 export const Default: Story = {
   render: () =>
@@ -72,15 +87,13 @@ export const CustomRowActions: Story = {
             </button>
             <lr-menu-item
               value="rename"
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) =>
-                console.log('rename', thread.id, e.detail.value)}
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('rename', thread.id, e.detail.value)}
               >Rename</lr-menu-item
             >
             <lr-menu-item
               value="delete"
               destructive
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) =>
-                console.log('delete', thread.id, e.detail.value)}
+              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('delete', thread.id, e.detail.value)}
               >Delete</lr-menu-item
             >
           </lr-menu>
@@ -115,6 +128,48 @@ export const UnavailableWrappedRow: Story = {
         .wrapRow=${(thread: ChatThread, row: TemplateResult) =>
           thread.id === '2' ? html`<div inert style="opacity:var(--lr-opacity-disabled);">${row}</div>` : row}
       ></lr-thread-list>
+    </div>
+  `,
+};
+
+/**
+ * Scroll to the middle, focus a conversation, then press Home or End. The target is resolved from
+ * all 40 threads rather than the mounted window, so the true boundary row is mounted and focused.
+ */
+export const VirtualKeyboardBoundaries: Story = {
+  render: () => html`
+    <div style="block-size:240px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list grouping="none" .threads=${boundaryThreads}></lr-thread-list>
+    </div>
+  `,
+};
+
+/**
+ * Activate the last row: its public id intentionally equals the old internal key for the `today`
+ * header. Separate internal namespaces mount and activate the thread rather than selecting the
+ * header at the top of the virtual model.
+ */
+export const CollidingActiveIdentity: Story = {
+  render: () => html`
+    <div data-colliding-identity style="display:grid;gap:var(--lr-space-s);inline-size:320px;max-inline-size:100%;">
+      <button
+        type="button"
+        @click=${(event: Event) => {
+          const list = (event.currentTarget as HTMLElement)
+            .closest('[data-colliding-identity]')
+            ?.querySelector<LyraThreadList>('lr-thread-list');
+          if (list) list.activeId = 'group:today';
+        }}
+      >
+        Activate the colliding last thread
+      </button>
+      <div style="block-size:240px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list
+          grouping="custom"
+          .threads=${collidingIdentityThreads}
+          .groupBy=${(thread: ChatThread & { group: string }) => thread.group}
+        ></lr-thread-list>
+      </div>
     </div>
   `,
 };
@@ -166,7 +221,8 @@ export const RenderHooks: Story = {
       <lr-thread-list
         class="hook-parts"
         .threads=${threads}
-        .renderLeading=${(thread: ChatThread) => html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
+        .renderLeading=${(thread: ChatThread) =>
+          html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
         .renderMeta=${(thread: ChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
         .renderRowContent=${(thread: ChatThread) => html`
           <strong>${thread.title}</strong>
@@ -190,10 +246,9 @@ export const HighlightedExcerpt: Story = {
       const query = 'token';
       const index = excerpt.toLowerCase().indexOf(query);
       if (index === -1) return html`${excerpt}`;
-      return html`${excerpt.slice(0, index)}<mark>${excerpt.slice(
-        index,
-        index + query.length,
-      )}</mark>${excerpt.slice(index + query.length)}`;
+      return html`${excerpt.slice(0, index)}<mark>${excerpt.slice(index, index + query.length)}</mark>${excerpt.slice(
+        index + query.length
+      )}`;
     };
     return html`
       <div

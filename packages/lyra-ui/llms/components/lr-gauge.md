@@ -18,6 +18,7 @@
 Dependency-free SVG radial, full-circle ring, or linear meter (no charting library).
 
 **Properties:**
+
 - `value: number = 0`
 - `min: number = 0`
 - `max: number = 100`
@@ -41,15 +42,20 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 
 ```html
 <lr-gauge value="72" min="0" max="100" label="CPU"></lr-gauge>
-<lr-gauge type="ring" value="84" label="Coverage"
-  style="--lr-gauge-fill: var(--lr-color-success)"></lr-gauge>
+<lr-gauge
+  type="ring"
+  value="84"
+  label="Coverage"
+  style="--lr-gauge-fill: var(--lr-color-success)"
+></lr-gauge>
 <lr-gauge type="linear" value="0.4" max="1"></lr-gauge>
 <script type="module">
-  document.querySelector('lr-gauge').valueLabel = '72°F'; // visible text and announced value
+  document.querySelector("lr-gauge").valueLabel = "72°F"; // visible text and announced value
 </script>
 ```
 
 **Known gotchas:**
+
 - SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
   single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
   inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible

@@ -104,7 +104,12 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * Markdown mode composes `<lr-markdown>` (`../markdown/markdown.js`)
  * directly, forwarding this component's own `streaming` through as that
  * component's own forward-compatible `streaming` hint prop; plain-text mode
- * renders into a `white-space: pre-wrap` span instead.
+ * renders into a `white-space: pre-wrap` span instead. The plain-text path
+ * does not load optional peers. Markdown mode uses `<lr-markdown>`'s lazy
+ * `marked` parser and default `dompurify` sanitizer; fenced-code highlighting
+ * can additionally use `shiki`. The transitive Markdown graph also contains
+ * the opt-in `katex` loader, but this wrapper does not enable Markdown math,
+ * so it never requests that peer itself.
  *
  * The blinking cursor (shown only while `streaming` is `true`) degrades to
  * a static, always-visible bar under `prefers-reduced-motion: reduce`

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -45,7 +45,7 @@ index, label, value }`).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
-**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
@@ -53,9 +53,13 @@ failure transition is announced through the shared document-level light-DOM asse
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` — all
-inherited from `LyraChart`, identical in meaning and default (see `lr-chart` above); each of the
-eight variants below reads the same set, so one rule retunes them together. The mirrored hooks are `--border-color-1`,
+`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
+`--lr-chart-pattern-step` — all inherited from `LyraChart`, identical in meaning and default (see
+`lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
+together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
 `--border-color-6`, `--fill-color-1`, `--fill-color-2`, `--fill-color-3`, `--fill-color-4`,
 `--fill-color-5`, `--fill-color-6`, `--border-radius`, `--border-width`, `--grid-border-width`,

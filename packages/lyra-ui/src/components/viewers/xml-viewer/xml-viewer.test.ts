@@ -300,7 +300,7 @@ describe('copy', () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
-    expect(button).to.exist;
+    expect((button) != null).to.equal(true);
     const eventPromise = oneEvent(el, 'lr-copy');
     button.click();
     const event = await eventPromise;

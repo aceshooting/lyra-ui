@@ -71,7 +71,7 @@ describe('lr-stack-trace', () => {
     const el = (await fixture(html`<lr-stack-trace .trace=${trace} collapse-internal></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
-    expect(toggle).to.exist;
+    expect((toggle) != null).to.equal(true);
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
     expect(toggle.textContent).to.include('2');
     toggle.click();
@@ -294,7 +294,7 @@ describe('lr-stack-trace chrome', () => {
       html`<lr-stack-trace frame="plain" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
-    expect(copy).to.exist;
+    expect((copy) != null).to.equal(true);
     const s = getComputedStyle(copy);
     expect(s.borderTopWidth).to.equal('1px');
     expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');

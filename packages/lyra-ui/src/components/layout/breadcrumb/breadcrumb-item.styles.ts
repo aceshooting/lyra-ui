@@ -56,10 +56,13 @@ export const styles = css`
      surface the trail happens to sit on rather than assuming --lr-color-surface is behind it. */
   :where(a, button)[part="base"]:active {
     text-decoration: underline;
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-breadcrumb-item-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part="base"]:focus-visible {

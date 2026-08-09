@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './breadcrumb-item.js';
 import './breadcrumb.js';
 import type { LyraBreadcrumbItem } from './breadcrumb-item.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders a link with design-token color and no default UA underline', async () => {
   const el = (await fixture(html`<lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>`)) as LyraBreadcrumbItem;
@@ -19,10 +20,44 @@ it('renders a native button when a non-current item has no href', async () => {
   `);
   const el = breadcrumb.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('button[part="base"]');
-  expect(button).to.exist;
+  expect((button) != null).to.equal(true);
   expect(button!.type).to.equal('button');
   expect(button!.getAttribute('aria-current')).to.equal('false');
   await expect(breadcrumb).to.be.accessible();
+});
+
+describe('host click()', () => {
+  for (const [name, markup] of [
+    ['button', html`<lr-breadcrumb-item>Open menu</lr-breadcrumb-item>`],
+    ['link', html`<lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>`],
+  ] as const) {
+    it(`activates the internal ${name}`, async () => {
+      const el = (await fixture(markup)) as LyraBreadcrumbItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      let activations = 0;
+      base.addEventListener('click', (event) => {
+        event.preventDefault();
+        activations += 1;
+      });
+
+      el.click();
+
+      expect(activations).to.equal(1);
+    });
+  }
+
+  it('does not activate the current-page label', async () => {
+    const el = (await fixture(
+      html`<lr-breadcrumb-item current>Reports</lr-breadcrumb-item>`,
+    )) as LyraBreadcrumbItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    let activations = 0;
+    base.addEventListener('click', () => (activations += 1));
+
+    el.click();
+
+    expect(activations).to.equal(0);
+  });
 });
 
 it('supports both upstream adornment vocabularies and part aliases', async () => {
@@ -131,4 +166,22 @@ describe('current-state cssprop', () => {
     `);
     await expect(el.querySelector('lr-breadcrumb')!).to.be.accessible();
   });
+});
+
+it('inherits its pressed fill independently from an ancestor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-breadcrumb-item-active-bg: rgb(1, 2, 3);">
+      <lr-breadcrumb><lr-breadcrumb-item>Reports</lr-breadcrumb-item></lr-breadcrumb>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });

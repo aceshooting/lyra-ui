@@ -27,6 +27,9 @@ Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-sele
 `lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
 `error` CSS parts) — left unset, none of that chrome renders.
 
+Public `--lr-emoji-picker-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper
+can override size-tier fallbacks; a value set directly on the element still wins.
+
 **Properties:** the shared form properties `name`, `value`, `defaultValue`, `customError`
 (`custom-error`), `disabled`, and `required`, plus
 `groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
@@ -46,7 +49,8 @@ localized default to `aria-labelledby` pointing at the visible label. `hint: str
 supporting text rendered below the search/grid; unset renders no hint chrome. `errorText: string =
 ''` (attribute `error-text`) — validation-error text rendered below the hint (overridden by slotted
 `error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
-visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
+visual size; scales the glyph and preferred emoji box while every interactive option remains
+floored at the shared `--lr-icon-button-size`.
 
 **Methods:** `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
 `resetValidity()` provide the shared form-validation surface. `resetValidity()` clears only
@@ -75,7 +79,9 @@ content, overrides the `errorText` attribute when provided).
 `form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
 button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
-error message). While windowing is active the rows are wrapped in `virtual-spacer`
+error message). The grid scrolls in the block axis and explicitly clips inline overflow, so an
+allocation narrower than one option does not introduce a second scrollbar. While windowing is
+active the rows are wrapped in `virtual-spacer`
 (full-height scroll spacer), `virtual-row` (one absolutely-positioned row), `virtual-label` (an
 `aria-hidden` spacer standing in for a row's missing `group-label`), and `virtual-items` (the row's
 emoji flex line).
@@ -111,10 +117,10 @@ repainting everything else that reads it — as the only way in. Like `lr-time-r
 properties, it is written as an inline `var()` fallback at the point of use rather than declared on
 `:host`, so a value set on **any ancestor** reaches it instead of being shadowed.
 
-Two constraints remain. `--lr-emoji-picker-item-size` is held at a flat 24px minimum (WCAG 2.5.8
-touch target floor): the smaller `size` tier values can shrink the box below the old 40px
-unconditional floor, but the minimum holds at 24px regardless of tokens, and the windowed geometry
-follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height
+Two constraints remain. `--lr-emoji-picker-item-size` is held at the shared
+`--lr-icon-button-size` minimum: smaller `size` tier values can still shrink the glyph, but never
+the interactive option, and the windowed geometry follows the clamped, painted size. And windowed
+rows are absolutely positioned at the row-height
 pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.

@@ -28,6 +28,7 @@ import {
   withSyntheticCatalogValue,
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelectNoModels, LYRA_DEFAULT_modelSelectRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
@@ -86,6 +87,9 @@ export interface LyraModelCatalogEntry {
  */
 export type LyraModelCatalog = string[] | LyraModelCatalogEntry[];
 
+/** Direction reported by the free-text input's native selection APIs. */
+export type LyraModelSelectSelectionDirection = 'forward' | 'backward' | 'none';
+
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
@@ -117,10 +121,8 @@ export interface LyraModelSelectEventMap {
  * `value` on every render, without ever mutating the `catalog` property
  * itself.
  *
- * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
- * `hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left unset, neither renders.
- * Pairs with the existing `label` prop/part (also mirroring `<lr-select>`) for a full
- * label/hint/error field.
+ * Ships the standard label/hint/error form-control chrome: properties, matching named slots, and
+ * the complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.
  *
  * @customElement lr-model-select
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
@@ -136,6 +138,7 @@ export interface LyraModelSelectEventMap {
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
  *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
  *   bubble so an app can present the failure its own way.
+ * @slot label - Custom visible label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @cssstate required - Matches while `required` is set. Style with `lr-model-select:state(required)`.
@@ -149,8 +152,8 @@ export interface LyraModelSelectEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
- * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to the
- *   accessible name — once `label` is non-empty).
+ * @csspart form-control - The complete label, control, hint, error, and listbox frame.
+ * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
  * @csspart combobox - The text-input container (free-text mode's positioning anchor).
  * @csspart combobox-input - The free-text mode's text input.
@@ -226,13 +229,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   /**
-   * Optional visible title above the control, mirroring `lr-select`'s
-   * `label` exactly: rendered via a `part="form-control-label"` `<label>`
-   * paired with the control's id, and — once non-empty — it takes over as
-   * the accessible-name source (the `aria-label` fallback below is then only
-   * emitted when the host has an explicit `aria-label` override, same
-   * precedence as `lr-select`). Leaving it empty (the default) keeps
-   * today's `aria-label || placeholder || 'Model'` chain untouched.
+   * Optional visible title above the control, rendered alongside the `label` slot in a
+   * `part="form-control-label"` `<label>` paired with the active control's id. A host `aria-label`
+   * remains authoritative by presence; otherwise either visible-label source supplies the native
+   * associated name. Leaving both empty keeps the `aria-label || placeholder || 'Model'` chain.
    */
   @property() label = '';
   /** Hint text below the field. Unset (the default): no hint chrome renders. */
@@ -278,6 +278,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // lr-select's identical hasHintSlot/hasErrorSlot) and reflected via the hidden attribute.
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -351,6 +352,68 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   /** Blurs the active semantic control in both rendering modes. */
   override blur(): void {
     this[VALIDITY_ANCHOR]()?.blur();
+  }
+
+  /** The native editable input in free-text mode, or `null` in closed-dropdown mode and before render. */
+  get input(): HTMLInputElement | null {
+    return this.renderRoot?.querySelector<HTMLInputElement>('[part="combobox-input"]') ?? null;
+  }
+
+  get selectionStart(): number | null {
+    return this.input?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.input) this.input.selectionStart = value;
+  }
+
+  get selectionEnd(): number | null {
+    return this.input?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.input) this.input.selectionEnd = value;
+  }
+
+  get selectionDirection(): LyraModelSelectSelectionDirection | null {
+    return (this.input?.selectionDirection as LyraModelSelectSelectionDirection | undefined) ?? null;
+  }
+
+  set selectionDirection(value: LyraModelSelectSelectionDirection | null) {
+    if (this.input) this.input.selectionDirection = value;
+  }
+
+  /** Selects all editable text in free-text mode; otherwise a no-op. */
+  select(): void {
+    this.input?.select();
+  }
+
+  /** Forwards the native selection range in free-text mode; otherwise a no-op. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: LyraModelSelectSelectionDirection,
+  ): void {
+    this.input?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  /**
+   * Applies a silent native range edit in free-text mode and synchronizes the committed value,
+   * form entry, and validity. Closed-dropdown mode and pre-render calls are no-ops.
+   */
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.input;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.query = input.value;
+    this.activeIndex = -1;
+    this.value = input.value;
   }
 
   get form(): HTMLFormElement | null {
@@ -940,9 +1003,15 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  /** `part="form-control-label"` — see `label`'s doc comment for its precedence over `aria-label`. */
+  private get hasVisibleLabel(): boolean {
+    return this.label.length > 0 || this.slotPresence.has('label');
+  }
+
+  /** `part="form-control-label"` — see `label`'s doc comment for host `aria-label` precedence. */
   private renderLabel(): TemplateResult {
-    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.label}>${this.label}</label>`;
+    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.hasVisibleLabel}
+      >${this.label}<slot name="label"></slot></label
+    >`;
   }
 
   /** `part="hint"`/`part="error"` — mirrors `lr-select`'s identical hint/error chrome, rendered
@@ -962,7 +1031,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const rows = this.effectiveEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
-    const hasLabel = this.label.length > 0;
+    const hasLabel = this.hasVisibleLabel;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
@@ -1003,7 +1072,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private renderFreeText(): TemplateResult {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
-    const hasLabel = this.label.length > 0;
+    const hasLabel = this.hasVisibleLabel;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
@@ -1047,7 +1116,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   override render(): TemplateResult {
-    return this.closedMode ? this.renderClosed() : this.renderFreeText();
+    return html`<div part="form-control">
+      ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
+    </div>`;
   }
 }
 

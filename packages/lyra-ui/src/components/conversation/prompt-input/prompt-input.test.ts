@@ -23,13 +23,25 @@ it('names the semantic group that owns the prompt option controls', async () => 
   expect(controls.getAttribute('aria-label')).to.equal('Prompt options');
 });
 
+it('is deliberately event-submitted rather than a native successful form control', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-prompt-input name="prompt" .value=${'Summarize the report'}></lr-prompt-input>
+    </form>
+  `)) as HTMLFormElement;
+  const element = form.querySelector('lr-prompt-input') as LyraPromptInput;
+
+  expect(new FormData(form).has('prompt')).to.be.false;
+  expect('getForm' in element).to.be.false;
+});
+
 it('keeps a definite flex-basis for controls even when --lr-control-width is never set (regression)', async () => {
   const el = (await fixture(
     html`<lr-prompt-input .modelCatalog=${['fast', 'accurate']}></lr-prompt-input>`,
   )) as LyraPromptInput;
   await el.updateComplete;
   const control = el.shadowRoot!.querySelector('[part="controls"] > *') as HTMLElement;
-  expect(control, 'expected at least one rendered control').to.exist;
+  expect((control) != null, 'expected at least one rendered control').to.equal(true);
   // Without a fallback, an unset custom property makes `var(--lr-control-width)` invalid at
   // computed-value time, which invalidates the whole `flex` shorthand declaration and falls the
   // basis back to its initial `auto` -- a definite length here proves the fallback took effect.
@@ -381,7 +393,7 @@ it('gates every composed interaction while disabled and forwards host click to t
   expect(popover.open).to.be.false;
 
   el.click();
-  expect(composer.shadowRoot!.activeElement).to.not.exist;
+  expect((composer.shadowRoot!.activeElement) == null).to.equal(true);
   el.disabled = false;
   await el.updateComplete;
   el.click();
@@ -446,7 +458,7 @@ it('delegates focus(), blur() and select() to the embedded composer', async () =
   const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
 
   el.focus();
-  expect(composer.shadowRoot!.activeElement).to.equal(textarea);
+  expect((composer.shadowRoot!.activeElement) === (textarea)).to.equal(true);
 
   el.value = 'draft text';
   await el.updateComplete;
@@ -456,5 +468,5 @@ it('delegates focus(), blur() and select() to the embedded composer', async () =
   expect(textarea.selectionEnd).to.equal(textarea.value.length);
 
   el.blur();
-  expect(composer.shadowRoot!.activeElement).to.not.equal(textarea);
+  expect((composer.shadowRoot!.activeElement) !== (textarea)).to.equal(true);
 });

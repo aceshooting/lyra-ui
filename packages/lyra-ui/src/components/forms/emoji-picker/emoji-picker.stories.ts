@@ -84,6 +84,7 @@ export const WithAutoLoadedData: Story = {
   render: () => html`<lr-emoji-picker></lr-emoji-picker>`,
 };
 
+/** Small tiers retain compact glyphs inside the shared icon-button hit-area floor. */
 export const Sizes: Story = {
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 2rem;">
@@ -111,6 +112,33 @@ export const Narrow: Story = {
         hint="Search by a localized name or shortcode; groups and results wrap within this panel."
         .groups=${groups}
       ></lr-emoji-picker>
+    </div>
+  `,
+};
+
+/** Component theme inputs inherit through an ancestor even when a size tier supplies fallbacks. */
+export const AncestorTheme: Story = {
+  render: () => html`
+    <div
+      style="
+        --lr-emoji-picker-item-size: var(--lr-space-2xl);
+        --lr-emoji-picker-glyph-size: var(--lr-font-size-xl);
+        --lr-emoji-picker-gap: var(--lr-space-s);
+        --lr-emoji-picker-control-gap: var(--lr-space-l);
+        --lr-emoji-picker-radius: var(--lr-radius);
+        --lr-emoji-picker-item-radius: var(--lr-radius);
+      "
+    >
+      <lr-emoji-picker size="2xs" .groups=${groups}></lr-emoji-picker>
+    </div>
+  `,
+};
+
+/** An allocation narrower than one option clips inline overflow without adding a second scrollbar. */
+export const CrossAxisContainment: Story = {
+  render: () => html`
+    <div style="inline-size: 2rem; max-inline-size: 100%;">
+      <lr-emoji-picker .groups=${groups}></lr-emoji-picker>
     </div>
   `,
 };

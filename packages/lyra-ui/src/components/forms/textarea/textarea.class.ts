@@ -132,6 +132,8 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * `appearance`; the documented default is `appearance="outlined"`'s value.
  * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field,
  * swapped per `appearance` in the same way as `--lr-textarea-fill`.
+ * @cssprop [--lr-textarea-hover-border-color=var(--lr-color-brand)] - Field border color while the
+ * native textarea is hovered.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.

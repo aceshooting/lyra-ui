@@ -27,6 +27,29 @@ describe('reorderable', () => {
 
   const clone = (): TreeItem[] => JSON.parse(JSON.stringify(reorderData));
 
+  const applyDataReorder = (el: LyraTree, event: CustomEvent): void => {
+    const { parentId, fromIndex, toIndex } = event.detail as {
+      parentId: string | null;
+      fromIndex: number;
+      toIndex: number;
+    };
+    const next = JSON.parse(JSON.stringify(el.data)) as TreeItem[];
+    const find = (items: TreeItem[], id: string): TreeItem | undefined => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        const nested = item.children ? find(item.children, id) : undefined;
+        if (nested) return nested;
+      }
+      return undefined;
+    };
+    const siblings = parentId === null ? next : find(next, parentId)?.children;
+    if (!siblings) return;
+    const [moved] = siblings.splice(fromIndex, 1);
+    if (!moved) return;
+    siblings.splice(toIndex, 0, moved);
+    el.data = next;
+  };
+
   /** Dispatch a Ctrl/Cmd+Arrow keydown from a node, the way a real key press reaches
    *  `<lr-tree>`'s single delegated listener (composed + bubbling). */
   const modArrow = (
@@ -241,24 +264,107 @@ describe('reorderable', () => {
     expect(events.length).to.equal(2);
   });
 
-  it('announces the requested move through an internal live region', async () => {
+  it('does not announce a completed move when the host ignores the reorder request', async () => {
     const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
     const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
-    expect(region, 'a reorderable tree renders a live region').to.exist;
+    expect((region) != null, 'a reorderable tree renders a live region').to.equal(true);
     await region.updateComplete;
 
     const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
+    const text = region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+    expect(text.trim()).to.equal('');
+  });
+
+  it('announces only after the host confirms the requested sibling order', async () => {
+    const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
+    el.data = clone();
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    const root = el.querySelector('lr-tree-item') as LyraTreeItem;
+    root.focus();
+    el.addEventListener('lr-reorder', (event) => applyDataReorder(el, event as CustomEvent));
+
+    modArrow(root, 'ArrowDown');
+    await el.updateComplete;
     const text = region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
     expect(text).to.contain('Root');
     expect(text).to.contain('2');
+  });
+
+  it('retains an async request through unrelated updates without announcing early', async () => {
+    const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
+    el.data = clone();
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    const root = el.querySelector('lr-tree-item') as LyraTreeItem;
+    root.focus();
+    let request: CustomEvent | undefined;
+    el.addEventListener('lr-reorder', (event) => {
+      request = event as CustomEvent;
+    });
+
+    modArrow(root, 'ArrowDown');
+    el.label = 'Updated while persistence is pending';
+    await el.updateComplete;
+    expect((region.shadowRoot!.textContent ?? '').trim()).to.equal('');
+
+    applyDataReorder(el, request!);
+    await el.updateComplete;
+    expect(region.shadowRoot!.textContent).to.contain('Moved Root');
+  });
+
+  it('does not announce a divergent host update or misattribute a later unrelated order', async () => {
+    const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
+    el.data = [
+      { id: 'a', label: 'Alpha' },
+      { id: 'b', label: 'Beta' },
+      { id: 'c', label: 'Gamma' },
+    ];
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    const alpha = el.querySelector('lr-tree-item') as LyraTreeItem;
+    alpha.focus();
+    el.addEventListener(
+      'lr-reorder',
+      () => {
+        el.data = [
+          { id: 'a', label: 'Alpha' },
+          { id: 'c', label: 'Gamma' },
+          { id: 'b', label: 'Beta' },
+        ];
+      },
+      { once: true },
+    );
+
+    modArrow(alpha, 'ArrowDown');
+    await el.updateComplete;
+    expect((region.shadowRoot!.textContent ?? '').trim()).to.equal('');
+
+    el.data = [
+      { id: 'b', label: 'Beta' },
+      { id: 'a', label: 'Alpha' },
+      { id: 'c', label: 'Gamma' },
+    ];
+    await el.updateComplete;
+    expect((region.shadowRoot!.textContent ?? '').trim()).to.equal('');
   });
 
   it('honors a .strings override for the treeNodeMoved announcement', async () => {
@@ -273,6 +379,7 @@ describe('reorderable', () => {
 
     const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     (root as unknown as HTMLElement).focus();
+    el.addEventListener('lr-reorder', (event) => applyDataReorder(el, event as CustomEvent));
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
 
@@ -297,6 +404,8 @@ describe('reorderable', () => {
     el.data = clone();
     await el.updateComplete;
     const child = await focusNestedChild(el, '1.2');
+
+    el.addEventListener('lr-reorder', (event) => applyDataReorder(el, event as CustomEvent));
 
     modArrow(child as unknown as Element, 'ArrowUp', 'metaKey');
     await el.updateComplete;

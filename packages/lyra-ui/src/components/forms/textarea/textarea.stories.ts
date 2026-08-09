@@ -136,6 +136,17 @@ export const Appearance: Story = {
   `,
 };
 
+export const IndependentHoverTheme: Story = {
+  name: 'Independent hover-border theme',
+  render: () => html`
+    <lr-textarea
+      label="Hover-border hook"
+      rows="2"
+      style="max-inline-size: var(--lr-size-24rem); --lr-textarea-hover-border-color: var(--lr-color-success);"
+    ></lr-textarea>
+  `,
+};
+
 /** Shoelace's `filled`/`help-text` aliases use the same field and form-chrome engine. */
 export const ShoelaceAliases: Story = {
   render: () => html`

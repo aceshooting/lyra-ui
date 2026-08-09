@@ -3,7 +3,19 @@ import { html } from 'lit';
 import './radio-button.js';
 import './radio-group.js';
 
-const meta: Meta = { title: 'Forms/Radio button', component: 'lr-radio-button', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Forms/Radio button',
+  component: 'lr-radio-button',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A button-chrome radio. Host `aria-label` is forwarded to the internal radio by attribute presence, including an explicitly empty override.',
+      },
+    },
+  },
+};
 export default meta;
 
 export const Default: StoryObj = {
@@ -12,6 +24,23 @@ export const Default: StoryObj = {
       <lr-radio-button value="day" checked>Day</lr-radio-button>
       <lr-radio-button value="week">Week</lr-radio-button>
       <lr-radio-button value="month">Month</lr-radio-button>
+    </lr-radio-group>
+  `,
+};
+
+export const IndependentStateTheme: StoryObj = {
+  name: 'Independent checked and pointer theme',
+  render: () => html`
+    <lr-radio-group name="button-state-theme" label="State hooks" orientation="horizontal">
+      <lr-radio-button
+        value="checked"
+        checked
+        style="--lr-radio-button-gap: var(--lr-space-s); --lr-radio-button-checked-bg: var(--lr-color-success); --lr-radio-button-checked-border-color: var(--lr-color-success); --lr-radio-button-checked-color: var(--lr-color-on-success); --lr-radio-button-checked-hover-bg: var(--lr-color-warning); --lr-radio-button-checked-active-bg: var(--lr-color-danger);"
+      >Checked</lr-radio-button>
+      <lr-radio-button
+        value="rest"
+        style="--lr-radio-button-gap: var(--lr-space-s); --lr-radio-button-hover-bg: var(--lr-color-success-quiet); --lr-radio-button-active-bg: var(--lr-color-warning-quiet);"
+      >Unchecked</lr-radio-button>
     </lr-radio-group>
   `,
 };
@@ -33,6 +62,26 @@ export const RightToLeft: StoryObj = {
         <lr-radio-button value="day" checked>يوم</lr-radio-button>
         <lr-radio-button value="week">أسبوع</lr-radio-button>
       </lr-radio-group>
+    </div>
+  `,
+};
+
+/** Standalone exact-320px buttons contain unbroken label and adornment content in both directions. */
+export const StandaloneNarrow: StoryObj = {
+  name: 'Standalone narrow LTR/RTL (320px)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+            <lr-radio-button value=${direction}>
+              <span slot="prefix">UnbrokenPrefixAdornmentWithoutNaturalBreaks</span>
+              InternationalizedStandaloneRadioButtonLabelWithoutAnyNaturalBreakOpportunity
+              <span slot="suffix">UnbrokenSuffixAdornmentWithoutNaturalBreaks</span>
+            </lr-radio-button>
+          </div>
+        `,
+      )}
     </div>
   `,
 };

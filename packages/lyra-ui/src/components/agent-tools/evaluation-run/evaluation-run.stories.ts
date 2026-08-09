@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './evaluation-run.js';
-import type { EvaluationExampleResult } from './evaluation-run.class.js';
+import type { EvaluationExampleResult, EvaluationToolApprovalDetail } from './evaluation-run.class.js';
 
 const meta: Meta = {
   title: 'EvaluationRun',
@@ -71,6 +71,46 @@ export const WithExplicitTotal: Story = {
   name: 'With an explicit total (batch still streaming in)',
   render: () =>
     html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples.slice(0, 2)} total="4"></lr-evaluation-run>`,
+};
+
+export const AsyncApprovalVeto: Story = {
+  name: 'Async approval veto',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Expand the example and approve the pending tool call. The correlated event is prevented, so the nested dialog remains pending while the host resolves asynchronous validation.',
+      },
+    },
+  },
+  render: () => {
+    const pendingExamples: EvaluationExampleResult[] = [
+      {
+        ...examples[0]!,
+        toolTrace: [
+          {
+            id: 'call-pending',
+            name: 'search_docs',
+            args: { query: 'refund policy' },
+            status: 'pending',
+            needsApproval: true,
+          },
+        ],
+      },
+    ];
+    return html`
+      <lr-evaluation-run
+        style="max-width: 40rem;"
+        .examples=${pendingExamples}
+        @lr-example-tool-approval-decide=${(event: CustomEvent<EvaluationToolApprovalDetail>) => {
+          event.preventDefault();
+          const output = (event.currentTarget as HTMLElement).nextElementSibling;
+          if (output) output.textContent = `Pending approval for ${event.detail.exampleId}/${event.detail.invocationId}`;
+        }}
+      ></lr-evaluation-run>
+      <p role="status">No decision pending.</p>
+    `;
+  },
 };
 
 export const Empty: Story = {

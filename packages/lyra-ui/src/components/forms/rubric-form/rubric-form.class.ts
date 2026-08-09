@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -23,11 +23,11 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface RubricKeyOption {
   value: string;
@@ -54,6 +54,12 @@ export type RubricValue = Record<string, number | string | string[] | undefined>
 const EMPTY_KEYS: RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
 
+function cloneRubricValue(value: RubricValue): RubricValue {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, Array.isArray(entry) ? [...entry] : entry]),
+  );
+}
+
 export interface LyraRubricFormEventMap {
   'lr-invalid': CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: RubricValue }>;
@@ -71,7 +77,9 @@ export interface LyraRubricFormEventMap {
  * renders `<lr-segmented>` when its `[min, max]`/`step` domain has 10 or
  * fewer integer steps, or `<lr-slider>` otherwise; `category` renders
  * `<lr-select>` (single) or `<lr-checkbox-group>` (`multiple`); `comment`
- * renders `<lr-textarea>`. A key whose `type` is none of the three renders
+ * renders `<lr-textarea>`. Both score branches format visible numeric labels with the effective
+ * locale; segmented item values and submitted rubric values remain stable raw numbers/strings.
+ * A key whose `type` is none of the three renders
  * a visible "Unsupported field type" note instead of silently dropping it,
  * and marks the form invalid — the same defensive shape as
  * `<lr-tool-param-form>`'s own unsupported-property fallback.
@@ -84,10 +92,17 @@ export interface LyraRubricFormEventMap {
  * `lr-input`/`lr-validity-change`/`lr-submit`/`lr-skip`), not a
  * requirement: a consumer that never puts this inside a `<form>` loses
  * nothing.
- * The outer `base` is a single accessible `role="group"`: a host `aria-label` or native external
- * `<label for>` names the aggregate, while each rubric field keeps its own field-level name.
+ * Aggregate `label`, `hint`/`helpText`, and `errorText` properties have matching slots and
+ * same-shadow ARIA links on the outer `base` role="group". A host `aria-label` wins by attribute
+ * presence (including an explicitly empty value), while each rubric field keeps its own
+ * field-level name. When `errorText` is empty, a consumer `setCustomValidity()` message is rendered
+ * in the aggregate error region so a blocking whole-form error is never silent.
  *
  * @customElement lr-rubric-form
+ * @slot label - Aggregate rubric label rendered before all fields.
+ * @slot hint - Aggregate supporting text rendered after all fields.
+ * @slot help-text - Shoelace-compatible alias for the aggregate `hint` slot.
+ * @slot error - Aggregate validation text; supplements `errorText` or the current custom error.
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
  * @event lr-input - `detail: { value }` — any control changed; the full current value object.
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
@@ -95,6 +110,15 @@ export interface LyraRubricFormEventMap {
  * @event lr-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
  * @event lr-invalid - The complete rubric form failed a validity check.
  * @csspart base - The outer wrapper around all fields.
+ * @csspart form-control - Aggregate form-control wrapper around label, fields, hint, and error.
+ * @csspart aggregate-label - Aggregate rubric label; separate from per-field `label` parts.
+ * @csspart form-control-label - Shared form-control alias on the aggregate label.
+ * @csspart fields - Wrapper around every rubric field or the empty state.
+ * @csspart form-control-input - Shared form-control alias on the fields wrapper.
+ * @csspart aggregate-hint - Aggregate supporting text; also carries `form-control-help-text`.
+ * @csspart form-control-help-text - Shared form-control alias on the aggregate hint.
+ * @csspart aggregate-error - Aggregate error text; also carries `form-control-error`.
+ * @csspart form-control-error - Shared form-control alias on the aggregate error.
  * @csspart field - One key's wrapper (label + control + description + error).
  * @csspart label - A field's label.
  * @csspart description - A field's helper text.
@@ -106,6 +130,21 @@ export interface LyraRubricFormEventMap {
  * @csspart skip - The Skip button (only rendered when `skippable`).
  * @csspart empty - The message shown when `keys` has no entries.
  * @csspart unsupported - The fallback note for a key whose `type` is outside the three supported ones.
+ * @cssprop [--lr-rubric-form-submit-bg=var(--lr-color-brand)] - Submit-button background.
+ * @cssprop [--lr-rubric-form-submit-border-color=var(--lr-color-brand)] - Submit-button border.
+ * @cssprop [--lr-rubric-form-submit-color=var(--lr-color-on-brand)] - Submit-button text color.
+ * @cssprop [--lr-rubric-form-submit-hover-bg=color-mix(...)] - Submit background while hovered.
+ * @cssprop [--lr-rubric-form-submit-hover-border-color=color-mix(...)] - Submit border while
+ * hovered.
+ * @cssprop [--lr-rubric-form-submit-active-bg=color-mix(...)] - Submit background while pressed.
+ * @cssprop [--lr-rubric-form-submit-active-border-color=color-mix(...)] - Submit border while
+ * pressed.
+ * @cssprop [--lr-rubric-form-skip-bg=var(--lr-color-surface)] - Skip-button background.
+ * @cssprop [--lr-rubric-form-skip-border-color=var(--lr-color-border)] - Skip-button border.
+ * @cssprop [--lr-rubric-form-skip-color=var(--lr-color-text)] - Skip-button text color.
+ * @cssprop [--lr-rubric-form-skip-hover-bg=var(--lr-color-brand-quiet)] - Skip background while
+ * hovered.
+ * @cssprop [--lr-rubric-form-skip-active-bg=color-mix(...)] - Skip background while pressed.
  * @cssstate required - Matches while at least one `RubricKey` is `required` — this control has no
  *   `required` property of its own, so "required" means the rubric cannot be submitted empty.
  * @cssstate optional - Matches while no key is required (the complement of `required`).
@@ -152,18 +191,40 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
+  /** Aggregate label for the complete rubric. Rich content can use the matching slot. */
+  @property() label = '';
+  /** Aggregate supporting text. */
+  @property() hint = '';
+  /** Shoelace-compatible spelling of {@link hint}; `hint` wins when both are set. */
+  @property({ attribute: 'help-text' }) helpText = '';
+  /** Aggregate visible error text. A consumer custom-validity message is shown when this is empty. */
+  @property({ attribute: 'error-text' }) errorText = '';
+  /** SSR label-presence hint; hydrated instances also discover populated slots. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** SSR hint-presence hint; hydrated instances also discover populated hint/help-text slots. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
+
   @state() private _errors: Record<string, string> = {};
   @state() private touchedFields = new Set<string>();
+  @state() private hasLabelSlot = false;
+  @state() private hasHintSlot = false;
+  @state() private hasHelpTextSlot = false;
+  @state() private hasErrorSlot = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private baseId = nextId('rubric-form');
+  private aggregateLabelId = `${this.baseId}-label`;
+  private aggregateHintId = `${this.baseId}-hint`;
+  private aggregateErrorId = `${this.baseId}-error`;
   private _fieldsetDisabled = false;
   private _name = '';
   private _keys: RubricKey[] = EMPTY_KEYS;
   private _value: RubricValue = EMPTY_VALUE;
+  private resetValue: RubricValue = EMPTY_VALUE;
+  private resetValueCaptured = false;
   private _itemId = '';
   private _hasNext = false;
   private _skippable = false;
@@ -250,6 +311,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.requestUpdate('keys', old);
   }
 
+  /** Live structured rubric value. The value present before the first render is snapshotted as
+   * the native form-reset baseline; later assignments are live-only. Each reset restores a fresh
+   * clone of that baseline, clears interaction state, and preserves consumer custom validity. */
   get value(): RubricValue {
     return this._value;
   }
@@ -258,6 +322,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this._value = next ?? EMPTY_VALUE;
     this.syncFormState();
     this.requestUpdate('value', old);
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.resetValueCaptured) {
+      this.resetValue = cloneRubricValue(this._value);
+      this.resetValueCaptured = true;
+    }
   }
 
   get itemId(): string {
@@ -342,9 +414,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const ownerCss = this.ownerDocument.defaultView?.CSS;
     if (typeof ownerCss?.escape === 'function') {
       try {
-        const candidate = root.querySelector<HTMLElement>(
-          `[part="field"][data-key="${ownerCss.escape(key)}"]`,
-        );
+        const candidate = root.querySelector<HTMLElement>(`[part="field"][data-key="${ownerCss.escape(key)}"]`);
         if (candidate?.getAttribute('data-key') === key) return candidate;
       } catch {
         // A partial DOM can expose CSS.escape while rejecting selector construction.
@@ -352,7 +422,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
     return (
       Array.from(root.querySelectorAll<HTMLElement>('[part="field"][data-key]')).find(
-        (candidate) => candidate.getAttribute('data-key') === key,
+        (candidate) => candidate.getAttribute('data-key') === key
       ) ?? null
     );
   }
@@ -383,10 +453,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const max = k.max ?? 5;
     const step = k.step ?? 1;
     const count = Math.round((max - min) / step);
-    return Array.from(
-      { length: count + 1 },
-      (_, index) => index === count ? max : min + index * step,
-    );
+    return Array.from({ length: count + 1 }, (_, index) => (index === count ? max : min + index * step));
   }
 
   private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags } {
@@ -394,13 +461,16 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const flags: ValidityStateFlags = {};
     for (const k of this._keys) {
       if (k.type !== 'score' && k.type !== 'category' && k.type !== 'comment') {
-        errors[k.key] = this.localize('unsupportedFieldType', undefined, { type: String((k as { type: string }).type) });
+        errors[k.key] = this.localize('unsupportedFieldType', undefined, {
+          type: String((k as { type: string }).type),
+        });
         flags.customError = true;
         continue;
       }
       if (!k.required) continue;
       const v = this._value[k.key];
-      const present = k.type === 'category' && k.multiple ? Array.isArray(v) && v.length > 0 : v !== undefined && v !== '';
+      const present =
+        k.type === 'category' && k.multiple ? Array.isArray(v) && v.length > 0 : v !== undefined && v !== '';
       if (!present) {
         errors[k.key] = this.localize('fieldRequired');
         flags.valueMissing = true;
@@ -505,7 +575,11 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   formResetCallback(): void {
-    this.value = {};
+    if (!this.resetValueCaptured) {
+      this.resetValue = cloneRubricValue(this._value);
+      this.resetValueCaptured = true;
+    }
+    this.value = cloneRubricValue(this.resetValue);
     // Pristine again, so the `user-*` states stop matching even though a rubric with required keys
     // is immediately invalid once more. Ordered after the `value` write (which runs
     // `syncFormState()`), so the republish below sees the cleared set.
@@ -545,6 +619,17 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   private stopChildEvent = (event: Event): void => {
     event.stopPropagation();
+  };
+
+  private onAggregateSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    const populated = slot.assignedNodes({ flatten: true }).some(
+      (node) => node.nodeType === Node.ELEMENT_NODE || Boolean(node.textContent?.trim()),
+    );
+    if (slot.name === 'label') this.hasLabelSlot = populated;
+    else if (slot.name === 'hint') this.hasHintSlot = populated;
+    else if (slot.name === 'help-text') this.hasHelpTextSlot = populated;
+    else if (slot.name === 'error') this.hasErrorSlot = populated;
   };
 
   private markTouched(key: string): void {
@@ -606,12 +691,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
   }
 
-  private renderScoreControl(
-    k: RubricKey,
-    fieldId: string,
-    current: unknown,
-    hasError: boolean,
-  ): TemplateResult {
+  private renderScoreControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
     const min = k.min ?? 0;
     const max = k.max ?? 5;
     const step = k.step ?? 1;
@@ -620,17 +700,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     // rubric's outer sibling description/error cannot describe those roles
     // through an idref. Include that context in the composed control's own
     // accessible label while retaining the visible outer field chrome.
-    const accessibleLabel = [
-      k.label ?? k.key,
-      k.description,
-      hasError ? this._errors[k.key] : undefined,
-    ]
+    const accessibleLabel = [k.label ?? k.key, k.description, hasError ? this._errors[k.key] : undefined]
       .filter((value): value is string => Boolean(value))
       .join('. ');
     if (this.isSegmentedScore(k)) {
+      const numberFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 });
       const items: SegmentedItem[] = this.scoreValues(k).map((score) => ({
         value: String(score),
-        label: String(score),
+        label: numberFormat.format(score),
         disabled,
       }));
       const value = typeof current === 'number' ? String(current) : '';
@@ -669,22 +746,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     ></lr-slider>`;
   }
 
-  private renderCategoryControl(
-    k: RubricKey,
-    fieldId: string,
-    current: unknown,
-    hasError: boolean,
-  ): TemplateResult {
+  private renderCategoryControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
     const options = k.options ?? [];
     const disabled = this.effectiveDisabled;
     const label = k.label ?? k.key;
     const requiredMark = k.required ? html`<span aria-hidden="true">*</span>` : nothing;
-    const description = k.description
-      ? html`<span slot="hint" part="description">${k.description}</span>`
-      : nothing;
-    const error = hasError
-      ? html`<span slot="error" part="error">${this._errors[k.key]}</span>`
-      : nothing;
+    const description = k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing;
+    const error = hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing;
     if (k.multiple) {
       const selected = Array.isArray(current) ? current : [];
       return html`<lr-checkbox-group
@@ -701,15 +769,16 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         }}
       >
         <span slot="label" part="label">${label}${requiredMark}</span>
-        ${description}
-        ${error}
+        ${description} ${error}
         ${options.map(
           (opt) =>
             html`<lr-checkbox value=${opt.value} ?checked=${selected.includes(opt.value)} ?disabled=${disabled}
-              ><span>${opt.label ?? opt.value}${opt.description
-                ? html`<small class="option-description">${opt.description}</small>`
-                : nothing}</span></lr-checkbox
-            >`,
+              ><span
+                >${opt.label ?? opt.value}${opt.description
+                  ? html`<small class="option-description">${opt.description}</small>`
+                  : nothing}</span
+              ></lr-checkbox
+            >`
         )}
       </lr-checkbox-group>`;
     }
@@ -729,18 +798,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       @lr-change=${this.stopChildEvent}
     >
       <span slot="label" part="label">${label}${requiredMark}</span>
-      ${description}
-      ${error}
-      ${options.map((opt) => html`<lr-option value=${opt.value} .sub=${opt.description ?? ''}>${opt.label ?? opt.value}</lr-option>`)}
+      ${description} ${error}
+      ${options.map(
+        (opt) => html`<lr-option value=${opt.value} .sub=${opt.description ?? ''}>${opt.label ?? opt.value}</lr-option>`
+      )}
     </lr-select>`;
   }
 
-  private renderCommentControl(
-    k: RubricKey,
-    fieldId: string,
-    current: unknown,
-    hasError: boolean,
-  ): TemplateResult {
+  private renderCommentControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
     const value = typeof current === 'string' ? current : '';
     const label = k.label ?? k.key;
     return html`<lr-textarea
@@ -759,9 +824,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         this.setFieldValue(k.key, e.detail.value);
       }}
     >
-      <span slot="label" part="label">${label}${k.required
-        ? html`<span aria-hidden="true">*</span>`
-        : nothing}</span>
+      <span slot="label" part="label">${label}${k.required ? html`<span aria-hidden="true">*</span>` : nothing}</span>
       ${k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing}
       ${hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing}
     </lr-textarea>`;
@@ -780,58 +843,102 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     else if (k.type === 'category') control = this.renderCategoryControl(k, fieldId, current, hasError);
     else if (k.type === 'comment') control = this.renderCommentControl(k, fieldId, current, hasError);
     else {
-      control = html`<p part="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: String((k as { type: string }).type) })}</p>`;
+      control = html`<p part="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, {
+          type: String((k as { type: string }).type),
+        })}</p>`;
     }
 
     return html`
       <div part="field" data-key=${k.key} @focusout=${() => this.markTouched(k.key)}>
         ${k.type === 'score' || (k.type !== 'category' && k.type !== 'comment')
-          ? html`<label part="label" for=${fieldId}>${label}${required ? html`<span aria-hidden="true">*</span>` : nothing}</label>`
+          ? html`<label part="label" for=${fieldId}
+              >${label}${required ? html`<span aria-hidden="true">*</span>` : nothing}</label
+            >`
           : nothing}
-        ${control}
-        ${k.type === 'score' && k.description ? html`<p part="description">${k.description}</p>` : nothing}
+        ${control} ${k.type === 'score' && k.description ? html`<p part="description">${k.description}</p>` : nothing}
         ${k.type === 'score' && hasError ? html`<p part="error" id=${errId}>${this._errors[k.key]}</p>` : nothing}
       </div>
     `;
   }
 
   override render(): TemplateResult {
-    if (this._keys.length === 0) {
-      return html`<div
-        part="base"
-        role="group"
-        aria-label=${this.getAttribute('aria-label') || nothing}
-      ><p part="empty">${this.localize('noData')}</p></div>`;
-    }
+    const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
+    const hasHint =
+      this.withHint ||
+      this.hasHintSlot ||
+      this.hasHelpTextSlot ||
+      this.hint.length > 0 ||
+      this.helpText.length > 0;
+    const aggregateError = this.errorText || this.customError || '';
+    const hasError = this.hasErrorSlot || aggregateError.length > 0;
+    const hostLabel = this.getAttribute('aria-label');
+    const describedBy = [
+      hasHint ? this.aggregateHintId : '',
+      hasError ? this.aggregateErrorId : '',
+    ].filter(Boolean).join(' ');
     return html`
       <div
         part="base"
         role="group"
-        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-label=${hostLabel ?? nothing}
+        aria-labelledby=${hostLabel === null && hasLabel ? this.aggregateLabelId : nothing}
+        aria-describedby=${describedBy || nothing}
+        aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+        aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
       >
-        ${repeat(
-          (() => {
-            const occurrences = new Map<string, number>();
-            return this._keys.map((key, index) => {
-              const occurrence = occurrences.get(key.key) ?? 0;
-              occurrences.set(key.key, occurrence + 1);
-              return { key, index, identity: `${key.key}\u0000${occurrence}` };
-            });
-          })(),
-          (entry) => entry.identity,
-          (entry) => this.renderField(entry.key, entry.index),
-        )}
-        <div part="footer">
-          <slot name="actions"></slot>
-          ${this._skippable
-            ? html`<button part="skip" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.skip()}>
-                ${this.localize('rubricSkip')}
-              </button>`
-            : nothing}
-          <button part="submit" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.submit()}>
-            ${this.localize(this._hasNext ? 'rubricSubmitAndNext' : 'rubricSubmit')}
-          </button>
+        <div part="form-control">
+          <div
+            id=${this.aggregateLabelId}
+            part="aggregate-label form-control-label"
+            ?hidden=${!hasLabel}
+          >
+            ${this.label}<slot name="label" @slotchange=${this.onAggregateSlotChange}></slot>
+          </div>
+          <div part="fields form-control-input">
+            ${this._keys.length === 0
+              ? html`<p part="empty">${this.localize('noData')}</p>`
+              : repeat(
+                  (() => {
+                    const occurrences = new Map<string, number>();
+                    return this._keys.map((key, index) => {
+                      const occurrence = occurrences.get(key.key) ?? 0;
+                      occurrences.set(key.key, occurrence + 1);
+                      return { key, index, identity: `${key.key}\u0000${occurrence}` };
+                    });
+                  })(),
+                  (entry) => entry.identity,
+                  (entry) => this.renderField(entry.key, entry.index),
+                )}
+          </div>
+          <div
+            id=${this.aggregateHintId}
+            part="aggregate-hint form-control-help-text"
+            ?hidden=${!hasHint}
+          >
+            ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onAggregateSlotChange}></slot
+            ><slot name="help-text" @slotchange=${this.onAggregateSlotChange}></slot>
+          </div>
+          <div
+            id=${this.aggregateErrorId}
+            part="aggregate-error form-control-error"
+            ?hidden=${!hasError}
+          >
+            ${aggregateError}<slot name="error" @slotchange=${this.onAggregateSlotChange}></slot>
+          </div>
         </div>
+        ${this._keys.length > 0
+          ? html`<div part="footer">
+              <slot name="actions"></slot>
+              ${this._skippable
+                ? html`<button part="skip" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.skip()}>
+                    ${this.localize('rubricSkip')}
+                  </button>`
+                : nothing}
+              <button part="submit" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.submit()}>
+                ${this.localize(this._hasNext ? 'rubricSubmitAndNext' : 'rubricSubmit')}
+              </button>
+            </div>`
+          : nothing}
       </div>
     `;
   }

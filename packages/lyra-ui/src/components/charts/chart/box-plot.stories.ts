@@ -33,7 +33,10 @@ export const Default: Story = {
   },
 };
 
-/** Narrow-allocation and long-content evidence for box plots embedded in compact panels. */
+/**
+ * Narrow-allocation and long-content evidence for box plots embedded in compact panels. Click the
+ * legend item to inspect its persistent line-through state and `legend-item-hidden` part hook.
+ */
 export const NarrowLongContent: Story = {
   name: 'Narrow (320px) with long content',
   render: () => {

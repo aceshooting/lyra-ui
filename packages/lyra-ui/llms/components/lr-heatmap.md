@@ -25,13 +25,21 @@ with arrow-key roving focus (a stroked ring is redrawn over the focused cell on 
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
+DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
+environments without `IntersectionObserver` retain eager drawing.
 
 Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
 interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
 `aria-pressed="true"|"false"` from the controlled `selectedCell`, and roving tabindex/arrow-key
 focus; it continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
+When matrix/calendar data refreshes while one of those buttons owns focus, the semantic matrix
+coordinate or calendar date remains the sole roving stop. If it disappears, focus clamps to the
+nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
+refresh never steals external focus.
 
 **Properties:**
+
 - `rowLabels: string[] = []` (attribute: false — matrix mode only)
 - `colLabels: string[] = []` (attribute: false — matrix mode only)
 - `values: number[][] = []` (attribute: false — matrix mode only) — `-1` or any non-finite value is
@@ -45,11 +53,11 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   the default, non-`fit-to-width` behavior)
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
-  the *whole* host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
+  the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
   produces enormous blocks; capping them keeps a cell a cell
 - `minCellSize?: number` (attribute `min-cell-size`) — the mirror floor, in CSS px, so a year-long
   calendar in a narrow pane keeps legible, hit-testable cells and overflows its host instead of
-  collapsing to hairlines. It can only *raise* the built-in `4`px floor, never lower it: a value
+  collapsing to hairlines. It can only _raise_ the built-in `4`px floor, never lower it: a value
   below `4` normalizes to `4`. When both clamps are set and `maxCellSize < minCellSize`, the ceiling
   wins. For both: a non-finite value, or an empty attribute, means unset rather than `0`, and unset
   (the default) reproduces the unclamped fit-to-width behavior exactly
@@ -60,7 +68,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   same `sqrtStep()` magnitude compression as matrix mode, so one heavy day doesn't wash out the rest
 - `mode: 'matrix' | 'calendar' = 'matrix'`
 - `days: CalendarDay[] = []` (attribute: false — calendar mode only) — `CalendarDay { date:
-  string /* ISO yyyy-mm-dd */; value: number }`; need not be sorted or contiguous, and an entry whose
+string /* ISO yyyy-mm-dd */; value: number }`; need not be sorted or contiguous, and an entry whose
   `date` doesn't parse is dropped rather than poisoning the whole grid
 - `firstDayOfWeek: number = 0` (attribute `first-day-of-week` — calendar mode only, no-op in matrix
   mode) — anchors the calendar grid at a different weekday instead of always Sunday; `0`-`6`, same
@@ -68,12 +76,12 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
 - `annotations: HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;
-  col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
+col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
   `[part="legend-annotation"]` entry in the legend.
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
-  row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
+row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
@@ -83,7 +91,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   one `[part="cell"]` native button per interactive cell. Buttons expose localized `aria-label`s,
   explicit `aria-pressed` state from `selectedCell`, and a roving tabindex; the canvas becomes
   `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
-  its low DOM footprint.
+  its low DOM footprint. Controlled refresh focus follows the preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard announcement text; receives the cell
   position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
@@ -92,9 +100,11 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
   alongside it). It lets a callback key off the date without re-deriving the grid's own
   anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
-  Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
-  value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
-  breaking.
+  Unset (the default) falls back to localized matrix row/column/value or calendar date/value
+  templates. The default English catalog renders "Row X, Col Y: value" (matrix) / "Jan 15: value"
+  — short month + day, **not** a weekday abbreviation (calendar). Matrix row/column placeholders,
+  no-data wording, template order, calendar wording/date formatting, and numeric values all follow
+  `locale` plus `registerLyraLocale()`/`.strings`; use `cellText` for application-specific wording.
 - `cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean` (attribute:
   false) — opts individual cells out of the interaction model; receives the cell position and its
   value, return `false` to make that cell present-but-non-interactive (no hover tooltip, click, or
@@ -108,7 +118,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   default) is the original formula, unchanged.
 - `rowY?: (weekday: number) => number` (attribute: false, calendar mode only) — the vertical
   analogue of `columnX`: overrides the internal weekday-row y-coordinate formula (`CAL_LABEL_H +
-  weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing, and the focus
+weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing, and the focus
   ring (also consulted at `weekday = 7` to size the canvas height, mirroring `columnX` at
   `week = weekCount`). Unset (the default) is the original formula, unchanged. Ignored in matrix
   mode.
@@ -139,7 +149,7 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
-  color?: string; label?: string }`: a discrete legend key rendered **instead of** the
+color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
@@ -213,10 +223,14 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```html
 <lr-heatmap value-label="requests"></lr-heatmap>
 <script>
-  const hm = document.querySelector('lr-heatmap');
-  hm.rowLabels = ['Mon', 'Tue', 'Wed'];
-  hm.colLabels = ['00h', '06h', '12h', '18h'];
-  hm.values = [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]];
+  const hm = document.querySelector("lr-heatmap");
+  hm.rowLabels = ["Mon", "Tue", "Wed"];
+  hm.colLabels = ["00h", "06h", "12h", "18h"];
+  hm.values = [
+    [3, 8, 12, 4],
+    [1, 2, 9, 5],
+    [0, 4, 6, 2],
+  ];
 </script>
 ```
 
@@ -224,22 +238,23 @@ same color as `--lr-heatmap-focus-ring-color`).
 <!-- Calendar mode: a GitHub-contributions-style day grid -->
 <lr-heatmap mode="calendar" value-label="commits"></lr-heatmap>
 <script>
-  document.querySelector('lr-heatmap').days = [
-    { date: '2026-01-01', value: 3 },
-    { date: '2026-01-02', value: 0 },
+  document.querySelector("lr-heatmap").days = [
+    { date: "2026-01-01", value: 3 },
+    { date: "2026-01-02", value: 0 },
     // ...
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
   annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
-- `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
+- `legendStops` _replaces_ the lo/hi gradient bar rather than adding to it: supplying it removes
   `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
   those parts silently stops applying. It is also presentation-only — it never feeds back into the
   cell colors, so the stops and a `cellColor` callback have to be kept in agreement by the consumer
-  (the point of the property is that they *can* be, from one shared function).
+  (the point of the property is that they _can_ be, from one shared function).
 - the `ResizeObserver` only actually resizes the drawn grid **when `fit-to-width` is set**, in either
   mode. Without it (the default), `draw()` sizes the canvas as `PAD_LEFT + cols * cellSize` (matrix
   mode) or `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), never from the host's measured
@@ -247,7 +262,7 @@ same color as `--lr-heatmap-focus-ring-color`).
   `canvas { inline-size: 100% }` is also dead code in that case, since `draw()` unconditionally sets
   an inline `canvas.style.width/height` that wins over it.
 - `maxCellSize`/`minCellSize` are no-ops without `fit-to-width` — an explicit `cellSize` is an exact
-  request and is never clamped. And the canvas is sized *from the clamped* cell size, so a capped
+  request and is never clamped. And the canvas is sized _from the clamped_ cell size, so a capped
   grid deliberately leaves the host's remaining width unfilled: the canvas simply ends early rather
   than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
   end-aligned.
@@ -262,10 +277,10 @@ same color as `--lr-heatmap-focus-ring-color`).
   and repeated DPR crossings (moving the window across displays with different pixel ratios) no
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
 - calendar mode's date labels (used by the default `cellText` template and the tooltip/announcement
-  text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
+  text) now format via `effectiveLocale` (`toLocaleString(effectiveLocale, ...)`) instead of a hardcoded
   `'en'` — fixed. The canvas-drawn axis chrome is now locale-aware too: month labels use
-  `toLocaleString(undefined, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
-  `Intl.DateTimeFormat(undefined, { weekday: 'short' })` (previously a literal English `['', 'Mon',
-  '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
+  `toLocaleString(effectiveLocale, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
+  `Intl.DateTimeFormat(effectiveLocale, { weekday: 'short' })` (previously a literal English `['', 'Mon',
+'', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
 
 ---

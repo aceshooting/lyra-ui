@@ -63,6 +63,10 @@ export const styles = css`
     font: inherit;
   }
 
+  [part='search']::placeholder {
+    color: var(--lr-color-text-quiet);
+  }
+
   [part='search']:hover {
     border-color: var(--accent-color);
   }

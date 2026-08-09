@@ -33,6 +33,8 @@ export type BreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
  *   current-page item (`current`/`aria-current="page"`). Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the current item
  *   without hijacking the library-wide `--lr-color-text-quiet` token.
+ * @cssprop --lr-breadcrumb-item-active-bg - Link/button pressed background; defaults to the
+ *   former transparent active mix.
  * @status stable
  * @since 4.0.0
  */
@@ -70,6 +72,15 @@ export class LyraBreadcrumbItem extends LyraElement {
     super.connectedCallback();
     this.setAttribute("role", "listitem");
   }
+
+  /** Activates the internal link or button. Current-page labels remain inert. */
+  override click(): void {
+    if (this.current) return;
+    this.renderRoot
+      .querySelector<HTMLAnchorElement | HTMLButtonElement>('[part~="base"]')
+      ?.click();
+  }
+
   override render(): TemplateResult {
     const href = safeLinkHref(this.href);
     const separator = html`<span part="separator" aria-hidden="true"><slot name="separator">/</slot></span>`;

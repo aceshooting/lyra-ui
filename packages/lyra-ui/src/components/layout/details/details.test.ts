@@ -7,6 +7,7 @@ import type { LyraDetails } from "./details.js";
 import type { LyraAccordion } from "./accordion.js";
 import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("renders a disclosure panel and reports its state", async () => {
   const el = (await fixture(
@@ -244,6 +245,30 @@ it('actually rotates the rendered chevron under a real dir="rtl" fixture instead
   expect(chevronAngleDeg(openIcon)).to.be.closeTo(-90, 0.01);
 });
 
+it("contains an expanded long summary, content, and action in an exact 320px RTL allocation", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-details open>
+        <span slot="summary">عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span>
+        <p>محتوىتفصيليمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+        <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
+      </lr-details>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-details") as LyraDetails;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const summary = el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+  expect(summary.scrollWidth).to.be.at.most(summary.clientWidth);
+  expect(content.scrollWidth).to.be.at.most(content.clientWidth);
+  expect(getComputedStyle(base).direction).to.equal("rtl");
+});
+
 it('renders a localized "Details" fallback from a .strings override when no summary/slot is supplied', async () => {
   const el = (await fixture(
     html`<lr-details .strings=${{ details: "Détails" }}>Content</lr-details>`
@@ -297,6 +322,68 @@ it("gives the summary (the real focusable/clickable surface) hover and focus-vis
   const css = detailsStyles.cssText.replace(/\s+/g, " ");
   expect(css).to.match(/\[part='summary'\]:hover\s*\{[^}]*background:/);
   expect(css).to.match(/\[part='summary'\]:focus-visible\s*\{[^}]*outline:/);
+});
+
+it("inherits independent appearance and pointer-state paint without retinting shared tokens", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-details-outlined-bg: rgb(1, 2, 3);
+      --lr-details-outlined-border-color: rgb(4, 5, 6);
+      --lr-details-filled-bg: rgb(7, 8, 9);
+      --lr-details-filled-border-color: rgb(10, 11, 12);
+      --lr-details-filled-outlined-bg: rgb(13, 14, 15);
+      --lr-details-filled-outlined-border-color: rgb(16, 17, 18);
+      --lr-details-summary-hover-bg: rgb(19, 20, 21);
+      --lr-details-summary-active-bg: rgb(22, 23, 24);
+    ">
+      <lr-details appearance="outlined" summary="Outlined">Content</lr-details>
+      <lr-details appearance="filled" summary="Filled">Content</lr-details>
+      <lr-details appearance="filled-outlined" summary="Filled outlined">Content</lr-details>
+    </div>
+  `);
+  const items = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+  await Promise.all(items.map((item) => item.updateComplete));
+  const bases = items.map((item) => item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!);
+
+  expect(getComputedStyle(bases[0]!).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(bases[0]!).borderTopColor).to.equal("rgb(4, 5, 6)");
+  expect(getComputedStyle(bases[1]!).backgroundColor).to.equal("rgb(7, 8, 9)");
+  expect(getComputedStyle(bases[1]!).borderTopColor).to.equal("rgb(10, 11, 12)");
+  expect(getComputedStyle(bases[2]!).backgroundColor).to.equal("rgb(13, 14, 15)");
+  expect(getComputedStyle(bases[2]!).borderTopColor).to.equal("rgb(16, 17, 18)");
+
+  const summary = items[0]!.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  summary.scrollIntoView();
+  const rect = summary.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(summary).backgroundColor).to.equal("rgb(19, 20, 21)");
+    await sendMouse({ type: "down" });
+    expect(getComputedStyle(summary).backgroundColor).to.equal("rgb(22, 23, 24)");
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("inherits independent gap and radius hooks across the extreme size tiers", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-details-gap: 27px; --lr-details-radius: 19px;">
+      <lr-details size="2xs" summary="Small">Content</lr-details>
+      <lr-details size="xl" summary="Large">Content</lr-details>
+    </div>
+  `);
+  const items = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+  await Promise.all(items.map((item) => item.updateComplete));
+
+  for (const item of items) {
+    const base = item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const header = item.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal("19px");
+    expect(getComputedStyle(header).columnGap).to.equal("27px");
+  }
 });
 
 it("gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale", () => {
@@ -604,7 +691,7 @@ describe("Web Awesome disclosure surface", () => {
     </lr-details>`)) as LyraDetails;
     expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
     const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
-    expect(icon).to.exist;
+    expect((icon) != null).to.equal(true);
     expect(icon.part.contains("summary-icon")).to.be.true;
     expect(el.shadowRoot!.querySelector('slot[name="expand-icon"]')).to.exist;
 
@@ -634,9 +721,7 @@ describe("Web Awesome disclosure surface", () => {
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
     const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
-    expect(header.firstElementChild).to.equal(
-      el.shadowRoot!.querySelector(".summary-content")
-    );
+    expect((header.firstElementChild) === (el.shadowRoot!.querySelector(".summary-content"))).to.equal(true);
     expect(getComputedStyle(icon).order).to.equal("-1");
     expect(getComputedStyle(summary).paddingInlineStart).to.equal("13px");
   });

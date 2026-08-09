@@ -60,6 +60,8 @@ export interface LyraOptionEventMap {
  * to `defaultSelected` intentionally do not reflect. `selected` is independent property-only live
  * state, so a user pick never rewrites the declarative default. A later default change updates a
  * pristine live option, but never clobbers a live selection that has already become dirty.
+ * In a constrained option row the default label ellipsizes, while each `start`/`end` adornment is
+ * capped at 40% of the row so unbroken consumer content cannot widen the owning listbox.
  *
  * @customElement lr-option
  * @slot - The option's visible label.
@@ -81,6 +83,13 @@ export interface LyraOptionEventMap {
  * @cssstate disabled - The option is disabled.
  * @cssstate hover - The pointer is over the option, including pointer-drag sessions.
  * @cssprop [--current-text-color=var(--lr-color-text)] - Text color while the option is `current`.
+ * @cssprop [--lr-option-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
+ * @cssprop [--lr-option-active-bg=color-mix(in oklab, var(--lr-option-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background.
+ * @cssprop [--lr-option-current-bg=var(--lr-color-brand-quiet)] - Keyboard-current background.
+ * @cssprop [--lr-option-current-color=var(--current-text-color, var(--lr-color-text))] -
+ * Keyboard-current text color; the upstream `--current-text-color` remains its fallback.
+ * @cssprop [--lr-option-selected-font-weight=var(--lr-font-weight-semibold)] - Selected label weight.
+ * @cssprop [--lr-option-checked-icon-color=var(--lr-color-brand)] - Selected checkmark color.
  * @method getTextLabel - Returns the normalized accessibility-visible text of the default slot.
  * @status stable
  * @since 4.0.0

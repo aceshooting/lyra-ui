@@ -131,8 +131,9 @@ export interface LyraConversationItemEventMap {
  * @customElement lr-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
  * button or a `lr-menu` trigger) rendered at the trailing edge of the row.
- * @slot leading - Non-interactive leading content such as an avatar, purpose icon, or status
- * indicator. It is rendered inside the selectable region before the title/excerpt content.
+ * @slot start - Non-interactive content such as an avatar, purpose icon, or status indicator,
+ * rendered inside the selectable region before the title/excerpt content.
+ * @slot leading - Deprecated compatibility alias for `start`; both spellings may coexist.
  * @slot content - Replaces the built-in title, excerpt, and meta content area with host-supplied
  * non-interactive row content.
  * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
@@ -159,7 +160,7 @@ export interface LyraConversationItemEventMap {
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="option"]`, the rename button, and `actions`.
  * @csspart active-indicator - A decorative inline indicator rendered only while the row is active.
  * @csspart option - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
- * @csspart leading - The wrapper around the `leading` slot, inside `option`. Always rendered, but `hidden` while that slot is empty.
+ * @csspart leading - The wrapper around the `start` and `leading` slots, inside `option`. Always rendered, but `hidden` while both slots are empty.
  * @csspart content - Wrapper around the title and excerpt.
  * @csspart title - The title text, shown while not renaming.
  * @csspart title-input - The in-place rename `<input>`, shown only while renaming.
@@ -277,7 +278,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // willUpdate() layered under this class must still run.
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
-      this.hasLeadingSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'leading');
+      this.syncLeadingSlots();
       this.hasContentSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'content');
       this.hasMetaSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'meta');
       this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
@@ -424,8 +425,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private onLeadingSlotChange = (e: Event): void => {
-    this.hasLeadingSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private syncLeadingSlots = (): void => {
+    this.hasLeadingSlot = Array.from(this.children).some((el) => {
+      const slot = el.getAttribute('slot');
+      return slot === 'start' || slot === 'leading';
+    });
   };
 
   private onContentSlotChange = (e: Event): void => {
@@ -464,7 +468,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
           @keydown=${this.onOptionKeyDown}
         >
           <span part="leading" ?hidden=${!this.hasLeadingSlot}>
-            <slot name="leading" @slotchange=${this.onLeadingSlotChange}></slot>
+            <slot name="start" @slotchange=${this.syncLeadingSlots}></slot>
+            <slot name="leading" @slotchange=${this.syncLeadingSlots}></slot>
           </span>
           <div part="content">
             <slot name="content" ?hidden=${this.renaming} @slotchange=${this.onContentSlotChange}></slot>

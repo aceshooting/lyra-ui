@@ -34,6 +34,30 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "0.375rem"
         }
+      },
+      {
+        "name": "--lr-theme-border-width-medium",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2px"
+        }
+      },
+      {
+        "name": "--lr-theme-border-width-thick",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3px"
+        }
+      },
+      {
+        "name": "--lr-theme-border-width-thin",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1px"
+        }
       }
     ]
   },
@@ -1838,6 +1862,31 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-theme-color-mix-active",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "22%"
+        }
+      },
+      {
+        "name": "--lr-theme-color-mix-hover",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "12%"
+        }
+      },
+      {
+        "name": "--lr-theme-color-mix-partner",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#1a1a1a",
+          "dark": "#f2f2f2"
+        }
+      },
+      {
         "name": "--lr-theme-color-neutral-border-loud",
         "type": "color",
         "scope": "theme-input",
@@ -1943,6 +1992,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "rgb(0 0 0 / 0.92)",
           "dark": "rgb(0 0 0 / 0.95)"
+        }
+      },
+      {
+        "name": "--lr-theme-color-shadow",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#000"
         }
       },
       {
@@ -2549,6 +2606,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "2.5rem"
         }
+      },
+      {
+        "name": "--lr-theme-otp-input-segment-size",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2.5em"
+        }
       }
     ]
   },
@@ -2727,6 +2792,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "var(--lr-theme-hover-brightness, 1.08)"
         }
+      },
+      {
+        "name": "--lr-theme-hover-brightness",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.08"
+        }
       }
     ]
   },
@@ -2800,6 +2873,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-scroll-fade-size, 2rem)"
+        }
+      },
+      {
+        "name": "--lr-theme-popover-viewport-clamp",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "92vw"
+        }
+      },
+      {
+        "name": "--lr-theme-scroll-fade-size",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2rem"
         }
       }
     ]
@@ -2883,6 +2972,86 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-theme-duration-fast",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "120ms"
+        }
+      },
+      {
+        "name": "--lr-theme-duration-icon",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "1s"
+        }
+      },
+      {
+        "name": "--lr-theme-duration-normal",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "180ms"
+        }
+      },
+      {
+        "name": "--lr-theme-duration-slow",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.8s"
+        }
+      },
+      {
+        "name": "--lr-theme-easing-emphasized",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "ease-in-out"
+        }
+      },
+      {
+        "name": "--lr-theme-easing-linear",
+        "type": "string",
+        "scope": "theme-input",
+        "values": {
+          "light": "linear"
+        }
+      },
+      {
+        "name": "--lr-theme-easing-standard",
+        "type": "string",
+        "scope": "theme-input",
+        "values": {
+          "light": "ease-out"
+        }
+      },
+      {
+        "name": "--lr-theme-transition-fast",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "120ms ease-out"
+        }
+      },
+      {
+        "name": "--lr-theme-transition-normal",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "180ms ease-out"
+        }
+      },
+      {
+        "name": "--lr-theme-transition-slow",
+        "type": "duration",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.8s ease-in-out"
+        }
+      },
+      {
         "name": "--lr-transition-ambient",
         "type": "duration",
         "scope": "shared",
@@ -2929,6 +3098,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "var(--lr-theme-opacity-muted, 0.85)"
         }
+      },
+      {
+        "name": "--lr-theme-opacity-disabled",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.5"
+        }
+      },
+      {
+        "name": "--lr-theme-opacity-muted",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.85"
+        }
       }
     ]
   },
@@ -2957,6 +3142,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-border-radius-xs, 2px)"
+        }
+      },
+      {
+        "name": "--lr-theme-border-radius-pill",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "999px"
+        }
+      },
+      {
+        "name": "--lr-theme-border-radius-xs",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2px"
         }
       }
     ]
@@ -3712,6 +3913,718 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "var(--lr-theme-size-neg-8px, -8px)"
         }
+      },
+      {
+        "name": "--lr-theme-size-0-02em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.02em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-03em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.03em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-04em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.04em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-05rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.05rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-0625rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.0625rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-09375rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.09375rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-125rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.125rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-15rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.15rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-1875rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.1875rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-1rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.1rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-25rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.25rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-3125rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.3125rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-35em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.35em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-375rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.375rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-3em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.3em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-4375rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.4375rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-4em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.4em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-4rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.4rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-5em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.5em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-5rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-625rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.625rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-6875rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.6875rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-6rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.6rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-75em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.75em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-75rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.75rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-7em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.7em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-875em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.875em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-8rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.8rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-0-9375rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "0.9375rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-0625rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.0625rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-1rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.1rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-25rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.25rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-5em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.5em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-5rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-75rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.75rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1-875rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.875rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-10px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "10px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-10rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "10rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-12em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "12em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-12rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "12rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-14px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "14px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-14rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "14rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-15rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "15rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-16px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "16px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-16rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "16rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-18rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "18rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-1rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-2-25rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2.25rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-2-5ch",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2.5ch"
+        }
+      },
+      {
+        "name": "--lr-theme-size-2-5rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-20rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "20rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-22rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "22rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-24px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "24px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-24rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "24rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-280px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "280px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-28px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "28px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-28rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "28rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-2px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-2rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-3-5em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3.5em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-3-5rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-30rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "30rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-32rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "32rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-36rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "36rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-38rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "38rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-3ch",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3ch"
+        }
+      },
+      {
+        "name": "--lr-theme-size-3px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-3rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-48rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "48rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-4ch",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "4ch"
+        }
+      },
+      {
+        "name": "--lr-theme-size-4px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "4px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-4rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "4rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-5em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "5em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-5rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-6ch",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "6ch"
+        }
+      },
+      {
+        "name": "--lr-theme-size-6em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "6em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-6px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "6px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-6rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "6rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-7rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "7rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-8em",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "8em"
+        }
+      },
+      {
+        "name": "--lr-theme-size-8rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "8rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-0-15rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-0.15rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-0-25rem",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-0.25rem"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-1px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-1px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-4px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-4px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-6px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-6px"
+        }
+      },
+      {
+        "name": "--lr-theme-size-neg-8px",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "-8px"
+        }
       }
     ]
   },
@@ -4089,6 +5002,86 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "theme-input",
         "values": {
           "light": "0.75rem"
+        }
+      },
+      {
+        "name": "--lr-theme-font-weight-bold",
+        "type": "fontWeight",
+        "scope": "theme-input",
+        "values": {
+          "light": "700"
+        }
+      },
+      {
+        "name": "--lr-theme-font-weight-medium",
+        "type": "fontWeight",
+        "scope": "theme-input",
+        "values": {
+          "light": "500"
+        }
+      },
+      {
+        "name": "--lr-theme-font-weight-normal",
+        "type": "fontWeight",
+        "scope": "theme-input",
+        "values": {
+          "light": "400"
+        }
+      },
+      {
+        "name": "--lr-theme-font-weight-semibold",
+        "type": "fontWeight",
+        "scope": "theme-input",
+        "values": {
+          "light": "600"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-1-4",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.4"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-compact",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.25"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-loose",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.6"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-none",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-normal",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.5"
+        }
+      },
+      {
+        "name": "--lr-theme-line-height-snug",
+        "type": "number",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.3"
         }
       }
     ]

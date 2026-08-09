@@ -27,10 +27,10 @@ export const styles = css`
      still interactive. */
   /* no-pressed-state: the editor frame is a text surface, not a push target -- pointer-down
      places a caret, and the border cue belongs to hover and :focus-visible. */
-  :host(:not(:disabled)) [part='editor']:hover { border-color: var(--lr-color-brand); }
+  :host(:not(:disabled)) [part='editor']:hover { border-color: var(--lr-code-editor-hover-border, var(--lr-color-brand)); }
   [part='hint'], [part='error'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='error'] { color: var(--lr-color-danger); }
-  :host([data-invalid]) [part='editor'] { border-color: var(--lr-color-danger); }
+  :host([data-invalid]) [part='editor'] { border-color: var(--lr-code-editor-invalid-border, var(--lr-color-danger)); }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
      (FormAssociated mixin -> static formAssociated = true), so the UA computes its disabled state
      (and therefore :disabled matching) the same way it does for a native form control: from its own

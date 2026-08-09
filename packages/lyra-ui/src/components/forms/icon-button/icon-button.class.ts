@@ -99,6 +99,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * `rel="noopener noreferrer"`; `download` narrows URL validation to downloadable schemes. A
  * disabled link keeps the anchor anatomy but removes `href`, so it cannot navigate.
  *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override the built-in fallback. A value set directly on the icon button
+ * still wins through normal custom-property inheritance.
+ *
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
  * @event blur - Native blur relayed once from the internal button.

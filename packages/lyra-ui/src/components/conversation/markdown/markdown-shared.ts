@@ -26,19 +26,52 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { scopeFromElement, resolveTextQuote } from '../../../internal/text-quote.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
-import {
-  normalizeShikiLanguage,
-  SHIKI_THEMES,
-  type ShikiHighlighter,
-} from '../code-block/code-loader.js';
+import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
 import type { ShikiTransformer } from '../code-block/shiki-types.js';
 import {
   loadMarkdownDeps,
   getMarkdownDepsIfLoaded,
+  type LyraMarkedParser,
   type MarkdownDeps,
   type MarkedModule,
 } from './markdown-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';
+
+/** One configurable parser per resolved `marked` module namespace, shared by both Markdown
+ * variants. Each parse still creates a fresh internal parser whose renderer closes over the
+ * current component state; only the consumer-installed defaults are shared. */
+const sharedMarkedInstances = new WeakMap<object, LyraMarkedParser>();
+
+export function sharedMarkdownParser(marked: MarkedModule | undefined): LyraMarkedParser | undefined {
+  if (!marked || (typeof marked !== 'object' && typeof marked !== 'function') || typeof marked.Marked !== 'function') {
+    return undefined;
+  }
+  const key = marked as object;
+  let instance = sharedMarkedInstances.get(key);
+  if (!instance) {
+    instance = new marked.Marked() as unknown as LyraMarkedParser;
+    sharedMarkedInstances.set(key, instance);
+  }
+  return instance;
+}
+
+/** Converts tabs only in a line's indentation to spaces at real tab stops. Markdown treats four
+ * leading spaces as an indented code block, so a fixed replacement is wrong after existing spaces;
+ * the next stop depends on the current indentation column. Shared by both Markdown variants so
+ * their source parsing differs only in the documented syntax-highlighting loader. */
+export function normalizeMarkdownLeadingTabs(content: string, tabSize: number): string {
+  const width = finiteInteger(tabSize, 4, 1, 32);
+  return content.replace(/^[\t ]+/gm, (indentation) => {
+    let column = 0;
+    let normalized = '';
+    for (const character of indentation) {
+      const spaces = character === '\t' ? width - (column % width) : 1;
+      normalized += ' '.repeat(spaces);
+      column += spaces;
+    }
+    return normalized;
+  });
+}
 
 /** One owner-window animation frame plus a settlement promise that cleanup can resolve. */
 interface MarkdownOwnedAnimationFrame {
@@ -66,7 +99,11 @@ export class MarkdownOwnedAnimationFrameController {
     const settled = new Promise<void>((resolve) => {
       resolveFrame = resolve;
     });
-    const pending: MarkdownOwnedAnimationFrame = { owner, settled, resolve: resolveFrame };
+    const pending: MarkdownOwnedAnimationFrame = {
+      owner,
+      settled,
+      resolve: resolveFrame,
+    };
     this.pending = pending;
     try {
       pending.handle = owner.requestAnimationFrame(() => {
@@ -171,7 +208,7 @@ export function setCachedHighlight(
   cache: Map<string, string>,
   key: string,
   html: string,
-  max: number = HIGHLIGHT_CACHE_MAX,
+  max: number = HIGHLIGHT_CACHE_MAX
 ): void {
   if (cache.has(key)) {
     cache.delete(key);
@@ -213,9 +250,21 @@ function mathExtension(renderMath: (token: MathToken) => string) {
     tokenizer(src: string): MathToken | undefined {
       const block = MATH_BLOCK_RE.exec(src);
       // safe: both regexes have a single non-optional capture group, present on any match.
-      if (block) return { type: 'math', raw: block[0], tex: block[1]!.trim(), display: true };
+      if (block)
+        return {
+          type: 'math',
+          raw: block[0],
+          tex: block[1]!.trim(),
+          display: true,
+        };
       const inline = MATH_INLINE_RE.exec(src);
-      if (inline) return { type: 'math', raw: inline[0], tex: inline[1]!.replace(/\\\$/g, '$').trim(), display: false };
+      if (inline)
+        return {
+          type: 'math',
+          raw: inline[0],
+          tex: inline[1]!.replace(/\\\$/g, '$').trim(),
+          display: false,
+        };
       return undefined;
     },
     renderer(token: unknown): string {
@@ -230,8 +279,7 @@ function mathExtension(renderMath: (token: MathToken) => string) {
  *  both. */
 export interface ParseMarkdownOptions {
   marked: MarkedModule;
-  /** Snapshot of `<lr-markdown>`'s shared configurable parser defaults. Core omits this, keeping
-   *  its public surface lean while still using the same parsing implementation. */
+  /** Snapshot of the Markdown pair's shared configurable parser defaults. */
   markedConfiguration?: Record<string, unknown>;
   content: string;
   gfm: boolean;
@@ -264,7 +312,10 @@ export interface ParseMarkdownOptions {
  * `internal-link-prefix`-driven behavior, and the math-token extension are documented on
  * `LyraMarkdown`'s own class doc -- this function's contract is exactly that doc.
  */
-export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: string; hadMathFallback: boolean } {
+export function parseMarkdownDocument(options: ParseMarkdownOptions): {
+  html: string;
+  hadMathFallback: boolean;
+} {
   const {
     marked,
     content,
@@ -296,7 +347,10 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
             return escapeHtml(token.display ? `$$${token.tex}$$` : `$${token.tex}$`);
           }
           try {
-            const mathml = cachedKatex.renderToString(token.tex, { output: 'mathml', throwOnError: false });
+            const mathml = cachedKatex.renderToString(token.tex, {
+              output: 'mathml',
+              throwOnError: false,
+            });
             return `<span part="math" data-display="${token.display ? 'block' : 'inline'}">${mathml}</span>`;
           } catch {
             // throwOnError: false already handles a malformed-TeX render internally (KaTeX's own
@@ -380,7 +434,9 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
           for (const cell of row) rowHtml += this.tablecell(cell);
           bodyRows += this.tablerow({ text: rowHtml });
         }
-        const thead = `<thead>\n${this.tablerow({ text: headerRow })}</thead>\n`;
+        const thead = `<thead>\n${this.tablerow({
+          text: headerRow,
+        })}</thead>\n`;
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
         return `<table part="table">\n${thead}${tbody}</table>\n`;
       },
@@ -389,9 +445,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
         const href = cleanHref(token.href);
         if (href === null) return text;
         const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-        const targetAttr = linkTarget
-          ? ` target="${escapeHtml(linkTarget)}" rel="noopener noreferrer"`
-          : '';
+        const targetAttr = linkTarget ? ` target="${escapeHtml(linkTarget)}" rel="noopener noreferrer"` : '';
         return `<a part="link" href="${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
       },
       image(token) {
@@ -411,8 +465,8 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
       },
     },
   });
-  // `<lr-markdown>` exposes a shared configurable parser, but this function still creates a fresh
-  // internal instance so its renderer closures always capture the current component properties.
+  // Both Markdown variants expose a shared configurable parser, but this function still creates a
+  // fresh internal instance so its renderer closures always capture current component properties.
   // Apply the public parser's current defaults last: consumer hooks/extensions are meaningful,
   // and sanitization still runs over the resulting HTML in `renderMarkdownDocument()`.
   if (options.markedConfiguration && typeof options.markedConfiguration === 'object') {
@@ -421,11 +475,14 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
     // overrides above. Keep meaningful configured values (including `false`) and discard only
     // nullish defaults; once a consumer installs a real renderer/hook, that object survives.
     const configuredDefaults = Object.fromEntries(
-      Object.entries(options.markedConfiguration).filter(([, value]) => value != null),
+      Object.entries(options.markedConfiguration).filter(([, value]) => value != null)
     );
     if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults as never);
   }
-  return { html: instance.parse(content, { gfm, async: false }), hadMathFallback };
+  return {
+    html: instance.parse(content, { gfm, async: false }),
+    hadMathFallback,
+  };
 }
 
 // -- katex resolution state -------------------------------------------------------------------
@@ -470,7 +527,7 @@ export function createMarkdownKatexState(): MarkdownKatexState {
       override = katex;
     },
     getIfLoaded() {
-      return override !== undefined ? override : (resolved ?? null);
+      return override !== undefined ? override : resolved ?? null;
     },
     isConfirmedMissing() {
       return (override !== undefined ? override : resolved) === null;
@@ -505,11 +562,7 @@ export function markdownCodeTransformer(lang: string): ShikiTransformer {
     },
     code(node) {
       const classValue = node.properties['class'];
-      const classes = Array.isArray(classValue)
-        ? classValue.map(String)
-        : classValue
-          ? [String(classValue)]
-          : [];
+      const classes = Array.isArray(classValue) ? classValue.map(String) : classValue ? [String(classValue)] : [];
       node.properties['class'] = [...classes, `language-${lang}`];
     },
   };
@@ -522,10 +575,7 @@ export function markdownCodeTransformer(lang: string): ShikiTransformer {
  * block keeps its plain fallback permanently rather than being rediscovered as pending forever.
  * Shared by both variants' `highlightPending()`; only the *loading* half above it differs.
  */
-export function tokenizeMarkdownHighlight(
-  hl: ShikiHighlighter,
-  pending: PendingHighlight,
-): string | null {
+export function tokenizeMarkdownHighlight(hl: ShikiHighlighter, pending: PendingHighlight): string | null {
   try {
     const highlighted = hl.codeToHtml(pending.code, {
       lang: normalizeShikiLanguage(pending.lang),
@@ -542,6 +592,8 @@ export function tokenizeMarkdownHighlight(
 
 // -- the render pipeline ------------------------------------------------------------------------
 
+const markdownDepsLoadGenerations = new WeakMap<object, number>();
+
 /**
  * `connectedCallback()`'s optional-peer load for both variants. `eagerLoad` only takes the
  * synchronous path when the shared `marked`/`dompurify` module cache has *already* settled (see
@@ -551,13 +603,16 @@ export function tokenizeMarkdownHighlight(
  * The (module-cached, page-lifetime) `loadMarkdownDeps()` promise can resolve after the instance
  * was removed from the DOM -- e.g. a markdown viewer inside a conditionally-rendered chat message
  * or a virtualized list. Without the `isConnected` guard, a detached instance would still have its
- * deps applied and a render scheduled that no one will ever see. Mirrors `chart.ts`'s own
- * `connectedCallback()` guard for the identical race.
+ * deps applied and a render scheduled that no one will ever see. A per-host connection generation
+ * also invalidates the earlier subscription when the same instance reconnects before the shared
+ * promise settles, so one settlement cannot apply twice to the current connection.
  */
 export function beginMarkdownDepsLoad(
-  host: { readonly eagerLoad: boolean; readonly isConnected: boolean },
-  apply: (deps: MarkdownDeps) => void,
+  host: object & { readonly eagerLoad: boolean; readonly isConnected: boolean },
+  apply: (deps: MarkdownDeps) => void
 ): void {
+  const generation = (markdownDepsLoadGenerations.get(host) ?? 0) + 1;
+  markdownDepsLoadGenerations.set(host, generation);
   if (host.eagerLoad) {
     const alreadyLoaded = getMarkdownDepsIfLoaded();
     if (alreadyLoaded) {
@@ -566,7 +621,7 @@ export function beginMarkdownDepsLoad(
     }
   }
   void loadMarkdownDeps().then((resolved) => {
-    if (!host.isConnected) return;
+    if (!host.isConnected || markdownDepsLoadGenerations.get(host) !== generation) return;
     apply(resolved);
   });
 }
@@ -607,7 +662,11 @@ export function markdownLanguageSetChanged(changed: Map<PropertyKey, unknown>): 
  *  whenever the parse itself succeeded -- including the `fallback` produced by a missing
  *  `dompurify`, which still computed a real outline before refusing to render. */
 export type MarkdownRenderOutcome =
-  | { status: 'fallback'; error: unknown; headingTree: MarkdownHeadingItem[] | null }
+  | {
+      status: 'fallback';
+      error: unknown;
+      headingTree: MarkdownHeadingItem[] | null;
+    }
   | {
       status: 'rendered';
       html: string;
@@ -630,7 +689,7 @@ export interface RenderMarkdownOptions {
   parse: (
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[],
+    headingTreeOut: MarkdownHeadingItem[]
   ) => { html: string; hadMathFallback: boolean };
   /** Runs immediately after a successful parse, before sanitization -- where each instance kicks
    *  off its variant's katex load. */
@@ -676,14 +735,20 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   if (!options.sanitize) {
     // Consumer explicitly opted out of sanitization -- dompurify's presence or absence is
     // irrelevant to this path.
-    return { status: 'rendered', html: rawHtml, headingTree, mathFailed, pendingKeys };
+    return {
+      status: 'rendered',
+      html: rawHtml,
+      headingTree,
+      mathFailed,
+      pendingKeys,
+    };
   }
 
   if (!deps.DOMPurify) {
     const error = new Error(
       `<${tag}> could not render: sanitize is enabled (the default) but the "dompurify" peer ` +
         'dependency failed to load — refusing to render unsanitized HTML. Install it with `pnpm add ' +
-        'dompurify`, or set sanitize="false" to explicitly opt out of sanitization.',
+        'dompurify`, or set sanitize="false" to explicitly opt out of sanitization.'
     );
     console.warn(error.message);
     return { status: 'fallback', error, headingTree };
@@ -701,13 +766,19 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     ADD_ATTR: ['target', 'style'],
     ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
   }) as string;
-  return { status: 'rendered', html: sanitized, headingTree, mathFailed, pendingKeys };
+  return {
+    status: 'rendered',
+    html: sanitized,
+    headingTree,
+    mathFailed,
+    pendingKeys,
+  };
 }
 
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {
   return new Error(
-    `<${tag}> needs the optional peer dependency \`katex\` to render math (the \`math\` property is set) — install it with \`pnpm add katex\`.`,
+    `<${tag}> needs the optional peer dependency \`katex\` to render math (the \`math\` property is set) — install it with \`pnpm add katex\`.`
   );
 }
 
@@ -735,7 +806,7 @@ function markdownScrollBehavior(root: Element): ScrollBehavior {
 export function applyMarkdownFragmentAnchor(
   root: Element,
   anchor: Extract<LyraAnchor, { kind: 'fragment' }>,
-  headingTree: readonly MarkdownHeadingItem[],
+  headingTree: readonly MarkdownHeadingItem[]
 ): boolean {
   if (!anchor.id) return false;
   const index = headingTree.findIndex((h) => h.id === anchor.id);
@@ -759,14 +830,12 @@ export function applyMarkdownTextQuoteAnchor(
   anchor: Extract<LyraAnchor, { kind: 'text-quote' }>,
   /** The component's resolved locale. Text-quote matching case-folds, and casing is
    *  locale-sensitive -- under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
-  locale?: string,
+  locale?: string
 ): boolean {
   const range = resolveTextQuote(scopeFromElement(root), anchor, locale);
   if (!range) return false;
   const target =
-    range.startContainer.nodeType === 1
-      ? (range.startContainer as Element)
-      : range.startContainer.parentElement;
+    range.startContainer.nodeType === 1 ? (range.startContainer as Element) : range.startContainer.parentElement;
   (target ?? root).scrollIntoView({
     behavior: markdownScrollBehavior(root),
     block: 'center',
@@ -838,11 +907,7 @@ export function repaintMarkdownHighlights(options: {
  * same reason (its own painted highlights sit under a text layer that intercepts most pointer
  * events).
  */
-export function hitTestHighlightRanges(
-  ranges: readonly ResolvedHighlightRange[],
-  x: number,
-  y: number,
-): string | null {
+export function hitTestHighlightRanges(ranges: readonly ResolvedHighlightRange[], x: number, y: number): string | null {
   for (let i = ranges.length - 1; i >= 0; i--) {
     const hit = ranges[i];
     if (!hit) continue; // unreachable: counted loop, i is in [0, length - 1]
@@ -864,13 +929,18 @@ export function hitTestHighlightRanges(
 export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | null {
   if (!prefix) return null;
   const anchor = e.composedPath().find(
-    (target): target is EventTarget & { localName: string; getAttribute(name: string): string | null } =>
+    (
+      target
+    ): target is EventTarget & {
+      localName: string;
+      getAttribute(name: string): string | null;
+    } =>
       typeof target === 'object' &&
       target !== null &&
       'localName' in target &&
       target.localName === 'a' &&
       'getAttribute' in target &&
-      typeof target.getAttribute === 'function',
+      typeof target.getAttribute === 'function'
   );
   if (!anchor) return null;
   const href = anchor.getAttribute('href') ?? '';

@@ -412,6 +412,7 @@ function labelText(value: unknown): string {
  * @csspart canvas - The Chart.js canvas.
  * @csspart legend - The wrapping DOM legend rendered when `legend` is set.
  * @csspart legend-item - A keyboard-operable series visibility toggle.
+ * @csspart legend-item-hidden - Added to a `legend-item` while its dataset is hidden.
  * @csspart legend-swatch - The resolved series-color swatch in a legend item.
  * @csspart reset-zoom-button - The reset-zoom control when zoom is active.
  * @csspart description - The accessible chart summary.
@@ -429,6 +430,18 @@ function labelText(value: unknown): string {
  *   Resolved via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color. Resolved via
  *   `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a
+ *   legend visibility button.
+ * @cssprop --lr-chart-legend-item-active-bg - Pressed background of a legend visibility button;
+ *   defaults to the standard active mix of `--lr-color-brand-quiet`.
+ * @cssprop [--lr-chart-data-table-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
+ *   of an actionable generated-table value.
+ * @cssprop --lr-chart-data-table-button-active-bg - Pressed background of an actionable generated-
+ *   table value; defaults to the standard active mix of `--lr-color-brand-quiet`.
+ * @cssprop [--lr-chart-reset-zoom-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
+ *   of the reset-zoom button.
+ * @cssprop --lr-chart-reset-zoom-button-active-bg - Pressed background of the reset-zoom button;
+ *   defaults to the standard active mix of `--lr-color-brand-quiet`.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Tooltip background color. Resolved
  *   via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Tooltip text color. Resolved via
@@ -2479,7 +2492,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             : undefined;
           return html`
             <button
-              part="legend-item"
+              part=${visible ? 'legend-item' : 'legend-item legend-item-hidden'}
               type="button"
               aria-pressed=${visible ? 'true' : 'false'}
               @click=${() => this.toggleDataset(index)}

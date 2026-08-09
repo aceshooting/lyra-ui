@@ -19,16 +19,47 @@ export const styles = css`
     color: inherit;
     text-decoration: none;
   }
+  .linked-shell {
+    position: relative;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: 100%;
+  }
+  .linked-shell > [part='base'] {
+    position: absolute;
+    inset: 0;
+    z-index: var(--lr-layer-base);
+  }
+  /* The visible content is a sibling of the stretched native link. Built-in, non-interactive
+     regions let pointer input pass through to that link; public slots opt back into hit testing so
+     their own controls remain independently operable. Plain slotted content delegates its click
+     to the link in the class rather than becoming a dead patch in the card. */
+  .linked-content {
+    position: relative;
+    z-index: var(--lr-layer-content);
+    display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-m);
+    block-size: 100%;
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+  .linked-content slot,
+  .linked-content [title] {
+    pointer-events: auto;
+  }
   [part='base'][href] {
     cursor: pointer;
-    transition:
-      border-color var(--lr-transition-fast),
-      box-shadow var(--lr-transition-fast);
+    transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
   /* :where() zeroes the extra [href] attribute selector's specificity contribution, leaving only
      :hover itself so a consumer's ::part(base):hover override ((0,1,1)) wins without needing
      !important. */
-  :where([part='base'][href]):hover {
+  :where([part='base'][href]):hover,
+  :where(.linked-shell:hover > [part='base']) {
     border-color: var(--lr-color-brand);
     /* One step of lift on an otherwise flat resting card -- a hovered tile is still resting chrome,
        not an overlay, so it stops at the card step. */
@@ -220,12 +251,12 @@ export const styles = css`
      visually emphasized (e.g. the "headline" stat in a group) regardless of
      status color. */
   :host([emphasis]) [part='base'] {
-    border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-brand);
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-stat-emphasis-border-color, var(--lr-color-brand));
   }
   /* Status semantics win over visual emphasis: only tint the value with the
      brand color when there's no status variant already claiming it. */
   :host([emphasis][variant='neutral']) [part='value'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-stat-emphasis-value-color, var(--lr-color-brand));
   }
   :host([prose]) [part='value'] {
     font-size: var(--lr-size-0-9375rem);
@@ -237,6 +268,10 @@ export const styles = css`
     display: none;
   }
   :host([compact]) [part='base'] {
+    padding: var(--lr-space-s);
+    gap: var(--lr-size-0-125rem);
+  }
+  :host([compact]) .linked-content {
     padding: var(--lr-space-s);
     gap: var(--lr-size-0-125rem);
   }
@@ -254,6 +289,13 @@ export const styles = css`
     background: transparent;
     block-size: auto;
   }
+  :host([frame='plain']) .linked-shell,
+  :host([frame='plain']) .linked-content {
+    block-size: auto;
+  }
+  :host([frame='plain']) .linked-content {
+    padding: 0;
+  }
   /* The card's interactive affordance is a border-color shift plus a lift shadow, and neither
      reads on a border-less, background-less box — a linked plain stat underlines its headline
      value instead. The :focus-visible outline above needs no border and still applies as-is. */
@@ -267,18 +309,24 @@ export const styles = css`
     box-shadow: none;
     background: transparent;
   }
-  :host([frame='plain']) [part='base'][href]:hover [part='value'],
-  :host([frame='plain']) [part='base'][href]:focus-visible [part='value'] {
+  :host([frame='plain']) .linked-shell:hover .linked-content [part='value'],
+  :host([frame='plain']) [part='base'][href]:focus-visible + .linked-content [part='value'] {
     text-decoration: underline;
   }
   /* Pressed thickens the same underline rather than recolouring the value -- the value already
      carries the status variant's colour, and overriding it for the length of a click would read as
      the stat changing state. */
-  :host([frame='plain']) [part='base'][href]:active [part='value'] {
+  :host([frame='plain']) [part='base'][href]:active + .linked-content [part='value'] {
     text-decoration: underline;
     text-decoration-thickness: var(--lr-border-width-medium);
   }
   :host([orientation='horizontal']) [part='base'] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--lr-space-s);
+  }
+  :host([orientation='horizontal']) .linked-content {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;

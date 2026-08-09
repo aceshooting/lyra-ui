@@ -5,63 +5,55 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --lr-phone-input-padding-block: var(--lr-space-s);
-    --lr-phone-input-font-size: var(--lr-font-size-md-sm);
-    --lr-phone-input-flag-size: var(--lr-font-size-lg);
-    --lr-phone-input-glyph-size: var(--lr-font-size-md-sm);
-    --lr-phone-input-gap: var(--lr-space-xs);
-    --lr-phone-input-radius: var(--lr-radius);
+    --_lr-phone-input-padding-block-default: var(--lr-form-control-padding-block);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-md-sm);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-lg);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-md-sm);
+    --_lr-phone-input-gap-default: var(--lr-space-xs);
+    --_lr-phone-input-radius-default: var(--lr-radius);
     /* The floor's six values come from the ONE shared form-control ladder
        (internal/sizes.styles.ts) rather than a private copy, so retuning
        --lr-theme-form-control-height-* moves this control and every sibling field together. That
        ladder matches both spellings of every tier, which is what makes size="small" resolve here
        without a per-component alias rule. */
-    --lr-phone-input-control-min-height: var(--lr-form-control-height);
+    --_lr-phone-input-control-min-height-default: var(--lr-form-control-height);
     /* --lr-phone-input-control-height is intentionally NOT declared here -- same convention as
        lr-input/lr-select/lr-combobox/lr-date-input: a consumer-facing exact-height escape hatch
        consumed only through the var() fallback on [part='input-wrapper'] below; declaring any
        value for it here would make that fallback arm unreachable. */
   }
   :host([pill]) {
-    --lr-phone-input-radius: var(--lr-radius-pill);
+    --_lr-phone-input-radius-default: var(--lr-radius-pill);
   }
-  /* What remains per tier is this component's OWN density and glyph geometry. It is deliberately
-     not the shared form-control padding/text ladder: this control's padding runs a tier looser at
-     every step, and moving onto the shared values would change the rendered row height at l and xl.
-     Both spellings of a tier match, for the same reason sizes.styles.ts emits both -- the height
-     ladder accepts size="small", so a row whose density silently ignored it would be worse than one
-     that never accepted it. */
+  /* What remains per tier is this component's own glyph geometry. Padding follows the shared
+     form-control ladder above so the country-selector action and sibling fields resolve to one
+     outer height; both spellings of a tier still match for the component-specific glyph values. */
   :host([size='2xs']) {
-    --lr-phone-input-padding-block: var(--lr-size-0-0625rem);
-    --lr-phone-input-font-size: var(--lr-font-size-2xs);
-    --lr-phone-input-flag-size: var(--lr-font-size-sm);
-    --lr-phone-input-glyph-size: var(--lr-font-size-2xs);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-2xs);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-sm);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-2xs);
   }
   :host([size='xs']) {
-    --lr-phone-input-padding-block: var(--lr-size-0-125rem);
-    --lr-phone-input-font-size: var(--lr-font-size-xs);
-    --lr-phone-input-flag-size: var(--lr-font-size-md-sm);
-    --lr-phone-input-glyph-size: var(--lr-font-size-xs);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-xs);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-md-sm);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-xs);
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-phone-input-padding-block: var(--lr-space-xs);
-    --lr-phone-input-font-size: var(--lr-font-size-sm);
-    --lr-phone-input-flag-size: var(--lr-font-size-m);
-    --lr-phone-input-glyph-size: var(--lr-font-size-sm);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-sm);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-m);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-sm);
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-phone-input-padding-block: var(--lr-space-m);
-    --lr-phone-input-font-size: var(--lr-font-size-lg);
-    --lr-phone-input-flag-size: var(--lr-font-size-xl);
-    --lr-phone-input-glyph-size: var(--lr-font-size-lg);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-lg);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-xl);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-lg);
   }
   :host([size='xl']) {
-    --lr-phone-input-padding-block: var(--lr-space-l);
-    --lr-phone-input-font-size: var(--lr-font-size-xl);
-    --lr-phone-input-flag-size: var(--lr-font-size-2xl);
-    --lr-phone-input-glyph-size: var(--lr-font-size-xl);
+    --_lr-phone-input-font-size-default: var(--lr-font-size-xl);
+    --_lr-phone-input-flag-size-default: var(--lr-font-size-2xl);
+    --_lr-phone-input-glyph-size-default: var(--lr-font-size-xl);
   }
 
   [part='form-control'] {
@@ -88,13 +80,14 @@ export const styles = css`
   [part='input-wrapper'] {
     display: flex;
     align-items: center;
+    box-sizing: border-box;
     min-inline-size: 0;
     inline-size: 100%;
-    min-block-size: var(--lr-phone-input-control-height, var(--lr-phone-input-control-min-height));
+    min-block-size: var(--lr-phone-input-control-height, var(--lr-phone-input-control-min-height, var(--_lr-phone-input-control-min-height-default)));
     block-size: var(--lr-phone-input-control-height, auto);
-    font-size: var(--lr-phone-input-font-size);
+    font-size: var(--lr-phone-input-font-size, var(--_lr-phone-input-font-size-default));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-phone-input-radius);
+    border-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
@@ -141,6 +134,7 @@ export const styles = css`
     align-items: stretch;
     flex: 0 0 auto;
     align-self: stretch;
+    min-block-size: var(--lr-icon-button-size);
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
 
@@ -173,10 +167,10 @@ export const styles = css`
   [part='country-trigger'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-phone-input-gap);
+    gap: var(--lr-phone-input-gap, var(--_lr-phone-input-gap-default));
     padding-inline: var(--lr-space-s);
-    border-start-start-radius: var(--lr-phone-input-radius);
-    border-end-start-radius: var(--lr-phone-input-radius);
+    border-start-start-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
+    border-end-start-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
     transition: background-color var(--lr-transition-fast);
   }
 
@@ -205,11 +199,11 @@ export const styles = css`
   }
 
   [part='flag'] {
-    font-size: var(--lr-phone-input-flag-size);
+    font-size: var(--lr-phone-input-flag-size, var(--_lr-phone-input-flag-size-default));
   }
 
   [part='country-code'] {
-    font-size: var(--lr-phone-input-font-size);
+    font-size: var(--lr-phone-input-font-size, var(--_lr-phone-input-font-size-default));
     font-weight: var(--lr-font-weight-semibold);
   }
 
@@ -223,7 +217,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-phone-input-glyph-size);
+    font-size: var(--lr-phone-input-glyph-size, var(--_lr-phone-input-glyph-size-default));
     line-height: var(--lr-line-height-none);
   }
 
@@ -240,7 +234,7 @@ export const styles = css`
     padding-inline-start: var(--lr-space-s);
     color: var(--lr-color-text-quiet);
     direction: ltr;
-    font-size: var(--lr-phone-input-font-size);
+    font-size: var(--lr-phone-input-font-size, var(--_lr-phone-input-font-size-default));
     unicode-bidi: isolate;
   }
 
@@ -248,7 +242,7 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     inline-size: 100%;
-    padding-block: var(--lr-phone-input-padding-block);
+    padding-block: var(--lr-phone-input-padding-block, var(--_lr-phone-input-padding-block-default));
     padding-inline: var(--lr-space-s);
     border: none;
     background: transparent;

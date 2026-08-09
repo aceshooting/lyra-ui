@@ -5,6 +5,7 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default a
 both dimensions through the aspect ratio.
 
 **Properties:**
+
 - `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the
   stroke, `gradient` fades that fill toward the baseline, and `line` renders only the stroke
 - `curve: 'linear'|'natural'|'step' = 'linear'` (reflected) — straight segments, smooth cubic
@@ -17,6 +18,7 @@ both dimensions through the aspect ratio.
   the line and fill. The public color custom properties below always override it
 
 **Additive Lyra extensions:**
+
 - `values: number[] = []` — programmatic data source used while `data` is empty
 - `type?: 'line'|'bar'|'area'` — `bar` renders bounded rectangles; `line`/`area` retain the older
   explicit unfilled/filled modes. Omit it for the mirrored `appearance` surface
@@ -52,6 +54,7 @@ manual refresh is needed.
 ```
 
 **Known gotchas:**
+
 - The semantic `role="img"` and accessible name live on the SVG that owns the graphic. `label` is
   applied exactly. The additive `values` path retains its localized, effective-locale summary when
   neither naming property is present; a `data` chart without a label is left presentational rather
@@ -65,7 +68,7 @@ manual refresh is needed.
   aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
   point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
   grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
-  scanned from the *full* pre-decimation `values` array, so a real extreme value that decimation
+  scanned from the _full_ pre-decimation `values` array, so a real extreme value that decimation
   happens to drop can't silently narrow the rendered scale.
 - Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
   animations, so reduced-motion mode needs no alternate timing branch.
@@ -82,11 +85,16 @@ this property was always the second. There is no alias — `appearance` on `<lr-
 attribute now, so a stat left on `appearance="plain"` silently renders full card chrome again.
 
 **Properties:**
+
 - `label: string = ''`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — when `href` is safe, this
+  host-level override names the real whole-card anchor; removing it restores the natural
+  label/value/unit name
 - `value: string = ''`
 - `unit: string = ''`
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
-  URL schemes keep the stat non-interactive
+  URL schemes keep the stat non-interactive. The anchor is stretched behind the visible content,
+  so public slots remain semantic siblings rather than interactive descendants of the link
 - `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
   `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
 - `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected) — the library's
@@ -98,9 +106,9 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 - `caption: string = ''`
 - `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
-  *decrease* is the win.
+  _decrease_ is the win.
 - `rows: StatRow[] = []` (attribute: false) — `StatRow { label: string; value: string; exactValue?:
-  string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
+string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
   tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
@@ -135,11 +143,13 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 
 **Events:** none.
 
-**Slots:** default (leading icon), `caption` (rich caption content — overrides the `caption`
-attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
+**Slots:** `start` (canonical leading icon), default (legacy leading-icon alias, retained as the
+fallback; `start` takes precedence when both are filled), `caption` (rich caption content —
+overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
-is provided)
+is provided). In a linked stat, an interactive slotted descendant keeps its own focus and action;
+clicking non-interactive slotted content still follows the whole-card link.
 
 **CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label` (carries `hidden`,
 and is collapsed, whenever `label` is empty — a label-less stat leaves no blank line above the
@@ -160,21 +170,26 @@ so retinting the trend pill doesn't also recolor the value, and vice versa.
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
-value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
-its own value tint.
+value for each non-neutral `variant`. `--lr-stat-emphasis-border-color` and
+`--lr-stat-emphasis-value-color` (both default `var(--lr-color-brand)`) independently color the
+emphasis accent edge and a neutral emphasized headline without retinting `variant="brand"`.
 
 **Optional peer deps:** none.
 
 ```html
 <lr-stat label="Active users" value="1,204" trend="4.2" variant="success">
-  <svg slot="">...</svg>
+  <svg slot="start">...</svg>
 </lr-stat>
 <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
 ```
 
 **Known gotchas:**
+
 - When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
   their own `tabindex` to avoid nesting focus targets inside the anchor.
+- Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
+  actions never also navigate the stat; use a host `aria-label` when the link destination needs a
+  more specific name than the visible label/value/unit.
 - no `aria-live` region wraps `value`/`trend` — an in-place update after first render still isn't
   proactively announced to screen readers. The trend pill's direction/polarity is no longer
   conveyed by icon rotation/color alone, though: a visually-hidden span now spells it out in plain
@@ -191,7 +206,7 @@ trees, row details, paging, pinning, resizing, reordering, selection, copy, and 
 the granular registration module when the root bundle is not already loaded:
 
 ```js
-import '@aceshooting/lyra-ui/components/data/data-grid/data-grid.js';
+import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
@@ -310,10 +325,15 @@ that descendant.
 
 **Events:** `request`; `lr-cell-click`; cancelable `lr-cell-contextmenu` (canceling it suppresses the
 native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
-live and committed resize); `lr-column-visibility-change`; `lr-data-error`; `lr-data-request`;
+live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
+restores the exact pre-gesture width state; after a live move it emits the restored width with
+`finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
+`lr-data-error`; `lr-data-request`;
 `lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-row-select`;
 `lr-sort-change`. Every library event bubbles and is composed; only `lr-cell-contextmenu` is
-cancelable.
+cancelable. The toolbar search and active column-filter inputs re-dispatch `focus` and `blur` once
+from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
+delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
 
 **Slots:** `empty`, `loading`, `no-results`.
 
@@ -354,12 +374,12 @@ render every row instead of a virtual window.
   page-size="20"
 ></lr-data-grid>
 <script type="module">
-  const grid = document.querySelector('lr-data-grid');
+  const grid = document.querySelector("lr-data-grid");
   grid.columns = [
-    { field: 'name', label: 'Name', filterable: true },
-    { field: 'score', label: 'Score', align: 'end' }
+    { field: "name", label: "Name", filterable: true },
+    { field: "score", label: "Score", align: "end" },
   ];
-  grid.data = [{ id: 1, name: 'Ada', score: 97 }];
+  grid.data = [{ id: 1, name: "Ada", score: 97 }];
 </script>
 ```
 
@@ -383,10 +403,17 @@ add a trailing totals column mirroring `expandedContent`'s leading one — `rowT
 per-row, `grandTotal(rows)` renders at its intersection with the footer row — both sharing `footer`'s
 own "consumer computes/renders" contract rather than assuming addition.
 
+Header cells and body rows use separate roving tab stops. When a controlled `columns` or rendered
+row collection changes while one of those stops owns focus, the table keeps the same stable key if
+it survives and otherwise clamps focus to the nearest surviving index. Moving focus outside the
+table before the update is applied always wins; nested editors and controls keep their independent
+focus contracts.
+
 **Properties:**
+
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-  minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
-  'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
+minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
@@ -426,21 +453,21 @@ own "consumer computes/renders" contract rather than assuming addition.
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
-  *commit* is vetoable — see `lr-column-resize` under Events.
+  _commit_ is vetoable — see `lr-column-resize` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
   inline style outranks any stylesheet rule in the cascade regardless of specificity, while the heat
   tint is painted by a shadow-stylesheet rule. So a `cellStyle` returning
   `background`/`backgroundColor` on a column that also defines `heatValue` silently and completely
   erases that column's tint — no warning, and the cell still contributes to the shared domain, so the
-  *other* tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
-  column only when that override is the intent; to tint *and* style, return only non-background
+  _other_ tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
+  column only when that override is the intent; to tint _and_ style, return only non-background
   declarations (`color`, `fontWeight`, `textAlign`, …) from `cellStyle`.
 - `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
   `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
   closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
   every body cell of that column, permanently:
   - **Focus model.** Each editor is a plain tab stop — no `tabindex` of its own — exactly like the
-    existing row-expand toggle, and stays *outside* the header/row roving-tabindex model. Tab walks
+    existing row-expand toggle, and stays _outside_ the header/row roving-tabindex model. Tab walks
     down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
     ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
   - **Value binding.** A persistent editor binds its `value` as a **content attribute**, not as the
@@ -448,30 +475,30 @@ own "consumer computes/renders" contract rather than assuming addition.
     typed into a cell, an out-of-band `rows` update to that same cell will **not** visibly replace
     their draft. An editor the user has not touched still picks up a new `rows` value normally.
     `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
-  - **Keys.** Enter commits (emits `lr-cell-edit`) and *keeps focus* in the field, since there is no
+  - **Keys.** Enter commits (emits `lr-cell-edit`) and _keeps focus_ in the field, since there is no
     closed state to fall back to. `change` (blur after a modification) commits, as with `true`.
     Escape is **not** cancelled and does nothing to the editor — there is nothing to cancel back to
     — so an ancestor dialog/popover still acts on it.
-  - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort *moves* the editor's
+  - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort _moves_ the editor's
     `<input>` (the typed value rides along) and the table restores focus to the same logical cell
     afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
     is simply lost rather than yanked to whichever unrelated row now sits in that position.
   - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
     column of otherwise-identical inputs is still individually named to a screen reader.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
-  when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
+  when a `priority` column is _actually_ hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
   `[part='base']` plus a post-render DOM check, so it settles one render cycle after a `columns`/
   `rows`/width change lands — poll for the settled value (e.g. `await el.updateComplete;` twice, or
   `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
   lasting effect; it's recomputed on the next render or resize. `[part='reveal-columns-button']` now
-  renders exactly when `columnsHidden` is true — no longer whenever any column merely *declares* a
+  renders exactly when `columnsHidden` is true — no longer whenever any column merely _declares_ a
   `priority` regardless of whether anything is actually hidden
 - `rows: T[] = []` (attribute: false)
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
-  stretching its column. The default `'auto'` still *resolves* to `fixed` whenever a column declares
+  stretching its column. The default `'auto'` still _resolves_ to `fixed` whenever a column declares
   a `width`, a column has been drag-resized, or a resize gesture is in flight — column resizing does
   not work under `table-layout: auto`, so `'auto'` can never mean "never fixed". See the gotchas for
   the two consequences of the fixed algorithm worth knowing before opting in
@@ -483,7 +510,7 @@ own "consumer computes/renders" contract rather than assuming addition.
   given, for a table whose ordering already happened server-side. `lr-sort` is emitted on header
   activation under both modes. With no `sortKey` set (the default) `'client'` is a **no-op** — the
   input order is preserved verbatim — so a table that never sorts renders identically either way.
-  Sorting applies to the whole filtered set *before* client pagination slices the page, so page 1
+  Sorting applies to the whole filtered set _before_ client pagination slices the page, so page 1
   holds the globally-smallest rows rather than a re-sorted slice
 - `defaultSortDir: 'asc'|'desc' = 'asc'` (attribute `default-sort-dir`) — the direction applied
   whenever header activation switches sorting to a **different** column, including the first column
@@ -516,7 +543,7 @@ own "consumer computes/renders" contract rather than assuming addition.
   (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading
 - `loadingAppearance: 'spinner'|'skeleton' = 'spinner'` (attribute `loading-appearance`, reflected) —
   how `loading` renders. `'spinner'` replaces the whole grid with an indeterminate spinner.
-  `'skeleton'` instead renders the real table — the same `<colgroup>` (declared *and* drag-resized
+  `'skeleton'` instead renders the real table — the same `<colgroup>` (declared _and_ drag-resized
   widths included), the same `<thead>`, the filter field and the pagination footer — and fills
   `<tbody>` with placeholder rows, so a cold load sketches the grid's shape rather than collapsing to
   a spinner and reflowing when the rows land. Kept as a separate property rather than widening
@@ -525,7 +552,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 - `skeletonRows: number = 0` (attribute `skeleton-rows`) — placeholder row count under
   `loadingAppearance="skeleton"`. `0` derives the count instead: the normalized `pageSize` when
   pagination is on (capped at 20, so a large page size can't emit thousands of placeholder cells),
-  otherwise 3. Any positive value is used verbatim and is *not* capped. Ignored entirely under the
+  otherwise 3. Any positive value is used verbatim and is _not_ capped. Ignored entirely under the
   default spinner appearance
 - `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
   zero disables the pagination footer
@@ -613,14 +640,14 @@ about the final width, not about every pixel the pointer passes through.
 The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
 host as bubbling, composed events (the native ones are neither).
 
-**Slots:** `empty` — replaces the built-in empty state on the two *data*-empty branches (no rows at
+**Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
 renders as this slot's fallback content. The no-columns branch is deliberately **not**
 slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
 nothing", and one slot covering all three would collapse that distinction. Everything else comes
 from `columns`/`rows`.
 
-**CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
+**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
 (shown only when `columnsHidden` is true), `foot` (the `<tfoot>`, only rendered when at least one
 column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each body row's trailing
@@ -649,10 +676,12 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
 `--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
+These four heat-tint/resize hooks are not redeclared on the component host: set them on
+`lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
 `--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
 `aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
 `var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
-element *or on any ancestor* and still reach the rule that reads it. It exists because Shadow Parts
+element _or on any ancestor_ and still reach the rule that reads it. It exists because Shadow Parts
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
@@ -671,26 +700,44 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 **Optional peer deps:** none.
 
 ```html
-<lr-table id="t" sort-key="name" sort-dir="asc" accessible-label="Items"></lr-table>
+<lr-table
+  id="t"
+  sort-key="name"
+  sort-dir="asc"
+  accessible-label="Items"
+></lr-table>
 <script type="module">
-  const t = document.getElementById('t');
+  const t = document.getElementById("t");
   t.columns = [
-    { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+    { key: "name", label: "Name", sortable: true, cell: (r) => r.name },
     // sortValue keeps the numeric column comparing as numbers, not as strings.
-    { key: 'value', label: 'Value', align: 'end', sortable: true, sortValue: (r) => r.value, cell: (r) => r.value },
+    {
+      key: "value",
+      label: "Value",
+      align: "end",
+      sortable: true,
+      sortValue: (r) => r.value,
+      cell: (r) => r.value,
+    },
   ];
-  t.rows = [{ name: 'Alpha', value: 1 }, { name: 'Beta', value: 2 }];
+  t.rows = [
+    { name: "Alpha", value: 1 },
+    { name: "Beta", value: 2 },
+  ];
   t.rowKey = (r) => r.name;
-  t.addEventListener('lr-sort', (e) => console.log('sort by', e.detail.key));
-  t.addEventListener('lr-row-click', (e) => console.log('clicked', e.detail.row));
+  t.addEventListener("lr-sort", (e) => console.log("sort by", e.detail.key));
+  t.addEventListener("lr-row-click", (e) =>
+    console.log("clicked", e.detail.row)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - activating a sortable header now writes `sortKey`/`sortDir` on the table itself, in **both** sort
   modes — it is no longer a pure `lr-sort` notification. A `sortMode="server"` consumer that
   re-sorts on `lr-sort` and pushes fresh `rows` back in is unaffected (the table renders whatever
-  order it is handed), but a consumer implementing a *tri-state* header (asc → desc → unsorted) must
+  order it is handed), but a consumer implementing a _tri-state_ header (asc → desc → unsorted) must
   drive `sortKey`/`sortDir` from its own `lr-sort` handler, since the built-in activation only
   toggles between the two directions.
 - `sortValue`/`cell` are read off the column object by identity. Mutating a column **in place**
@@ -726,13 +773,13 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 - a `cell()` template can render its own interactive content without it being swallowed by
   row/column activation: clicks and Enter/Space landing on (or bubbling through) anything matching
   `button, a[href], input, select, textarea, [role="button"], [role="combobox"], [role="listbox"],
-  [role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
+[role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
   `<lr-select>`/`<lr-combobox>` rendered inside a `cell()`), are left alone by the table's own
   delegated `click`/`keydown` handlers instead of triggering `lr-sort`/`lr-row-click`.
 - `layout="fixed"` (and any `'auto'` that resolves to fixed) carries two consequences of the CSS
   fixed algorithm. With no declared widths the **first** row — the header row included — determines
   every column's width, so revealing a `priority`-hidden column via
-  `[part='reveal-columns-button']` re-measures and changes *all* of them, not just the revealed one.
+  `[part='reveal-columns-button']` re-measures and changes _all_ of them, not just the revealed one.
   And `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`; declare `width`
   instead when a specific column needs a specific size.
 - skeleton mode keeps geometry stable only when the browser isn't sizing columns from cell content.
@@ -748,7 +795,7 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
   own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the
   tooltip can't shadow the editor. Accessibility caveat: some screen readers announce a `<td title>`
-  as the cell's accessible *name*, replacing the cell's content rather than supplementing it (the
+  as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
 - `editable: 'always'` deliberately does not re-assert a cell's source value once the user has typed
@@ -757,7 +804,7 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
   row (`rowKey`) so the editor is recreated rather than updated, or keep `editable: true` and let
   the short-lived double-click editor's property binding re-assert. Also note the two things
-  `'always'` intentionally does *not* do: it never sets the roving `tabindex` (its editors are
+  `'always'` intentionally does _not_ do: it never sets the roving `tabindex` (its editors are
   ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
   the same way the row-expand toggle's already does), and it never cancels Escape.
 
@@ -772,6 +819,7 @@ after the host applies a requested page. The component owns no data fetching and
 `page`.
 
 **8.0.0 migration — these changes are breaking:**
+
 - `total-items` is now `total` (property `totalItems` → `total`). The old attribute no longer binds
   to anything: a pager left on `total-items` keeps `total` at its `0` default and silently renders
   the empty state with every control disabled.
@@ -785,6 +833,7 @@ after the host applies a requested page. The component owns no data fetching and
   asserted the exact one-key detail object must accept `{ page, pageSize }`.
 
 **Properties and getters:**
+
 - `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within
   the valid `1..pageCount` range, but the public property itself remains controlled and is not
   rewritten by the component
@@ -907,19 +956,38 @@ buttons, interactive ellipses, and numbered pages, which is what `appearance` re
 buttons, the numbered pages and the page input — `--lr-pagination-control-padding` (default
 `var(--lr-space-xs)`) — inner padding of those same controls, deliberately uniform across every
 `size` tier because the control's outer footprint is already fixed by
-`--lr-pagination-control-size`, so this only adjusts the icon/digit inset —
+`--lr-pagination-control-size`, so this only adjusts the icon/digit inset. Layout spacing is split
+across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary and controls,
+`--lr-pagination-controls-gap` (default `var(--lr-space-xs)`) inside the navigation group, and
+`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages; each remains
+active in standard, compact, and 320px container layouts —
 `--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
 declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
-CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-ring tokens.
+CSS. `--lr-pagination-control-color` independently controls the resting foreground. The applied
+page has `--lr-pagination-current-bg`, `--lr-pagination-current-border-color`, and
+`--lr-pagination-current-color`. Ordinary controls use `--lr-pagination-hover-bg`,
+`--lr-pagination-hover-border-color`, `--lr-pagination-active-bg`, and
+`--lr-pagination-active-border-color`; the applied page has independent
+`--lr-pagination-current-hover-bg`, `--lr-pagination-current-hover-border-color`,
+`--lr-pagination-current-active-bg`, and `--lr-pagination-current-active-border-color` hooks. Each
+defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. These state
+hooks and the resting background/border hooks are consumed through inline fallbacks, so they work
+when inherited from an ancestor as well as when set directly on one pager. Shared spacing,
+disabled-opacity, and focus-ring tokens remain available as usual.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-pagination total="237" page-size="20" with-summary with-edges></lr-pagination>
+<lr-pagination
+  total="237"
+  page-size="20"
+  with-summary
+  with-edges
+></lr-pagination>
 <script>
-  const pagination = document.querySelector('lr-pagination');
-  pagination.addEventListener('lr-page-change', async (event) => {
+  const pagination = document.querySelector("lr-pagination");
+  pagination.addEventListener("lr-page-change", async (event) => {
     await loadPage(event.detail.page, event.detail.pageSize);
     pagination.page = event.detail.page;
   });
@@ -938,13 +1006,14 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 A function template builds the URL itself, which is where any dynamic segment gets encoded:
 
 ```js
-const pagination = document.querySelector('lr-pagination');
-const query = new URLSearchParams(location.search).get('q') ?? '';
+const pagination = document.querySelector("lr-pagination");
+const query = new URLSearchParams(location.search).get("q") ?? "";
 pagination.hrefTemplate = (page) =>
   `/products?${new URLSearchParams({ q: query, page: String(page) })}`;
 ```
 
 **Known gotchas:**
+
 - user activation only emits an intent. Until the host applies a new `page`, the numeric input
   returns to the currently controlled value; assigning the page triggers the localized
   announcement in the shared light-DOM polite sink
@@ -996,6 +1065,7 @@ pagination.hrefTemplate = (page) =>
 Dependency-free SVG radial, full-circle ring, or linear meter (no charting library).
 
 **Properties:**
+
 - `value: number = 0`
 - `min: number = 0`
 - `max: number = 100`
@@ -1019,15 +1089,20 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 
 ```html
 <lr-gauge value="72" min="0" max="100" label="CPU"></lr-gauge>
-<lr-gauge type="ring" value="84" label="Coverage"
-  style="--lr-gauge-fill: var(--lr-color-success)"></lr-gauge>
+<lr-gauge
+  type="ring"
+  value="84"
+  label="Coverage"
+  style="--lr-gauge-fill: var(--lr-color-success)"
+></lr-gauge>
 <lr-gauge type="linear" value="0.4" max="1"></lr-gauge>
 <script type="module">
-  document.querySelector('lr-gauge').valueLabel = '72°F'; // visible text and announced value
+  document.querySelector("lr-gauge").valueLabel = "72°F"; // visible text and announced value
 </script>
 ```
 
 **Known gotchas:**
+
 - SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
   single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
   inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible
@@ -1054,7 +1129,7 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
 out via an outward Archimedean-spiral search — heaviest word placed first, each word spiraling from
 the center until it clears every word already placed. Unlike sibling `lr-sparkline`/`lr-heatmap`
-(one `role="img"` glyph standing in for an aggregate value), the individual words here *are* the
+(one `role="img"` glyph standing in for an aggregate value), the individual words here _are_ the
 meaningful interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
 its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`'s cells, the whole
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
@@ -1068,8 +1143,9 @@ and repeated edge movements append repeated announcements even when their text i
 no live-region role of its own.
 
 **Properties:**
+
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
-  string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
+string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
   `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
   `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
   declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
@@ -1114,7 +1190,8 @@ the actual announcement uses the shared light-DOM polite sink),
 `--lr-word-cloud-color-6`, `--lr-word-cloud-color-7`, `--lr-word-cloud-color-8` (the default
 categorical palette, cycled by word index or `group`; a data-driven literal exception like
 `lr-heatmap`'s scale-ramp endpoints — exposed as retheme-able custom properties instead of
-hardcoded), plus shared tokens (`--lr-font`,
+hardcoded). They inherit from theme ancestors, while a value set directly on the word cloud wins
+through the normal cascade), plus shared tokens (`--lr-font`,
 `--lr-focus-ring-*`, `--lr-transition-fast`, `--lr-color-text-quiet`).
 
 **Optional peer deps:** none.
@@ -1122,12 +1199,14 @@ hardcoded), plus shared tokens (`--lr-font`,
 ```html
 <lr-word-cloud id="cloud" style="height: 20rem"></lr-word-cloud>
 <script type="module">
-  document.getElementById('cloud').words = [
-    { text: 'JavaScript', weight: 90 },
-    { text: 'TypeScript', weight: 75 },
-    { text: 'Lit', weight: 60, group: 'framework' },
+  document.getElementById("cloud").words = [
+    { text: "JavaScript", weight: 90 },
+    { text: "TypeScript", weight: 75 },
+    { text: "Lit", weight: 60, group: "framework" },
   ];
-  document.getElementById('cloud').addEventListener('lr-word-click', (e) => console.log(e.detail));
+  document
+    .getElementById("cloud")
+    .addEventListener("lr-word-click", (e) => console.log(e.detail));
 </script>
 ```
 
@@ -1135,11 +1214,12 @@ The host itself gets `role="group"` and an auto-computed `aria-label` (e.g. `"Wo
 words"` / `"Word cloud of 1 word"`, counting only words actually rendered — post `MAX_WORDS`-cap and
 post-drop, not the raw `words.length`) **unless** the host already carried its own `role`/`aria-label`
 attribute at first render. That opt-out check runs exactly once (the very first update) and is never
-re-checked afterwards, so setting `role`/`aria-label` yourself *after* the component has already
+re-checked afterwards, so setting `role`/`aria-label` yourself _after_ the component has already
 rendered at least once only sticks until the next `words`-driven relayout, which overwrites it back
 to the auto default — set it in the initial markup (or before first paint) to opt out permanently.
 
 **Known gotchas:**
+
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
   `MAX_BARS` DOM-node-count guard) — over the cap, the **heaviest** 150 survive and the rest are
   dropped, regardless of where they fell in the input array (it is not simply "first 150 in, rest
@@ -1174,6 +1254,9 @@ with arrow-key roving focus (a stroked ring is redrawn over the focused cell on 
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
+DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
+environments without `IntersectionObserver` retain eager drawing.
 
 Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
 interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
@@ -1185,6 +1268,7 @@ nearest surviving interactive cell, or to the stable heatmap base when none rema
 refresh never steals external focus.
 
 **Properties:**
+
 - `rowLabels: string[] = []` (attribute: false — matrix mode only)
 - `colLabels: string[] = []` (attribute: false — matrix mode only)
 - `values: number[][] = []` (attribute: false — matrix mode only) — `-1` or any non-finite value is
@@ -1198,11 +1282,11 @@ refresh never steals external focus.
   the default, non-`fit-to-width` behavior)
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
-  the *whole* host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
+  the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
   produces enormous blocks; capping them keeps a cell a cell
 - `minCellSize?: number` (attribute `min-cell-size`) — the mirror floor, in CSS px, so a year-long
   calendar in a narrow pane keeps legible, hit-testable cells and overflows its host instead of
-  collapsing to hairlines. It can only *raise* the built-in `4`px floor, never lower it: a value
+  collapsing to hairlines. It can only _raise_ the built-in `4`px floor, never lower it: a value
   below `4` normalizes to `4`. When both clamps are set and `maxCellSize < minCellSize`, the ceiling
   wins. For both: a non-finite value, or an empty attribute, means unset rather than `0`, and unset
   (the default) reproduces the unclamped fit-to-width behavior exactly
@@ -1213,7 +1297,7 @@ refresh never steals external focus.
   same `sqrtStep()` magnitude compression as matrix mode, so one heavy day doesn't wash out the rest
 - `mode: 'matrix' | 'calendar' = 'matrix'`
 - `days: CalendarDay[] = []` (attribute: false — calendar mode only) — `CalendarDay { date:
-  string /* ISO yyyy-mm-dd */; value: number }`; need not be sorted or contiguous, and an entry whose
+string /* ISO yyyy-mm-dd */; value: number }`; need not be sorted or contiguous, and an entry whose
   `date` doesn't parse is dropped rather than poisoning the whole grid
 - `firstDayOfWeek: number = 0` (attribute `first-day-of-week` — calendar mode only, no-op in matrix
   mode) — anchors the calendar grid at a different weekday instead of always Sunday; `0`-`6`, same
@@ -1221,12 +1305,12 @@ refresh never steals external focus.
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
 - `annotations: HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;
-  col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
+col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
   `[part="legend-annotation"]` entry in the legend.
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
-  row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
+row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
@@ -1235,7 +1319,7 @@ refresh never steals external focus.
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   one `[part="cell"]` native button per interactive cell. Buttons expose localized `aria-label`s,
   explicit `aria-pressed` state from `selectedCell`, and a roving tabindex; the canvas becomes
-`aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
+  `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
   its low DOM footprint. Controlled refresh focus follows the preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard announcement text; receives the cell
@@ -1245,9 +1329,11 @@ refresh never steals external focus.
   at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
   alongside it). It lets a callback key off the date without re-deriving the grid's own
   anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
-  Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
-  value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
-  breaking.
+  Unset (the default) falls back to localized matrix row/column/value or calendar date/value
+  templates. The default English catalog renders "Row X, Col Y: value" (matrix) / "Jan 15: value"
+  — short month + day, **not** a weekday abbreviation (calendar). Matrix row/column placeholders,
+  no-data wording, template order, calendar wording/date formatting, and numeric values all follow
+  `locale` plus `registerLyraLocale()`/`.strings`; use `cellText` for application-specific wording.
 - `cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean` (attribute:
   false) — opts individual cells out of the interaction model; receives the cell position and its
   value, return `false` to make that cell present-but-non-interactive (no hover tooltip, click, or
@@ -1261,7 +1347,7 @@ refresh never steals external focus.
   default) is the original formula, unchanged.
 - `rowY?: (weekday: number) => number` (attribute: false, calendar mode only) — the vertical
   analogue of `columnX`: overrides the internal weekday-row y-coordinate formula (`CAL_LABEL_H +
-  weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing, and the focus
+weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing, and the focus
   ring (also consulted at `weekday = 7` to size the canvas height, mirroring `columnX` at
   `week = weekCount`). Unset (the default) is the original formula, unchanged. Ignored in matrix
   mode.
@@ -1292,7 +1378,7 @@ refresh never steals external focus.
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
-  color?: string; label?: string }`: a discrete legend key rendered **instead of** the
+color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
@@ -1366,10 +1452,14 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```html
 <lr-heatmap value-label="requests"></lr-heatmap>
 <script>
-  const hm = document.querySelector('lr-heatmap');
-  hm.rowLabels = ['Mon', 'Tue', 'Wed'];
-  hm.colLabels = ['00h', '06h', '12h', '18h'];
-  hm.values = [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]];
+  const hm = document.querySelector("lr-heatmap");
+  hm.rowLabels = ["Mon", "Tue", "Wed"];
+  hm.colLabels = ["00h", "06h", "12h", "18h"];
+  hm.values = [
+    [3, 8, 12, 4],
+    [1, 2, 9, 5],
+    [0, 4, 6, 2],
+  ];
 </script>
 ```
 
@@ -1377,22 +1467,23 @@ same color as `--lr-heatmap-focus-ring-color`).
 <!-- Calendar mode: a GitHub-contributions-style day grid -->
 <lr-heatmap mode="calendar" value-label="commits"></lr-heatmap>
 <script>
-  document.querySelector('lr-heatmap').days = [
-    { date: '2026-01-01', value: 3 },
-    { date: '2026-01-02', value: 0 },
+  document.querySelector("lr-heatmap").days = [
+    { date: "2026-01-01", value: 3 },
+    { date: "2026-01-02", value: 0 },
     // ...
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
   annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
-- `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
+- `legendStops` _replaces_ the lo/hi gradient bar rather than adding to it: supplying it removes
   `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
   those parts silently stops applying. It is also presentation-only — it never feeds back into the
   cell colors, so the stops and a `cellColor` callback have to be kept in agreement by the consumer
-  (the point of the property is that they *can* be, from one shared function).
+  (the point of the property is that they _can_ be, from one shared function).
 - the `ResizeObserver` only actually resizes the drawn grid **when `fit-to-width` is set**, in either
   mode. Without it (the default), `draw()` sizes the canvas as `PAD_LEFT + cols * cellSize` (matrix
   mode) or `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), never from the host's measured
@@ -1400,7 +1491,7 @@ same color as `--lr-heatmap-focus-ring-color`).
   `canvas { inline-size: 100% }` is also dead code in that case, since `draw()` unconditionally sets
   an inline `canvas.style.width/height` that wins over it.
 - `maxCellSize`/`minCellSize` are no-ops without `fit-to-width` — an explicit `cellSize` is an exact
-  request and is never clamped. And the canvas is sized *from the clamped* cell size, so a capped
+  request and is never clamped. And the canvas is sized _from the clamped_ cell size, so a capped
   grid deliberately leaves the host's remaining width unfilled: the canvas simply ends early rather
   than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
   end-aligned.
@@ -1415,11 +1506,11 @@ same color as `--lr-heatmap-focus-ring-color`).
   and repeated DPR crossings (moving the window across displays with different pixel ratios) no
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
 - calendar mode's date labels (used by the default `cellText` template and the tooltip/announcement
-  text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
+  text) now format via `effectiveLocale` (`toLocaleString(effectiveLocale, ...)`) instead of a hardcoded
   `'en'` — fixed. The canvas-drawn axis chrome is now locale-aware too: month labels use
-  `toLocaleString(undefined, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
-  `Intl.DateTimeFormat(undefined, { weekday: 'short' })` (previously a literal English `['', 'Mon',
-  '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
+  `toLocaleString(effectiveLocale, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
+  `Intl.DateTimeFormat(effectiveLocale, { weekday: 'short' })` (previously a literal English `['', 'Mon',
+'', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
 
 ---
 
@@ -1443,12 +1534,22 @@ A standard host `aria-label` dynamically names the internal list and wins over t
 `accessible-label` alias, which in turn wins over the generated category-count summary. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
-refreshes do not move focus.
+refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
+identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
+focus an unrelated cell that merely inherited the old numeric index.
+
+High-cardinality strips use a dense-collapse policy rather than a horizontal scrollport: cells may
+flex below their ordinary 2px visual target to keep 200 items inside the 320px responsive baseline;
+above 320 items the decorative 1px gaps collapse too, keeping 500 items contained. Every item still
+renders as its own named `role="listitem"`, remains reachable through the same roving keyboard model,
+and shows its detail tooltip on focus — density changes only the visual spacing, never the data or
+accessibility surface.
 
 **Properties:**
+
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
-  subagent-dispatched turn); `label` is per-item hover/focus tooltip text *and* that cell's own
+  subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
   `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
@@ -1464,13 +1565,13 @@ refreshes do not move focus.
   summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
-  order. The key describes the *scheme*, not the current data: a category with no matching item
+  order. The key describes the _scheme_, not the current data: a category with no matching item
   still gets a row, and an item whose `category` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
   once — and it wraps onto further rows in a narrow allocation rather than overflowing
-- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
+- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
   `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
@@ -1509,20 +1610,21 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 ```html
 <lr-sequence-strip></lr-sequence-strip>
 <script>
-  const strip = document.querySelector('lr-sequence-strip');
+  const strip = document.querySelector("lr-sequence-strip");
   strip.categories = [
-    { key: 'text', color: '#4f46e5', label: 'Text' },
-    { key: 'tool', color: '#16a34a', label: 'Tool' },
+    { key: "text", color: "#4f46e5", label: "Text" },
+    { key: "tool", color: "#16a34a", label: "Tool" },
   ];
   strip.items = [
-    { id: '1', category: 'text', label: 'Turn 1: text' },
-    { id: '2', category: 'tool', marker: true, label: 'Turn 2: tool call' },
-    { id: '3', category: 'text', label: 'Turn 3: text' },
+    { id: "1", category: "text", label: "Turn 1: text" },
+    { id: "2", category: "tool", marker: true, label: "Turn 2: tool call" },
+    { id: "3", category: "text", label: "Turn 3: text" },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - there is no `lr-cell-click`/keyboard-interaction model at all — unlike `lr-heatmap`'s
   canvas cells, a strip cell is purely a hover target; build a click handler outside this component
   (e.g. on a wrapping element) if per-item activation is needed.
@@ -1555,6 +1657,10 @@ with the stale markup sitting inert in the light DOM — no error anywhere.
   library's own original shape and is where per-row icons, secondary descriptions and badges live —
   the declarative model has none of those. `<lr-tree>` creates and reconciles the
   `<lr-tree-item>` children by `id`, and each item renders its own subtree into its own shadow root.
+  Every reachable `TreeItem.id` must be globally unique. For invalid duplicate input, the first
+  depth-first occurrence owns the public id; later occurrences remain visible but render disabled
+  and cannot receive focus, selection, expansion, or reorder requests. Supplying unique refreshed
+  data releases that fail-closed state.
 
 A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
 and `data` is ignored. The empty state renders only when neither model has any items.
@@ -1572,15 +1678,20 @@ ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated `keydown` 
 deeply-nested node's own shadow root still reaches it).
 
 **Properties:**
+
 - `data: TreeItem[] = []` (attribute: false) — the object child model; ignored while any
   author-written `<lr-tree-item>` child is present. `TreeItem { id: string; label: string; children?:
-  TreeItem[]; selected?: boolean; disabled?: boolean; lazy?: boolean; badge?: string | number; badges?: TreeBadge[];
-  icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
-  string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
+TreeItem[]; selected?: boolean; disabled?: boolean; lazy?: boolean; badge?: string | number; badges?: TreeBadge[];
+icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
+string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
   `'neutral'|'brand'|'success'|'warning'|'danger'`. The legacy singular `badge` renders first;
   `badges` adds tone-mapped chips after it and each chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
-  `accessibleLabel` names the `role="treeitem"` host without changing its visible label
+  `accessibleLabel` names the `role="treeitem"` host without changing its visible label. An
+  author-supplied host `aria-label` takes precedence by presence and is never overwritten or
+  removed by later object refreshes; removing the author attribute restores the current data name.
+  `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
+  the complete reachable hierarchy; later duplicate occurrences fail closed as described above
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -1596,7 +1707,7 @@ deeply-nested node's own shadow root still reaches it).
 **Read-only getter:** `selectedItems: LyraTreeItem[]` returns selected item elements in document
 order, including derived fully-selected parents in either multiple mode.
 
-**Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
+**Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
 child) or moves into an already-expanded node's first child. ArrowLeft collapses an expanded node, or
 moves focus to its parent. Home/End jump to the first/last visible node. Enter/Space activate
@@ -1614,8 +1725,8 @@ on `<body>` and kill every later arrow press. Marking the focused item inert the
 roving stop to the next reachable row instead of stranding it, and the state is observed live
 (`attributeFilter: ['selected', 'disabled', 'inert', 'lazy']`). Two deliberate limits:
 
-- **Only inertness *inside* the tree counts** — the item's own `inert`, or that of an ancestor item
-  between it and the `<lr-tree>`. An inert ancestor *outside* the tree (the page behind an open
+- **Only inertness _inside_ the tree counts** — the item's own `inert`, or that of an ancestor item
+  between it and the `<lr-tree>`. An inert ancestor _outside_ the tree (the page behind an open
   modal) inerts every item uniformly, and excluding them all would empty the walk, null out
   `activeId`, and leave the tree with no `tabindex="0"` stop for anything to restore once the dialog
   closes. That case needs no handling: focus cannot be inside the tree at all.
@@ -1630,7 +1741,10 @@ cycle).
 `selectedItems` array) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
-moved node. `parentId` is `null` for a top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
+moved node. The live region likewise announces a completed move only after the rendered sibling
+order confirms the exact requested swap. Ignored or rejected requests stay silent, and unrelated
+updates do not prematurely discard an asynchronously persisted request. `parentId` is `null` for a
+top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
 indices**, not positions in the flattened visible list. The move is constrained to one sibling list
 and never fires at a subtree boundary, so a reorder can never become a reparent: Ctrl+ArrowDown on
 the last child of a subtree is ambiguous (the visually next row is a top-level uncle, so "move down"
@@ -1659,13 +1773,14 @@ itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guid
 
 One row of the tree, in either child model. `role="treeitem"` (plus
 `aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset`/`aria-selected` and the roving
-`tabindex`, driven by `<lr-tree>`) live on the *host* element itself, not an internal row `<div>` —
+`tabindex`, driven by `<lr-tree>`) live on the _host_ element itself, not an internal row `<div>` —
 so this node's own nested children (whether rendered in its own shadow root or projected from the
 light DOM, as further `role="group"` content) are genuine DOM descendants of the treeitem, matching
 the WAI-ARIA treeitem pattern's containment expectation.
 
 **Properties — declarative model** (write these as attributes; `item` data seeds the matching state
 when assigned):
+
 - `label: string = ''` — the row's label, used only when nothing is slotted into the default slot
 - `disabled: boolean = false` (reflected) — removes the item from roving focus and blocks
   select/toggle activation
@@ -1675,6 +1790,7 @@ when assigned):
   `lr-lazy-load` until children arrive or `lazy` is cleared
 
 **Properties — data model:**
+
 - `item: TreeItem` (attribute: false) — the whole subtree as one object, normally assigned by
   `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
   `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
@@ -1684,6 +1800,7 @@ when assigned):
   cyclic `TreeItem` graph before it recurses; pushed down by the parent item
 
 **Properties — shared:**
+
 - `expanded: boolean = false` (reflected)
 - `depth: number = 0` — nesting depth, `0` at top level; feeds `aria-level` (`depth + 1`) and the
   `--lr-tree-depth` indent. Clamped to a finite integer `>= 0`
@@ -1699,16 +1816,18 @@ when assigned):
 
 **Read-only getters** — each answers for whichever child model is in use, which is what lets
 `<lr-tree>` drive both with one implementation:
+
 - `nodeId: string` — this item's identity: `item.id` in the data model, or a generated per-element
   id in the declarative one (where the markup carries no id of its own). It is the `id` every
   `lr-node-toggle` / `lr-node-select` / `lr-reorder` detail carries, and what the tree tracks its
   roving tabindex by
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
   declarative one
-- `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements:
-  `item.accessibleLabel || item.label` in the data model; a host `aria-label`, then flattened
-  accessibility-visible slotted label text (nested items excluded), then the `label` fallback in
-  the declarative one. Direct and forwarding-slot text/ARIA/visibility mutations update the name
+- `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements: a host
+  `aria-label` is authoritative in both models; otherwise `item.accessibleLabel || item.label` in
+  the data model, or flattened accessibility-visible slotted label text (nested items excluded)
+  followed by the `label` fallback in the declarative one. Direct and forwarding-slot
+  text/ARIA/visibility mutations update the name
 - `hasChildren: boolean` — whether this node has at least one child in whichever model is in use.
   Leaf nodes never expose `aria-expanded` and cannot expand or collapse. It also reports `false`
   past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
@@ -1756,6 +1875,11 @@ the declarative model has no icon/description/badge inputs, so a row written as 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
 `--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
+`--lr-tree-checkbox-checked-border-color`, `--lr-tree-checkbox-checked-bg`,
+`--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
+`--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
+theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
+fallbacks); and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
 badge property falls back to its corresponding shared semantic token. The expanded names are
@@ -1771,14 +1895,17 @@ The data model — icons, descriptions and badges live here:
 ```html
 <lr-tree></lr-tree>
 <script>
-  document.querySelector('lr-tree').data = [
+  document.querySelector("lr-tree").data = [
     {
-      id: '1',
-      label: 'Root',
-      description: 'Two child documents',
-      accessibleLabel: 'Root, two child documents',
-      icon: document.createTextNode('◇'),
-      children: [{ id: '1a', label: 'Child A' }, { id: '1b', label: 'Child B', badge: 3 }],
+      id: "1",
+      label: "Root",
+      description: "Two child documents",
+      accessibleLabel: "Root, two child documents",
+      icon: document.createTextNode("◇"),
+      children: [
+        { id: "1a", label: "Child A" },
+        { id: "1b", label: "Child B", badge: 3 },
+      ],
     },
   ];
 </script>
@@ -1797,6 +1924,7 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
 ```
 
 **Known gotchas:**
+
 - all four previously-known ARIA gaps in this pair are fixed: the treeitem row is now genuinely
   keyboard-operable with a roving tabindex and full arrow-key navigation (not just the expand/collapse
   button); the expanded-children `role="group"` is now a real DOM descendant of its `role="treeitem"`
@@ -1833,13 +1961,17 @@ itself — every edit intent is an event the host applies, mirroring `lr-stepper
 controlled-component contract.
 
 **Properties:**
+
 - `nodes: FlowNode[] = []` (attribute: false) — `FlowNode { id: string; type?: string; position?: {
-  x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
-  FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
-  `data.description` feed the default `<lr-flow-node>` card when no matching light-DOM child exists
+x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
+FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
+  `data.description` feed the default `<lr-flow-node>` card when no matching light-DOM child exists.
+  Replacing the array retires any active node drag or pointer/keyboard connection, rolls its preview
+  back, and removes global listeners before a captured id can outlive the controlled model. An
+  independent background pan continues.
 - `edges: FlowEdge[] = []` (attribute: false) — `FlowEdge { id: string; source: string; target:
-  string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
-  'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
+string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
+'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
   unlike `lr-graph`'s spoken-only `GraphLink.label`)
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
@@ -1847,7 +1979,9 @@ controlled-component contract.
 - `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
   `lr-node-palette` drag sets, emitting `lr-node-add`
 - `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
-  gesture flags
+  gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
+  cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
+  window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — seed or
   replace selection state. Node/edge activation and clear-selection gestures also update these
   arrays internally before emitting `lr-selection-change`; a host may assign its own authoritative
@@ -1858,8 +1992,8 @@ controlled-component contract.
 - `layerGap: number = 64` (attribute `layer-gap`), `nodeGap: number = 24` (attribute `node-gap`) —
   auto-layout layer/sibling spacing
 - `decorations: FlowRunDecorations | null = null` (attribute: false) — `Record<nodeOrEdgeId,
-  FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
-  progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lr-flow-node`
+FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
+progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lr-flow-node`
   cards, typically supplied via a `lr-flow-run-overlay`
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (read-only getter) — `{ x, y, zoom }`, the current pan/zoom state
@@ -1870,6 +2004,11 @@ controlled-component contract.
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
+All viewport-mutating methods, including `focusNode()`, are inert while `locked`; coordinate mapping
+and companion subscription remain available because neither mutates viewport or edit state.
+`FlowStructureSnapshot.viewport` contains `{ x, y, zoom, width, height, minZoom, maxZoom }`; its
+`minZoom`/`maxZoom` are finite, positive, and sorted even when the corresponding public inputs are
+invalid or reversed. Bound changes publish a fresh coalesced snapshot.
 
 **Events:** `lr-node-click` (`detail: { id }`), `lr-edge-click` (`detail: { id, source, target
 }`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { id,
@@ -1880,25 +2019,36 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 unpositioned nodes).
 
 **Slots:** default (`lr-flow-node` children adopted by `node-id`; a non-matching child is ignored
-with a console warning), `top-start`, `top-end` (floating corner overlays), `bottom-start` (e.g.
-`lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`).
+with a console warning), `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
+`lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`). Opposite-side slots share wrapping top
+and bottom rails, so wide companions stack without intersecting in narrow allocations.
 
-**CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `arrowhead`, `stub`
+**CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `edge-hit-area`,
+`arrowhead`, `stub`
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
-`live-region`, `edge-list` (a visually hidden list of every edge).
+`node-control` (the native per-node roving/activation control), `live-region`, `edge-list` (a
+visually hidden list of every edge), `overlay-rail` (the wrapping top/bottom companion rail).
 
 `live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
 identical repeated messages are appended as separate announcements.
 
-**Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
-spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over
-the stylesheet fallback whenever a grid is in effect), `--lr-flow-canvas-march-duration` (default
-`var(--lr-transition-ambient)`, running-edge march animation duration), and
+**Themeable custom properties:** `--lr-flow-canvas-grid-size` (default: the finite `grid` property,
+or `8px`; dotted background spacing). Set it on the canvas or a theme ancestor to override that
+property-derived fallback. Each edge tone colors its stroke and the arrowhead marker it references:
+`--lr-flow-canvas-edge-neutral-color` (default `var(--lr-color-border)`),
+`--lr-flow-canvas-edge-accent-color` (default `var(--lr-color-brand)`),
+`--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
+`--lr-flow-canvas-edge-warning-color` (default `var(--lr-color-warning)`), and
+`--lr-flow-canvas-edge-danger-color` (default `var(--lr-color-danger)`).
+`--lr-flow-canvas-march-duration` (default
+`var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
+the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
+`linear` timing function), and
 `--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
 of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
 an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
-the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
+the element _or any ancestor_. It exists because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
 only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
 that reads it. The same restriction motivates three more state-scoped outline colors:
@@ -1909,7 +2059,7 @@ a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-co
 viewport itself while a palette item is dragged over it (`droppable`). A fifth,
 `--lr-flow-canvas-node-hover-outline-color` (default `var(--lr-color-border-strong)`) — the
 mouse-hover preview of a node's own `:focus-visible` ring — exists for a different reason than the
-four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` *is* valid
+four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` _is_ valid
 CSS here, but the internal `[part='node']:hover` rule still out-specifies it ((0,2,0) vs. (0,1,1)),
 which this custom property sidesteps the same way. Set it to `transparent` to opt out of the hover
 treatment entirely.
@@ -1917,23 +2067,33 @@ treatment entirely.
 **Optional peer deps:** none.
 
 ```html
-<lr-flow-canvas id="canvas" nodes-draggable connectable droppable style="height:480px"></lr-flow-canvas>
-<lr-flow-controls slot="bottom-start" for="canvas"></lr-flow-controls>
-<lr-flow-minimap slot="bottom-end" for="canvas"></lr-flow-minimap>
+<lr-flow-canvas
+  id="canvas"
+  nodes-draggable
+  connectable
+  droppable
+  style="height:480px"
+>
+  <lr-flow-controls slot="bottom-start" for="canvas"></lr-flow-controls>
+  <lr-flow-minimap slot="bottom-end" for="canvas"></lr-flow-minimap>
+</lr-flow-canvas>
 <script>
-  const canvas = document.getElementById('canvas');
+  const canvas = document.getElementById("canvas");
   canvas.nodes = [
-    { id: 'a', data: { label: 'Fetch' } },
-    { id: 'b', data: { label: 'Transform' } },
+    { id: "a", data: { label: "Fetch" } },
+    { id: "b", data: { label: "Transform" } },
   ];
-  canvas.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
-  canvas.addEventListener('lr-node-move', (e) => {
-    canvas.nodes = canvas.nodes.map((n) => (n.id === e.detail.id ? { ...n, position: e.detail.position } : n));
+  canvas.edges = [{ id: "a-b", source: "a", target: "b" }];
+  canvas.addEventListener("lr-node-move", (e) => {
+    canvas.nodes = canvas.nodes.map((n) =>
+      n.id === e.detail.id ? { ...n, position: e.detail.position } : n
+    );
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - `nodes` and `edges` are controlled inputs: move, connect, add, and delete events are requests the
   host applies back. Selection is hybrid state: `selectedNodeIds`/`selectedEdgeIds` accept external
   replacement, while node/edge activation and clear-selection gestures update them internally and
@@ -1965,6 +2125,7 @@ activation, selection, movement, and connection are all `lr-flow-canvas` events;
 owns none of that.
 
 **Properties:**
+
 - `nodeId: string = ''` (attribute `node-id`)
 - `heading: string = ''`
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
@@ -1994,8 +2155,8 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 (default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
 `--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
 `selected`. Like the other state-scoped custom properties here they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so they can be set on the element *or any
-ancestor* (a canvas retunes every card at once); overriding the selection color otherwise means
+their point of use rather than `:host` declarations, so they can be set on the element _or any
+ancestor_ (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
 `--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
 `status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
@@ -2007,15 +2168,25 @@ to the shared border-strong, brand, success, danger, and warning tokens;
 `--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
 `--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
 `--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
-`--lr-flow-node-status-denied-color`.
+`--lr-flow-node-status-denied-color`. `--lr-flow-node-progress-track-color` (default
+`var(--lr-color-border)`) and `--lr-flow-node-progress-fill-color` (default
+`var(--lr-color-brand)`) independently retint the determinate progress track and fill. All of
+these hooks inherit, so one canvas-level override can retint every descendant node without
+changing a library-wide semantic token.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-flow-node node-id="a" heading="Fetch" status="running" progress="40"></lr-flow-node>
+<lr-flow-node
+  node-id="a"
+  heading="Fetch"
+  status="running"
+  progress="40"
+></lr-flow-node>
 ```
 
 **Known gotchas:**
+
 - A running node's card pulses (`?data-pulse`) unless `prefers-reduced-motion` is set — the same
   reduced-motion exception every animated surface in this library follows.
 - `status` drives a status chip with a localized label plus `statusDetail`/`durationMs`, never a
@@ -2037,6 +2208,7 @@ geometry always comes from the canvas's `registerCompanion()` snapshots, so the 
 disagree.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; when empty, the nearest ancestor canvas
   is used (the slotted-into-a-corner-slot case, the primary wiring)
 - `label: string = ''` — accessible name for the map region. A host `aria-label` takes precedence,
@@ -2047,7 +2219,8 @@ disagree.
 **Slots:** none.
 
 **CSS parts:** `base`, `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
-draggable, focusable view rectangle).
+draggable, focusable view rectangle), `instructions` (visually hidden keyboard help), and
+`live-region` (the `aria-hidden` mirror of the latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
 `--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
@@ -2067,18 +2240,23 @@ success, danger, and warning colors respectively. Their expanded names are
 ```
 
 **Known gotchas:**
+
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
   from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
   currently renders.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
-  event to wire up.
+  event to wire up. A completed drag consumes only the browser-synthesized click following its
+  `pointerup`; a canceled or lost-capture drag leaves the next genuine map click available for
+  click-to-center navigation.
 
 **Additional API surface:**
 
 - `part="instructions"` — Visually hidden keyboard instructions for the viewport.
 - `part="live-region"` — Visually hidden, `aria-hidden` mirror of the latest viewport-change text.
-  The initial companion snapshot is silent; interaction-requested changes append to the document's
-  shared light-DOM polite sink, including repeated identical snapshots.
+  The initial companion snapshot is silent. Keyboard, map-click, and wheel viewport changes append
+  their next rAF-coalesced snapshot to the document's shared light-DOM polite sink; a completed
+  viewport drag appends its final position once, while canceled/lost-capture drags remain silent.
+  Repeated identical snapshots are still separate additions.
 
 ---
 
@@ -2086,9 +2264,12 @@ success, danger, and warning colors respectively. Their expanded names are
 
 The canvas's button cluster: zoom in/out, fit, and interaction lock, so every flow surface ships the
 same affordances without hosts rebuilding them. Manipulates only view state, never `nodes`/`edges` —
-no editing commands live here.
+no editing commands live here. Zoom-in/out disabled state reads the canvas snapshot's effective
+finite, sorted bounds, so invalid or reversed raw `minZoom`/`maxZoom` values cannot disable an
+otherwise available direction.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
@@ -2121,6 +2302,7 @@ hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-colo
 ```
 
 **Known gotchas:**
+
 - `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
   the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
   its types, so registration order between them and the canvas never matters.
@@ -2139,9 +2321,10 @@ strip. Summary/count text and slotted host chrome wrap within narrow allocations
 poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `decorations: FlowRunDecorations = {}` (attribute: false) — `Record<nodeOrEdgeId,
-  FlowRunDecoration>`, pushed verbatim onto the resolved canvas's own `decorations` property
+FlowRunDecoration>`, pushed verbatim onto the resolved canvas's own `decorations` property
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
@@ -2182,14 +2365,15 @@ brand, success, danger, and warning tokens. Their expanded names are
   <lr-flow-run-overlay slot="top-start" for="canvas"></lr-flow-run-overlay>
 </lr-flow-canvas>
 <script>
-  document.querySelector('lr-flow-run-overlay').decorations = {
-    a: { status: 'success', durationMs: 820 },
-    b: { status: 'running', progress: 40 },
+  document.querySelector("lr-flow-run-overlay").decorations = {
+    a: { status: "success", durationMs: 820 },
+    b: { status: "running", progress: 40 },
   };
 </script>
 ```
 
 **Known gotchas:**
+
 - Purely a pushed-state conduit: it never starts, stops, or times a run itself — the host recomputes
   `decorations` (including `durationMs`) on whatever cadence its own execution engine ticks at.
 - `for` resolution matches `lr-flow-minimap`/`lr-flow-controls`.
@@ -2206,8 +2390,9 @@ one exception is the plain arithmetic sum of segment values used to build the ac
 used" summary.
 
 **Properties:**
+
 - `segments: ContextMeterSegment[] = []` (attribute: false, JS-only) — `{ label: string; value:
-  number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an *absolute*
+number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an _absolute_
   quantity measured against `total`, never a pre-computed percentage.
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
@@ -2223,9 +2408,10 @@ A host `aria-label` overrides the generated meter summary and is preserved acros
 
 **Slots:** none.
 
-**CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `track` (the unfilled/empty
-capacity), `segment` (one occupied segment — carries `data-tone` and, for custom colors,
-`--lr-context-meter-segment-color`), `label`
+**CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `semantic` (the visually hidden
+meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
+`data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
+category list), `segment-item` (one hidden category/value entry), and `label`
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied; otherwise the component consumes shared tokens
@@ -2257,7 +2443,7 @@ each labeled quantity, while the visible track, segments, ring SVG, and visible 
 `aria-hidden`. The summary's "used" figure is the sum of
 `segments[].value`, clamped to `total` whenever `total > 0` so the announced text can never claim
 more than 100% used (e.g. `segments` summing to `150000` against `total="128000"` still announces
-`"128,000 of 128,000 used"`) — matching what the *visual* meter shows, since each segment's ratio is
+`"128,000 of 128,000 used"`) — matching what the _visual_ meter shows, since each segment's ratio is
 independently clamped so the running cumulative fill across all segments can never exceed 100% of the
 bar/ring either: an over-`total` `segments` array renders as a fully (not over-) filled meter, with
 later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
@@ -2267,6 +2453,7 @@ just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `seg
 numbers, so the two circular-meter components in the library share one visual scale.
 
 **Known gotchas:**
+
 - The ring variant's per-segment `<title>` and the bar variant's per-segment `title=` attribute are
   native mouse-hover tooltips only — they sit inside `aria-hidden` markup. Screen readers use the
   hidden meter/group summary and segment list instead.
@@ -2290,8 +2477,9 @@ numbers, so the two circular-meter components in the library share one visual sc
 Responsive month calendar with event markers and an agenda view.
 
 **Properties:**
+
 - `events: CalendarEvent[] = []` (attribute: false) — `{ id?, date, title, start?, end?, color?,
-  data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is sanitized before being used as the
+data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is sanitized before being used as the
   marker background
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
@@ -2319,11 +2507,13 @@ the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `t
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
-≤ 28rem), and `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) — background of
-a selected (`data-selected="true"`) day cell. Component-scoped indirection over the shared
-`--lr-color-brand-quiet` token, so a consumer can retint the persistent selected-day highlight
-without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
-token directly for a visually distinct purpose (transient hover feedback).
+≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected
+day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and
+`--lr-calendar-day-outside-bg` (default `var(--lr-color-surface)`) for adjacent-month days; and
+`--lr-calendar-day-today-outline-color` (default `var(--lr-color-brand)`) for today's outline.
+These state hooks use inline fallbacks at their paint rules, so an application theme can set them
+on an ancestor. They keep persistent selection, outside-month chrome, and today's outline
+independent from shared tokens that also drive unrelated component states.
 
 Month-view `[part='event']` markers are real keyboard-focusable buttons inside a non-interactive
 `role="gridcell"` day container; Enter/Space activates the same `lr-event-select` path as a pointer.
@@ -2358,9 +2548,11 @@ inactive).
 **Events:** none on either element. Listen to the native `slotchange` if you need item-count changes.
 
 **Slots:** `lr-timeline`'s default slot holds the items, in display order. On an item the **default
-slot is the title** (there is no `title` slot), plus `icon` (marker glyph override; falls back to a
-color-coded dot), `timestamp` (wins outright over the `timestamp` property whenever it has assigned
-content), and `description` (its part is hidden entirely when empty).
+slot is the title** (there is no `title` slot), plus `marker-icon` (canonical marker glyph override),
+`icon` (legacy marker-glyph alias retained as the fallback; `marker-icon` takes precedence when both
+are filled, and an empty pair falls back to a color-coded dot), `timestamp` (wins outright over the
+`timestamp` property whenever it has assigned content), and `description` (its part is hidden
+entirely when empty).
 
 **CSS parts:** timeline `base` — the `role="list"` flex container (no separate `list` part). Item:
 `base`, `track` (marker + rail spine, always the opposite axis from `base`), `marker`
@@ -2375,8 +2567,8 @@ inter-item spacing and the length each rail bridges. On the item: `--lr-timeline
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, swapped per `variant`; setting it directly on an item wins over the
-variant default).
+`var(--lr-color-text-quiet)`, swapped per `variant`). All four item hooks inherit from theme
+ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 **Internal, not public:** `--lr-timeline-item-direction`, `--lr-timeline-item-track-direction`,
 `--lr-timeline-item-gap-block-end` and `--lr-timeline-item-gap-inline-end` (set by `lr-timeline`'s
@@ -2423,7 +2615,7 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
 `var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
-can be set on the element *or any ancestor*. They exist because
+can be set on the element _or any ancestor_. They exist because
 `::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so restyling the pressed state otherwise required overriding the
 library-wide brand tokens.
@@ -2441,11 +2633,19 @@ parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
+Internal search `lr-input`, tag-filter `change`, and checkbox `lr-change` events stop at the
+component's translation boundary. Listen for `lr-filter-change` and `lr-selection-change`; one
+interaction emits one documented host contract without also leaking the composed child event.
 
 ## `lr-graph-query-builder`
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
+
+The normalized `value` present at the first update is the form reset default. Later property writes
+and user edits change only the live query; `form.reset()` restores that initial model, clears
+interaction/touched state and the save-name draft, and retains a caller-set custom validity message
+like a native control.
 
 Removing a focused relationship/node filter chip moves focus to the adjacent chip, or to that
 filter's add picker when no chips remain. `savedQueries` is controlled: when the host applies a
@@ -2482,6 +2682,22 @@ form-associated control in this library exposes — see `lr-select`), `path-fiel
 `save-row`, `save-name-input`, `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`,
 `saved-load-button`, `saved-delete-button`, `saved-empty`.
 
+**Themeable custom properties:** the Run button exposes `--lr-graph-query-builder-run-bg`,
+`--lr-graph-query-builder-run-border-color`, and `--lr-graph-query-builder-run-color` for its
+resting longhands plus `--lr-graph-query-builder-run-hover-bg` and
+`--lr-graph-query-builder-run-active-bg`; the Save button exposes
+`--lr-graph-query-builder-save-bg`, `--lr-graph-query-builder-save-border-color`,
+`--lr-graph-query-builder-save-color`, `--lr-graph-query-builder-save-hover-bg`, and
+`--lr-graph-query-builder-save-active-bg`. Saved-query actions use
+`--lr-graph-query-builder-saved-load-color`, `--lr-graph-query-builder-saved-load-active-bg`,
+`--lr-graph-query-builder-saved-delete-color`,
+`--lr-graph-query-builder-saved-delete-hover-color`,
+`--lr-graph-query-builder-saved-delete-active-color`, and
+`--lr-graph-query-builder-saved-delete-active-bg`. Unset hooks preserve the current shared
+surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
+longhand that consumes them, so an override on a parent themes every descendant builder without
+being shadowed by a declaration on the component host.
+
 **Additional API surface:**
 
 - `errorText` — Caller-supplied outer error text. Field-level validation remains on the affected controls. Type: `string`.
@@ -2498,6 +2714,11 @@ AND/OR combinator.
 
 **Properties:** `fields`, `value`, `disabled`.
 
+For a field declared as `type: 'number'`, non-finite controlled values normalize to `undefined`.
+The same applies when field metadata arrives after `value`, and when a numeric input string
+overflows to positive or negative infinity. The rendered blank number field therefore agrees with
+the model, and serializing the query cannot silently turn infinity into JSON `null`.
+
 **Methods:** `addCondition()` appends a condition using the first available field and emits
 `lr-add-condition`; it is a no-op while disabled or when there are no fields.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
@@ -2506,3 +2727,7 @@ no-op while disabled or when the id is absent.
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
 `condition`, `field-select`, `operator-select`, `value`, `combinator`, `add-button`,
 `remove-button`, `empty`.
+
+At allocations of 320px or less, each condition stacks its composed field/operator/value controls
+into one column. Long field labels and localized operator text remain contained and ellipsize inside
+the nested `lr-select` triggers in both LTR and RTL; they do not widen the host or document.

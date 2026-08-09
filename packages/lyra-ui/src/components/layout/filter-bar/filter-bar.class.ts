@@ -169,6 +169,59 @@ export interface LyraFilterBarEventMap {
 const EMPTY_FILTERS: FilterBarFilterDefinition[] = [];
 const EMPTY_VALUE: FilterBarValue = {};
 
+const SELECT_EXPORT_PARTS = [
+  "form-control-label: filter-control-label",
+  "trigger: filter-control-field",
+  "display-input: filter-control-input",
+  "start: filter-control-start",
+  "end: filter-control-end",
+  "listbox: filter-control-listbox",
+  "option: filter-control-option",
+  "clear-button: filter-control-clear-button",
+  "expand-icon: filter-control-expand-icon",
+  "error: filter-control-error",
+  "hint: filter-control-hint",
+].join(", ");
+
+const COMBOBOX_EXPORT_PARTS = [
+  "form-control-label: filter-control-label",
+  "combobox: filter-control-field",
+  "combobox-input: filter-control-input",
+  "start: filter-control-start",
+  "end: filter-control-end",
+  "listbox: filter-control-listbox",
+  "option: filter-control-option",
+  "clear-button: filter-control-clear-button",
+  "expand-icon: filter-control-expand-icon",
+  "error: filter-control-error",
+  "hint: filter-control-hint",
+].join(", ");
+
+const INPUT_EXPORT_PARTS = [
+  "form-control-label: filter-control-label",
+  "input-wrapper: filter-control-field",
+  "input: filter-control-input",
+  "start: filter-control-start",
+  "end: filter-control-end",
+  "clear-button: filter-control-clear-button",
+  "error: filter-control-error",
+  "hint: filter-control-hint",
+].join(", ");
+
+const DATE_INPUT_EXPORT_PARTS = [
+  "form-control-label: filter-control-label",
+  "input-wrapper: filter-control-field",
+  "input: filter-control-input",
+  "start: filter-control-start",
+  "end: filter-control-end",
+  "clear-button: filter-control-clear-button",
+  "expand-button: filter-control-expand-button",
+  "expand-icon: filter-control-expand-icon",
+  "popup: filter-control-popup",
+  "error: filter-control-error",
+  "hint: filter-control-hint",
+].join(", ");
+
 /** A filter's value counts as "active" (shown as a chip, counted toward `hasActiveFilters`,
  *  satisfying `required`) once it's neither absent, `''`, nor `[]`. */
 function isSet(value: FilterBarFieldValue): boolean {
@@ -201,7 +254,12 @@ function isSet(value: FilterBarFieldValue): boolean {
  * option, committing a date, removing an active-filter chip, or clicking reset -- goes through
  * the same `setFilterValue()` path and emits a single `lr-input` carrying the *full* resulting
  * `value`, not just the changed filter's own value, mirroring `<lr-tool-param-form>`'s identical
- * "always the whole object" event contract.
+ * "always the whole object" event contract. A composed control's own `lr-input`/`lr-change`
+ * aliases stay inside this wrapper; its native-style `input`/`change` events retain their normal
+ * bubbling path. Date/date-range chip labels localize only
+ * round-trip-valid ISO `YYYY-MM-DD` segments, including literal four-digit years `0000`-`0099`.
+ * Impossible dates, malformed values, and a range with either invalid endpoint remain verbatim so
+ * display never invents a normalized day.
  *
  * Validation is scoped to each filter definition's own `required` flag: `invalidFilterIds`/
  * `checkValidity()` are always live (plain getters over `filters`/`value`, not cached), and
@@ -215,6 +273,12 @@ function isSet(value: FilterBarFieldValue): boolean {
  * and every value it holds already round-trips through `value` directly -- see `disabled` below,
  * a plain property with no `<fieldset disabled>` cascade, for the same reason.
  *
+ * The composed reset action stays on `lr-button`'s default `m` size tier, matching the default
+ * select/combobox/input/date field height beside it instead of introducing a shorter action row.
+ * The active-filter row and its composed chip group also zero every nested flex auto minimum, so
+ * an unbroken localized value stays inside a narrow allocation and the chip's own label ellipsis
+ * remains the overflow owner in both writing directions.
+ *
  * @customElement lr-filter-bar
  * @event lr-input - A filter's value changed (including a chip removal or `reset()`).
  *   `detail: { value, filterId }` -- `value` is always the complete object; `filterId` is the
@@ -225,6 +289,20 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @csspart controls - The row holding every filter control, the reset button, and the loading status.
  * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
  *   custom renderer's control.
+ * @csspart filter-control-label - A built-in control's label element.
+ * @csspart filter-control-field - A built-in control's field frame: select trigger, combobox
+ *   container, or text/date input wrapper.
+ * @csspart filter-control-input - A built-in control's display or editable input.
+ * @csspart filter-control-start - A built-in control's start adornment wrapper.
+ * @csspart filter-control-end - A built-in control's end adornment wrapper.
+ * @csspart filter-control-listbox - A select or combobox options popover.
+ * @csspart filter-control-option - A select or combobox option row.
+ * @csspart filter-control-clear-button - A built-in control's clear action, when rendered.
+ * @csspart filter-control-expand-button - A date input's calendar-popup action.
+ * @csspart filter-control-expand-icon - A select, combobox, or date-input expansion icon.
+ * @csspart filter-control-popup - A date input's positioned calendar popup.
+ * @csspart filter-control-error - A built-in control's validation message.
+ * @csspart filter-control-hint - A built-in control's hint message.
  * @csspart reset-button - The reset `<lr-button>`.
  * @csspart status - The loading `<lr-spinner>`, only rendered while `loading`.
  * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
@@ -259,7 +337,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   };
 
   /** Accessible-name fallback for the root `role="group"` wrapper when the host has no
-   *  `aria-label`, matching `<lr-control-group>`. */
+   *  `aria-label`, matching `<lr-control-group>`. Attribute presence wins, including an
+   *  explicitly empty `aria-label`. */
   @property() label = "";
 
   /** Disables every composed filter control and the reset button. Plain property -- see the
@@ -406,6 +485,13 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     );
   };
 
+  /** Built-in controls keep their native-style `input`/`change` compatibility path, but their
+   * prefixed aliases carry the child control's detail shape and must not impersonate this bar's
+   * single full-value `lr-input` contract at the host boundary. */
+  private stopControlAlias = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onCustomControlChange = (
     def: FilterBarFilterDefinition,
     e: Event,
@@ -531,10 +617,17 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const parseIso = (input: string): Date | undefined => {
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
       if (!match) return undefined;
-      const date = new Date(
-        Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-      );
-      return Number.isNaN(date.getTime()) ? undefined : date;
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const date = new Date(0);
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCFullYear(year, month - 1, day);
+      return date.getUTCFullYear() === year &&
+        date.getUTCMonth() === month - 1 &&
+        date.getUTCDate() === day
+        ? date
+        : undefined;
     };
     const [startText, endText] = value.split("/");
     const start = parseIso(startText ?? "");
@@ -663,6 +756,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         : "";
       return html`<lr-combobox
         part="filter-control"
+        exportparts=${COMBOBOX_EXPORT_PARTS}
         data-filter-id=${def.id}
         .label=${def.label}
         placeholder=${def.placeholder || ""}
@@ -672,6 +766,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         .value=${comboValue}
         ?disabled=${this.disabled}
         @change=${onChange}
+        @lr-input=${this.stopControlAlias}
+        @lr-change=${this.stopControlAlias}
         @focusout=${onFocusout}
         >${(def.options ?? []).map(
           (o) => html`<lr-option value=${o.value}>${o.label}</lr-option>`
@@ -695,6 +791,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       // propagating, exactly as they already do from `lr-select`/`lr-date-input`.
       return html`<lr-input
         part="filter-control"
+        exportparts=${INPUT_EXPORT_PARTS}
         data-filter-id=${def.id}
         type="text"
         .label=${def.label}
@@ -717,6 +814,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     if (def.type === "date" || def.type === "date-range") {
       return html`<lr-date-input
         part="filter-control"
+        exportparts=${DATE_INPUT_EXPORT_PARTS}
         data-filter-id=${def.id}
         .label=${def.label}
         placeholder=${def.placeholder || ""}
@@ -728,6 +826,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         .value=${typeof value === "string" ? value : ""}
         ?disabled=${this.disabled}
         @change=${onChange}
+        @lr-input=${this.stopControlAlias}
+        @lr-change=${this.stopControlAlias}
         @focusout=${onFocusout}
       ></lr-date-input>`;
     }
@@ -736,6 +836,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     // renders a usable, if empty, control instead of vanishing silently).
     return html`<lr-select
       part="filter-control"
+      exportparts=${SELECT_EXPORT_PARTS}
       data-filter-id=${def.id}
       .label=${def.label}
       placeholder=${def.placeholder || ""}
@@ -744,6 +845,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       .value=${typeof value === "string" ? value : ""}
       ?disabled=${this.disabled}
       @change=${onChange}
+      @lr-input=${this.stopControlAlias}
+      @lr-change=${this.stopControlAlias}
       @focusout=${onFocusout}
       >${(def.options ?? []).map(
         (o) => html`<lr-option value=${o.value}>${o.label}</lr-option>`
@@ -752,8 +855,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   override render(): TemplateResult {
-    const accessibleLabel =
-      this.getAttribute("aria-label") || this.label || nothing;
+    const accessibleLabel = this.hasAttribute("aria-label")
+      ? this.getAttribute("aria-label")!
+      : this.label || nothing;
     const active = this.activeEntries;
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
@@ -762,7 +866,6 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
           <lr-button
             part="reset-button"
             appearance="quiet"
-            size="s"
             ?disabled=${this.disabled || this.loading || !this.hasActiveFilters}
             @click=${() => this.reset()}
           >

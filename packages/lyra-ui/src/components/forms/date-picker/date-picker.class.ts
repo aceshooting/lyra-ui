@@ -54,6 +54,8 @@ export interface DateRange {
 
 export type LyraDatePickerPageBy = 'months' | 'single';
 export type LyraDatePickerView = 'days' | 'months' | 'years' | 'decades';
+export type LyraDatePickerFirstDayOfWeek =
+  | 'auto' | 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
 export type LyraDatePickerDisabledDates = string | string[] | Date[];
 export type LyraDatePickerDayContent = (date: Date) => unknown;
 
@@ -119,8 +121,8 @@ export interface LyraDatePickerEventMap {
  * @slot next-icon - Replaces the next-page icon.
  * @slot footer - Content below the calendar grids.
  * @slot day-YYYY-MM-DD - Lyra extension for replacing an individual ISO calendar day's content.
- * @csspart date-picker - The date-picker wrapper.
- * @csspart base - The date-picker wrapper.
+ * @csspart date-picker - The visible date-picker shell.
+ * @csspart base - Deprecated compatibility alias on the same visible shell; use `date-picker`.
  * @csspart months - The visible-month collection.
  * @csspart month - A visible month wrapper.
  * @csspart header - The month header.
@@ -155,11 +157,34 @@ export interface LyraDatePickerEventMap {
  * @csspart view-item-disabled - A disabled selection item.
  * @csspart view-item-selected - The item containing the selected date.
  * @csspart view-item-today - The item containing today.
+ * @cssprop [--lr-cell-size=var(--lr-size-2-25rem)] - Inline and block size of each day cell and
+ *   the matching calendar grid track.
  * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
  * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
  * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
  * @cssprop [--lr-date-picker-nav-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the
  *   `[part="previous"]`/`[part="next"]` month-navigation buttons.
+ * @cssprop [--lr-date-picker-nav-active-bg=color-mix(in oklab, var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed month-navigation background.
+ * @cssprop [--lr-date-picker-title-hover-color=var(--lr-color-brand)] - Hovered title color.
+ * @cssprop [--lr-date-picker-title-active-color=var(--lr-color-brand)] - Pressed title color.
+ * @cssprop [--lr-date-picker-title-active-bg=var(--lr-color-brand-quiet)] - Pressed title background.
+ * @cssprop [--lr-date-picker-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
+ * @cssprop [--lr-date-picker-day-active-bg=color-mix(in oklab, var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
+ * @cssprop [--lr-date-picker-day-outside-color=var(--lr-color-text-quiet)] - Adjacent-month day color.
+ * @cssprop [--lr-date-picker-today-outline=var(--lr-color-brand)] - Today outline color.
+ * @cssprop [--lr-date-picker-range-bg=var(--lr-color-brand-quiet)] - Selected-range interior background.
+ * @cssprop [--lr-date-picker-range-preview-bg=var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet))] - Pending-range preview background.
+ * @cssprop [--lr-date-picker-range-color=var(--lr-color-text)] - Adjacent-month range text color.
+ * @cssprop [--lr-date-picker-selected-bg=var(--lr-color-brand)] - Selected day/range-endpoint background.
+ * @cssprop [--lr-date-picker-selected-color=var(--lr-color-on-brand)] - Selected day/range-endpoint text color.
+ * @cssprop [--lr-date-picker-disabled-color=var(--lr-color-text-quiet)] - Disabled day text color.
+ * @cssprop [--lr-date-picker-disabled-opacity=var(--lr-opacity-disabled)] - Disabled day opacity.
+ * @cssprop [--lr-date-picker-view-hover-bg=var(--lr-color-brand-quiet)] - Selection-view item hover background.
+ * @cssprop [--lr-date-picker-view-active-bg=color-mix(in oklab, var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Selection-view item pressed background.
+ * @cssprop [--lr-date-picker-view-selected-bg=var(--lr-color-brand)] - Selected selection-view item background.
+ * @cssprop [--lr-date-picker-view-selected-color=var(--lr-color-on-brand)] - Selected selection-view item text color.
+ * @cssprop [--lr-date-picker-view-today-outline=var(--lr-color-brand)] - Current-period selection-view outline.
+ * @cssprop [--lr-date-picker-view-disabled-opacity=var(--lr-opacity-disabled)] - Disabled selection-view item opacity.
  * @cssstate disabled - Matches while date selection and navigation are disabled.
  * @cssstate range - Matches while `mode="range"` is active.
  * @cssstate readonly - Matches while selection is read-only.
@@ -197,7 +222,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
   @property({ reflect: true }) override locale = '';
-  @property({ attribute: 'first-day-of-week', reflect: true }) firstDayOfWeek = 'auto';
+  @property({ attribute: 'first-day-of-week', reflect: true })
+  firstDayOfWeek: LyraDatePickerFirstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter, reflect: true }) weekdayFormat: WeekdayFormat = 'short';
   @property({ type: Boolean, attribute: 'disable-past', reflect: true }) disablePast = false;
   @property({ type: Boolean, attribute: 'disable-future', reflect: true }) disableFuture = false;
@@ -1025,8 +1051,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
         );
       }
     }
-    return html`<div part="base">
-      <div part="date-picker">
+    return html`<div part="base date-picker">
+      <div>
         ${this.effectiveView === 'days'
           ? html`<div part="months">${monthEls}</div>`
           : this.renderView(today)}

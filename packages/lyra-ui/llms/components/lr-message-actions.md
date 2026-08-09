@@ -23,7 +23,9 @@ alike — via `.focus()`. Only the plain-button built-ins (`regenerate`/`edit`) 
 toggled by this component itself; a composite child (`lr-copy-button`, the `feedback` built-in, any
 slotted custom element) remains independently reachable via the page's native Tab order alongside the
 toolbar's single roving stop, since a shadow-root-internal focusable element can't be suppressed from
-outside its own component.
+outside its own component. Disabled, hidden, `aria-hidden`, and inert controls (including controls
+beneath an inert ancestor) are excluded from arrow navigation before the usable roving fallback is
+chosen.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins

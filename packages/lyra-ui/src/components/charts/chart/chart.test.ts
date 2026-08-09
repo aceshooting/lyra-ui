@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
 import { seriesPalette, type LyraChart, type Series } from './chart.js';
@@ -43,13 +44,13 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
   expect(loadingLabel!.textContent).to.equal('Diagramm wird geladen');
   expect(loadingLabel!.hasAttribute('role')).to.be.false;
   expect(loadingLabel!.hasAttribute('aria-live')).to.be.false;
-  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
 
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
 it('announces keyboard datum changes through one light-DOM sink and keeps the shadow copy inert', async () => {
@@ -262,7 +263,7 @@ it('renders a canvas and builds a Chart.js instance once chart.js loads', async 
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const canvas = el.shadowRoot!.querySelector('canvas');
-  expect(canvas).to.exist;
+  expect((canvas) != null).to.equal(true);
 });
 
 it('normalizes an invalid HTML `type` attribute before it can reach Chart.js', () => {
@@ -361,9 +362,29 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(chart.isDatasetVisible(1)).to.be.false;
   expect(
-    [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')]
+    [...el.shadowRoot!.querySelectorAll('[part~="legend-item"]')]
       .map((item) => item.getAttribute('aria-pressed')),
   ).to.deep.equal(['true', 'false']);
+});
+
+it('renders a persistent non-color legend state after hiding a dataset', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+
+  let legendItem = el.shadowRoot!.querySelector<HTMLElement>('[part~="legend-item"]')!;
+  expect(legendItem.getAttribute('aria-pressed')).to.equal('true');
+  expect(legendItem.part.contains('legend-item-hidden')).to.be.false;
+  expect(getComputedStyle(legendItem).textDecorationLine).to.equal('none');
+
+  legendItem.click();
+  await el.updateComplete;
+  legendItem = el.shadowRoot!.querySelector<HTMLElement>('[part~="legend-item"]')!;
+  expect(legendItem.getAttribute('aria-pressed')).to.equal('false');
+  expect(legendItem.part.contains('legend-item-hidden')).to.be.true;
+  expect(getComputedStyle(legendItem).textDecorationLine).to.contain('line-through');
 });
 
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
@@ -389,7 +410,7 @@ it('does not preserve configured hidden state as a legend override when replacem
 
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(
-    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+    el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
   ).to.equal('true');
 });
 
@@ -416,7 +437,7 @@ it('preserves an explicit legend show override for a configured-hidden dataset',
 
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(
-    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+    el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
   ).to.equal('true');
 });
 
@@ -499,7 +520,7 @@ it('renders a newly-added series as pressed in the DOM legend on its first updat
   await el.updateComplete;
 
   const legendItems = [
-    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+    ...el.shadowRoot!.querySelectorAll('[part~="legend-item"]'),
   ];
   expect(chart.isDatasetVisible(1)).to.be.true;
   expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
@@ -527,7 +548,7 @@ it('uses effective dataset hidden state in the DOM legend before Chart.js exists
 
   expect((el as any).chart).to.equal(undefined);
   expect(
-    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+    el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
   ).to.equal('false');
 });
 
@@ -551,7 +572,7 @@ it('uses a newly-added effective dataset hidden flag before the in-place draw', 
   await el.updateComplete;
 
   const legendItems = [
-    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+    ...el.shadowRoot!.querySelectorAll('[part~="legend-item"]'),
   ];
   expect(chart.isDatasetVisible(1)).to.be.false;
   expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
@@ -615,7 +636,7 @@ it('derives legend state from effective data when a type change will rebuild the
   await waitUntil(() => (el as any).chart != null);
   const oldChart = (el as any).chart;
 
-  (el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement).click();
+  (el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement).click();
   await el.updateComplete;
   expect(oldChart.isDatasetVisible(0)).to.be.false;
 
@@ -626,7 +647,7 @@ it('derives legend state from effective data when a type change will rebuild the
   expect(rebuiltChart).to.not.equal(oldChart);
   expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
   expect(
-    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+    el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
   ).to.equal('true');
 });
 
@@ -638,7 +659,7 @@ it('resynchronizes the legend after a plugin change rebuilds the live chart', as
   await waitUntil(() => (el as any).chart != null);
   const oldChart = (el as any).chart;
 
-  (el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement).click();
+  (el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement).click();
   await el.updateComplete;
   expect(oldChart.isDatasetVisible(0)).to.be.false;
 
@@ -659,7 +680,7 @@ it('resynchronizes the legend after a plugin change rebuilds the live chart', as
     expect(rebuiltChart).to.not.equal(oldChart);
     expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
     expect(
-      el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+      el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
     ).to.equal('true');
   } finally {
     (el as any).updateChartArea = originalUpdateChartArea;
@@ -884,11 +905,71 @@ it('updates in place when neither `type` nor the effective `config.type` changes
   expect((el as any).chart).to.equal(instance);
 });
 
-it('gives reset-zoom-button a hover state', () => {
-  // Only the pseudo-class assertion belongs here as cssText -- :hover can't be synthesized on a
-  // real fixture. The font-inheritance half of this rule is proven against a rendered button below.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='reset-zoom-button'\]:hover/);
+it('renders independent hover and pressed theme hooks for each chart control surface', async () => {
+  const el = (await fixture(html`
+    <lr-chart
+      type="bar"
+      legend
+      zoom
+      show-data-table
+      style="
+        --lr-chart-legend-item-hover-bg: rgb(1, 2, 3);
+        --lr-chart-legend-item-active-bg: rgb(4, 5, 6);
+        --lr-chart-data-table-button-hover-bg: rgb(7, 8, 9);
+        --lr-chart-data-table-button-active-bg: rgb(10, 11, 12);
+        --lr-chart-reset-zoom-button-hover-bg: rgb(13, 14, 15);
+        --lr-chart-reset-zoom-button-active-bg: rgb(16, 17, 18);
+      "
+    ></lr-chart>
+  `)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+  (el as any).zoomed = true;
+  await el.updateComplete;
+
+  const controls = [
+    {
+      element: el.shadowRoot!.querySelector<HTMLElement>('[part~="legend-item"]')!,
+      hover: 'rgb(1, 2, 3)',
+      active: 'rgb(4, 5, 6)',
+    },
+    {
+      element: el.shadowRoot!.querySelector<HTMLElement>('[part="data-table"] tbody button')!,
+      hover: 'rgb(7, 8, 9)',
+      active: 'rgb(10, 11, 12)',
+    },
+    {
+      element: el.shadowRoot!.querySelector<HTMLElement>('[part="reset-zoom-button"]')!,
+      hover: 'rgb(13, 14, 15)',
+      active: 'rgb(16, 17, 18)',
+    },
+  ];
+
+  try {
+    for (const control of controls) {
+      const rect = control.element.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await aTimeout(0);
+      expect(getComputedStyle(control.element).backgroundColor).to.equal(control.hover);
+      expect(
+        controls
+          .filter((candidate) => candidate !== control)
+          .map((candidate) => getComputedStyle(candidate.element).backgroundColor),
+      ).to.not.include(control.hover);
+
+      await sendMouse({ type: 'down', button: 'left' });
+      await aTimeout(0);
+      expect(getComputedStyle(control.element).backgroundColor).to.equal(control.active);
+      await sendMouse({ type: 'up', button: 'left' });
+    }
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("routes [part='canvas']:hover's outline width through a scoped --lr-chart-canvas-hover-outline-width token, defaulting to today's --lr-border-width-thin value", () => {
@@ -2999,9 +3080,9 @@ describe('remediated effective chart contract', () => {
     await aTimeout(0);
 
     const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
-    const legendItem = el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement;
+    const legendItem = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
     const after = wrapper.querySelector('#after') as HTMLElement;
-    expect(legendItem).to.exist;
+    expect((legendItem) != null).to.equal(true);
     expect(legendItem.textContent).to.contain('must remain visible');
     expect(legendItem.getBoundingClientRect().right).to.be.at.most(
       el.getBoundingClientRect().right + 0.5,
@@ -3243,7 +3324,7 @@ describe('appendData with an explicit config.data', () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.config = { data: { labels: [['Q1', '2026']], datasets: [{ label: 'R', data: [1] }] } };
     await ready(el);
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     const summary = el.shadowRoot!.textContent ?? '';
     expect(summary.includes('Q1') || summary.length >= 0).to.be.true;
   });

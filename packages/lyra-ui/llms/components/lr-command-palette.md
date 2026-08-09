@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -47,8 +47,9 @@ fired before the command's own `onSelect` runs and before the palette closes).
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
 input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
-heading), `command` (a `role="option"` button), `icon` (a command's leading icon glyph; only
-rendered when the command has one), `description`, `shortcut`, `empty`.
+heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
+`icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
+`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`
@@ -68,4 +69,8 @@ that token, so rendering is unchanged.
 - `part="command-group"` — A labeled ARIA group containing visible command options.
 - `part="list-spacer"` — Virtual result extent inside the scrolling list.
 - `--lr-command-palette-row-height` — Virtual command-row height. Default: `var(--lr-size-3rem)`.
-- `--lr-command-palette-group-height` — Virtual group-heading height. Default: `var(--lr-size-2rem)`.
+  Its live resolved value drives the painted height, row transforms, keyboard-scroll coordinates,
+  and result extent together.
+- `--lr-command-palette-group-height` — Virtual group-heading height. Default:
+  `var(--lr-size-2rem)`. Its live resolved value drives heading/row transforms and the result extent
+  together.

@@ -31,7 +31,9 @@ number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied t
 amplitude; `label: string = ''` — the host's accessible name.
 
 **Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change (the
-canvas resolves token values at paint time and cannot inherit `var()` directly).
+canvas resolves token values at paint time and cannot inherit `var()` directly). Canvas-bound
+colors are materialized through a live DOM probe, so `currentColor` and inherited expressions
+resolve in the component's theme scope while invalid values fall back safely.
 
 **Events:** none — purely presentational.
 

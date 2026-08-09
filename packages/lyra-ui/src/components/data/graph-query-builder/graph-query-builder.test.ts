@@ -63,7 +63,7 @@ describe('lr-graph-query-builder', () => {
         detail: { value: 'node-1' },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
 
@@ -108,13 +108,13 @@ describe('lr-graph-query-builder', () => {
       selected: boolean;
     })[];
     const eight = options.find((o) => o.value === '8');
-    expect(eight, 'expected an <lr-option value="8"> even though hop-limit defaults to 6').to.exist;
+    expect(eight != null, 'expected an <lr-option value="8"> even though hop-limit defaults to 6').to.equal(true);
     expect(eight!.selected).to.be.true;
   });
 
   it('adds a relationship type via the picker, renders it as a removable chip, and excludes it from the picker afterwards', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const picker = el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement & { value: string };
@@ -126,9 +126,9 @@ describe('lr-graph-query-builder', () => {
     const chips = el.shadowRoot!.querySelectorAll('[part="relationship-chips"] lr-chip');
     expect(chips.length).to.equal(1);
     expect(chips[0].textContent!.trim()).to.equal('Works for');
-    const pickerOptions = (el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement).querySelectorAll(
-      'lr-option',
-    );
+    const pickerOptions = (
+      el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement
+    ).querySelectorAll('lr-option');
     expect(pickerOptions.length).to.equal(1);
     expect((pickerOptions[0] as HTMLElement).getAttribute('value')).to.equal('founded_by');
     // The picker itself resets back to its placeholder after adding.
@@ -140,7 +140,7 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
         .value=${query({ relationshipTypes: ['works_for', 'founded_by'] })}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector('[part="relationship-chips"] lr-chip') as HTMLElement;
@@ -154,13 +154,17 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
         .value=${query({ relationshipTypes: ['works_for', 'founded_by'] })}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const chips = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="relationship-chips"] lr-chip');
     chips[0]!.focus();
     chips[0]!.dispatchEvent(
-      new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { value: 'works_for' } }),
+      new CustomEvent('lr-remove', {
+        bubbles: true,
+        composed: true,
+        detail: { value: 'works_for' },
+      })
     );
     await el.updateComplete;
 
@@ -173,13 +177,17 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .nodeTypeOptions=${NODE_TYPE_OPTIONS}
         .value=${query({ nodeTypes: ['person'] })}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="node-type-chips"] lr-chip')!;
     chip.focus();
     chip.dispatchEvent(
-      new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { value: 'person' } }),
+      new CustomEvent('lr-remove', {
+        bubbles: true,
+        composed: true,
+        detail: { value: 'person' },
+      })
     );
     await el.updateComplete;
 
@@ -188,7 +196,7 @@ describe('lr-graph-query-builder', () => {
 
   it('adds and removes node types the same way as relationship types', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .nodeTypeOptions=${NODE_TYPE_OPTIONS}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .nodeTypeOptions=${NODE_TYPE_OPTIONS}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const picker = el.shadowRoot!.querySelector('[part="node-type-picker"]') as HTMLElement & { value: string };
@@ -208,7 +216,7 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
         .value=${query({ relationshipTypes: ['no_longer_offered'] })}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector('[part="relationship-chips"] lr-chip') as HTMLElement;
@@ -238,7 +246,9 @@ describe('lr-graph-query-builder', () => {
 
   it('is invalid when minHops exceeds maxHops', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder
+        .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.checkValidity()).to.be.false;
@@ -260,7 +270,7 @@ describe('lr-graph-query-builder', () => {
 
   it('emits lr-query-run with the current query once valid', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const run = el.shadowRoot!.querySelector('[part="run-button"]') as HTMLElement;
@@ -271,7 +281,7 @@ describe('lr-graph-query-builder', () => {
 
   it('disables the save button until a name is entered, then emits lr-query-save and clears the name field', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const saveButton = el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement;
@@ -287,15 +297,21 @@ describe('lr-graph-query-builder', () => {
     expect(ev.detail.name).to.equal('My saved search');
     expect(ev.detail.query.startId).to.equal('node-1');
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string }).value).to.equal('');
+    expect(
+      (el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string }).value
+    ).to.equal('');
   });
 
   it('renders saved queries and loads one on click, replacing the current value', async () => {
     const saved: GraphQuerySavedItem[] = [
-      { id: 's1', name: 'Coworkers', query: query({ startId: 'node-9', relationshipTypes: ['works_for'] }) },
+      {
+        id: 's1',
+        name: 'Coworkers',
+        query: query({ startId: 'node-9', relationshipTypes: ['works_for'] }),
+      },
     ];
     const el = (await fixture(
-      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const loadButton = el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLElement;
@@ -313,7 +329,7 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .savedQueries=${saved}
         .strings=${{ graphQueryLoadWithContext: 'Open query {name}' }}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     const loadButton = el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement;
     expect(loadButton.getAttribute('aria-label')).to.equal('Open query Coworkers');
@@ -322,7 +338,7 @@ describe('lr-graph-query-builder', () => {
   it('emits lr-query-delete without mutating savedQueries itself', async () => {
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
     const el = (await fixture(
-      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const deleteButton = el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLElement;
@@ -336,7 +352,7 @@ describe('lr-graph-query-builder', () => {
   it('moves focus to the stable save input when controlled deletion removes the sole saved query', async () => {
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
     const el = (await fixture(
-      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     el.addEventListener('lr-query-delete', (event) => {
       el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
@@ -357,7 +373,7 @@ describe('lr-graph-query-builder', () => {
       { id: 's3', name: 'Third', query: query() },
     ];
     const el = (await fixture(
-      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     el.addEventListener('lr-query-delete', (event) => {
       el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
@@ -369,9 +385,7 @@ describe('lr-graph-query-builder', () => {
 
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('saved-delete-button');
     expect(
-      (el.shadowRoot!.activeElement as HTMLElement | null)
-        ?.closest('[data-query-id]')
-        ?.getAttribute('data-query-id'),
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.closest('[data-query-id]')?.getAttribute('data-query-id')
     ).to.equal('s3');
   });
 
@@ -379,9 +393,7 @@ describe('lr-graph-query-builder', () => {
     const wrapper = await fixture(html`
       <div>
         <button id="outside-query-builder">Outside</button>
-        <lr-graph-query-builder
-          .savedQueries=${[{ id: 's1', name: 'Only', query: query() }]}
-        ></lr-graph-query-builder>
+        <lr-graph-query-builder .savedQueries=${[{ id: 's1', name: 'Only', query: query() }]}></lr-graph-query-builder>
       </div>
     `);
     const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
@@ -393,12 +405,21 @@ describe('lr-graph-query-builder', () => {
   });
 
   it('disables every interactive part when disabled', async () => {
-    const el = (await fixture(html`<lr-graph-query-builder disabled></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    const el = (await fixture(
+      html`<lr-graph-query-builder disabled></lr-graph-query-builder>`
+    )) as LyraGraphQueryBuilder;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement & {
+          disabled: boolean;
+        }
+      ).disabled
+    ).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement).disabled).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement & { disabled: boolean }).disabled).to
-      .be.true;
+    expect(
+      (el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement & { disabled: boolean }).disabled
+    ).to.be.true;
 
     let fired = false;
     el.addEventListener('lr-input', () => (fired = true));
@@ -407,17 +428,29 @@ describe('lr-graph-query-builder', () => {
     expect(fired).to.be.false;
   });
 
-  it('resets to the empty value on formResetCallback', async () => {
+  it('resets to its initial normalized value on formResetCallback', async () => {
+    const initial = query({
+      startId: 'node-1',
+      relationshipTypes: ['works_for', 'works_for'],
+      minHops: 2,
+      maxHops: 4,
+    });
     const form = (await fixture(html`
       <form>
-        <lr-graph-query-builder name="query" .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>
+        <lr-graph-query-builder name="query" .value=${initial}></lr-graph-query-builder>
       </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
+    el.value = query({ startId: 'node-2', nodeTypes: ['Document'] });
+    await el.updateComplete;
     form.reset();
     await el.updateComplete;
-    expect(el.value.startId).to.equal('');
+    expect(el.value.startId).to.equal('node-1');
+    expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+    expect(el.value.nodeTypes).to.deep.equal([]);
+    expect(el.value.minHops).to.equal(2);
+    expect(el.value.maxHops).to.equal(4);
   });
 
   it('participates in a form: submits the value as JSON under name', async () => {
@@ -433,7 +466,9 @@ describe('lr-graph-query-builder', () => {
   });
 
   it('changes hop select option count when hop-limit is set', async () => {
-    const el = (await fixture(html`<lr-graph-query-builder hop-limit="3"></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    const el = (await fixture(
+      html`<lr-graph-query-builder hop-limit="3"></lr-graph-query-builder>`
+    )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const options = (el.shadowRoot!.querySelector('[part="min-hops"]') as HTMLElement).querySelectorAll('lr-option');
     expect(options.length).to.equal(3);
@@ -441,22 +476,25 @@ describe('lr-graph-query-builder', () => {
 
   it('locale-formats visible hop option labels while preserving machine values', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder locale="ar" hop-limit="3"></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder locale="ar" hop-limit="3"></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     const options = [
       ...(el.shadowRoot!.querySelector('[part="min-hops"]') as HTMLElement).querySelectorAll('lr-option'),
     ] as Array<HTMLElement & { value: string }>;
     expect(options.map((option) => option.value)).to.deep.equal(['1', '2', '3']);
     expect(options.map((option) => option.textContent)).to.deep.equal(
-      [1, 2, 3].map((value) => new Intl.NumberFormat('ar').format(value)),
+      [1, 2, 3].map((value) => new Intl.NumberFormat('ar').format(value))
     );
   });
 
   it('renders a .strings override for graphQueryRun and the shared fieldRequired key', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder
-        .strings=${{ graphQueryRun: 'Lancer', fieldRequired: 'Ce champ est requis.' }}
-      ></lr-graph-query-builder>`,
+        .strings=${{
+          graphQueryRun: 'Lancer',
+          fieldRequired: 'Ce champ est requis.',
+        }}
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="run-button"]')!.textContent!.trim()).to.equal('Lancer');
@@ -468,7 +506,9 @@ describe('lr-graph-query-builder', () => {
 
   it('renders correctly under dir="rtl"', async () => {
     const el = (await fixture(
-      html`<div dir="rtl"><lr-graph-query-builder .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}></lr-graph-query-builder></div>`,
+      html`<div dir="rtl">
+        <lr-graph-query-builder .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}></lr-graph-query-builder>
+      </div>`
     )) as HTMLElement;
     const builder = el.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await builder.updateComplete;
@@ -491,8 +531,11 @@ describe('lr-graph-query-builder', () => {
         .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
         .nodeTypeOptions=${NODE_TYPE_OPTIONS}
         .savedQueries=${saved}
-        .value=${query({ relationshipTypes: ['works_for'], nodeTypes: ['person'] })}
-      ></lr-graph-query-builder>`,
+        .value=${query({
+          relationshipTypes: ['works_for'],
+          nodeTypes: ['person'],
+        })}
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     el.reportValidity();
@@ -510,7 +553,7 @@ describe('lr-graph-query-builder', () => {
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
-    expect(el.form).to.equal(form);
+    expect(el.form === form).to.equal(true);
     // Assert labels.length (a number), never the NodeList itself: a *failing* chai assertion whose
     // `actual` is a DOM node/NodeList hangs the whole wtr session (wtr ships `err.actual` verbatim in
     // its session-finished message, which is serialized with structuredClone() -- DataCloneError on
@@ -524,7 +567,9 @@ describe('lr-graph-query-builder', () => {
   });
 
   it('normalizes a nullish name to an empty string, exercising the removeAttribute branch of the name setter', async () => {
-    const el = (await fixture(html`<lr-graph-query-builder name="query"></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    const el = (await fixture(
+      html`<lr-graph-query-builder name="query"></lr-graph-query-builder>`
+    )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.name).to.equal('query');
     expect(el.getAttribute('name')).to.equal('query');
@@ -541,7 +586,7 @@ describe('lr-graph-query-builder', () => {
 
   it('normalizes a null/undefined value assignment to the empty query', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.value.startId).to.equal('node-1');
@@ -601,8 +646,12 @@ describe('lr-graph-query-builder', () => {
 
     expect(() =>
       el.formStateRestoreCallback(
-        JSON.stringify({ startId: 7, relationshipTypes: 'bad', nodeTypes: ['organization'] }),
-      ),
+        JSON.stringify({
+          startId: 7,
+          relationshipTypes: 'bad',
+          nodeTypes: ['organization'],
+        })
+      )
     ).to.not.throw();
     await el.updateComplete;
     expect(el.value.startId).to.equal('');
@@ -633,7 +682,7 @@ describe('lr-graph-query-builder', () => {
 
   it('formStateRestoreCallback falls back to the empty value for malformed JSON', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     el.formStateRestoreCallback('{not valid json');
@@ -643,7 +692,7 @@ describe('lr-graph-query-builder', () => {
 
   it('formStateRestoreCallback falls back to the empty value for non-string state (e.g. FormData)', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     el.formStateRestoreCallback(new FormData());
@@ -653,7 +702,7 @@ describe('lr-graph-query-builder', () => {
 
   it('formStateRestoreCallback falls back to the empty value when the parsed JSON is not a plain object (e.g. an array)', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     el.formStateRestoreCallback('[1,2,3]');
@@ -680,8 +729,11 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder
         .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
         .nodeTypeOptions=${NODE_TYPE_OPTIONS}
-        .value=${query({ relationshipTypes: ['works_for'], nodeTypes: ['person'] })}
-      ></lr-graph-query-builder>`,
+        .value=${query({
+          relationshipTypes: ['works_for'],
+          nodeTypes: ['person'],
+        })}
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     let fired = false;
@@ -710,7 +762,7 @@ describe('lr-graph-query-builder', () => {
         disabled
         .savedQueries=${saved}
         .value=${query({ startId: 'node-1' })}
-      ></lr-graph-query-builder>`,
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
 
@@ -744,7 +796,7 @@ describe('lr-graph-query-builder', () => {
 
   it('saveQuery no-ops when the save name is blank, even called directly (defensive guard behind the disabled save button)', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     let fired = false;
@@ -757,7 +809,7 @@ describe('lr-graph-query-builder', () => {
     const wrapper = (await fixture(
       html`<div style="--lr-theme-opacity-disabled: 0.25">
         <lr-graph-query-builder disabled></lr-graph-query-builder>
-      </div>`,
+      </div>`
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
@@ -768,7 +820,9 @@ describe('lr-graph-query-builder', () => {
 
   it('reveals the max-hops error text after reportValidity when minHops exceeds maxHops', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder
+        .value=${query({ startId: 'node-1', minHops: 3, maxHops: 1 })}
+      ></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     el.reportValidity();
@@ -778,14 +832,111 @@ describe('lr-graph-query-builder', () => {
     expect(maxHopsSelect.errorText).to.not.equal('');
   });
 
+  it('inherits independent resting action colors from an ancestor', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-graph-query-builder-run-bg: rgb(1, 2, 3);
+          --lr-graph-query-builder-run-border-color: rgb(4, 5, 6);
+          --lr-graph-query-builder-run-color: rgb(7, 8, 9);
+          --lr-graph-query-builder-save-bg: rgb(10, 11, 12);
+          --lr-graph-query-builder-save-border-color: rgb(13, 14, 15);
+          --lr-graph-query-builder-save-color: rgb(16, 17, 18);
+          --lr-graph-query-builder-saved-load-color: rgb(19, 20, 21);
+          --lr-graph-query-builder-saved-delete-color: rgb(22, 23, 24);
+        "
+      >
+        <lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const run = el.shadowRoot!.querySelector('[part="run-button"]') as HTMLElement;
+    const save = el.shadowRoot!.querySelector('[part="save-button"]') as HTMLElement;
+    const load = el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLElement;
+    const remove = el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLElement;
+
+    expect(getComputedStyle(run).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(run).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(run).color).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(save).backgroundColor).to.equal('rgb(10, 11, 12)');
+    expect(getComputedStyle(save).borderTopColor).to.equal('rgb(13, 14, 15)');
+    expect(getComputedStyle(save).color).to.equal('rgb(16, 17, 18)');
+    expect(getComputedStyle(load).color).to.equal('rgb(19, 20, 21)');
+    expect(getComputedStyle(remove).color).to.equal('rgb(22, 23, 24)');
+  });
+
+  it('inherits independent hover and pressed action colors from an ancestor', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-graph-query-builder-run-hover-bg: rgb(31, 32, 33);
+          --lr-graph-query-builder-run-active-bg: rgb(34, 35, 36);
+          --lr-graph-query-builder-save-hover-bg: rgb(37, 38, 39);
+          --lr-graph-query-builder-save-active-bg: rgb(40, 41, 42);
+          --lr-graph-query-builder-saved-load-active-bg: rgb(43, 44, 45);
+          --lr-graph-query-builder-saved-delete-hover-color: rgb(46, 47, 48);
+          --lr-graph-query-builder-saved-delete-active-color: rgb(49, 50, 51);
+          --lr-graph-query-builder-saved-delete-active-bg: rgb(52, 53, 54);
+        "
+      >
+        <lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const saveName = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement;
+    saveName.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Saved' } }));
+    await el.updateComplete;
+
+    const probe = async (
+      part: string,
+      hovered: { property: 'backgroundColor' | 'color'; value: string } | null,
+      active: Array<{ property: 'backgroundColor' | 'color'; value: string }>
+    ): Promise<void> => {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      button.scrollIntoView();
+      const rect = button.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        if (hovered) expect(getComputedStyle(button)[hovered.property], `${part} hover`).to.equal(hovered.value);
+        await sendMouse({ type: 'down' });
+        const pressedStyle = getComputedStyle(button);
+        for (const expectation of active) {
+          expect(pressedStyle[expectation.property], `${part} active ${expectation.property}`).to.equal(
+            expectation.value
+          );
+        }
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    };
+
+    await probe('run-button', { property: 'backgroundColor', value: 'rgb(31, 32, 33)' }, [
+      { property: 'backgroundColor', value: 'rgb(34, 35, 36)' },
+    ]);
+    await probe('save-button', { property: 'backgroundColor', value: 'rgb(37, 38, 39)' }, [
+      { property: 'backgroundColor', value: 'rgb(40, 41, 42)' },
+    ]);
+    await probe('saved-load-button', null, [{ property: 'backgroundColor', value: 'rgb(43, 44, 45)' }]);
+    await probe('saved-delete-button', { property: 'color', value: 'rgb(46, 47, 48)' }, [
+      { property: 'color', value: 'rgb(49, 50, 51)' },
+      { property: 'backgroundColor', value: 'rgb(52, 53, 54)' },
+    ]);
+  });
+
   // Asserted through getComputedStyle on a really hovered/pressed element rather than by grepping
   // the stylesheet: the previous version of this test matched `filter: brightness` in the CSS text,
   // which kept passing while proving nothing about what the button actually renders.
   for (const part of ['run-button', 'save-button'] as const) {
     it(`renders a hover fill on ${part}, and a pressed fill distinct from both`, async () => {
-      const el = (await fixture(
-        html`<lr-graph-query-builder></lr-graph-query-builder>`,
-      )) as LyraGraphQueryBuilder;
+      const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       button.scrollIntoView();
@@ -820,7 +971,7 @@ describe('lr-graph-query-builder', () => {
 
   it('names the region from the label property when set and no host aria-label is present', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder label="Path filter"></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder label="Path filter"></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -829,7 +980,7 @@ describe('lr-graph-query-builder', () => {
 
   it('a host-level aria-label attribute wins over both the label property and the localized default', async () => {
     const el = (await fixture(
-      html`<lr-graph-query-builder aria-label="Custom region name" label="Path filter"></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder aria-label="Custom region name" label="Path filter"></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -942,7 +1093,11 @@ describe('validity custom states', () => {
     expect(states(el).has('user-valid')).to.be.false;
 
     startInput(el).dispatchEvent(
-      new CustomEvent('lr-input', { detail: { value: 'node-1' }, bubbles: true, composed: true }),
+      new CustomEvent('lr-input', {
+        detail: { value: 'node-1' },
+        bubbles: true,
+        composed: true,
+      })
     );
     await el.updateComplete;
     expect(states(el).has('user-valid')).to.be.true;
@@ -972,7 +1127,9 @@ describe('validity custom states', () => {
   it('goes pristine again after a form reset', async function () {
     if (!supportsCustomStates) this.skip();
     const form = await fixture<HTMLFormElement>(
-      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+      html`<form>
+        <lr-graph-query-builder name="q"></lr-graph-query-builder>
+      </form>`
     );
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
@@ -980,10 +1137,8 @@ describe('validity custom states', () => {
     expect(states(el).has('user-invalid')).to.be.true;
     form.reset();
     await el.updateComplete;
-    expect(states(el).has('invalid'), 'still invalid — reset cleared the value, not the constraint').to.be
-      .true;
-    expect(states(el).has('user-invalid'), 'but pristine again, so nothing should be painted red').to.be
-      .false;
+    expect(states(el).has('invalid'), 'still invalid — reset cleared the value, not the constraint').to.be.true;
+    expect(states(el).has('user-invalid'), 'but pristine again, so nothing should be painted red').to.be.false;
   });
 
   it('publishes neither invalid nor user-invalid while disabled', async function () {
@@ -993,7 +1148,7 @@ describe('validity custom states', () => {
     // `invalid` — and, after any reportValidity(), `user-invalid` — painting itself red under the
     // documented `lr-graph-query-builder:state(user-invalid) { ... }` rule.
     const el = (await fixture(
-      html`<lr-graph-query-builder disabled></lr-graph-query-builder>`,
+      html`<lr-graph-query-builder disabled></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
@@ -1015,14 +1170,15 @@ describe('validity custom states', () => {
     if (!supportsCustomStates) this.skip();
     const form = await fixture<HTMLFormElement>(html`
       <form>
-        <fieldset disabled><lr-graph-query-builder name="q"></lr-graph-query-builder></fieldset>
+        <fieldset disabled>
+          <lr-graph-query-builder name="q"></lr-graph-query-builder>
+        </fieldset>
       </form>
     `);
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
-    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be
-      .false;
+    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be.false;
     expect(states(el).has('invalid')).to.be.false;
     el.reportValidity();
     await el.updateComplete;
@@ -1065,7 +1221,9 @@ describe('setCustomValidity()', () => {
 
   it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
     const form = await fixture<HTMLFormElement>(
-      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+      html`<form>
+        <lr-graph-query-builder name="q"></lr-graph-query-builder>
+      </form>`
     );
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     el.value = query({ startId: 'node-1' });
@@ -1114,7 +1272,9 @@ describe('setCustomValidity()', () => {
     // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
     // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
     const form = await fixture<HTMLFormElement>(
-      html`<form><lr-graph-query-builder name="q"></lr-graph-query-builder></form>`,
+      html`<form>
+        <lr-graph-query-builder name="q"></lr-graph-query-builder>
+      </form>`
     );
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     el.value = query({ startId: 'node-1' });

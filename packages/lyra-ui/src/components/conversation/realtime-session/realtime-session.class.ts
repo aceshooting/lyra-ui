@@ -5,6 +5,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
 import type { AudioVisualizerState } from '../audio-visualizer/audio-visualizer.class.js';
+import type { LyraPushToTalkEventMap } from '../push-to-talk/push-to-talk.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../audio-visualizer/audio-visualizer.class.js';
 import '../push-to-talk/push-to-talk.class.js';
@@ -18,16 +19,19 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
-export interface LyraRealtimeSessionEventMap {
+export interface LyraRealtimeSessionEventMap extends LyraPushToTalkEventMap {
   'lr-connect': CustomEvent<undefined>;
   'lr-disconnect': CustomEvent<undefined>;
   'lr-mute-change': CustomEvent<{ muted: boolean }>;
   'lr-interrupt': CustomEvent<undefined>;
 }
 const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
-  disconnected: 'neutral', connecting: 'brand', connected: 'success', reconnecting: 'warning', error: 'danger',
+  disconnected: 'neutral',
+  connecting: 'brand',
+  connected: 'success',
+  reconnecting: 'warning',
+  error: 'danger',
 };
 
 /**
@@ -44,6 +48,13 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @event lr-disconnect - Disconnection was requested.
  * @event lr-mute-change - A controlled microphone mute change was requested.
  * @event lr-interrupt - Interruption of the current response was requested.
+ * @event lr-record-start - Passthrough from capture. `detail: { stream: MediaStream }`.
+ * @event lr-record-chunk - Passthrough from capture. `detail: { blob: Blob }`.
+ * @event lr-record-stop - Passthrough from capture. `detail: { blob: Blob; durationMs: number }`.
+ * @event lr-record-cancel - Passthrough from capture with no detail.
+ * @event lr-record-error - Passthrough from capture. `detail: { error: DOMException | Error }`.
+ * @event lr-level - Passthrough from capture. `detail: { level: number }`.
+ * @event lr-state-change - Passthrough from capture. `detail: { state: PushToTalkState }`.
  * @csspart base - The named session region.
  * @csspart header - Status and session controls.
  * @csspart status - Connection status badge.
@@ -94,6 +105,10 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
    *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
   @property({ type: Boolean, attribute: 'show-capture', reflect: true, converter: trueDefaultBooleanConverter })
   showCapture = true;
+  /**
+   * Host-readable provider diagnostic identifier. Informational only: changing it does not alter
+   * localized error text, announcements, parts, events, or connection state.
+   */
   @property({ attribute: 'error-code' }) errorCode = '';
   @property() label = '';
   private transferActionFocus = false;
@@ -106,7 +121,8 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     if (
       this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
       this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument
-    ) return;
+    )
+      return;
     this.statusAnnouncementSink?.release();
     this.errorAnnouncementSink?.release();
     this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
@@ -146,15 +162,16 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     if (!stateChanged && !captureHidden) return;
     const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
     const focusedPart = focused?.getAttribute('part') ?? null;
-    this.transferActionFocus = captureHidden && !stateChanged
-      ? focusedPart === 'capture'
-      : focused !== null &&
-        (focused.closest('[part="controls"]') !== null ||
-          focusedPart === 'connect' ||
-          focusedPart === 'disconnect' ||
-          focusedPart === 'mute' ||
-          focusedPart === 'interrupt' ||
-          focusedPart === 'capture');
+    this.transferActionFocus =
+      captureHidden && !stateChanged
+        ? focusedPart === 'capture'
+        : focused !== null &&
+          (focused.closest('[part="controls"]') !== null ||
+            focusedPart === 'connect' ||
+            focusedPart === 'disconnect' ||
+            focusedPart === 'mute' ||
+            focusedPart === 'interrupt' ||
+            focusedPart === 'capture');
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -179,11 +196,16 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
 
   private stateLabel(): string {
     switch (this.state) {
-      case 'disconnected': return this.localize('realtimeSessionDisconnected');
-      case 'connecting': return this.localize('realtimeSessionConnecting');
-      case 'connected': return this.localize('realtimeSessionConnected');
-      case 'reconnecting': return this.localize('realtimeSessionReconnecting');
-      case 'error': return this.localize('realtimeSessionError');
+      case 'disconnected':
+        return this.localize('realtimeSessionDisconnected');
+      case 'connecting':
+        return this.localize('realtimeSessionConnecting');
+      case 'connected':
+        return this.localize('realtimeSessionConnected');
+      case 'reconnecting':
+        return this.localize('realtimeSessionReconnecting');
+      case 'error':
+        return this.localize('realtimeSessionError');
     }
   }
 
@@ -192,7 +214,11 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     const active = this.state === 'connected';
     const safeLevel = this.level == null ? null : finiteRange(this.level, 0, 0, 1);
     return html`
-      <section part="base" aria-label=${label} aria-busy=${this.state === 'connecting' || this.state === 'reconnecting' ? 'true' : 'false'}>
+      <section
+        part="base"
+        aria-label=${label}
+        aria-busy=${this.state === 'connecting' || this.state === 'reconnecting' ? 'true' : 'false'}
+      >
         <header part="header">
           <lr-badge part="status" variant=${STATE_VARIANT[this.state]}>${this.stateLabel()}</lr-badge>
           <lr-audio-visualizer
@@ -203,14 +229,25 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           ></lr-audio-visualizer>
           <div part="controls">
             ${this.state === 'disconnected' || this.state === 'error'
-              ? html`<button part="connect" type="button" @click=${() => this.emit('lr-connect')}>${this.localize('realtimeSessionConnect')}</button>`
-              : html`<button part="disconnect" type="button" @click=${() => this.emit('lr-disconnect')}>${this.localize('realtimeSessionDisconnect')}</button>`}
+              ? html`<button part="connect" type="button" @click=${() => this.emit('lr-connect')}>
+                  ${this.localize('realtimeSessionConnect')}
+                </button>`
+              : html`<button part="disconnect" type="button" @click=${() => this.emit('lr-disconnect')}>
+                  ${this.localize('realtimeSessionDisconnect')}
+                </button>`}
             ${active
               ? html`
-                  <button part="mute" type="button" aria-pressed=${this.muted ? 'true' : 'false'} @click=${() => this.emit('lr-mute-change', { muted: !this.muted })}>
+                  <button
+                    part="mute"
+                    type="button"
+                    aria-pressed=${this.muted ? 'true' : 'false'}
+                    @click=${() => this.emit('lr-mute-change', { muted: !this.muted })}
+                  >
                     ${this.localize(this.muted ? 'realtimeSessionUnmute' : 'realtimeSessionMute')}
                   </button>
-                  <button part="interrupt" type="button" @click=${() => this.emit('lr-interrupt')}>${this.localize('realtimeSessionInterrupt')}</button>
+                  <button part="interrupt" type="button" @click=${() => this.emit('lr-interrupt')}>
+                    ${this.localize('realtimeSessionInterrupt')}
+                  </button>
                 `
               : nothing}
             <slot name="controls"></slot>

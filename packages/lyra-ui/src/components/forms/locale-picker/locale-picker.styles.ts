@@ -4,16 +4,16 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
-    --lr-locale-picker-trigger-padding: var(--lr-space-xs) var(--lr-space-s);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-space-xs) var(--lr-space-s);
     /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
        rather than a private copy of the same six values. The ladder matches both spellings of every
        tier in one selector list, so size="small" and size="s" resolve identically here with no
        per-component alias rules. */
-    --lr-locale-picker-trigger-min-height: var(--lr-form-control-height);
-    --lr-locale-picker-font-size: var(--lr-form-control-font-size);
-    --lr-locale-picker-expand-size: var(--lr-size-1-75rem);
-    --lr-locale-picker-gap: var(--lr-space-xs);
-    --lr-locale-picker-radius: var(--lr-radius);
+    --_lr-locale-picker-trigger-min-height-default: var(--lr-form-control-height);
+    --_lr-locale-picker-font-size-default: var(--lr-form-control-font-size);
+    --_lr-locale-picker-expand-size-default: var(--lr-size-1-75rem);
+    --_lr-locale-picker-gap-default: var(--lr-space-xs);
+    --_lr-locale-picker-radius-default: var(--lr-radius);
     /* --lr-locale-picker-trigger-height is intentionally NOT declared here -- see lr-select's
        identical convention: it is a consumer-facing escape hatch consumed only through the
        var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that
@@ -25,24 +25,24 @@ export const styles = css`
      ladder accepts size="small", and a trigger whose density silently ignored it would be worse than
      one that never accepted it. */
   :host([size='2xs']) {
-    --lr-locale-picker-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
-    --lr-locale-picker-expand-size: var(--lr-size-1rem);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-size-0-0625rem) var(--lr-space-2xs);
+    --_lr-locale-picker-expand-size-default: var(--lr-size-1rem);
   }
   :host([size='xs']) {
-    --lr-locale-picker-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    --lr-locale-picker-expand-size: var(--lr-size-1rem);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --_lr-locale-picker-expand-size-default: var(--lr-size-1rem);
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-locale-picker-trigger-padding: var(--lr-space-xs) var(--lr-space-xs);
-    --lr-locale-picker-expand-size: var(--lr-size-1-25rem);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-space-xs) var(--lr-space-xs);
+    --_lr-locale-picker-expand-size-default: var(--lr-size-1-25rem);
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-locale-picker-trigger-padding: var(--lr-space-s) var(--lr-space-m);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-space-s) var(--lr-space-m);
   }
   :host([size='xl']) {
-    --lr-locale-picker-trigger-padding: var(--lr-space-m) var(--lr-space-l);
+    --_lr-locale-picker-trigger-padding-default: var(--lr-space-m) var(--lr-space-l);
   }
 
   [part='form-control-label'] {
@@ -63,18 +63,18 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-locale-picker-gap);
+    gap: var(--lr-locale-picker-gap, var(--_lr-locale-picker-gap-default));
     inline-size: 100%;
-    min-block-size: var(--lr-locale-picker-trigger-height, var(--lr-locale-picker-trigger-min-height));
+    min-block-size: var(--lr-locale-picker-trigger-height, var(--lr-locale-picker-trigger-min-height, var(--_lr-locale-picker-trigger-min-height-default)));
     box-sizing: border-box;
     block-size: var(--lr-locale-picker-trigger-height, auto);
-    padding: var(--lr-locale-picker-trigger-padding);
+    padding: var(--lr-locale-picker-trigger-padding, var(--_lr-locale-picker-trigger-padding-default));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-locale-picker-radius);
+    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lr-locale-picker-font-size);
+    font-size: var(--lr-locale-picker-font-size, var(--_lr-locale-picker-font-size-default));
     text-align: start;
     cursor: pointer;
   }
@@ -124,8 +124,8 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-locale-picker-expand-size));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-locale-picker-expand-size));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-locale-picker-expand-size, var(--_lr-locale-picker-expand-size-default)));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-locale-picker-expand-size, var(--_lr-locale-picker-expand-size-default)));
     line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {
@@ -145,7 +145,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-locale-picker-radius);
+    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
     visibility: hidden;
@@ -170,12 +170,12 @@ export const styles = css`
   [part='option'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-locale-picker-gap);
+    gap: var(--lr-locale-picker-gap, var(--_lr-locale-picker-gap-default));
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-locale-picker-radius);
+    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
     background: none;
     color: inherit;
     font: inherit;
@@ -198,7 +198,7 @@ export const styles = css`
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-locale-picker-option-selected-border-color, var(--lr-color-brand));
     color: var(--lr-locale-picker-option-selected-color, var(--lr-color-brand));
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-locale-picker-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
   [part='option-flag'] {
     flex: 0 0 auto;

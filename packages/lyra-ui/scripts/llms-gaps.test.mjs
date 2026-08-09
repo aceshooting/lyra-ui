@@ -12,7 +12,13 @@
 // `click-to-start`/`click-to-stop`. Both cases are reproduced below as regression fixtures.
 
 import assert from 'node:assert/strict';
-import { collectGaps, inheritsAllPublicSurface, mentionsName, ownsToken } from './llms-gaps.mjs';
+import {
+  collectGaps,
+  contractBlockMentionsName,
+  inheritsAllPublicSurface,
+  mentionsName,
+  ownsToken,
+} from './llms-gaps.mjs';
 
 // Quiet by default (it runs inside the `pnpm lint` contract-policy chain); `--verbose` prints the
 // per-case lines.
@@ -76,6 +82,22 @@ test('a name that is itself hyphenated is a mention only when it appears whole',
   const text = '**CSS parts:** `base`, `label`, `hint`, `error`, `min-hops`, `max-hops`.';
   assert.equal(mentionsName(text, 'min-hops'), true);
   assert.equal(mentionsName(text, 'label'), true);
+});
+
+test('a CSS part must appear in the designated CSS parts block, not merely a slot or property list', () => {
+  const text = [
+    '**Slots:** `leading` — leading content.',
+    '',
+    '**Properties:** `meta: string`.',
+    '',
+    '**CSS parts:** `base`, `content`.',
+    '',
+    '**Themeable custom properties:** `--lr-fixture-color`.',
+  ].join('\n');
+  assert.equal(contractBlockMentionsName(text, 'CSS parts', 'base'), true);
+  assert.equal(contractBlockMentionsName(text, 'CSS parts', 'leading'), false);
+  assert.equal(contractBlockMentionsName(text, 'CSS parts', 'meta'), false);
+  assert.equal(contractBlockMentionsName(text, 'CSS parts', '--lr-fixture-color'), false);
 });
 
 test('a name at the very start or end of the text is still a mention (no boundary character needed)', () => {
@@ -218,4 +240,3 @@ if (failures > 0) {
 } else {
   console.log(`llms-gaps self-test passed (${passes} cases).`);
 }
-

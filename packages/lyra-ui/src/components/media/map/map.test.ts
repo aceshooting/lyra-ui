@@ -1341,14 +1341,14 @@ it('renders a colored marker and an html popup', async function () {
   await el.updateComplete;
 
   const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
-  expect(markerEl).to.exist;
+  expect((markerEl) != null).to.equal(true);
   markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await waitUntil(
     () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
     'popup never opened',
   );
   const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content')!;
-  expect(popupContent.querySelector('strong')).to.exist;
+  expect((popupContent.querySelector('strong')) != null).to.equal(true);
   expect(popupContent.textContent).to.contain('Station A');
 });
 

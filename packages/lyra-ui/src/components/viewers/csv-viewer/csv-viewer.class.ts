@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { assertTableSize, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
@@ -21,7 +21,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -87,7 +87,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @csspart cell - One rendered cell.
  * @csspart cell-highlight - A structural cell covered by a `highlights` entry.
  * @csspart cell-highlight-action - The native button filling a highlighted cell; emits
- *   `lr-highlight-activate` when activated.
+ *   `lr-highlight-activate` when activated. Its accessible name localizes the complete cell-value
+ *   and annotation message through separate `{value}` and `{label}` placeholders.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
@@ -105,6 +106,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
     collapse: LYRA_DEFAULT_collapse,
     csvViewerLabel: LYRA_DEFAULT_csvViewerLabel,
     csvViewerUnavailable: LYRA_DEFAULT_csvViewerUnavailable,
@@ -126,7 +128,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
-  /** Source filename or display name, used as the viewer's accessible name. */
+  /** Source filename or display name, used as the viewer's accessible name when the host has no
+   *  `aria-label`. Host `aria-label` wins by attribute presence, including an empty value. */
   @property() name = '';
   /** Whether the first parsed row is rendered as a sticky header. */
   @property({ attribute: 'has-header-row', converter: trueDefaultBooleanConverter }) hasHeaderRow = true;
@@ -285,9 +288,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const text = cell(value);
-    const accessibleLabel = this.localize('highlightWithLabel', undefined, {
-      label: primary.highlight.label ? `${text} — ${primary.highlight.label}` : text,
-    });
+    const accessibleLabel = primary.highlight.label
+      ? this.localize('cellHighlightWithLabel', undefined, {
+          value: text,
+          label: primary.highlight.label,
+        })
+      : this.localize('highlightWithLabel', undefined, { label: text });
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     return html`<div
       part="cell cell-highlight"
@@ -415,6 +421,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };
 
   override render(): TemplateResult {
+    const label = hostAriaLabel(this) ?? (this.name || this.localize('csvViewerLabel'));
     let content: TemplateResult;
     if (this.fetchState.kind === 'loaded') {
       const rows = this.fetchState.rows;
@@ -423,7 +430,6 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         const header = this.hasHeaderRow ? rows[0] : undefined;
         const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
-        const label = this.getAttribute('aria-label') || this.name || this.localize('csvViewerLabel');
         content = html`<div part="sheet" role="table" aria-label=${label} aria-rowcount=${rows.length} aria-colcount=${count}>${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list
           part="rows"
           exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
@@ -442,7 +448,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     else if (this.fetchState.kind === 'error') content = html`<div part="error">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('csvViewerLabel')}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${label}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,13 +28,17 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 `lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
+Standalone button chrome is allocation-safe too: unbroken labels wrap, and prefix/suffix adornments
+are each capped and truncate rather than widening the containing panel. The exact-320px story shows
+that behavior in LTR and RTL.
+
 **Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
 `customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
 `setCustomValidity()`. The inherited `appearance` remains `'default' | 'button'`; this tag already
 renders button chrome in either state, so the property adds no second visual mode. `size` is where this
 chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
 inline padding and font size, so a `size="small"` radio button sits at the same height as a
-`size="small"` `lr-button` beside it. `pill` is the one inherited property that does *more* here
+`size="small"` `lr-button` beside it. `pill` is the one inherited property that does _more_ here
 than on a plain `lr-radio` — see the radius note below.
 
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
@@ -45,6 +49,8 @@ not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / 
 its own alias.
 
 **Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
+Host `aria-label` is forwarded to the internal radio by attribute presence, including
+`aria-label=""`; it is not replaced by the visible default-slot text.
 
 **CSS parts:** `base` / `button` / `control`, `prefix`, `label`, `suffix`. The interactive node
 carries `checked` and `button--checked` when selected, plus `disabled` when disabled, because an
@@ -53,12 +59,22 @@ attribute selector after `::part()` never matches.
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
 it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
-it back to `--lr-radius-pill`. Only the *outer* corners of a run take it: consecutive siblings
+it back to `--lr-radius-pill`. Only the _outer_ corners of a run take it: consecutive siblings
 collapse their shared borders, so the radius lands on the first button's leading corners and the
-last button's trailing ones. Everything else is shared tokens — `--lr-color-brand` /
-`--lr-color-on-brand` / `--lr-color-brand-quiet` (selected and hover fills),
-`--lr-color-surface-raised`, `--lr-color-border`, and the `--lr-form-control-*` ladder values behind
-the height, padding and font size.
+last button's trailing ones. `--lr-radio-button-gap` (default `var(--lr-space-xs)`) controls the
+spacing between prefix, label, and suffix in both `<lr-radio-button>` and
+`<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
+Button paint states can be rethemed without changing shared tokens:
+`--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
+`--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked
+pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-border-color`, and
+`--lr-radio-button-checked-color` control checked rest; and the corresponding
+`--lr-radio-button-checked-hover-bg`, `--lr-radio-button-checked-hover-border-color`,
+`--lr-radio-button-checked-active-bg`, and `--lr-radio-button-checked-active-border-color` hooks
+control checked pointer states. The inherited `--lr-radio-hover-border-color`,
+`--lr-radio-active-border-color`, and `--lr-radio-active-ring-color` remain visible in generated
+metadata but apply only to the base radio's circular chrome. All fallbacks preserve the existing
+brand, on-brand, quiet, and color-mix treatments.
 
 Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and
 its `--lr-radio-circle-size`, `--lr-radio-dot-size`, `--lr-radio-label-indent`,

@@ -10,10 +10,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -31,7 +28,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type { WordCloudOrientations, WordCloudScale, WordCloudWord };
 
 const DEFAULT_MIN_FONT_SIZE = 12;
@@ -46,13 +42,12 @@ const NAV_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Ho
 /** Padding, in px, between a focused word's glyph box and its drawn focus ring. */
 const FOCUS_RING_PAD = 2;
 
-
 function warnSkippedWords(count: number, warnedSkipCounts: Set<number>): void {
   if (warnedSkipCounts.has(count)) return;
   warnedSkipCounts.add(count);
   console.warn(
     `<lr-word-cloud> could not place ${count} word(s) (blank text, over the ${MAX_WORDS}-word cap, or ` +
-      'the layout search was exhausted) -- they were dropped, not rendered.',
+      'the layout search was exhausted) -- they were dropped, not rendered.'
   );
 }
 
@@ -84,6 +79,9 @@ export interface WordCloudLegendItem {
  * role and aggregate accessible name; `[part="live-region"]` is an aria-hidden
  * mirror of the most recent announcement. Mount is silent, and identical edge
  * movements append separate announcements.
+ *
+ * The eight default palette custom properties inherit from theme ancestors; setting one directly
+ * on the word cloud still wins through the normal cascade.
  *
  * @customElement lr-word-cloud
  * @event lr-word-click - Fired on click, or Enter/Space on the focused word.
@@ -236,15 +234,17 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   private paletteColors(): string[] {
     if (this.palette?.length) {
-      const colors = this.palette
-        .map(sanitizeCssColor)
-        .filter((color): color is string => color !== undefined);
+      const colors = this.palette.map(sanitizeCssColor).filter((color): color is string => color !== undefined);
       if (colors.length) return colors;
     }
     const cs = getComputedStyle(this);
     const colors: string[] = [];
     for (let i = 0; i < PALETTE_SIZE; i++) {
-      colors.push(cs.getPropertyValue(`--lr-word-cloud-color-${i + 1}`).trim() || FALLBACK_PALETTE[i]!);
+      colors.push(
+        cs.getPropertyValue(`--lr-word-cloud-color-${i + 1}`).trim() ||
+          cs.getPropertyValue(`--_lr-word-cloud-color-${i + 1}-default`).trim() ||
+          FALLBACK_PALETTE[i]!
+      );
     }
     return colors;
   }
@@ -280,9 +280,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private relayout(preserveInteraction = false): void {
-    const focusedOriginalIndex = preserveInteraction && this.focusedIndex !== null
-      ? this.navOrder()[this.focusedIndex]?.originalIndex
-      : undefined;
+    const focusedOriginalIndex =
+      preserveInteraction && this.focusedIndex !== null ? this.navOrder()[this.focusedIndex]?.originalIndex : undefined;
     const priorLiveText = this.liveText;
     // The font family/weight tokens are invariant for the whole layout pass --
     // read them once here rather than inside the per-word `measureText`
@@ -429,7 +428,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
               ></span>
               <span part="legend-label">${item.label}</span>
             </span>
-          `,
+          `
         )}
       </div>
     `;
@@ -497,7 +496,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
               fill=${colorFor(w)}
               transform=${w.rotated ? `rotate(-90, ${w.x}, ${w.y})` : nothing}
               @click=${() => this.onWordClick(w)}
-            >${w.text}</text>`,
+            >${w.text}</text>`
           )}
           ${ring
             ? svg`<rect part="focus-ring" x=${ring.x} y=${ring.y} width=${ring.width} height=${ring.height}></rect>`
@@ -516,10 +515,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
     'lr-word-cloud': LyraWordCloud;
   }
-
 }

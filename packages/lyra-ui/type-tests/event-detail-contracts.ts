@@ -1,4 +1,6 @@
 import type { LyraVoicePickerEventMap } from '../src/components/conversation/voice-picker/voice-picker.class.js';
+import type { LyraPushToTalkEventMap } from '../src/components/conversation/push-to-talk/push-to-talk.class.js';
+import type { LyraRealtimeSessionEventMap } from '../src/components/conversation/realtime-session/realtime-session.class.js';
 import type {
   LyraKnownDateEventDetail,
   LyraKnownDateEventMap,
@@ -25,6 +27,9 @@ type _KnownDateInputKeepsCompatibilityDetail = AssertTrue<
 type _KnownDateChangeKeepsCompatibilityDetail = AssertTrue<
   LyraKnownDateEventMap['change']['detail'] extends LyraKnownDateEventDetail ? true : false
 >;
+type _RealtimeSessionIncludesCaptureEvents = AssertTrue<
+  LyraRealtimeSessionEventMap extends LyraPushToTalkEventMap ? true : false
+>;
 
 export type EventDetailContractAssertions =
   | _VoiceInputUsesNativeConstructor
@@ -32,4 +37,5 @@ export type EventDetailContractAssertions =
   | _KnownDateInputIsNative
   | _KnownDateChangeIsNative
   | _KnownDateInputKeepsCompatibilityDetail
-  | _KnownDateChangeKeepsCompatibilityDetail;
+  | _KnownDateChangeKeepsCompatibilityDetail
+  | _RealtimeSessionIncludesCaptureEvents;

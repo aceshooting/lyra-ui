@@ -4,26 +4,26 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
-    --lr-otp-input-mask-char: '•';
-    --lr-otp-input-segment-fill: transparent;
-    --lr-otp-input-segment-border-color: var(--lr-color-border);
-    --lr-otp-input-segment-radius: var(
+    --_lr-otp-input-mask-char-default: '•';
+    --_lr-otp-input-segment-fill-default: transparent;
+    --_lr-otp-input-segment-border-color-default: var(--lr-color-border);
+    --_lr-otp-input-segment-radius-default: var(
       --segment-border-radius,
       var(--lr-form-control-radius, var(--lr-radius))
     );
   }
   :host([appearance='filled']) {
-    --lr-otp-input-segment-fill: var(--lr-color-surface-raised);
-    --lr-otp-input-segment-border-color: transparent;
+    --_lr-otp-input-segment-fill-default: var(--lr-color-surface-raised);
+    --_lr-otp-input-segment-border-color-default: transparent;
   }
   :host([appearance='filled-outlined']) {
-    --lr-otp-input-segment-fill: var(--lr-color-surface-raised);
-    --lr-otp-input-segment-border-color: var(--lr-color-border);
+    --_lr-otp-input-segment-fill-default: var(--lr-color-surface-raised);
+    --_lr-otp-input-segment-border-color-default: var(--lr-color-border);
   }
   :host([appearance='contained']) {
-    --lr-otp-input-segment-fill: transparent;
-    --lr-otp-input-segment-border-color: transparent;
-    --lr-otp-input-segment-radius: 0;
+    --_lr-otp-input-segment-fill-default: transparent;
+    --_lr-otp-input-segment-border-color-default: transparent;
+    --_lr-otp-input-segment-radius-default: 0;
   }
   [part~='base'] {
     display: flex;
@@ -101,9 +101,9 @@ export const styles = css`
     inline-size: var(--segment-size, var(--lr-otp-input-segment-size));
     block-size: var(--segment-size, var(--lr-otp-input-segment-size));
     padding: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-otp-input-segment-border-color);
-    border-radius: var(--lr-otp-input-segment-radius);
-    background: var(--lr-otp-input-segment-fill);
+    border: var(--lr-border-width-thin) solid var(--lr-otp-input-segment-border-color, var(--_lr-otp-input-segment-border-color-default));
+    border-radius: var(--lr-otp-input-segment-radius, var(--_lr-otp-input-segment-radius-default));
+    background: var(--lr-otp-input-segment-fill, var(--_lr-otp-input-segment-fill-default));
     color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
     font-size: var(--lr-form-control-font-size, var(--lr-font-size-m));
@@ -112,11 +112,11 @@ export const styles = css`
   }
   /* State in the part name -- ::part(segment)[data-active] never matches. */
   [part~='active'] {
-    border-color: var(--lr-focus-ring-color);
-    box-shadow: 0 0 0 var(--lr-focus-ring-width) var(--lr-focus-ring-color);
+    border-color: var(--lr-otp-input-active-border-color, var(--lr-focus-ring-color));
+    box-shadow: 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));
   }
   [part~='invalid'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-otp-input-invalid-border-color, var(--lr-color-danger));
   }
   :host(:disabled) [part~='segment'] {
     opacity: var(--lr-opacity-disabled);
@@ -136,7 +136,7 @@ export const styles = css`
      field reads as a fixed-length code before any entry. */
   [part~='masked']::after,
   [part~='placeholder-mask']::after {
-    content: var(--mask-char, var(--lr-otp-input-mask-char));
+    content: var(--mask-char, var(--lr-otp-input-mask-char, var(--_lr-otp-input-mask-char-default)));
   }
   /* An unentered glyph is a placeholder, so it sits quieter than an entered character. */
   [part~='placeholder-mask'] {

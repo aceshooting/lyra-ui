@@ -33,6 +33,38 @@ it('lets a consumer retint the previous/next hover background via the scoped --l
   }
 });
 
+it('lets a consumer retint day and selection-view states independently', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker
+      value="2026-07-15"
+      style="--lr-date-picker-day-hover-bg: rgb(1, 2, 3); --lr-date-picker-selected-bg: rgb(4, 5, 6); --lr-date-picker-selected-color: rgb(7, 8, 9); --lr-date-picker-view-selected-bg: rgb(10, 11, 12); --lr-date-picker-view-selected-color: rgb(13, 14, 15)"
+    ></lr-date-picker>
+  `)) as LyraDatePicker;
+  const selected = el.shadowRoot!.querySelector('[part~="day-selected"]') as HTMLElement;
+  expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(selected).color).to.equal('rgb(7, 8, 9)');
+
+  const day = el.shadowRoot!.querySelector(
+    '[part~="day"]:not([part~="day-selected"]):not([part~="day-outside"])',
+  ) as HTMLElement;
+  const rect = day.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(day).backgroundColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+
+  el.view = 'months';
+  await el.updateComplete;
+  const selectedView = el.shadowRoot!.querySelector('[part~="view-item-selected"]') as HTMLElement;
+  expect(getComputedStyle(selectedView).backgroundColor).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(selectedView).color).to.equal('rgb(13, 14, 15)');
+});
+
 it('scales day-cell size across every tier, floored at the 24px WCAG minimum', async () => {
   const expected: Record<string, string> = {
     '2xs': '24px',
@@ -50,6 +82,64 @@ it('scales day-cell size across every tier, floored at the 24px WCAG minimum', a
     expect(getComputedStyle(day).blockSize, `size=${size}`).to.equal(px);
     expect(getComputedStyle(day).inlineSize, `size=${size}`).to.equal(px);
   }
+});
+
+it('renders a consumer override of the public --lr-cell-size geometry hook', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker value="2026-07-15" style="--lr-cell-size: 44px"></lr-date-picker>
+  `)) as LyraDatePicker;
+  const day = el.shadowRoot!.querySelector('[part~="day"]') as HTMLElement;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+
+  expect(getComputedStyle(day).inlineSize).to.equal('44px');
+  expect(getComputedStyle(day).blockSize).to.equal('44px');
+  expect(getComputedStyle(grid).gridTemplateColumns.split(' ').length).to.equal(7);
+  expect(getComputedStyle(grid).gridTemplateColumns.split(' ').every((track) => track === '44px')).to.equal(true);
+});
+
+it('co-tokenizes the mirrored date-picker part and deprecated base alias on one shell', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker value="2026-07-15"></lr-date-picker>
+  `)) as LyraDatePicker;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="base"][part~="date-picker"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="date-picker"]').length).to.equal(1);
+});
+
+it('renders equivalent shell chrome through either date-picker part spelling', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <style>
+        .through-base::part(base),
+        .through-date-picker::part(date-picker) {
+          padding: 13px;
+          background: rgb(3, 17, 29);
+          border-color: rgb(41, 53, 67);
+          border-radius: 11px;
+        }
+      </style>
+      <lr-date-picker class="through-base" value="2026-07-15"></lr-date-picker>
+      <lr-date-picker class="through-date-picker" value="2026-07-15"></lr-date-picker>
+    </div>
+  `);
+  const pickers = [...wrapper.querySelectorAll<LyraDatePicker>('lr-date-picker')];
+  const renderedShell = (picker: LyraDatePicker) => {
+    const shell = picker.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const computed = getComputedStyle(shell);
+    return [computed.padding, computed.backgroundColor, computed.borderTopColor, computed.borderRadius];
+  };
+
+  expect(renderedShell(pickers[0]!)).to.deep.equal([
+    '13px',
+    'rgb(3, 17, 29)',
+    'rgb(41, 53, 67)',
+    '11px',
+  ]);
+  expect(renderedShell(pickers[1]!)).to.deep.equal(renderedShell(pickers[0]!));
+  expect(Math.round(pickers[1]!.getBoundingClientRect().width)).to.equal(
+    Math.round(pickers[0]!.getBoundingClientRect().width),
+  );
 });
 
 it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
@@ -329,7 +419,7 @@ it('leaves the two-month view alone when ArrowRight moves into a date already vi
   expect(titles[1]).to.contain('august');
 
   const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
-  expect(focused, 'August 1 was already showing in the second grid').to.exist;
+  expect((focused) != null, 'August 1 was already showing in the second grid').to.equal(true);
   expect(focused.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
@@ -355,7 +445,7 @@ it('slides the two-month view by exactly one month once a keypress moves past th
   expect(titles()[1]).to.contain('september');
 
   const focused = el.shadowRoot!.querySelector('[data-date="2026-09-01"]') as HTMLButtonElement;
-  expect(focused).to.exist;
+  expect((focused) != null).to.equal(true);
   expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 
@@ -383,15 +473,14 @@ it('disables every day button when the picker is readonly', async () => {
   for (const day of days) expect(day.disabled).to.be.true;
 });
 
-it('uses the shared --lr-color-on-brand token instead of a raw #fff for selected/range day text', () => {
-  const css = styles.cssText;
-  const selectedBlock =
-    /\[part~=['"]?day-selected['"]?],\s*\[part~=['"]?day-range-start['"]?],\s*\[part~=['"]?day-range-end['"]?]\s*{([^}]*)}/.exec(
-      css,
-    );
-  expect(selectedBlock, 'expected a shared day-selected/day-range-start/day-range-end rule').to.not.equal(null);
-  expect(selectedBlock![1]).to.include('var(--lr-color-on-brand');
-  expect(selectedBlock![1]).to.not.match(/color:\s*#fff/);
+it('renders selected day text from the shared --lr-color-on-brand fallback', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker value="2026-07-15" style="--lr-color-on-brand: rgb(1, 2, 3)"></lr-date-picker>
+  `)) as LyraDatePicker;
+  await el.updateComplete;
+
+  const selected = el.shadowRoot!.querySelector('[part~="day-selected"]') as HTMLButtonElement;
+  expect(getComputedStyle(selected).color).to.equal('rgb(1, 2, 3)');
 });
 
 // onGridKey: the ARIA-grid keyboard navigation handler (roving focus across
@@ -504,7 +593,7 @@ it('clamps the day-of-month on PageDown instead of rolling over into the wrong m
   await el.updateComplete;
   expect(title()).to.contain('february');
   const focused = el.shadowRoot!.querySelector('[data-date="2026-02-28"]') as HTMLButtonElement;
-  expect(focused, 'expected Jan 31 + 1 month to clamp to Feb 28').to.exist;
+  expect((focused) != null, 'expected Jan 31 + 1 month to clamp to Feb 28').to.equal(true);
   expect(focused.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
@@ -567,7 +656,7 @@ it('crosses a month boundary when ArrowRight moves past the last day of the mont
   const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
   expect(title).to.contain('august');
   const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
-  expect(focused, 'expected the next day, in August, to be rendered').to.exist;
+  expect((focused) != null, 'expected the next day, in August, to be rendered').to.equal(true);
   expect(focused.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
@@ -582,7 +671,7 @@ it('crosses a month boundary backwards when ArrowLeft moves before the first day
   const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
   expect(title).to.contain('june');
   const focused = el.shadowRoot!.querySelector('[data-date="2026-06-30"]') as HTMLButtonElement;
-  expect(focused, 'expected the previous day, in June, to be rendered').to.exist;
+  expect((focused) != null, 'expected the previous day, in June, to be rendered').to.equal(true);
   expect(focused.getAttribute('tabindex')).to.equal('0');
 });
 
@@ -597,8 +686,8 @@ it('renders chevron icons for month navigation instead of text glyphs', async ()
   await el.updateComplete;
   const previous = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
-  expect(previous.querySelector('svg')).to.exist;
-  expect(next.querySelector('svg')).to.exist;
+  expect((previous.querySelector('svg')) != null).to.equal(true);
+  expect((next.querySelector('svg')) != null).to.equal(true);
   expect(previous.textContent).to.not.contain('‹');
   expect(next.textContent).to.not.contain('›');
 });
@@ -732,17 +821,17 @@ it('gives an outside-month day inside a selected range normal text contrast, not
   const overlapCell = el.shadowRoot!.querySelector(
     '[part~="day-outside"][part~="day-range-inner"]',
   ) as HTMLButtonElement;
-  expect(overlapCell, 'expected an outside day cell inside the selected range').to.exist;
+  expect((overlapCell) != null, 'expected an outside day cell inside the selected range').to.equal(true);
 
   const plainOutsideCell = el.shadowRoot!.querySelector(
     '[part~="day-outside"]:not([part~="day-range-inner"])',
   ) as HTMLButtonElement;
-  expect(plainOutsideCell, 'expected a plain outside day cell for comparison').to.exist;
+  expect((plainOutsideCell) != null, 'expected a plain outside day cell for comparison').to.equal(true);
 
   const normalCell = el.shadowRoot!.querySelector(
     '[part~="day"]:not([part~="day-outside"]):not([part~="day-selected"]):not([part~="day-range-start"]):not([part~="day-range-end"])',
   ) as HTMLButtonElement;
-  expect(normalCell, 'expected a plain in-month day cell for comparison').to.exist;
+  expect((normalCell) != null, 'expected a plain in-month day cell for comparison').to.equal(true);
 
   const overlapColor = getComputedStyle(overlapCell).color;
   const plainOutsideColor = getComputedStyle(plainOutsideCell).color;
@@ -807,7 +896,7 @@ it('goToToday() navigates the view to the current month and focuses today', asyn
 
   const today = new Date();
   const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
-  expect(cell, 'expected today to be rendered after goToToday()').to.exist;
+  expect((cell) != null, 'expected today to be rendered after goToToday()').to.equal(true);
   expect(cell.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement === cell).to.be.true;
 });
@@ -826,7 +915,7 @@ it('goToToday() focuses today itself, not yesterday, when disable-future is set'
 
   const today = new Date();
   const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
-  expect(cell, 'expected today to be rendered after goToToday()').to.exist;
+  expect((cell) != null, 'expected today to be rendered after goToToday()').to.equal(true);
   expect(cell.disabled, 'today itself must remain selectable under disable-future').to.be.false;
   expect(cell.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement === cell).to.be.true;
@@ -845,25 +934,49 @@ it('goToDate() normalizes a Date argument carrying a time-of-day to local midnig
   expect(el.shadowRoot!.activeElement === cell).to.be.true;
 });
 
-it('wraps the two-month layout instead of overflowing a narrow allocation', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const baseBlock = /\[part=['"]?base['"]?]\s*{([^}]*)}/.exec(css);
-  expect(baseBlock, "expected a [part='base'] rule").to.not.equal(null);
-  expect(baseBlock![1]).to.include('flex-wrap: wrap;');
+it('renders two months as contained rows at a 320px allocation in LTR and RTL', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = (await fixture(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%; overflow: auto">
+        <lr-date-picker
+          mode="range"
+          months="2"
+          value="2026-07-15"
+          style="inline-size: 100%; max-inline-size: 100%"
+        ></lr-date-picker>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-date-picker') as LyraDatePicker;
+    await el.updateComplete;
+
+    const monthElements = Array.from(el.shadowRoot!.querySelectorAll('[part="month"]')) as HTMLElement[];
+    expect(monthElements.length).to.equal(2);
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const firstRect = monthElements[0].getBoundingClientRect();
+    const secondRect = monthElements[1].getBoundingClientRect();
+    for (const rect of [firstRect, secondRect]) {
+      expect(rect.left).to.be.at.least(wrapperRect.left - 1);
+      expect(rect.right).to.be.at.most(wrapperRect.right + 1);
+    }
+    expect(secondRect.top).to.be.greaterThan(firstRect.top);
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+  }
 });
 
-it('uses the shared --lr-opacity-disabled token instead of a literal 0.35 for the disabled day state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const dayDisabledBlock = /\[part~=['"]?day['"]?]:disabled\s*{([^}]*)}/.exec(css);
-  expect(dayDisabledBlock, 'expected a [part~="day"]:disabled rule').to.not.equal(null);
-  expect(dayDisabledBlock![1]).to.include('opacity: var(--lr-opacity-disabled);');
-  expect(dayDisabledBlock![1]).to.not.include('0.35');
+it('lets the component-scoped disabled opacity override the shared fallback', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker
+      value="2026-07-15"
+      disabled
+      style="--lr-opacity-disabled: 0.42; --lr-date-picker-disabled-opacity: 0.63"
+    ></lr-date-picker>
+  `)) as LyraDatePicker;
+  const day = el.shadowRoot!.querySelector('[part~="day"]') as HTMLButtonElement;
+  expect(day.disabled).to.be.true;
+  expect(getComputedStyle(day).opacity).to.equal('0.63');
 });
 
-it("renders a disabled day cell's opacity from the shared --lr-opacity-disabled token (getComputedStyle, not just source text)", async () => {
-  // The test above only proves the token string appears in the stylesheet source -- it can't
-  // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a
-  // competing higher-specificity rule). This reads the actual rendered disabled cell instead.
+it("renders a disabled day cell's opacity from the shared --lr-opacity-disabled fallback", async () => {
   const el = (await fixture(html`
     <lr-date-picker value="2026-07-15" disabled style="--lr-opacity-disabled: 0.42"></lr-date-picker>
   `)) as LyraDatePicker;
@@ -912,7 +1025,7 @@ it('clamps goToDate() to min/max instead of navigating to an out-of-range date',
   const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
   expect(title, 'expected the view to clamp into July instead of jumping to August').to.contain('july');
   const focused = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
-  expect(focused, 'expected the view to clamp to max').to.exist;
+  expect((focused) != null, 'expected the view to clamp to max').to.equal(true);
   expect(el.shadowRoot!.activeElement === focused).to.be.true;
 });
 

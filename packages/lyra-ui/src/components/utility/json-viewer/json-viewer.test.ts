@@ -28,7 +28,7 @@ it('renders object keys and primitive values with typed parts', async () => {
 
   const values = el.shadowRoot!.querySelectorAll('[part="value"]');
   const stringValue = Array.from(values).find((v) => v.textContent === '"Ada Lovelace"');
-  expect(stringValue).to.exist;
+  expect((stringValue) != null).to.equal(true);
   expect(stringValue!.getAttribute('data-type')).to.equal('string');
 
   const numberValue = Array.from(values).find((v) => v.textContent === '36');
@@ -181,7 +181,7 @@ it('renders a top-level copy button when copyable, and emits lr-copy with the fu
   await el.updateComplete;
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
-  expect(toolbarButton).to.exist;
+  expect((toolbarButton) != null).to.equal(true);
 
   setTimeout(() => toolbarButton.click());
   const event = await oneEvent(el, 'lr-copy');
@@ -269,7 +269,7 @@ it('highlights matching keys/values with data-match when search is set', async (
   await el.updateComplete;
 
   const match = el.shadowRoot!.querySelector('[part="value"][data-match]');
-  expect(match).to.exist;
+  expect((match) != null).to.equal(true);
   expect(match!.textContent).to.equal('"Ada Lovelace"');
 });
 
@@ -284,7 +284,7 @@ it('auto-expands ancestors of a match even under a collapsing collapsed-depth', 
   const match = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).find(
     (v) => v.textContent === '"London"',
   );
-  expect(match).to.exist;
+  expect((match) != null).to.equal(true);
   expect(match!.hasAttribute('data-match')).to.be.true;
 });
 
@@ -428,8 +428,8 @@ it('sizes the closing-bracket spacer to the toggle\'s real (min-inline-size-driv
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]:not([hidden])') as HTMLElement;
   const spacer = el.shadowRoot!.querySelector('.toggle-space') as HTMLElement;
-  expect(toggle, 'the nested object should render expanded with a real toggle').to.exist;
-  expect(spacer, 'the closing-bracket row should render its alignment spacer').to.exist;
+  expect((toggle) != null, 'the nested object should render expanded with a real toggle').to.equal(true);
+  expect((spacer) != null, 'the closing-bracket row should render its alignment spacer').to.equal(true);
   expect(getComputedStyle(spacer).getPropertyValue('inline-size')).to.equal(
     getComputedStyle(toggle).getPropertyValue('inline-size'),
   );

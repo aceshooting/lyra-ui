@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
@@ -10,7 +11,7 @@ import { styles } from './document-compare.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -82,6 +83,9 @@ export interface DocumentCompareVersion extends DocumentRef {
  * - A shared `anchor` property (same declarative shape as `<lr-document-viewer>`'s own `anchor`)
  *   drives both panes to the same target at once via their own `scrollToAnchor()`.
  *
+ * A host `aria-label` names the comparison group by attribute presence, including an explicitly
+ * empty value. The localized comparison label is used only when that attribute is absent.
+ *
  * @customElement lr-document-compare
  * @event lr-copy - See `LyraDocumentCompareEventMap`.
  * @event lr-highlight-activate - See `LyraDocumentCompareEventMap`.
@@ -103,10 +107,13 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     documentCompareLabel: LYRA_DEFAULT_documentCompareLabel,
     documentCompareNewVersion: LYRA_DEFAULT_documentCompareNewVersion,
     documentCompareNoVersion: LYRA_DEFAULT_documentCompareNoVersion,
     documentCompareOldVersion: LYRA_DEFAULT_documentCompareOldVersion,
+    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -284,7 +291,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   override render(): TemplateResult {
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('documentCompareLabel')}>
+      <div part="base" role="group" aria-label=${hostAriaLabel(this) ?? this.localize('documentCompareLabel')}>
         ${this.view === 'side-by-side' ? this.renderSideBySide() : this.renderDiff()}
       </div>
     `;

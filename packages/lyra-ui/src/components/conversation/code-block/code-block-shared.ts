@@ -17,38 +17,61 @@
  * on its own module graph never reaching that call, and this module is in that graph.
  */
 
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { styleMap } from 'lit/directives/style-map.js';
-import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighterCore, type ShikiLanguageInput } from './code-loader.js';
-import type { ShikiTransformer } from './shiki-types.js';
-import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { chevronIcon } from "../../../internal/icons.js";
+import { prefersReducedMotion } from "../../../internal/motion.js";
+import { styleMap } from "lit/directives/style-map.js";
+import { sanitizeCssLength } from "../../../internal/safe-css.js";
+import {
+  normalizeShikiLanguage,
+  SHIKI_THEMES,
+  type ShikiHighlighterCore,
+  type ShikiLanguageInput,
+} from "./shiki-types.js";
+import type { ShikiTransformer } from "./shiki-types.js";
+import type {
+  LyraAnchor,
+  LyraHighlight,
+} from "../../viewers/document-viewer/anchors.js";
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
 export type LyraLocalizeFn = (
   key: string,
   fallback?: string,
-  values?: Record<string, string | number>,
+  values?: Record<string, string | number>
 ) => string;
 
 /** The collapse/expand header toggle button's `aria-label`. */
-export function codeBlockToggleLabel(localize: LyraLocalizeFn, collapsed: boolean): string {
-  return collapsed ? localize('expandCode') : localize('collapseCode');
+export function codeBlockToggleLabel(
+  localize: LyraLocalizeFn,
+  collapsed: boolean
+): string {
+  return collapsed ? localize("expandCode") : localize("collapseCode");
 }
 
 /** The copy-to-clipboard header button's `aria-label`. */
-export function codeBlockCopyLabel(localize: LyraLocalizeFn, justCopied: boolean): string {
-  return justCopied ? localize('copiedToClipboard') : localize('copyCode');
+export function codeBlockCopyLabel(
+  localize: LyraLocalizeFn,
+  justCopied: boolean
+): string {
+  return justCopied ? localize("copiedToClipboard") : localize("copyCode");
 }
 
 /** The `[part="body"]` region's `aria-label`: the filename when set, else a
  *  language-aware "Code" region label. */
-export function codeBlockBodyLabel(localize: LyraLocalizeFn, filename: string, language: string): string {
-  return filename || (language ? localize('codeRegionWithLanguage', undefined, { language }) : localize('codeRegion'));
+export function codeBlockBodyLabel(
+  localize: LyraLocalizeFn,
+  filename: string,
+  language: string
+): string {
+  return (
+    filename ||
+    (language
+      ? localize("codeRegionWithLanguage", undefined, { language })
+      : localize("codeRegion"))
+  );
 }
 
 /**
@@ -58,10 +81,18 @@ export function codeBlockBodyLabel(localize: LyraLocalizeFn, filename: string, l
  * normalized to ascending order. An invalid segment is skipped (with a `console.warn`) rather
  * than throwing or discarding the otherwise-valid segments around it.
  */
-export function addBoundedLineRange(lines: Set<number>, start: number, end: number, maxLine: number): void {
+export function addBoundedLineRange(
+  lines: Set<number>,
+  start: number,
+  end: number,
+  maxLine: number
+): void {
   if (!Number.isFinite(start) || !Number.isFinite(end) || maxLine < 1) return;
   const low = Math.max(1, Math.min(Math.trunc(start), Math.trunc(end)));
-  const high = Math.min(Math.trunc(maxLine), Math.max(Math.trunc(start), Math.trunc(end)));
+  const high = Math.min(
+    Math.trunc(maxLine),
+    Math.max(Math.trunc(start), Math.trunc(end))
+  );
   for (let line = low; line <= high; line++) lines.add(line);
 }
 
@@ -76,7 +107,10 @@ export function codeBlockLineCount(code: string): number {
 
 /** Keeps the roving-tabindex gutter's focused line inside `[1, lineCount]` after a `code` change
  *  shrinks the document out from under it. */
-export function clampCodeBlockFocusedLine(focusedLine: number, lineCount: number): number {
+export function clampCodeBlockFocusedLine(
+  focusedLine: number,
+  lineCount: number
+): number {
   return Math.min(Math.max(1, focusedLine), lineCount);
 }
 
@@ -86,20 +120,33 @@ export interface CodeBlockLineFocusHost extends HTMLElement {
 
 /** Whether real focus currently sits on one of the rendered roving line controls. */
 export function codeBlockLineHasFocus(host: CodeBlockLineFocusHost): boolean {
-  return host.shadowRoot?.activeElement?.matches('[data-line][part~="line-button"]') ?? false;
+  return (
+    host.shadowRoot?.activeElement?.matches(
+      '[data-line][part~="line-button"]'
+    ) ?? false
+  );
 }
 
 /** Restores focus after Lit replaces a focused line node, but never overrides focus that moved
  *  to another internal or external control while the update was pending. */
-export function restoreCodeBlockLineFocus(host: CodeBlockLineFocusHost, line: number): boolean {
+export function restoreCodeBlockLineFocus(
+  host: CodeBlockLineFocusHost,
+  line: number
+): boolean {
   const shadowActive = host.shadowRoot?.activeElement;
-  if (shadowActive) return shadowActive.matches('[data-line][part~="line-button"]');
+  if (shadowActive)
+    return shadowActive.matches('[data-line][part~="line-button"]');
 
   const documentActive = host.ownerDocument.activeElement;
-  if (documentActive && documentActive !== host.ownerDocument.body && documentActive !== host) return false;
+  if (
+    documentActive &&
+    documentActive !== host.ownerDocument.body &&
+    documentActive !== host
+  )
+    return false;
 
   const target = host.renderRoot.querySelector<HTMLElement>(
-    `[data-line="${line}"][part~="line-button"]`,
+    `[data-line="${line}"][part~="line-button"]`
   );
   target?.focus();
   return host.shadowRoot?.activeElement === target;
@@ -111,11 +158,11 @@ export function restoreCodeBlockLineFocus(host: CodeBlockLineFocusHost, line: nu
 export function codeBlockLineHighlightSet(
   highlightLines: string,
   highlights: readonly LyraHighlight[],
-  maxLine: number,
+  maxLine: number
 ): Set<number> {
   const merged = parseHighlightLines(highlightLines, maxLine);
   for (const highlight of highlights) {
-    if (highlight.anchor.kind !== 'line-range') continue;
+    if (highlight.anchor.kind !== "line-range") continue;
     const end = highlight.anchor.end ?? highlight.anchor.start;
     addBoundedLineRange(merged, highlight.anchor.start, end, maxLine);
   }
@@ -126,11 +173,11 @@ export function codeBlockLineHighlightSet(
 export function codeBlockActiveHighlightLineSet(
   highlights: readonly LyraHighlight[],
   activeHighlightId: string | null,
-  maxLine: number,
+  maxLine: number
 ): Set<number> {
   const active = highlights.find((h) => h.id === activeHighlightId);
   const result = new Set<number>();
-  if (!active || active.anchor.kind !== 'line-range') return result;
+  if (!active || active.anchor.kind !== "line-range") return result;
   const end = active.anchor.end ?? active.anchor.start;
   addBoundedLineRange(result, active.anchor.start, end, maxLine);
   return result;
@@ -141,7 +188,7 @@ export function codeBlockActiveHighlightLineSet(
  *  `syncHighlight()` on either component all agree on whether the fine-grained path applies. */
 export function codeBlockPreSuppliedGrammar(
   languages: Record<string, ShikiLanguageInput> | undefined,
-  language: string,
+  language: string
 ): ShikiLanguageInput | undefined {
   const normalized = normalizeShikiLanguage(language);
   return languages?.[normalized] ?? languages?.[language];
@@ -161,19 +208,30 @@ export interface CodeBlockAnchorHost {
  *  `line-range`, the id isn't found, or the start line is out of bounds. */
 export async function scrollCodeBlockToAnchor(
   host: CodeBlockAnchorHost,
-  target: LyraAnchor | string,
+  target: LyraAnchor | string
 ): Promise<boolean> {
-  const anchor = typeof target === 'string' ? host.highlights.find((h) => h.id === target)?.anchor : target;
-  if (!anchor || anchor.kind !== 'line-range') return false;
-  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code)) return false;
+  const anchor =
+    typeof target === "string"
+      ? host.highlights.find((h) => h.id === target)?.anchor
+      : target;
+  if (!anchor || anchor.kind !== "line-range") return false;
+  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code))
+    return false;
   await host.updateComplete;
-  const body = host.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
-  const lineEl = host.renderRoot.querySelector(`[data-line="${anchor.start}"]`) as HTMLElement | null;
+  const body = host.renderRoot.querySelector(
+    '[part="body"]'
+  ) as HTMLElement | null;
+  const lineEl = host.renderRoot.querySelector(
+    `[data-line="${anchor.start}"]`
+  ) as HTMLElement | null;
   if (!body || !lineEl) return false;
   const offset = lineEl.offsetTop - body.clientHeight / 2;
   const ownerWindow = body.ownerDocument.defaultView;
   const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
-  body.scrollTo({ top: Math.max(0, offset), behavior: reducedMotion ? 'auto' : 'smooth' });
+  body.scrollTo({
+    top: Math.max(0, offset),
+    behavior: reducedMotion ? "auto" : "smooth",
+  });
   return true;
 }
 
@@ -182,34 +240,43 @@ export async function scrollCodeBlockToAnchor(
 export function codeBlockEventLine(e: Event): number | null {
   const target = e.composedPath()[0];
   if (
-    typeof target !== 'object' ||
+    typeof target !== "object" ||
     target === null ||
     (target as Node).nodeType !== 1 ||
-    typeof (target as Element).localName !== 'string' ||
-    typeof (target as Element).closest !== 'function'
+    typeof (target as Element).localName !== "string" ||
+    typeof (target as Element).closest !== "function"
   ) {
     return null;
   }
-  const lineElement = (target as Element).closest<HTMLElement>('[data-line][part~="line-button"]');
-  const line = Number(lineElement?.dataset['line']);
+  const lineElement = (target as Element).closest<HTMLElement>(
+    '[data-line][part~="line-button"]'
+  );
+  const line = Number(lineElement?.dataset["line"]);
   return Number.isInteger(line) && line >= 1 ? line : null;
 }
 
 /** What a keystroke on a gutter line button means. `null` covers both an unhandled key and a
  *  movement key that would land on the line already focused -- neither of which may
  *  `preventDefault()`, so the caller must not treat them differently. */
-export type CodeBlockLineKeyAction = { kind: 'activate' } | { kind: 'move'; line: number } | null;
+export type CodeBlockLineKeyAction =
+  | { kind: "activate" }
+  | { kind: "move"; line: number }
+  | null;
 
 /** The roving-tabindex keyboard contract for the (`line-numbers`-gated) gutter. */
-export function codeBlockLineKeyAction(key: string, line: number, total: number): CodeBlockLineKeyAction {
-  if (key === 'Enter' || key === ' ') return { kind: 'activate' };
+export function codeBlockLineKeyAction(
+  key: string,
+  line: number,
+  total: number
+): CodeBlockLineKeyAction {
+  if (key === "Enter" || key === " ") return { kind: "activate" };
   let next: number | null = null;
-  if (key === 'ArrowDown') next = Math.min(total, line + 1);
-  else if (key === 'ArrowUp') next = Math.max(1, line - 1);
-  else if (key === 'Home') next = 1;
-  else if (key === 'End') next = total;
+  if (key === "ArrowDown") next = Math.min(total, line + 1);
+  else if (key === "ArrowUp") next = Math.max(1, line - 1);
+  else if (key === "Home") next = 1;
+  else if (key === "End") next = total;
   if (next === null || next === line) return null;
-  return { kind: 'move', line: next };
+  return { kind: "move", line: next };
 }
 
 /** An `lr-text-select` payload for a selection ending inside `[part="body"]`. */
@@ -221,11 +288,17 @@ export interface CodeBlockSelection {
 
 /** Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to
  *  report: no selection, a collapsed/whitespace-only one, or endpoints outside any `[data-line]`. */
-export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlockSelection | null {
+export function codeBlockSelectionAnchor(
+  shadowRoot: ShadowRoot | null
+): CodeBlockSelection | null {
   if (!shadowRoot) return null;
   const ownerDocument = shadowRoot.ownerDocument;
   const globalSelection = ownerDocument.defaultView?.getSelection() as
-    | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
+    | (Selection & {
+        getComposedRanges?: (options: {
+          shadowRoots: ShadowRoot[];
+        }) => StaticRange[];
+      })
     | null
     | undefined;
   let range: Range | null = null;
@@ -233,10 +306,13 @@ export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlo
   // boundary. The composed-range API preserves the real endpoints; Firefox's legacy Range remains
   // the fallback, as does Chromium's non-standard ShadowRoot.getSelection().
   if (globalSelection?.getComposedRanges) {
-    const [composed] = globalSelection.getComposedRanges({ shadowRoots: [shadowRoot] });
+    const [composed] = globalSelection.getComposedRanges({
+      shadowRoots: [shadowRoot],
+    });
     if (
       composed &&
-      (composed.startContainer !== composed.endContainer || composed.startOffset !== composed.endOffset)
+      (composed.startContainer !== composed.endContainer ||
+        composed.startOffset !== composed.endOffset)
     ) {
       range = ownerDocument.createRange();
       range.setStart(composed.startContainer, composed.startOffset);
@@ -244,18 +320,22 @@ export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlo
     }
   }
   // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib.
-  const shadowSelection = (shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection?.();
+  const shadowSelection = (
+    shadowRoot as unknown as { getSelection?: () => Selection | null }
+  ).getSelection?.();
   const selection = shadowSelection ?? globalSelection;
   if (!range) {
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0)
+      return null;
     range = selection.getRangeAt(0);
   }
   const text = range.toString();
   if (!text.trim()) return null;
   const lineOf = (node: Node): number | null => {
-    const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
-    const lineEl = el?.closest('[data-line]');
-    const attr = lineEl?.getAttribute('data-line');
+    const el =
+      node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+    const lineEl = el?.closest("[data-line]");
+    const attr = lineEl?.getAttribute("data-line");
     return attr === null || attr === undefined ? null : Number(attr);
   };
   const start = lineOf(range.startContainer);
@@ -263,7 +343,11 @@ export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlo
   if (start === null || end === null) return null;
   return {
     text,
-    anchor: { kind: 'line-range', start: Math.min(start, end), end: Math.max(start, end) },
+    anchor: {
+      kind: "line-range",
+      start: Math.min(start, end),
+      end: Math.max(start, end),
+    },
     rects: Array.from(range.getClientRects()),
   };
 }
@@ -272,7 +356,10 @@ export function codeBlockSelectionAnchor(shadowRoot: ShadowRoot | null): CodeBlo
  *  browsers, and some engines throw synchronously rather than rejecting -- either way the caller
  *  still emits `lr-copy` regardless of whether the OS clipboard was actually reached, the same
  *  convention `<lr-json-viewer>`'s own copy button follows. */
-export function writeCodeBlockClipboard(text: string, ownerWindow: Window | null): void {
+export function writeCodeBlockClipboard(
+  text: string,
+  ownerWindow: Window | null
+): void {
   if (!ownerWindow) return;
   try {
     void ownerWindow.navigator.clipboard?.writeText(text)?.catch(() => {});
@@ -287,17 +374,19 @@ export function writeCodeBlockClipboard(text: string, ownerWindow: Window | null
  *  options, so a change to any of them needs a re-tokenize to stay in sync even when the code
  *  itself is untouched. `languagesOnly` is listed for `<lr-code-block>`; `<lr-code-block-core>` has
  *  no such property, so it simply never appears in that component's changed map. */
-export function codeBlockNeedsHighlightResync(changed: PropertyValues): boolean {
+export function codeBlockNeedsHighlightResync(
+  changed: PropertyValues
+): boolean {
   return (
-    changed.has('code') ||
-    changed.has('language') ||
-    changed.has('languages') ||
-    changed.has('highlightLines') ||
-    changed.has('highlights') ||
-    changed.has('activeHighlightId') ||
-    changed.has('lineNumbers') ||
-    changed.has('interactiveLines') ||
-    changed.has('languagesOnly')
+    changed.has("code") ||
+    changed.has("language") ||
+    changed.has("languages") ||
+    changed.has("highlightLines") ||
+    changed.has("highlights") ||
+    changed.has("activeHighlightId") ||
+    changed.has("lineNumbers") ||
+    changed.has("interactiveLines") ||
+    changed.has("languagesOnly")
   );
 }
 
@@ -311,18 +400,26 @@ export function codeBlockNeedsHighlightResync(changed: PropertyValues): boolean 
  * `updated()` and `render()` on each class so the `aria-busy` host attribute can never disagree
  * with what is actually on screen.
  */
-export function codeBlockShowsSkeleton(shikiReady: boolean, language: string, loaderPending: boolean): boolean {
+export function codeBlockShowsSkeleton(
+  shikiReady: boolean,
+  language: string,
+  loaderPending: boolean
+): boolean {
   return !shikiReady && !!language && loaderPending;
 }
 
 /** Mirrors the skeleton state onto the host as `aria-busy`, so assistive tech knows the code
  *  region is still resolving. */
-export function applyCodeBlockAriaBusy(host: Element, showingSkeleton: boolean): void {
-  if (showingSkeleton) host.setAttribute('aria-busy', 'true');
-  else host.removeAttribute('aria-busy');
+export function applyCodeBlockAriaBusy(
+  host: Element,
+  showingSkeleton: boolean
+): void {
+  if (showingSkeleton) host.setAttribute("aria-busy", "true");
+  else host.removeAttribute("aria-busy");
 }
 
-export interface CodeBlockTokenizeOptions extends CodeBlockLineTransformerOptions {
+export interface CodeBlockTokenizeOptions
+  extends CodeBlockLineTransformerOptions {
   code: string;
   lang: string;
 }
@@ -340,7 +437,10 @@ export interface CodeBlockTokenizeOptions extends CodeBlockLineTransformerOption
  * Returns `null` on malformed input for the grammar or any other shiki-internal failure, so the
  * caller falls back to plain text rather than a blank code block.
  */
-export function tokenizeCodeBlock(hl: ShikiHighlighterCore, options: CodeBlockTokenizeOptions): string | null {
+export function tokenizeCodeBlock(
+  hl: ShikiHighlighterCore,
+  options: CodeBlockTokenizeOptions
+): string | null {
   try {
     return hl.codeToHtml(options.code, {
       lang: options.lang,
@@ -352,9 +452,12 @@ export function tokenizeCodeBlock(hl: ShikiHighlighterCore, options: CodeBlockTo
   }
 }
 
-export function parseHighlightLines(spec: string, maxLine = Number.MAX_SAFE_INTEGER): Set<number> {
+export function parseHighlightLines(
+  spec: string,
+  maxLine = Number.MAX_SAFE_INTEGER
+): Set<number> {
   const lines = new Set<number>();
-  for (const raw of spec.split(',')) {
+  for (const raw of spec.split(",")) {
     const segment = raw.trim();
     if (!segment) continue;
     const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(segment);
@@ -391,40 +494,44 @@ export interface CodeBlockLineTransformerOptions {
  * strips shiki's own default `tabindex="0"` from `<pre>` — each component's own `[part="body"]`
  * wrapper is the single scrollable/focusable region.
  */
-export function codeBlockLineTransformer(options: CodeBlockLineTransformerOptions): ShikiTransformer {
+export function codeBlockLineTransformer(
+  options: CodeBlockLineTransformerOptions
+): ShikiTransformer {
   return {
-    name: 'lr-code-block-parts',
+    name: "lr-code-block-parts",
     pre(node) {
-      node.properties.part = ['pre'];
+      node.properties.part = ["pre"];
       if (options.lineNumbers) {
-        const classValue = node.properties['class'];
+        const classValue = node.properties["class"];
         const classes = Array.isArray(classValue)
           ? classValue.map(String)
           : classValue
-            ? [String(classValue)]
-            : [];
-        node.properties['class'] = [...classes, 'line-numbers'];
+          ? [String(classValue)]
+          : [];
+        node.properties["class"] = [...classes, "line-numbers"];
       }
-      delete node.properties['tabindex'];
+      delete node.properties["tabindex"];
     },
     code(node) {
-      node.properties.part = ['code'];
+      node.properties.part = ["code"];
     },
     line(node, line: number) {
-      node.properties['data-line'] = String(line);
+      node.properties["data-line"] = String(line);
       const parts: string[] = [];
       if (options.interactiveLines && options.lineNumbers) {
-        parts.push('line-button');
-        node.properties.role = 'button';
-        node.properties['tabindex'] = String(options.focusedLine === line ? 0 : -1);
-        node.properties['aria-description'] = options.lineDescription(line);
+        parts.push("line-button");
+        node.properties.role = "button";
+        node.properties["tabindex"] = String(
+          options.focusedLine === line ? 0 : -1
+        );
+        node.properties["aria-description"] = options.lineDescription(line);
       }
       if (options.highlightedLines.has(line)) {
-        parts.push('line-highlight');
-        node.properties['data-highlighted'] = '';
+        parts.push("line-highlight");
+        node.properties["data-highlighted"] = "";
       }
       if (parts.length > 0) node.properties.part = parts;
-      if (options.activeLines.has(line)) node.properties['data-active'] = '';
+      if (options.activeLines.has(line)) node.properties["data-active"] = "";
     },
   };
 }
@@ -455,51 +562,65 @@ export interface CodeBlockPlainCodeOptions {
  * buttons (see each component's own class doc), only `data-line`/`data-highlighted`/`data-active`/
  * `part="line-highlight"` from `codeBlockLineTransformer` above.
  */
-export function renderCodeBlockPlainCode(options: CodeBlockPlainCodeOptions): TemplateResult {
+export function renderCodeBlockPlainCode(
+  options: CodeBlockPlainCodeOptions
+): TemplateResult {
   const lines = options.code.split(/\r\n|\r|\n/);
   const interactive = options.interactiveLines && options.lineNumbers;
   // The `>` sits on its own line right before the expression (and `</code` right after it, closing
   // on the following line) so no incidental whitespace text node lands inside <code> -- its
   // textContent must be exactly the concatenated line text, matching a single-text-node rendering.
-  return html`<code part="code" class=${options.lineNumbers ? 'line-numbered-code' : nothing}
-      >${lines.map((line, index) => {
-        const lineNumber = index + 1;
-        const isHighlighted = options.highlightedLines.has(lineNumber);
-        const isActive = options.activeLines.has(lineNumber);
-        const part = interactive
-          ? isHighlighted
-            ? 'line-button line-highlight'
-            : 'line-button'
-          : isHighlighted
-            ? 'line-highlight'
-            : nothing;
-        const lineTemplate = interactive
-          ? html`<button
-              type="button"
-              class="line"
-              part=${part}
-              data-line=${lineNumber}
-              ?data-highlighted=${isHighlighted}
-              ?data-active=${isActive}
-              aria-description=${options.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
-              tabindex=${options.focusedLine === lineNumber ? 0 : -1}
-              @click=${() => options.onLineActivate(lineNumber)}
-              @keydown=${(e: KeyboardEvent) => options.onLineKeyDown(e, lineNumber)}
-            >${line}</button>`
-          : html`<span
-              class="line"
-              part=${part}
-              data-line=${lineNumber}
-              ?data-highlighted=${isHighlighted}
-              ?data-active=${isActive}
-            >${line}</span>`;
-        // Only the non-line-numbered case needs the newline text node re-inserted -- the
-        // line-numbered case's .line elements are already display:block (code-block.styles.ts),
-        // and each component's own test asserts textContent has no embedded newlines between
-        // lines.
-        return index > 0 && !options.lineNumbers ? html`\n${lineTemplate}` : lineTemplate;
-      })}</code
-    >`;
+  return html`<code
+    part="code"
+    class=${options.lineNumbers ? "line-numbered-code" : nothing}
+    >${lines.map((line, index) => {
+      const lineNumber = index + 1;
+      const isHighlighted = options.highlightedLines.has(lineNumber);
+      const isActive = options.activeLines.has(lineNumber);
+      const part = interactive
+        ? isHighlighted
+          ? "line-button line-highlight"
+          : "line-button"
+        : isHighlighted
+        ? "line-highlight"
+        : nothing;
+      const lineTemplate = interactive
+        ? html`<button
+            type="button"
+            class="line"
+            part=${part}
+            data-line=${lineNumber}
+            ?data-highlighted=${isHighlighted}
+            ?data-active=${isActive}
+            aria-description=${options.localize(
+              "codeBlockLineLabel",
+              undefined,
+              { line: lineNumber }
+            )}
+            tabindex=${options.focusedLine === lineNumber ? 0 : -1}
+            @click=${() => options.onLineActivate(lineNumber)}
+            @keydown=${(e: KeyboardEvent) =>
+              options.onLineKeyDown(e, lineNumber)}
+          >
+            ${line}
+          </button>`
+        : html`<span
+            class="line"
+            part=${part}
+            data-line=${lineNumber}
+            ?data-highlighted=${isHighlighted}
+            ?data-active=${isActive}
+            >${line}</span
+          >`;
+      // Only the non-line-numbered case needs the newline text node re-inserted -- the
+      // line-numbered case's .line elements are already display:block (code-block.styles.ts),
+      // and each component's own test asserts textContent has no embedded newlines between
+      // lines.
+      return index > 0 && !options.lineNumbers
+        ? html` ${lineTemplate}`
+        : lineTemplate;
+    })}</code
+  >`;
 }
 
 export interface CodeBlockHeaderOptions {
@@ -521,7 +642,9 @@ export interface CodeBlockHeaderOptions {
  * `<lr-code-block-core>`. `aria-expanded` renders both `"true"` and `"false"` rather than being
  * conditionally omitted -- the collapse toggle's state is meaningless to assistive tech otherwise.
  */
-export function renderCodeBlockHeader(options: CodeBlockHeaderOptions): TemplateResult {
+export function renderCodeBlockHeader(
+  options: CodeBlockHeaderOptions
+): TemplateResult {
   // Indented two levels deeper than this function body on purpose: the literal text between these
   // tags becomes real whitespace text nodes, so keeping the exact indentation both class files
   // used before the extraction keeps the rendered DOM byte-identical (see renderCodeBlockShell()
@@ -599,11 +722,18 @@ export interface CodeBlockShellOptions {
  * without claiming landmark/navigation significance for what is, structurally, just one small piece
  * of a larger document.
  */
-export function renderCodeBlockShell(options: CodeBlockShellOptions): TemplateResult {
-  const hasHeader = !!options.filename || !!options.language || options.copyable || options.collapsible;
+export function renderCodeBlockShell(
+  options: CodeBlockShellOptions
+): TemplateResult {
+  const hasHeader =
+    !!options.filename ||
+    !!options.language ||
+    options.copyable ||
+    options.collapsible;
   const bodyHidden = options.collapsible && options.collapsed;
   const bodyLabel =
-    options.accessibleLabel || codeBlockBodyLabel(options.localize, options.filename, options.language);
+    options.accessibleLabel ||
+    codeBlockBodyLabel(options.localize, options.filename, options.language);
 
   // Indentation preserved from both class files' own render() -- see renderCodeBlockHeader() above.
   // prettier-ignore

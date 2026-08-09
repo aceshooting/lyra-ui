@@ -223,7 +223,7 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal('b"c');
     // Without escaping the value in the attribute-selector lookup, `focusItem()` throws before
     // reaching `.focus()`, so the target button never receives focus even though `value` updated.
-    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
   });
 
   it("keeps duplicate values as distinct rendered occurrences with exactly one checked/tabbable radio", async () => {
@@ -252,7 +252,7 @@ describe("lr-segmented", () => {
     );
     await el.updateComplete;
     buttons = segmentButtons(el);
-    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
     expect(buttons[1]!.getAttribute("aria-checked")).to.equal("true");
     expect(buttons[0]!.getAttribute("aria-checked")).to.equal("false");
   });
@@ -304,7 +304,7 @@ describe("item icon", () => {
     )) as LyraSegmented;
     const button = el.shadowRoot!.querySelector('[part="segment"]')!;
     const icon = button.querySelector('[part="segment-icon"]');
-    expect(icon).to.exist;
+    expect((icon) != null).to.equal(true);
     expect(icon!.querySelector(".dot")).to.exist;
     const children = Array.from(button.children);
     const labelIndex = children.findIndex(

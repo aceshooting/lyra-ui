@@ -196,7 +196,8 @@ undefined, value: unknown }`). For scatter/bubble points, `label` prefers the pe
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
-wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-swatch`,
+wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
+that button while its dataset is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
 `center` slot), `error` (neutral visible message rendered in place of `canvas` when the optional
 `chart.js` peer dependency fails to load; the failure transition is announced through the shared
@@ -214,6 +215,12 @@ descendant, since custom properties only cascade downward);
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; plus
+`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
+`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`, and
+`--lr-chart-reset-zoom-button-hover-bg` / `--lr-chart-reset-zoom-button-active-bg` — independent
+background hooks for each DOM control's hover and pressed states. Hover defaults to
+`--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair
+without repainting the other controls;
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) — the width of
 `[part="canvas"]`'s own `:hover` outline. Unlike the tokens above, this one is a real CSS
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
@@ -409,7 +416,8 @@ passthrough). Not a subclass of `LyraChart`.
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
   chart, the category index selects the matching mark in every dataset. Empty is the default.
-  Style the built-in highlight through `--lr-lite-chart-selected-outline-color`. Note
+  Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
+  `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
   forbids an attribute selector after `::part()` — so they silently never match; the outline is
   painted inside the shadow root and exposed through that token instead.
@@ -465,7 +473,8 @@ blank instead of reporting a misleading zero.
 `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
 without moving the library-wide ramp; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
-selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`.
+selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`;
+`--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
 `refreshTheme()` method needed (there's nothing to go stale).
@@ -540,7 +549,7 @@ index, label, value }`).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
-**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
@@ -548,9 +557,13 @@ failure transition is announced through the shared document-level light-DOM asse
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` — all
-inherited from `LyraChart`, identical in meaning and default (see `lr-chart` above); each of the
-eight variants below reads the same set, so one rule retunes them together. The mirrored hooks are `--border-color-1`,
+`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
+`--lr-chart-pattern-step` — all inherited from `LyraChart`, identical in meaning and default (see
+`lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
+together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
 `--border-color-6`, `--fill-color-1`, `--fill-color-2`, `--fill-color-3`, `--fill-color-4`,
 `--fill-color-5`, `--fill-color-6`, `--border-radius`, `--border-width`, `--grid-border-width`,
@@ -617,7 +630,7 @@ and `label` the generated bucket range string (`"lo–hi"`, both bounds at one d
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
-**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
@@ -625,8 +638,12 @@ inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width`, `--lr-chart-pattern-step` —
-inherited from `LyraChart`, identical in meaning, together with the mirrored `--border-color-1`,
+`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
+`--lr-chart-pattern-step` — inherited from `LyraChart`, identical in meaning, together with the
+mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
 `--fill-color-2`, `--fill-color-3`, `--fill-color-4`, `--fill-color-5`, `--fill-color-6`,
@@ -687,7 +704,8 @@ its computed color swatches.
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
-`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+`legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
+`legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
 announced through the shared document-level light-DOM assertive sink)
 

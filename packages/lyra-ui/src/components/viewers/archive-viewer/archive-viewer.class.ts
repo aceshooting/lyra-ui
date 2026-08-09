@@ -1,6 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
@@ -195,7 +195,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
-  /** Display name used as the archive listing's accessible label. */
+  /** Display name used as the archive listing's accessible label when the host has no
+   *  `aria-label`. Host `aria-label` wins by attribute presence, including an empty value. */
   @property() name = '';
 
   /** Case-insensitive search over loaded entry paths, with next/previous navigation that scrolls
@@ -553,8 +554,9 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   override render(): TemplateResult {
     // `name` (or a host-level aria-label) names the archive listing region; with neither set
     // there is nothing meaningful to announce, so the region role is only added once a name exists.
-    const label = this.getAttribute('aria-label') || this.name;
-    return label
+    const authoredLabel = hostAriaLabel(this);
+    const label = authoredLabel ?? this.name;
+    return authoredLabel !== null || Boolean(this.name)
       ? html`<div part="base" role="region" aria-label=${label}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`
       : html`<div part="base"><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }

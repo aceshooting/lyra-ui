@@ -2965,7 +2965,7 @@ it("moves focus into the floating pane when opened", async () => {
     el.open = true;
     await elementUpdated(el);
 
-    expect(document.activeElement).to.equal(first);
+    expect((document.activeElement) === (first)).to.equal(true);
   } finally {
     spy.restore();
   }
@@ -2999,7 +2999,7 @@ it("traps Tab focus within the floating pane while open, wrapping last->first an
     });
     document.dispatchEvent(tabForward);
     expect(tabForward.defaultPrevented).to.be.true;
-    expect(document.activeElement).to.equal(first);
+    expect((document.activeElement) === (first)).to.equal(true);
 
     const tabBackward = new KeyboardEvent("keydown", {
       key: "Tab",
@@ -3009,7 +3009,7 @@ it("traps Tab focus within the floating pane while open, wrapping last->first an
     });
     document.dispatchEvent(tabBackward);
     expect(tabBackward.defaultPrevented).to.be.true;
-    expect(document.activeElement).to.equal(last);
+    expect((document.activeElement) === (last)).to.equal(true);
   } finally {
     spy.restore();
   }

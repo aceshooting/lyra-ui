@@ -382,7 +382,7 @@ it('closes on Escape and returns focus to the trigger', async () => {
   trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.open).to.be.false;
-  expect(el.shadowRoot!.activeElement).to.equal(trigger);
+  expect((el.shadowRoot!.activeElement) === (trigger)).to.equal(true);
 });
 
 it('closes the menu and returns focus to the trigger after picking a format', async () => {
@@ -401,7 +401,7 @@ it('closes the menu and returns focus to the trigger after picking a format', as
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(el.shadowRoot!.activeElement).to.equal(trigger);
+  expect((el.shadowRoot!.activeElement) === (trigger)).to.equal(true);
 });
 
 it('exports JSON and applies the same columns allow-list CSV uses', async () => {
@@ -715,7 +715,7 @@ it('opens the menu and focuses the first item on ArrowDown from the trigger', as
 
   expect(el.open).to.be.true;
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
 it('opens the menu and focuses the last item on ArrowUp from the trigger', async () => {
@@ -730,7 +730,7 @@ it('opens the menu and focuses the last item on ArrowUp from the trigger', async
 
   expect(el.open).to.be.true;
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
-  expect(el.shadowRoot!.activeElement).to.equal(items[items.length - 1]);
+  expect((el.shadowRoot!.activeElement) === (items[items.length - 1])).to.equal(true);
 });
 
 it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with Home/End', async () => {
@@ -742,25 +742,25 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   await el.updateComplete;
 
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 
   items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+  expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 
   items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 
   items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(items[items.length - 1]);
+  expect((el.shadowRoot!.activeElement) === (items[items.length - 1])).to.equal(true);
 
   items[items.length - 1].dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }),
   );
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+  expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
 it('transfers focus to a surviving menu item when the focused format is removed', async () => {
@@ -770,13 +770,13 @@ it('transfers focus to a surviving menu item when the focused format is removed'
   await el.updateComplete;
   const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
   items[1]!.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+  expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 
   el.formats = ['csv', { id: 'xml', label: 'XML' }];
   await el.updateComplete;
 
   const survivingItems = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
-  expect(el.shadowRoot!.activeElement).to.equal(survivingItems[1]);
+  expect((el.shadowRoot!.activeElement) === (survivingItems[1])).to.equal(true);
   expect(survivingItems[1]!.textContent!.trim()).to.equal('XML');
 });
 
@@ -793,9 +793,7 @@ it('returns focus to the trigger when an open menu collapses to a single format'
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(el.shadowRoot!.activeElement).to.equal(
-    el.shadowRoot!.querySelector('[part="trigger"]'),
-  );
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="trigger"]'))).to.equal(true);
 });
 
 it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
@@ -976,9 +974,9 @@ it('blur() releases the native trigger it focused', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.exist;
+  expect((el.shadowRoot!.activeElement) != null).to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect((el.shadowRoot!.activeElement) === null).to.equal(true);
 });
 
 const twoFormats = [

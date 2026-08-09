@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { ComboboxFilterDetail, ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
+import '../color-picker/color-picker.js';
 
 const meta: Meta = {
   title: 'Combobox',
@@ -18,6 +19,64 @@ export const Default: Story = {
       <lr-option value="c">Cherry</lr-option>
       <lr-option value="d">Date</lr-option>
     </lr-combobox>
+  `,
+};
+
+export const VetoedClosePreservesFilter: Story = {
+  name: 'Cancelable close preserves live filter state',
+  render: () => {
+    let vetoNextClose = true;
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-22rem)">
+        <p style="margin: 0">Type a filter, then close twice. The first close is vetoed and keeps the query and active row.</p>
+        <lr-combobox
+          open
+          label="Fruit"
+          @lr-hide=${(event: Event) => {
+            if (!vetoNextClose) return;
+            vetoNextClose = false;
+            event.preventDefault();
+          }}
+        >
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+          <lr-option value="c">Cherry</lr-option>
+        </lr-combobox>
+      </div>
+    `;
+  },
+};
+
+export const DynamicOptionAvailability: Story = {
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-s); max-inline-size:22rem;">
+      <p style="margin:0;">Open the list, press End, then R to remove the active final option or D to disable it.</p>
+      <lr-combobox
+        label="Fruit"
+        placeholder="Pick one…"
+        @keydown=${(event: KeyboardEvent) => {
+          const combobox = event.currentTarget as LyraCombobox;
+          if (event.key.toLocaleLowerCase() === 'r') {
+            combobox.querySelector('lr-option:last-of-type')?.remove();
+          }
+          if (event.key.toLocaleLowerCase() === 'd') {
+            const input = combobox.shadowRoot?.querySelector('[part="combobox-input"]');
+            const activeId = input?.getAttribute('aria-activedescendant');
+            const value = activeId
+              ? combobox.shadowRoot?.getElementById(activeId)?.getAttribute('data-value')
+              : null;
+            const option = value
+              ? combobox.querySelector(`lr-option[value="${CSS.escape(value)}"]`)
+              : null;
+            if (option) (option as HTMLElement & { disabled: boolean }).disabled = true;
+          }
+        }}
+      >
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-combobox>
+    </div>
   `,
 };
 
@@ -356,5 +415,27 @@ export const Adornments: Story = {
       <lr-option value="grace">Grace Hopper</lr-option>
       <lr-option value="alan">Alan Turing</lr-option>
     </lr-combobox>
+  `,
+};
+
+export const ManagedOverlayStack: Story = {
+  name: 'Managed nonmodal overlay stack',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The color picker opens first and the combobox second. Their shared stack puts the newer listbox above the picker; one Escape or outside pointer dismisses only that top layer and hands focus to the survivor.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;align-items:start;gap:calc(var(--lr-space-l) + var(--lr-space-s));min-block-size:var(--lr-size-24rem)">
+      <lr-color-picker label="Accent" open></lr-color-picker>
+      <lr-combobox label="Owner" placeholder="Search people…" open>
+        <lr-option value="ada">Ada Lovelace</lr-option>
+        <lr-option value="grace">Grace Hopper</lr-option>
+        <lr-option value="alan">Alan Turing</lr-option>
+      </lr-combobox>
+    </div>
   `,
 };

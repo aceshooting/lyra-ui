@@ -27,6 +27,9 @@ export const styles = css`
   [part~='base'] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
        value and the rendered label offset cannot drift: the label always starts exactly
        --lr-checkbox-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
@@ -69,7 +72,7 @@ export const styles = css`
       border-color var(--lr-transition-fast);
   }
   :host(:not(:disabled)) [part~='base']:hover [part~='box'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));
   }
   /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
      is the state readout: it is the page surface while unchecked and the brand while checked, and
@@ -77,8 +80,8 @@ export const styles = css`
      A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
      -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
   :host(:not(:disabled)) [part~='base']:active [part~='box'] {
-    border-color: var(--lr-color-brand);
-    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-color-brand-quiet);
+    border-color: var(--lr-checkbox-active-border, var(--lr-color-brand));
+    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
   }
   [part~='checked'],
   [part~='indeterminate'] {
@@ -94,7 +97,7 @@ export const styles = css`
      beyond the transient native validation-bubble popup, which only shows
      momentarily around reportValidity()/form submission. */
   :host([data-invalid]) [part~='box'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-checkbox-invalid-border, var(--lr-color-danger));
   }
 
   [part~='checkmark'] {
@@ -119,6 +122,23 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
   [part~='hint'][hidden] { display: none; }
+
+  [part='error'] {
+    margin-block-start: var(--lr-space-xs);
+    margin-inline-start: var(--lr-checkbox-label-indent);
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='error'][hidden] { display: none; }
+
+  [part='form-control'],
+  [part='label'],
+  [part~='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     [part~='box'] {

@@ -210,7 +210,7 @@ it('moves focus into the panel to the first focusable element when opened', asyn
   // The focusable elements are light-DOM slot content, so the focused node
   // reads directly off `document.activeElement` -- unlike lr-widget's own
   // shadow-DOM buttons, there's no shadow-root indirection here.
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
   expect(initialFocusEvents).to.equal(1);
 });
 
@@ -238,11 +238,11 @@ it('returns focus to the element that was focused before the dialog opened', asy
   const inside = el.querySelector('button') as HTMLButtonElement;
   el.open = true;
   await el.updateComplete;
-  expect(document.activeElement).to.equal(inside);
+  expect((document.activeElement) === (inside)).to.equal(true);
 
   el.close('api');
   await el.updateComplete;
-  expect(document.activeElement).to.equal(trigger);
+  expect((document.activeElement) === (trigger)).to.equal(true);
 
   trigger.remove();
 });
@@ -340,7 +340,7 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 
   const tabBackward = new KeyboardEvent('keydown', {
     key: 'Tab',
@@ -350,7 +350,7 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 });
 
 it('makes an overflowing body a keyboard stop when it holds no interactive content', async () => {
@@ -422,22 +422,19 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   const input = shadowHost.shadowRoot!.querySelector('input') as HTMLInputElement;
   const last = el.querySelector('[slot="footer"] button') as HTMLButtonElement;
 
-  expect(
-    shadowHost.shadowRoot!.activeElement,
-    'the shadow input should be the first focusable element, focused automatically on open',
-  ).to.equal(input);
+  expect((shadowHost.shadowRoot!.activeElement) === (input), 'the shadow input should be the first focusable element, focused automatically on open').to.equal(true);
 
   // Shift+Tab from the first focusable must wrap to the last.
   const shiftTab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
   document.dispatchEvent(shiftTab);
   expect(shiftTab.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 
   // Tab from the last focusable must wrap back to the shadow input.
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(shadowHost.shadowRoot!.activeElement).to.equal(input);
+  expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
 });
 
 it('renders the mapped label prop visibly and uses it for aria-labelledby', async () => {
@@ -549,11 +546,11 @@ it('renders a visible header with the heading text and uses it for aria-labelled
   const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   const headingEl = el.shadowRoot!.querySelector('[part~="heading"]') as HTMLElement;
 
-  expect(headingEl).to.exist;
+  expect((headingEl) != null).to.equal(true);
   expect(headingEl.textContent).to.equal('Title');
   const labelledby = panel.getAttribute('aria-labelledby');
   expect(labelledby).to.exist;
-  expect(el.shadowRoot!.getElementById(labelledby!)).to.equal(headingEl);
+  expect((el.shadowRoot!.getElementById(labelledby!)) === (headingEl)).to.equal(true);
   expect(panel.hasAttribute('aria-label')).to.be.false;
   // Only one element should ever claim aria-labelledby -- the sr-only label
   // element must not also render once `heading` wins.
@@ -619,6 +616,19 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
     expect(panel.hasAttribute('aria-labelledby')).to.be.false;
   });
 
+  it('preserves an explicitly empty host aria-label instead of restoring another name source', async () => {
+    const el = (await fixture(
+      html`<lr-dialog label="Visible title" aria-label="">body</lr-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+
+    expect(panel.hasAttribute('aria-label')).to.equal(true);
+    expect(panel.getAttribute('aria-label')).to.equal('');
+    expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part~="heading"]')?.textContent).to.equal('Visible title');
+  });
+
   it("leaves today's 3-tier precedence untouched when aria-label is left unset (regression)", async () => {
     const el = (await fixture(html`<lr-dialog label="Delete item?">body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
@@ -663,7 +673,7 @@ it('renders a close button when closable is set, which closes the dialog via the
   el.addEventListener('lr-dialog-close', (e) => (detail = (e as CustomEvent).detail));
 
   const closeButton = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLButtonElement;
-  expect(closeButton).to.exist;
+  expect((closeButton) != null).to.equal(true);
   closeButton.click();
   await el.updateComplete;
 
@@ -677,7 +687,7 @@ it('renders a header row containing just the close button when no visible title 
   )) as LyraDialog;
   await el.updateComplete;
   const header = el.shadowRoot!.querySelector('[part="header"]');
-  expect(header).to.exist;
+  expect((header) != null).to.equal(true);
   expect(header!.querySelector('[part~="heading"]')).to.not.exist;
   expect(header!.querySelector('[part~="close-button"]')).to.exist;
 });
@@ -1303,7 +1313,7 @@ describe('header chrome', () => {
     const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
     const closeButton = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
 
-    expect(actions).to.exist;
+    expect((actions) != null).to.equal(true);
     expect(
       actions.compareDocumentPosition(closeButton) & Node.DOCUMENT_POSITION_FOLLOWING,
       'header-actions come before the close button',

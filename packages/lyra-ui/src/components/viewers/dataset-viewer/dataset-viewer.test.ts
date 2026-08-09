@@ -197,6 +197,17 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
     } finally { restore(); }
   });
+  it('preserves an explicitly empty host aria-label ahead of the name-derived caption', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label=""></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      const table = el.shadowRoot!.querySelector('[part="table"]')!;
+      expect(table.hasAttribute('aria-label')).to.be.true;
+      expect(table.getAttribute('aria-label')).to.equal('');
+    } finally { restore(); }
+  });
   it('localizes the interpolated row count', async () => {
     const el = (await fixture(html`<lr-dataset-viewer lang="ar"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
@@ -547,13 +558,13 @@ describe('lr-dataset-viewer', () => {
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement | null;
-        expect(highlighted).to.exist;
+        expect((highlighted) != null).to.equal(true);
         // The cell itself stays structural (role="cell", not focusable); the activation
         // affordance is the nested native button.
         expect(highlighted!.getAttribute('role')).to.equal('cell');
         expect(highlighted!.hasAttribute('tabindex')).to.be.false;
         const action = highlighted!.querySelector('[part="cell-highlight-action"]') as HTMLElement | null;
-        expect(action).to.exist;
+        expect((action) != null).to.equal(true);
         expect(action!.tagName).to.equal('BUTTON');
         // A real action button (not a plain grid cell) -- gets the shared minimum hit area.
         expect(getComputedStyle(action!).minInlineSize).to.equal('40px');
@@ -578,7 +589,7 @@ describe('lr-dataset-viewer', () => {
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
         expect(plain.hasAttribute('tabindex')).to.be.false;
-        expect(plain.querySelector('button')).to.equal(null);
+        expect((plain.querySelector('button')) === (null)).to.equal(true);
         // A native <button> provides Enter/Space activation as built-in behavior, so proving the
         // control is a button with the highlight's accessible name covers the keyboard contract.
         const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
@@ -588,6 +599,25 @@ describe('lr-dataset-viewer', () => {
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('localizes the complete highlighted-cell name with independently ordered value and label placeholders', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      el.strings = {
+        cellHighlightWithLabel: '{label} ⇐ {value}',
+      };
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        expect(action.getAttribute('aria-label')).to.equal('First result ⇐ Ada');
       } finally {
         restore();
       }

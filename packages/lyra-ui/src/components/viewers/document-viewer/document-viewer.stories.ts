@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A dialog-hosted, format-dispatching document viewer. Registered MIME types render through the pluggable registry; other formats fall back to lr-document-preview.',
+          'A dialog-hosted, format-dispatching document viewer. Registered MIME types render through the pluggable registry; other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.',
       },
     },
   },

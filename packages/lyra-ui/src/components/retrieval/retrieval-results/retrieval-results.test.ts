@@ -389,7 +389,7 @@ describe('pagination', () => {
     el.chunks = chunks;
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="load-more"]') as HTMLButtonElement;
-    expect(button).to.exist;
+    expect((button) != null).to.equal(true);
     expect(button.textContent).to.include('Load more');
     const listener = oneEvent(el, 'lr-load-more');
     button.click();

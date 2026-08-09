@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 23 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -44,7 +44,10 @@ boolean }`), `lr-example-citation-select` (`detail: EvaluationCitationSelectDeta
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
 (`detail: EvaluationToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
-`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`).
+`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`). The approval
+event is cancelable: calling `preventDefault()` propagates the veto to the nested
+`lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
+host resolves asynchronous validation.
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,

@@ -7,11 +7,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
-import {
-  findImplicitSubmitter,
-  isNativeSubmitter,
-  submitOnEnter,
-} from '../../../internal/submit-on-enter.js';
+import { findImplicitSubmitter, isNativeSubmitter, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './otp-input.styles.js';
 import {
@@ -24,15 +20,14 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** Which characters a segment accepts. */
 export type OtpInputType = 'numeric' | 'alpha' | 'alphanumeric';
 /** Case transform applied as characters are entered. */
 export type OtpInputCase = 'preserve' | 'upper' | 'lower';
+/** Direction of the native compact-string selection exposed by the host editing facade. */
+export type OtpInputSelectionDirection = 'forward' | 'backward' | 'none';
 /** Segment fill treatment, including the OTP-specific joined `contained` treatment. */
-export type OtpInputAppearance =
-  | Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'>
-  | 'contained';
+export type OtpInputAppearance = Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'> | 'contained';
 
 const ACCEPTED: Record<OtpInputType, RegExp> = {
   numeric: /[0-9]/,
@@ -88,6 +83,13 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * the first cell in one input operation. The public/submitted string concatenates occupied cells;
  * middle empty cells are a visual editing state and are not encoded in that string. A nonempty
  * native selection maps its compact offsets back to occupied cells for replacement or deletion.
+ * The host forwards the native selection getters, setters, and range-editing methods against that
+ * same compact string. Range edits pass through the sanitizer, synchronize form value and
+ * validity, and remain event-silent like a programmatic `value` write.
+ *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override appearance fallbacks. A value set directly on the OTP input
+ * still wins through normal custom-property inheritance.
  *
  * @customElement lr-otp-input
  * @slot label - Rich label content used while the `label` attribute is empty.
@@ -153,6 +155,9 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssprop [--lr-otp-input-segment-fill=transparent] - Background fill of each segment.
  * @cssprop [--lr-otp-input-segment-radius=var(--lr-form-control-radius,var(--lr-radius))] -
  *   Corner radius of each segment.
+ * @cssprop [--lr-otp-input-active-border-color=var(--lr-focus-ring-color)] - Active segment border.
+ * @cssprop [--lr-otp-input-active-ring-color=var(--lr-focus-ring-color)] - Active segment outer ring.
+ * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-color-danger)] - Invalid segment border.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -192,7 +197,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /** Automatically focus the real input after the first client render. */
   @property({ type: Boolean }) override autofocus = false;
   /** Submit the owning form after an un-canceled `lr-complete`, one task later so an asynchronous
-   *  listener can still veto it. The form's default button is resolved as the submitter. */
+   *  listener can still veto it. Replacing or restoring the code before that task runs cancels
+   *  the stale submission. The form's default button is resolved as the submitter. */
   @property({ type: Boolean, reflect: true }) autosubmit = false;
   /** Segment size on the shared form-control ladder. An unset size inherits its containing context;
    *  standalone rendering falls back to `m`. */
@@ -258,9 +264,21 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override set value(next: string | null) {
+    this.autosubmitToken += 1;
     const normalized = this.sanitize(next ?? '');
     this.packSegmentValues(normalized);
     super.value = normalized;
+  }
+
+  /** The reset default uses the same sanitizer when it becomes live; changing it also retires a
+   *  queued autosubmission, even while a dirty live value prevents immediate propagation. */
+  override get defaultValue(): string {
+    return super.defaultValue;
+  }
+
+  override set defaultValue(next: string) {
+    this.autosubmitToken += 1;
+    super.defaultValue = next;
   }
 
   /** Parses at most 32 segments and coalesces every literal run into one cell, so even an
@@ -309,8 +327,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private get cells(): Cell[] {
-    return this.formattedCells ??
-      Array.from({ length: this.segmentCount }, () => ({ kind: 'segment' as const }));
+    return this.formattedCells ?? Array.from({ length: this.segmentCount }, () => ({ kind: 'segment' as const }));
   }
 
   /** Drops characters the current `type` rejects, applies `case`, and truncates to the segment
@@ -375,26 +392,24 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   private completeIfTransition(previousFilled: number): void {
     if (previousFilled >= this.segmentCount || this.filledSegmentCount !== this.segmentCount) return;
-    const completeEvent = this.emit('lr-complete', { value: this.value }, { cancelable: true });
+    const completionValue = this.value;
+    const token = this.autosubmitToken;
+    const completeEvent = this.emit('lr-complete', { value: completionValue }, { cancelable: true });
     if (!this.autosubmit) return;
     // One task later, not synchronously: `lr-complete` is a real veto point, and a listener that
     // decides asynchronously (checking the code before letting the form go) has to be able to call
-    // `preventDefault()` after its own `await`. The token, connectivity and completeness re-checks
-    // make a code that changed again in that window drop the stale submission.
-    const token = (this.autosubmitToken += 1);
+    // `preventDefault()` after its own `await`. The captured generation/value plus connectivity and
+    // completeness re-checks make a code that changed again in that window drop the stale submit.
     setTimeout(() => {
       if (token !== this.autosubmitToken || completeEvent.defaultPrevented) return;
       if (!this.isConnected || !this.autosubmit) return;
-      if (this.filledSegmentCount !== this.segmentCount) return;
+      if (this.value !== completionValue || this.filledSegmentCount !== this.segmentCount) return;
       this.submitOwningForm();
     });
   }
 
-  private commitSegmentEdit(
-    values: string[],
-    inputType: string,
-    data: string | null = null,
-  ): void {
+  private commitSegmentEdit(values: string[], inputType: string, data: string | null = null): void {
+    this.autosubmitToken += 1;
     const previousValue = this.value;
     const previousFilled = this.filledSegmentCount;
     this.segmentValues = this.normalizedSegmentValues(values);
@@ -418,22 +433,113 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       return null;
     }
     const occupiedIndices = this.normalizedSegmentValues()
-      .map((value, index) => value ? index : -1)
+      .map((value, index) => (value ? index : -1))
       .filter((index) => index >= 0);
     const indices = occupiedIndices.slice(start, end);
     const first = indices[0];
     return first === undefined ? null : { indices, first };
   }
 
+  /** Maps a compact-string caret offset to the first visual cell at that boundary. */
+  private segmentIndexAtCompactOffset(offset: number): number {
+    const values = this.normalizedSegmentValues();
+    let occupied = 0;
+    for (let index = 0; index < values.length; index += 1) {
+      if (occupied >= offset) return index;
+      if (values[index]) occupied += 1;
+    }
+    return Math.max(0, values.length - 1);
+  }
+
+  /** Keeps fixed-cell keyboard editing aligned with a public compact-string selection write. */
+  private syncActiveSegmentFromSelection(): void {
+    const control = this.control;
+    if (!control || control.selectionStart === null) return;
+    const selected = this.selectedSegmentRange;
+    this.activeSegmentIndex = selected?.first ?? this.segmentIndexAtCompactOffset(control.selectionStart);
+  }
+
+  /** Start offset of the native compact-string selection, or `null` before first render. */
+  get selectionStart(): number | null {
+    return this.control?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (!this.control) return;
+    this.control.selectionStart = value;
+    this.syncActiveSegmentFromSelection();
+  }
+
+  /** End offset of the native compact-string selection, or `null` before first render. */
+  get selectionEnd(): number | null {
+    return this.control?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (!this.control) return;
+    this.control.selectionEnd = value;
+    this.syncActiveSegmentFromSelection();
+  }
+
+  /** Direction of the native compact-string selection, or `null` before first render. */
+  get selectionDirection(): OtpInputSelectionDirection | null {
+    return this.control?.selectionDirection ?? null;
+  }
+
+  set selectionDirection(value: OtpInputSelectionDirection | null) {
+    if (this.control) this.control.selectionDirection = value;
+  }
+
   override focus(options?: FocusOptions): void {
     if (!this.effectiveDisabled) this.control?.focus(options);
   }
-  override blur(): void { this.control?.blur(); }
+  override blur(): void {
+    this.control?.blur();
+  }
   override click(): void {
     if (!this.effectiveDisabled) this.control?.click();
   }
   /** Selects the whole compact code. Fixed-cell typing or deletion honors the selected range. */
-  select(): void { this.control?.select(); }
+  select(): void {
+    this.control?.select();
+  }
+  /** Sets the selection on the compact code and maps its start back to the visual fixed cells. */
+  setSelectionRange(start: number | null, end: number | null, direction?: OtpInputSelectionDirection): void {
+    if (!this.control) return;
+    this.control.setSelectionRange(start, end, direction);
+    this.syncActiveSegmentFromSelection();
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  /**
+   * Applies a silent native range edit to the compact code, then normalizes the result through the
+   * same sanitizer as typing and synchronizes visual cells, form value, and validity.
+   */
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const control = this.control;
+    if (!control) return;
+    if (start === undefined || end === undefined) {
+      control.setRangeText(replacement);
+    } else {
+      control.setRangeText(replacement, start, end, selectMode);
+    }
+
+    const raw = control.value;
+    const selectionStart =
+      control.selectionStart === null ? null : this.sanitize(raw.slice(0, control.selectionStart)).length;
+    const selectionEnd =
+      control.selectionEnd === null ? null : this.sanitize(raw.slice(0, control.selectionEnd)).length;
+    const selectionDirection = control.selectionDirection;
+    const normalized = this.sanitize(raw);
+
+    this.value = normalized;
+    control.value = normalized;
+    if (selectionStart !== null && selectionEnd !== null) {
+      control.setSelectionRange(selectionStart, selectionEnd, selectionDirection ?? undefined);
+    }
+    this.syncActiveSegmentFromSelection();
+  }
   /** Clears the live code, returns focus to the field, and emits `lr-clear` when a value changed. */
   clear(): void {
     const hadValue = this.value.length > 0;
@@ -444,9 +550,23 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override formResetCallback(): void {
+    this.autosubmitToken += 1;
     super.formResetCallback();
     this.touched = false;
     this.segmentEditPendingChange = false;
+  }
+
+  override formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    this.autosubmitToken += 1;
+    super.formStateRestoreCallback(state, reason);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.autosubmitToken += 1;
   }
 
   override reportValidity(): boolean {
@@ -567,20 +687,14 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       const values = this.normalizedSegmentValues();
       if (selection) {
         for (const index of selection.indices) values[index] = '';
-        this.commitSegmentEdit(
-          values,
-          event.key === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward',
-        );
+        this.commitSegmentEdit(values, event.key === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward');
         this.setActiveSegment(selection.first);
         return;
       }
       const changed = Boolean(values[this.activeSegmentIndex]);
       values[this.activeSegmentIndex] = '';
       if (changed) {
-        this.commitSegmentEdit(
-          values,
-          event.key === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward',
-        );
+        this.commitSegmentEdit(values, event.key === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward');
       }
       if (event.key === 'Backspace') this.setActiveSegment(this.activeSegmentIndex - 1);
       return;
@@ -649,8 +763,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private renderSegment(index: number, invalid: boolean): TemplateResult {
     const char = this.segmentValues[index] ?? '';
     const filled = char !== '';
-    const active = this.focused && !this.effectiveDisabled && !this.readonly
-      && index === this.activeSegmentIndex;
+    const active = this.focused && !this.effectiveDisabled && !this.readonly && index === this.activeSegmentIndex;
     const masked = filled && this.mask;
     const placeholderMask = !filled && this.withMask;
     const parts = ['segment'];
@@ -677,17 +790,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return html`
       <div part="base form-control">
         <label part="label form-control-label" id=${this.labelId} for="control" ?hidden=${!hasLabel}>
-          ${this.label}<slot
-            name="label"
-            ?hidden=${Boolean(this.label)}
-            @slotchange=${this.onLabelSlotChange}
-          ></slot>
+          ${this.label}<slot name="label" ?hidden=${Boolean(this.label)} @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="field segments" @click=${() => this.focus()}>
           ${this.cells.map((cell) =>
             cell.kind === 'separator'
               ? html`<div part="separator segment-literal" aria-hidden="true">${cell.text}</div>`
-              : this.renderSegment((segmentIndex += 1), intrinsicInvalid),
+              : this.renderSegment((segmentIndex += 1), intrinsicInvalid)
           )}
           <input
             part="control"
@@ -724,15 +833,15 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
           ></slot>
         </div>
         <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot
-            name="hint"
-            ?hidden=${Boolean(this.hint)}
-            @slotchange=${this.onHintSlotChange}
-          ></slot>
+          ${this.hint}<slot name="hint" ?hidden=${Boolean(this.hint)} @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
     `;
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lr-otp-input': LyraOtpInput; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-otp-input': LyraOtpInput;
+  }
+}

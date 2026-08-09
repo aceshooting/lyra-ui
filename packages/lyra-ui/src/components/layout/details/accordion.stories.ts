@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './accordion.js';
 import './accordion-item.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Disclosure/Accordion',
@@ -49,6 +50,75 @@ export const Presentation: StoryObj = {
       Labels can contain markup.
     </lr-accordion-item>
   </lr-accordion>`,
+};
+
+export const ThemedAppearancesAndStates: StoryObj = {
+  name: 'Themed appearances and states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The group chrome, item surfaces, and item trigger states each use inheritable family-scoped hooks while retaining the shared tokens as defaults.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        display: grid;
+        gap: var(--lr-space-s);
+        --lr-accordion-outlined-bg: ${storyColor('surface')};
+        --lr-accordion-outlined-border-color: ${storyColor('border')};
+        --lr-accordion-filled-bg: ${storyColor('successQuiet')};
+        --lr-accordion-filled-border-color: ${storyColor('success')};
+        --lr-accordion-filled-outlined-bg: ${storyColor('warningQuiet')};
+        --lr-accordion-filled-outlined-border-color: ${storyColor('warning')};
+        --lr-accordion-item-outlined-bg: ${storyColor('surface')};
+        --lr-accordion-item-filled-bg: ${storyColor('successQuiet')};
+        --lr-accordion-item-filled-outlined-bg: ${storyColor('warningQuiet')};
+        --lr-accordion-item-button-hover-bg: ${storyColor('dangerQuiet')};
+        --lr-accordion-item-button-active-bg: ${storyColor('danger')};
+      "
+    >
+      ${(['outlined', 'filled', 'filled-outlined'] as const).map(
+        (appearance) => html`
+          <lr-accordion appearance=${appearance}>
+            <lr-accordion-item label=${appearance} expanded>
+              Hover and press this item trigger to exercise its independent state paint.
+            </lr-accordion-item>
+          </lr-accordion>
+        `,
+      )}
+    </div>
+  `,
+};
+
+export const NarrowRtlLongContent: StoryObj = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An exact 320px RTL accordion keeps expanded long localized item labels, content, and actions contained while retaining the complete group/item composition.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="inline-size: 320px; max-inline-size: 100%; border: var(--lr-border-width-thin) dashed var(--lr-color-border);"
+    >
+      <lr-accordion>
+        <lr-accordion-item label="عنوانقسممحليطويلجداًبدونأيفرصةللفصلالتلقائي" expanded>
+          <p>محتوىقسممحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+          <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
+        </lr-accordion-item>
+        <lr-accordion-item label="عنوانقسمثانطويلجداًبدونأيفرصةللفصلالتلقائي">
+          محتوى القسم الثاني.
+        </lr-accordion-item>
+      </lr-accordion>
+    </div>
+  `,
 };
 
 export const CancelableLifecycle: StoryObj = {

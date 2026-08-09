@@ -338,22 +338,34 @@ export const Disabled: Story = {
 };
 
 export const IconOnly: Story = {
-  name: 'Icon-only (aria-label)',
+  name: 'Compact icon targets (aria-label)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `2xs` tier scales the visible icon chrome, while icon-only and `circle` buttons ' +
+          'retain the shared `--lr-icon-button-size` minimum interactive target.',
+      },
+    },
+  },
   render: () => html`
-    <lr-button appearance="plain" aria-label="Close dialog">
-      <svg
-        slot="start"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-      >
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </lr-button>
+    <div style="display:flex;align-items:center;gap:var(--lr-space-s)">
+      <lr-button size="2xs" appearance="plain" aria-label="Close dialog">
+        <svg
+          slot="start"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </lr-button>
+      <lr-button size="2xs" circle aria-label="Settings"><span aria-hidden="true">⚙</span></lr-button>
+    </div>
   `,
 };
 
@@ -369,6 +381,60 @@ export const SubmitInAForm: Story = {
       <lr-button type="submit" variant="brand">Save</lr-button>
     </form>
   `,
+};
+
+export const CancelableFormDefaultActions: Story = {
+  name: 'Cancelable submit/reset click defaults',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Submit and reset are default actions of the composed native `click`. A host click ' +
+          'listener can call `preventDefault()` before either action runs; `stopPropagation()` ' +
+          'alone does not cancel it.',
+      },
+    },
+  },
+  render: () => {
+    const report = (event: Event, message: string): void => {
+      const form = (event.currentTarget as HTMLElement).closest('form');
+      const output = form?.querySelector('output');
+      if (output) output.textContent = message;
+    };
+    return html`
+      <form
+        @submit=${(event: SubmitEvent) => {
+          event.preventDefault();
+          const output = (event.currentTarget as HTMLFormElement).querySelector('output');
+          if (output) output.textContent = 'Submit default action ran';
+        }}
+      >
+        <label>Draft <input name="draft" value="Initial value" /></label>
+        <div style="display:flex; gap:var(--lr-space-s); flex-wrap:wrap; margin-block:var(--lr-space-s);">
+          <lr-button
+            type="submit"
+            @click=${(event: Event) => {
+              event.preventDefault();
+              report(event, 'Submit default action vetoed');
+            }}
+          >
+            Veto submit
+          </lr-button>
+          <lr-button
+            type="reset"
+            @click=${(event: Event) => {
+              event.preventDefault();
+              report(event, 'Reset default action vetoed');
+            }}
+          >
+            Veto reset
+          </lr-button>
+          <lr-button type="submit" variant="brand">Allow submit</lr-button>
+        </div>
+        <output aria-live="polite">No action yet</output>
+      </form>
+    `;
+  },
 };
 
 export const NamedSubmitters: Story = {
@@ -403,5 +469,25 @@ export const NamedSubmitters: Story = {
         </lr-button>
       </div>
     </form>
+  `,
+};
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The label ellipsizes and the trailing adornment stays capped inside an exact 320px RTL allocation.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+      <lr-button style="display:block;max-inline-size:100%">
+        ${'LocalizedUnbrokenButtonLabel'.repeat(16)}
+        <span slot="end">${'UnbrokenMetadata'.repeat(16)}</span>
+      </lr-button>
+    </div>
   `,
 };

@@ -86,15 +86,15 @@ export const styles = css`
      beating a consumer's own ::part(preset-button):hover override on specificity -- mirrors
      lr-attachment-trigger's identical :where() fix for this exact selector shape. */
   :where([part='preset-button']):hover:where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-time-range-preset-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed goes further than the hover's edge change: the button's own surface fill mixes toward
      --lr-color-mix-partner (which follows the text colour), so it darkens on a light theme and
      lightens on a dark one. Same :where() wrapping as the hover rule above, for the same
      specificity reason, and gated on :not(:disabled) so a disabled preset stays inert. */
   :where([part='preset-button']):active:where(:not(:disabled)) {
-    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: var(--lr-time-range-preset-pressed-border-color, color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-time-range-preset-pressed-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='preset-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -143,8 +143,8 @@ export const styles = css`
     inline-size: var(--lr-time-range-handle-size);
     block-size: var(--lr-time-range-handle-size);
     border-radius: 50%;
-    background: var(--lr-color-brand);
-    border: var(--lr-border-width-medium) solid var(--lr-color-surface);
+    background: var(--lr-time-range-handle-bg, var(--lr-color-brand));
+    border: var(--lr-border-width-medium) solid var(--lr-time-range-handle-border-color, var(--lr-color-surface));
     /* Resting chrome, not an overlay: a knob riding on its own track, matching lr-slider's thumb. */
     box-shadow: var(--lr-shadow-s);
     transform: translateX(-50%);
@@ -229,7 +229,7 @@ export const styles = css`
      gated via :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover
      rules are, since a disabled handle must not still brighten on hover. */
   :host(:not(:disabled)) [part^='handle']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-time-range-handle-hover-bg, color-mix(in oklab, var(--lr-time-range-handle-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   /* Pressed = the grab itself, which is the only feedback a drag has before the value starts
      moving: the knob mixes a full step further toward the text colour and the cursor closes.
@@ -238,7 +238,7 @@ export const styles = css`
      that separate the knob from its own track, and it did nothing at all on a theme whose brand
      colour is pure white or pure black. */
   :host(:not(:disabled)) [part^='handle']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-time-range-handle-pressed-bg, color-mix(in oklab, var(--lr-time-range-handle-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     cursor: grabbing;
   }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element

@@ -380,6 +380,78 @@ it('navigates with ArrowDown and selects the active option with Enter', async ()
   expect(el.value).to.equal('b');
 });
 
+it('rehomes an active final row to the nearest survivor when options shrink while open', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  for (let index = 0; index < 3; index += 1) {
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+  }
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]')?.textContent?.trim()).to.equal('Cherry');
+
+  const slot = el.shadowRoot!.querySelector('slot:not([name])')!;
+  const changed = oneEvent(slot, 'slotchange');
+  el.querySelector<LyraOption>('lr-option[value="c"]')!.remove();
+  await changed;
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  expect(active?.textContent?.trim()).to.equal('Banana');
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(active?.id);
+  setTimeout(() => btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('b');
+});
+
+it('preserves active option identity when light-DOM options reorder while open', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  for (let index = 0; index < 2; index += 1) {
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+  }
+  const banana = el.querySelector<LyraOption>('lr-option[value="b"]')!;
+  const slot = el.shadowRoot!.querySelector('slot:not([name])')!;
+  const changed = oneEvent(slot, 'slotchange');
+  el.append(banana);
+  await changed;
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  expect(active?.textContent?.trim()).to.equal('Banana');
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(active?.id);
+  setTimeout(() => btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('b');
+});
+
+it('rehomes an active option when it becomes disabled while open', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  for (let index = 0; index < 3; index += 1) {
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+  }
+  const cherry = el.querySelector<LyraOption>('lr-option[value="c"]')!;
+  cherry.disabled = true;
+  await cherry.updateComplete;
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  expect(active?.textContent?.trim()).to.equal('Banana');
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(active?.id);
+  setTimeout(() => btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('b');
+});
+
 it('selects the active option with Space, same as Enter', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
@@ -1086,7 +1158,7 @@ it('forwards public focus and blur to the trigger', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('bridges exactly one native trigger focus/blur pair plus typed aliases', async () => {
@@ -1323,6 +1395,15 @@ it('prefers a host-level aria-label over label/placeholder for the trigger', asy
   )) as LyraSelect;
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(trigger.getAttribute('aria-label')).to.equal('Sort order');
+});
+
+it('preserves an explicitly empty host aria-label on the trigger', async () => {
+  const el = (await fixture(
+    html`<lr-select aria-label="" label="Choice" placeholder="Choose…"></lr-select>`,
+  )) as LyraSelect;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(trigger.hasAttribute('aria-label')).to.equal(true);
+  expect(trigger.getAttribute('aria-label')).to.equal('');
 });
 
 it('falls back to placeholder when no host aria-label or label is set', async () => {
@@ -1676,13 +1757,26 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
 });
 
-it('pins overflow-x explicitly alongside the listbox\'s overflow-y, so the unset axis never falls back to browser-implicit auto', () => {
+it('renders a populated open listbox with vertical scrolling and horizontal overflow clipped', async () => {
   // Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other axis's
   // used value to 'auto' too -- an implicit overflow-x: auto here risks a phantom horizontal
   // scrollbar even though this listbox only ever scrolls vertically. Same class of bug already
   // fixed on lr-tab-group' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='listbox'\]\s*\{[^}]*overflow-y:\s*auto;\s*overflow-x:\s*hidden;/);
+  const el = (await fixture(html`
+    <lr-select open style="--lr-size-18rem: 40px;">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  const computed = getComputedStyle(listbox);
+
+  expect(computed.visibility).to.equal('visible');
+  expect(listbox.scrollHeight).to.be.greaterThan(listbox.clientHeight);
+  expect(computed.overflowY).to.equal('auto');
+  expect(computed.overflowX).to.equal('hidden');
 });
 
 it('contains long form and option content at a 320px allocation', async () => {
@@ -1719,10 +1813,82 @@ it('contains long form and option content at a 320px allocation', async () => {
   }
 });
 
+it('lets its trigger shrink below a long placeholder\'s min-content width', async () => {
+  const placeholder = `SelecioneUmaOpcaoLocalizada${'MuitoLonga'.repeat(12)}`;
+  const wrapper = (await fixture(html`
+    <div style="display:flex; inline-size:228px; min-inline-size:0;">
+      <lr-select
+        style="min-inline-size:0; flex:1 1 auto;"
+        placeholder=${placeholder}
+      ></lr-select>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-select') as LyraSelect;
+  await el.updateComplete;
+
+  const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+  const label = trigger.querySelector<HTMLElement>('.trigger-label')!;
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const triggerRect = trigger.getBoundingClientRect();
+
+  expect(triggerRect.width).to.be.at.most(wrapperRect.width + 1);
+  expect(triggerRect.right).to.be.at.most(wrapperRect.right + 1);
+  expect(label.scrollWidth).to.be.greaterThan(label.clientWidth);
+  expect(getComputedStyle(label).textOverflow).to.equal('ellipsis');
+});
+
+it('contains a long selected value and adornments at 320px in LTR and RTL', async () => {
+  const label = `primary-${'production-region-identifier'.repeat(8)}`;
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-select value="primary" label="Deployment region">
+          <span slot="start" aria-hidden="true">◉</span>
+          <kbd slot="end">R</kbd>
+          <lr-option value="primary">${label}</lr-option>
+          <lr-option value="backup">Backup</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+    expect(wrapper.scrollWidth, `dir=${direction} wrapper`).to.be.at.most(wrapper.clientWidth);
+    expect(trigger.getBoundingClientRect().width, `dir=${direction} trigger`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
+  }
+});
+
+it('contains multiple long selected tags at 320px in LTR and RTL', async () => {
+  const values = ['alpha', 'beta', 'gamma'];
+  const labels = values.map(
+    (value) => `${value}-${'generated-selection-identifier'.repeat(6)}`,
+  );
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-select multiple .value=${values} label="Regions">
+          ${labels.map(
+            (label, index) => html`<lr-option value=${values[index]}>${label}</lr-option>`,
+          )}
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    const tags = el.shadowRoot!.querySelector<HTMLElement>('[part="tags"]')!;
+    expect(wrapper.scrollWidth, `dir=${direction} wrapper`).to.be.at.most(wrapper.clientWidth);
+    expect(tags.getBoundingClientRect().width, `dir=${direction} tags`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
+  }
+});
+
 it('gives the trigger a :hover rule alongside its :focus-visible ring', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(
-    /:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/,
+    /:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)\s*\{[^}]*background:\s*var\(--lr-select-trigger-hover-bg,\s*var\(--lr-color-brand-quiet\)\)/,
   );
 });
 
@@ -1788,7 +1954,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect((el!.form) === (null)).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -1953,7 +2119,7 @@ describe('ElementInternals unavailable at call time (attachInternals throws)', (
       }).to.not.throw();
       expect(el!.checkValidity()).to.be.true;
       expect(el!.reportValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect((el!.form) === (null)).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -2307,7 +2473,7 @@ describe('ElementInternals fallback (lr-select)', () => {
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, async (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect((internals.form) === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;
@@ -2647,7 +2813,7 @@ describe('max-options-visible', () => {
     el.value = ['a', 'b', 'c', 'd', 'e'];
     await el.updateComplete;
     expect(tags(el).length).to.equal(5);
-    expect(overflowTag(el)).to.equal(null);
+    expect((overflowTag(el)) === (null)).to.equal(true);
   });
 
   it('falls back to three for a non-finite attribute value', async () => {
@@ -2672,18 +2838,18 @@ describe('with-clear', () => {
     const el = (await fixture(basic())) as LyraSelect;
     el.withClear = true;
     await el.updateComplete;
-    expect(clearButton(el)).to.equal(null);
+    expect((clearButton(el)) === (null)).to.equal(true);
 
     el.value = 'b';
     await el.updateComplete;
-    expect(clearButton(el)).to.not.equal(null);
+    expect((clearButton(el)) !== (null)).to.equal(true);
   });
 
   it('stays absent while unset, even with a value', async () => {
     const el = (await fixture(basic())) as LyraSelect;
     el.value = 'b';
     await el.updateComplete;
-    expect(clearButton(el)).to.equal(null);
+    expect((clearButton(el)) === (null)).to.equal(true);
   });
 
   it('clear() no-ops while disabled, or with nothing selected', async () => {
@@ -2724,7 +2890,7 @@ describe('with-clear', () => {
 
     expect(el.value).to.equal('');
     expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'lr-clear']);
-    expect(clearButton(el)).to.equal(null);
+    expect((clearButton(el)) === (null)).to.equal(true);
   });
 
   it('clears every value at once in multiple mode', async () => {
@@ -2838,7 +3004,7 @@ describe('getTag', () => {
     el.value = ['a'];
     await el.updateComplete;
     const container = el.shadowRoot!.querySelector('[part="tags"]') as HTMLElement;
-    expect(container.querySelector('b')).to.equal(null);
+    expect((container.querySelector('b')) === (null)).to.equal(true);
     expect(container.textContent).to.contain('<b>bold</b>');
   });
 
@@ -2954,7 +3120,7 @@ describe('lr-select clear-button spelling parity', () => {
       el.setAttribute(attribute, '');
       el.value = 'b';
       await el.updateComplete;
-      expect(clearButton(el), attribute).to.not.equal(null);
+      expect((clearButton(el)) !== (null), attribute).to.equal(true);
     }
   });
 
@@ -2962,7 +3128,7 @@ describe('lr-select clear-button spelling parity', () => {
     const el = (await fixture(basic())) as LyraSelect;
     el.value = 'b';
     await el.updateComplete;
-    expect(clearButton(el)).to.equal(null);
+    expect((clearButton(el)) === (null)).to.equal(true);
   });
 });
 
@@ -3229,6 +3395,35 @@ describe('lr-select hover and press feedback', () => {
       }
     });
   }
+
+  it('themes trigger hover, pressed, and open border paint through component hooks', async () => {
+    const el = (await fixture(html`
+      <lr-select
+        open
+        style="
+          --lr-transition-fast: 0s;
+          --lr-select-trigger-hover-bg: rgb(1, 2, 3);
+          --lr-select-trigger-active-bg: rgb(4, 5, 6);
+          --lr-select-open-border-color: rgb(7, 8, 9);
+        "
+      >
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+    expect(getComputedStyle(trigger).borderTopColor).to.equal('rgb(7, 8, 9)');
+    try {
+      await sendMouse({ type: 'move', position: centerOf(trigger) });
+      expect(getComputedStyle(trigger).backgroundColor).to.equal('rgb(1, 2, 3)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(trigger).backgroundColor).to.equal('rgb(4, 5, 6)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
 });
 
 describe('lr-select mapped Select parity surface', () => {
@@ -3352,7 +3547,7 @@ describe('lr-select mapped Select parity surface', () => {
     `)) as LyraSelect & { selectedOptions: LyraOption[] };
     await el.updateComplete;
     const remove = el.shadowRoot!.querySelector('[part~="tag__remove-button"]') as HTMLButtonElement;
-    expect(remove).to.exist;
+    expect((remove) != null).to.equal(true);
     expect(remove.closest('button[part~="trigger"]')).to.equal(null);
     expect(el.shadowRoot!.querySelector('[part~="tag__base"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part~="tag__content"]')).to.exist;

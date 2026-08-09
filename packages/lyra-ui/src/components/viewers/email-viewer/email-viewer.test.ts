@@ -148,7 +148,7 @@ describe('lr-email-viewer', () => {
     const { el, restore } = await loaded(EVIL_EML);
     try {
       const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
-      expect(body.querySelector('script')).to.not.exist;
+      expect((body.querySelector('script')) == null).to.equal(true);
       expect(body.querySelector('p')!.getAttribute('onclick')).to.be.null;
     } finally { restore(); }
   });

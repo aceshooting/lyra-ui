@@ -20,7 +20,7 @@ trees, row details, paging, pinning, resizing, reordering, selection, copy, and 
 the granular registration module when the root bundle is not already loaded:
 
 ```js
-import '@aceshooting/lyra-ui/components/data/data-grid/data-grid.js';
+import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
@@ -139,10 +139,15 @@ that descendant.
 
 **Events:** `request`; `lr-cell-click`; cancelable `lr-cell-contextmenu` (canceling it suppresses the
 native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
-live and committed resize); `lr-column-visibility-change`; `lr-data-error`; `lr-data-request`;
+live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
+restores the exact pre-gesture width state; after a live move it emits the restored width with
+`finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
+`lr-data-error`; `lr-data-request`;
 `lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-row-select`;
 `lr-sort-change`. Every library event bubbles and is composed; only `lr-cell-contextmenu` is
-cancelable.
+cancelable. The toolbar search and active column-filter inputs re-dispatch `focus` and `blur` once
+from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
+delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
 
 **Slots:** `empty`, `loading`, `no-results`.
 
@@ -183,12 +188,12 @@ render every row instead of a virtual window.
   page-size="20"
 ></lr-data-grid>
 <script type="module">
-  const grid = document.querySelector('lr-data-grid');
+  const grid = document.querySelector("lr-data-grid");
   grid.columns = [
-    { field: 'name', label: 'Name', filterable: true },
-    { field: 'score', label: 'Score', align: 'end' }
+    { field: "name", label: "Name", filterable: true },
+    { field: "score", label: "Score", align: "end" },
   ];
-  grid.data = [{ id: 1, name: 'Ada', score: 97 }];
+  grid.data = [{ id: 1, name: "Ada", score: 97 }];
 </script>
 ```
 

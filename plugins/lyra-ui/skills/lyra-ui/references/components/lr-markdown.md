@@ -23,6 +23,9 @@ instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
 
+If an instance disconnects and reconnects before that shared promise settles, only the current
+connection applies the result and reparses; the stale connection callback is generation-guarded.
+
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
@@ -33,14 +36,15 @@ is attempted while `streaming` is `true` — it applies once a stream settles, a
 while content is still arriving.
 
 **Properties:**
+
 - `content: string = ''` — the Markdown source to render
 - `tabSize: number = 4` (attribute `tab-size`) — tab-stop width used to expand tabs in leading
   indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
   invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
   how tabs already inside rendered code are displayed.
 - `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the peer-neutral configurable
-  `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
-  while the optional peer is still resolving or unavailable; configuration installed with
+  `marked.Marked` parser shared by every `<lr-markdown>` and `<lr-markdown-core>` instance on the
+  page. It is `undefined` while the optional peer is still resolving or unavailable; configuration installed with
   variadic `marked.use(...extensions)` is copied into each parse. The peer-neutral type deliberately
   models Lyra's stable `defaults`/`use()`/`parse()` configuration surface; consumers using
   version-specific Marked tokenizers, constructors, or helpers should type that local reference
@@ -60,7 +64,7 @@ while content is still arriving.
   empty string via `link-target=""`) omits `target`/`rel` entirely instead of always defaulting to
   `_blank`, so rendered links open in the same tab
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
-  whose `href` *attribute* (not the browser-resolved `.href` property) starts with this prefix is
+  whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
   intercepted on click and reported via `lr-link-click` instead of navigating; empty (the default)
   means every link is treated as external
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
@@ -70,7 +74,7 @@ while content is still arriving.
   `<h${token.depth}>` output
 - `eagerLoad: boolean = false` (attribute `eager-load`) — when `true`, `connectedCallback()` skips
   awaiting the async `loadMarkdownDeps()` import and renders synchronously if the shared
-  `marked`/`dompurify` module cache is *already* warm (e.g. an earlier `<lr-markdown>` instance on
+  `marked`/`dompurify` module cache is _already_ warm (e.g. an earlier `<lr-markdown>` instance on
   the page already finished loading); falls back to the normal async path (with its brief
   plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
   byte-identical to always taking the async path
@@ -99,13 +103,16 @@ while content is still arriving.
   component resolves for the shared anchor-target contract.
 
 **Methods:**
+
 - `renderMarkdown(): void` — immediately reruns the current content through the parse, sanitize,
   and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
   it safely no-ops while the optional parser is unresolved.
-- `getHeadingTree()` — returns the document-ordered heading outline (`{ level, text, slug }[]`)
+- `getHeadingTree(): MarkdownHeadingItem[]` — returns the document-ordered heading outline
+  (`{ id, label, level }[]`)
   computed on every parse, regardless of `headingAnchors`.
 
 **Events:**
+
 - `lr-link-click` (`detail: { href: string; internal: true }`) — fired, with the click prevented,
   when a rendered link's `href` starts with `internal-link-prefix`; ordinary external links navigate
   normally and never fire this
@@ -153,23 +160,26 @@ instance; call `renderMarkdown()` after `marked.use(...)` to refresh content tha
   internal-link-prefix="/docs/"
 ></lr-markdown>
 <script>
-  document.querySelector('lr-markdown').addEventListener('lr-link-click', (e) => {
-    router.navigate(e.detail.href);
-  });
+  document
+    .querySelector("lr-markdown")
+    .addEventListener("lr-link-click", (e) => {
+      router.navigate(e.detail.href);
+    });
 </script>
 ```
 
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no
 HTML parsing at all — the raw `content` string itself) and fires `lr-render-error`. If `sanitize`
-is `true` (the default) and `dompurify` fails to load, the component *also* falls back to plain text
-+ `lr-render-error` — it never renders `marked`'s raw HTML output when sanitization was requested
-(or defaulted to) but is unavailable, even though `marked` itself loaded fine. If `sanitize` is
-explicitly `false`, `marked`'s raw output renders as-is regardless of whether `dompurify` is
-installed. While the optional peers are still resolving, the host carries `aria-busy="true"` (set/
-cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
-rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
-legible text in the meantime.
+is `true` (the default) and `dompurify` fails to load, the component _also_ falls back to plain text
+
+- `lr-render-error` — it never renders `marked`'s raw HTML output when sanitization was requested
+  (or defaulted to) but is unavailable, even though `marked` itself loaded fine. If `sanitize` is
+  explicitly `false`, `marked`'s raw output renders as-is regardless of whether `dompurify` is
+  installed. While the optional peers are still resolving, the host carries `aria-busy="true"` (set/
+  cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
+  rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
+  legible text in the meantime.
 
 **One tab width for every code surface.** `--lr-code-block-tab-size` is deliberately the same
 property name and default (`2`) that `<lr-code-block>` and `<lr-code-editor>` use, so a consumer sets
@@ -178,11 +188,12 @@ of use, never on `:host`** — a `:host` declaration is re-stamped on every inst
 inherited value, so a page- or container-level declaration could never reach it. This element carries
 its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
 **sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
-can cover the other. The same value can still *look* different between the two — a markdown code
+can cover the other. The same value can still _look_ different between the two — a markdown code
 block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
 restart at the beginning of each visual line, so a wrapped line's tabs land differently.
 
 **Known gotchas:**
+
 - a malformed percent-escape or lone UTF-16 surrogate in a link's raw `href` makes the internal
   `encodeURI`-based validity guard throw, silently dropping just that anchor (the link text still
   renders, with no `href`) — mirrors `marked`'s own default `link()` renderer's defensive behavior.
@@ -190,11 +201,11 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
 - a fresh internal `marked.Marked()` instance (with a fresh renderer) is built on every parse so
-  the renderer's `link()` override always closes over the *current* `linkTarget`. The public
+  the renderer's `link()` override always closes over the _current_ `linkTarget`. The public
   `marked` parser is still shared: its current configured defaults are copied into that fresh
   instance on each pass, avoiding a stale closure while preserving `marked.use(...)` hooks and
   extensions.
-- `internal-link-prefix` matching compares against the raw `href` *attribute*, not the resolved
+- `internal-link-prefix` matching compares against the raw `href` _attribute_, not the resolved
   `.href` IDL property (always an absolute URL in the browser) — a prefix like `/docs/` matches a
   relative markdown link but would never match against the resolved property.
 - rendered output goes through `unsafeHTML`; with `sanitize="false"` the component renders whatever

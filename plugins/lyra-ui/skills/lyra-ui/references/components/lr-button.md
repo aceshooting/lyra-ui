@@ -18,7 +18,10 @@
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
 `type="reset"` are handled by the component itself via its browser-resolved form owner (including
 an external owner named by `form`), since a shadow-internal native button doesn't participate in a
-light-DOM form's submission on its own.
+light-DOM form's submission on its own. They remain default actions of the composed native
+`click`: `preventDefault()` from any listener on that click path vetoes submit/reset before it
+runs, while `stopPropagation()` alone does not. Canceling the form's later `submit` or `reset`
+event remains an independent veto point.
 
 Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
@@ -28,6 +31,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 `<button>`.
 
 **Properties:**
+
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
   `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Setting `download`
   narrows the allowlist to `http:`/`https:`/`blob:`/relative — `mailto:` names no retrievable bytes,
@@ -48,7 +52,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
   intentionally still `neutral`
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
-  'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
+'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
   tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
   `<lr-button>` now paints the loud fill it used to need `appearance="accent"` for. The two are no
   longer near-duplicates: `'accent'` takes the active `variant`'s **loud** fill
@@ -78,7 +82,9 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   zero chrome, pill or not
 - `circle: boolean = false` (reflected) — Shoelace-compatible circular icon-button treatment: a
   square control with the pill radius and compact inline padding. It is additive to, not a rename
-  of, `pill`
+  of, `pill`. Circle and automatically detected icon-only buttons retain the shared
+  `--lr-icon-button-size` minimum clickable box at every `size`; the tier still scales their glyph
+  and chrome
 - `outline: boolean = false` (reflected) — Shoelace-compatible outlined treatment. It does not
   overwrite `appearance`, so removing `outline` restores the canonical Lyra appearance
 - `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
@@ -107,7 +113,7 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 `form*` overrides describe the submission this button triggers, not the button itself:
 
 - `formAction?: string` (attribute `formaction`) — overrides the form owner's `action`. Unset by
-  default, leaving the form's own `action` in place; an empty string is deliberately *not*
+  default, leaving the form's own `action` in place; an empty string is deliberately _not_
   forwarded, since an empty `formaction` resolves against the document URL and would silently
   redirect the submission
 - `formEnctype?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'`
@@ -130,7 +136,7 @@ host, used as `requestSubmit()`'s submitter and removed again in the same synchr
 `finally`, so a throwing or validation-blocked submission can't leave it behind). That is what makes
 the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
 `requestSubmit()` only accepts a submitter the form actually owns, and a custom element is never
-one. While that stand-in exists it *is* the form's submitter, so **`SubmitEvent.submitter` is the
+one. While that stand-in exists it _is_ the form's submitter, so **`SubmitEvent.submitter` is the
 transient native button, not this host**. With none of those properties set, submission stays a
 plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
 
@@ -145,7 +151,10 @@ consumer error and restores the current `required`/`value` constraint. `formStat
 restores `value` for session history/autofill without changing submitter-only form-data semantics.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
-(disabled while `disabled` or `loading`). The internal button's `focus` and `blur` — which do not
+(disabled while `disabled` or `loading`). In button mode, submit/reset runs only after that click's
+listener path has accepted the default action; calling `preventDefault()` on the host or an
+ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
+`focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
 detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
@@ -153,6 +162,9 @@ suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content),
 plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
+
+In a constrained button the default label ellipsizes and each adornment wrapper is capped at 40%
+of the control. Fixed icons remain visible while unbroken labels or metadata cannot widen the row.
 
 **CSS parts:** `base` (compatibility name for the internal control; use `button`),
 `button` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe link; it is
@@ -169,7 +181,7 @@ block of its own — the ones marked variant-independent are the exceptions:
 
 - `--lr-button-accent` (default `--lr-color-fill-loud`) — text/glyph colour for the chrome-less
   tiers (`outlined`, `plain`, `link`), i.e. the variant's loud fill borrowed as a foreground.
-  `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry *light*
+  `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry _light_
   text, so reusing it as dark-on-surface text would wash out every plain and link button — neutral
   keeps `--lr-color-text` instead.
 - `--lr-button-fill` (default `--lr-color-fill-quiet`) and `--lr-button-on-fill` (default
@@ -181,7 +193,7 @@ block of its own — the ones marked variant-independent are the exceptions:
 - `--lr-button-border` (default `--lr-color-border-normal`) — the border colour, from the active
   variant's row.
 - `--lr-button-outlined-border` (default `--lr-color-border-strong`) — the border colour of
-  `appearance="outlined"` *and* `"filled-outlined"`, overriding `--lr-button-border`. Deliberately
+  `appearance="outlined"` _and_ `"filled-outlined"`, overriding `--lr-button-border`. Deliberately
   variant-independent.
 - `--lr-button-outlined-fill` (default `transparent`) — the `appearance="outlined"` background, also
   variant-independent. Set it to tint an outlined button (a faint surface wash behind the outline)
@@ -215,15 +227,18 @@ The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
 (`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
-button is the same height as an input, select, combobox or date input of the same tier *by
-construction* rather than by two hand-maintained lists agreeing — which is exactly how they drifted
+button is the same height as an input, select, combobox or date input of the same tier _by
+construction_ rather than by two hand-maintained lists agreeing — which is exactly how they drifted
 apart before 8.0.0. Each is read only by its own tier (`--lr-button-size-s` also serves
 `size="small"`, and so on for the other two aliases), and all are ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
+Circle and automatically detected icon-only buttons add the shared `--lr-icon-button-size` floor
+on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below 40px.
+Ordinary labelled buttons keep the exact shared form-control ladder heights above.
 
 `--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
 content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
-radius) *does* follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
+radius) _does_ follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
 a 20px-tall control reads as a lozenge. Both are retunable without a `::part(base)` rule;
 `appearance="link"` ignores the radius (it renders with zero), and `pill` re-assigns it to
 `--lr-radius-pill`. `--lr-button-caret-size` (default `var(--lr-size-0-75em)`) is the `with-caret`
@@ -271,14 +286,13 @@ box no matter what tier or override is in play.
 
 <form action="/save" method="post">
   <lr-input name="title" label="Title" required></lr-input>
-  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft">
-    Save draft
-  </lr-button>
+  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft"> Save draft </lr-button>
   <lr-button type="submit" name="intent" value="publish">Publish</lr-button>
 </form>
 ```
 
 **Known gotchas:**
+
 - `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
   a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
   are resolved onto the focused internal control through `ariaDescribedByElements`; external

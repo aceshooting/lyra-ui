@@ -3,11 +3,15 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='controls'] {
     display: flex;
@@ -18,6 +22,8 @@ export const styles = css`
        it. */
     align-items: flex-end;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='filter-control'] {
     flex: 1 1 var(--lr-size-12rem);
@@ -34,6 +40,18 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='chips'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    inline-size: 100%;
+  }
+  [part='chip'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   /* lr-chip has no disabled property of its own to bind ?disabled to (unlike every other
      composed control in this component) -- the chip itself is un-rendered as \`removable\` while

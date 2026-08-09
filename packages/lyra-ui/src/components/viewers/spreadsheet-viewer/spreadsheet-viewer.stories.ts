@@ -3,7 +3,12 @@ import { html } from 'lit';
 import './spreadsheet-viewer.js';
 import { MINIMAL_XLSX_BASE64 } from './fixtures/minimal-xlsx-fixture.js';
 
-const meta: Meta = { title: 'DocumentViewer/SpreadsheetViewer', component: 'lr-spreadsheet-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'DocumentViewer/SpreadsheetViewer',
+  component: 'lr-spreadsheet-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'Highlight actions localize their complete cell value and annotation through separate `{value}` and `{label}` placeholders, allowing locale-specific order and punctuation.' } } },
+};
 export default meta;
 type Story = StoryObj;
 const src = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${MINIMAL_XLSX_BASE64}`;

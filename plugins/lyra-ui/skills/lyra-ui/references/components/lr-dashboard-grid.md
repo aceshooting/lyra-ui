@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -33,6 +33,15 @@ Move, resize, and collision feedback is appended to the shared light-DOM polite 
 sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
 **Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
+
+In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
+interactive-action block-size (`--lr-icon-button-size`). The handle is absolutely positioned and
+cannot contribute intrinsic size itself; the state-aware floor prevents it from overlapping the
+preceding cell or gap while readonly and locked short cells retain content-derived sizing.
+Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
+inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
+stack. This does not seize overflow from child-owned widgets: custom content can still declare
+`overflow: auto` and `white-space: nowrap` to retain a contained internal scrollport.
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.

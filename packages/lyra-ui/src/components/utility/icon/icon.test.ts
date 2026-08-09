@@ -17,7 +17,7 @@ it('uses mapped defaults and reflects name changes', async () => {
 
 it('renders a named SVG path as a decorative icon', async () => {
   const el = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
-  expect(el.shadowRoot!.querySelector('path')).to.exist;
+  expect((el.shadowRoot!.querySelector('path')) != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
 });
 

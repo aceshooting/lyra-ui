@@ -24,6 +24,8 @@ IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestio
 `label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
+An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
+tab and panel inactive.
 
 **Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the

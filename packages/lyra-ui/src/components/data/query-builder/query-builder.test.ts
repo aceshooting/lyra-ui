@@ -279,6 +279,32 @@ describe('lr-query-builder', () => {
     expect(ev.detail.value.conditions[0].value).to.be.undefined;
   });
 
+  it('normalizes non-finite controlled number conditions when value or field metadata arrives', async () => {
+    const el = (await fixture(html`
+      <lr-query-builder
+        .fields=${FIELDS}
+        .value=${{
+          combinator: 'and',
+          conditions: [
+            { id: 'positive', field: 'age', operator: 'eq', value: Number.POSITIVE_INFINITY },
+            { id: 'negative', field: 'age', operator: 'eq', value: Number.NEGATIVE_INFINITY },
+          ],
+        }}
+      ></lr-query-builder>
+    `)) as LyraQueryBuilder;
+    await el.updateComplete;
+    expect(el.value.conditions.map((condition) => condition.value)).to.deep.equal([undefined, undefined]);
+    expect(JSON.stringify(el.value).includes('null'), 'the normalized model never persists Infinity as JSON null').to.equal(false);
+
+    const late = document.createElement('lr-query-builder') as LyraQueryBuilder;
+    late.value = {
+      combinator: 'and',
+      conditions: [{ id: 'late', field: 'age', operator: 'eq', value: Number.POSITIVE_INFINITY }],
+    };
+    late.fields = FIELDS;
+    expect(late.value.conditions[0]?.value, 'late field metadata re-normalizes the controlled model').to.be.undefined;
+  });
+
   it('selecting a boolean value control coerces to a real boolean', async () => {
     const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'active', operator: 'eq' }] };
     const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
@@ -318,12 +344,12 @@ describe('lr-query-builder', () => {
     await el.updateComplete;
     const removeButton = conditionRow(el, 0).querySelector('[part="remove-button"]') as HTMLElement & { focus(): void };
     removeButton.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(removeButton);
+    expect((el.shadowRoot!.activeElement) === (removeButton)).to.equal(true);
     setTimeout(() => removeButton.click());
     await oneEvent(el, 'lr-remove-condition');
     await el.updateComplete;
     expect(el.value.conditions.length).to.equal(0);
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="add-button"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="add-button"]'))).to.equal(true);
   });
 
   it('uses the adopted owner realm CSS escape for public removal of a focused special-id row', async () => {
@@ -454,7 +480,7 @@ describe('lr-query-builder', () => {
     const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
     await el.updateComplete;
     const row = conditionRow(el, 0);
-    expect(row).to.exist;
+    expect((row) != null).to.equal(true);
     expect((row.querySelector('[part="operator-select"]') as LyraSelect).disabled).to.be.true;
     expect(row.querySelector('[part="value"]')!.tagName.toLowerCase()).to.equal('span');
   });
@@ -573,6 +599,43 @@ describe('lr-query-builder', () => {
     await el.updateComplete;
     const row = conditionRow(el, 0);
     expect(getComputedStyle(row).flexDirection).to.equal('column');
+  });
+
+  it('contains long field and localized operator labels at exactly 320px in LTR and RTL', async () => {
+    const longFieldLabel = `Field-${'unbroken'.repeat(60)}`;
+    const longOperatorLabel = `Operator-${'localized'.repeat(60)}`;
+    const fields: QueryBuilderField[] = [
+      { name: 'long-field', label: longFieldLabel, type: 'string', operators: ['contains'] },
+    ];
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'long-field', operator: 'contains', value: 'needle' }],
+    };
+
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = (await fixture(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+          <lr-query-builder
+            style="inline-size: 100%"
+            .fields=${fields}
+            .value=${value}
+            .strings=${{ queryBuilderOperatorContains: longOperatorLabel }}
+          ></lr-query-builder>
+        </div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-query-builder') as LyraQueryBuilder;
+      await el.updateComplete;
+      const row = conditionRow(el, 0);
+
+      expect(getComputedStyle(row).flexDirection, direction).to.equal('column');
+      expect(wrapper.scrollWidth, `${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
+      expect(el.scrollWidth, `${direction} host`).to.be.at.most(el.clientWidth + 1);
+      expect(row.scrollWidth, `${direction} condition`).to.be.at.most(row.clientWidth + 1);
+      for (const part of ['field-select', 'operator-select', 'value'] as const) {
+        const control = row.querySelector(`[part="${part}"]`) as HTMLElement;
+        expect(control.scrollWidth, `${direction} ${part}`).to.be.at.most(control.clientWidth + 1);
+      }
+    }
   });
 
   it('selectValue() narrows an event.target.value that widens to string[] (defensive fast-path guard)', async () => {
@@ -877,6 +940,19 @@ describe('lr-query-builder', () => {
     setAndDispatch(input, 'value', 'not-a-number', 'lr-input');
     const ev = await promise;
     expect(ev.detail.value.conditions[0].value).to.be.undefined;
+  });
+
+  it('commits undefined for positive and negative numeric overflow strings', async () => {
+    const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'age', operator: 'eq', value: 5 }] };
+    const el = (await fixture(html`<lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;
+    await el.updateComplete;
+    const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    for (const raw of ['1e309', '-1e309']) {
+      const promise = oneEvent(el, 'lr-input');
+      setAndDispatch(input, 'value', raw, 'lr-input');
+      const event = await promise;
+      expect(event.detail.value.conditions[0].value, `${raw} cannot enter the query model`).to.be.undefined;
+    }
   });
 
   it('is accessible (empty state)', async () => {

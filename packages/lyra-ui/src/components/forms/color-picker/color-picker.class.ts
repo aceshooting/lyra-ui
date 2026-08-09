@@ -63,6 +63,15 @@ interface EyeDropperLike {
 }
 type EyeDropperConstructor = new () => EyeDropperLike;
 
+interface ColorPickerDrag {
+  pointerId: number;
+  track: 'grid' | 'hue' | 'alpha';
+  rect: DOMRect;
+  rtl: boolean;
+  startColor: LyraColorHsva;
+  startValue: { readonly value: string; readonly dirty: boolean };
+}
+
 function eyeDropperConstructor(ownerWindow: Window | null): EyeDropperConstructor | undefined {
   return (ownerWindow as (Window & { EyeDropper?: EyeDropperConstructor }) | null)?.EyeDropper;
 }
@@ -112,12 +121,19 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * Colour is never the only channel carrying state: the trigger is described by the current value in
  * text, the panel shows it in an editable field, and the selected palette swatch is marked with
  * `aria-pressed` plus a check mark rather than a tint alone.
+ * Pointer drags are reversible previews: a release commits the latest colour, while cancellation,
+ * lost capture, disablement, disconnection, or document adoption silently restores the colour and
+ * submitted form value that existed before the gesture.
+ * The popup participates in the shared nonmodal overlay stack, so Escape and an outside pointer
+ * dismiss it only while it is topmost; closing a newer overlay hands focus back through the
+ * manager instead of collapsing every open popup under the same event.
  *
  * @customElement lr-color-picker
  * @slot label - Custom label content.
  * @slot hint - Supporting text.
  * @slot error - Custom validation-error content.
- * @event {InputEvent} input - Native-style composed event, fired for every colour change during an interaction.
+ * @event {InputEvent} input - Native-style composed event, fired for every colour preview during an interaction.
+ *   Canceling a pointer gesture silently restores its pre-gesture value without another event.
  * @event {Event} change - Native-style composed event, fired once an interaction commits (pointer release,
  *   key release, swatch click, text entry, eyedropper result).
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
@@ -200,6 +216,10 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-color-picker-gap=var(--lr-space-xs)] - Gap between field chrome and panel rows.
  * @cssprop [--lr-color-picker-radius=var(--lr-radius)] - Trigger, grid, and panel corner radius.
  * @cssprop [--lr-color-picker-hover-border-color=var(--lr-color-brand)] - Hover border color.
+ * @cssprop [--lr-color-picker-selected-border=var(--lr-color-brand)] - Border of the selected
+ * palette swatch.
+ * @cssprop [--lr-color-picker-selected-check-color=var(--lr-color-surface)] - Checkmark color on
+ * the selected palette swatch.
  * @cssprop [--lr-color-picker-grid-inline-size=var(--lr-size-15rem)] - Saturation/brightness grid width.
  * @cssprop [--lr-color-picker-grid-block-size=var(--lr-size-8rem)] - Saturation/brightness grid height.
  * @cssprop [--lr-color-picker-grid-handle-size=var(--lr-size-1rem)] - Diameter of the grid handle.
@@ -362,13 +382,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private panelId = nextId('color-picker-panel');
 
   /** Which control a pointer drag is currently steering, plus the box it maps onto. */
-  private drag?: { pointerId: number; track: 'grid' | 'hue' | 'alpha'; rect: DOMRect; rtl: boolean };
+  private drag?: ColorPickerDrag;
   /** Exact realm carrying the active drag listeners, retained across adoption for symmetric cleanup. */
   private dragWindow?: Window;
   private dragChanged = false;
   private keyboardChanged = false;
   private cleanupPositioner?: () => void;
   private overlayHandle?: OverlayHandle;
+  private restoreFocusOnClose = true;
   private lightDismissDocument?: Document;
   private eyeDropperAbort?: AbortController;
   private eyeDropperGeneration = 0;
@@ -418,14 +439,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.cancelEyeDropper();
     this.interactionGeneration += 1;
     this.keyboardChanged = false;
-    this.endDrag();
+    this.cancelDrag();
     super.disconnectedCallback();
   }
 
   adoptedCallback(): void {
     // Adoption can occur while already disconnected, in which case no new disconnected callback
     // runs. Defensively retire resources retained from the previous realm either way.
-    this.endDrag();
+    this.cancelDrag();
     this.cancelEyeDropper();
   }
 
@@ -434,12 +455,18 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   override set value(next: string | null) {
+    // A consumer assignment is authoritative. Retire any pointer transaction without restoring
+    // its older checkpoint, or a later capture-loss event could overwrite the assigned value.
+    this.endDrag();
     super.value = next ?? '';
     this.valueNeedsParse = true;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const formatChanged =
+      changed.has('format') || changed.has('opacity') || changed.has('uppercase');
+    if (formatChanged) this.cancelDrag();
     // `disabled` can flip (directly, or through an ancestor fieldset) while the panel is already
     // showing; the open-guard in the setter only covers the opening direction.
     if (this.effectiveDisabled) {
@@ -452,10 +479,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         }
       }
       this.keyboardChanged = false;
-      this.endDrag();
+      this.cancelDrag();
     }
-    const formatChanged =
-      changed.has('format') || changed.has('opacity') || changed.has('uppercase');
     if (!this.valueNeedsParse && !formatChanged) return;
     const shouldReserialize = formatChanged;
     if (this.valueNeedsParse) {
@@ -479,7 +504,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       if (this.open && !this.inline) {
         this.activatePanel();
       } else {
-        this.teardownOverlay();
+        this.teardownOverlay(this.restoreFocusOnClose);
         // An abandoned half-typed entry must not reappear the next time the panel opens.
         this.pendingInput = '';
       }
@@ -677,10 +702,16 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private activatePanel(): void {
     if (!this.isConnected || this.inline) return;
     this.positionPanel();
+    this.restoreFocusOnClose = true;
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.panelEl(),
       onEscape: () => this.hide(),
+      onBackdrop: () => {
+        this.restoreFocusOnClose = false;
+        this.hide();
+        if (this.open) this.restoreFocusOnClose = true;
+      },
       restoreFocusTo: this.triggerEl(),
       modal: false,
       trapFocus: false,
@@ -697,12 +728,17 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.overlayHandle = undefined;
     this.lightDismissDocument?.removeEventListener('pointerdown', this.onDocumentPointerDown, true);
     this.lightDismissDocument = undefined;
+    this.restoreFocusOnClose = true;
   }
 
   private onDocumentPointerDown = (event: Event): void => {
     const target = event.composedPath()[0];
     if (isElementValue(target) && composedContains(this, target)) return;
-    this.teardownOverlay(false);
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.dismissBackdrop();
+      return;
+    }
+    this.restoreFocusOnClose = false;
     this.hide();
   };
 
@@ -725,7 +761,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       (event.pointerType === 'mouse' && event.button !== 0)
     ) return;
     const rect = box.getBoundingClientRect();
-    this.drag = { pointerId: event.pointerId, track, rect, rtl: isRtl(this) };
+    this.drag = {
+      pointerId: event.pointerId,
+      track,
+      rect,
+      rtl: isRtl(this),
+      startColor: { ...this.color },
+      startValue: this.captureLiveValueCheckpoint(),
+    };
     this.dragChanged = false;
     try {
       box.setPointerCapture(event.pointerId);
@@ -765,7 +808,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (this.effectiveDisabled) {
       // These window-level listeners keep firing for a captured pointer regardless of the
       // `disabled` reflection, so an in-flight drag would otherwise keep mutating `value`.
-      this.endDrag();
+      this.cancelDrag();
       return;
     }
     this.applyPointer(event);
@@ -774,7 +817,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private onPointerUp = (event: PointerEvent): void => {
     if (this.drag?.pointerId !== event.pointerId) return;
     if (this.effectiveDisabled) {
-      this.endDrag();
+      this.cancelDrag();
       return;
     }
     this.applyPointer(event);
@@ -787,8 +830,17 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   // pointercancel, and losing capture fires lostpointercapture. Both end the drag with no commit.
   private onPointerCancel = (event: PointerEvent): void => {
     if (this.drag?.pointerId !== event.pointerId) return;
-    this.endDrag();
+    this.cancelDrag();
   };
+
+  private cancelDrag(): void {
+    const drag = this.drag;
+    if (!drag) return;
+    this.endDrag();
+    this.color = drag.startColor;
+    this.restoreLiveValueCheckpoint(drag.startValue);
+    this.valueNeedsParse = false;
+  }
 
   private endDrag(): void {
     this.drag = undefined;

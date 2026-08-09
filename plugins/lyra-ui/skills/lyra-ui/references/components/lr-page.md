@@ -53,8 +53,13 @@ The default mobile toggle is a native button with localized open/close names and
 `aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus
 trapping, stacking, reconnect suspension, and focus return. A custom `navigation-toggle` element is
-wired to the same state and receives synchronized `aria-expanded`, `aria-controls`, and a localized
-label when it did not supply its own.
+wired to the same state and receives synchronized `aria-expanded` plus a localized label when it
+did not supply its own. Its light-DOM `aria-controls` points to the Page host, a resolvable public
+bridge to the private shadow drawer; supporting browsers therefore report the Page in
+`ariaControlsElements` instead of an empty list for an unresolvable shadow ID. When that toggle is
+replaced, removed, or its Page disconnects, component-owned attributes are restored to their prior
+author values (or removed when they were absent). A consumer write made after assignment wins and
+is not restored over.
 
 The focus-visible skip link has a localized `Skip to content` fallback and focuses the unique
 internal `<main>`. Native URL fragments cannot address an id inside a shadow root, so the Page host

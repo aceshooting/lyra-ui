@@ -46,6 +46,20 @@ export const FreeTextNoCatalog: Story = {
   render: () => html`<lr-model-select provider="custom" placeholder="Type any model id…"></lr-model-select>`,
 };
 
+/** Rich visible labels use the standard `label` slot in both rendering modes. */
+export const SlottedLabel: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-24rem)">
+      <lr-model-select required .catalog=${OPENAI_CATALOG}>
+        <span slot="label">Deployment model <small>(required)</small></span>
+      </lr-model-select>
+      <lr-model-select allow-custom placeholder="Type a model id…">
+        <span slot="label">Custom inference model</span>
+      </lr-model-select>
+    </div>
+  `,
+};
+
 /**
  * `allow-custom` keeps the catalog's suggestions but switches the control to
  * the text-input shape so a value outside the list can still be typed and committed.
@@ -59,6 +73,33 @@ export const AllowCustomWithCatalog: Story = {
       .catalog=${OLLAMA_CATALOG}
     ></lr-model-select>
   `,
+};
+
+/**
+ * Free-text mode exposes the native selection facade. The buttons select the current model id or
+ * replace that selection without emitting user-input events; the committed form value stays in sync.
+ */
+export const SelectionEditingFacade: Story = {
+  render: () => {
+    const pickerFor = (event: Event) =>
+      (event.currentTarget as HTMLElement).closest('[data-selection-demo]')?.querySelector<LyraModelSelect>('lr-model-select');
+    return html`
+      <div data-selection-demo style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+        <lr-model-select name="model" value="mistral" allow-custom></lr-model-select>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs)">
+          <button type="button" @click=${(event: Event) => pickerFor(event)?.select()}>Select text</button>
+          <button
+            type="button"
+            @click=${(event: Event) => {
+              const picker = pickerFor(event);
+              if (!picker?.input) return;
+              picker.setRangeText('custom-model', 0, picker.input.value.length, 'select');
+            }}
+          >Replace selection</button>
+        </div>
+      </div>
+    `;
+  },
 };
 
 /**

@@ -2,9 +2,27 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
-import { styles } from './rubric-form.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+
+it('contains long field and action content at 320px in LTR and RTL', async () => {
+  const label = 'InternationalizedRubricContentWithoutAnyNaturalBreakOpportunity';
+  const keys: RubricKey[] = [
+    { key: 'comment', type: 'comment', label, description: label, placeholder: label },
+  ];
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-rubric-form
+          skippable
+          .keys=${keys}
+          .strings=${{ rubricSubmit: label, rubricSkip: label }}
+        ></lr-rubric-form>
+      </div>
+    `);
+    expect(wrapper.scrollWidth, `dir=${direction}`).to.be.at.most(wrapper.clientWidth);
+  }
+});
 
 type CssEscapeHost = { escape?: (identifier: string) => string };
 
@@ -24,10 +42,7 @@ function createRealmFrame(): {
   return { iframe, frameDocument, frameWindow };
 }
 
-function replaceCssEscape(
-  target: CssEscapeHost,
-  replacement: CssEscapeHost['escape'],
-): () => void {
+function replaceCssEscape(target: CssEscapeHost, replacement: CssEscapeHost['escape']): () => void {
   const previous = Object.getOwnPropertyDescriptor(target, 'escape');
   Object.defineProperty(target, 'escape', {
     configurable: true,
@@ -73,6 +88,33 @@ describe('lr-rubric-form', () => {
     expect(el.shadowRoot!.querySelector('[data-key="score"] lr-segmented')).to.not.exist;
   });
 
+  it('localizes visible segmented scores like slider scores while preserving raw values', async () => {
+    const keys: RubricKey[] = [
+      { key: 'compact', type: 'score', min: 0, max: 2, step: 1 },
+      { key: 'wide', type: 'score', min: 0, max: 2000, step: 1 },
+    ];
+    const el = (await fixture(html`
+      <lr-rubric-form locale="ar-EG" .keys=${keys} .value=${{ compact: 1, wide: 1234 }}></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector('[data-key="compact"] lr-segmented') as HTMLElement & {
+      items: Array<{ value: string; label: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    const slider = el.shadowRoot!.querySelector('[data-key="wide"] lr-slider') as HTMLElement & {
+      shadowRoot: ShadowRoot;
+      updateComplete: Promise<boolean>;
+    };
+    await segmented.updateComplete;
+    await slider.updateComplete;
+
+    const formatter = new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 20 });
+    expect(segmented.items.map((item) => item.value)).to.deep.equal(['0', '1', '2']);
+    expect(segmented.items.map((item) => item.label)).to.deep.equal([0, 1, 2].map((value) => formatter.format(value)));
+    expect(slider.shadowRoot.querySelector('[part="value"]')!.textContent).to.equal(formatter.format(1234));
+    expect(el.value).to.deep.equal({ compact: 1, wide: 1234 });
+  });
+
   it('enumerates a single-point extreme score domain without a non-advancing loop', async () => {
     const key: RubricKey = {
       key: 'score',
@@ -89,9 +131,7 @@ describe('lr-rubric-form', () => {
     ).scoreValues(key);
     expect(values).to.deep.equal([Number.MAX_VALUE]);
 
-    const el = (await fixture(
-      html`<lr-rubric-form .keys=${[key]}></lr-rubric-form>`,
-    )) as LyraRubricForm;
+    const el = (await fixture(html`<lr-rubric-form .keys=${[key]}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     const segmented = el.shadowRoot!.querySelector('[data-key="score"] lr-segmented') as
       | (HTMLElement & { items: Array<{ value: string }> })
@@ -107,7 +147,7 @@ describe('lr-rubric-form', () => {
     const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     const group = el.shadowRoot!.querySelector('[data-key="tags"] lr-checkbox-group') as HTMLElement;
-    expect(group).to.exist;
+    expect(group != null).to.equal(true);
     expect(group.querySelectorAll('lr-checkbox').length).to.equal(2);
   });
 
@@ -143,7 +183,7 @@ describe('lr-rubric-form', () => {
         detail: { value: 'Clear and accurate' },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
 
@@ -163,7 +203,7 @@ describe('lr-rubric-form', () => {
 
   it('emits lr-submit with the value and itemId only after validity passes', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" .value=${{ accuracy: 5 }}></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" .value=${{ accuracy: 5 }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const submit = el.shadowRoot!.querySelector('[part="submit"]') as HTMLElement;
@@ -173,7 +213,9 @@ describe('lr-rubric-form', () => {
   });
 
   it('does not emit lr-submit when validity fails, and reveals the error', async () => {
-    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`)) as LyraRubricForm;
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`
+    )) as LyraRubricForm;
     await el.updateComplete;
     const submit = el.shadowRoot!.querySelector('[part="submit"]') as HTMLElement;
     let fired = false;
@@ -186,9 +228,7 @@ describe('lr-rubric-form', () => {
     expect(error.getAttribute('role')).to.equal(null);
     expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
     const score = el.shadowRoot!.querySelector('[data-key="accuracy"] .control')!;
-    expect(score.getAttribute('label') ?? score.getAttribute('aria-label')).to.contain(
-      error.textContent?.trim(),
-    );
+    expect(score.getAttribute('label') ?? score.getAttribute('aria-label')).to.contain(error.textContent?.trim());
   });
 
   it('switches the submit label between rubricSubmit and rubricSubmitAndNext based on has-next', async () => {
@@ -199,7 +239,7 @@ describe('lr-rubric-form', () => {
 
   it('emits lr-skip without validating when skippable', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" skippable></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" skippable></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const skip = el.shadowRoot!.querySelector('[part="skip"]') as HTMLElement;
@@ -209,7 +249,9 @@ describe('lr-rubric-form', () => {
   });
 
   it('resets touched/error-reveal state when itemId changes', async () => {
-    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`)) as LyraRubricForm;
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`
+    )) as LyraRubricForm;
     await el.updateComplete;
     el.reportValidity();
     await el.updateComplete;
@@ -228,12 +270,18 @@ describe('lr-rubric-form', () => {
     ];
     const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
-    const select = el.shadowRoot!.querySelector('[data-key="category"] lr-select') as HTMLElement & { required: boolean };
+    const select = el.shadowRoot!.querySelector('[data-key="category"] lr-select') as HTMLElement & {
+      required: boolean;
+    };
     const optionalSelect = el.shadowRoot!.querySelector('[data-key="optionalCategory"] lr-select') as HTMLElement & {
       required: boolean;
     };
-    const group = el.shadowRoot!.querySelector('[data-key="tags"] lr-checkbox-group') as HTMLElement & { required: boolean };
-    const textarea = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea') as HTMLElement & { required: boolean };
+    const group = el.shadowRoot!.querySelector('[data-key="tags"] lr-checkbox-group') as HTMLElement & {
+      required: boolean;
+    };
+    const textarea = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea') as HTMLElement & {
+      required: boolean;
+    };
     expect(select.required).to.be.true;
     expect(optionalSelect.required).to.be.false;
     expect(group.required).to.be.true;
@@ -242,7 +290,7 @@ describe('lr-rubric-form', () => {
 
   it('does not steal focus when item-id is set directly in initial markup (mount, not a real transition)', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form item-id="item-1" .keys=${KEYS}></lr-rubric-form>`,
+      html`<lr-rubric-form item-id="item-1" .keys=${KEYS}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     // `=== null` (rather than a direct chai `.to.equal(node)` on a real
@@ -288,15 +336,13 @@ describe('lr-rubric-form', () => {
   });
 
   it('uses the adopted owner realm CSS escape to resolve a special-key validity anchor', async () => {
-    const specialKey = 'target\"] [data-key=\"decoy';
+    const specialKey = 'target"] [data-key="decoy';
     const keys: RubricKey[] = [
       { key: specialKey, type: 'comment', required: true },
       { key: 'decoy', type: 'comment', required: true },
     ];
     const { iframe, frameDocument, frameWindow } = createRealmFrame();
-    const el = (await fixture(
-      html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`,
-    )) as LyraRubricForm;
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
     el.remove();
     frameDocument.adoptNode(el);
     frameDocument.body.append(el);
@@ -322,16 +368,14 @@ describe('lr-rubric-form', () => {
   });
 
   it('uses an exact key scan for adopted initial focus when owner CSS escape is missing or throws', async () => {
-    const specialKey = 'target\"] [data-key=\"decoy';
+    const specialKey = 'target"] [data-key="decoy';
     const keys: RubricKey[] = [
       { key: specialKey, type: 'comment' },
       { key: 'decoy', type: 'comment' },
     ];
     for (const mode of ['missing', 'throwing'] as const) {
       const { iframe, frameDocument, frameWindow } = createRealmFrame();
-      const el = (await fixture(
-        html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`,
-      )) as LyraRubricForm;
+      const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
       el.remove();
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
@@ -345,7 +389,7 @@ describe('lr-rubric-form', () => {
           : () => {
               ownerCalls += 1;
               throw new Error('owner CSS escape unavailable');
-            },
+            }
       );
       const restoreAmbient = replaceCssEscape(CSS, () => 'decoy');
       try {
@@ -366,7 +410,7 @@ describe('lr-rubric-form', () => {
 
   it('renders a .strings override for the empty-keys message', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .strings=${{ noData: 'Rien à évaluer' }}></lr-rubric-form>`,
+      html`<lr-rubric-form .strings=${{ noData: 'Rien à évaluer' }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Rien à évaluer');
@@ -384,16 +428,16 @@ describe('lr-rubric-form', () => {
           fieldRequired: 'Ce champ est requis.',
           unsupportedFieldType: 'Type de champ non pris en charge : "{type}".',
         }}
-      ></lr-rubric-form>`,
+      ></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     el.reportValidity();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')!.textContent).to.equal(
-      'Ce champ est requis.',
+      'Ce champ est requis.'
     );
     expect(el.shadowRoot!.querySelector('[part="unsupported"]')!.textContent).to.equal(
-      'Type de champ non pris en charge : "bogus".',
+      'Type de champ non pris en charge : "bogus".'
     );
   });
 
@@ -407,7 +451,7 @@ describe('lr-rubric-form', () => {
           rubricSubmitAndNext: 'Envoyer et suivant',
           rubricSkip: 'Passer',
         }}
-      ></lr-rubric-form>`,
+      ></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="submit"]')!.textContent!.trim()).to.equal('Envoyer');
@@ -458,9 +502,87 @@ describe('lr-rubric-form', () => {
   });
 
   it('is accessible', async () => {
-    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} skippable has-next></lr-rubric-form>`)) as LyraRubricForm;
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} skippable has-next></lr-rubric-form>`
+    )) as LyraRubricForm;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('renders aggregate label, hint, and error chrome with same-shadow ARIA links', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form
+        label="Review rubric"
+        hint="Score every dimension"
+        error-text="Review could not be saved"
+        .keys=${KEYS}
+      >
+        <span slot="label">for this response</span>
+        <span slot="hint">before submitting</span>
+        <span slot="help-text">with supporting context</span>
+        <span slot="error">Try again</span>
+      </lr-rubric-form>
+    `)) as LyraRubricForm;
+    const group = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part~="aggregate-label"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="aggregate-hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part~="aggregate-error"]') as HTMLElement;
+
+    expect(label.textContent).to.contain('Review rubric');
+    expect(label.querySelector('slot')!.assignedElements()[0]?.textContent).to.contain('for this response');
+    expect(hint.textContent).to.contain('Score every dimension');
+    expect(hint.querySelector('slot[name="hint"]')!.assignedElements()[0]?.textContent).to.contain(
+      'before submitting',
+    );
+    expect(
+      hint.querySelector('slot[name="help-text"]')!.assignedElements()[0]?.textContent,
+    ).to.contain('with supporting context');
+    expect(error.textContent).to.contain('Review could not be saved');
+    expect(error.querySelector('slot')!.assignedElements()[0]?.textContent).to.contain('Try again');
+    expect(group.getAttribute('aria-labelledby')).to.equal(label.id);
+    expect(group.getAttribute('aria-describedby')?.split(/\s+/)).to.deep.equal([hint.id, error.id]);
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(group.hasAttribute('aria-label')).to.equal(true);
+    expect(group.getAttribute('aria-label')).to.equal('');
+    expect(group.hasAttribute('aria-labelledby')).to.equal(false);
+  });
+
+  it('renders a blocking aggregate custom error when no errorText or error slot is supplied', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form label="Review rubric" .keys=${KEYS}></lr-rubric-form>
+    `)) as LyraRubricForm;
+    el.setCustomValidity('This response was already reviewed');
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part~="aggregate-error"]') as HTMLElement;
+    expect(error.hidden).to.equal(false);
+    expect(error.textContent).to.contain('This response was already reviewed');
+    expect(group.getAttribute('aria-describedby')?.split(/\s+/)).to.include(error.id);
+
+    el.setCustomValidity('');
+    await el.updateComplete;
+    expect(error.hidden).to.equal(true);
+    expect(group.hasAttribute('aria-describedby')).to.equal(false);
+  });
+
+  it('honors and can unset aggregate label/hint SSR presence hints and the help-text alias', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form with-label with-hint help-text="Supporting context"></lr-rubric-form>
+    `)) as LyraRubricForm;
+    const label = el.shadowRoot!.querySelector('[part~="aggregate-label"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part~="aggregate-hint"]') as HTMLElement;
+    expect(label.hidden).to.equal(false);
+    expect(hint.hidden).to.equal(false);
+    expect(hint.textContent).to.contain('Supporting context');
+
+    el.withLabel = false;
+    el.withHint = false;
+    el.helpText = '';
+    await el.updateComplete;
+    expect(label.hidden).to.equal(true);
+    expect(hint.hidden).to.equal(true);
   });
 
   it('exposes ElementInternals-backed getters: form, validity, validationMessage, willValidate', async () => {
@@ -477,7 +599,7 @@ describe('lr-rubric-form', () => {
     // serializes that message via `structuredClone()`, which throws DataCloneError on DOM values.
     // The run then reports `0 passed, 0 failed` only when the per-file watchdog expires.
     expect(el.labels.length).to.equal(0);
-    expect(el.form).to.equal(form);
+    expect(el.form === form).to.equal(true);
     expect(el.validity.valid).to.be.false;
     expect(el.validationMessage).to.be.a('string');
     expect(el.willValidate).to.be.true;
@@ -507,7 +629,9 @@ describe('lr-rubric-form', () => {
   });
 
   it('normalizes a nullish itemId to an empty string and removes the item-id attribute', async () => {
-    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`)) as LyraRubricForm;
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`
+    )) as LyraRubricForm;
     await el.updateComplete;
     expect(el.hasAttribute('item-id')).to.be.true;
     el.itemId = null as unknown as string;
@@ -550,8 +674,8 @@ describe('lr-rubric-form', () => {
     await el.updateComplete;
     for (const k of keys) {
       expect(el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-slider`), `${k.key} should be lr-slider`).to.exist;
-      expect(el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-segmented`), `${k.key} should not be lr-segmented`).to
-        .not.exist;
+      expect(el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-segmented`), `${k.key} should not be lr-segmented`)
+        .to.not.exist;
     }
   });
 
@@ -562,18 +686,18 @@ describe('lr-rubric-form', () => {
     const segmented = el.shadowRoot!.querySelector('[data-key="bare"] lr-segmented') as HTMLElement & {
       items: { value: string }[];
     };
-    expect(segmented).to.exist;
+    expect(segmented != null).to.equal(true);
     expect(segmented.items.map((i) => i.value)).to.deep.equal(['0', '1', '2', '3', '4', '5']);
   });
 
   it('applies default min/step (0/1) to a slider score field and reflects a preset numeric value', async () => {
     const keys: RubricKey[] = [{ key: 's2', type: 'score', max: 100 }];
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${keys} .value=${{ s2: 42 }}></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${keys} .value=${{ s2: 42 }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const slider = el.shadowRoot!.querySelector('[data-key="s2"] lr-slider') as HTMLElement & { value: number };
-    expect(slider).to.exist;
+    expect(slider != null).to.equal(true);
     expect(slider.value).to.equal(42);
   });
 
@@ -583,11 +707,11 @@ describe('lr-rubric-form', () => {
       { key: 'category', type: 'category', options: [{ value: 'hallucination' }, { value: 'tone' }] },
     ];
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${keys} .value=${{ category: 'tone' }}></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${keys} .value=${{ category: 'tone' }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const emptySelect = el.shadowRoot!.querySelector('[data-key="catNoOpts"] lr-select') as HTMLElement;
-    expect(emptySelect).to.exist;
+    expect(emptySelect != null).to.equal(true);
     expect(emptySelect.querySelectorAll('lr-option').length).to.equal(0);
     const select = el.shadowRoot!.querySelector('[data-key="category"] lr-select') as HTMLElement & { value: string };
     expect(select.value).to.equal('tone');
@@ -595,19 +719,26 @@ describe('lr-rubric-form', () => {
 
   it('renders the description paragraph for a key that has one', async () => {
     const keys: RubricKey[] = [
-      { key: 'accuracy', type: 'score', min: 0, max: 5, step: 1, description: 'How factually accurate is the response?' },
+      {
+        key: 'accuracy',
+        type: 'score',
+        min: 0,
+        max: 5,
+        step: 1,
+        description: 'How factually accurate is the response?',
+      },
     ];
     const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     const desc = el.shadowRoot!.querySelector('[data-key="accuracy"] [part="description"]');
-    expect(desc).to.exist;
+    expect(desc != null).to.equal(true);
     expect(desc!.textContent).to.equal('How factually accurate is the response?');
   });
 
-  it('reflects a preset string value in a comment field\'s textarea', async () => {
+  it("reflects a preset string value in a comment field's textarea", async () => {
     const keys: RubricKey[] = [{ key: 'comment', type: 'comment' }];
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${keys} .value=${{ comment: 'Looks correct.' }}></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${keys} .value=${{ comment: 'Looks correct.' }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const textarea = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea') as HTMLElement & {
@@ -635,9 +766,10 @@ describe('lr-rubric-form', () => {
   });
 
   it('resets value and touched/error-reveal state when the owning form is reset (formResetCallback)', async () => {
+    const initialValue = { accuracy: 5 };
     const form = (await fixture(html`
       <form>
-        <lr-rubric-form name="rubric" .keys=${KEYS} .value=${{ accuracy: 5 }}></lr-rubric-form>
+        <lr-rubric-form name="rubric" .keys=${KEYS} .value=${initialValue}></lr-rubric-form>
       </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
@@ -646,10 +778,17 @@ describe('lr-rubric-form', () => {
     el.reportValidity();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.exist;
+    initialValue.accuracy = 2;
     form.reset();
     await el.updateComplete;
-    expect(el.value).to.deep.equal({});
+    expect(el.value).to.deep.equal({ accuracy: 5 });
+    expect(el.value === initialValue).to.equal(false);
     expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.not.exist;
+
+    el.value.accuracy = 1;
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ accuracy: 5 });
   });
 
   it('formStateRestoreCallback restores a valid JSON object state, and falls back to {} for invalid JSON, an array, or a non-string state', async () => {
@@ -679,7 +818,7 @@ describe('lr-rubric-form', () => {
 
   it('does not recreate the touched-fields set when a field is already touched (markTouched guard)', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1"></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     const field = el.shadowRoot!.querySelector('[data-key="accuracy"]') as HTMLElement;
@@ -695,7 +834,7 @@ describe('lr-rubric-form', () => {
 
   it('does not emit lr-submit when disabled, even with a valid value (submit guard)', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} .value=${{ accuracy: 5 }} disabled></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} .value=${{ accuracy: 5 }} disabled></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     let fired = false;
@@ -707,7 +846,7 @@ describe('lr-rubric-form', () => {
 
   it('does not emit lr-skip when disabled (skip guard)', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} skippable disabled></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} skippable disabled></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     let fired = false;
@@ -770,7 +909,7 @@ describe('lr-rubric-form', () => {
     const wrapper = (await fixture(
       html`<div style="--lr-theme-opacity-disabled: 0.25">
         <lr-rubric-form .keys=${KEYS} skippable disabled></lr-rubric-form>
-      </div>`,
+      </div>`
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-rubric-form') as LyraRubricForm;
     await el.updateComplete;
@@ -784,7 +923,7 @@ describe('lr-rubric-form', () => {
 
   it('submits on Ctrl/Cmd+Enter, but not on a plain Enter or an unmodified other key (onFormKeyDown)', async () => {
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" .value=${{ accuracy: 5 }}></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} item-id="item-1" .value=${{ accuracy: 5 }}></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     let fired = false;
@@ -809,15 +948,12 @@ describe('lr-rubric-form', () => {
   for (const part of ['submit', 'skip'] as const) {
     it(`moves ${part}'s painted background on hover, and further again while pressed`, async () => {
       const el = (await fixture(
-        html`<lr-rubric-form .keys=${KEYS} item-id="item-1" skippable></lr-rubric-form>`,
+        html`<lr-rubric-form .keys=${KEYS} item-id="item-1" skippable></lr-rubric-form>`
       )) as LyraRubricForm;
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
       const rect = button.getBoundingClientRect();
-      const centre: [number, number] = [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ];
+      const centre: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
       const rest = getComputedStyle(button).backgroundColor;
       try {
         await sendMouse({ type: 'move', position: centre });
@@ -833,6 +969,50 @@ describe('lr-rubric-form', () => {
       }
     });
   }
+
+  it('themes submit and skip rest, hover, and pressed paint through component hooks', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form
+        .keys=${KEYS}
+        .value=${{ accuracy: 5 }}
+        item-id="item-1"
+        skippable
+        style="
+          --lr-rubric-form-submit-bg: rgb(1, 2, 3);
+          --lr-rubric-form-submit-border-color: rgb(4, 5, 6);
+          --lr-rubric-form-submit-color: rgb(7, 8, 9);
+          --lr-rubric-form-submit-hover-bg: rgb(10, 11, 12);
+          --lr-rubric-form-submit-active-bg: rgb(13, 14, 15);
+          --lr-rubric-form-skip-hover-bg: rgb(16, 17, 18);
+          --lr-rubric-form-skip-active-bg: rgb(19, 20, 21);
+        "
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    const submit = el.shadowRoot!.querySelector<HTMLElement>('[part="submit"]')!;
+    const skip = el.shadowRoot!.querySelector<HTMLElement>('[part="skip"]')!;
+    expect(getComputedStyle(submit).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(submit).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(submit).color).to.equal('rgb(7, 8, 9)');
+    for (const [button, hover, active] of [
+      [submit, 'rgb(10, 11, 12)', 'rgb(13, 14, 15)'],
+      [skip, 'rgb(16, 17, 18)', 'rgb(19, 20, 21)'],
+    ] as const) {
+      const rect = button.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(button).backgroundColor).to.equal(hover);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(button).backgroundColor).to.equal(active);
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
+  });
 
   describe('lifecycle: attachInternals guard', () => {
     it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
@@ -919,11 +1099,9 @@ it('forwards field labels, descriptions, errors, and option descriptions to comp
     },
   ];
   const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
-  const segmented = el.shadowRoot!.querySelector<HTMLElement & { label: string }>(
-    '[data-key="score"] lr-segmented',
-  )!;
+  const segmented = el.shadowRoot!.querySelector<HTMLElement & { label: string }>('[data-key="score"] lr-segmented')!;
   const slider = el.shadowRoot!.querySelector<HTMLElement & { label: string; updateComplete: Promise<unknown> }>(
-    '[data-key="scoreWide"] lr-slider',
+    '[data-key="scoreWide"] lr-slider'
   )!;
   await slider.updateComplete;
   expect(segmented.label).to.contain('Accuracy');
@@ -979,10 +1157,16 @@ it('keeps each keyed composed control with its logical field across reorder', as
   expect(el.shadowRoot!.querySelector('[data-key="b"] lr-textarea') === originalB).to.be.true;
 });
 
-it('uses the on-brand token for the submit action foreground', () => {
-  expect(styles.cssText).to.match(/\[part='submit'\][^}]*color:\s*var\(--lr-color-on-brand\)/s);
+it('resolves the submit action foreground from the on-brand token', async () => {
+  const el = (await fixture(html`
+    <lr-rubric-form
+      .keys=${KEYS}
+      style="--lr-color-on-brand: rgb(7, 19, 31);"
+    ></lr-rubric-form>
+  `)) as LyraRubricForm;
+  const submit = el.shadowRoot!.querySelector<HTMLElement>('[part="submit"]')!;
 
-
+  expect(getComputedStyle(submit).color).to.equal('rgb(7, 19, 31)');
 });
 
 it('reportValidity() reveals current field errors and answers overall validity', async () => {
@@ -1071,7 +1255,7 @@ describe('validity custom states', () => {
     // `invalid`/`user-invalid` from a barred control is what painted every disabled required field
     // red under the documented `lr-rubric-form:state(user-invalid) { ... }` rule.
     const el = (await fixture(
-      html`<lr-rubric-form .keys=${KEYS} name="rubric" disabled></lr-rubric-form>`,
+      html`<lr-rubric-form .keys=${KEYS} name="rubric" disabled></lr-rubric-form>`
     )) as LyraRubricForm;
     await el.updateComplete;
     expect(el.checkValidity(), 'a barred control reports no violation').to.be.true;
@@ -1099,8 +1283,7 @@ describe('validity custom states', () => {
     const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
     await el.updateComplete;
     expect(el.disabled, 'a fieldset never mutates the control own disabled').to.be.false;
-    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be
-      .false;
+    expect(el.validity.valueMissing, 'fieldset-disabled bars validation exactly like own disabled').to.be.false;
     expect(el.matches(':state(invalid)')).to.be.false;
     el.reportValidity();
     await el.updateComplete;
@@ -1110,9 +1293,7 @@ describe('validity custom states', () => {
 
 describe('lr-rubric-form setCustomValidity()', () => {
   const optionalKeys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment' }];
-  const requiredKeys: RubricKey[] = [
-    { key: 'comment', type: 'comment', label: 'Comment', required: true },
-  ];
+  const requiredKeys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment', required: true }];
 
   it('blocks form submission and becomes the validationMessage', async () => {
     const form = (await fixture(html`
@@ -1176,7 +1357,7 @@ describe('lr-rubric-form setCustomValidity()', () => {
     expect(el.validity.customError, 'custom error cleared').to.be.false;
     expect(
       el.validity.valueMissing,
-      'an empty custom error must not force a rubric with unanswered required keys valid',
+      'an empty custom error must not force a rubric with unanswered required keys valid'
     ).to.be.true;
     expect(el.checkValidity()).to.be.false;
     expect(el.validationMessage).to.not.equal('');

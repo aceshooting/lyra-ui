@@ -22,7 +22,7 @@ export const styles = css`
   [part~='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-space-s);
+    gap: var(--lr-switch-gap, var(--lr-space-s));
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
@@ -40,10 +40,10 @@ export const styles = css`
      it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
      the label text sitting next to the track as well. */
   :host(:not(:disabled)) [part~='base']:hover [part~='track'] {
-    background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-switch-track-hover-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   :host(:not(:disabled)) [part~='base']:active [part~='track'] {
-    background: color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-switch-track-active-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   :host(:disabled) [part~='base'] {
     cursor: not-allowed;
@@ -69,7 +69,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part~='track'][part~='checked'] {
-    --lr-switch-track-fill: var(--lr-color-brand);
+    --lr-switch-track-fill: var(--lr-switch-checked-track-fill, var(--lr-color-brand));
   }
 
   [part='thumb'] {
@@ -79,7 +79,7 @@ export const styles = css`
     inline-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
     block-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
     border-radius: 50%;
-    background: var(--lr-color-surface);
+    background: var(--lr-switch-thumb-fill, var(--lr-color-surface));
     /* Animates the logical 'inset-inline-start' rather than a physical
        'transform: translateX()' so the slide direction mirrors correctly
        under dir="rtl" — consistent with this library's CSS-logical-

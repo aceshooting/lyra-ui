@@ -17,7 +17,10 @@
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
-upload, retrieval, or model call.
+upload, retrieval, or model call. It is deliberately not form-associated: the complete interaction
+state includes attachments, source scope, model, voice, and queued turns rather than one successful
+string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the submission
+request. `label` names the prompt section; it is not generic field chrome.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected);
@@ -54,5 +57,5 @@ mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, a
 **Optional peer deps:** none of its own.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
+import "@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js";
 ```

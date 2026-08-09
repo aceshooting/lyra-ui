@@ -1,6 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
@@ -25,6 +27,7 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
@@ -55,6 +58,11 @@ export interface LyraVoiceCatalogEntry {
  * `{ id, label, ... }` row -- not a mix of both, mirroring `LyraModelCatalog`'s identical contract.
  */
 export type LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[];
+
+/** The canonical step a `size` resolves to — an alias of the shared {@linkcode LyraSizeStep}.
+ * The public `size` property also accepts the `small`/`medium`/`large` aliases in
+ * {@linkcode LyraSize}. */
+export type LyraVoicePickerSize = LyraSizeStep;
 
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
@@ -88,6 +96,7 @@ export interface LyraVoicePickerEventMap {
  * playback start/stop (`voiceId: null` on stop/end/error).
  *
  * @customElement lr-voice-picker
+ * @slot label - Custom visible label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @cssstate required - Matches while `required` is set. Style with `lr-voice-picker:state(required)`.
@@ -113,7 +122,11 @@ export interface LyraVoicePickerEventMap {
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
  *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
  *   bubble so an app can present the failure its own way.
- * @csspart form-control-label - The `<label>` element.
+ * @attr size - Visual size on the shared six-tier control ladder (`2xs`–`xl`, default `m`). The
+ *   `small`/`medium`/`large` aliases render as `s`/`m`/`l`. Preview actions retain the shared 40px
+ *   minimum hit area even when the field chrome uses a smaller tier.
+ * @csspart form-control - The complete label, control, hint, error, and listbox frame.
+ * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode).
  * @csspart combobox - The text-input container (free-text mode).
  * @csspart combobox-input - The free-text `<input>`.
@@ -170,7 +183,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -194,6 +207,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   /** Whether to render preview affordances at all. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) preview = true;
+  /** Visible label text. The `label` slot appends custom label content to the same native label. */
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -205,12 +219,16 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Visual size on the shared six-tier control ladder. `small`/`medium`/`large` alias
+   *  `s`/`m`/`l`; the preview action keeps the library-wide 40px minimum hit area. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
   @state() private query = '';
   @state() private touched = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   /** The voiceId currently playing via the internal `<audio>` (`null` when nothing is). */
   @state() private previewingId: string | null = null;
 
@@ -983,8 +1001,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private get hasVisibleLabel(): boolean {
+    return this.label.length > 0 || this.slotPresence.has('label');
+  }
+
   private renderLabel(): TemplateResult {
-    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.label}>${this.label}</label>`;
+    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.hasVisibleLabel}
+      >${this.label}<slot name="label"></slot></label
+    >`;
   }
 
   private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
@@ -1020,7 +1044,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const rows = this.effectiveEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
-    const hasLabel = this.label.length > 0;
+    const hasLabel = this.hasVisibleLabel;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
@@ -1064,7 +1088,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private renderFreeText(): TemplateResult {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
-    const hasLabel = this.label.length > 0;
+    const hasLabel = this.hasVisibleLabel;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
@@ -1111,7 +1135,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   override render(): TemplateResult {
-    return this.closedMode ? this.renderClosed() : this.renderFreeText();
+    return html`<div part="form-control">
+      ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
+    </div>`;
   }
 }
 

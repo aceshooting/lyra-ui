@@ -116,7 +116,7 @@ it('strips the redundant host-level title attribute so only the truncating span 
 it('always renders the body wrapper around the default slot', async () => {
   const el = (await fixture(html`<lr-result-card>plain body text</lr-result-card>`)) as LyraResultCard;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
-  expect(body).to.exist;
+  expect((body) != null).to.equal(true);
   expect(el.textContent).to.equal('plain body text');
 });
 

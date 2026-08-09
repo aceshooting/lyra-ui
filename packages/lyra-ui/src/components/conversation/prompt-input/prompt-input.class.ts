@@ -64,6 +64,11 @@ export interface LyraPromptInputEventMap {
  * model and voice selection, retrieval sources, mentions, slash commands, and a queued-turn list.
  * It performs no upload, model call, retrieval, or persistence.
  *
+ * Deliberately not form-associated: this is a composite application interaction whose complete
+ * state includes attachments, source scope, model, voice, and queued turns, not one successful
+ * string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the
+ * submission request. `label` names the prompt section; it is not generic field chrome.
+ *
  * @customElement lr-prompt-input
  * @slot controls - Replaces the data-driven model, voice, and source controls.
  * @slot leading - Replaces the default attachment trigger.

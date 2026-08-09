@@ -71,8 +71,8 @@ entry, used instead of the default slot
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
-`view-toggle` (a single view toggle button), `collapse-button`, `fullscreen-button`, `body`,
-`backdrop`
+`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
+(a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side

@@ -112,7 +112,10 @@ export const styles = css`
   [part~='base'] {
     display: inline-flex;
     position: relative;
+    box-sizing: border-box;
     inline-size: var(--lr-button-width);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* --lr-button-height is deliberately left UNDECLARED on :host, so both var()s below take their
        fallback arm: a floor at the active tier's --lr-button-min-height and an auto height --
        byte-identical to the behaviour before this property existed. Setting it (e.g. to pin the
@@ -208,7 +211,20 @@ export const styles = css`
   [part~='start'],
   [part~='end'] {
     display: inline-flex;
+    flex: 0 1 40%;
+    min-inline-size: 0;
+    max-inline-size: 40%;
     align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [part='label'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* When the matching slot has no assigned content, button.class.ts stamps the hidden attribute
      on the wrapper (a bare slot is an element child, so the old :empty rule could never match).
@@ -225,6 +241,8 @@ export const styles = css`
   :host([circle]) [part~='base'],
   [part~='base'][data-icon-button] {
     inline-size: var(--lr-button-height, var(--lr-button-min-height));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     aspect-ratio: 1;
     padding-inline: var(--lr-button-padding-block);
   }

@@ -77,7 +77,7 @@ describe('duration display', () => {
   it('shows a pulsing "Thinking…" placeholder in live mode while duration-ms is unset', async () => {
     const el = (await fixture(html`<lr-thinking-panel mode="live"></lr-thinking-panel>`)) as LyraThinkingPanel;
     const duration = el.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
-    expect(duration).to.exist;
+    expect((duration) != null).to.equal(true);
     expect(duration.textContent!.trim()).to.equal('Thinking…');
     expect(duration.hasAttribute('data-pending')).to.be.true;
   });
@@ -342,7 +342,7 @@ describe('body keyboard accessibility', () => {
     expect(body.getAttribute('aria-label')).to.equal('Reasoning');
 
     body.focus();
-    expect(el.shadowRoot!.activeElement).to.equal(body);
+    expect((el.shadowRoot!.activeElement) === (body)).to.equal(true);
   });
 });
 
@@ -458,7 +458,7 @@ describe('motion', () => {
       html`<lr-thinking-panel mode="live" expanded></lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const dot = el.shadowRoot!.querySelector('.pending-dot') as HTMLElement;
-    expect(dot).to.exist;
+    expect((dot) != null).to.equal(true);
     expect(getComputedStyle(dot).animationDuration).to.equal('1.8s');
   });
 });

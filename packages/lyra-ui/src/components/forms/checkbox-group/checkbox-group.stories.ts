@@ -69,3 +69,47 @@ export const Sizes: StoryObj = {
     </div>
   `,
 };
+
+export const ScopedInvalidTheme: Story = {
+  name: 'Scoped invalid border',
+  parameters: { docs: { description: { story: 'Submit with no selection to reveal the group-only invalid-border hook.' } } },
+  render: () => html`
+    <form>
+      <lr-checkbox-group
+        label="Required topics"
+        name="topics"
+        required
+        style="--lr-checkbox-group-invalid-border: var(--lr-color-warning)"
+      >
+        <lr-checkbox value="news">News</lr-checkbox>
+        <lr-checkbox value="product">Product updates</lr-checkbox>
+      </lr-checkbox-group>
+      <button type="submit">Validate</button>
+    </form>
+  `,
+};
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow RTL long options (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Long translated group chrome and unbroken horizontal option labels wrap inside an exact 320px RTL allocation.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+      <lr-checkbox-group
+        orientation="horizontal"
+        label="${'LocalizedUnbrokenGroupLabel'.repeat(12)}"
+        hint="${'LocalizedUnbrokenGroupHint'.repeat(12)}"
+        style="max-inline-size:100%"
+      >
+        <lr-checkbox value="alpha">${'LocalizedUnbrokenOption'.repeat(12)}</lr-checkbox>
+        <lr-checkbox value="beta">${'LocalizedUnbrokenOption'.repeat(12)}</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `,
+};

@@ -8,6 +8,8 @@ export const styles = css`
   [part~='base'] {
     box-sizing: border-box;
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     align-items: center;
     gap: var(--lr-space-xs);
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
@@ -22,24 +24,27 @@ export const styles = css`
 
   :host(:state(hover)) [part~='base'],
   [part~='base']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-option-hover-bg, var(--lr-color-brand-quiet));
   }
 
   [part~='base']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-option-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-option-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
 
   :host(:state(current)) [part~='base'] {
-    background: var(--lr-color-brand-quiet);
-    color: var(--current-text-color, var(--lr-color-text));
+    background: var(--lr-option-current-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-option-current-color, var(--current-text-color, var(--lr-color-text)));
   }
 
   :host(:state(selected)) [part~='base'] {
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
 
   :host(:state(disabled)) [part~='base'],
@@ -68,8 +73,18 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
   }
 
+  [part~='start'],
+  [part~='end'] {
+    flex: 0 1 40%;
+    min-inline-size: 0;
+    max-inline-size: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   [part~='checked-icon'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-option-checked-icon-color, var(--lr-color-brand));
   }
 
   [part~='checked-icon'][hidden],

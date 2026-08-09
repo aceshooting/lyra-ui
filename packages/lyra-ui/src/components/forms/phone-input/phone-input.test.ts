@@ -29,6 +29,27 @@ const adapter: PhoneNumberAdapter = {
   },
 };
 
+it('inherits public row geometry from an ancestor across size and pill fallbacks', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-phone-input-padding-block: 7px; --lr-phone-input-font-size: 18px; --lr-phone-input-flag-size: 22px; --lr-phone-input-glyph-size: 20px; --lr-phone-input-gap: 13px; --lr-phone-input-radius: 17px; --lr-phone-input-control-min-height: 49px">
+      <lr-phone-input size="2xs" pill flags default-country="LU" .adapter=${adapter}></lr-phone-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-phone-input') as LyraPhoneInput;
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+  const computed = getComputedStyle(row);
+  expect(computed.minBlockSize).to.equal('49px');
+  expect(computed.borderTopLeftRadius).to.equal('17px');
+  expect(getComputedStyle(input).paddingTop).to.equal('7px');
+  expect(getComputedStyle(input).fontSize).to.equal('18px');
+  expect(getComputedStyle(trigger).gap).to.equal('13px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="flag"]') as HTMLElement).fontSize).to.equal('22px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement).fontSize).to.equal('20px');
+});
+
 it('normalizes live user input to an E.164 form value through an injected adapter', async () => {
   const form = (await fixture(html`
     <form>
@@ -612,6 +633,15 @@ it("matches lr-input's own row height at every shared size tier", async () => {
   }
 });
 
+it('keeps country-selector rows on the shared hit-floor-aware height ladder', async () => {
+  const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+  for (const [size, height] of Object.entries(expected)) {
+    const el = await fixture(html`<lr-phone-input size=${size}></lr-phone-input>`);
+    const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+    expect(wrapper.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+  }
+});
+
 it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
   const pairs: ReadonlyArray<readonly [string, string]> = [
     ['small', 's'],
@@ -1066,7 +1096,7 @@ it('exposes focus() and blur() methods that delegate to the internal telephone i
   const focusPromise = oneEvent(el, 'focus');
   el.focus();
   await focusPromise;
-  expect(el.shadowRoot!.activeElement).to.equal(el.input);
+  expect((el.shadowRoot!.activeElement) === (el.input)).to.equal(true);
 
   const blurPromise = oneEvent(el, 'blur');
   el.blur();

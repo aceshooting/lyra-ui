@@ -2903,7 +2903,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         'property',
         ['dataSource'],
         '((request: DataGridRequest) => Promise<DataGridResponse>) | null',
-        '((request: DataGridRequest) => Promise<DataGridResponse<Row>>) | null',
+        '| ((request: DataGridRequest) => Promise<DataGridResponse<Row>>) | null',
       ],
       ['property', ['expandedKeys', 'selectedKeys'], '(string | number)[]', 'DataGridKey[]'],
       ['property', ['filters'], '{ id: string; value: unknown }[]', 'DataGridFilter[]'],
@@ -2911,7 +2911,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         'property',
         ['searchFn'],
         '((value: unknown, searchTerm: string, row: Row) => boolean) | null',
-        '((value: unknown, term: string, row: Row) => boolean) | null',
+        '| ((value: unknown, term: string, row: Row) => boolean) | null',
       ],
     ],
   ],
@@ -2928,7 +2928,6 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-date-picker',
     [
-      ['attribute', ['first-day-of-week'], 'WaDatePickerFirstDayOfWeek', 'string'],
       ['attribute', ['mode'], 'WaDatePickerMode', 'CalendarMode'],
       ['attribute', ['weekday-format'], 'WaDatePickerWeekdayFormat', 'WeekdayFormat'],
       ['property', ['valueAsRange'], 'WaDatePickerRange', 'DateRange'],
@@ -3717,4 +3716,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.exitCode = 1;
   }
 }
-

@@ -7,12 +7,12 @@ import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../in
 import { scopeFromElement, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraAnchorKind } from '../../viewers/document-viewer/anchors.js';
-import type { MarkdownDeps } from './markdown-loader.js';
+import type { LyraMarkedParser, MarkdownDeps } from './markdown-loader.js';
 import {
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
   type ShikiLanguageInput,
-} from '../code-block/code-loader.js';
+} from '../code-block/shiki-types.js';
 import type { KatexApi } from './katex-loader.js';
 import type { MarkedModule } from './markdown-loader.js';
 import {
@@ -29,11 +29,13 @@ import {
   markdownMathPeerError,
   markdownNeedsReparse,
   MarkdownOwnedAnimationFrameController,
+  normalizeMarkdownLeadingTabs,
   parseMarkdownDocument,
   renderMarkdownContent,
   renderMarkdownDocument,
   repaintMarkdownHighlights,
   setCachedHighlight as setCachedHighlightShared,
+  sharedMarkdownParser,
   tokenizeMarkdownHighlight,
   HIGHLIGHT_CACHE_MAX,
   type PendingHighlight,
@@ -50,7 +52,6 @@ import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
@@ -122,6 +123,8 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * a second render replaces it with the real Markdown output. Set
  * `eager-load` to skip that window once the shared dependency cache is
  * already warm; see that property's doc for exactly what "warm" requires.
+ * Disconnecting and reconnecting while the shared load is pending invalidates the earlier
+ * connection's settlement callback, so the current connection parses only once.
  *
  * `heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are rendered
  * through a `marked` renderer override that injects `part="..."` attributes
@@ -216,6 +219,11 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   /** The Markdown source to render. */
   @property() content = '';
 
+  /** Tab-stop width used to expand tabs in leading indentation before parsing. Values are guarded
+   * to finite integers from 1 through 32, with `4` as the fallback. This is separate from
+   * `--lr-code-block-tab-size`, which controls the visual width of tabs in rendered code. */
+  @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
+
   /** Sanitize marked's HTML output with DOMPurify before rendering. See the
    *  class doc for what happens when this is `true` (the default) but the
    *  `dompurify` peer isn't installed. */
@@ -284,7 +292,11 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  transparently by whether `shiki` is installed at all (an app that never installs it sees
    *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
    *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
-  @property({ attribute: 'highlight-code', converter: trueDefaultBooleanConverter }) highlightCode = true;
+  @property({
+    attribute: 'highlight-code',
+    converter: trueDefaultBooleanConverter,
+  })
+  highlightCode = true;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), forwarded verbatim to `loadShikiHighlighterCore()` -- same shape as
@@ -319,6 +331,14 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   @state() private renderedHtml: string | null = null;
 
   private deps?: MarkdownDeps;
+
+  /** The configurable parser shared by both Markdown variants on this page. It is `undefined`
+   * while the optional peer is unresolved or unavailable. Configuration installed with
+   * `marked.use()` is copied into each fresh internal parse; call `renderMarkdown()` to refresh
+   * content that is already rendered. */
+  get marked(): LyraMarkedParser | undefined {
+    return sharedMarkdownParser(this.deps?.marked);
+  }
 
   /** Document-ordered heading outline computed on every parse (see `getHeadingTree()`), regardless
    *  of `headingAnchors`. */
@@ -481,10 +501,10 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     }
   }
 
-  /** Runs the shared parse/sanitize/fallback pipeline (see `renderMarkdownDocument()`) and applies
-   *  its outcome to this instance's own state -- every `@state` assignment and every emitted event
-   *  stays here so the shared half remains a pure function of its inputs. */
-  private renderMarkdown(): void {
+  /** Immediately reruns the current content through the shared parse, sanitize, highlight, and
+   * fallback pipeline. This is the public refresh point after configuring `marked`; it safely
+   * no-ops while the optional parser is unresolved. */
+  renderMarkdown(): void {
     const deps = this.deps;
     if (!deps) return;
     const outcome = renderMarkdownDocument({
@@ -534,7 +554,9 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   private reportMathFailure(): void {
     if (this.mathFailureReported) return;
     this.mathFailureReported = true;
-    this.emit('lr-render-error', { error: markdownMathPeerError('lr-markdown-core') });
+    this.emit('lr-render-error', {
+      error: markdownMathPeerError('lr-markdown-core'),
+    });
   }
 
   /** Kicks off async highlighting for `pendingKeys` (see `highlightPending()`) unless there's
@@ -592,11 +614,12 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   private parseMarkdown(
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[],
+    headingTreeOut: MarkdownHeadingItem[]
   ): { html: string; hadMathFallback: boolean } {
     return parseMarkdownDocument({
       marked,
-      content: this.content,
+      content: normalizeMarkdownLeadingTabs(this.content, finiteInteger(this.tabSize, 4, 1, 32)),
+      markedConfiguration: sharedMarkdownParser(marked)?.defaults,
       gfm: this.gfm,
       // Falsy (`null` or `''`) means the consumer explicitly opted out of
       // target="..."/rel="..." on rendered links -- see the linkTarget doc.

@@ -219,6 +219,87 @@ it('keeps a custom navigation-toggle operable when the default is disabled and a
   expect(custom.getAttribute('aria-expanded')).to.equal('true');
 });
 
+it('gives a custom navigation toggle a cross-shadow controls reference and cleans owned ARIA on release', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle>
+      <button slot="navigation-toggle">Sections</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const custom = page.querySelector<HTMLButtonElement>('[slot="navigation-toggle"]')!;
+  if ('ariaControlsElements' in custom) {
+    expect(custom.ariaControlsElements.map((element) => element.id)).to.deep.equal([page.id]);
+  }
+
+  custom.slot = 'header';
+  await aTimeout(0);
+  expect(custom.hasAttribute('aria-expanded')).to.equal(false);
+  expect(custom.hasAttribute('aria-controls')).to.equal(false);
+  expect(custom.hasAttribute('aria-label')).to.equal(false);
+  if ('ariaControlsElements' in custom) {
+    expect((custom.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([]);
+  }
+});
+
+it('restores authored custom-toggle ARIA across replacement and preserves later author changes', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle>
+      <div id="author-panel" slot="header"></div>
+      <button
+        slot="navigation-toggle"
+        aria-expanded="true"
+        aria-controls="author-panel"
+        aria-label="Author label"
+      >Sections</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const custom = page.querySelector<HTMLButtonElement>('[slot="navigation-toggle"]')!;
+  expect(custom.getAttribute('aria-expanded')).to.equal('false');
+
+  const replacement = document.createElement('button');
+  replacement.slot = 'navigation-toggle';
+  replacement.textContent = 'Replacement';
+  custom.slot = 'header';
+  page.append(replacement);
+  await aTimeout(0);
+  expect(custom.getAttribute('aria-expanded')).to.equal('true');
+  expect(custom.getAttribute('aria-controls')).to.equal('author-panel');
+  expect(custom.getAttribute('aria-label')).to.equal('Author label');
+
+  replacement.setAttribute('aria-controls', 'consumer-late-target');
+  replacement.slot = 'header';
+  await aTimeout(0);
+  expect(replacement.getAttribute('aria-controls')).to.equal('consumer-late-target');
+});
+
+it('releases generated custom-toggle ARIA on disconnect and reapplies it on reconnect', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-page style="inline-size:320px" disable-navigation-toggle>
+        <button slot="navigation-toggle">Sections</button>
+      </lr-page>
+    </div>
+  `);
+  const page = wrapper.querySelector('lr-page') as LyraPage;
+  await page.updateComplete;
+  const custom = page.querySelector<HTMLButtonElement>('[slot="navigation-toggle"]')!;
+  expect(custom.getAttribute('aria-controls')).to.equal(page.id);
+
+  page.remove();
+  expect(custom.hasAttribute('aria-expanded')).to.equal(false);
+  expect(custom.hasAttribute('aria-controls')).to.equal(false);
+  expect(custom.hasAttribute('aria-label')).to.equal(false);
+
+  wrapper.append(page);
+  await aTimeout(0);
+  expect(custom.getAttribute('aria-expanded')).to.equal('false');
+  expect(custom.getAttribute('aria-controls')).to.equal(page.id);
+  expect(custom.hasAttribute('aria-label')).to.equal(true);
+});
+
 it('honors data-toggle-nav controls in any slotted page region', async () => {
   const page = (await fixture(html`
     <lr-page style="inline-size:320px"><button slot="header" data-toggle-nav>Sections</button></lr-page>
@@ -303,16 +384,16 @@ it('keeps the exact slotted navigation node and focus while crossing desktop/mob
   `)) as LyraPage;
   const navigationButton = page.querySelector<HTMLButtonElement>('[slot="navigation"]')!;
   navigationButton.focus();
-  expect(document.activeElement).to.equal(navigationButton);
+  expect((document.activeElement) === (navigationButton)).to.equal(true);
 
   access(page).applyMeasuredInlineSize(320);
   await page.updateComplete;
   expect(page.querySelector('[slot="navigation"]')?.textContent).to.equal('Focused section');
-  expect(document.activeElement).to.equal(navigationButton);
+  expect((document.activeElement) === (navigationButton)).to.equal(true);
 
   access(page).applyMeasuredInlineSize(900);
   await page.updateComplete;
-  expect(document.activeElement).to.equal(navigationButton);
+  expect((document.activeElement) === (navigationButton)).to.equal(true);
 });
 
 it('uses the shared mobile overlay lifecycle for Escape, scroll lock, and focus return', async () => {

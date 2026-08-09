@@ -168,7 +168,7 @@ it('locale-formats the spoken slider value and forwards host focus/blur/click to
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base rating');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   let clicked = 0;
   base.addEventListener('click', () => clicked++);
   el.click();
@@ -846,8 +846,8 @@ it('exposes its native label association', async () => {
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-rating') as LyraRating;
-  expect(el.form).to.equal(form);
-  expect(el.getForm()).to.equal(form);
+  expect((el.form) === (form)).to.equal(true);
+  expect((el.getForm()) === (form)).to.equal(true);
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['score-label']);
   expect(el.validity.valid).to.equal(true);
   expect(el.validationMessage).to.equal('');

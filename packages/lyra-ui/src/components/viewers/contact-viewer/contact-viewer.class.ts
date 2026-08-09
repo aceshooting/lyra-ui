@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
@@ -95,10 +95,10 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
-  /** Optional display name for the source document. Used as the accessible
-   *  name of `[part='base']` after a host `aria-label`, and before
-   *  the localized `contactViewerLabel` default, matching the
-   *  `csvViewerLabel`-style sibling document viewers. */
+  /** Optional display name for the source document. Used as the accessible name of
+   *  `[part='base']` when the host has no `aria-label`, and before the localized
+   *  `contactViewerLabel` default. Host `aria-label` wins by attribute presence, including an
+   *  empty value. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -237,7 +237,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('contactViewerLabel'))}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

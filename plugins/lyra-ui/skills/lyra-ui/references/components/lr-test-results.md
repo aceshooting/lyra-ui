@@ -28,10 +28,12 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
 
 **Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
-a test, where each encoded segment is `encodeURIComponent(id)`. It renders after the plain
-`message` once expanded (for example, suite `unit` and test `same` use
-`slot="detail-unit:same"`). This canonical form distinguishes duplicate and delimiter-containing
-ids and wins when multiple forms are supplied. The prior
+a test. Derive the complete name with the exported
+`testResultDetailSlotName(suiteId, testId)` helper. Well-formed ids use `encodeURIComponent`
+segments; isolated UTF-16 surrogates, which that built-in rejects, use deterministic uppercase
+`%uXXXX` code-unit escapes. It renders after the plain `message` once expanded (for example, suite
+`unit` and test `same` use `slot="detail-unit:same"`). This canonical form distinguishes duplicate
+and delimiter-containing ids and wins when multiple forms are supplied. The prior
 `detail-{suiteId}-{testId}` form remains an unambiguous compatibility fallback; it is ignored when
 the same name could address multiple rows or collide with another row's canonical name. The older
 `detail-{testId}` form remains supported only while that test id is globally unique across all
@@ -48,6 +50,9 @@ expansion state is always keyed by the suite+test pair, so toggling one duplicat
 sibling.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
 repeated row controls remain distinguishable.
+
+Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
+adjacent localized status word carries the meaning. Running rows use the decorative spinner.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries

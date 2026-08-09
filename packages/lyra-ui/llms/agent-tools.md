@@ -1471,7 +1471,7 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
 
-**CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
+**CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
@@ -1545,10 +1545,12 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
 
 **Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
-a test, where each encoded segment is `encodeURIComponent(id)`. It renders after the plain
-`message` once expanded (for example, suite `unit` and test `same` use
-`slot="detail-unit:same"`). This canonical form distinguishes duplicate and delimiter-containing
-ids and wins when multiple forms are supplied. The prior
+a test. Derive the complete name with the exported
+`testResultDetailSlotName(suiteId, testId)` helper. Well-formed ids use `encodeURIComponent`
+segments; isolated UTF-16 surrogates, which that built-in rejects, use deterministic uppercase
+`%uXXXX` code-unit escapes. It renders after the plain `message` once expanded (for example, suite
+`unit` and test `same` use `slot="detail-unit:same"`). This canonical form distinguishes duplicate
+and delimiter-containing ids and wins when multiple forms are supplied. The prior
 `detail-{suiteId}-{testId}` form remains an unambiguous compatibility fallback; it is ignored when
 the same name could address multiple rows or collide with another row's canonical name. The older
 `detail-{testId}` form remains supported only while that test id is globally unique across all
@@ -1872,7 +1874,7 @@ this component's own retry counter, reset when `run.id` changes).
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,
 `usage`, `current-step`, `current-step-icon`, `current-step-label`, `body`, `tasks`, `tools`,
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
-(carries `data-variant`), `empty`.
+(carries `data-variant`), `metric` (one metric label/value pair), `empty`.
 
 **Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
@@ -2073,7 +2075,10 @@ boolean }`), `lr-example-citation-select` (`detail: EvaluationCitationSelectDeta
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
 (`detail: EvaluationToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
-`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`).
+`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`). The approval
+event is cancelable: calling `preventDefault()` propagates the veto to the nested
+`lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
+host resolves asynchronous validation.
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,

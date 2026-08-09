@@ -3,7 +3,7 @@ import './streaming-text.js';
 import '../markdown/markdown.js';
 import { looksLikeMarkdown } from './streaming-text.js';
 import type { LyraStreamingText } from './streaming-text.js';
-import { styles } from './streaming-text.styles.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 // `@sinonjs/fake-timers` doesn't work in this test environment (CJS-only,
 // no shim configured) -- real timers with short, generously-margined
@@ -440,31 +440,49 @@ describe('cursor', () => {
       html`<lr-streaming-text streaming .content=${'hi'}></lr-streaming-text>`,
     )) as LyraStreamingText;
     const cursor = el.shadowRoot!.querySelector('[part="cursor"]');
-    expect(cursor).to.exist;
+    expect((cursor) != null).to.equal(true);
     expect(cursor!.getAttribute('aria-hidden')).to.equal('true');
   });
 
-  it('gives the cursor a looping blink animation, using the ambient (not discrete-flip) transition token, disabled under reduced motion', async () => {
+  it('gives the cursor an ambient looping blink and renders it statically under reduced motion', async () => {
     // Regression test: this used to assert --lr-transition-base (a 180ms
     // discrete-state-flip token), which made the cursor strobe roughly every
     // 90ms instead of the calm, ambient blink lr-typing-indicator's own
     // cursor variant produces via --lr-transition-ambient.
-    const el = (await fixture(html`<lr-streaming-text streaming .content=${'hi'}></lr-streaming-text>`)) as LyraStreamingText;
-    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
-    expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
+    await setReducedMotion('no-preference');
+    try {
+      const el = (await fixture(
+        html`<lr-streaming-text streaming .content=${'hi'}></lr-streaming-text>`,
+      )) as LyraStreamingText;
+      const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+      const fullMotion = getComputedStyle(cursor);
+      expect(fullMotion.animationName).to.equal('lr-streaming-text-cursor-blink');
+      expect(fullMotion.animationDuration).to.equal('1.8s');
+      expect(fullMotion.animationIterationCount).to.equal('infinite');
 
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('animation: lr-streaming-text-cursor-blink var(--lr-transition-ambient) infinite;');
-    expect(css).to.not.include('animation: lr-streaming-text-cursor-blink var(--lr-transition-base) infinite;');
-    expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
+      await setReducedMotion('reduce');
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      const reducedMotion = getComputedStyle(cursor);
+      expect(reducedMotion.animationName).to.equal('none');
+      expect(reducedMotion.opacity).to.equal('1');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
   });
 
-  it('sizes the cursor bar from themeable --lr-streaming-text-cursor-width/-height custom properties, not hardcoded literals', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-streaming-text-cursor-width: var(--lr-size-0-125rem);');
-    expect(css).to.include('--lr-streaming-text-cursor-height: var(--lr-size-1em);');
-    expect(css).to.include('inline-size: var(--lr-streaming-text-cursor-width);');
-    expect(css).to.include('block-size: var(--lr-streaming-text-cursor-height);');
+  it('sizes the rendered cursor from its themeable width and height properties', async () => {
+    const el = (await fixture(html`
+      <lr-streaming-text
+        streaming
+        .content=${'hi'}
+        style="--lr-streaming-text-cursor-width: 7px; --lr-streaming-text-cursor-height: 19px;"
+      ></lr-streaming-text>
+    `)) as LyraStreamingText;
+    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    const computed = getComputedStyle(cursor);
+    expect(computed.inlineSize).to.equal('7px');
+    expect(computed.blockSize).to.equal('19px');
+    expect(computed.borderRadius).to.equal('7px');
   });
 });
 

@@ -47,6 +47,20 @@ it('formats legend ranges with the effective locale', async () => {
   expect(el.getAttribute('aria-label')).to.contain('value range 1.234,5–2.345,6');
 });
 
+it('formats matrix row and column counts with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      locale="fa-IR"
+      .values=${[[1, 2]]}
+      .rowLabels=${['A']}
+      .colLabels=${['B', 'C']}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  const number = new Intl.NumberFormat('fa-IR');
+
+  expect(el.getAttribute('aria-label')).to.contain(`${number.format(1)} × ${number.format(2)}`);
+});
+
 it('derives calendar-mode month labels from the same `locale` as weekday labels, so the two never disagree on language', async () => {
   const el = (await fixture(html`
     <lr-heatmap mode="calendar" locale="fr-FR" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>

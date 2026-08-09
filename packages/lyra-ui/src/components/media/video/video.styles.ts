@@ -55,6 +55,26 @@ export const styles = css`
     object-fit: cover;
   }
 
+  .icon-button-stack {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    color: var(--controls-color, var(--lr-color-text));
+  }
+
+  .icon-button-stack > button,
+  .icon-button-stack > .control-icon-layer {
+    grid-area: 1 / 1;
+  }
+
+  .control-icon-layer {
+    z-index: var(--lr-layer-content);
+    display: inline-grid;
+    place-items: center;
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+
   [part='poster-play-button'] {
     position: relative;
     min-inline-size: var(--lr-icon-button-size);

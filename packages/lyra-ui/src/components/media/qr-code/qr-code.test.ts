@@ -69,9 +69,9 @@ describe('lr-qr-code', () => {
     await el.updateComplete;
     await aTimeout(20);
     const empty = el.shadowRoot!.querySelector('[part="empty"]');
-    expect(empty).to.exist;
+    expect((empty) != null).to.equal(true);
     expect(empty!.textContent).to.equal('No data');
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[role="img"]')).to.not.exist;
     expect(calls).to.equal(0);
   });
@@ -132,7 +132,7 @@ describe('lr-qr-code', () => {
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
     await aTimeout(20);
     expect(el.isConnected).to.be.false;
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   });
 
   it('ignores a stale generate() call if the generation advances while the peer loader is still pending', async () => {
@@ -171,7 +171,7 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await el.updateComplete;
     await aTimeout(20);
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   });
 
   it('discards an error result if the generation advances synchronously while create() throws', async () => {
@@ -207,7 +207,7 @@ describe('lr-qr-code', () => {
     el.remove();
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
     await aTimeout(20);
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
 
     parent.append(el);
     await waitForPart(el, 'canvas');
@@ -634,8 +634,8 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     await aTimeout(20);
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
-    expect((el as unknown as { loadState: { image?: HTMLImageElement } }).loadState.image).to.equal(undefined);
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
+    expect(((el as unknown as { loadState: { image?: HTMLImageElement } }).loadState.image) === (undefined)).to.equal(true);
   });
 
   it('normalizes non-finite/out-of-range embedded-image geometry before drawing', async () => {
@@ -775,7 +775,7 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     await el.updateComplete;
     expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
   });
 
   it('no-ops draw() when the canvas element has not rendered yet for the current load state', async () => {
@@ -784,7 +784,7 @@ describe('lr-qr-code', () => {
     // Bypasses the normal generate()/Lit-render flow: forces `ready` state directly, then calls
     // draw() synchronously before Lit's async render has had a chance to create the <canvas>.
     (el as unknown as { loadState: unknown }).loadState = { kind: 'ready', modules: fakeModules(true) };
-    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
     expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
   });
 

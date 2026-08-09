@@ -122,7 +122,7 @@ export const WithLeadingAndChips: Story = {
   render: () => html`
     <lr-chat-composer placeholder="Message the assistant…" style="max-width: 32rem; display: block;">
       <button
-        slot="leading"
+        slot="start"
         type="button"
         aria-label="Attach file"
         style="font:inherit;font-size:1.125rem;background:none;border:none;cursor:pointer;padding:0.375rem;line-height:1;"
@@ -149,7 +149,7 @@ export const CustomTrailingSlot: Story = {
   render: () => html`
     <lr-chat-composer placeholder="Send button fully replaced by trailing slot content…" style="max-width: 32rem; display: block;">
       <button
-        slot="trailing"
+        slot="end"
         type="button"
         style="font:inherit;font-size:0.8125rem;background:var(--lr-color-brand);color:var(--lr-color-on-brand);border:none;border-radius:0.375rem;padding:0.5rem 0.75rem;cursor:pointer;"
         @click=${(e: Event) => {

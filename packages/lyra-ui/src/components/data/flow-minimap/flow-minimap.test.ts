@@ -373,6 +373,53 @@ it('announces viewport changes as light-DOM additions and keeps an aria-hidden s
   expect(sinkElement() === null).to.be.true;
 });
 
+it('announces click, wheel, and completed pointer-drag viewport changes', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  const viewport = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  (viewport as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+  expect(sinkTexts(), 'the initial companion snapshot must stay silent').to.deep.equal([]);
+
+  map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(sinkTexts(), 'click-to-center must announce the applied viewport').to.have.length(1);
+
+  map.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }),
+  );
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(sinkTexts(), 'wheel zoom must announce the applied viewport').to.have.length(2);
+
+  viewport.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 81,
+      clientX: 10,
+      clientY: 10,
+    }),
+  );
+  window.dispatchEvent(
+    new PointerEvent('pointermove', { pointerId: 81, clientX: 30, clientY: 30 }),
+  );
+  window.dispatchEvent(
+    new PointerEvent('pointerup', { pointerId: 81, clientX: 30, clientY: 30 }),
+  );
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(sinkTexts(), 'a completed viewport drag must announce its final viewport').to.have.length(3);
+});
+
 it('re-targets its shared sink with the canvas when adopted into another document', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
@@ -569,7 +616,7 @@ it('tracks an adopted iframe viewport drag on its owner window and releases it s
   }
 });
 
-it('pointercancel ends a viewport drag so a later pointermove no longer pans the canvas', async () => {
+it('pointercancel ends a viewport drag without swallowing the next genuine map click', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
@@ -581,15 +628,23 @@ it('pointercancel ends a viewport drag so a later pointermove no longer pans the
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 30, clientY: 30 }));
 
   // A touch scroll takeover fires pointercancel, never pointerup -- the drag must end there.
   window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
-  let changed = false;
-  wrapper.addEventListener('lr-viewport-change', () => (changed = true));
+  let changes = 0;
+  wrapper.addEventListener('lr-viewport-change', () => (changes += 1));
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 60, clientY: 60 }));
-  expect(changed).to.be.false;
+  expect(changes).to.equal(0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(sinkTexts(), 'a canceled viewport drag must remain silent').to.deep.equal([]);
+
+  map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 60, clientY: 60 }));
+  expect(changes).to.equal(1);
 });
 
 it('swallows the browser-synthesized click that follows a viewport-rect drag, so releasing does not re-center', async () => {

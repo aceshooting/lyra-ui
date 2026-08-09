@@ -33,7 +33,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     pointer-events: none;
   }
-  [part='base'] {
+  [part~='base'] {
     display: flex;
     /* months="2" renders two fixed-width month grids side by side (~520px
        total) -- in a panel/dialog/viewport narrower than that, wrapping the
@@ -46,7 +46,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-date-picker-radius);
   }
-  [part='date-picker'] {
+  [part~='date-picker'] {
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -80,11 +80,11 @@ export const styles = css`
     font-size: var(--lr-size-0-9375rem);
   }
   :where([part='title']):hover {
-    color: var(--lr-color-brand);
+    color: var(--lr-date-picker-title-hover-color, var(--lr-color-brand));
   }
   :where([part='title']):active {
-    color: var(--lr-color-brand);
-    background: var(--lr-color-brand-quiet);
+    color: var(--lr-date-picker-title-active-color, var(--lr-color-brand));
+    background: var(--lr-date-picker-title-active-bg, var(--lr-color-brand-quiet));
     border-radius: var(--lr-date-picker-radius);
   }
   :where([part='title']):focus-visible {
@@ -121,10 +121,13 @@ export const styles = css`
      Wrapped in :where() for the same specificity reason as the hover rule above. */
   :where([part='previous']):active,
   :where([part='next']):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-date-picker-nav-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part='previous']:focus-visible, [part='next']:focus-visible {
@@ -198,13 +201,20 @@ export const styles = css`
     border-radius: var(--lr-date-picker-radius);
   }
   [part~='day']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet));
   }
   [part~='day']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-date-picker-day-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part~='day-outside'] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-date-picker-day-outside-color, var(--lr-color-text-quiet));
   }
   /* no-pressed-state: this is not a hover treatment. The :hover half only restates the resting
      text colour so an adjacent-month day inside the selected range keeps full contrast once
@@ -212,32 +222,32 @@ export const styles = css`
      [part~='day']:active rule above, which they match too. */
   [part~='day-outside'][part~='day-range-inner'],
   [part~='day-outside'][part~='day-range-inner']:hover {
-    color: var(--lr-color-text);
+    color: var(--lr-date-picker-range-color, var(--lr-color-text));
   }
   [part='day-placeholder'] {
     inline-size: var(--lr-cell-size);
     block-size: var(--lr-cell-size);
   }
   [part~='day-today'] {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-thin) solid var(--lr-date-picker-today-outline, var(--lr-color-brand));
     outline-offset: var(--lr-size-neg-1px);
   }
   [part~='day-range-inner'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet));
     border-radius: 0;
   }
   [part~='day-range-preview'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-date-picker-range-preview-bg, var(--lr-date-picker-range-bg, var(--lr-color-brand-quiet)));
   }
   [part~='day-selected'],
   [part~='day-range-start'],
   [part~='day-range-end'] {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-date-picker-selected-bg, var(--lr-color-brand));
+    color: var(--lr-date-picker-selected-color, var(--lr-color-on-brand));
   }
   [part~='day']:disabled {
-    color: var(--lr-color-text-quiet);
-    opacity: var(--lr-opacity-disabled);
+    color: var(--lr-date-picker-disabled-color, var(--lr-color-text-quiet));
+    opacity: var(--lr-date-picker-disabled-opacity, var(--lr-opacity-disabled));
     cursor: not-allowed;
   }
   [part~='day']:focus-visible {
@@ -265,13 +275,16 @@ export const styles = css`
     padding: var(--lr-space-s);
   }
   :where([part~='view-item']):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet));
   }
   :where([part~='view-item']):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-date-picker-view-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   :where([part~='view-item']):focus-visible {
@@ -279,15 +292,15 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part~='view-item-selected'] {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-date-picker-view-selected-bg, var(--lr-color-brand));
+    color: var(--lr-date-picker-view-selected-color, var(--lr-color-on-brand));
   }
   [part~='view-item-today'] {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-thin) solid var(--lr-date-picker-view-today-outline, var(--lr-color-brand));
     outline-offset: var(--lr-size-neg-1px);
   }
   [part~='view-item-disabled'] {
     cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    opacity: var(--lr-date-picker-view-disabled-opacity, var(--lr-opacity-disabled));
   }
 `;

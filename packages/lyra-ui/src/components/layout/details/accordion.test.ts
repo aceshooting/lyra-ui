@@ -5,6 +5,7 @@ import './details.js';
 import type { LyraAccordion } from './accordion.js';
 import type { LyraAccordionItem } from './accordion-item.js';
 import type { LyraDetails } from './details.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const quickMotion = '--show-duration: 1ms; --hide-duration: 1ms;';
 
@@ -37,6 +38,62 @@ async function renderAccordion(
 }
 
 describe('<lr-accordion>', () => {
+  it('inherits independent group/item appearance and item pointer-state paint', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="
+        --lr-accordion-outlined-bg: rgb(1, 2, 3);
+        --lr-accordion-outlined-border-color: rgb(4, 5, 6);
+        --lr-accordion-filled-bg: rgb(7, 8, 9);
+        --lr-accordion-filled-border-color: rgb(10, 11, 12);
+        --lr-accordion-filled-outlined-bg: rgb(13, 14, 15);
+        --lr-accordion-filled-outlined-border-color: rgb(16, 17, 18);
+        --lr-accordion-item-outlined-bg: rgb(19, 20, 21);
+        --lr-accordion-item-filled-bg: rgb(22, 23, 24);
+        --lr-accordion-item-filled-outlined-bg: rgb(25, 26, 27);
+        --lr-accordion-item-button-hover-bg: rgb(28, 29, 30);
+        --lr-accordion-item-button-active-bg: rgb(31, 32, 33);
+      ">
+        <lr-accordion appearance="outlined"><lr-accordion-item label="Outlined">A</lr-accordion-item></lr-accordion>
+        <lr-accordion appearance="filled"><lr-accordion-item label="Filled">B</lr-accordion-item></lr-accordion>
+        <lr-accordion appearance="filled-outlined"><lr-accordion-item label="Filled outlined">C</lr-accordion-item></lr-accordion>
+      </div>
+    `);
+    const accordions = [...wrapper.querySelectorAll('lr-accordion')] as LyraAccordion[];
+    const items = [...wrapper.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all([...accordions, ...items].map((element) => element.updateComplete));
+    const bases = accordions.map((accordion) =>
+      accordion.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!,
+    );
+    const itemBases = items.map((item) =>
+      item.shadowRoot!.querySelector<HTMLElement>('[part~="accordion-item"]')!,
+    );
+
+    expect(getComputedStyle(bases[0]!).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(bases[0]!).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(bases[1]!).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(bases[1]!).borderTopColor).to.equal('rgb(10, 11, 12)');
+    expect(getComputedStyle(bases[2]!).backgroundColor).to.equal('rgb(13, 14, 15)');
+    expect(getComputedStyle(bases[2]!).borderTopColor).to.equal('rgb(16, 17, 18)');
+    expect(getComputedStyle(itemBases[0]!).backgroundColor).to.equal('rgb(19, 20, 21)');
+    expect(getComputedStyle(itemBases[1]!).backgroundColor).to.equal('rgb(22, 23, 24)');
+    expect(getComputedStyle(itemBases[2]!).backgroundColor).to.equal('rgb(25, 26, 27)');
+
+    const button = buttonFor(items[0]!);
+    button.scrollIntoView();
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(button).backgroundColor).to.equal('rgb(28, 29, 30)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(button).backgroundColor).to.equal('rgb(31, 32, 33)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('defaults to the Web Awesome-compatible multiple mode and propagates presentation', async () => {
     const { accordion, items } = await renderAccordion();
 
@@ -629,14 +686,38 @@ describe('<lr-accordion-item>', () => {
     expect(item.matches(':state(animating)')).to.be.false;
   });
 
-  it('contains long labels and content at a 320px allocation', async () => {
-    const item = (await fixture(html`<lr-accordion-item
-      label="A_really_long_unbroken_label_that_must_wrap_without_widening_the_panel"
-      expanded
-      style="inline-size: 320px"
-    >A_really_long_unbroken_content_value_that_must_wrap_without_widening_the_panel</lr-accordion-item>`)) as LyraAccordionItem;
-    const base = item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
-    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  it('contains expanded long labels, content, and actions in an exact 320px RTL accordion', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-accordion>
+          <lr-accordion-item
+            label="عنوانقسممحليطويلجداًبدونأيفرصةللفصلالتلقائي"
+            expanded
+          >
+            <p>محتوىقسممحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+            <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
+          </lr-accordion-item>
+          <lr-accordion-item label="عنوانقسمثانطويلجداًبدونأيفرصةللفصلالتلقائي">
+            Secondary content
+          </lr-accordion-item>
+        </lr-accordion>
+      </div>
+    `);
+    const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+    const items = [...wrapper.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all([accordion.updateComplete, ...items.map((item) => item.updateComplete)]);
+    const groupBase = accordion.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const itemBase = items[0]!.shadowRoot!.querySelector<HTMLElement>('[part~="accordion-item"]')!;
+    const button = buttonFor(items[0]!);
+    const content = items[0]!.shadowRoot!.querySelector<HTMLElement>('[part~="content"]')!;
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(accordion.scrollWidth).to.be.at.most(accordion.clientWidth);
+    expect(groupBase.scrollWidth).to.be.at.most(groupBase.clientWidth);
+    expect(itemBase.scrollWidth).to.be.at.most(itemBase.clientWidth);
+    expect(button.scrollWidth).to.be.at.most(button.clientWidth);
+    expect(content.scrollWidth).to.be.at.most(content.clientWidth);
+    expect(getComputedStyle(groupBase).direction).to.equal('rtl');
   });
 
   it('renders motion by default and applies the reduced-motion kill switch to panel and icon', async () => {

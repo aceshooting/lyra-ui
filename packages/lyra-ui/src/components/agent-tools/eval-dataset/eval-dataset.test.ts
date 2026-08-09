@@ -28,7 +28,7 @@ it('renders the built-in empty state when there are no examples', async () => {
   const empty = el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelector('[part="empty"]') as
     | (HTMLElement & { heading: string })
     | null;
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.heading).to.equal('No examples yet.');
 });
 

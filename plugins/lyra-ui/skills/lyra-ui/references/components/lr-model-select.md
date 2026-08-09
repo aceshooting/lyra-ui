@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,22 +26,24 @@ Session-history/autofill restoration synchronously restores the model id and for
 emitting `lr-change`.
 
 **Exported types:**
+
 - `LyraModelCatalogEntry { id: string; label: string }` — one catalog row.
 - `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
   as both id and label) or every entry is a full `{ id, label }` row; the two shapes are not meant to be
   mixed within one array.
 
 **Properties:**
+
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
 - `catalog?: LyraModelCatalog` (attribute: false) — the full model list. Omit (or leave empty) to fall
   back to plain free-text entry.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
-- `label: string = ''` — optional visible title above the control, mirroring `<lr-select>`'s own
-  `label` exactly: rendered via a `[part="form-control-label"]` `<label>` paired with the control's
-  id, and once non-empty it takes over as the accessible-name source (an `aria-label` override is
-  then only consulted as the fallback). Empty (the default) keeps the original
-  `aria-label || placeholder || 'Model'` accessible-name chain untouched.
+- `label: string = ''` — optional visible title above the control, rendered alongside the `label`
+  slot in a `[part="form-control-label"]` `<label>` paired with the active control's id. A host
+  `aria-label` remains the authoritative override by presence; otherwise either visible-label
+  source names the control through the native label association. Leaving both sources empty keeps
+  the original `aria-label || placeholder || 'Model'` accessible-name chain untouched.
 - `hint: string = ''` — hint text below the field. Unset (the default): no hint chrome renders.
 - `errorText: string = ''` (attribute `error-text`) — error text below the field (overridden by
   slotted `error` content). Unset (the default): no error chrome renders.
@@ -82,6 +84,11 @@ emitting `lr-change`.
 - `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
   readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
   `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state.
+- `input: HTMLInputElement | null` — readonly native input reference in free-text mode; `null` in
+  closed-dropdown mode and before render.
+- `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
+LyraModelSelectSelectionDirection | null` — native caret/selection state in free-text mode;
+  getters return `null` and setters are inert when no text input is rendered.
 
 **Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
 since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
@@ -95,6 +102,10 @@ behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` h
 itself.
 
 `focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+
+`select()` and `setSelectionRange()` forward to the native input in free-text mode.
+`setRangeText()` applies the native range edit and silently synchronizes `value`, the form entry,
+and validity; none of these editing methods has an effect in closed-dropdown mode or before render.
 
 `getForm()` returns the browser-resolved owning form. `checkValidity()` / `reportValidity()` behave
 as on any form-associated control.
@@ -124,6 +135,7 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 `catalog` + `value` on every access, without ever mutating the `catalog` property itself.
 
 **Events:**
+
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -140,9 +152,11 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
-**Slots:** `hint` (custom hint content), `error` (custom error content).
+**Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom
+error content).
 
-**The required marker and barred validity.** With `required` set and `label` non-empty,
+**The required marker and barred validity.** With `required` set and either visible-label source
+non-empty,
 `[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
 every labelled control in the library uses, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
@@ -152,13 +166,13 @@ constraint validation — its own `disabled`, or an ancestor `<fieldset disabled
 `readonly` — it reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
-**CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
-the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's
+**CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),
+`form-control-label` (the `<label>` element containing the `label` property and slot), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
 both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+stale-value row), `empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
@@ -205,8 +219,9 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 ```
 
 **Known gotchas:**
+
 - `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label }` objects, not
-  a mix; `LyraModelCatalog` is a union of two array *types*, not an array of a union item type.
+  a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared

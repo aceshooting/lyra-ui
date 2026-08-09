@@ -78,7 +78,7 @@ describe("collapse-icon slot override", () => {
       'slot[name="collapse-icon"]'
     ) as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
-    expect(slot.querySelector("svg")).to.exist;
+    expect((slot.querySelector("svg")) != null).to.equal(true);
   });
 
   it("renders a custom icon slotted into collapse-icon instead of the default chevron", async () => {
@@ -113,7 +113,7 @@ describe("fullscreen-icon slot override", () => {
       'slot[name="fullscreen-icon"]'
     ) as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
-    expect(slot.querySelector("svg")).to.exist;
+    expect((slot.querySelector("svg")) != null).to.equal(true);
   });
 
   it("renders a custom icon slotted into fullscreen-icon instead of the default expand/close glyph", async () => {
@@ -285,7 +285,7 @@ describe("views", () => {
     const bodySlot = el.shadowRoot!.querySelector(
       '[part="body"] slot:not([name])'
     ) as HTMLSlotElement;
-    expect(bodySlot).to.exist;
+    expect((bodySlot) != null).to.equal(true);
     expect(
       bodySlot
         .assignedNodes({ flatten: true })
@@ -534,7 +534,7 @@ it("truncates long label/sublabel text instead of wrapping and growing the heade
   expect(sublabel.getBoundingClientRect().height).to.be.lessThanOrEqual(
     parseFloat(getComputedStyle(sublabel).fontSize) * 2
   );
-  expect(header).to.exist;
+  expect((header) != null).to.equal(true);
 });
 
 it("hides the actions wrapper when no actions content is slotted, shows it once slotted", async () => {
@@ -784,9 +784,7 @@ it("exits fullscreen on Escape and returns focus to the trigger button", async (
   await el.updateComplete;
 
   expect(el.fullscreen).to.be.false;
-  expect(el.shadowRoot!.activeElement).to.equal(
-    el.shadowRoot!.querySelector('[part="fullscreen-button"]')
-  );
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="fullscreen-button"]'))).to.equal(true);
 });
 
 it("exits fullscreen on Escape even when entered by setting the fullscreen property directly (not via the button click)", async () => {
@@ -1001,7 +999,7 @@ it("traps Tab focus inside the fullscreen panel, wrapping last->first and first-
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(collapseBtn);
+  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
 
   // Shift+Tab from the first focusable must wrap to the last.
   const tabBackward = new KeyboardEvent("keydown", {
@@ -1013,7 +1011,7 @@ it("traps Tab focus inside the fullscreen panel, wrapping last->first and first-
   document.dispatchEvent(tabBackward);
   await el.updateComplete;
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(fullscreenBtn);
+  expect((el.shadowRoot!.activeElement) === (fullscreenBtn)).to.equal(true);
 });
 
 it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root", async () => {
@@ -1048,7 +1046,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   document.dispatchEvent(shiftTab);
   await el.updateComplete;
   expect(shiftTab.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(fullscreenBtn);
+  expect((el.shadowRoot!.activeElement) === (fullscreenBtn)).to.equal(true);
 
   // Tab from the last focusable (fullscreen button) must wrap back to the
   // shadow input.
@@ -1061,7 +1059,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(shadowHost.shadowRoot!.activeElement).to.equal(input);
+  expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
 });
 
 it("prevents Tab from doing anything when fullscreen has no focusable elements at all", async () => {
@@ -1135,7 +1133,7 @@ it("excludes a collapsed body's slotted focusable content from the fullscreen ta
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(collapseBtn);
+  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
 });
 
 it("reclaims focus inside the fullscreen panel when collapsing hides the currently focused body content", async () => {
@@ -1187,7 +1185,7 @@ it("moves focus into the panel when fullscreen is entered", async () => {
   // collapse-button is the first focusable element (no actions slotted);
   // entering fullscreen must move focus there even though nothing was
   // clicked to trigger it.
-  expect(el.shadowRoot!.activeElement).to.equal(collapseBtn);
+  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
 });
 
 it("focuses the panel base as a fallback when fullscreen has no focusable elements", async () => {
@@ -1198,9 +1196,7 @@ it("focuses the panel base as a fallback when fullscreen has no focusable elemen
   el.fullscreen = true;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.activeElement).to.equal(
-    el.shadowRoot!.querySelector('[part="base"]')
-  );
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="base"]'))).to.equal(true);
 });
 
 it("links the collapse-button to the body region it controls via aria-controls", async () => {
@@ -1296,7 +1292,7 @@ it('lets a consumer retint the view-toggle hover state via the scoped --lr-widge
   // The resting (unpressed) toggle -- isolates the hover cssprop from the sibling
   // [aria-pressed='true'] rule's own, differently-scoped cssprops.
   const toggle = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="false"]') as HTMLElement;
-  expect(toggle, 'expected an unpressed view-toggle').to.exist;
+  expect((toggle) != null, 'expected an unpressed view-toggle').to.equal(true);
   const before = getComputedStyle(toggle).backgroundColor;
   const rect = toggle.getBoundingClientRect();
   try {
@@ -1508,7 +1504,7 @@ describe("view-toggle active-state cssprops", () => {
     const pressed = el.shadowRoot!.querySelector(
       '[part="view-toggle"][aria-pressed="true"]'
     ) as HTMLElement;
-    expect(pressed).to.exist;
+    expect((pressed) != null).to.equal(true);
     expect(getComputedStyle(pressed).backgroundColor).to.equal(
       "rgb(0, 51, 102)"
     );

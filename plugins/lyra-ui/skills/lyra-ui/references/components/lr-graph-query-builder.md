@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 27 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 27 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,6 +17,17 @@
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
+
+The normalized `value` present at the first update is the form reset default. Later property writes
+and user edits change only the live query; `form.reset()` restores that initial model, clears
+interaction/touched state and the save-name draft, and retains a caller-set custom validity message
+like a native control.
+
+Removing a focused relationship/node filter chip moves focus to the adjacent chip, or to that
+filter's add picker when no chips remain. `savedQueries` is controlled: when the host applies a
+focused `lr-query-delete` request, focus follows the adjacent saved-query delete action, or the
+stable save-name input when the list becomes empty. Updates that did not remove the focused control
+never move external focus.
 
 **Properties:** `value`, `customError` (`custom-error`), `label`, `labels`, `name`, `disabled`,
 `effectiveDisabled`, `nodeTypeOptions`,
@@ -46,6 +57,22 @@ form-associated control in this library exposes — see `lr-select`), `path-fiel
 `direction`, `filter-group`, `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`,
 `save-row`, `save-name-input`, `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`,
 `saved-load-button`, `saved-delete-button`, `saved-empty`.
+
+**Themeable custom properties:** the Run button exposes `--lr-graph-query-builder-run-bg`,
+`--lr-graph-query-builder-run-border-color`, and `--lr-graph-query-builder-run-color` for its
+resting longhands plus `--lr-graph-query-builder-run-hover-bg` and
+`--lr-graph-query-builder-run-active-bg`; the Save button exposes
+`--lr-graph-query-builder-save-bg`, `--lr-graph-query-builder-save-border-color`,
+`--lr-graph-query-builder-save-color`, `--lr-graph-query-builder-save-hover-bg`, and
+`--lr-graph-query-builder-save-active-bg`. Saved-query actions use
+`--lr-graph-query-builder-saved-load-color`, `--lr-graph-query-builder-saved-load-active-bg`,
+`--lr-graph-query-builder-saved-delete-color`,
+`--lr-graph-query-builder-saved-delete-hover-color`,
+`--lr-graph-query-builder-saved-delete-active-color`, and
+`--lr-graph-query-builder-saved-delete-active-bg`. Unset hooks preserve the current shared
+surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
+longhand that consumes them, so an override on a parent themes every descendant builder without
+being shadowed by a declaration on the component host.
 
 **Additional API surface:**
 

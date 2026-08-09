@@ -75,30 +75,42 @@ export const styles = css`
     border-radius: var(--lr-radius);
     padding: var(--lr-space-xs) var(--lr-space-m);
     cursor: pointer;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    border: var(--lr-border-width-thin) solid;
   }
   [part='run-button'] {
-    background: var(--lr-color-brand);
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-graph-query-builder-run-bg, var(--lr-color-brand));
+    border-color: var(--lr-graph-query-builder-run-border-color, var(--lr-color-brand));
+    color: var(--lr-graph-query-builder-run-color, var(--lr-color-on-brand));
+  }
+  [part='save-button'] {
+    background: var(--lr-graph-query-builder-save-bg, var(--lr-color-surface));
+    border-color: var(--lr-graph-query-builder-save-border-color, var(--lr-color-border));
+    color: var(--lr-graph-query-builder-save-color, var(--lr-color-text));
   }
   /* Mixing the resting fill toward --lr-color-mix-partner (which follows the text colour) rather
      than multiplying every channel with filter: brightness(): a filter lightens a dark brand and
      darkens a light one only by accident, does nothing at all to a pure white or pure black one,
      and -- because it applies to the whole subtree -- shifted this button's label with it. */
   [part='run-button']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(
+      --lr-graph-query-builder-run-hover-bg,
+      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
   }
   [part='run-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-graph-query-builder-run-active-bg,
+      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='save-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-graph-query-builder-save-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='save-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-graph-query-builder-save-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='run-button']:disabled,
   [part='save-button']:disabled,
@@ -165,7 +177,7 @@ export const styles = css`
     white-space: nowrap;
     text-align: start;
     font: inherit;
-    color: var(--lr-color-text);
+    color: var(--lr-graph-query-builder-saved-load-color, var(--lr-color-text));
     background: none;
     border: none;
     padding: var(--lr-space-2xs);
@@ -179,7 +191,10 @@ export const styles = css`
      background -- is the base the pressed tint mixes from; an underline alone cannot get "more
      underlined", and loading a saved query replaces the whole form, which is worth acknowledging. */
   [part='saved-load-button']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-graph-query-builder-saved-load-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
     text-decoration: underline;
   }
   [part='saved-delete-button'] {
@@ -192,7 +207,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet));
     background: none;
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -203,14 +218,17 @@ export const styles = css`
     block-size: var(--lr-size-1em);
   }
   [part='saved-delete-button']:hover {
-    color: var(--lr-color-danger);
+    color: var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger));
   }
   /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening the
      glyph itself: a colour step on an icon this small is easy to miss, and this is the destructive
      control in the row. */
   [part='saved-delete-button']:active {
-    color: color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    background: var(--lr-color-danger-quiet);
+    color: var(
+      --lr-graph-query-builder-saved-delete-active-color,
+      color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    background: var(--lr-graph-query-builder-saved-delete-active-bg, var(--lr-color-danger-quiet));
   }
 
   [part='saved-empty'] {

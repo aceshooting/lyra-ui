@@ -29,6 +29,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * caret. Shift+Tab is never captured, so it always performs native reverse focus traversal.
  * Pressing Escape releases the next Tab for native forward traversal instead of indenting; typing
  * any other key, or focus leaving the editor, re-arms Tab indentation.
+ * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
+ * remains reachable through the editor's internal scroll surface instead of widening the page.
  *
  * Tab-width precedence, highest first: an explicitly assigned `tabSize` (property or `tab-size`
  * attribute) wins over everything; otherwise a host-level `--lr-code-editor-tab-size` override
@@ -57,6 +59,10 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
+ * @cssprop [--lr-code-editor-hover-border=var(--lr-color-brand)] - Editor-frame border while the
+ * enabled surface is hovered.
+ * @cssprop [--lr-code-editor-invalid-border=var(--lr-color-danger)] - Editor-frame border while
+ * invalid chrome is visible.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.

@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraMenuItem, type LyraMenuItemEventMap } from './menu-item.class.js';
 import type { MenuFocusTarget } from './menu-shared.js';
@@ -29,6 +30,7 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * focusable host when it gains focus.
  * @event blur - Native, non-bubbling, composed, non-cancelable `FocusEvent` emitted by the
  * focusable host when it loses focus.
+ * @attr {boolean} submenuopen - Normalized Web Awesome compatibility alias for `submenu-open`.
  * @csspart base - The visual item row.
  * @csspart checkmark - WA-compatible checkbox glyph.
  * @csspart checked-icon - Shoelace-compatible checkbox-glyph wrapper.
@@ -57,9 +59,36 @@ export class LyraDropdownItem extends LyraMenuItem {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  static override get observedAttributes(): string[] {
+    // Web Awesome publishes the mixed-case `submenuOpen` spelling. HTML lowercases authored
+    // attribute names before custom-element observation, while Lyra keeps kebab-case canonical.
+    return [...new Set([...super.observedAttributes, 'submenuopen'])];
+  }
+
+  private pendingAuthoredOpen = false;
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    newValue: string | null,
+  ): void {
+    if (name === 'submenuopen') {
+      if (oldValue !== newValue) this.submenuOpen = newValue !== null;
+      return;
+    }
+    // Either supported spelling keeps the state open. If the normalized upstream alias remains,
+    // removing only the canonical reflection must not contradict that still-present input.
+    if (name === 'submenu-open' && newValue === null && this.hasAttribute('submenuopen')) {
+      this.setAttribute('submenu-open', '');
+      return;
+    }
+    super.attributeChangedCallback(name, oldValue, newValue);
+  }
+
   /** Whether the submenu is currently open. Assigning it, or changing the reflected
    * `submenu-open` attribute, drives the same panel as `openSubmenu()` / `closeSubmenu()` without
-   * moving focus. Like those methods, it is a no-op until submenu content is connected.
+   * moving focus. The normalized upstream `submenuopen` attribute is a permanent compatibility
+   * alias. Like those methods, both spellings are a no-op until submenu content is connected.
    * @default false */
   @property({ type: Boolean, reflect: true, attribute: 'submenu-open' })
   override get submenuOpen(): boolean {
@@ -70,6 +99,31 @@ export class LyraDropdownItem extends LyraMenuItem {
     if (normalized === super.submenuOpen) return;
     if (normalized) void super.openSubmenu('none');
     else void super.closeSubmenu();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Attribute callbacks can run before slotted submenu content has connected. Retain either
+    // authored spelling as the requested state and apply it once the panel exists.
+    if (
+      this.hasSubmenu &&
+      !this.submenuOpen &&
+      !this.pendingAuthoredOpen &&
+      (this.hasAttribute('submenu-open') || this.hasAttribute('submenuopen'))
+    ) {
+      this.pendingAuthoredOpen = true;
+      queueMicrotask(() => {
+        this.pendingAuthoredOpen = false;
+        if (
+          this.isConnected &&
+          this.hasSubmenu &&
+          !this.submenuOpen &&
+          (this.hasAttribute('submenu-open') || this.hasAttribute('submenuopen'))
+        ) {
+          void this.openSubmenu('none');
+        }
+      });
+    }
   }
 
   /** Opens the submenu and resolves after the panel state and render settle. The optional focus

@@ -153,10 +153,10 @@ describe("<lr-scroller>", () => {
       '[part="previous-glyph"]'
     )!;
     const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
-    expect(previousGlyph).to.exist;
+    expect((previousGlyph) != null).to.equal(true);
     expect(previousGlyph.getAttribute("aria-hidden")).to.equal("true");
     expect(previousGlyph.textContent).to.equal("‹");
-    expect(nextGlyph).to.exist;
+    expect((nextGlyph) != null).to.equal(true);
     expect(nextGlyph.getAttribute("aria-hidden")).to.equal("true");
     expect(nextGlyph.textContent).to.equal("›");
   });
@@ -171,10 +171,10 @@ describe("<lr-scroller>", () => {
       '[part="previous-glyph"]'
     )!;
     const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
-    expect(previousGlyph).to.exist;
+    expect((previousGlyph) != null).to.equal(true);
     expect(previousGlyph.getAttribute("aria-hidden")).to.equal("true");
     expect(previousGlyph.textContent).to.equal("↑");
-    expect(nextGlyph).to.exist;
+    expect((nextGlyph) != null).to.equal(true);
     expect(nextGlyph.getAttribute("aria-hidden")).to.equal("true");
     expect(nextGlyph.textContent).to.equal("↓");
   });

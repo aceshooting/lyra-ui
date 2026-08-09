@@ -59,9 +59,10 @@ describe('<lr-intersection-observer>', () => {
       await el.updateComplete;
       await aTimeout(0);
       const target = el.querySelector('#target')!;
-      expect(latest?.options?.root).to.equal(wrapper.querySelector('#viewport'));
+      expect((latest?.options?.root) === (wrapper.querySelector('#viewport'))).to.equal(true);
       expect(latest?.options?.threshold).to.deep.equal([0, 0.5, 1]);
-      expect(latest?.observed).to.deep.equal([target]);
+      expect(latest?.observed.length).to.equal(1);
+      expect(latest?.observed[0] === target).to.equal(true);
 
       const batchEvent = oneEvent(el, 'lr-intersection');
       const itemEvent = oneEvent(el, 'lr-intersect');
@@ -71,7 +72,8 @@ describe('<lr-intersection-observer>', () => {
       expect(batch.detail.entries).to.deep.equal([entry]);
       expect(item.detail.entry).to.equal(entry);
       expect(target.classList.contains('visible')).to.be.true;
-      expect(latest?.unobserved).to.deep.equal([target]);
+      expect(latest?.unobserved.length).to.equal(1);
+      expect(latest?.unobserved[0] === target).to.equal(true);
     } finally {
       window.IntersectionObserver = OriginalIntersectionObserver;
     }

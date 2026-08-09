@@ -1,7 +1,6 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
-import { styles } from './tool-result-dialog.styles.js';
 
 // A stand-in for a slotted component (e.g. lr-tab-group) whose real focusable
 // target lives inside its own shadow root rather than the host tag's
@@ -168,20 +167,22 @@ it('clamps a negative duration to 0 instead of rendering a nonsensical negative 
 });
 
 it('uses themeable running motion and lets footer actions wrap', async () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    'animation: lr-tool-result-dialog-spin var(--lr-tool-result-dialog-spin) infinite;',
-  );
-  expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
-
   const el = (await fixture(html`
     <lr-tool-result-dialog
       status="running"
       style="--lr-tool-result-dialog-spin: 2.5s linear"
-    ></lr-tool-result-dialog>
+    >
+      <button slot="footer">Copy result</button>
+      <button slot="footer">Run again</button>
+    </lr-tool-result-dialog>
   `)) as LyraToolResultDialog;
   const glyph = el.shadowRoot!.querySelector('[part="status"] svg')!;
+  expect(getComputedStyle(glyph).animationName).to.equal('lr-tool-result-dialog-spin');
   expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
+  const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!;
+  expect(footer.hidden).to.be.false;
+  expect(getComputedStyle(footer).display).to.equal('flex');
+  expect(getComputedStyle(footer).flexWrap).to.equal('wrap');
 });
 
 it('toggles maximized and emits lr-maximize-change when the maximize button is clicked', async () => {
@@ -290,7 +291,7 @@ it('moves focus to the first focusable element (the maximize button) when opened
   el.open = true;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="maximize-button"]'));
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="maximize-button"]'))).to.equal(true);
 });
 
 it('returns focus to the element that was focused before the dialog opened', async () => {
@@ -304,11 +305,11 @@ it('returns focus to the element that was focused before the dialog opened', asy
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="maximize-button"]'));
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="maximize-button"]'))).to.equal(true);
 
   el.close('api');
   await el.updateComplete;
-  expect(document.activeElement).to.equal(trigger);
+  expect((document.activeElement) === (trigger)).to.equal(true);
 
   trigger.remove();
 });
@@ -324,11 +325,11 @@ it('restores focus to the trigger when open is set to false directly, not just v
   )) as LyraToolResultDialog;
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="maximize-button"]'));
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="maximize-button"]'))).to.equal(true);
 
   el.open = false;
   await el.updateComplete;
-  expect(document.activeElement).to.equal(trigger);
+  expect((document.activeElement) === (trigger)).to.equal(true);
 
   trigger.remove();
 });
@@ -418,7 +419,7 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(maximizeButton);
+  expect((el.shadowRoot!.activeElement) === (maximizeButton)).to.equal(true);
 
   const tabBackward = new KeyboardEvent('keydown', {
     key: 'Tab',
@@ -428,7 +429,7 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 });
 
 it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root', async () => {
@@ -452,12 +453,12 @@ it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(el.shadowRoot!.activeElement).to.equal(maximizeButton);
+  expect((el.shadowRoot!.activeElement) === (maximizeButton)).to.equal(true);
 
   const tabBackward = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(shadowHost.shadowRoot!.activeElement).to.equal(input);
+  expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
 });
 
 it('hides the footer wrapper when nothing is slotted into it, shows it once slotted', async () => {

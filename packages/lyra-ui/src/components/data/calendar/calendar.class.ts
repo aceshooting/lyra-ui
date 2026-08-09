@@ -46,6 +46,9 @@ export type CalendarView = 'month' | 'agenda';
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
  * @cssprop [--lr-calendar-day-min-block-size-narrow=var(--lr-size-4rem)] - Minimum block size of a day cell once the host is narrower than 28rem.
  * @cssprop [--lr-calendar-day-selected-bg=var(--lr-color-brand-quiet)] - Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background.
+ * @cssprop [--lr-calendar-day-outside-color=var(--lr-color-text-quiet)] - Text color of an adjacent-month day cell.
+ * @cssprop [--lr-calendar-day-outside-bg=var(--lr-color-surface)] - Background of an adjacent-month day cell.
+ * @cssprop [--lr-calendar-day-today-outline-color=var(--lr-color-brand)] - Outline color of today's day cell.
  * @status stable
  * @since 4.0.0
  */

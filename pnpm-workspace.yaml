@@ -73,6 +73,8 @@ minimumReleaseAgeExclude:
   - axe-core@4.13.0
   - vue@3.5.41
   - postal-mime@2.7.6
+  - katex@0.18.3
+  - mammoth@1.12.1
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

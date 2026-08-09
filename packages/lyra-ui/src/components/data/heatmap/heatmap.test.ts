@@ -156,7 +156,7 @@ it('renders a canvas sized to the grid dimensions', async () => {
   ];
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-  expect(canvas).to.exist;
+  expect((canvas) != null).to.equal(true);
 });
 
 it('repaints only the focus-cell dirty rectangles when keyboard focus moves', async () => {
@@ -185,7 +185,7 @@ it('treats -1 as a no-data sentinel without throwing', async () => {
   el.rowLabels = ['a'];
   el.colLabels = ['x', 'y'];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
 it('does not throw a RangeError computing the range label/draw for a very large grid (150k+ cells)', async () => {
@@ -202,7 +202,7 @@ it('does not throw a RangeError computing the range label/draw for a very large 
     Array.from({ length: cols }, (_, c) => r * cols + c),
   );
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   expect(el.getAttribute('aria-label')).to.contain('159,999');
 });
 
@@ -497,7 +497,7 @@ it('calendar mode: renders a canvas sized by the week count', async () => {
   ];
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-  expect(canvas).to.exist;
+  expect((canvas) != null).to.equal(true);
   expect(parseInt(canvas.style.width)).to.be.greaterThan(0);
 });
 
@@ -925,7 +925,7 @@ it('retheming with an unparsable custom property value does not throw and does n
   expect(warnings).to.have.length(1);
   expect(warnings.flat().join(' ')).to.contain('still-not-a-real-color');
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-  expect(canvas).to.exist;
+  expect((canvas) != null).to.equal(true);
   const ctx = canvas.getContext('2d')!;
   const dpr = window.devicePixelRatio || 1;
   const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
@@ -1261,7 +1261,7 @@ describe('annotation/overlay affordance', () => {
     el.values = [[1, 2]];
     el.annotations = [{ row: 0, col: 1, label: 'Peak' }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   });
 
   it('matrix mode: renders a legend-annotation entry (ring swatch + label text) when an annotation has a label', async () => {
@@ -1272,7 +1272,7 @@ describe('annotation/overlay affordance', () => {
     el.annotations = [{ row: 0, col: 0, label: 'Peak' }];
     await el.updateComplete;
     const entry = el.shadowRoot!.querySelector('[part="legend-annotation"]');
-    expect(entry).to.exist;
+    expect((entry) != null).to.equal(true);
     expect(entry!.textContent).to.contain('Peak');
   });
 
@@ -1300,9 +1300,9 @@ describe('annotation/overlay affordance', () => {
     el.days = [{ date: '2026-03-01', value: 5 }];
     el.annotations = [{ date: '2026-03-01', label: 'Launch' }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     const entry = el.shadowRoot!.querySelector('[part="legend-annotation"]');
-    expect(entry).to.exist;
+    expect((entry) != null).to.equal(true);
     expect(entry!.textContent).to.contain('Launch');
   });
 
@@ -1375,7 +1375,7 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
     expect(live!.textContent).to.equal('custom 0,0: 5');
   });
 
-  it('falls back to the built-in English template without cellText', async () => {
+  it('falls back to the localized template and default English catalog without cellText', async () => {
     const el = (await fixture(html`<lr-heatmap
       .rowLabels=${['R1']}
       .colLabels=${['C1']}
@@ -2279,7 +2279,92 @@ describe('theme watching (via the shared ThemeWatcher controller)', () => {
     el.setAttribute('data-theme', 'dark');
     await aTimeout(0);
     expect(refreshes).to.be.greaterThan(0);
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
+  });
+});
+
+describe('visibility-gated canvas redraws', () => {
+  it('redraws canvas-derived labels when the effective locale changes', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap mode="calendar" locale="en-US"></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+
+    let draws = 0;
+    const instrumented = el as unknown as { draw(): void };
+    const realDraw = instrumented.draw.bind(el);
+    instrumented.draw = () => {
+      draws++;
+      realDraw();
+    };
+
+    el.locale = 'de-DE';
+    await el.updateComplete;
+    expect(draws, 'locale-derived canvas text is repainted').to.equal(1);
+  });
+
+  it('coalesces hidden invalidations into one draw when the heatmap becomes visible', async () => {
+    const originalIntersectionObserver = window.IntersectionObserver;
+    let callback: IntersectionObserverCallback | undefined;
+    let observed = false;
+    let disconnected = false;
+    class TestIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        callback = next;
+      }
+      observe(target: Element): void {
+        observed = target.localName === 'lr-heatmap';
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        disconnected = true;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
+
+    let el: LyraHeatmap | undefined;
+    try {
+      el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.rowLabels = ['row'];
+      el.colLabels = ['column'];
+      el.values = [[1]];
+      await el.updateComplete;
+      expect(callback !== undefined, 'the owner-window visibility observer is installed').to.equal(true);
+      expect(observed, 'the observer watches the heatmap host').to.equal(true);
+
+      callback!([{ target: el, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      let draws = 0;
+      const instrumented = el as unknown as { draw(): void };
+      const realDraw = instrumented.draw.bind(el);
+      instrumented.draw = () => {
+        draws++;
+        realDraw();
+      };
+
+      el.values = [[2]];
+      await el.updateComplete;
+      el.annotations = [{ row: 0, col: 0, label: 'changed while hidden' }];
+      await el.updateComplete;
+      el.refreshTheme();
+      expect(draws, 'hidden data and theme changes do no canvas work').to.equal(0);
+
+      callback!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(draws, 'all hidden invalidations coalesce into the visibility-entry draw').to.equal(1);
+
+      el.remove();
+      expect(disconnected, 'the visibility observer is disconnected with its host').to.equal(true);
+    } finally {
+      el?.remove();
+      window.IntersectionObserver = originalIntersectionObserver;
+    }
   });
 });
 
@@ -2752,7 +2837,7 @@ describe('coverage: matrix full-draw annotation validity guards', () => {
       { row: 99, col: 99, label: 'Out of range' }, // valid shape, out of bounds
     ];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     // Legend filtering only checks `.label`, independent of row/col validity -- both still appear.
     expect(el.shadowRoot!.querySelectorAll('[part="legend-annotation"]').length).to.equal(2);
   });
@@ -2837,7 +2922,7 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
     await el.updateComplete;
     const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
     const match = cells.find((c) => c.dataset.cellKey === 'calendar-0-0');
-    expect(match).to.exist;
+    expect((match) != null).to.equal(true);
     expect(match!.getAttribute('aria-pressed')).to.equal('true');
     expect(cells.filter((c) => c !== match).every((c) => c.getAttribute('aria-pressed') === 'false')).to.equal(true);
   });
@@ -3734,7 +3819,7 @@ describe('cell paint overrides across both modes', () => {
     const el = (await fixture(matrix())) as LyraHeatmap;
     el.cellColor = () => undefined;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   });
 
   it('scale="sqrt" and discrete colorSteps both paint no-data cells with the no-data fill', async () => {
@@ -3749,7 +3834,7 @@ describe('cell paint overrides across both modes', () => {
       const el = (await fixture(matrix())) as LyraHeatmap;
       setup(el);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+      expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     }
   });
 
@@ -3777,7 +3862,7 @@ describe('cell paint overrides across both modes', () => {
     await el.updateComplete;
     el.colorSteps = ['#101010', '#202020'];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   });
 });
 
@@ -3894,7 +3979,7 @@ it('annotations without a resolvable date or match are skipped in calendar mode'
     ></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('canvas'), 'renders despite the unusable annotations').to.exist;
+  expect((el.shadowRoot!.querySelector('canvas')) != null, 'renders despite the unusable annotations').to.equal(true);
 });
 
 /** Adopts `el` into a same-page iframe's document, then stubs that document's `defaultView` to
@@ -4531,7 +4616,7 @@ describe('coverage: additional edge-path gaps', () => {
     el.cellColor = () => 'var(--lr-color-brand)';
     await el.updateComplete;
     const probe = (el as unknown as { colorProbe?: HTMLSpanElement }).colorProbe;
-    expect(probe, 'the color probe is lazily created on first var() resolution').to.not.equal(undefined);
+    expect((probe) !== (undefined), 'the color probe is lazily created on first var() resolution').to.equal(true);
     const original = window.getComputedStyle;
     window.getComputedStyle = ((target: Element, pseudo?: string | null) =>
       target === probe ? ({ color: '' } as CSSStyleDeclaration) : original(target, pseudo)) as typeof window.getComputedStyle;

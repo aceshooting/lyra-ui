@@ -22,6 +22,17 @@ export const Default: StoryObj = {
     `,
 };
 
+/** Disabled is an opening invariant: even declarative `open` markup normalizes closed before the
+ * first rendered/positioned state, independent of attribute order. */
+export const DisabledOpenNormalizesClosed: StoryObj = {
+  render: () => html`
+    <lr-dropdown open disabled aria-label="Unavailable actions">
+      <button slot="trigger">Unavailable</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `,
+};
+
 /** The Web Awesome direct-item submenu shape. The same controller also accepts Shoelace's nested
  * `<lr-menu slot="submenu">` shape, as shown by the consumer-menu story below. */
 export const DirectItemSubmenus: StoryObj = {
@@ -40,7 +51,8 @@ export const DirectItemSubmenus: StoryObj = {
 };
 
 /** A consumer-supplied menu becomes the dropdown's owned content instead of creating a second
- * popup. Selection still travels through the dropdown's single cancelable `lr-select` path. */
+ * popup. Selection still travels through the dropdown's single cancelable `lr-select` path; the
+ * menu's standalone `lr-menu-select` compatibility alias stays inside the wrapper. */
 export const ConsumerMenu: StoryObj = {
   render: () => html`
     <lr-dropdown aria-label="Account actions" stay-open-on-select>

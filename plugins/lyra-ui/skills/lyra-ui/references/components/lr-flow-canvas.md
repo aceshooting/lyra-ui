@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated css-property** `--lr-flow-canvas-node-current-outline-color` since `7.0.0`; use css-property `--lr-flow-canvas-node-selected-outline-color`; removal not before `9.0.0` — The selected spelling matches the component's selection vocabulary; current remains a compatibility fallback for existing themes.
 - **Optional peers** none
-- **Themeable via** 15 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,13 +23,17 @@ itself — every edit intent is an event the host applies, mirroring `lr-stepper
 controlled-component contract.
 
 **Properties:**
+
 - `nodes: FlowNode[] = []` (attribute: false) — `FlowNode { id: string; type?: string; position?: {
-  x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
-  FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
-  `data.description` feed the default `<lr-flow-node>` card when no matching light-DOM child exists
+x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
+FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
+  `data.description` feed the default `<lr-flow-node>` card when no matching light-DOM child exists.
+  Replacing the array retires any active node drag or pointer/keyboard connection, rolls its preview
+  back, and removes global listeners before a captured id can outlive the controlled model. An
+  independent background pan continues.
 - `edges: FlowEdge[] = []` (attribute: false) — `FlowEdge { id: string; source: string; target:
-  string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
-  'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
+string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
+'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
   unlike `lr-graph`'s spoken-only `GraphLink.label`)
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
@@ -37,7 +41,9 @@ controlled-component contract.
 - `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
   `lr-node-palette` drag sets, emitting `lr-node-add`
 - `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
-  gesture flags
+  gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
+  cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
+  window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — seed or
   replace selection state. Node/edge activation and clear-selection gestures also update these
   arrays internally before emitting `lr-selection-change`; a host may assign its own authoritative
@@ -48,8 +54,8 @@ controlled-component contract.
 - `layerGap: number = 64` (attribute `layer-gap`), `nodeGap: number = 24` (attribute `node-gap`) —
   auto-layout layer/sibling spacing
 - `decorations: FlowRunDecorations | null = null` (attribute: false) — `Record<nodeOrEdgeId,
-  FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
-  progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lr-flow-node`
+FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
+progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lr-flow-node`
   cards, typically supplied via a `lr-flow-run-overlay`
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (read-only getter) — `{ x, y, zoom }`, the current pan/zoom state
@@ -60,6 +66,11 @@ controlled-component contract.
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
+All viewport-mutating methods, including `focusNode()`, are inert while `locked`; coordinate mapping
+and companion subscription remain available because neither mutates viewport or edit state.
+`FlowStructureSnapshot.viewport` contains `{ x, y, zoom, width, height, minZoom, maxZoom }`; its
+`minZoom`/`maxZoom` are finite, positive, and sorted even when the corresponding public inputs are
+invalid or reversed. Bound changes publish a fresh coalesced snapshot.
 
 **Events:** `lr-node-click` (`detail: { id }`), `lr-edge-click` (`detail: { id, source, target
 }`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { id,
@@ -70,25 +81,36 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 unpositioned nodes).
 
 **Slots:** default (`lr-flow-node` children adopted by `node-id`; a non-matching child is ignored
-with a console warning), `top-start`, `top-end` (floating corner overlays), `bottom-start` (e.g.
-`lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`).
+with a console warning), `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
+`lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`). Opposite-side slots share wrapping top
+and bottom rails, so wide companions stack without intersecting in narrow allocations.
 
-**CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `arrowhead`, `stub`
+**CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `edge-hit-area`,
+`arrowhead`, `stub`
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
-`live-region`, `edge-list` (a visually hidden list of every edge).
+`node-control` (the native per-node roving/activation control), `live-region`, `edge-list` (a
+visually hidden list of every edge), `overlay-rail` (the wrapping top/bottom companion rail).
 
 `live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
 identical repeated messages are appended as separate announcements.
 
-**Themeable custom properties:** `--lr-flow-canvas-grid-size` (default `8px`, dotted background
-spacing — the canvas also writes it inline as `${grid}px` from the `grid` property, which wins over
-the stylesheet fallback whenever a grid is in effect), `--lr-flow-canvas-march-duration` (default
-`var(--lr-transition-ambient)`, running-edge march animation duration), and
+**Themeable custom properties:** `--lr-flow-canvas-grid-size` (default: the finite `grid` property,
+or `8px`; dotted background spacing). Set it on the canvas or a theme ancestor to override that
+property-derived fallback. Each edge tone colors its stroke and the arrowhead marker it references:
+`--lr-flow-canvas-edge-neutral-color` (default `var(--lr-color-border)`),
+`--lr-flow-canvas-edge-accent-color` (default `var(--lr-color-brand)`),
+`--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
+`--lr-flow-canvas-edge-warning-color` (default `var(--lr-color-warning)`), and
+`--lr-flow-canvas-edge-danger-color` (default `var(--lr-color-danger)`).
+`--lr-flow-canvas-march-duration` (default
+`var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
+the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
+`linear` timing function), and
 `--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
 of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
 an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
-the element *or any ancestor*. It exists because Shadow Parts forbids an attribute selector after
+the element _or any ancestor_. It exists because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
 only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
 that reads it. The same restriction motivates three more state-scoped outline colors:
@@ -99,7 +121,7 @@ a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-co
 viewport itself while a palette item is dragged over it (`droppable`). A fifth,
 `--lr-flow-canvas-node-hover-outline-color` (default `var(--lr-color-border-strong)`) — the
 mouse-hover preview of a node's own `:focus-visible` ring — exists for a different reason than the
-four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` *is* valid
+four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` _is_ valid
 CSS here, but the internal `[part='node']:hover` rule still out-specifies it ((0,2,0) vs. (0,1,1)),
 which this custom property sidesteps the same way. Set it to `transparent` to opt out of the hover
 treatment entirely.
@@ -107,23 +129,33 @@ treatment entirely.
 **Optional peer deps:** none.
 
 ```html
-<lr-flow-canvas id="canvas" nodes-draggable connectable droppable style="height:480px"></lr-flow-canvas>
-<lr-flow-controls slot="bottom-start" for="canvas"></lr-flow-controls>
-<lr-flow-minimap slot="bottom-end" for="canvas"></lr-flow-minimap>
+<lr-flow-canvas
+  id="canvas"
+  nodes-draggable
+  connectable
+  droppable
+  style="height:480px"
+>
+  <lr-flow-controls slot="bottom-start" for="canvas"></lr-flow-controls>
+  <lr-flow-minimap slot="bottom-end" for="canvas"></lr-flow-minimap>
+</lr-flow-canvas>
 <script>
-  const canvas = document.getElementById('canvas');
+  const canvas = document.getElementById("canvas");
   canvas.nodes = [
-    { id: 'a', data: { label: 'Fetch' } },
-    { id: 'b', data: { label: 'Transform' } },
+    { id: "a", data: { label: "Fetch" } },
+    { id: "b", data: { label: "Transform" } },
   ];
-  canvas.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
-  canvas.addEventListener('lr-node-move', (e) => {
-    canvas.nodes = canvas.nodes.map((n) => (n.id === e.detail.id ? { ...n, position: e.detail.position } : n));
+  canvas.edges = [{ id: "a-b", source: "a", target: "b" }];
+  canvas.addEventListener("lr-node-move", (e) => {
+    canvas.nodes = canvas.nodes.map((n) =>
+      n.id === e.detail.id ? { ...n, position: e.detail.position } : n
+    );
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - `nodes` and `edges` are controlled inputs: move, connect, add, and delete events are requests the
   host applies back. Selection is hybrid state: `selectedNodeIds`/`selectedEdgeIds` accept external
   replacement, while node/edge activation and clear-selection gestures update them internally and

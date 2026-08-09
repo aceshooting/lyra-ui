@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 const meta: Meta = {
   title: 'Stat',
@@ -18,12 +19,34 @@ export const Gallery: Story = {
       <lr-stat label="Pending Reviews" value="42" trend="8.6" variant="warning"></lr-stat>
       <lr-stat label="Sessions" value="9,204"></lr-stat>
       <lr-stat label="Uptime" value="99.98" unit="%" caption="Last 30 days">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+        <svg slot="start" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="9"></circle>
         </svg>
       </lr-stat>
       <lr-stat label="Latency" value="182" unit="ms" trend="14" good-direction="down">
         <span slot="caption">Median over <strong>1,000</strong> requests</span>
+      </lr-stat>
+    </div>
+  `,
+};
+
+export const StartAndLegacyIconSlots: Story = {
+  name: 'Canonical and legacy icon slots',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use the canonical start slot for a leading icon. The shipped unnamed slot remains a permanent fallback, and start takes precedence if both are filled.',
+      },
+    },
+  },
+  render: () => html`
+    <div class="flex flex-wrap gap-4">
+      <lr-stat label="Canonical start" value="128">
+        <span slot="start" aria-hidden="true">◆</span>
+      </lr-stat>
+      <lr-stat label="Legacy fallback" value="42">
+        <span aria-hidden="true">◇</span>
       </lr-stat>
     </div>
   `,
@@ -60,11 +83,7 @@ export const SparkAndBreakdown: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
       <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success" caption="Last 30 days">
-        <lr-sparkline
-          slot="spark"
-          type="line"
-          .values=${[4, 6, 5, 8, 7, 9, 12, 10, 13, 12.4]}
-        ></lr-sparkline>
+        <lr-sparkline slot="spark" type="line" .values=${[4, 6, 5, 8, 7, 9, 12, 10, 13, 12.4]}></lr-sparkline>
       </lr-stat>
       <lr-stat label="Sessions" value="9,204" caption="By channel">
         <lr-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
@@ -118,6 +137,26 @@ export const Emphasis: Story = {
   `,
 };
 
+export const RetintedEmphasis: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The emphasis edge and neutral headline have separate hooks; the adjacent brand variant keeps its own independent value hook.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      class="flex flex-wrap gap-4"
+      style="--lr-stat-emphasis-border-color: var(--lr-color-warning); --lr-stat-emphasis-value-color: var(--lr-color-success); --lr-stat-value-brand-color: var(--lr-color-danger)"
+    >
+      <lr-stat label="Emphasized" value="12.4" emphasis></lr-stat>
+      <lr-stat label="Brand variant" value="17" variant="brand"></lr-stat>
+    </div>
+  `,
+};
+
 export const LinkedKpi: Story = {
   render: () => html`
     <lr-stat
@@ -129,18 +168,25 @@ export const LinkedKpi: Story = {
   `,
 };
 
+export const LinkedKpiWithAction: Story = {
+  render: () => html`
+    <lr-stat
+      aria-label="Open revenue details"
+      label="Revenue"
+      value="12.4"
+      unit="k€"
+      href="?path=/story/stat--linked-kpi-with-action"
+    >
+      <button slot="caption" type="button">Compare periods</button>
+    </lr-stat>
+  `,
+};
+
 export const Frame: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
       <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
-      <lr-stat
-        frame="plain"
-        label="Revenue"
-        value="12.4"
-        unit="k€"
-        trend="3.2"
-        caption="Last 30 days"
-      ></lr-stat>
+      <lr-stat frame="plain" label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
       <lr-stat
         frame="plain"
         label="Memories"
@@ -164,13 +210,7 @@ export const Orientation: Story = {
         caption="42 of 48 clean"
       ></lr-stat>
       <!-- The acceptance shape: chrome-less, single baseline row, no label box. -->
-      <lr-stat
-        frame="plain"
-        orientation="horizontal"
-        value="87"
-        unit="/100"
-        caption="42 of 48 clean"
-      ></lr-stat>
+      <lr-stat frame="plain" orientation="horizontal" value="87" unit="/100" caption="42 of 48 clean"></lr-stat>
       <!-- rows/spark have no place on a text baseline: they stay stacked below the row. -->
       <lr-stat
         orientation="horizontal"
@@ -205,4 +245,44 @@ export const ExactValueSubProseCompact: Story = {
       <lr-stat label="Sessions" value="9,204" sub="+312 today" compact></lr-stat>
     </div>
   `,
+};
+
+export const NarrowLongContent: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paired LTR/RTL allocations at the default 20rem (320px) contract with long localized and unbroken content.',
+      },
+    },
+  },
+  render: () =>
+    narrowStoryFrames((direction) => {
+      const rtl = direction === 'rtl';
+      return html`
+        <lr-stat
+          orientation="horizontal"
+          label=${rtl
+            ? 'إجمالي عمليات التحقق المكتملة لهذا الإصدار'
+            : 'Gesamte abgeschlossene Prüfungen dieser Version'}
+          value="987654321"
+          unit=${rtl ? 'عملية' : 'Prüfungen'}
+          caption=${rtl
+            ? 'مرجعغيرقابلللالتفافللتأكدمنبقاءالمحتوىداخلالمساحة'
+            : 'NichtUmbrechbareReferenzZurPrüfungDerSchmalenZuordnung'}
+          .rows=${[
+            {
+              label: rtl
+                ? 'التحقق من إمكانية الوصول باستخدام تسمية طويلة'
+                : 'Barrierefreiheitsprüfung mit langem Namen',
+              value: '124567',
+            },
+            {
+              label: rtl ? 'اختبارات التكامل متعددة المحركات' : 'Engineübergreifende Integrationstests',
+              value: '863087',
+            },
+          ]}
+        ></lr-stat>
+      `;
+    }),
 };

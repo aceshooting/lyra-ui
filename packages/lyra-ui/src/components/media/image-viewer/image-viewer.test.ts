@@ -128,7 +128,7 @@ describe('image loading', () => {
 
   it('renders the empty state and never sets an img src for an unsafe src', async () => {
     const el = (await fixture(html`<lr-image-viewer src="javascript:alert(1)"></lr-image-viewer>`)) as LyraImageViewer;
-    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
     expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
   });
@@ -380,7 +380,7 @@ describe('annotation', () => {
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await el.updateComplete;
     let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect(box).to.exist;
+    expect((box) != null).to.equal(true);
     expect(box.style.left).to.equal('37.5%');
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
@@ -567,7 +567,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 20, clientY: 10, bubbles: true }));
     await el.updateComplete;
     let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect(box).to.exist;
+    expect((box) != null).to.equal(true);
     expect(box.style.left).to.equal('10%'); // 20 / 200 * 100
     expect(box.style.top).to.equal('10%'); // 10 / 100 * 100
 
@@ -727,7 +727,7 @@ describe('active-state cssprop escape hatches', () => {
     const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="annotate-toggle"][aria-pressed="true"]') as HTMLElement;
-    expect(toggle, 'the annotate toggle renders pressed').to.exist;
+    expect((toggle) != null, 'the annotate toggle renders pressed').to.equal(true);
     return { el, toggle };
   }
 
@@ -739,7 +739,7 @@ describe('active-state cssprop escape hatches', () => {
     const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
     await el.updateComplete;
     const box = el.shadowRoot!.querySelector('[part="highlight"][data-active]') as HTMLElement;
-    expect(box, 'the active highlight box renders').to.exist;
+    expect((box) != null, 'the active highlight box renders').to.equal(true);
     return { el, box };
   }
 
@@ -801,7 +801,7 @@ describe('native control theming', () => {
     const select = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
     expect(getComputedStyle(select).appearance).to.equal('none');
     const wrapper = select.closest('.fit-control-wrapper');
-    expect(wrapper).to.exist;
+    expect((wrapper) != null).to.equal(true);
     expect(wrapper!.querySelector('.fit-control-chevron svg')).to.exist;
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='fit-control'\] option[^{]*\{[^}]*background:/);

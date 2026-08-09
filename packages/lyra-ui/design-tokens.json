@@ -3914,7 +3914,6 @@
               "src/components/conversation/code-block/code-block.styles.ts",
               "src/components/forms/date-picker/date-input.styles.ts",
               "src/components/forms/locale-picker/locale-picker.styles.ts",
-              "src/components/forms/phone-input/phone-input.styles.ts",
               "src/components/forms/token-input/token-input.styles.ts",
               "src/components/overlays/chip/chip.styles.ts",
               "src/components/overlays/kbd/kbd.styles.ts"
@@ -3974,7 +3973,6 @@
               "src/components/data/stat/stat.styles.ts",
               "src/components/forms/date-picker/date-input.styles.ts",
               "src/components/forms/locale-picker/locale-picker.styles.ts",
-              "src/components/forms/phone-input/phone-input.styles.ts",
               "src/components/forms/token-input/token-input.styles.ts",
               "src/components/layout/segmented/segmented.class.ts",
               "src/components/layout/segmented/segmented.styles.ts",
@@ -4765,7 +4763,6 @@
               "src/components/conversation/message-feedback/message-feedback.styles.ts",
               "src/components/conversation/model-select/model-select.class.ts",
               "src/components/conversation/model-select/model-select.styles.ts",
-              "src/components/conversation/voice-picker/voice-picker.styles.ts",
               "src/components/data/tree/tree-item.styles.ts",
               "src/components/forms/combobox/combobox.styles.ts",
               "src/components/forms/date-picker/date-picker.styles.ts",
@@ -4875,7 +4872,6 @@
               "src/components/agent-tools/tool-param-form/tool-param-form.styles.ts",
               "src/components/conversation/message-feedback/message-feedback.styles.ts",
               "src/components/conversation/suggestion-chips/suggestion-chips.styles.ts",
-              "src/components/conversation/voice-picker/voice-picker.styles.ts",
               "src/components/data/pagination/pagination.styles.ts",
               "src/components/forms/color-picker/color-picker.class.ts",
               "src/components/forms/color-picker/color-picker.styles.ts",
@@ -7032,6 +7028,88 @@
               "group": "border"
             }
           }
+        },
+        "pill": {
+          "$type": "dimension",
+          "$value": {
+            "value": 999,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-radius-pill.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-border-radius-pill",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "radius"
+            }
+          }
+        },
+        "xs": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-radius-xs.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-border-radius-xs",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "radius"
+            }
+          }
+        }
+      },
+      "width": {
+        "medium": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-border-width-medium.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-border-width-medium",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "border"
+            }
+          }
+        },
+        "thick": {
+          "$type": "dimension",
+          "$value": {
+            "value": 3,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-border-width-thick.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-border-width-thick",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "border"
+            }
+          }
+        },
+        "thin": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-border-width-thin.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-border-width-thin",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "border"
+            }
+          }
         }
       }
     },
@@ -8008,6 +8086,68 @@
           }
         }
       },
+      "mix": {
+        "active": {
+          "$type": "string",
+          "$value": "22%",
+          "$description": "Application theme input for --lr-color-mix-active.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-color-mix-active",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "color"
+            }
+          }
+        },
+        "hover": {
+          "$type": "string",
+          "$value": "12%",
+          "$description": "Application theme input for --lr-color-mix-hover.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-color-mix-hover",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "color"
+            }
+          }
+        },
+        "partner": {
+          "$type": "color",
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.101961,
+              0.101961,
+              0.101961
+            ],
+            "alpha": 1,
+            "hex": "#1a1a1a"
+          },
+          "$description": "Application theme input for --lr-color-mix-partner.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-color-mix-partner",
+              "cssType": "color",
+              "scope": "theme-input",
+              "group": "color"
+            },
+            "com.aceshooting.lyra.modes": {
+              "dark": {
+                "colorSpace": "srgb",
+                "components": [
+                  0.94902,
+                  0.94902,
+                  0.94902
+                ],
+                "alpha": 1,
+                "hex": "#f2f2f2"
+              }
+            }
+          }
+        }
+      },
       "neutral": {
         "border": {
           "loud": {
@@ -8425,6 +8565,28 @@
                 "hex": "#000000"
               }
             }
+          }
+        }
+      },
+      "shadow": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 1,
+          "hex": "#000000"
+        },
+        "$description": "Application theme input for --lr-color-shadow.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-color-shadow",
+            "cssType": "color",
+            "scope": "theme-input",
+            "group": "color"
           }
         }
       },
@@ -9265,6 +9427,113 @@
         }
       }
     },
+    "duration": {
+      "fast": {
+        "$type": "duration",
+        "$value": {
+          "value": 120,
+          "unit": "ms"
+        },
+        "$description": "Application theme input for --lr-duration-fast.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-duration-fast",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "icon": {
+        "$type": "duration",
+        "$value": {
+          "value": 1,
+          "unit": "s"
+        },
+        "$description": "Application theme input for --lr-duration-icon.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-duration-icon",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "normal": {
+        "$type": "duration",
+        "$value": {
+          "value": 180,
+          "unit": "ms"
+        },
+        "$description": "Application theme input for --lr-duration-base.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-duration-normal",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "slow": {
+        "$type": "duration",
+        "$value": {
+          "value": 1.8,
+          "unit": "s"
+        },
+        "$description": "Application theme input for --lr-duration-ambient.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-duration-slow",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      }
+    },
+    "easing": {
+      "emphasized": {
+        "$type": "string",
+        "$value": "ease-in-out",
+        "$description": "Application theme input for --lr-easing-emphasized.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-easing-emphasized",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "linear": {
+        "$type": "string",
+        "$value": "linear",
+        "$description": "Application theme input for --lr-easing-linear.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-easing-linear",
+            "cssType": "string",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "standard": {
+        "$type": "string",
+        "$value": "ease-out",
+        "$description": "Application theme input for --lr-easing-standard.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-easing-standard",
+            "cssType": "string",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      }
+    },
     "focus": {
       "ring": {
         "offset": {
@@ -9497,6 +9766,60 @@
             "com.aceshooting.lyra": {
               "cssCustomProperty": "--lr-theme-font-size-xs",
               "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        }
+      },
+      "weight": {
+        "bold": {
+          "$type": "fontWeight",
+          "$value": 700,
+          "$description": "Application theme input for --lr-font-weight-bold.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-font-weight-bold",
+              "cssType": "fontWeight",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "medium": {
+          "$type": "fontWeight",
+          "$value": 500,
+          "$description": "Application theme input for --lr-font-weight-medium.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-font-weight-medium",
+              "cssType": "fontWeight",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "normal": {
+          "$type": "fontWeight",
+          "$value": 400,
+          "$description": "Application theme input for --lr-font-weight-normal.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-font-weight-normal",
+              "cssType": "fontWeight",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "semibold": {
+          "$type": "fontWeight",
+          "$value": 600,
+          "$description": "Application theme input for --lr-font-weight-semibold.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-font-weight-semibold",
+              "cssType": "fontWeight",
               "scope": "theme-input",
               "group": "typography"
             }
@@ -9780,6 +10103,21 @@
         }
       }
     },
+    "hover": {
+      "brightness": {
+        "$type": "number",
+        "$value": 1.08,
+        "$description": "Application theme input for --lr-hover-brightness.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-hover-brightness",
+            "cssType": "number",
+            "scope": "theme-input",
+            "group": "interaction"
+          }
+        }
+      }
+    },
     "icon": {
       "button": {
         "size": {
@@ -9795,6 +10133,174 @@
               "cssType": "dimension",
               "scope": "theme-input",
               "group": "control"
+            }
+          }
+        }
+      }
+    },
+    "line": {
+      "height": {
+        "1": {
+          "4": {
+            "$type": "number",
+            "$value": 1.4,
+            "$description": "Application theme input for --lr-line-height-1-4.",
+            "$extensions": {
+              "com.aceshooting.lyra": {
+                "cssCustomProperty": "--lr-theme-line-height-1-4",
+                "cssType": "number",
+                "scope": "theme-input",
+                "group": "typography"
+              }
+            }
+          }
+        },
+        "compact": {
+          "$type": "number",
+          "$value": 1.25,
+          "$description": "Application theme input for --lr-line-height-compact.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-line-height-compact",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "loose": {
+          "$type": "number",
+          "$value": 1.6,
+          "$description": "Application theme input for --lr-line-height-loose.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-line-height-loose",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "none": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "Application theme input for --lr-line-height-none.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-line-height-none",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "normal": {
+          "$type": "number",
+          "$value": 1.5,
+          "$description": "Application theme input for --lr-line-height-normal.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-line-height-normal",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        },
+        "snug": {
+          "$type": "number",
+          "$value": 1.3,
+          "$description": "Application theme input for --lr-line-height-snug.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-line-height-snug",
+              "cssType": "number",
+              "scope": "theme-input",
+              "group": "typography"
+            }
+          }
+        }
+      }
+    },
+    "opacity": {
+      "disabled": {
+        "$type": "number",
+        "$value": 0.5,
+        "$description": "Application theme input for --lr-opacity-disabled.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-opacity-disabled",
+            "cssType": "number",
+            "scope": "theme-input",
+            "group": "opacity"
+          }
+        }
+      },
+      "muted": {
+        "$type": "number",
+        "$value": 0.85,
+        "$description": "Application theme input for --lr-opacity-muted.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-opacity-muted",
+            "cssType": "number",
+            "scope": "theme-input",
+            "group": "opacity"
+          }
+        }
+      }
+    },
+    "otp": {
+      "input": {
+        "segment": {
+          "size": {
+            "$type": "string",
+            "$value": "2.5em",
+            "$description": "Application theme input for --lr-otp-input-segment-size.",
+            "$extensions": {
+              "com.aceshooting.lyra": {
+                "cssCustomProperty": "--lr-theme-otp-input-segment-size",
+                "cssType": "dimension",
+                "scope": "theme-input",
+                "group": "control"
+              }
+            }
+          }
+        }
+      }
+    },
+    "popover": {
+      "viewport": {
+        "clamp": {
+          "$type": "string",
+          "$value": "92vw",
+          "$description": "Application theme input for --lr-popover-viewport-clamp.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-popover-viewport-clamp",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "layout"
+            }
+          }
+        }
+      }
+    },
+    "scroll": {
+      "fade": {
+        "size": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-scroll-fade-size.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-scroll-fade-size",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "layout"
             }
           }
         }
@@ -9891,6 +10397,1381 @@
           },
           "com.aceshooting.lyra.modes": {
             "dark": "0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.34)"
+          }
+        }
+      }
+    },
+    "size": {
+      "0": {
+        "02em": {
+          "$type": "string",
+          "$value": "0.02em",
+          "$description": "Application theme input for --lr-size-0-02em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-02em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "03em": {
+          "$type": "string",
+          "$value": "0.03em",
+          "$description": "Application theme input for --lr-size-0-03em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-03em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "04em": {
+          "$type": "string",
+          "$value": "0.04em",
+          "$description": "Application theme input for --lr-size-0-04em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-04em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "05rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.05,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-05rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-05rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "0625rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.0625,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-0625rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-0625rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "09375rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.09375,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-09375rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-09375rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "125rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.125,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-125rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-125rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "15rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.15,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-15rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-15rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "1875rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.1875,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-1875rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-1875rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "1rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.1,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-1rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-1rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "25rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.25,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-25rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-25rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "3125rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.3125,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-3125rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-3125rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "35em": {
+          "$type": "string",
+          "$value": "0.35em",
+          "$description": "Application theme input for --lr-size-0-35em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-35em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "375rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.375,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-375rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-375rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "3em": {
+          "$type": "string",
+          "$value": "0.3em",
+          "$description": "Application theme input for --lr-size-0-3em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-3em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "4375rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.4375,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-4375rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-4375rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "4em": {
+          "$type": "string",
+          "$value": "0.4em",
+          "$description": "Application theme input for --lr-size-0-4em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-4em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "4rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.4,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-4rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-4rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5em": {
+          "$type": "string",
+          "$value": "0.5em",
+          "$description": "Application theme input for --lr-size-0-5em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-5em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.5,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-5rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-5rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "625rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.625,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-625rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-625rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "6875rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.6875,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-6875rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-6875rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "6rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.6,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-6rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-6rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "75em": {
+          "$type": "string",
+          "$value": "0.75em",
+          "$description": "Application theme input for --lr-size-0-75em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-75em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "75rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.75,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-75rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-75rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "7em": {
+          "$type": "string",
+          "$value": "0.7em",
+          "$description": "Application theme input for --lr-size-0-7em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-7em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "875em": {
+          "$type": "string",
+          "$value": "0.875em",
+          "$description": "Application theme input for --lr-size-0-875em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-875em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "8rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.8,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-8rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-8rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "9375rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 0.9375,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-0-9375rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-0-9375rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        }
+      },
+      "1": {
+        "0625rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.0625,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-0625rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-0625rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "1rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.1,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-1rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-1rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "25rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.25,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-25rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-25rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5em": {
+          "$type": "string",
+          "$value": "1.5em",
+          "$description": "Application theme input for --lr-size-1-5em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-5em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.5,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-5rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-5rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "75rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.75,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-75rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-75rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "875rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1.875,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-1-875rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-1-875rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        }
+      },
+      "2": {
+        "25rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2.25,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-2-25rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-2-25rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5ch": {
+          "$type": "string",
+          "$value": "2.5ch",
+          "$description": "Application theme input for --lr-size-2-5ch.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-2-5ch",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2.5,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-2-5rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-2-5rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        }
+      },
+      "3": {
+        "5em": {
+          "$type": "string",
+          "$value": "3.5em",
+          "$description": "Application theme input for --lr-size-3-5em.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-3-5em",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "5rem": {
+          "$type": "dimension",
+          "$value": {
+            "value": 3.5,
+            "unit": "rem"
+          },
+          "$description": "Application theme input for --lr-size-3-5rem.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-3-5rem",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        }
+      },
+      "10px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-10px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-10px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "10rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-10rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-10rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "12em": {
+        "$type": "string",
+        "$value": "12em",
+        "$description": "Application theme input for --lr-size-12em.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-12em",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "12rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-12rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-12rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "14px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-14px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-14px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "14rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-14rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-14rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "15rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 15,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-15rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-15rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "16px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-16px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-16px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "16rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-16rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-16rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "18rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-18rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-18rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "1em": {
+        "$type": "string",
+        "$value": "1em",
+        "$description": "Application theme input for --lr-size-1em.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-1em",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "1px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-1px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-1px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "1rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 1,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-1rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-1rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "20rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 20,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-20rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-20rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "22rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 22,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-22rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-22rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "24px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-24px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-24px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "24rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-24rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-24rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "280px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 280,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-280px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-280px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "28px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 28,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-28px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-28px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "28rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 28,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-28rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-28rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "2px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-2px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-2px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "2rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-2rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-2rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "30rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 30,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-30rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-30rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "32rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 32,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-32rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-32rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "36rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 36,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-36rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-36rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "38rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 38,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-38rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-38rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "3ch": {
+        "$type": "string",
+        "$value": "3ch",
+        "$description": "Application theme input for --lr-size-3ch.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-3ch",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "3px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 3,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-3px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-3px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "3rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 3,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-3rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-3rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "48rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 48,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-48rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-48rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "4ch": {
+        "$type": "string",
+        "$value": "4ch",
+        "$description": "Application theme input for --lr-size-4ch.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-4ch",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "4px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-4px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-4px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "4rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-4rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-4rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "5em": {
+        "$type": "string",
+        "$value": "5em",
+        "$description": "Application theme input for --lr-size-5em.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-5em",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "5rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 5,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-5rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-5rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "6ch": {
+        "$type": "string",
+        "$value": "6ch",
+        "$description": "Application theme input for --lr-size-6ch.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-6ch",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "6em": {
+        "$type": "string",
+        "$value": "6em",
+        "$description": "Application theme input for --lr-size-6em.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-6em",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "6px": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Application theme input for --lr-size-6px.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-6px",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "6rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-6rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-6rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "7rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 7,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-7rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-7rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "8em": {
+        "$type": "string",
+        "$value": "8em",
+        "$description": "Application theme input for --lr-size-8em.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-8em",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "8rem": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "rem"
+        },
+        "$description": "Application theme input for --lr-size-8rem.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-size-8rem",
+            "cssType": "dimension",
+            "scope": "theme-input",
+            "group": "size"
+          }
+        }
+      },
+      "neg": {
+        "0": {
+          "15rem": {
+            "$type": "dimension",
+            "$value": {
+              "value": -0.15,
+              "unit": "rem"
+            },
+            "$description": "Application theme input for --lr-size-neg-0-15rem.",
+            "$extensions": {
+              "com.aceshooting.lyra": {
+                "cssCustomProperty": "--lr-theme-size-neg-0-15rem",
+                "cssType": "dimension",
+                "scope": "theme-input",
+                "group": "size"
+              }
+            }
+          },
+          "25rem": {
+            "$type": "dimension",
+            "$value": {
+              "value": -0.25,
+              "unit": "rem"
+            },
+            "$description": "Application theme input for --lr-size-neg-0-25rem.",
+            "$extensions": {
+              "com.aceshooting.lyra": {
+                "cssCustomProperty": "--lr-theme-size-neg-0-25rem",
+                "cssType": "dimension",
+                "scope": "theme-input",
+                "group": "size"
+              }
+            }
+          }
+        },
+        "1px": {
+          "$type": "dimension",
+          "$value": {
+            "value": -1,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-size-neg-1px.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-neg-1px",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "4px": {
+          "$type": "dimension",
+          "$value": {
+            "value": -4,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-size-neg-4px.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-neg-4px",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "6px": {
+          "$type": "dimension",
+          "$value": {
+            "value": -6,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-size-neg-6px.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-neg-6px",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
+          }
+        },
+        "8px": {
+          "$type": "dimension",
+          "$value": {
+            "value": -8,
+            "unit": "px"
+          },
+          "$description": "Application theme input for --lr-size-neg-8px.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-theme-size-neg-8px",
+              "cssType": "dimension",
+              "scope": "theme-input",
+              "group": "size"
+            }
           }
         }
       }
@@ -10799,6 +12680,47 @@
                 "hex": "#c7a01e"
               }
             }
+          }
+        }
+      }
+    },
+    "transition": {
+      "fast": {
+        "$type": "string",
+        "$value": "120ms ease-out",
+        "$description": "Application theme input for --lr-transition-fast.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-transition-fast",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "normal": {
+        "$type": "string",
+        "$value": "180ms ease-out",
+        "$description": "Application theme input for --lr-transition-base.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-transition-normal",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
+          }
+        }
+      },
+      "slow": {
+        "$type": "string",
+        "$value": "1.8s ease-in-out",
+        "$description": "Application theme input for --lr-transition-ambient.",
+        "$extensions": {
+          "com.aceshooting.lyra": {
+            "cssCustomProperty": "--lr-theme-transition-slow",
+            "cssType": "duration",
+            "scope": "theme-input",
+            "group": "motion"
           }
         }
       }

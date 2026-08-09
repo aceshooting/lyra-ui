@@ -56,7 +56,7 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   expect(el.shadowRoot!.querySelector('.sr-only')?.textContent?.trim()).to.equal(
     'Chargement du drapeau…',
   );
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
 
   // Clear the code while the (real, unstubbed) first-ever peer-package
   // resolution for 'fr' is still in flight -- this is the very first fixture
@@ -66,13 +66,13 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   await el.updateComplete;
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
 
   // Give the original 'fr' resolution every chance to land. A correctly
   // token-guarded implementation recognizes it as superseded and no-ops; a
   // buggy one overwrites the cleared state with the stale flag.
   await aTimeout(200);
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
@@ -251,7 +251,7 @@ it('exposes themeable aspect-ratio and object-fit custom properties', async () =
 
 it('renders nothing for unknown input', async () => {
   const el = (await fixture(html`<lr-flag></lr-flag>`)) as LyraFlag;
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
 });
 
 describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
@@ -263,14 +263,14 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
     // round trip entirely, so the <img> is present on the very first render.
     expect(el.getAttribute('aria-busy')).to.equal('false');
     const image = el.shadowRoot!.querySelector('img');
-    expect(image).to.exist;
+    expect((image) != null).to.equal(true);
     expect(image!.getAttribute('src')).to.equal(TEST_FLAG_SRC);
     expect(image!.getAttribute('alt')).to.equal('Custom');
   });
 
   it('does not render an image for an unsafe pre-resolved src URL', async () => {
     const el = (await fixture(html`<lr-flag src="javascript:alert(1)"></lr-flag>`)) as LyraFlag;
-    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
   });
 
@@ -302,7 +302,7 @@ it('rejects a path-traversal-shaped country value instead of passing it to the f
   // the intended flags/ directory; a validated one is treated as unknown and
   // never calls the resolver at all, so no <img> ever appears.
   await aTimeout(50);
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
@@ -312,7 +312,7 @@ it('rejects a path-traversal-shaped language region subtag instead of passing it
   // subtag instead: an un-validated region would resolve to a live <img>
   // pointing outside the intended flags/ directory.
   await aTimeout(50);
-  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
@@ -413,7 +413,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "fr"');
     expect(el.loading).to.be.false;
     expect(el.getAttribute('aria-busy')).to.equal('false');
-    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   });
 
   it('fails closed visibly and appends each localized resolver failure to the light-DOM sink', async () => {
@@ -475,7 +475,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     `)) as LyraFlag;
     await waitUntil(() => !unknown.loading);
     expect(unknown.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
-    expect(unknown.shadowRoot!.querySelector('img')).to.equal(null);
+    expect((unknown.shadowRoot!.querySelector('img')) === (null)).to.equal(true);
   });
 
   it('ignores a rejection superseded by a newer country/language/src change (the same resolveToken guard the .then() branch uses), while the still-current call still recovers from its own rejection', async () => {

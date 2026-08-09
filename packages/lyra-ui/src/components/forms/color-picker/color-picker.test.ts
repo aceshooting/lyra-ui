@@ -841,29 +841,54 @@ it('emits input/lr-input per step and change/lr-change once on release', async (
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
 });
 
-it('tracks a pointer drag across the hue slider and ends cleanly on pointercancel', async () => {
-  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
-  const slider = part(el, 'hue-slider');
-  const rect = slider.getBoundingClientRect();
-  expect(rect.width > 0).to.be.true;
+for (const cancellation of ['pointercancel', 'lostpointercapture'] as const) {
+  it(`rolls a pointer preview and submitted value back silently on ${cancellation}`, async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-color-picker open label="A" name="accent" value="#ff0000"></lr-color-picker></form>
+    `);
+    const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+    await el.updateComplete;
+    const slider = part(el, 'hue-slider');
+    const rect = slider.getBoundingClientRect();
+    expect(rect.width > 0).to.be.true;
+    const initialValue = el.value;
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('input', () => inputs++);
+    el.addEventListener('change', () => changes++);
 
-  slider.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      composed: true,
-      pointerId: 11,
-      clientX: rect.left + rect.width / 2,
-      clientY: rect.top + rect.height / 2,
-    }),
-  );
-  await el.updateComplete;
-  expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('180');
+    slider.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        composed: true,
+        pointerId: 11,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
+    await el.updateComplete;
+    expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('180');
+    expect(el.value).to.not.equal(initialValue);
+    expect(new FormData(form).get('accent')).to.equal(el.value);
+    const inputsBeforeCancel = inputs;
 
-  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 11 }));
-  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 11, clientX: rect.left }));
-  await el.updateComplete;
-  expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('180');
-});
+    window.dispatchEvent(new PointerEvent(cancellation, { pointerId: 11 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 11, clientX: rect.left }));
+    await el.updateComplete;
+    expect(part(el, 'hue-slider-handle').getAttribute('aria-valuenow')).to.equal('0');
+    expect(el.value).to.equal(initialValue);
+    expect(new FormData(form).get('accent')).to.equal(initialValue);
+    expect(inputs).to.equal(inputsBeforeCancel);
+    expect(changes).to.equal(0);
+
+    el.setAttribute('value', '#00ff00');
+    await el.updateComplete;
+    expect(el.value, 'cancellation restores the pre-drag pristine/default relationship').to.equal('#00ff00');
+    expect(new FormData(form).get('accent')).to.equal('#00ff00');
+    expect(inputs).to.equal(inputsBeforeCancel);
+    expect(changes).to.equal(0);
+  });
+}
 
 it('keeps an adopted iframe drag on its owner window and releases that window on readoption', async () => {
   const frame = document.createElement('iframe');
@@ -891,6 +916,7 @@ it('keeps an adopted iframe drag on its owner window and releases that window on
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
+    const valueBeforeDrag = el.value;
     slider.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
       bubbles: true,
       composed: true,
@@ -911,6 +937,7 @@ it('keeps an adopted iframe drag on its owner window and releases that window on
     document.body.append(document.adoptNode(el));
     await el.updateComplete;
     const adoptedValue = el.value;
+    expect(adoptedValue, 'adoption rolls the uncommitted preview back').to.equal(valueBeforeDrag);
     frameWindow.dispatchEvent(new frameWindow.PointerEvent('pointermove', {
       pointerId: 81,
       pointerType: 'touch',
@@ -922,6 +949,32 @@ it('keeps an adopted iframe drag on its owner window and releases that window on
     el.remove();
     frame.remove();
   }
+});
+
+it('lets an authoritative value assignment supersede an active pointer preview', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-color-picker open label="A" name="accent" value="#ff0000"></lr-color-picker></form>
+  `);
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  await el.updateComplete;
+  const slider = part(el, 'hue-slider');
+  const rect = slider.getBoundingClientRect();
+  slider.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    composed: true,
+    pointerId: 82,
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top,
+  }));
+  await el.updateComplete;
+  expect(el.value).to.not.equal('#ff0000');
+
+  el.value = '#00ff00';
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 82 }));
+  await el.updateComplete;
+  expect(el.value).to.equal('#00ff00');
+  expect(new FormData(form).get('accent')).to.equal('#00ff00');
 });
 
 it('does not arm or mutate a drag while disconnected in an ownerless document', async () => {
@@ -1033,6 +1086,7 @@ it('cancels an active drag when disabled before pointerup', async () => {
   const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
   const slider = part(el, 'hue-slider');
   const rect = slider.getBoundingClientRect();
+  const valueBeforeDrag = el.value;
   slider.dispatchEvent(new PointerEvent('pointerdown', {
     bubbles: true,
     composed: true,
@@ -1042,7 +1096,7 @@ it('cancels an active drag when disabled before pointerup', async () => {
     clientY: rect.top + rect.height / 2,
   }));
   await el.updateComplete;
-  const valueAtDisable = el.value;
+  expect(el.value).to.not.equal(valueBeforeDrag);
   let inputs = 0;
   let changes = 0;
   el.addEventListener('input', () => inputs++);
@@ -1057,7 +1111,7 @@ it('cancels an active drag when disabled before pointerup', async () => {
   }));
   await el.updateComplete;
 
-  expect(el.value).to.equal(valueAtDisable);
+  expect(el.value).to.equal(valueBeforeDrag);
   expect(inputs).to.equal(0);
   expect(changes).to.equal(0);
 });
@@ -1286,6 +1340,29 @@ it('closes on an outside pointerdown but not on one inside the panel', async () 
   outside.remove();
 });
 
+it('retains overlay positioning and Escape ownership when an outside close is vetoed', async () => {
+  const el = await opened();
+  const panel = part(el, 'panel');
+  expect(panel.style.position).to.not.equal('');
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+  const outside = document.createElement('button');
+  document.body.append(outside);
+  try {
+    outside.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 23 }),
+    );
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(panel.style.position).to.not.equal('');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  } finally {
+    outside.remove();
+  }
+});
+
 it('closes on an outside pointerdown whose composed path starts at a non-element node', async () => {
   const el = await opened();
   const text = document.createTextNode('outside');
@@ -1350,6 +1427,20 @@ it('marks the selected swatch with a check mark, not colour alone', async () => 
   expect(selected.getAttribute('part')).to.contain('swatch-selected');
   expect(getComputedStyle(selected, '::before').content).to.contain('✓');
   expect(getComputedStyle(parts(el, 'swatch')[0]!, '::before').content).to.not.contain('✓');
+});
+
+it('lets a consumer retint selected-swatch border and check paint independently', async () => {
+  const el = await opened(html`
+    <lr-color-picker
+      label="A"
+      value="#00ff00"
+      swatches="#ff0000;#00ff00"
+      style="--lr-color-picker-selected-border: rgb(1, 2, 3); --lr-color-picker-selected-check-color: rgb(4, 5, 6)"
+    ></lr-color-picker>
+  `);
+  const selected = parts(el, 'swatch')[1]!;
+  expect(getComputedStyle(selected).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(selected, '::before').color).to.equal('rgb(4, 5, 6)');
 });
 
 it('reflects placement and defaults to bottom-start', async () => {
@@ -1924,6 +2015,7 @@ it('tracks a pointer drag across the grid and abandons it when the control becom
   const grid = part(el, 'grid');
   const rect = grid.getBoundingClientRect();
   expect(rect.width > 0).to.be.true;
+  const valueBeforeDrag = el.value;
 
   grid.dispatchEvent(new PointerEvent('pointerdown', {
     bubbles: true,
@@ -1962,7 +2054,7 @@ it('tracks a pointer drag across the grid and abandons it when the control becom
     clientY: rect.bottom,
   }));
   await el.updateComplete;
-  expect(el.value).to.equal(duringDrag);
+  expect(el.value).to.equal(valueBeforeDrag);
 });
 
 it('commits a typed color on Enter and keeps the draft until then', async () => {

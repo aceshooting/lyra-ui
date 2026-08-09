@@ -607,14 +607,14 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 </lr-dialog>
 ```
 
-Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, (2)
-`accessible-label`, (3) the copied text of an unslotted direct light-DOM heading, then (4) the
-shadow-owned visible title wrapper. Visible-title precedence is the rich `label` slot, then the
-mapped `label` property, then legacy `heading`. The direct-heading case copies text because an IDREF
-cannot cross from the panel's shadow tree to a light-DOM heading; the mapped title wrapper can use
-`aria-labelledby` because it lives in the same shadow root. `no-header`/`without-header` removes the
-mapped title, so custom-chrome dialogs should provide a direct heading, `accessible-label`, or host
-`aria-label`.
+Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, by
+attribute presence including an explicitly empty value, (2) `accessible-label`, (3) the copied text
+of an unslotted direct light-DOM heading, then (4) the shadow-owned visible title wrapper.
+Visible-title precedence is the rich `label` slot, then the mapped `label` property, then legacy
+`heading`. The direct-heading case copies text because an IDREF cannot cross from the panel's shadow
+tree to a light-DOM heading; the mapped title wrapper can use `aria-labelledby` because it lives in
+the same shadow root. `no-header`/`without-header` removes the mapped title, so custom-chrome dialogs
+should provide a direct heading, `accessible-label`, or host `aria-label`.
 
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
@@ -979,9 +979,12 @@ virtual element), `for` (a same-root id), then the first element assigned to the
 - `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
   changes when it flips.
 - `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
-  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above
+  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above. For a
+  plain virtual rect, omitted `width`/`height` default to zero, negative dimensions clamp to zero,
+  and any non-finite coordinate or dimension makes that rect inert so it cannot corrupt layout.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
-  under RTL
+  under RTL. The shared positioner's physical coordinates remain authoritative in either
+  direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
   escapes every ancestor transform/filter/containment context; `absolute` positions against the
   nearest positioned ancestor, so the popup scrolls with its containing content
@@ -1349,7 +1352,8 @@ methods, events, slots, parts, and theme variables are documented in the layout-
 - `size: LyraSize = 'm'` (reflected) — propagated to directly owned mapped items. Accepts the
   six-step Lyra ladder and `small`/`medium`/`large` aliases.
 - `disabled: boolean = false` (reflected) — prevents pointer/keyboard/programmatic opening and
-  dismisses an already-open dropdown when enabled.
+  dismisses an already-open dropdown when enabled. Initial `disabled` plus `open` markup or
+  pre-upgrade property writes normalize closed regardless of assignment/attribute order.
 - `stayOpenOnSelect: boolean = false` (attribute `stay-open-on-select`, reflected) — suppresses the
   default selection close for direct and nested selections.
 - `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
@@ -1371,7 +1375,9 @@ Lyra's virtual-anchor compatibility surface.
 `detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
 open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
 not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
-event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+event. The contained menu's standalone `lr-menu-select` compatibility alias is stopped inside the
+dropdown for direct, nested, and consumer-supplied menu shapes. `lr-show` (cancelable),
+`lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
 the Popover lifecycle; none fires for initial open markup.
 
 Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;
@@ -1781,8 +1787,10 @@ stay silent. Nested forwarding slots expose their flattened assigned text instea
 content, and later assignment plus assigned-node text/style/visibility mutations are observed.
 Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
 `aria-label` (or `accessible-label` fallback) prefixes visible update text as context, with an
-equality check preventing duplicate copy; an explicitly empty host label still leaves visible
-heading/message text live.
+equality check preventing duplicate copy. The complete localized
+`calloutAnnouncementWithContext: '{context}: {content}'` message owns both fields, their order, and
+punctuation; override that key through `strings` rather than prejoining either field. An explicitly
+empty host label still leaves visible heading/message text live.
 `[part="base"]` is an ordinary wrapper, upgraded to a non-live `role="group"` only when it has an
 accessible label. Initial connection, reconnection, adoption, and detached changes that settle
 during staging stay silent; each connection acquires its owning document's shared sink.

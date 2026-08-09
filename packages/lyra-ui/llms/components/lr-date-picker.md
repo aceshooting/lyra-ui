@@ -6,9 +6,9 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated part** `base` since `8.2.3`; use part `::part(date-picker)`; removal not before `10.0.0` — The date-picker part identifies the visible shell explicitly; base remains on that same node during the compatibility window.
 - **Optional peers** none
-- **Themeable via** 36 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 36 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -32,7 +32,8 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
 - `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
-- `firstDayOfWeek: 'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat' = 'auto'` (attribute
+- `firstDayOfWeek: LyraDatePickerFirstDayOfWeek = 'auto'` (`'auto'|'sun'|'mon'|'tue'|'wed'|
+  'thu'|'fri'|'sat'`; attribute
   `first-day-of-week`, reflected)
 - `focusedDate: string = ''` (attribute `focused-date`, reflected)
 - `isDateDisabled?: (date: Date) => boolean` (JS only)
@@ -70,13 +71,13 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 
 **Custom states:** `disabled`, `range`, and `readonly`.
 
-**CSS parts (35):** `date-picker`, `day`, `day-disabled`, `day-label`, `day-outside`,
+**CSS parts (35):** `date-picker` / deprecated `base` (tokens on the same visible shell; use
+`date-picker`), `day`, `day-disabled`, `day-label`, `day-outside`,
 `day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
 `day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
 `months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
 `view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
-`weeknumber`, `weeknumbers`, and deprecated `base` (use `date-picker`). Lyra additionally retains
-the existing `week` part.
+`weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
 size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
@@ -173,6 +174,9 @@ control, without making the control valid — see "The validity alias is cancela
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
 overrides `errorText`.
 
+The editable input shrinks first in a constrained row; `start` and `end` adornments are each
+capped at 40% and ellipsize unbroken content. Clear and calendar actions retain their fixed target.
+
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
 
@@ -207,7 +211,7 @@ enter and exit transitions; both default to `var(--lr-transition-fast)`.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
-under `lr-input`. Pinning it *below* the calendar toggle's 24×24 target is safe: the toggle keeps
+under `lr-input`. Pinning it _below_ the calendar toggle's 24×24 target is safe: the toggle keeps
 its own `--lr-icon-button-size` floor and simply overflows a short row rather than shrinking, so
 WCAG 2.2 SC 2.5.8 is preserved either way.
 
@@ -247,6 +251,7 @@ lands on Feb 28/29, not Mar 3; backs `lr-date-picker`'s PageUp/PageDown), `clamp
 and `dateTimeFormat(locale, options)`.
 
 **Known gotchas:**
+
 - `first-day-of-week="auto"` now derives from `locale` when the runtime's `Intl.Locale` exposes
   week-info (`weekInfo`/`getWeekInfo()`, still shifting between engines) — `resolveFirstDayOfWeek()`
   only hardcodes Sunday as the fallback when that isn't available or `locale` is unset. A
@@ -280,8 +285,8 @@ and `dateTimeFormat(locale, options)`.
   validity synchronously; range mode validates both endpoints.
 - The grid keyboard pattern (Arrow/PageUp/PageDown/Home/End navigation with correct focus
   sequencing) is implemented correctly and safe to rely on, as is the selected/range-day text color
-  (`--lr-color-on-brand`, not a hardcoded literal — safe to override `--lr-color-brand` without
-  losing contrast on selected-day text).
+  (`--lr-date-picker-selected-color`, defaulting to `--lr-color-on-brand`, not a hardcoded literal).
+  Override selected background and foreground together to preserve contrast.
 
 **Additional API surface:**
 
@@ -292,6 +297,26 @@ and `dateTimeFormat(locale, options)`.
   Default: `var(--lr-color-brand-quiet)`. An inline `var()` fallback rather than a `:host`
   declaration, and the rule wraps its selector in `:where()` so a consumer's own
   `::part(previous):hover` still wins without `!important`.
+- `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
+  mixed by `--lr-color-mix-active`.
+- `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`, and
+  `--lr-date-picker-title-active-bg` — Month-title hover/press paint; defaults to brand, brand, and
+  brand-quiet respectively.
+- `--lr-date-picker-day-hover-bg` and `--lr-date-picker-day-active-bg` — Day hover/press
+  backgrounds; the pressed default mixes the hover hook by `--lr-color-mix-active`.
+- `--lr-date-picker-day-outside-color`, `--lr-date-picker-today-outline`,
+  `--lr-date-picker-disabled-color`, and `--lr-date-picker-disabled-opacity` — adjacent-month,
+  today, and disabled-day paint; defaults preserve the quiet-text, brand, and shared disabled
+  tokens.
+- `--lr-date-picker-range-bg`, `--lr-date-picker-range-preview-bg`, and
+  `--lr-date-picker-range-color` — range-interior, pending-preview, and adjacent-month range text
+  paint. The preview defaults to the range background hook.
+- `--lr-date-picker-selected-bg` and `--lr-date-picker-selected-color` — selected day and range
+  endpoint paint; defaults to brand/on-brand.
+- `--lr-date-picker-view-hover-bg`, `--lr-date-picker-view-active-bg`,
+  `--lr-date-picker-view-selected-bg`, `--lr-date-picker-view-selected-color`,
+  `--lr-date-picker-view-today-outline`, and `--lr-date-picker-view-disabled-opacity` — the
+  corresponding month/year/decade selection-view states, independently themeable from day cells.
 - `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.

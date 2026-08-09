@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,6 +28,10 @@ value/form/validity path as a programmatic value write and does not emit `input`
 There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
 `<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
+
+The trigger and its overlaid multi-select tag row accept constrained allocation. Long selected
+labels ellipsize; long built-in tags wrap and cap their labels, so single and multiple selections
+stay inside exact-320px LTR and RTL containers alongside start/end adornments.
 
 **Multi-select (`multiple`, new in 8.0.0, default `false`).** Setting it re-shapes `value` from a
 `string` into a `string[]` and renders one chip per selection. The `[part="tags"]` row is a sibling
@@ -61,6 +65,7 @@ on its own: an unselected single-option select stays unselected (and a `required
 exactly like the multi-option case, until the trigger is actually activated.
 
 **Properties:**
+
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
@@ -107,7 +112,7 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins if both
   are present. `withLabel`/`withHint` (`with-label`/`with-hint`) are SSR slot-presence hints
 - `getTag?: LyraSelectTagRenderer` (attribute: false) — `(option: LyraOption, index: number) =>
-  unknown`, exported under that name from the component's own module, renders one
+unknown`, exported under that name from the component's own module, renders one
   selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
   `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
   styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
@@ -145,7 +150,7 @@ read `event.target.value`. Both
 prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
 in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus
-`lr-clear` (no detail; emitted by the `with-clear` button *after* its
+`lr-clear` (no detail; emitted by the `with-clear` button _after_ its
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
@@ -193,7 +198,7 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-space-xs`, the gap inside `[part='trigger']`) is retunable without a `::part(trigger)` rule
 and does not vary by `size` — the adornment gap a field wants is looser than the icon-beside-label
 gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-radius`, the corner
-radius) is retunable the same way but *does* follow the tier: the two tightest tiers take a smaller
+radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
 radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-assigns it to
 `--lr-radius-pill`. `--lr-select-tag-padding`
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
@@ -202,10 +207,17 @@ radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 
+The trigger's pointer/open states have component-scoped hooks too:
+`--lr-select-trigger-hover-bg` (default `var(--lr-color-brand-quiet)` for the quiet appearances),
+`--lr-select-trigger-active-bg` (default a deeper mix from the hover background), and
+`--lr-select-open-border-color` (default `var(--lr-color-brand)`). Accent keeps its louder mixed
+hover fallback when the hook is unset. These inline fallbacks let one select be rethemed without
+changing the shared brand tokens used by other controls.
+
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
 agree at that tier. It used to be dead code: the component declared `--lr-select-trigger-height:
-auto` on `:host`, and a *declared* value (`auto` is one) wins over the `var()` fallback arm that
+auto` on `:host`, and a _declared_ value (`auto` is one) wins over the `var()` fallback arm that
 the floor lives in, so the floor never applied and four extra specificity rules existed only to
 patch it back for four of the tiers. Those rules are gone.
 
@@ -262,9 +274,13 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 ```
 
 **Known gotchas:**
+
 - The trigger keeps real DOM focus throughout — the listbox's "active" row is conveyed via
   `aria-activedescendant`, never actual focus, matching the WAI-ARIA "select-only combobox" pattern
   (as opposed to `lr-combobox`'s editable-input pattern).
+- While open, live option reorders preserve the active row by option identity. Removing or
+  disabling that option rehomes activity to the nearest navigable survivor (preferring the
+  following row on a tie); removing every navigable option clears `aria-activedescendant`.
 - No typing-to-filter, but a printable keypress still jumps to (while open) or directly selects
   (while closed) the next non-disabled option whose label starts with what's been typed, matching a
   native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke.
@@ -278,7 +294,8 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
-  silently ignored.
+  silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
+  override rather than restoring any fallback.
 - With `autoCommitSingleOption` set, a select with exactly one enabled option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the

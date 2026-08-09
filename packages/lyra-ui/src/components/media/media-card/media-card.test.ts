@@ -114,7 +114,7 @@ it('forwards host focus(), blur(), and click() to the resolved primary action', 
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('open-button');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   el.click();
   expect(opens).to.equal(1);
   expect(button.disabled).to.be.false;
@@ -266,7 +266,7 @@ describe('kind="image"', () => {
       html`<lr-media-card src=${DATA_URI} kind="image" filename="pixel.png"></lr-media-card>`,
     )) as LyraMediaCard;
     const img = el.shadowRoot!.querySelector('img[part="media"]') as HTMLImageElement;
-    expect(img).to.exist;
+    expect((img) != null).to.equal(true);
     expect(img.getAttribute('src')).to.equal(DATA_URI);
   });
 });
@@ -279,7 +279,7 @@ describe('kind="video"', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.tagName).to.equal('DIV');
     const video = el.shadowRoot!.querySelector('video[part="media"]') as HTMLVideoElement;
-    expect(video).to.exist;
+    expect((video) != null).to.equal(true);
     expect(video.hasAttribute('controls')).to.be.true;
     expect(video.getAttribute('src')).to.equal('https://example.test/a.mp4');
     expect(el.shadowRoot!.querySelector('[part="open-button"]')).to.exist;

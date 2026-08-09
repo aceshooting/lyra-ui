@@ -223,7 +223,7 @@ describe('fetching and parsing', () => {
     );
     await useDeterministicMapStyle(el);
     const status = el.shadowRoot!.querySelector('[part="status"]');
-    expect(status).to.exist;
+    expect((status) != null).to.equal(true);
     expect(status!.textContent).to.include('2');
     const politeMessages = Array.from(
       document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.children ?? [],
@@ -390,7 +390,7 @@ describe('aria-label forwarding', () => {
     const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
       map?: { getCanvas(): HTMLCanvasElement };
     };
-    expect(map.map).to.equal(undefined);
+    expect((map.map) === (undefined)).to.equal(true);
     expect(base.getAttribute('role')).to.equal('region');
     expect(base.getAttribute('aria-label')).to.equal('Host zones');
 

@@ -27,7 +27,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** Traversal direction relative to the matched node(s): `'out'` (outgoing edges), `'in'`
  *  (incoming edges), or `'both'`. */
 export type GraphQueryDirection = 'out' | 'in' | 'both';
@@ -101,9 +100,7 @@ function stringArray(value: unknown): string[] {
 
 function normalizeGraphQuery(value: unknown): GraphQuery {
   const record =
-    value !== null && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
+    value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
   const direction = record['direction'];
   return {
     startId: typeof record['startId'] === 'string' ? record['startId'] : '',
@@ -115,13 +112,13 @@ function normalizeGraphQuery(value: unknown): GraphQuery {
       typeof record['minHops'] === 'number' ? record['minHops'] : EMPTY_VALUE.minHops,
       EMPTY_VALUE.minHops,
       1,
-      20,
+      20
     ),
     maxHops: finiteInteger(
       typeof record['maxHops'] === 'number' ? record['maxHops'] : EMPTY_VALUE.maxHops,
       EMPTY_VALUE.maxHops,
       1,
-      20,
+      20
     ),
   };
 }
@@ -129,7 +126,10 @@ function normalizeGraphQuery(value: unknown): GraphQuery {
 export interface LyraGraphQueryBuilderEventMap {
   'lr-invalid': CustomEvent<undefined>;
   'lr-input': CustomEvent<{ value: GraphQuery }>;
-  'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
+  'lr-validity-change': CustomEvent<{
+    valid: boolean;
+    errors: Record<string, string>;
+  }>;
   'lr-query-run': CustomEvent<{ query: GraphQuery }>;
   'lr-query-save': CustomEvent<{ name: string; query: GraphQuery }>;
   'lr-query-load': CustomEvent<{ id: string; query: GraphQuery }>;
@@ -173,6 +173,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * `value`/`lr-input`/`lr-validity-change` integration contract, not a requirement. This component
  * follows that same established convention: `value` round-trips through `JSON.stringify()` as the
  * submitted form value, and a consumer that never places this inside a `<form>` loses nothing.
+ * The normalized initial `value` is captured as the reset default; `form.reset()` restores that
+ * model, clears interaction/touched state and the save-name draft, and preserves a caller-set
+ * custom validity message like a native control.
  *
  * **Accessible name:** the region (`role="group"`) is named by, in order, a host-level
  * `aria-label` attribute, the `label` property, or the localized `graphQueryBuilderLabel` default
@@ -221,6 +224,27 @@ export interface LyraGraphQueryBuilderEventMap {
  * @csspart saved-item - One saved query's row.
  * @csspart saved-load-button - A saved query row's Load button.
  * @csspart saved-delete-button - A saved query row's delete button.
+ * @cssprop [--lr-graph-query-builder-run-bg=var(--lr-color-brand)] - Run button resting background.
+ * @cssprop [--lr-graph-query-builder-run-border-color=var(--lr-color-brand)] - Run button resting border color.
+ * @cssprop [--lr-graph-query-builder-run-color=var(--lr-color-on-brand)] - Run button resting foreground.
+ * @cssprop --lr-graph-query-builder-run-hover-bg - Run button hover background; defaults to the
+ *   current brand hover mix.
+ * @cssprop --lr-graph-query-builder-run-active-bg - Run button pressed background; defaults to the
+ *   current brand active mix.
+ * @cssprop [--lr-graph-query-builder-save-bg=var(--lr-color-surface)] - Save button resting background.
+ * @cssprop [--lr-graph-query-builder-save-border-color=var(--lr-color-border)] - Save button resting border color.
+ * @cssprop [--lr-graph-query-builder-save-color=var(--lr-color-text)] - Save button resting foreground.
+ * @cssprop [--lr-graph-query-builder-save-hover-bg=var(--lr-color-brand-quiet)] - Save button hover background.
+ * @cssprop --lr-graph-query-builder-save-active-bg - Save button pressed background; defaults to
+ *   the current quiet-brand active mix.
+ * @cssprop [--lr-graph-query-builder-saved-load-color=var(--lr-color-text)] - Saved-query Load button foreground.
+ * @cssprop --lr-graph-query-builder-saved-load-active-bg - Saved-query Load button pressed
+ *   background; defaults to the current surface active mix.
+ * @cssprop [--lr-graph-query-builder-saved-delete-color=var(--lr-color-text-quiet)] - Saved-query delete foreground.
+ * @cssprop [--lr-graph-query-builder-saved-delete-hover-color=var(--lr-color-danger)] - Saved-query delete hover foreground.
+ * @cssprop --lr-graph-query-builder-saved-delete-active-color - Saved-query delete pressed
+ *   foreground; defaults to the current danger active mix.
+ * @cssprop [--lr-graph-query-builder-saved-delete-active-bg=var(--lr-color-danger-quiet)] - Saved-query delete pressed background.
  * @cssstate required - Always matches. This control's one constraint is unconditional — a query
  * with no start anchor is not runnable — so it always demands something of the user, which is what
  * `lr-graph-query-builder:state(required)` asks.
@@ -284,7 +308,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   };
 
   /** Pickable relationship types offered by the relationship-type "add" picker. */
-  @property({ attribute: false }) relationshipTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
+  @property({ attribute: false })
+  relationshipTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
   /** Pickable node types offered by the node-type "add" picker. */
   @property({ attribute: false }) nodeTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
   /** Host-persisted saved queries. Controlled -- this component never mutates this array itself,
@@ -320,6 +345,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private _fieldsetDisabled = false;
   private _name = '';
   private _value: GraphQuery = EMPTY_VALUE;
+  private defaultValue: GraphQuery = normalizeGraphQuery(EMPTY_VALUE);
+  private defaultValueCaptured = false;
   private _disabled = false;
   // Drives the user-valid/user-invalid pair: an empty required query is invalid from the first
   // render, but styling it red before the user has done anything is hostile.
@@ -328,7 +355,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
   private lastValidityKey: string | undefined;
   private pendingRemovalFocus?:
-    | { kind: 'chip'; group: 'relationship' | 'node-type'; targetValue?: string }
+    | {
+        kind: 'chip';
+        group: 'relationship' | 'node-type';
+        targetValue?: string;
+      }
     | { kind: 'saved'; targetId?: string };
   private removalFocusGeneration = 0;
 
@@ -400,6 +431,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return this.internals.willValidate;
   }
 
+  /** The complete controlled query model. Its normalized value at the first update is the form
+   *  reset default; later property writes and user edits change only the live value. */
   get value(): GraphQuery {
     return this._value;
   }
@@ -454,7 +487,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return (this.renderRoot.querySelector(`[part="${firstInvalidPart}"]`) as HTMLElement | null) ?? undefined;
   }
 
-  private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags } {
+  private computeValidation(): {
+    errors: Record<string, string>;
+    flags: ValidityStateFlags;
+  } {
     const errors: Record<string, string> = {};
     const flags: ValidityStateFlags = {};
     if (!this._value.startId.trim()) {
@@ -558,10 +594,18 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     // Cleared before the `value` assignment below, whose setter is what republishes the custom
     // states — a reset control is pristine again, so user-valid/user-invalid must drop off it.
     this.hasInteracted = false;
-    this.value = EMPTY_VALUE;
+    this.captureDefaultValue();
+    this.value = this.defaultValue;
     this.touchedFields = new Set();
     this.saveName = '';
   }
+
+  private captureDefaultValue(): void {
+    if (this.defaultValueCaptured) return;
+    this.defaultValue = normalizeGraphQuery(this._value);
+    this.defaultValueCaptured = true;
+  }
+
   formStateRestoreCallback(state: string | File | FormData | null, _mode?: 'restore' | 'autocomplete'): void {
     let restored: GraphQuery = EMPTY_VALUE;
     if (typeof state === 'string') {
@@ -610,33 +654,42 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private addRelationshipType(type: string): void {
     if (!type || this._value.relationshipTypes.includes(type)) return;
-    this.setValue({ ...this._value, relationshipTypes: [...this._value.relationshipTypes, type] });
+    this.setValue({
+      ...this._value,
+      relationshipTypes: [...this._value.relationshipTypes, type],
+    });
   }
   private removeRelationshipType(type: string): void {
     this.captureChipRemovalFocus('relationship', type, this._value.relationshipTypes);
-    this.setValue({ ...this._value, relationshipTypes: this._value.relationshipTypes.filter((t) => t !== type) });
+    this.setValue({
+      ...this._value,
+      relationshipTypes: this._value.relationshipTypes.filter((t) => t !== type),
+    });
   }
   private addNodeType(type: string): void {
     if (!type || this._value.nodeTypes.includes(type)) return;
-    this.setValue({ ...this._value, nodeTypes: [...this._value.nodeTypes, type] });
+    this.setValue({
+      ...this._value,
+      nodeTypes: [...this._value.nodeTypes, type],
+    });
   }
   private removeNodeType(type: string): void {
     this.captureChipRemovalFocus('node-type', type, this._value.nodeTypes);
-    this.setValue({ ...this._value, nodeTypes: this._value.nodeTypes.filter((t) => t !== type) });
+    this.setValue({
+      ...this._value,
+      nodeTypes: this._value.nodeTypes.filter((t) => t !== type),
+    });
   }
 
-  private captureChipRemovalFocus(
-    group: 'relationship' | 'node-type',
-    value: string,
-    selected: string[],
-  ): void {
+  private captureChipRemovalFocus(group: 'relationship' | 'node-type', value: string, selected: string[]): void {
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     if (
       active?.localName !== 'lr-chip' ||
       active.getAttribute('value') !== value ||
       active.closest<HTMLElement>('lr-chip-group')?.getAttribute('part') !== expectedPart
-    ) return;
+    )
+      return;
     const index = selected.indexOf(value);
     const survivors = selected.filter((candidate) => candidate !== value);
     const targetValue = survivors[Math.min(Math.max(index, 0), survivors.length - 1)];
@@ -680,6 +733,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.hasUpdated) this.captureDefaultValue();
     if (!changed.has('savedQueries')) return;
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     if (active?.getAttribute('part') !== 'saved-delete-button') return;
@@ -711,8 +765,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       if (pending.kind === 'chip') {
         if (pending.targetValue) {
           const part = pending.group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
-          const chip = [...(this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="${part}"] lr-chip`) ?? [])]
-            .find((candidate) => candidate.getAttribute('value') === pending.targetValue);
+          const chip = [...(this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="${part}"] lr-chip`) ?? [])].find(
+            (candidate) => candidate.getAttribute('value') === pending.targetValue
+          );
           if (chip) {
             chip.focus();
             return;
@@ -723,8 +778,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         return;
       }
       if (pending.targetId) {
-        const item = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-query-id]') ?? [])]
-          .find((candidate) => candidate.dataset['queryId'] === pending.targetId);
+        const item = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-query-id]') ?? [])].find(
+          (candidate) => candidate.dataset['queryId'] === pending.targetId
+        );
         const action = item?.querySelector<HTMLElement>('[part="saved-delete-button"]');
         if (action) {
           action.focus();
@@ -751,9 +807,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private onChromeSlotChange = (event: Event): void => {
     const slot = event.currentTarget as HTMLSlotElement;
-    const hasContent = slot.assignedNodes({ flatten: true }).some((node) =>
-      node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true,
-    );
+    const hasContent = slot
+      .assignedNodes({ flatten: true })
+      .some((node) => (node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true));
     if (slot.name === 'hint') this.hasHintSlot = hasContent;
     else if (slot.name === 'error') this.hasErrorSlot = hasContent;
   };
@@ -768,7 +824,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     selected: string[],
     add: (type: string) => void,
     remove: (type: string) => void,
-    disabled: boolean,
+    disabled: boolean
   ): TemplateResult {
     const pickerPart = kind === 'relationship' ? 'relationship-picker' : 'node-type-picker';
     const chipsPart = kind === 'relationship' ? 'relationship-chips' : 'node-type-chips';
@@ -790,7 +846,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             const el = e.target as LyraSelect;
             // `value` widened to `string | string[]` when `<lr-select>` gained `multiple`; this
             // picker is single-select, so take the first entry rather than stringifying an array.
-            add(Array.isArray(el.value) ? (el.value[0] ?? '') : el.value);
+            add(Array.isArray(el.value) ? el.value[0] ?? '' : el.value);
             el.value = '';
           }}
         >
@@ -806,7 +862,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
                 remove(t);
               }}
               >${this.labelForType(options, t)}</lr-chip
-            >`,
+            >`
           )}
         </lr-chip-group>
       </div>
@@ -826,12 +882,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const hopNumber = getNumberFormat(this.effectiveLocale);
 
     return html`
-      <div
-        part="base"
-        role="group"
-        aria-label=${regionLabel}
-        aria-describedby=${describedBy || nothing}
-      >
+      <div part="base" role="group" aria-label=${regionLabel} aria-describedby=${describedBy || nothing}>
         <div part="label" id=${this.labelId}>
           <slot name="label" @slotchange=${this.onChromeSlotChange}
             >${this.label || this.localize('graphQueryBuilderLabel')}</slot
@@ -873,7 +924,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             ?disabled=${disabled}
             @change=${(e: Event) => {
               e.stopPropagation();
-              this.setValue({ ...value, minHops: Number((e.target as LyraSelect).value) });
+              this.setValue({
+                ...value,
+                minHops: Number((e.target as LyraSelect).value),
+              });
             }}
           >
             ${hops.map((n) => html`<lr-option value=${String(n)}>${hopNumber.format(n)}</lr-option>`)}
@@ -886,7 +940,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             ?disabled=${disabled}
             @change=${(e: Event) => {
               e.stopPropagation();
-              this.setValue({ ...value, maxHops: Number((e.target as LyraSelect).value) });
+              this.setValue({
+                ...value,
+                maxHops: Number((e.target as LyraSelect).value),
+              });
             }}
           >
             ${hops.map((n) => html`<lr-option value=${String(n)}>${hopNumber.format(n)}</lr-option>`)}
@@ -899,7 +956,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           value.relationshipTypes,
           (t) => this.addRelationshipType(t),
           (t) => this.removeRelationshipType(t),
-          disabled,
+          disabled
         )}
         ${this.renderTypeFilter(
           'node-type',
@@ -907,7 +964,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           value.nodeTypes,
           (t) => this.addNodeType(t),
           (t) => this.removeNodeType(t),
-          disabled,
+          disabled
         )}
 
         <lr-select
@@ -917,7 +974,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           ?disabled=${disabled}
           @change=${(e: Event) => {
             e.stopPropagation();
-            this.setValue({ ...value, direction: (e.target as LyraSelect).value as GraphQueryDirection });
+            this.setValue({
+              ...value,
+              direction: (e.target as LyraSelect).value as GraphQueryDirection,
+            });
           }}
         >
           <lr-option value="out">${this.localize('neighborDirectionOut')}</lr-option>
@@ -977,7 +1037,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
                     >
                       ${closeIcon()}
                     </button>
-                  </li>`,
+                  </li>`
                 )}
               </ul>`}
         </div>

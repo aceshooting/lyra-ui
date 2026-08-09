@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +56,7 @@ while visible error content makes it `"true"`. Inline mode omits the trigger, bu
 follows the same pristine/user-invalid contract.
 
 **Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
-*beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
+_beside_ a saturation grid, a hue ramp and a text field, and the committed value can be any colour
 the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothing else, with
 `radiogroup` semantics rather than a popover. Reach for it when the answer must be one of N
 designer-chosen colours; reach for this when it must not.
@@ -80,7 +80,7 @@ and:
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
   `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
-  entries are dropped. An entry that is *not* parseable is kept in the list and still renders a
+  entries are dropped. An entry that is _not_ parseable is kept in the list and still renders a
   swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
   the palette yourself if that matters. `label` becomes the swatch's accessible name — without one
   the raw colour string is announced. The palette container renders only while the normalized list
@@ -131,8 +131,12 @@ and names both the trigger and dialog; a host `aria-label` remains the strongest
 one bubbling/composed native `Event` named `change`, followed by `lr-change` with
 `detail: { value }`. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
-emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair. Also
-emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
+emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
+Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
+disablement, disconnection, or document adoption restores the pre-gesture colour and submitted
+form value without emitting another `input` or a commit pair. A direct consumer `value` assignment
+during a drag is authoritative instead: it retires the gesture and remains current.
+Also emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
 disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
 its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
@@ -148,7 +152,9 @@ and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning unde
 never do. One discrete press pairs a keydown (`input`/`lr-input`) with a keyup
 (`change`/`lr-change`); OS key repeat re-fires the edit pair but still commits once. The panel is
 Escape-dismissible and returns focus to the trigger; a pointerdown outside the element closes it
-too.
+too. Both routes are topmost-aware through the shared nonmodal overlay stack, so an older color
+picker remains open under a newer Lyra popup and receives the manager's focus handoff when that top
+layer closes.
 
 **CSS parts:** `base` (compatibility name for the field wrapper; use `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
@@ -230,6 +236,10 @@ the current colour and text direction). Read them if you need the resolved colou
 - `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
+- `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
+  `var(--lr-color-brand)`.
+- `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
+  `var(--lr-color-surface)`.
 
 ```html
 <lr-color-picker
@@ -251,7 +261,7 @@ the current colour and text direction). Read them if you need the resolved colou
     { color: '#2563eb', label: 'Blue' },
   ];
   picker.addEventListener('change', () => {
-    console.log(picker.value);                    // e.g. "RGBA(225, 29, 72, 1.00)"
+    console.log(picker.value); // e.g. "RGBA(225, 29, 72, 1.00)"
     console.log(picker.getFormattedValue('hexa')); // e.g. "#E11D48FF"
   });
   picker.show();
@@ -259,6 +269,7 @@ the current colour and text direction). Read them if you need the resolved colou
 ```
 
 **Known gotchas:**
+
 - **The `input` CSS part moved.** It is the panel's text field as of 8.0.0; the swatch is `trigger`.
 - The eyedropper button is only in the DOM where `window.EyeDropper` exists (feature-detected once,
   at connect). Dismissing the eyedropper rejects the platform promise, which is treated as a

@@ -28,8 +28,9 @@ narrow: a versioned document may bind an allowlisted primitive prop to a JSON Po
 must apply every requested change itself.
 
 **Exported types:**
+
 - `WidgetNode { type: string; id?: string; props?: Record<string, unknown>; children?: (WidgetNode |
-  string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
+string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
   reconciliation key (falling back to a structural path), `slot` is honored only when the parent
   type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is echoed
   back in `lr-widget-action`.
@@ -40,8 +41,10 @@ must apply every requested change itself.
   optional controlled binding state.
 
 **Properties:**
+
 - `tree: WidgetNode | null = null` (property only) — the unversioned declarative widget tree;
-  `null` renders an empty base.
+  `null` renders an empty base. A malformed root or reachable nested node fails closed, clears any
+  prior rendered tree, and emits exactly one `lr-render-error` for that update.
 - `document: LyraWidgetDocument | null = null` (property only) — versioned document form; when set,
   its `root` takes precedence over `tree`. A version other than `'1'` fails closed with
   `lr-render-error`.
@@ -74,27 +77,36 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 'image' }`).
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
-channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
-value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update. The
-renderer never mutates `state` or `document.state`; assign a new `state` value to complete the
-controlled update.
+channel. `lr-render-error` — `detail: { error }`, the root or a reachable nested node was
+structurally unusable (including a non-object node, invalid `props`/`children` shape, or a tree the
+depth/size caps made empty). The rejected update clears prior rendered content and emits this event
+once rather than throwing. `lr-widget-state-change` — `detail: { path, value, nodeId, prop }`,
+emitted when a state-bound mapped control requests a controlled update. The renderer never mutates
+`state` or `document.state`; assign a new `state` value to complete the controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
 
-Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop per
-instance. Reconciliation is keyed by `id ?? structural path`, so a streamed re-send patches in
-place and user state (an open `<details>`, focus, scroll) survives.
+Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop within
+the current effective root/registry generation. Re-resolving that same root for a controlled
+`state` update stays quiet; assigning a different streamed root or registry releases the prior
+generation's arbitrary warning keys before resolving the replacement, so a long-lived renderer
+cannot accumulate attacker-chosen type/prop names forever. Reconciliation is keyed by `id ??
+structural path`, so a streamed re-send patches in place and user state (an open `<details>`, focus,
+scroll) survives.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js';
-import '@aceshooting/lyra-ui/components/forms/input/input.js';
-import { registerWidgetType } from '@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js';
-import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
+import "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
+import "@aceshooting/lyra-ui/components/data/sparkline/sparkline.js";
+import { registerWidgetType } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
+import { tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 
-registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string' } });
+registerWidgetType("sparkline", {
+  tag: tag("sparkline"),
+  props: { data: "string" },
+});
 ```
+
 ```html
 <lr-widget-renderer .tree=${msg.widget}
   @lr-widget-action=${(e) => sendToAgent(e.detail.actionId, e.detail.payload)}
@@ -102,36 +114,49 @@ registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string'
 ```
 
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
-`state` (this one-field example binds `/name`):
+`state` (this one-field example binds `/name`). This is also the lean registration route: it imports
+the side-effect-free renderer class, defines only `lr-widget-renderer`, and imports only the mapped
+input registration. Do not import `widget-renderer.js` on this route; that entry intentionally
+installs the full default registry.
 
 ```html
 <lr-widget-renderer id="bound-widget"></lr-widget-renderer>
 ```
 
 ```js
-const renderer = document.querySelector('#bound-widget');
+import { LyraWidgetRenderer } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.class.js";
+import { defineElement, tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
+import "@aceshooting/lyra-ui/components/forms/input/input.js";
+
+defineElement("widget-renderer", LyraWidgetRenderer);
+
+const renderer = document.querySelector("#bound-widget");
 renderer.registry = new Map([
-  ['bound-input', {
-    tag: tag('input'),
-    props: { label: 'string', value: 'string' },
-    bindings: { value: { event: 'lr-input' } },
-  }],
+  [
+    "bound-input",
+    {
+      tag: tag("input"),
+      props: { label: "string", value: "string" },
+      bindings: { value: { event: "lr-input" } },
+    },
+  ],
 ]);
 renderer.document = {
-  version: '1',
-  state: { name: 'Ada' },
+  version: "1",
+  state: { name: "Ada" },
   root: {
-    type: 'bound-input',
-    id: 'name',
-    props: { label: 'Name', value: { $bind: '/name', fallback: '' } },
+    type: "bound-input",
+    id: "name",
+    props: { label: "Name", value: { $bind: "/name", fallback: "" } },
   },
 };
-renderer.addEventListener('lr-widget-state-change', (event) => {
+renderer.addEventListener("lr-widget-state-change", (event) => {
   renderer.state = { name: event.detail.value };
 });
 ```
 
-**Optional peer deps:** none new — the default-registry entry directly imports the eight mapped
-components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). A host wanting a
-leaner dependency graph registers a custom registry (via the `registry` property) and imports only
-the components it maps.
+**Optional peer deps:** none new — the normal registration entry directly imports the eight mapped
+components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). The manual class
+route above is the verified lean path: its real peer-inclusive esbuild metafile excludes
+`default-registry.js` and all eight default mapped class modules, while the consumer explicitly
+imports only the component registrations its per-instance registry maps.

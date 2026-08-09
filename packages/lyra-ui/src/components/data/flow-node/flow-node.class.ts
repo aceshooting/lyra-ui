@@ -11,7 +11,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
 const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
 
@@ -60,6 +59,10 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  * @cssprop [--lr-flow-node-status-success-color=var(--lr-color-success)] - Success status-dot color.
  * @cssprop [--lr-flow-node-status-error-color=var(--lr-color-danger)] - Error status-dot color.
  * @cssprop [--lr-flow-node-status-denied-color=var(--lr-color-warning)] - Denied status-dot color.
+ * @cssprop [--lr-flow-node-progress-track-color=var(--lr-color-border)] - Determinate progress
+ *   track color.
+ * @cssprop [--lr-flow-node-progress-fill-color=var(--lr-color-brand)] - Determinate progress fill
+ *   color, independent from the track and other brand-colored states.
  * @status stable
  * @since 4.0.0
  */
@@ -115,9 +118,7 @@ export class LyraFlowNode extends LyraElement {
       return;
     }
     const children = (this as unknown as { children?: HTMLCollection }).children;
-    this.hasHeaderSlot = Array.from(children ?? []).some(
-      (element) => element.getAttribute('slot') === 'header',
-    );
+    this.hasHeaderSlot = Array.from(children ?? []).some((element) => element.getAttribute('slot') === 'header');
   }
 
   private shouldPulseRing(): boolean {
@@ -192,7 +193,9 @@ export class LyraFlowNode extends LyraElement {
   }
 
   private handleTemplate(kind: 'input' | 'output', handle: FlowHandle): TemplateResult {
-    const label = handle.label ?? this.localize(kind === 'input' ? 'flowInputHandle' : 'flowOutputHandle', undefined, { id: handle.id });
+    const label =
+      handle.label ??
+      this.localize(kind === 'input' ? 'flowInputHandle' : 'flowOutputHandle', undefined, { id: handle.id });
     return html`<span
       part="handle handle-${kind}"
       class="handle"
@@ -228,7 +231,9 @@ export class LyraFlowNode extends LyraElement {
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow=${clampedProgress}
-            ><div class="progress-fill" style="inline-size:${clampedProgress}%"></div></div>`
+            >
+              <div class="progress-fill" style="inline-size:${clampedProgress}%"></div>
+            </div>`
           : nothing}
         <div part="body"><slot></slot></div>
         <div part="toolbar"><slot name="toolbar"></slot></div>
@@ -240,21 +245,34 @@ export class LyraFlowNode extends LyraElement {
   private formattedDuration(): string {
     const durationMs = this.safeDurationMs;
     if (durationMs == null) return '';
-    const formatter = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 });
+    const formatter = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: 1,
+    });
     return durationMs < 1000
-      ? this.localize('durationMilliseconds', undefined, { value: formatter.format(Math.round(durationMs)) })
-      : this.localize('durationSeconds', undefined, { value: formatter.format(Math.round(durationMs / 100) / 10) });
+      ? this.localize('durationMilliseconds', undefined, {
+          value: formatter.format(Math.round(durationMs)),
+        })
+      : this.localize('durationSeconds', undefined, {
+          value: formatter.format(Math.round(durationMs / 100) / 10),
+        });
   }
 
   private statusText(): string {
     const label = this.statusLabel();
     const duration = this.formattedDuration();
-    const withDuration = duration ? this.localize('flowStatusWithDuration', undefined, { status: label, duration }) : label;
+    const withDuration = duration
+      ? this.localize('flowStatusWithDuration', undefined, {
+          status: label,
+          duration,
+        })
+      : label;
     return this.statusDetail
-      ? this.localize('flowStatusWithDetail', undefined, { status: withDuration, detail: this.statusDetail })
+      ? this.localize('flowStatusWithDetail', undefined, {
+          status: withDuration,
+          detail: this.statusDetail,
+        })
       : withDuration;
   }
-
 }
 
 declare global {

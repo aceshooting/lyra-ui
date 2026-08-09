@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -57,6 +57,10 @@ or by Enter/Space on `[part='activation-button']`. Only fired while `interactive
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
+**Methods:** `click(): void` activates the native whole-card owner: the linked root when `href` is
+safe, or the activation button while `interactive` is set without a link. Passive cards remain
+inert.
+
 **Slots:** default (the card body), `header` (vertical header content), `media` and `image` (aliases
 for media above the header vertically or at logical start horizontally), `footer` (vertical footer
 content), `header-actions` and `footer-actions` (controls aligned with those vertical sections), and
@@ -77,6 +81,11 @@ gap around card sections. Shoelace-compatible `--padding` is its fallback; `--bo
 tokens — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
+Appearance and interaction paint can be rethemed independently through `--lr-card-filled-bg`,
+`--lr-card-filled-outlined-bg`, `--lr-card-accent-border-color`,
+`--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
+`--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
+former brand and active-mix values when unset.
 
 **Optional peer deps:** none.
 

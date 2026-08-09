@@ -146,6 +146,26 @@ function isMultiOperator(op: QueryBuilderOperator | ''): boolean {
   return op === 'in' || op === 'notIn';
 }
 
+function normalizeFiniteNumberValues(
+  value: QueryBuilderValue,
+  fields: readonly QueryBuilderField[],
+): QueryBuilderValue {
+  const numberFields = new Set(fields.filter((field) => field.type === 'number').map((field) => field.name));
+  let changed = false;
+  const conditions = value.conditions.map((condition) => {
+    if (
+      numberFields.has(condition.field) &&
+      typeof condition.value === 'number' &&
+      !Number.isFinite(condition.value)
+    ) {
+      changed = true;
+      return { ...condition, value: undefined };
+    }
+    return condition;
+  });
+  return changed ? { ...value, conditions } : value;
+}
+
 /**
  * `<lr-query-builder>` — a composable structured-query builder for tabular/dashboard data: a
  * flat list of field/operator/value condition rows combined with one AND/OR combinator.
@@ -159,7 +179,10 @@ function isMultiOperator(op: QueryBuilderOperator | ''): boolean {
  * (a plain, serializable `{ combinator, conditions }` object — safe to persist or send to a
  * backend as-is, the same shape convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).
  * This component never mutates `fields`/`value` in place or calls out to storage/network itself;
- * every change is surfaced through `value`/`lr-input` for the host to own.
+ * every change is surfaced through `value`/`lr-input` for the host to own. A non-finite value on a
+ * field declared as `number` normalizes to `undefined`, whether it arrives through the controlled
+ * model, later field metadata, or an overflowing user-input string, so JSON never turns it into
+ * an unrelated `null` condition.
  *
  * Each row composes `<lr-select>` for the field and operator pickers, and a value control chosen
  * from the selected field's `type`: `<lr-input type="text">` (`string`), `<lr-input
@@ -264,17 +287,21 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     const old = this._fields;
     this._fields = next ?? EMPTY_FIELDS;
     this.requestUpdate('fields', old);
+    const previousValue = this._value;
+    this._value = normalizeFiniteNumberValues(this._value, this._fields);
+    if (this._value !== previousValue) this.requestUpdate('value', previousValue);
   }
 
   /** The current query: one combinator plus a flat list of conditions. Controlled — assigning
    *  this directly never emits `lr-input` (that only fires for a user-driven change); see the
-   *  class doc's form-association note for why this stays a plain property, not a form value. */
+   *  class doc's form-association note for why this stays a plain property, not a form value.
+   *  Non-finite values for fields declared as `number` normalize to `undefined`. */
   get value(): QueryBuilderValue {
     return this._value;
   }
   set value(next: QueryBuilderValue) {
     const old = this._value;
-    this._value = next ?? EMPTY_VALUE;
+    this._value = normalizeFiniteNumberValues(next ?? EMPTY_VALUE, this._fields);
     this.requestUpdate('value', old);
   }
 
@@ -530,7 +557,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
             this.consumeChildEvent(event, () => {
               const raw = (event.target as LyraInput).value;
               const parsed = raw === '' ? undefined : Number(raw);
-              this.setConditionValue(condition.id, parsed !== undefined && Number.isNaN(parsed) ? undefined : parsed);
+              this.setConditionValue(
+                condition.id,
+                parsed !== undefined && !Number.isFinite(parsed) ? undefined : parsed,
+              );
             })}
         ></lr-input>
       `;

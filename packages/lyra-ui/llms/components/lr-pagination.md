@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,6 +22,7 @@ after the host applies a requested page. The component owns no data fetching and
 `page`.
 
 **8.0.0 migration — these changes are breaking:**
+
 - `total-items` is now `total` (property `totalItems` → `total`). The old attribute no longer binds
   to anything: a pager left on `total-items` keeps `total` at its `0` default and silently renders
   the empty state with every control disabled.
@@ -35,6 +36,7 @@ after the host applies a requested page. The component owns no data fetching and
   asserted the exact one-key detail object must accept `{ page, pageSize }`.
 
 **Properties and getters:**
+
 - `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within
   the valid `1..pageCount` range, but the public property itself remains controlled and is not
   rewritten by the component
@@ -157,19 +159,38 @@ buttons, interactive ellipses, and numbered pages, which is what `appearance` re
 buttons, the numbered pages and the page input — `--lr-pagination-control-padding` (default
 `var(--lr-space-xs)`) — inner padding of those same controls, deliberately uniform across every
 `size` tier because the control's outer footprint is already fixed by
-`--lr-pagination-control-size`, so this only adjusts the icon/digit inset —
+`--lr-pagination-control-size`, so this only adjusts the icon/digit inset. Layout spacing is split
+across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary and controls,
+`--lr-pagination-controls-gap` (default `var(--lr-space-xs)`) inside the navigation group, and
+`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages; each remains
+active in standard, compact, and 320px container layouts —
 `--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
 declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
-CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-ring tokens.
+CSS. `--lr-pagination-control-color` independently controls the resting foreground. The applied
+page has `--lr-pagination-current-bg`, `--lr-pagination-current-border-color`, and
+`--lr-pagination-current-color`. Ordinary controls use `--lr-pagination-hover-bg`,
+`--lr-pagination-hover-border-color`, `--lr-pagination-active-bg`, and
+`--lr-pagination-active-border-color`; the applied page has independent
+`--lr-pagination-current-hover-bg`, `--lr-pagination-current-hover-border-color`,
+`--lr-pagination-current-active-bg`, and `--lr-pagination-current-active-border-color` hooks. Each
+defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. These state
+hooks and the resting background/border hooks are consumed through inline fallbacks, so they work
+when inherited from an ancestor as well as when set directly on one pager. Shared spacing,
+disabled-opacity, and focus-ring tokens remain available as usual.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-pagination total="237" page-size="20" with-summary with-edges></lr-pagination>
+<lr-pagination
+  total="237"
+  page-size="20"
+  with-summary
+  with-edges
+></lr-pagination>
 <script>
-  const pagination = document.querySelector('lr-pagination');
-  pagination.addEventListener('lr-page-change', async (event) => {
+  const pagination = document.querySelector("lr-pagination");
+  pagination.addEventListener("lr-page-change", async (event) => {
     await loadPage(event.detail.page, event.detail.pageSize);
     pagination.page = event.detail.page;
   });
@@ -188,13 +209,14 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 A function template builds the URL itself, which is where any dynamic segment gets encoded:
 
 ```js
-const pagination = document.querySelector('lr-pagination');
-const query = new URLSearchParams(location.search).get('q') ?? '';
+const pagination = document.querySelector("lr-pagination");
+const query = new URLSearchParams(location.search).get("q") ?? "";
 pagination.hrefTemplate = (page) =>
   `/products?${new URLSearchParams({ q: query, page: String(page) })}`;
 ```
 
 **Known gotchas:**
+
 - user activation only emits an intent. Until the host applies a new `page`, the numeric input
   returns to the currently controlled value; assigning the page triggers the localized
   announcement in the shared light-DOM polite sink

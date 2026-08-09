@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { Series } from './chart.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import { narrowChartStory } from '../../../../../../.storybook/narrow-chart-story.js';
 
 const meta: Meta = {
   title: 'Charts/Line',
@@ -26,6 +27,26 @@ export const Default: Story = {
         .datasets=${series}
       ></lr-line-chart>
     `;
+  },
+};
+
+/** Narrow-allocation, RTL, and long-content evidence for the concrete line controller. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow RTL (320px) with long content',
+  render: () => {
+    const series: Series[] = [
+      { label: 'Sessions completed across every production deployment region', data: [4, 7, 6, 9, 12] },
+    ];
+    return narrowChartStory(html`
+      <lr-line-chart
+        aria-label="Monthly sessions completed across every production deployment region"
+        height="16rem"
+        legend
+        legend-position="start"
+        .labels=${['January release', 'February release', 'March release', 'April release', 'May release']}
+        .datasets=${series}
+      ></lr-line-chart>
+    `);
   },
 };
 

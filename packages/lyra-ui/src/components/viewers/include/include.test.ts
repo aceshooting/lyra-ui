@@ -81,7 +81,7 @@ describe('lr-include', () => {
       expect(event.detail.src).to.equal('https://example.test/a.html');
       // Light DOM, not shadow DOM: the fetched fragment becomes the host's
       // own children, projected through the shadow root's default <slot>.
-      expect(el.querySelector('script')).to.not.exist;
+      expect((el.querySelector('script')) == null).to.equal(true);
       expect(el.querySelector('h1')!.textContent).to.equal('Safe');
       expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
@@ -387,7 +387,7 @@ describe('lr-include', () => {
       resolveSecond(response('<h1>Second</h1>'));
       await waitUntil(() => el.querySelector('h1') !== null);
       expect(el.querySelector('h1')!.textContent).to.equal('Second');
-      expect(el.querySelector('p')).to.not.exist;
+      expect((el.querySelector('p')) == null).to.equal(true);
     } finally { window.fetch = original; }
   });
 
@@ -428,7 +428,7 @@ describe('lr-include', () => {
       el.src = '';
       await aTimeout(20);
       expect(callCount).to.equal(1);
-      expect(el.querySelector('p')).to.exist;
+      expect((el.querySelector('p')) != null).to.equal(true);
     } finally { window.fetch = original; }
   });
 
@@ -442,7 +442,7 @@ describe('lr-include', () => {
       el.remove();
       resolveFetch(response('<h1>Late</h1>'));
       await aTimeout(20);
-      expect(el.querySelector('h1')).to.not.exist;
+      expect((el.querySelector('h1')) == null).to.equal(true);
       expect(el.textContent).to.equal('Fallback');
     } finally { window.fetch = original; }
   });
@@ -480,7 +480,7 @@ describe('lr-include', () => {
       const el = document.createElement('lr-include') as LyraInclude;
       el.src = 'https://example.test/detached.html';
       await aTimeout(10);
-      expect(el.querySelector('h1'), 'nothing should load while detached').to.not.exist;
+      expect((el.querySelector('h1')) == null, 'nothing should load while detached').to.equal(true);
       document.body.append(el);
       await waitUntil(() => el.querySelector('h1') !== null);
       expect(el.querySelector('h1')!.textContent).to.equal('Reconnected');
@@ -968,7 +968,7 @@ describe('lr-include', () => {
     await el.scrollToAnchor('no-such-highlight');
     await el.updateComplete;
     const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
-    expect(region, 'the mixin live region is rendered').to.exist;
+    expect((region) != null, 'the mixin live region is rendered').to.equal(true);
     expect(
       (region.textContent ?? '').trim().length,
       'the live region actually carries announcement text',

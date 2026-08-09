@@ -75,3 +75,21 @@ it("renders separators as explicitly decorative content", async () => {
   expect(getComputedStyle(firstSeparator).display).to.equal("none");
   expect(getComputedStyle(secondSeparator).display).to.not.equal("none");
 });
+
+it("contains a long localized RTL trail at an exact 320px allocation", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-breadcrumb label="مسار المشروع">
+        <lr-breadcrumb-item href="/">الصفحة-الرئيسية-ذات-العنوان-الطويل-جداً</lr-breadcrumb-item>
+        <lr-breadcrumb-item href="/reports">التقارير-التحليلية-المفصلة-جداً</lr-breadcrumb-item>
+        <lr-breadcrumb-item current>النتيجة-الحالية-ذات-العنوان-الطويل-جداً</lr-breadcrumb-item>
+      </lr-breadcrumb>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-breadcrumb") as HTMLElement;
+  const list = el.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!;
+
+  expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+  expect(list.scrollWidth).to.be.at.most(list.clientWidth);
+  expect(getComputedStyle(list).direction).to.equal("rtl");
+});

@@ -3,6 +3,7 @@ import './pagination.js';
 import type { LyraPagination } from './pagination.js';
 import { styles } from './pagination.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -14,7 +15,7 @@ function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
 }
 
 async function pagination(
-  template = html`<lr-pagination total="95" page-size="10" with-summary></lr-pagination>`,
+  template = html`<lr-pagination total="95" page-size="10" with-summary></lr-pagination>`
 ): Promise<LyraPagination> {
   const el = (await fixture(template)) as LyraPagination;
   await el.updateComplete;
@@ -24,9 +25,7 @@ async function pagination(
 /** The editable page-jump field is the compact layout's centrepiece; the default `standard` layout
  *  renders the numbered page list instead. */
 async function compactPagination(
-  template = html`
-    <lr-pagination format="compact" total="95" page-size="10" with-summary></lr-pagination>
-  `,
+  template = html` <lr-pagination format="compact" total="95" page-size="10" with-summary></lr-pagination> `
 ): Promise<LyraPagination> {
   return pagination(template);
 }
@@ -36,9 +35,7 @@ it('derives the pageCount and totalPages aliases plus a localized item-range sum
 
   expect(el.pageCount).to.equal(10);
   expect(el.totalPages).to.equal(10);
-  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
-    '1–10 of 95 items',
-  );
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('1–10 of 95 items');
 });
 
 it('recognizes a pending focus target created in another realm as inside the host', async () => {
@@ -49,9 +46,11 @@ it('recognizes a pending focus target created in another realm as inside the hos
     const target = iframe.contentDocument!.createElement('button');
     el.append(target);
     expect(target instanceof Node, 'fixture really crosses constructor realms').to.equal(false);
-    const inside = (el as unknown as {
-      focusTargetIsInside(target: EventTarget): boolean;
-    }).focusTargetIsInside(target);
+    const inside = (
+      el as unknown as {
+        focusTargetIsInside(target: EventTarget): boolean;
+      }
+    ).focusTargetIsInside(target);
     expect(inside).to.equal(true);
   } finally {
     iframe.remove();
@@ -77,13 +76,9 @@ it('publishes the disabled CSS custom state only for the public disabled propert
 });
 
 it('forwards a host aria-label to the internal navigation landmark', async () => {
-  const el = await pagination(html`
-    <lr-pagination aria-label="Search result pages" total="95"></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination aria-label="Search result pages" total="95"></lr-pagination> `);
 
-  expect(el.shadowRoot!.querySelector('nav')!.getAttribute('aria-label')).to.equal(
-    'Search result pages',
-  );
+  expect(el.shadowRoot!.querySelector('nav')!.getAttribute('aria-label')).to.equal('Search result pages');
 });
 
 it('is controlled and emits the requested page without mutating page itself', async () => {
@@ -105,13 +100,9 @@ it('moves focus to the applied current-page control after navigation is accepted
     });
   };
 
-  const nextPage = await pagination(html`
-    <lr-pagination total="200" page-size="10" page="10"></lr-pagination>
-  `);
+  const nextPage = await pagination(html` <lr-pagination total="200" page-size="10" page="10"></lr-pagination> `);
   applyRequestedPage(nextPage);
-  const nextButton = nextPage.shadowRoot!.querySelector(
-    '[part~="next-button"]',
-  ) as HTMLButtonElement;
+  const nextButton = nextPage.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
   nextButton.focus();
   nextButton.click();
   await nextPage.updateComplete;
@@ -242,7 +233,7 @@ it('announces the same page again when it is revisited, instead of rewriting one
   await el.updateComplete;
   expect(
     sinkTexts('polite').filter((text) => text === 'Page 4 of 10').length,
-    'an identical repeat must be a second addition so assistive tech reads it again',
+    'an identical repeat must be a second addition so assistive tech reads it again'
   ).to.equal(2);
 });
 
@@ -264,7 +255,11 @@ it('commits a valid numeric page jump on Enter', async () => {
   const eventPromise = oneEvent(el, 'lr-page-change');
 
   input.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }),
+    new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      composed: true,
+    })
   );
   const event = await eventPromise;
   await el.updateComplete;
@@ -279,7 +274,7 @@ it('forwards public focus and blur to the page input', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('page-input');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
 it('forwards host click to the page input and suppresses it while effectively disabled', async () => {
@@ -299,9 +294,7 @@ it('forwards host click to the page input and suppresses it while effectively di
 
 it('keeps previous and next actions at the shared hit-area floor in every size', async () => {
   for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
-    const el = await pagination(
-      html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
-    );
+    const el = await pagination(html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`);
     for (const part of ['previous-button', 'next-button']) {
       const button = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
       expect(button.getBoundingClientRect().width, `${size} ${part}`).to.be.at.least(40);
@@ -320,13 +313,7 @@ it('relays exactly one native FocusEvent from button, link, and compact controls
     },
     {
       name: 'link',
-      template: html`
-        <lr-pagination
-          total="50"
-          page="2"
-          href-template="/results?page={page}"
-        ></lr-pagination>
-      `,
+      template: html` <lr-pagination total="50" page="2" href-template="/results?page={page}"></lr-pagination> `,
       selector: '[part~="next-button"]',
       localName: 'a',
     },
@@ -352,8 +339,14 @@ it('relays exactly one native FocusEvent from button, link, and compact controls
     expect(control.localName, testCase.name).to.equal(testCase.localName);
 
     for (const type of ['focus', 'blur'] as const) {
-      const hostEvents: Array<{ event: Event; origin: EventTarget | undefined }> = [];
-      const delegatedEvents: Array<{ event: Event; origin: EventTarget | undefined }> = [];
+      const hostEvents: Array<{
+        event: Event;
+        origin: EventTarget | undefined;
+      }> = [];
+      const delegatedEvents: Array<{
+        event: Event;
+        origin: EventTarget | undefined;
+      }> = [];
       el.addEventListener(type, (event) => {
         hostEvents.push({ event, origin: event.composedPath()[0] });
       });
@@ -368,27 +361,23 @@ it('relays exactly one native FocusEvent from button, link, and compact controls
           relatedTarget,
           view: window,
           detail: 7,
-        }),
+        })
       );
 
       expect(hostEvents.length, `${testCase.name} ${type} host count`).to.equal(1);
       expect(delegatedEvents.length, `${testCase.name} ${type} delegated count`).to.equal(1);
       for (const seen of [hostEvents[0]!, delegatedEvents[0]!]) {
         expect(seen.event.constructor, `${testCase.name} ${type} constructor`).to.equal(FocusEvent);
-        expect(seen.event instanceof CustomEvent, `${testCase.name} ${type} is not custom`).to.equal(
-          false,
-        );
+        expect(seen.event instanceof CustomEvent, `${testCase.name} ${type} is not custom`).to.equal(false);
         expect(seen.event.target === el, `${testCase.name} ${type} target`).to.equal(true);
         expect(seen.origin === el, `${testCase.name} ${type} shadow original stopped`).to.equal(true);
         expect(seen.event.bubbles, `${testCase.name} ${type} bubbles`).to.equal(true);
         expect(seen.event.composed, `${testCase.name} ${type} composed`).to.equal(true);
         expect(
           (seen.event as FocusEvent).relatedTarget === relatedTarget,
-          `${testCase.name} ${type} relatedTarget`,
+          `${testCase.name} ${type} relatedTarget`
         ).to.equal(true);
-        expect((seen.event as FocusEvent).view === window, `${testCase.name} ${type} view`).to.equal(
-          true,
-        );
+        expect((seen.event as FocusEvent).view === window, `${testCase.name} ${type} view`).to.equal(true);
         expect((seen.event as FocusEvent).detail, `${testCase.name} ${type} detail`).to.equal(7);
       }
     }
@@ -414,9 +403,7 @@ it('rejects out-of-range and fractional page jumps', async () => {
 
 it('disables every control for empty data, disabled, and loading states', async () => {
   const el = await pagination(html`<lr-pagination with-summary></lr-pagination>`);
-  const controls = () => [
-    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input'),
-  ];
+  const controls = () => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input')];
 
   expect(el.pageCount).to.equal(0);
   expect(controls().every((control) => control.disabled)).to.equal(true);
@@ -451,18 +438,10 @@ it('uses singular item text and accepts localized label overrides', async () => 
     ></lr-pagination>
   `);
 
-  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
-    '1–1 / 1 entry',
-  );
-  expect(
-    (el.shadowRoot!.querySelector('[part~="previous-button"]') as HTMLButtonElement).ariaLabel,
-  ).to.equal('Back');
-  expect(
-    (el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).ariaLabel,
-  ).to.equal('Forward');
-  expect(
-    (el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement).ariaLabel,
-  ).to.equal('Result page');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('1–1 / 1 entry');
+  expect((el.shadowRoot!.querySelector('[part~="previous-button"]') as HTMLButtonElement).ariaLabel).to.equal('Back');
+  expect((el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement).ariaLabel).to.equal('Forward');
+  expect((el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement).ariaLabel).to.equal('Result page');
 });
 
 it('localizes the empty summary as one interpolated message', async () => {
@@ -470,22 +449,20 @@ it('localizes the empty summary as one interpolated message', async () => {
     <lr-pagination
       item-label="résultats"
       with-summary
-      .strings=${{ paginationEmptySummary: 'Aucun contenu ({total} {itemLabel})' }}
+      .strings=${{
+        paginationEmptySummary: 'Aucun contenu ({total} {itemLabel})',
+      }}
     ></lr-pagination>
   `);
 
-  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
-    'Aucun contenu (0 résultats)',
-  );
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Aucun contenu (0 résultats)');
 });
 
 it('omits the built-in summary by default, without removing the controls', async () => {
   // Opt-in, matching `wa-pagination`'s `with-summary`. The attribute used to be `hide-summary`,
   // whose default rendered the row, so a mechanical rename silently added a summary to every
   // migrated pager.
-  const el = await pagination(html`
-    <lr-pagination total="30"></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination total="30"></lr-pagination> `);
 
   expect(el.withSummary).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
@@ -493,39 +470,27 @@ it('omits the built-in summary by default, without removing the controls', async
 });
 
 it('renders the built-in summary when with-summary is set', async () => {
-  const el = await pagination(html`
-    <lr-pagination total="30" with-summary></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination total="30" with-summary></lr-pagination> `);
 
   expect(el.shadowRoot!.querySelector('[part="summary"]')).to.exist;
 });
 
 it('mirrors the directional icons under RTL', async () => {
   const ltr = await pagination();
-  const rtl = await pagination(html`
-    <lr-pagination dir="rtl" total="95" page-size="10"></lr-pagination>
-  `);
+  const rtl = await pagination(html` <lr-pagination dir="rtl" total="95" page-size="10"></lr-pagination> `);
   const ltrPrevious = ltr.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
   const rtlPrevious = rtl.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
 
-  expect(getComputedStyle(ltrPrevious).transform).to.not.equal(
-    getComputedStyle(rtlPrevious).transform,
-  );
+  expect(getComputedStyle(ltrPrevious).transform).to.not.equal(getComputedStyle(rtlPrevious).transform);
 });
 
 it('stacks its summary and controls in a narrow allocation', async () => {
   const el = await pagination(html`
-    <lr-pagination
-      style="inline-size: 18rem"
-      total="95"
-      page-size="10"
-    ></lr-pagination>
+    <lr-pagination style="inline-size: 18rem" total="95" page-size="10"></lr-pagination>
   `);
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-  expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]')!).flexDirection).to.equal(
-    'column',
-  );
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]')!).flexDirection).to.equal('column');
 });
 
 it('contains long translated labels in a narrow allocation', async () => {
@@ -556,9 +521,7 @@ it('is accessible', async () => {
 });
 
 it('normalizes NaN/negative pageSize and total to an empty, zero-page state instead of NaN', async () => {
-  const el = await pagination(html`
-    <lr-pagination total="95" page-size="10" with-summary></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination total="95" page-size="10" with-summary></lr-pagination> `);
 
   el.pageSize = NaN;
   el.total = -50;
@@ -568,9 +531,7 @@ it('normalizes NaN/negative pageSize and total to an empty, zero-page state inst
 });
 
 it('clamps an oversized or negative page to the last/first valid page instead of NaN/out-of-range', async () => {
-  const el = await pagination(html`
-    <lr-pagination format="compact" total="95" page-size="10"></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination format="compact" total="95" page-size="10"></lr-pagination> `);
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
 
   el.page = 9999;
@@ -589,14 +550,13 @@ it('clamps an oversized or negative page to the last/first valid page instead of
 describe('control padding knob (--lr-pagination-control-padding)', () => {
   const nextButton = (el: LyraPagination): HTMLElement =>
     el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLElement;
-  const pageInput = (el: LyraPagination): HTMLElement | null =>
-    el.shadowRoot!.querySelector('[part="page-input"]');
+  const pageInput = (el: LyraPagination): HTMLElement | null => el.shadowRoot!.querySelector('[part="page-input"]');
 
   it('defaults the control padding to var(--lr-space-xs) (4px) identically at every tier', async () => {
     // Byte-identical to today, which hardcoded var(--lr-space-xs) at every tier on both sites.
     for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
       const el = await pagination(
-        html`<lr-pagination format="compact" size=${size} total="95" page-size="10"></lr-pagination>`,
+        html`<lr-pagination format="compact" size=${size} total="95" page-size="10"></lr-pagination>`
       );
       expect(getComputedStyle(nextButton(el)).paddingTop, `${size} button`).to.equal('4px');
       const input = pageInput(el);
@@ -611,6 +571,143 @@ describe('control padding knob (--lr-pagination-control-padding)', () => {
     expect(getComputedStyle(nextButton(el)).paddingTop).to.equal('9px');
     const input = pageInput(el);
     if (input) expect(getComputedStyle(input).paddingTop).to.equal('9px');
+  });
+});
+
+describe('layout gap hooks', () => {
+  async function themedPagination(format: 'standard' | 'compact', inlineSize?: string): Promise<LyraPagination> {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          ${inlineSize ? `inline-size: ${inlineSize};` : ''}
+          --lr-pagination-base-gap: 11px;
+          --lr-pagination-controls-gap: 12px;
+          --lr-pagination-pages-gap: 13px;
+        "
+      >
+        <lr-pagination format=${format} total="95" page-size="10" page="2" with-summary></lr-pagination>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+    await el.updateComplete;
+    return el;
+  }
+
+  function gap(el: LyraPagination, selector: string): string | null {
+    const node = el.shadowRoot!.querySelector(selector) as HTMLElement | null;
+    return node ? getComputedStyle(node).gap : null;
+  }
+
+  it('inherits separate base, controls, and page-list gaps in the standard layout', async () => {
+    const el = await themedPagination('standard');
+    expect(gap(el, '[part~="base"]')).to.equal('11px');
+    expect(gap(el, '[part="controls"]')).to.equal('12px');
+    expect(gap(el, '[part="pages"]')).to.equal('13px');
+  });
+
+  it('inherits base and controls gaps in compact format without rendering a page list', async () => {
+    const el = await themedPagination('compact');
+    expect(gap(el, '[part~="base"]')).to.equal('11px');
+    expect(gap(el, '[part="controls"]')).to.equal('12px');
+    expect(gap(el, '[part="pages"]')).to.equal(null);
+  });
+
+  it('preserves all three scoped gaps after the exact 320px container layout activates', async () => {
+    const el = await themedPagination('standard', '320px');
+    expect(gap(el, '[part~="base"]')).to.equal('11px');
+    expect(gap(el, '[part="controls"]')).to.equal('12px');
+    expect(gap(el, '[part="pages"]')).to.equal('13px');
+  });
+});
+
+describe('state color hooks', () => {
+  it('inherits resting and current-page color hooks from an ancestor', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-pagination-control-bg: rgb(1, 2, 3);
+          --lr-pagination-control-border-color: rgb(4, 5, 6);
+          --lr-pagination-control-color: rgb(7, 8, 9);
+          --lr-pagination-current-bg: rgb(10, 11, 12);
+          --lr-pagination-current-border-color: rgb(13, 14, 15);
+          --lr-pagination-current-color: rgb(16, 17, 18);
+        "
+      >
+        <lr-pagination total="95" page-size="10" page="2"></lr-pagination>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+    await el.updateComplete;
+    const next = el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLElement;
+    const current = el.shadowRoot!.querySelector('[part~="page-current"]') as HTMLElement;
+
+    expect(getComputedStyle(next).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(next).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(next).color).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(current).backgroundColor).to.equal('rgb(10, 11, 12)');
+    expect(getComputedStyle(current).borderTopColor).to.equal('rgb(13, 14, 15)');
+    expect(getComputedStyle(current).color).to.equal('rgb(16, 17, 18)');
+  });
+
+  it('inherits independent hover and pressed colors for ordinary and current controls', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-pagination-hover-bg: rgb(21, 22, 23);
+          --lr-pagination-hover-border-color: rgb(24, 25, 26);
+          --lr-pagination-active-bg: rgb(27, 28, 29);
+          --lr-pagination-active-border-color: rgb(30, 31, 32);
+          --lr-pagination-current-hover-bg: rgb(33, 34, 35);
+          --lr-pagination-current-hover-border-color: rgb(36, 37, 38);
+          --lr-pagination-current-active-bg: rgb(39, 40, 41);
+          --lr-pagination-current-active-border-color: rgb(42, 43, 44);
+        "
+      >
+        <lr-pagination total="95" page-size="10" page="2"></lr-pagination>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+    await el.updateComplete;
+
+    const probe = async (
+      target: HTMLElement,
+      hoverBg: string,
+      hoverBorder: string,
+      activeBg: string,
+      activeBorder: string
+    ): Promise<void> => {
+      target.scrollIntoView();
+      const rect = target.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(target).backgroundColor).to.equal(hoverBg);
+        expect(getComputedStyle(target).borderTopColor).to.equal(hoverBorder);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(target).backgroundColor).to.equal(activeBg);
+        expect(getComputedStyle(target).borderTopColor).to.equal(activeBorder);
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    };
+
+    await probe(
+      el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLElement,
+      'rgb(21, 22, 23)',
+      'rgb(24, 25, 26)',
+      'rgb(27, 28, 29)',
+      'rgb(30, 31, 32)'
+    );
+    await probe(
+      el.shadowRoot!.querySelector('[part~="page-current"]') as HTMLElement,
+      'rgb(33, 34, 35)',
+      'rgb(36, 37, 38)',
+      'rgb(39, 40, 41)',
+      'rgb(42, 43, 44)'
+    );
   });
 });
 
@@ -629,7 +726,7 @@ describe('nav button hover specificity', () => {
       .find(
         (text) =>
           text.includes(':hover') &&
-          (text.includes("[part~='previous-button']") || text.includes("[part~='next-button']")),
+          (text.includes("[part~='previous-button']") || text.includes("[part~='next-button']"))
       );
     expect(internalRule).to.contain(':where(');
   });
@@ -656,7 +753,7 @@ describe('page-input invalid-state specificity (regression)', () => {
     const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
       .flatMap((sheet) => Array.from(sheet.cssRules))
       .map((rule) => rule.cssText.replace(/"/g, "'"))
-      .find((text) => text.includes("[part='page-input']") && text.includes("aria-invalid"));
+      .find((text) => text.includes("[part='page-input']") && text.includes('aria-invalid'));
     expect(internalRule).to.contain(':where(');
   });
 
@@ -719,7 +816,7 @@ describe('numbered page list', () => {
     expect(
       pageNodes(el)
         .filter((node) => node !== current)
-        .map((node) => node.getAttribute('aria-current')),
+        .map((node) => node.getAttribute('aria-current'))
     ).to.deep.equal(['false', 'false', 'false', 'false']);
   });
 
@@ -782,18 +879,14 @@ describe('numbered page list', () => {
   });
 
   it('renders no first/last controls until with-edges is set', async () => {
-    const el = await pagination(html`
-      <lr-pagination total="50" page-size="10" page="3"></lr-pagination>
-    `);
+    const el = await pagination(html` <lr-pagination total="50" page-size="10" page="3"></lr-pagination> `);
     expect(el.withEdges).to.equal(false);
     expect(el.shadowRoot!.querySelectorAll('[part~="first-button"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part~="last-button"]').length).to.equal(0);
   });
 
   it('jumps to the first and last page through the edge controls', async () => {
-    const el = await pagination(html`
-      <lr-pagination total="50" page-size="10" page="3" with-edges></lr-pagination>
-    `);
+    const el = await pagination(html` <lr-pagination total="50" page-size="10" page="3" with-edges></lr-pagination> `);
     const first = el.shadowRoot!.querySelector('[part~="first-button"]') as HTMLButtonElement;
     const last = el.shadowRoot!.querySelector('[part~="last-button"]') as HTMLButtonElement;
 
@@ -803,7 +896,10 @@ describe('numbered page list', () => {
 
     const firstRequest = oneEvent(el, 'lr-page-change');
     first.click();
-    expect((await firstRequest).detail).to.deep.equal({ page: 1, pageSize: 10 });
+    expect((await firstRequest).detail).to.deep.equal({
+      page: 1,
+      pageSize: 10,
+    });
 
     el.page = 1;
     await el.updateComplete;
@@ -813,20 +909,14 @@ describe('numbered page list', () => {
 
   it('renders pages as links from an href-template string, current page excepted', async () => {
     const el = await pagination(html`
-      <lr-pagination
-        total="50"
-        page-size="10"
-        page="2"
-        href-template="/products?page={page}"
-      ></lr-pagination>
+      <lr-pagination total="50" page-size="10" page="2" href-template="/products?page={page}"></lr-pagination>
     `);
     const nodes = pageNodes(el);
 
     expect(nodes.map((node) => node.localName)).to.deep.equal(['a', 'a', 'a', 'a', 'a']);
     expect(nodes[0].getAttribute('href')).to.equal('/products?page=1');
     expect(nodes[2].getAttribute('href')).to.equal('/products?page=3');
-    expect(nodes[1].hasAttribute('href'), 'the current page is where the reader already is').to.be
-      .false;
+    expect(nodes[1].hasAttribute('href'), 'the current page is where the reader already is').to.be.false;
     expect(nodes[1].getAttribute('aria-current')).to.equal('page');
     // No target, therefore no rel to get wrong.
     expect(nodes[0].hasAttribute('target')).to.be.false;
@@ -834,15 +924,9 @@ describe('numbered page list', () => {
 
   it('removes every link-mode tab stop while disabled or loading', async () => {
     const enabled = await pagination(html`
-      <lr-pagination
-        total="50"
-        page="2"
-        href-template="/products?page={page}"
-      ></lr-pagination>
+      <lr-pagination total="50" page="2" href-template="/products?page={page}"></lr-pagination>
     `);
-    const enabledCurrent = enabled.shadowRoot!.querySelector(
-      '[part~="page-current"]',
-    ) as HTMLAnchorElement;
+    const enabledCurrent = enabled.shadowRoot!.querySelector('[part~="page-current"]') as HTMLAnchorElement;
     expect(enabledCurrent.localName).to.equal('a');
     expect(enabledCurrent.getAttribute('tabindex')).to.equal('0');
 
@@ -850,23 +934,13 @@ describe('numbered page list', () => {
       {
         name: 'disabled',
         template: html`
-          <lr-pagination
-            total="50"
-            page="2"
-            href-template="/products?page={page}"
-            disabled
-          ></lr-pagination>
+          <lr-pagination total="50" page="2" href-template="/products?page={page}" disabled></lr-pagination>
         `,
       },
       {
         name: 'loading',
         template: html`
-          <lr-pagination
-            total="50"
-            page="2"
-            href-template="/products?page={page}"
-            loading
-          ></lr-pagination>
+          <lr-pagination total="50" page="2" href-template="/products?page={page}" loading></lr-pagination>
         `,
       },
     ] as const;
@@ -875,22 +949,19 @@ describe('numbered page list', () => {
       const el = await pagination(testCase.template);
       const anchors = el.shadowRoot!.querySelectorAll('a');
       expect(anchors.length, `${testCase.name} link branch`).to.be.greaterThan(0);
-      expect(
-        el.shadowRoot!.querySelectorAll('a[href], a[tabindex="0"]').length,
-        `${testCase.name} tab stops`,
-      ).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('a[href], a[tabindex="0"]').length, `${testCase.name} tab stops`).to.equal(
+        0
+      );
       expect(
         el.shadowRoot!.querySelector('[part~="page-current"]')!.hasAttribute('tabindex'),
-        `${testCase.name} current tabindex`,
+        `${testCase.name} current tabindex`
       ).to.equal(false);
     }
   });
 
   it('calls an href-template function only for active valid page targets', async () => {
     const seen: number[] = [];
-    const el = await pagination(html`
-      <lr-pagination total="50" page="1" with-edges></lr-pagination>
-    `);
+    const el = await pagination(html` <lr-pagination total="50" page="1" with-edges></lr-pagination> `);
     el.hrefTemplate = (page: number) => {
       seen.push(page);
       return `/products?page=${page}`;
@@ -900,7 +971,7 @@ describe('numbered page list', () => {
     expect(seen.length).to.be.greaterThan(0);
     expect(
       seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
-      'first-page render',
+      'first-page render'
     ).to.equal(true);
 
     seen.length = 0;
@@ -909,11 +980,16 @@ describe('numbered page list', () => {
     expect(seen.length).to.be.greaterThan(0);
     expect(
       seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
-      'last-page render',
+      'last-page render'
     ).to.equal(true);
 
     for (const testCase of [
-      { name: 'disabled', apply: () => { el.disabled = true; } },
+      {
+        name: 'disabled',
+        apply: () => {
+          el.disabled = true;
+        },
+      },
       {
         name: 'loading',
         apply: () => {
@@ -937,7 +1013,7 @@ describe('numbered page list', () => {
       expect(anchors.length, `${testCase.name} configured link branch`).to.be.greaterThan(0);
       expect(
         anchors.every((anchor) => !anchor.hasAttribute('href')),
-        `${testCase.name} href omission`,
+        `${testCase.name} href omission`
       ).to.equal(true);
     }
   });
@@ -952,24 +1028,18 @@ describe('numbered page list', () => {
 
     expect(nodes[2].getAttribute('href')).to.equal('#results/3');
     expect(nodes[2].textContent!.trim(), 'the visible label is still localized').to.equal(
-      new Intl.NumberFormat('ar-EG').format(3),
+      new Intl.NumberFormat('ar-EG').format(3)
     );
   });
 
   it('falls back to buttons when an href-template resolves to an unsafe scheme', async () => {
     const el = await pagination(html`
-      <lr-pagination
-        total="30"
-        page-size="10"
-        href-template="javascript:alert({page})"
-      ></lr-pagination>
+      <lr-pagination total="30" page-size="10" href-template="javascript:alert({page})"></lr-pagination>
     `);
 
     const nodes = pageNodes(el);
     expect(nodes.map((node) => node.localName)).to.deep.equal(['a', 'button', 'button']);
-    expect(nodes[0].hasAttribute('href'), 'the inactive current link is not resolved').to.equal(
-      false,
-    );
+    expect(nodes[0].hasAttribute('href'), 'the inactive current link is not resolved').to.equal(false);
   });
 
   it('disables every page control while disabled or loading', async () => {
@@ -977,30 +1047,24 @@ describe('numbered page list', () => {
       <lr-pagination total="50" page-size="10" page="2" with-edges disabled></lr-pagination>
     `);
     expect(
-      [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')].every(
-        (button) => button.disabled,
-      ),
+      [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')].every((button) => button.disabled)
     ).to.equal(true);
 
     el.disabled = false;
     el.hrefTemplate = '/page/{page}';
     await el.updateComplete;
-    expect(
-      pageNodes(el).every((node) => node.getAttribute('aria-disabled') === 'false'),
-    ).to.equal(true);
+    expect(pageNodes(el).every((node) => node.getAttribute('aria-disabled') === 'false')).to.equal(true);
 
     el.loading = true;
     await el.updateComplete;
-    expect(pageNodes(el).every((node) => node.getAttribute('aria-disabled') === 'true')).to.equal(
-      true,
-    );
+    expect(pageNodes(el).every((node) => node.getAttribute('aria-disabled') === 'true')).to.equal(true);
     expect(pageNodes(el).some((node) => node.hasAttribute('href'))).to.equal(false);
   });
 
   it('keeps every numbered control at the shared hit-area floor in every size', async () => {
     for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
       const el = await pagination(
-        html`<lr-pagination size=${size} total="50" page-size="10" with-edges></lr-pagination>`,
+        html`<lr-pagination size=${size} total="50" page-size="10" with-edges></lr-pagination>`
       );
       for (const node of [
         ...pageNodes(el),
@@ -1037,29 +1101,21 @@ describe('numbered page list', () => {
       ></lr-pagination>
     `);
 
-    expect(
-      el.shadowRoot!.querySelector('[part~="first-button"]')!.getAttribute('aria-label'),
-    ).to.equal('Première page');
-    expect(
-      el.shadowRoot!.querySelector('[part~="last-button"]')!.getAttribute('aria-label'),
-    ).to.equal('Dernière page');
+    expect(el.shadowRoot!.querySelector('[part~="first-button"]')!.getAttribute('aria-label')).to.equal(
+      'Première page'
+    );
+    expect(el.shadowRoot!.querySelector('[part~="last-button"]')!.getAttribute('aria-label')).to.equal('Dernière page');
   });
 
   it('mirrors the edge-control glyphs under RTL', async () => {
-    const ltr = await pagination(html`
-      <lr-pagination total="50" page-size="10" with-edges></lr-pagination>
-    `);
+    const ltr = await pagination(html` <lr-pagination total="50" page-size="10" with-edges></lr-pagination> `);
     const rtl = await pagination(html`
       <lr-pagination dir="rtl" total="50" page-size="10" with-edges></lr-pagination>
     `);
 
     expect(
-      getComputedStyle(ltr.shadowRoot!.querySelector('[part="first-icon"]') as HTMLElement)
-        .transform,
-    ).to.not.equal(
-      getComputedStyle(rtl.shadowRoot!.querySelector('[part="first-icon"]') as HTMLElement)
-        .transform,
-    );
+      getComputedStyle(ltr.shadowRoot!.querySelector('[part="first-icon"]') as HTMLElement).transform
+    ).to.not.equal(getComputedStyle(rtl.shadowRoot!.querySelector('[part="first-icon"]') as HTMLElement).transform);
   });
 
   it('renders the compact layout as previous/next around the page-jump field', async () => {
@@ -1089,12 +1145,7 @@ describe('numbered page list', () => {
   describe('appearance', () => {
     async function appearanceFixture(appearance?: string): Promise<LyraPagination> {
       return pagination(html`
-        <lr-pagination
-          total="50"
-          page-size="10"
-          page="2"
-          appearance=${appearance ?? 'outlined'}
-        ></lr-pagination>
+        <lr-pagination total="50" page-size="10" page="2" appearance=${appearance ?? 'outlined'}></lr-pagination>
       `);
     }
 
@@ -1104,10 +1155,10 @@ describe('numbered page list', () => {
       const page = pageNodes(el)[0];
       expect(getComputedStyle(page).borderTopStyle).to.equal('solid');
       expect(getComputedStyle(page).borderTopColor).to.equal(
-        resolvedInShadow(el, 'border-color: var(--lr-color-border)', 'border-top-color'),
+        resolvedInShadow(el, 'border-color: var(--lr-color-border)', 'border-top-color')
       );
       expect(getComputedStyle(page).backgroundColor).to.equal(
-        resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color'),
+        resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color')
       );
     });
 
@@ -1121,11 +1172,9 @@ describe('numbered page list', () => {
       expect(getComputedStyle(pageNodes(filled)[0]).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 
       const filledOutlined = await appearanceFixture('filled-outlined');
-      expect(getComputedStyle(pageNodes(filledOutlined)[0]).borderTopColor).to.not.equal(
-        'rgba(0, 0, 0, 0)',
-      );
+      expect(getComputedStyle(pageNodes(filledOutlined)[0]).borderTopColor).to.not.equal('rgba(0, 0, 0, 0)');
       expect(getComputedStyle(pageNodes(filledOutlined)[0]).backgroundColor).to.equal(
-        getComputedStyle(pageNodes(filled)[0]).backgroundColor,
+        getComputedStyle(pageNodes(filled)[0]).backgroundColor
       );
     });
 
@@ -1135,10 +1184,10 @@ describe('numbered page list', () => {
         const current = el.shadowRoot!.querySelector('[part~="page-current"]') as HTMLElement;
         const other = pageNodes(el)[0];
         expect(getComputedStyle(current).backgroundColor, appearance).to.equal(
-          resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),
+          resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color')
         );
         expect(getComputedStyle(current).backgroundColor, appearance).to.not.equal(
-          getComputedStyle(other).backgroundColor,
+          getComputedStyle(other).backgroundColor
         );
       }
     });
@@ -1147,16 +1196,14 @@ describe('numbered page list', () => {
       const accent = await appearanceFixture('accent');
       const outlined = await appearanceFixture('outlined');
       expect(getComputedStyle(pageNodes(accent)[0]).backgroundColor).to.not.equal(
-        getComputedStyle(pageNodes(outlined)[0]).backgroundColor,
+        getComputedStyle(pageNodes(outlined)[0]).backgroundColor
       );
     });
   });
 });
 
 it('exposes the numbered pages as a real list', async () => {
-  const el = await pagination(html`
-    <lr-pagination total="200" page-size="10" page="10"></lr-pagination>
-  `);
+  const el = await pagination(html` <lr-pagination total="200" page-size="10" page="10"></lr-pagination> `);
   const list = el.shadowRoot!.querySelector('[part="pages"]') as HTMLElement;
 
   // list-style: none strips list semantics in some engines, so the roles are explicit.
@@ -1187,9 +1234,7 @@ it('wraps a long page list into a narrow allocation instead of overflowing it', 
 
 describe('the shared size ladder', () => {
   const baseFontSize = async (size: string): Promise<string> => {
-    const el = await pagination(
-      html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
-    );
+    const el = await pagination(html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`);
     return getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).fontSize;
   };
 
@@ -1207,9 +1252,7 @@ describe('the shared size ladder', () => {
   });
 
   it('keeps every control at the shared hit-area floor even at the smallest new tier', async () => {
-    const el = await pagination(
-      html`<lr-pagination size="2xs" total="95" page-size="10" with-edges></lr-pagination>`,
-    );
+    const el = await pagination(html`<lr-pagination size="2xs" total="95" page-size="10" with-edges></lr-pagination>`);
     for (const part of ['first-button', 'previous-button', 'next-button', 'last-button']) {
       const button = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement;
       expect(button.getBoundingClientRect().width, part).to.be.at.least(40);
@@ -1228,13 +1271,7 @@ describe('the shared size ladder', () => {
     }
 
     const compact = await pagination(html`
-      <lr-pagination
-        size="2xs"
-        format="compact"
-        total="950"
-        page-size="10"
-        page="48"
-      ></lr-pagination>
+      <lr-pagination size="2xs" format="compact" total="950" page-size="10" page="48"></lr-pagination>
     `);
     const field = compact.shadowRoot!.querySelector<HTMLElement>('[part="page-input"]')!;
     const box = field.getBoundingClientRect();
@@ -1270,18 +1307,14 @@ describe('Web Awesome navigation surface', () => {
   });
 
   it('without-nav removes only previous/next and hide-single-page renders nothing', async () => {
-    const withoutNav = await pagination(html`
-      <lr-pagination total="50" without-nav with-edges></lr-pagination>
-    `);
+    const withoutNav = await pagination(html` <lr-pagination total="50" without-nav with-edges></lr-pagination> `);
     expect(withoutNav.shadowRoot!.querySelector('[part~="previous-button"]')).to.not.exist;
     expect(withoutNav.shadowRoot!.querySelector('[part~="next-button"]')).to.not.exist;
     expect(withoutNav.shadowRoot!.querySelector('[part~="first-button"]')).to.exist;
     expect(withoutNav.shadowRoot!.querySelector('[part~="page"]')).to.exist;
 
-    const single = await pagination(html`
-      <lr-pagination total="5" hide-single-page></lr-pagination>
-    `);
-    expect(single.shadowRoot!.querySelector('nav')).to.not.exist;
+    const single = await pagination(html` <lr-pagination total="5" hide-single-page></lr-pagination> `);
+    expect(single.shadowRoot!.querySelector('nav') == null).to.equal(true);
   });
 
   it('projects all four custom icon slots without replacing accessible button names', async () => {
@@ -1296,7 +1329,8 @@ describe('Web Awesome navigation surface', () => {
       const slot = icon.querySelector('slot') as HTMLSlotElement;
       expect(slot.assignedElements()).to.have.length(1);
       expect(el.shadowRoot!.querySelector(`[part~="${name}-button"]`)!.getAttribute('aria-label'))
-        .to.be.a('string').and.not.equal('');
+        .to.be.a('string')
+        .and.not.equal('');
     }
   });
 
@@ -1319,9 +1353,7 @@ describe('Web Awesome navigation surface', () => {
   });
 
   it('puts the shared button part on pages, ellipses, and navigation and label on compact output', async () => {
-    const standard = await pagination(html`
-      <lr-pagination total="200" page="10" with-edges></lr-pagination>
-    `);
+    const standard = await pagination(html` <lr-pagination total="200" page="10" with-edges></lr-pagination> `);
     const controls = [...standard.shadowRoot!.querySelectorAll<HTMLElement>('[part~="button"]')];
     expect(controls.length).to.be.greaterThan(8);
     expect(controls.some((control) => control.part.contains('ellipsis'))).to.be.true;

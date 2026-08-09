@@ -32,14 +32,14 @@ export const styles = css`
   }
   :host([appearance="filled"]) [part="base"] {
     border-color: transparent;
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-card-filled-bg, var(--lr-color-brand-quiet));
   }
   :host([appearance="filled-outlined"]) [part="base"] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-card-filled-outlined-bg, var(--lr-color-brand-quiet));
   }
   :host([appearance="accent"]) [part="base"] {
     border-color: transparent;
-    border-inline-start: var(--lr-size-3px) solid var(--lr-color-brand);
+    border-inline-start: var(--lr-size-3px) solid var(--lr-card-accent-border-color, var(--lr-color-brand));
   }
   :host([appearance="plain"]) [part="base"] {
     border-color: transparent;
@@ -50,7 +50,7 @@ export const styles = css`
     transition: border-color var(--lr-transition-fast);
   }
   :host([interactive]) [part="base"]:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed keeps the hover border and adds a tint of the whole tile, so it reads as a step past
      hover rather than a different colour of the same step. The tint is a background-IMAGE layer,
@@ -58,17 +58,23 @@ export const styles = css`
      filled-outlined set brand-quiet), and a colour here would replace theirs instead of deepening
      it, so a filled card would flash back to plain surface on mousedown. */
   :host([interactive]) [part="base"]:active {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-card-interactive-active-border-color, var(--lr-color-brand));
     background-image: linear-gradient(
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      var(
+        --lr-card-interactive-active-overlay,
+        color-mix(
+          in oklab,
+          transparent,
+          var(--lr-color-mix-partner) var(--lr-color-mix-active)
+        )
       ),
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      var(
+        --lr-card-interactive-active-overlay,
+        color-mix(
+          in oklab,
+          transparent,
+          var(--lr-color-mix-partner) var(--lr-color-mix-active)
+        )
       )
     );
   }

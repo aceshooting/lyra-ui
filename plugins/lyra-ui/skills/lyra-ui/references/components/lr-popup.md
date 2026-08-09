@@ -35,9 +35,12 @@ virtual element), `for` (a same-root id), then the first element assigned to the
 - `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
   changes when it flips.
 - `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
-  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above
+  `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above. For a
+  plain virtual rect, omitted `width`/`height` default to zero, negative dimensions clamp to zero,
+  and any non-finite coordinate or dimension makes that rect inert so it cannot corrupt layout.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
-  under RTL
+  under RTL. The shared positioner's physical coordinates remain authoritative in either
+  direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
   escapes every ancestor transform/filter/containment context; `absolute` positions against the
   nearest positioned ancestor, so the popup scrolls with its containing content

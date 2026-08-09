@@ -5,7 +5,9 @@ export const buttonChromeStyles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-radio-button-gap, var(--lr-space-xs));
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* WCAG 2.5.8: the whole button is the target. The size ladder drives the height, floored at
        1.5rem/24px so even the 2xs tier stays a conformant target. */
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-1-5rem));
@@ -26,6 +28,18 @@ export const buttonChromeStyles = css`
        out fully rounded. Logical radii, so RTL mirrors without a :dir() rule. */
     border-radius: 0;
   }
+  [part='label'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='prefix'],
+  [part='suffix'] {
+    min-inline-size: 0;
+    max-inline-size: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   :host(:first-of-type) [part~='button'] {
     border-start-start-radius: var(--lr-radio-radius);
     border-end-start-radius: var(--lr-radio-radius);
@@ -39,16 +53,16 @@ export const buttonChromeStyles = css`
   }
 
   [part~='button']:hover {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-radio-button-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed: the hover's tint carried further toward --lr-color-mix-partner (which follows the text
      colour). This rule used to be byte-identical to the :hover above, which is a pressed state only
      on paper -- a segment that looks exactly the same held down as hovered tells the user nothing
      about whether their click landed. */
   [part~='button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    border-color: var(--lr-color-brand);
+    background: var(--lr-radio-button-active-bg, color-mix(in oklab, var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    border-color: var(--lr-radio-button-active-border-color, var(--lr-radio-button-hover-border-color, var(--lr-color-brand)));
   }
   :host(:focus-visible) [part~='button'],
   [part~='button']:focus-visible {
@@ -62,9 +76,9 @@ export const buttonChromeStyles = css`
   /* State lives in the part name, never as ::part(base)[aria-checked] -- an attribute selector
      after ::part() never matches. */
   [part~='checked'] {
-    background: var(--lr-color-brand);
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--lr-radio-button-checked-bg, var(--lr-color-brand));
+    border-color: var(--lr-radio-button-checked-border-color, var(--lr-color-brand));
+    color: var(--lr-radio-button-checked-color, var(--lr-color-on-brand));
   }
   [part~='checked'] [part='label'] {
     color: inherit;
@@ -74,12 +88,12 @@ export const buttonChromeStyles = css`
      to out-read the hover. Both mix the loud fill toward --lr-color-mix-partner, which follows the
      text colour, so the on-brand label stays legible at either share. */
   [part~='checked']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
-    border-color: var(--lr-color-brand);
+    background: var(--lr-radio-button-checked-hover-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    border-color: var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand)));
   }
   [part~='checked']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    border-color: var(--lr-color-brand);
+    background: var(--lr-radio-button-checked-active-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    border-color: var(--lr-radio-button-checked-active-border-color, var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand))));
   }
   [part~='disabled'] {
     cursor: not-allowed;
@@ -95,6 +109,8 @@ export const styles = css`
        of the two they are looking at. */
     --lr-radio-radius: var(--lr-form-control-radius);
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   :host([pill]) { --lr-radio-radius: var(--lr-radius-pill); }
   ${buttonChromeStyles}
@@ -105,6 +121,8 @@ export const appearanceStyles = css`
   :host([appearance='button']) {
     --lr-radio-radius: var(--lr-form-control-radius);
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   :host([appearance='button'][pill]) { --lr-radio-radius: var(--lr-radius-pill); }
   ${buttonChromeStyles}

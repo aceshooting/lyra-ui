@@ -77,7 +77,7 @@ it('shows args read-only inside a collapsed lr-details + lr-json-viewer only whe
   withArgs.args = { path: '/etc/hosts' };
   await withArgs.updateComplete;
   const details = withArgs.shadowRoot!.querySelector('[part="args"]') as HTMLElement & { open: boolean };
-  expect(details).to.exist;
+  expect((details) != null).to.equal(true);
   expect(details.open).to.be.false; // collapsed by default
   expect(details.tagName.toLowerCase()).to.equal('lr-details');
   const viewer = details.querySelector('lr-json-viewer') as HTMLElement & { data: unknown };
@@ -177,7 +177,7 @@ it('is role="group" labeled by the heading', async () => {
   expect(base.getAttribute('role')).to.equal('group');
   const labelledBy = base.getAttribute('aria-labelledby');
   expect(labelledBy).to.be.a('string');
-  expect(el.shadowRoot!.getElementById(labelledBy!)).to.equal(el.shadowRoot!.querySelector('[part="heading"]'));
+  expect((el.shadowRoot!.getElementById(labelledBy!)) === (el.shadowRoot!.querySelector('[part="heading"]'))).to.equal(true);
 });
 
 it('is accessible before and after a decision, with and without args', async () => {

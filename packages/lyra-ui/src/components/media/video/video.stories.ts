@@ -80,3 +80,26 @@ export const CustomControlTheme: Story = {
     ></lr-video>
   `,
 };
+
+export const SafeIconOverrides: Story = {
+  name: 'Interactive icon overrides stay decorative',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Icon slots are decorative glyph layers beside the real native controls. Even accidentally interactive assigned markup such as these links is inert, accessibility-hidden, pointer-transparent, and never nested inside the named button; the video control remains the only focus and click target.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-video src=${VIDEO_SRC} poster=${POSTER} title="Decorative icon slot safety">
+      <a slot="poster-icon" href="#unexpected-poster-action" style="color: inherit; text-decoration: none;">▶</a>
+      <a slot="play-icon" href="#unexpected-play-action" style="color: inherit; text-decoration: none;">▶</a>
+      <a slot="pause-icon" href="#unexpected-pause-action" style="color: inherit; text-decoration: none;">Ⅱ</a>
+      <a slot="volume-icon" href="#unexpected-volume-action" style="color: inherit; text-decoration: none;">◖</a>
+      <a slot="mute-icon" href="#unexpected-mute-action" style="color: inherit; text-decoration: none;">×</a>
+      <a slot="fullscreen-icon" href="#unexpected-fullscreen-action" style="color: inherit; text-decoration: none;">⛶</a>
+      <a slot="exit-fullscreen-icon" href="#unexpected-exit-action" style="color: inherit; text-decoration: none;">⊡</a>
+    </lr-video>
+  `,
+};

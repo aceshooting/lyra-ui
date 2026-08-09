@@ -132,6 +132,8 @@ export interface LyraSelectEventMap {
  * `with-clear`'s button renders inside the trigger's inline-end padding,
  * outboard of the expand icon, as a sibling of the trigger rather than a child
  * of it -- for the same nesting reason.
+ * The trigger and overlaid multi-select tag row accept constrained allocation: long selected
+ * labels ellipsize and long chips wrap within a 320px LTR or RTL container instead of widening it.
  *
  * Reuses `lr-combobox`'s popup positioning (`internal/positioner.js`) and
  * click-outside/Escape/Home/End/Arrow-key listbox navigation patterns,
@@ -160,6 +162,11 @@ export interface LyraSelectEventMap {
  * trigger is a `role="combobox"` button where Enter opens the listbox and, once open, commits the
  * active option — the ARIA combobox behavior its upstream counterpart follows. Submitting there
  * would shadow the only keyboard way to open the list.
+ *
+ * While the listbox is open, live option collection changes preserve the keyboard-active option
+ * by element identity across reorders. If that option is removed or becomes unavailable, the
+ * nearest navigable survivor takes over (preferring the following row on a tie); an empty
+ * navigable collection clears `aria-activedescendant` instead of retaining an invalid index.
  *
  * @customElement lr-select
  * @slot - `<lr-option>` elements.
@@ -270,6 +277,11 @@ export interface LyraSelectEventMap {
  * @cssprop [--tag-max-size=var(--lr-size-12rem)] - Maximum inline size of one selected-value tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition timing.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition timing.
+ * @cssprop [--lr-select-trigger-hover-bg=var(--lr-color-brand-quiet)] - Trigger background while
+ * hovered. Accent appearance keeps its louder mixed fallback when this hook is unset.
+ * @cssprop [--lr-select-trigger-active-bg=color-mix(...)] - Trigger background while pressed.
+ * @cssprop [--lr-select-open-border-color=var(--lr-color-brand)] - Trigger border while the
+ * listbox is open.
  * @cssprop [--lr-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor
  *   is never shadowed -- retheme just this row state without hijacking the shared
@@ -334,6 +346,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   @property() placeholder = '';
+  /** Visible label. A host `aria-label` wins on the internal trigger by attribute presence,
+   * including an explicitly empty value that suppresses this label's naming fallback. */
   @property() label = '';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are present. */
@@ -384,6 +398,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property({ type: Boolean, attribute: 'auto-commit-single-option' }) autoCommitSingleOption = false;
 
   @state() private activeIndex = -1;
+  /** Stable identity behind `activeIndex`, retained across collection reorder/removal and option
+   *  availability changes so the numeric index never silently points at a different row. */
+  private activeOption?: LyraOption;
   @state() private options: LyraOption[] = [];
   // Set on the trigger button's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
@@ -945,9 +962,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private collectOptions = (e: Event): void => {
     const slot = e.target as HTMLSlotElement;
     const previous = new Set(this.options);
+    const previousActive = this.activeOption;
+    const previousActiveRawIndex = previousActive
+      ? this.options.indexOf(previousActive)
+      : this.activeIndex;
     this.options = slot
       .assignedElements({ flatten: true })
       .filter((el): el is LyraOption => el instanceof LyraOption);
+    this.reconcileActiveOption(previousActive, previousActiveRawIndex);
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
       // Seed the initial selection -- and the reset default -- from
@@ -1089,6 +1111,54 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return options.filter((o) => !o.disabled && !o.inert && !o.closest('[inert]'));
   }
 
+  /** Updates the numeric active-descendant cursor and its stable option identity together. */
+  private setActiveIndex(next: number, navigable: LyraOption[] = this.navigableOptions()): void {
+    if (next < 0 || navigable.length === 0) {
+      this.activeIndex = -1;
+      this.activeOption = undefined;
+      return;
+    }
+    const index = Math.min(next, navigable.length - 1);
+    this.activeIndex = index;
+    this.activeOption = navigable[index];
+  }
+
+  /** Keeps the active option by identity when possible. If it disappeared or became unavailable,
+   *  choose the nearest navigable row around its former raw collection position, preferring the
+   *  following row on an equal-distance tie, then fall back to no active descendant. */
+  private reconcileActiveOption(previousActive: LyraOption | undefined, previousRawIndex: number): void {
+    if (!previousActive && this.activeIndex < 0) return;
+    const navigable = this.navigableOptions();
+    if (previousActive) {
+      const preservedIndex = navigable.indexOf(previousActive);
+      if (preservedIndex >= 0) {
+        this.setActiveIndex(preservedIndex, navigable);
+        return;
+      }
+    }
+    if (navigable.length === 0) {
+      this.setActiveIndex(-1, navigable);
+      return;
+    }
+    const pivot = Math.max(0, previousRawIndex);
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    let nearestRawIndex = -1;
+    navigable.forEach((option, index) => {
+      const rawIndex = this.options.indexOf(option);
+      const distance = Math.abs(rawIndex - pivot);
+      if (
+        distance < nearestDistance ||
+        (distance === nearestDistance && rawIndex >= pivot && nearestRawIndex < pivot)
+      ) {
+        nearestIndex = index;
+        nearestDistance = distance;
+        nearestRawIndex = rawIndex;
+      }
+    });
+    this.setActiveIndex(nearestIndex, navigable);
+  }
+
   // Fired by `option.ts`'s `lr-option-change` (a MutationObserver on the
   // option's own light-DOM content/attributes) when an already-slotted
   // `<lr-option>` mutates its own data in place -- `collectOptions()` only
@@ -1096,10 +1166,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // without this the rendered listbox row would go stale. Reassigning (not
   // mutating) `options` gives Lit a new array reference to diff against.
   private onOptionChange = (): void => {
+    const previousActive = this.activeOption;
+    const previousActiveRawIndex = previousActive
+      ? this.options.indexOf(previousActive)
+      : this.activeIndex;
     queueMicrotask(() => {
       this.refreshOptionDefaults();
       this.reflectSelected();
       this.options = [...this.options];
+      this.reconcileActiveOption(previousActive, previousActiveRawIndex);
     });
   };
 
@@ -1117,7 +1192,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.resolveTransitionWaiters('lr-after-show');
     const settled = this.waitForTransition('lr-after-hide');
     this.open = false;
-    this.activeIndex = -1;
+    this.setActiveIndex(-1);
     return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {
@@ -1395,7 +1470,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       if (candidate === undefined) continue;
       if (candidate.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
-          this.activeIndex = idx;
+          this.setActiveIndex(idx, navigable);
         } else if (!(this.multiple && this._selected.includes(candidate.value))) {
           // A closed multi-select commits the match the same way, except when it is already
           // selected: typing a label to *find* an option must never silently deselect it.
@@ -1425,7 +1500,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           void this.show();
           return;
         }
-        this.activeIndex = Math.min(navigable.length - 1, this.activeIndex + 1);
+        this.setActiveIndex(Math.min(navigable.length - 1, this.activeIndex + 1), navigable);
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -1434,7 +1509,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           void this.show();
           return;
         }
-        this.activeIndex = Math.max(0, this.activeIndex - 1);
+        this.setActiveIndex(Math.max(0, this.activeIndex - 1), navigable);
         break;
       case 'Enter':
       case ' ':
@@ -1461,13 +1536,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       case 'Home':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = 0;
+          this.setActiveIndex(0, navigable);
         }
         break;
       case 'End':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = navigable.length - 1;
+          this.setActiveIndex(navigable.length - 1, navigable);
         }
         break;
       case 'Backspace':
@@ -1612,7 +1687,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             aria-expanded=${isSingleOption ? nothing : this.open ? 'true' : 'false'}
             aria-controls=${isSingleOption ? nothing : this.listId}
             aria-activedescendant=${isSingleOption ? nothing : activeId}
-            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('select'))}
+            aria-label=${this.getAttribute('aria-label') ?? (hasLabel ? nothing : this.placeholder || this.localize('select'))}
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}

@@ -23,8 +23,9 @@ one exception is the plain arithmetic sum of segment values used to build the ac
 used" summary.
 
 **Properties:**
+
 - `segments: ContextMeterSegment[] = []` (attribute: false, JS-only) — `{ label: string; value:
-  number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an *absolute*
+number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an _absolute_
   quantity measured against `total`, never a pre-computed percentage.
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
@@ -40,9 +41,10 @@ A host `aria-label` overrides the generated meter summary and is preserved acros
 
 **Slots:** none.
 
-**CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `track` (the unfilled/empty
-capacity), `segment` (one occupied segment — carries `data-tone` and, for custom colors,
-`--lr-context-meter-segment-color`), `label`
+**CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `semantic` (the visually hidden
+meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
+`data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
+category list), `segment-item` (one hidden category/value entry), and `label`
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied; otherwise the component consumes shared tokens
@@ -74,7 +76,7 @@ each labeled quantity, while the visible track, segments, ring SVG, and visible 
 `aria-hidden`. The summary's "used" figure is the sum of
 `segments[].value`, clamped to `total` whenever `total > 0` so the announced text can never claim
 more than 100% used (e.g. `segments` summing to `150000` against `total="128000"` still announces
-`"128,000 of 128,000 used"`) — matching what the *visual* meter shows, since each segment's ratio is
+`"128,000 of 128,000 used"`) — matching what the _visual_ meter shows, since each segment's ratio is
 independently clamped so the running cumulative fill across all segments can never exceed 100% of the
 bar/ring either: an over-`total` `segments` array renders as a fully (not over-) filled meter, with
 later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
@@ -84,6 +86,7 @@ just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `seg
 numbers, so the two circular-meter components in the library share one visual scale.
 
 **Known gotchas:**
+
 - The ring variant's per-segment `<title>` and the bar variant's per-segment `title=` attribute are
   native mouse-hover tooltips only — they sit inside `aria-hidden` markup. Screen readers use the
   hidden meter/group summary and segment list instead.

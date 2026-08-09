@@ -28,7 +28,7 @@ changes the component library version without installing a supported SheetJS rel
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-flags` | `workspace:^2.0.0` | `lr-flag`, `lr-phone-input` |
+| `@aceshooting/lyra-flags` | `workspace:^2.0.0` | `lr-flag`, `lr-locale-picker`, `lr-phone-input` |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
 | `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
@@ -38,22 +38,22 @@ changes the component library version without installing a supported SheetJS rel
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `dompurify` | `^3.4.13` | `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`, `lr-icon`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-svg-viewer`, `lr-widget-renderer` |
+| `dompurify` | `^3.4.13` | `lr-agent-workspace`, `lr-command-palette`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-evaluation-run`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-query-builder`, `lr-rag-answer`, `lr-streaming-text`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `jszip` | `^3.10.1` | `lr-archive-viewer` |
-| `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-widget-renderer` |
+| `katex` | `^0.18.1` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.0` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-map` |
-| `marked` | `^18.0.9` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-widget-renderer` |
+| `marked` | `^18.0.9` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.6` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
-| `shiki` | `^4.4.2` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-widget-renderer` |
+| `shiki` | `^4.4.2` | `lr-agent-workspace`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `svelte` | `>=5 <6` | type-only `@aceshooting/lyra-ui/svelte` entry (no runtime import) |
 | `vue` | `>=3.5 <4` | type-only `@aceshooting/lyra-ui/vue` entry (no runtime import) |
 | `xlsx` | `>=0.20.3 <0.21.0` | `lr-spreadsheet-viewer` |

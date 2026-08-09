@@ -54,50 +54,55 @@ export const Phases: Story = {
 export const LiveDemo: Story = {
   name: 'Live demo (connect → stream → stall → recover)',
   render: () => {
-    function wire(root: HTMLElement): void {
-      const status = root.querySelector<LyraStreamStatus>('lr-stream-status')!;
+    let connectGeneration = 0;
+    const rootFor = (event: Event): HTMLElement =>
+      (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-live-demo]')!;
+    const line = (root: HTMLElement, text: string): void => {
       const log = root.querySelector<HTMLElement>('[data-log]')!;
-      if (status.hasAttribute('data-wired')) return;
-      status.setAttribute('data-wired', '');
-
-      const line = (text: string): void => {
-        const time = new Date().toLocaleTimeString(undefined, { hour12: false });
-        const el = document.createElement('div');
-        el.textContent = `${time} — ${text}`;
-        log.prepend(el);
-      };
-      status.addEventListener('lr-stall', () => line('lr-stall fired'));
-      status.addEventListener('lr-recover', () => line('lr-recover fired'));
-
-      root.querySelector('[data-connect]')!.addEventListener('click', () => {
-        status.phase = 'connecting';
-        line('phase = "connecting"');
-        setTimeout(() => {
-          status.phase = 'streaming';
-          line('phase = "streaming"');
-        }, 600);
-      });
-      root.querySelector('[data-activity]')!.addEventListener('click', () => {
-        status.recordActivity();
-        line('recordActivity() called');
-      });
-      root.querySelector('[data-stop]')!.addEventListener('click', () => {
-        status.phase = 'idle';
-        line('phase = "idle" (host stopped the stream)');
-      });
-    }
+      const time = new Date().toLocaleTimeString(undefined, { hour12: false });
+      const entry = document.createElement('div');
+      entry.textContent = `${time} — ${text}`;
+      log.prepend(entry);
+    };
+    const onConnect = (event: Event): void => {
+      const root = rootFor(event);
+      const status = root.querySelector<LyraStreamStatus>('lr-stream-status')!;
+      const generation = ++connectGeneration;
+      status.phase = 'connecting';
+      line(root, 'phase = "connecting"');
+      setTimeout(() => {
+        if (!status.isConnected || generation !== connectGeneration) return;
+        status.phase = 'streaming';
+        line(root, 'phase = "streaming"');
+      }, 600);
+    };
+    const onActivity = (event: Event): void => {
+      const root = rootFor(event);
+      root.querySelector<LyraStreamStatus>('lr-stream-status')!.recordActivity();
+      line(root, 'recordActivity() called');
+    };
+    const onStop = (event: Event): void => {
+      const root = rootFor(event);
+      connectGeneration += 1;
+      root.querySelector<LyraStreamStatus>('lr-stream-status')!.phase = 'idle';
+      line(root, 'phase = "idle" (host stopped the stream)');
+    };
 
     return html`
       <div
+        data-live-demo
         style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
       >
-        <lr-stream-status stall-threshold-ms="2000">
-          <button slot="actions" style=${buttonStyle} data-stop>Stop</button>
+        <lr-stream-status
+          stall-threshold-ms="2000"
+          @lr-stall=${(event: Event) => line(rootFor(event), 'lr-stall fired')}
+          @lr-recover=${(event: Event) => line(rootFor(event), 'lr-recover fired')}
+        >
+          <button slot="actions" style=${buttonStyle} data-stop @click=${onStop}>Stop</button>
         </lr-stream-status>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-          <button style=${buttonStyle} data-connect>Connect</button>
-          <button style=${buttonStyle} data-activity>Record activity</button>
+          <button style=${buttonStyle} data-connect @click=${onConnect}>Connect</button>
+          <button style=${buttonStyle} data-activity @click=${onActivity}>Record activity</button>
         </div>
         <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           <code>stall-threshold-ms="2000"</code> here (vs. the real default of 10000) so the demo doesn't

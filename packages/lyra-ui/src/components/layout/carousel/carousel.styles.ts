@@ -161,17 +161,20 @@ export const styles = css`
   }
 
   [part~="navigation-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-carousel-navigation-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-carousel-navigation-hover-border-color, var(--lr-color-brand));
   }
 
   [part~="navigation-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-carousel-navigation-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-carousel-navigation-active-border-color, var(--lr-color-brand));
   }
 
   [part~="navigation-button"]:disabled {
@@ -242,17 +245,20 @@ export const styles = css`
   }
 
   [part~="pagination-item"]:hover [part="indicator-dot"] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
+    background: var(--lr-carousel-pagination-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(--lr-carousel-pagination-hover-border-color, var(--lr-color-brand));
   }
 
   [part~="pagination-item"]:active [part="indicator-dot"] {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-carousel-pagination-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-carousel-pagination-active-border-color, var(--lr-color-brand));
   }
 
   :host(:dir(rtl)) [part="previous-glyph"],

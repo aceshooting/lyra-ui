@@ -152,7 +152,8 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *
  * `label`/`hint` plus their slots render visible form context. `with-label`/`with-hint` are SSR
  * presence hints only: hydrated instances also detect populated content automatically. The
- * `reference` slot supplies endpoint/unit context in the `references` part.
+ * `reference` slot supplies endpoint/unit context in the `references` part. All three text regions
+ * wrap unbroken content within the slider's allocation in LTR and RTL instead of widening it.
  *
  * @customElement lr-slider
  * @event input - Native event fired continuously while a user moves a handle.
@@ -214,6 +215,8 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @method checkValidity - Returns whether custom constraint validation currently passes.
  * @method reportValidity - Reports validity through the browser's validation UI.
  * @method setCustomValidity - Sets or clears a caller-supplied validation message.
+ * @cssprop [--lr-slider-gap=var(--lr-space-s)] - Gap between the track row, value, label,
+ * references, and hint as they wrap.
  * @cssprop [--lr-slider-track-length=var(--lr-size-10rem)] - Length of the track in
  *   `orientation="vertical"`; the horizontal track fills its container instead. Declared as an
  *   inline `var()` fallback (never on `:host`), so a consumer override at any ancestor wins.
@@ -225,6 +228,12 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   area around it never drops below 1.75rem/28px, whatever this is set to.
  * @cssprop [--lr-slider-track-thickness=calc(var(--lr-slider-thumb-size) * 0.25)] - Thickness of
  *   the track, the filled indicator and (scaled from it) the `with-markers` ticks.
+ * @cssprop [--lr-slider-thumb-bg=var(--lr-color-brand)] - Resting thumb background.
+ * @cssprop [--lr-slider-thumb-border-color=var(--lr-color-surface)] - Resting thumb border.
+ * @cssprop [--lr-slider-thumb-hover-ring-color=var(--lr-color-brand-quiet)] - Thumb ring while
+ * hovered.
+ * @cssprop [--lr-slider-thumb-active-ring-color=var(--lr-slider-thumb-hover-ring-color)] - Thumb
+ * ring while pressed.
  * @cssprop --thumb-size - Shoelace alias setting both thumb dimensions.
  * @cssprop --thumb-width - Upstream thumb inline size.
  * @cssprop --thumb-height - Upstream thumb block size.
@@ -584,9 +593,11 @@ export class LyraSlider extends LyraSliderBase {
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
    *  The resolved name is set on the interactive `role="slider"` element — or, in `range` mode,
    *  on the `role="group"` wrapping both handles, since each handle then owns its own
-   *  start/end name. With neither a host `aria-label` nor this property, the localized generic
-   *  `sliderLabel` message applies so the focusable thumb is never nameless (the same pattern as
-   *  `<lr-input>`/`<lr-textarea>`'s built-in generic labels). */
+   *  start/end name. A host attribute wins by presence, including an explicitly empty value that
+   *  suppresses visible/property/localized fallbacks and visible-label linkage. With neither a
+   *  host `aria-label` nor this property, the localized generic `sliderLabel` message applies so
+   *  the focusable thumb is never nameless (the same pattern as `<lr-input>`/`<lr-textarea>`'s
+   *  built-in generic labels). */
   @property() label = '';
 
   /** Plain-text description of what the slider controls, rendered below the track and wired to
@@ -1342,7 +1353,8 @@ export class LyraSlider extends LyraSliderBase {
   /** The accessible name of the control as a whole — the single thumb's own
    *  name, or the `role="group"` name wrapping both range handles. */
   private resolvedLabel(): string {
-    return this.getAttribute('aria-label') || this.label || this.localize('sliderLabel');
+    const hostLabel = this.getAttribute('aria-label');
+    return hostLabel !== null ? hostLabel : this.label || this.localize('sliderLabel');
   }
 
   /** Position one absolutely-placed child along the current value axis. */

@@ -65,6 +65,46 @@ export const MultipleSelection: Story = {
   `,
 };
 
+/** Invalid duplicate data ids remain visible for diagnosis, but only their first depth-first
+ * occurrence owns the public identity; later rows fail closed as disabled. */
+export const InvalidDuplicateIds: Story = {
+  render: () => html`
+    <lr-tree
+      style="max-width: 20rem"
+      label="Import preview with duplicate ids"
+      .data=${[
+        { id: 'shared', label: 'Canonical shared record' },
+        { id: 'shared', label: 'Conflicting shared record' },
+        { id: 'unique', label: 'Unique record' },
+      ] satisfies TreeItem[]}
+    ></lr-tree>
+  `,
+};
+
+export const RetintedSelectionCheckboxes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Checked and indeterminate checkbox foregrounds, backgrounds, and borders are independently themeable.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-tree-checkbox-checked-border-color: var(--lr-color-success); --lr-tree-checkbox-checked-bg: var(--lr-color-success-quiet); --lr-tree-checkbox-checked-color: var(--lr-color-success); --lr-tree-checkbox-indeterminate-border-color: var(--lr-color-warning); --lr-tree-checkbox-indeterminate-bg: var(--lr-color-warning-quiet); --lr-tree-checkbox-indeterminate-color: var(--lr-color-warning)"
+    >
+      <lr-tree style="max-width: var(--lr-size-20rem)" label="Themed selection" selection="multiple">
+        <lr-tree-item expanded>
+          Partially selected package
+          <lr-tree-item selected>Selected child</lr-tree-item>
+          <lr-tree-item>Unselected child</lr-tree-item>
+        </lr-tree-item>
+        <lr-tree-item selected>Fully selected package</lr-tree-item>
+      </lr-tree>
+    </div>
+  `,
+};
+
 /** Tree-wide icons are inherited by every disclosure; an item-level slot can override either one. */
 export const CustomDisclosureIcons: Story = {
   render: () => html`
@@ -94,7 +134,7 @@ export const LazyLoading: Story = {
       event: CustomEvent<{
         item: HTMLElement & { lazy: boolean; loading: boolean };
         generation: number;
-      }>,
+      }>
     ): void => {
       const { item, generation } = event.detail;
       latestGeneration.set(item, generation);
@@ -126,8 +166,7 @@ export const RichRows: Story = {
           id: 'judgment',
           label: 'C-42/24 — Commission v Example',
           description: 'Grand Chamber · Judgment · 14 July 2026',
-          accessibleLabel:
-            'Case C-42/24, Commission v Example, Grand Chamber judgment, 14 July 2026',
+          accessibleLabel: 'Case C-42/24, Commission v Example, Grand Chamber judgment, 14 July 2026',
           badge: 12,
           icon: html`<svg aria-hidden="true" viewBox="0 0 16 16" width="1em" height="1em">
             <circle cx="8" cy="8" r="6" fill="currentColor"></circle>
@@ -169,16 +208,18 @@ export const RetintedBadges: Story = {
         --lr-tree-badge-danger-bg: var(--lr-color-warning-quiet);
       "
       label="Retinted badge tones"
-      .data=${[{
-        id: 'root',
-        label: 'Build',
-        badges: [
-          { text: 'Brand', tone: 'brand' },
-          { text: 'Ready', tone: 'success' },
-          { text: 'Wait', tone: 'warning' },
-          { text: 'Fail', tone: 'danger' },
-        ],
-      }] satisfies TreeItem[]}
+      .data=${[
+        {
+          id: 'root',
+          label: 'Build',
+          badges: [
+            { text: 'Brand', tone: 'brand' },
+            { text: 'Ready', tone: 'success' },
+            { text: 'Wait', tone: 'warning' },
+            { text: 'Fail', tone: 'danger' },
+          ],
+        },
+      ] satisfies TreeItem[]}
     ></lr-tree>
   `,
 };
@@ -186,10 +227,11 @@ export const RetintedBadges: Story = {
 /** Demonstrates the imperative `expandAll()`/`collapseAll()` methods. */
 export const ExpandCollapseAll: Story = {
   render: () => {
-    const getTree = () => document.getElementById('imperative-tree') as HTMLElement & {
-      expandAll: () => void;
-      collapseAll: () => void;
-    };
+    const getTree = () =>
+      document.getElementById('imperative-tree') as HTMLElement & {
+        expandAll: () => void;
+        collapseAll: () => void;
+      };
     return html`
       <div style="display:flex; flex-direction:column; gap:1rem; max-width:20rem">
         <div style="display:flex; gap:0.5rem">
@@ -206,8 +248,9 @@ export const ExpandCollapseAll: Story = {
  * `reorderable` opts into keyboard reordering. Focus a row and press
  * **Ctrl/Cmd+ArrowUp / Ctrl/Cmd+ArrowDown** to move it within its own parent's child list.
  * `lr-reorder` is only a *request* — `data` is host-owned, so this story applies the move itself
- * and reassigns `data`; focus follows the moved row. The move is sibling-scoped: Ctrl+ArrowDown on
- * the last child of a subtree does nothing rather than reparenting it.
+ * and reassigns `data`; focus follows the moved row and the success announcement fires only after
+ * that rendered order confirms the request. The move is sibling-scoped: Ctrl+ArrowDown on the last
+ * child of a subtree does nothing rather than reparenting it.
  */
 export const Reorderable: Story = {
   render: () => {
@@ -246,8 +289,8 @@ export const Reorderable: Story = {
           item.id === parentId && item.children
             ? { ...item, children: move(item.children) }
             : item.children
-              ? { ...item, children: apply(item.children) }
-              : item,
+            ? { ...item, children: apply(item.children) }
+            : item
         );
       tree.data = parentId === null ? move(tree.data) : apply(tree.data);
     };

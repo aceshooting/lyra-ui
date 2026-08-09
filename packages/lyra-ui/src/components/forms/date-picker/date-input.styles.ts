@@ -108,6 +108,8 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-date-input-gap);
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     box-sizing: border-box;
     min-block-size: var(--lr-date-input-control-height, var(--lr-date-input-control-min-height));
     /* Pinned only when --lr-date-input-control-height is set; 'auto' otherwise, so the row keeps
@@ -144,10 +146,15 @@ export const styles = css`
   }
   [part='start'],
   [part='end'] {
-    flex: 0 0 auto;
+    flex: 0 1 40%;
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 40%;
     align-items: center;
     color: var(--lr-color-text-quiet);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='start'][hidden],
   [part='end'][hidden] {

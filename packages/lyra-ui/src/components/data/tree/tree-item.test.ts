@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree-item.js';
-import type { LyraTreeItem } from './tree-item.js';
+import './tree.js';
+import { LyraTreeItem } from './tree-item.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const item = { id: '1', label: 'Root' };
@@ -41,6 +42,64 @@ it('completes its lifecycle without an item, then renders once one is assigned',
   }
 });
 
+describe('ElementInternals availability', () => {
+  it('constructs and renders a standalone item when attachInternals is absent', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    let el: LyraTreeItem | undefined;
+    // @ts-expect-error -- simulating a downstream DOM shim without ElementInternals support
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      expect(() => {
+        el = new LyraTreeItem();
+      }).to.not.throw();
+      document.body.append(el!);
+      await el!.updateComplete;
+      expect(el!.getAttribute('role')).to.equal('treeitem');
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+      el?.remove();
+    }
+  });
+
+  it('constructs and renders generated items when attachInternals throws', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+      if (this.localName === 'lr-tree-item') {
+        throw new DOMException('ElementInternals unavailable', 'NotSupportedError');
+      }
+      return original.call(this);
+    };
+    try {
+      const tree = await fixture(html`
+        <lr-tree .data=${[{ id: 'root', label: 'Root' }]}></lr-tree>
+      `);
+      await (tree as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+      const generated = tree.querySelector('lr-tree-item') as LyraTreeItem | null;
+      expect(generated !== null).to.equal(true);
+      await generated!.updateComplete;
+      expect(generated!.getAttribute('role')).to.equal('treeitem');
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+
+  it('constructs and renders when a partial polyfill returns no internals object', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+      if (this.localName === 'lr-tree-item') return undefined as unknown as ElementInternals;
+      return original.call(this);
+    };
+    try {
+      const el = (await fixture(html`<lr-tree-item label="Leaf"></lr-tree-item>`)) as LyraTreeItem;
+      await el.updateComplete;
+      expect(renderedLabel(el)).to.equal('Leaf');
+      expect(el.getAttribute('role')).to.equal('treeitem');
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
 // The declarative child model. `<lr-tree-item>` mirrors `wa-tree-item`/`sl-tree-item`, whose whole
 // child model is markup: the default slot carries the label and nested `<lr-tree-item>` elements
 // carry the hierarchy. A migration codemod only renames the tag, so markup that arrives with no
@@ -61,19 +120,20 @@ describe('tree-item declarative child model', () => {
     const el = (await fixture(html`<lr-tree-item label="Fallback"></lr-tree-item>`)) as LyraTreeItem;
     const assigned = el.ownerDocument.createTextNode(' ');
     el.append(assigned);
-    el.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+    el.setTreeContext({
+      selection: 'multiple',
+      expandIcon: null,
+      collapseIcon: null,
+    });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    const checkbox = (): HTMLElement =>
-      el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
+    const checkbox = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
     const settle = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await el.updateComplete;
     };
 
-    expect(renderedLabel(el), 'an empty element does not suppress the label fallback').to.equal(
-      'Fallback',
-    );
+    expect(renderedLabel(el), 'an empty element does not suppress the label fallback').to.equal('Fallback');
     expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
 
     assigned.data = 'Direct tree label';
@@ -138,10 +198,13 @@ describe('tree-item declarative child model', () => {
       </lr-tree-item>
     `;
     const el = root.querySelector('lr-tree-item') as LyraTreeItem;
-    el.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+    el.setTreeContext({
+      selection: 'multiple',
+      expandIcon: null,
+      collapseIcon: null,
+    });
     const forwardingSlot = el.querySelector('slot')!;
-    const checkbox = (): HTMLElement =>
-      el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
+    const checkbox = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
     const settle = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await el.updateComplete;
@@ -160,7 +223,7 @@ describe('tree-item declarative child model', () => {
     await settle();
     expect(
       checkbox().getAttribute('aria-label'),
-      'a hard-hidden composed parent prunes a forwarded root Text node',
+      'a hard-hidden composed parent prunes a forwarded root Text node'
     ).to.equal('Fallback');
 
     wrapper.removeAttribute('aria-hidden');
@@ -171,7 +234,7 @@ describe('tree-item declarative child model', () => {
     await settle();
     expect(
       checkbox().getAttribute('aria-label'),
-      'a closed details ancestor prunes a forwarded root Text node',
+      'a closed details ancestor prunes a forwarded root Text node'
     ).to.equal('Fallback');
 
     details.open = true;
@@ -195,7 +258,7 @@ describe('tree-item declarative child model', () => {
     await settle();
     expect(
       el.shadowRoot!.querySelector('[part="label"] slot') !== null,
-      'aria-hidden visual content still selects the authored slot',
+      'aria-hidden visual content still selects the authored slot'
     ).to.be.true;
     expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
 
@@ -219,7 +282,7 @@ describe('tree-item declarative child model', () => {
     await settle();
     expect(
       checkbox().getAttribute('aria-label'),
-      'a forwarding-host class mutation refreshes the checkbox name',
+      'a forwarding-host class mutation refreshes the checkbox name'
     ).to.equal('Fallback');
 
     wrapper.classList.remove('hide-forwarded-label');
@@ -230,7 +293,7 @@ describe('tree-item declarative child model', () => {
     await settle();
     expect(
       checkbox().getAttribute('aria-label'),
-      'a forwarding-host style mutation refreshes the checkbox name',
+      'a forwarding-host style mutation refreshes the checkbox name'
     ).to.equal('Fallback');
 
     wrapper.style.removeProperty('--forwarded-label-visibility');
@@ -255,12 +318,14 @@ describe('tree-item declarative child model', () => {
     assigned.textContent = 'Later visible text';
     await settle();
     expect(checkbox().getAttribute('aria-label'), 'the consumer host name keeps precedence').to.equal(
-      'Explicit tree item name',
+      'Explicit tree item name'
     );
 
     el.removeAttribute('aria-label');
     const reassigned = new Promise<void>((resolve) =>
-      forwardingSlot.addEventListener('slotchange', () => resolve(), { once: true }),
+      forwardingSlot.addEventListener('slotchange', () => resolve(), {
+        once: true,
+      })
     );
     assigned.remove();
     await reassigned;
@@ -285,12 +350,8 @@ describe('tree-item declarative child model', () => {
         constructions += 1;
       }
       override observe(target: Node, options?: MutationObserverInit): void {
-        if (
-          target === adoptedTarget &&
-          options?.childList &&
-          options.characterData &&
-          options.subtree
-        ) labelHostObservations += 1;
+        if (target === adoptedTarget && options?.childList && options.characterData && options.subtree)
+          labelHostObservations += 1;
         super.observe(target, options);
       }
     }
@@ -314,8 +375,7 @@ describe('tree-item declarative child model', () => {
       if (observerDescriptor) {
         Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
       } else {
-        delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver })
-          .MutationObserver;
+        delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
       }
       frame.remove();
     }
@@ -379,10 +439,7 @@ describe('tree-item declarative child model', () => {
 
     try {
       el = (await fixture(html`
-        <lr-tree-item
-          label="Parent"
-          style="--show-duration: 19ms; --hide-duration: 23ms"
-        >
+        <lr-tree-item label="Parent" style="--show-duration: 19ms; --hide-duration: 23ms">
           <lr-tree-item label="Child"></lr-tree-item>
         </lr-tree-item>
       `)) as LyraTreeItem;
@@ -402,20 +459,15 @@ describe('tree-item declarative child model', () => {
 
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
-      expect(parentClears, 'disconnect cancels through the retained old timer owner').to.include(
-        oldTimer,
-      );
+      expect(parentClears, 'disconnect cancels through the retained old timer owner').to.include(oldTimer);
 
       el.collapse();
       await el.updateComplete;
       await Promise.resolve();
       expect(frameSchedules.map(({ delay }) => delay)).to.eql([23]);
-      expect(parentSchedules, 'the adopted item never schedules another parent timer').to.have
-        .length(1);
-      expect(frameMotionQueries, 'reduced-motion state comes from the adopted window').to.be
-        .greaterThan(0);
-      expect(frameStyleReads, 'motion custom properties come from the adopted window').to.be
-        .greaterThan(0);
+      expect(parentSchedules, 'the adopted item never schedules another parent timer').to.have.length(1);
+      expect(frameMotionQueries, 'reduced-motion state comes from the adopted window').to.be.greaterThan(0);
+      expect(frameStyleReads, 'motion custom properties come from the adopted window').to.be.greaterThan(0);
 
       staleCallback();
       expect(afterExpand, 'a canceled old-realm callback stays stale after adoption').to.equal(0);
@@ -503,9 +555,54 @@ describe('tree-item declarative child model', () => {
 
   it('leaves a host-authored aria-label alone in the declarative model', async () => {
     const el = (await fixture(
-      html`<lr-tree-item label="Docs" aria-label="Documentation folder"></lr-tree-item>`,
+      html`<lr-tree-item label="Docs" aria-label="Documentation folder"></lr-tree-item>`
     )) as LyraTreeItem;
     expect(el.getAttribute('aria-label')).to.equal('Documentation folder');
+  });
+
+  it('keeps an initial host-authored aria-label authoritative after data-model assignment', async () => {
+    const el = (await fixture(html`<lr-tree-item aria-label="Author name"></lr-tree-item>`)) as LyraTreeItem;
+
+    el.item = {
+      id: 'data',
+      label: 'Visible data label',
+      accessibleLabel: 'Data name',
+    };
+    await el.updateComplete;
+
+    expect(el.getAttribute('aria-label')).to.equal('Author name');
+    expect(el.nodeLabel).to.equal('Author name');
+  });
+
+  it('preserves a late host-authored aria-label across data refreshes and restores data naming after removal', async () => {
+    const el = (await fixture(html`<lr-tree-item></lr-tree-item>`)) as LyraTreeItem;
+    el.item = {
+      id: 'data',
+      label: 'Visible data label',
+      accessibleLabel: 'Initial data name',
+    };
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Initial data name');
+
+    el.setAttribute('aria-label', 'Late author name');
+    await el.updateComplete;
+    el.item = {
+      id: 'data',
+      label: 'Refreshed label',
+      accessibleLabel: 'Refreshed data name',
+    };
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Late author name');
+    expect(el.nodeLabel).to.equal('Late author name');
+
+    el.item = { id: 'data', label: 'Label-only fallback' };
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Late author name');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+    expect(el.nodeLabel).to.equal('Label-only fallback');
   });
 
   it('lets an assigned item object win over the declarative attributes', async () => {
@@ -607,6 +704,41 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
 });
 
+it('themes checked and indeterminate checkbox paint independently from the shared brand', async () => {
+  const wrapper = await fixture(html`
+    <div
+      role="tree"
+      style="--lr-color-brand:rgb(40, 41, 42); --lr-tree-checkbox-checked-border-color:rgb(1, 2, 3); --lr-tree-checkbox-checked-bg:rgb(4, 5, 6); --lr-tree-checkbox-checked-color:rgb(7, 8, 9); --lr-tree-checkbox-indeterminate-border-color:rgb(10, 11, 12); --lr-tree-checkbox-indeterminate-bg:rgb(13, 14, 15); --lr-tree-checkbox-indeterminate-color:rgb(16, 17, 18)"
+    >
+      <lr-tree-item label="Checked"></lr-tree-item>
+      <lr-tree-item label="Mixed"></lr-tree-item>
+    </div>
+  `);
+  const [checked, mixed] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  for (const item of [checked!, mixed!]) {
+    item.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+  }
+  checked!.setSelectionState(true, false);
+  mixed!.setSelectionState(false, true);
+  await checked!.updateComplete;
+  await mixed!.updateComplete;
+
+  const checkedControl = checked!.shadowRoot!.querySelector('[part~="checkbox__control"]') as HTMLElement;
+  const mixedControl = mixed!.shadowRoot!.querySelector('[part~="checkbox__control"]') as HTMLElement;
+  const checkedStyle = getComputedStyle(checkedControl);
+  const mixedStyle = getComputedStyle(mixedControl);
+  expect([checkedStyle.borderColor, checkedStyle.backgroundColor, checkedStyle.color]).to.deep.equal([
+    'rgb(1, 2, 3)',
+    'rgb(4, 5, 6)',
+    'rgb(7, 8, 9)',
+  ]);
+  expect([mixedStyle.borderColor, mixedStyle.backgroundColor, mixedStyle.color]).to.deep.equal([
+    'rgb(10, 11, 12)',
+    'rgb(13, 14, 15)',
+    'rgb(16, 17, 18)',
+  ]);
+});
+
 it('keeps a disabled branch toggle inert and does not move focus to the disabled treeitem', async () => {
   const disabledBranch = {
     ...item,
@@ -628,7 +760,7 @@ it('keeps a disabled branch toggle inert and does not move focus to the disabled
   expect(getComputedStyle(toggle).cursor).to.equal('default');
   before.focus();
   toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true }));
-  expect(document.activeElement).to.equal(before);
+  expect(document.activeElement === before).to.equal(true);
 });
 
 // A `role="treeitem"` host is only ARIA-valid nested inside a `role="tree"`/`role="group"`
@@ -649,7 +781,7 @@ it('is accessible with a realistic, expanded, badged item', async () => {
   const wrapper = await fixture(
     html`<div role="tree">
       <lr-tree-item .item=${populated} expanded .setSize=${1} .posInSet=${1}></lr-tree-item>
-    </div>`,
+    </div>`
   );
   const node = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
   await node.updateComplete;
@@ -675,7 +807,7 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async (
     html`<div role="tree">
       <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${2} .posInSet=${1}></lr-tree-item>
       <lr-tree-item .item=${{ id: 'd', label: 'Disabled', disabled: true }} .setSize=${2} .posInSet=${2}></lr-tree-item>
-    </div>`,
+    </div>`
   );
   const [selectedItem, disabledItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   await selectedItem!.updateComplete;
@@ -715,7 +847,7 @@ it('shows a hover fill on a selected row, distinct from the resting selected fil
   const wrapper = await fixture(
     html`<div role="tree">
       <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${1} .posInSet=${1}></lr-tree-item>
-    </div>`,
+    </div>`
   );
   const [selectedItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   await selectedItem!.updateComplete;

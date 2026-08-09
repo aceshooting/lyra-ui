@@ -290,7 +290,7 @@ describe('lr-span-waterfall', () => {
       el.style.setProperty('--lr-span-waterfall-row-active-bg', 'rgb(10, 20, 30)');
       const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
       const inactive = el.shadowRoot!.querySelector('[part="row"]:not([data-active])') as HTMLElement;
-      expect(active).to.exist;
+      expect((active) != null).to.equal(true);
       expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
       expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
     });

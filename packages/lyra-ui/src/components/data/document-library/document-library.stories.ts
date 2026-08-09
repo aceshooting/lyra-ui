@@ -1,17 +1,17 @@
-import { html } from 'lit';
-import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './document-library.js';
-import type { LibraryDocument } from './document-library.class.js';
+import { html } from "lit";
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import "./document-library.js";
+import type { LibraryDocument } from "./document-library.class.js";
 
 const meta: Meta = {
-  title: 'DocumentLibrary',
-  component: 'lr-document-library',
-  tags: ['autodocs'],
+  title: "DocumentLibrary",
+  component: "lr-document-library",
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
         component:
-          'A searchable, filterable document inventory with versions, tags, owners, freshness, and bulk selection, built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.',
+          "A searchable, filterable document inventory with versions, tags, owners, freshness, and bulk selection, built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.",
       },
     },
   },
@@ -21,54 +21,88 @@ type Story = StoryObj;
 
 const documents: LibraryDocument[] = [
   {
-    id: 'd1',
-    name: 'Alpha Overview.docx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    version: 'v10',
-    owner: 'Jordan Lee',
-    tags: ['onboarding', 'handbook'],
-    freshness: 'fresh',
-    updatedAt: '2024-06-01T00:00:00.000Z',
+    id: "d1",
+    name: "Alpha Overview.docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    version: "v10",
+    owner: "Jordan Lee",
+    tags: ["onboarding", "handbook"],
+    freshness: "fresh",
+    updatedAt: "2024-06-01T00:00:00.000Z",
   },
   {
-    id: 'd2',
-    name: 'Zeta Runbook.pdf',
-    mimeType: 'application/pdf',
-    version: 'v2',
-    owner: 'Priya Nair',
-    tags: ['ops', 'runbook'],
-    freshness: 'stale',
-    updatedAt: '2024-01-05T00:00:00.000Z',
+    id: "d2",
+    name: "Zeta Runbook.pdf",
+    mimeType: "application/pdf",
+    version: "v2",
+    owner: "Priya Nair",
+    tags: ["ops", "runbook"],
+    freshness: "stale",
+    updatedAt: "2024-01-05T00:00:00.000Z",
   },
   {
-    id: 'd3',
-    name: 'Mid Spec.md',
-    mimeType: 'text/markdown',
-    version: 'v1',
-    owner: 'Alex Chen',
-    tags: ['spec'],
-    freshness: 'aging',
-    updatedAt: '2024-03-15T00:00:00.000Z',
+    id: "d3",
+    name: "Mid Spec.md",
+    mimeType: "text/markdown",
+    version: "v1",
+    owner: "Alex Chen",
+    tags: ["spec"],
+    freshness: "aging",
+    updatedAt: "2024-03-15T00:00:00.000Z",
   },
   {
-    id: 'd4',
-    name: 'Quarterly Metrics.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    version: 'v5',
-    owner: 'Jordan Lee',
-    tags: ['ops', 'metrics'],
-    freshness: 'fresh',
-    updatedAt: '2024-06-10T00:00:00.000Z',
+    id: "d4",
+    name: "Quarterly Metrics.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    version: "v5",
+    owner: "Jordan Lee",
+    tags: ["ops", "metrics"],
+    freshness: "fresh",
+    updatedAt: "2024-06-10T00:00:00.000Z",
   },
 ];
 
 export const Default: Story = {
-  render: () => html`<lr-document-library .documents=${documents}></lr-document-library>`,
+  render: () =>
+    html`<lr-document-library .documents=${documents}></lr-document-library>`,
 };
 
 export const WithSelection: Story = {
   render: () =>
-    html`<lr-document-library .documents=${documents} .selectedIds=${['d1', 'd4']}></lr-document-library>`,
+    html`<lr-document-library
+      .documents=${documents}
+      .selectedIds=${["d1", "d4"]}
+    ></lr-document-library>`,
+};
+
+/** Search, tag, and checkbox child events stop inside the component. Interact with the inventory;
+ * the log receives only the documented library-level filter and selection events. */
+export const TranslatedHostEvents: Story = {
+  render: () => {
+    const report = (event: Event): void => {
+      const output = (event.currentTarget as HTMLElement).querySelector(
+        "output"
+      );
+      if (output) output.textContent = `Received ${event.type}`;
+    };
+    return html`
+      <div
+        style="display:grid;gap:var(--lr-space-s)"
+        @lr-filter-change=${report}
+        @lr-selection-change=${report}
+        @lr-input=${report}
+        @lr-change=${report}
+        @change=${report}
+      >
+        <lr-document-library .documents=${documents}></lr-document-library>
+        <output aria-live="polite"
+          >Interact with a library filter or checkbox</output
+        >
+      </div>
+    `;
+  },
 };
 
 export const Empty: Story = {
@@ -76,12 +110,12 @@ export const Empty: Story = {
 };
 
 export const NarrowAllocation: Story = {
-  name: 'Document inventory at a 320px allocation',
+  name: "Document inventory at a 320px allocation",
   parameters: {
     docs: {
       description: {
         story:
-          'At a 320px allocation, the low-priority tags/freshness/updated columns hide (via lr-table\'s own priority mechanism) and only select/type/name stay visible, mirroring lr-table\'s own narrow-container story.',
+          "At a 320px allocation, the low-priority tags/freshness/updated columns hide (via lr-table's own priority mechanism) and only select/type/name stay visible, mirroring lr-table's own narrow-container story.",
       },
     },
   },

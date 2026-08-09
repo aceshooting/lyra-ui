@@ -233,7 +233,7 @@ describe('navigation lifecycle and theme sync', () => {
     el.srcdoc = '<p>second</p>';
     await el.updateComplete;
     const second = frameOf(el);
-    expect(second).to.not.equal(first);
+    expect((second) !== (first)).to.equal(true);
     first.dispatchEvent(new Event('load'));
     expect(loads).to.equal(0);
     second.dispatchEvent(new Event('load'));
@@ -267,11 +267,11 @@ describe('navigation lifecycle and theme sync', () => {
     oldFrame.dispatchEvent(new Event('load'));
     expect(loads).to.equal(0);
     expect(el.contentWindow).to.equal(null);
-    expect(el.contentDocument).to.equal(null);
+    expect((el.contentDocument) === (null)).to.equal(true);
 
     document.body.append(el);
     await el.updateComplete;
-    expect(frameOf(el)).to.not.equal(oldFrame);
+    expect((frameOf(el)) !== (oldFrame)).to.equal(true);
   });
 
   it('syncs Lyra theme selectors after load and later host-theme changes', async () => {

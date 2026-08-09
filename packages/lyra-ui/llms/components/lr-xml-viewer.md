@@ -18,9 +18,10 @@
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`collapsed-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
 `xml` reassignment) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
-sections, and processing instructions. Namespace-literal: qualified names render exactly as authored,
-with no namespace-URI-aware matching. `DOMParser` never resolves external entities or DTDs, so XXE
-injection is structurally out of reach. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
+sections, and processing instructions, preserved in their original mixed-child source order.
+Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
+matching. Every document type declaration is rejected before `DOMParser`, preventing external
+entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
 (sanitized *rendered* HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
@@ -37,7 +38,9 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches.
+`clearSearch()` clears the query and matches. When the XML document reloads while a query remains
+active, matches are recomputed, the active index is clamped to the new result set, and a fresh
+`lr-search-change` announces that state.
 
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a

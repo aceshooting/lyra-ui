@@ -73,6 +73,16 @@ function encodeDetailSlotSegment(value: string): string {
   return encoded;
 }
 
+/** Returns the canonical collision-free rich-detail slot name for one suite/test pair.
+ *
+ * Well-formed ids use the same segment encoding as `encodeURIComponent`. Isolated UTF-16
+ * surrogates, which `encodeURIComponent` rejects, are encoded as uppercase `%uXXXX` code units so
+ * every string accepted by the component still has a deterministic, distinct slot name.
+ */
+export function testResultDetailSlotName(suiteId: string, testId: string): string {
+  return `detail-${encodeDetailSlotSegment(suiteId)}:${encodeDetailSlotSegment(testId)}`;
+}
+
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
   'lr-filter-change': CustomEvent<{ statuses: TestStatus[] }>;
@@ -90,7 +100,8 @@ export interface LyraTestResultsEventMap {
  * @event lr-toggle - `detail: { id, suiteId?, expanded }` — a row's failure detail was
  *   expanded/collapsed. `suiteId` is included when the test id is not globally unique.
  * @slot detail-{encodedSuiteId}:{encodedTestId} - Collision-free suite-scoped rich detail for a
- *   test. Encode each id with `encodeURIComponent`; this form takes precedence over legacy slots.
+ *   test. Derive it with `testResultDetailSlotName(suiteId, testId)`; this form takes precedence
+ *   over legacy slots.
  * @slot detail-{suiteId}-{testId} - Legacy suite-scoped detail, supported only when its name maps
  *   unambiguously to one suite/test pair and does not collide with another pair's canonical name.
  * @slot detail-{testId} - Legacy rich detail for a test whose id is globally unique across all
@@ -222,7 +233,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private scopedDetailSlot(suiteId: string, testId: string): string {
-    return `detail-${encodeDetailSlotSegment(suiteId)}:${encodeDetailSlotSegment(testId)}`;
+    return testResultDetailSlotName(suiteId, testId);
   }
 
   private legacyScopedDetailSlot(suiteId: string, testId: string): string {

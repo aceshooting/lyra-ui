@@ -8,12 +8,16 @@ export const styles = css`
     display: contents;
   }
   [part~='popup'] {
-    /* Positioned by internal/positioner.ts, which writes position/left/top itself. The element
-       must still be laid out (not display:none) while inactive is expressed by hiding it, or the
-       first measurement would read a zero rect. */
+    /* Positioned by internal/positioner.ts, which writes physical position/left/top itself. The
+       baseline must use those same physical properties: inset-inline-start becomes right under
+       RTL and would remain active beside the JS-written left, stretching or pinning the popup.
+       The element must still be laid out (not display:none) while inactive is expressed by hiding
+       it, or the first measurement would read a zero rect. */
     position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
+    top: 0;
+    /* policy-allow(physical-css): positioner.ts overwrites this exact physical property; a
+       logical right baseline under RTL would over-constrain the positioned box. */
+    left: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
     max-inline-size: var(--lr-positioner-available-inline-size, none);
     max-block-size: var(--lr-positioner-available-block-size, none);

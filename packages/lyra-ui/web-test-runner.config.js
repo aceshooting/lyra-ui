@@ -139,6 +139,23 @@ const mouseCommandPlugin = {
   },
 };
 
+const reducedMotionPreferences = new Set(['reduce', 'no-preference']);
+const mediaCommandPlugin = {
+  name: 'lyra-media-command',
+  async executeCommand({ command, payload, session }) {
+    if (command !== 'set-reduced-motion') return;
+    if (session.browser.type !== 'playwright') {
+      throw new Error(`Media commands do not support browser type ${session.browser.type}.`);
+    }
+    if (!reducedMotionPreferences.has(payload)) {
+      throw new Error('Reduced motion must be "reduce" or "no-preference".');
+    }
+
+    await session.browser.getPage(session.id).emulateMedia({ reducedMotion: payload });
+    return true;
+  },
+};
+
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 const browserLaunchers = {
   chromium: { product: 'chromium' },
@@ -211,6 +228,7 @@ export default {
     jszipEsmInteropPlugin,
     echartsProcessInteropPlugin,
     mouseCommandPlugin,
+    mediaCommandPlugin,
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait

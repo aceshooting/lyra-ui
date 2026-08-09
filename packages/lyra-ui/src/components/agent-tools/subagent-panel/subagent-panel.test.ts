@@ -175,13 +175,13 @@ it('moves roving tabindex through a nested hierarchy with ArrowDown/ArrowUp/Home
   await el.updateComplete;
   expect(root.getAttribute('tabindex')).to.equal('-1');
   expect(child.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(child);
+  expect((el.shadowRoot!.activeElement) === (child)).to.equal(true);
   expect(tabbableCount()).to.equal(1);
 
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(grandchild.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(grandchild);
+  expect((el.shadowRoot!.activeElement) === (grandchild)).to.equal(true);
   expect(tabbableCount()).to.equal(1);
 
   // Already at the last row -- ArrowDown must clamp, not run off the end.
@@ -193,19 +193,19 @@ it('moves roving tabindex through a nested hierarchy with ArrowDown/ArrowUp/Home
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(child.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(child);
+  expect((el.shadowRoot!.activeElement) === (child)).to.equal(true);
   expect(tabbableCount()).to.equal(1);
 
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(grandchild.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(grandchild);
+  expect((el.shadowRoot!.activeElement) === (grandchild)).to.equal(true);
   expect(tabbableCount()).to.equal(1);
 
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(root.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(root);
+  expect((el.shadowRoot!.activeElement) === (root)).to.equal(true);
   expect(tabbableCount()).to.equal(1);
 });
 

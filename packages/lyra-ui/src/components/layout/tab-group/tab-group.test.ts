@@ -164,7 +164,7 @@ it("a child with no label attribute never produces a tab or a rendered panel", a
   const unlabeled = el.querySelector('[slot="preview"]') as HTMLElement;
   // Never assigned to any rendered <slot>, since this component only ever
   // renders a named slot for tabs that made it into the `tabs` state.
-  expect(unlabeled.assignedSlot).to.be.null;
+  expect((unlabeled.assignedSlot) === null).to.equal(true);
 });
 
 it("only the active panel is visible; the others are hidden", async () => {
@@ -299,7 +299,7 @@ it("ArrowRight moves focus and selection to the next tab, wrapping from the last
   press(buttons[0], "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("preview");
-  expect(el.shadowRoot!.activeElement).to.equal(tabButtons(el)[1]);
+  expect((el.shadowRoot!.activeElement) === (tabButtons(el)[1])).to.equal(true);
 
   press(tabButtons(el)[1], "ArrowRight");
   await el.updateComplete;
@@ -384,7 +384,7 @@ it('a direct-child sibling with slot="<id>-icon" renders as that tab\'s leading 
   const buttons = tabButtons(el);
 
   const iconWrapper = buttons[0].querySelector('[part="tab-icon"]');
-  expect(iconWrapper).to.exist;
+  expect((iconWrapper) != null).to.equal(true);
   expect(iconWrapper!.getAttribute("aria-hidden")).to.equal("true");
   const assigned = (
     iconWrapper!.querySelector("slot") as HTMLSlotElement
@@ -672,7 +672,7 @@ it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed"
   await el.updateComplete;
   tabButtons(el)[1].focus();
   expect(el.active).to.equal("preview");
-  expect(el.shadowRoot!.activeElement).to.equal(tabButtons(el)[1]);
+  expect((el.shadowRoot!.activeElement) === (tabButtons(el)[1])).to.equal(true);
 
   el.querySelector('[slot="input"]')!.remove();
   await aTimeout(0);
@@ -707,7 +707,7 @@ it("does not steal focus by reassigning it when the invalid-active correction ha
   await el.updateComplete;
 
   expect(el.active).to.equal("preview");
-  expect(document.activeElement).to.equal(outside);
+  expect((document.activeElement) === (outside)).to.equal(true);
   outside.remove();
 });
 

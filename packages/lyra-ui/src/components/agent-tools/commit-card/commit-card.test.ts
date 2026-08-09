@@ -254,7 +254,7 @@ describe('lr-commit-card', () => {
     )) as LyraCommitCard;
     await negative.updateComplete;
     const time = negative.shadowRoot!.querySelector('[part="time"] time')!;
-    expect(time).to.exist;
+    expect((time) != null).to.equal(true);
     expect(time.getAttribute('datetime')).to.equal(new Date(0).toISOString());
   });
 

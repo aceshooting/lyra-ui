@@ -18,6 +18,10 @@
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
 
+When a focused row action requests removal and the host applies the proposed queue, focus moves to
+the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
+receives focus. Removing an unfocused row does not move focus.
+
 **Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
@@ -33,5 +37,5 @@ these events propose complete next values without mutating `items`.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
+import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js";
 ```

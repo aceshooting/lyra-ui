@@ -19,7 +19,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** The canonical size ladder. Kept as a local name so existing imports keep resolving; the
  *  `size` property itself accepts the upstream `small`/`medium`/`large` spellings too. */
 export type LyraPaginationSize = LyraSizeStep;
@@ -69,7 +68,7 @@ function paginationItems(
   current: number,
   pageCount: number,
   siblingCount: number,
-  boundaryCount: number,
+  boundaryCount: number
 ): PaginationItem[] {
   if (pageCount <= 0) return [];
   const asPage = (page: number): PaginationItem => ({ type: 'page', page });
@@ -182,11 +181,29 @@ function paginationItems(
  *   `appearance` variant.
  * @cssprop --lr-pagination-control-border-color - Resting border color of every control; defaults
  *   from the `appearance` variant.
+ * @cssprop [--lr-pagination-control-color=var(--lr-color-text)] - Resting control foreground.
+ * @cssprop [--lr-pagination-current-bg=var(--lr-color-brand)] - Current-page background.
+ * @cssprop [--lr-pagination-current-border-color=transparent] - Current-page border color.
+ * @cssprop [--lr-pagination-current-color=var(--lr-color-on-brand)] - Current-page foreground.
+ * @cssprop [--lr-pagination-hover-bg=var(--lr-color-brand-quiet)] - Ordinary control hover background.
+ * @cssprop [--lr-pagination-hover-border-color=var(--lr-color-brand)] - Ordinary control hover border color.
+ * @cssprop --lr-pagination-active-bg - Ordinary control pressed background; defaults to the
+ *   current quiet-brand active mix.
+ * @cssprop [--lr-pagination-active-border-color=var(--lr-color-brand)] - Ordinary control pressed border color.
+ * @cssprop [--lr-pagination-current-hover-bg=var(--lr-color-brand)] - Current-page hover background.
+ * @cssprop [--lr-pagination-current-hover-border-color=transparent] - Current-page hover border color.
+ * @cssprop --lr-pagination-current-active-bg - Current-page pressed background; defaults to the
+ *   current brand active mix.
+ * @cssprop [--lr-pagination-current-active-border-color=transparent] - Current-page pressed border color.
  * @cssprop [--lr-pagination-control-radius=var(--lr-radius)] - Border radius of navigation
  * buttons and the page input.
  * @cssprop [--lr-pagination-control-padding=var(--lr-space-xs)] - Inner padding of the nav buttons
  * and the page input. Uniform across every `size` (the control footprint is fixed by
  * `--lr-pagination-control-size`, so this only adjusts the icon/digit inset).
+ * @cssprop [--lr-pagination-base-gap=var(--lr-space-m)] - Gap between the summary and controls.
+ * @cssprop [--lr-pagination-controls-gap=var(--lr-space-xs)] - Gap between the navigation controls
+ *   and the numbered-page list or compact page field.
+ * @cssprop [--lr-pagination-pages-gap=var(--lr-space-xs)] - Gap between numbered page controls.
  * @cssprop [--lr-pagination-invalid-border=var(--lr-color-danger)] - Border color of
  *   `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`).
  * @status stable
@@ -233,7 +250,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Renders the localized "showing X–Y of Z" summary row. Opt-in and `false` by default,
    *  matching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the
    *  summary, so a mechanical rename silently added a row to every migrated pager. */
-  @property({ type: Boolean, attribute: 'with-summary', reflect: true }) withSummary = false;
+  @property({ type: Boolean, attribute: 'with-summary', reflect: true })
+  withSummary = false;
   /** Control footprint, on the library-wide six-step ladder. Web Awesome's and Shoelace's
    *  `small`/`medium`/`large` spellings are accepted as exact synonyms of `s`/`m`/`l`, so
    *  migrating from either is a tag rename with no attribute rewrite. */
@@ -246,9 +264,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Pages always pinned at the start and at the end of the numbered list. */
   @property({ type: Number, attribute: 'boundary-count' }) boundaryCount = 1;
   /** Renders buttons that jump straight to the first and last page. */
-  @property({ type: Boolean, attribute: 'with-edges', reflect: true }) withEdges = false;
+  @property({ type: Boolean, attribute: 'with-edges', reflect: true })
+  withEdges = false;
   /** Hides the previous and next controls while retaining pages and optional edge controls. */
-  @property({ type: Boolean, attribute: 'without-nav', reflect: true }) withoutNav = false;
+  @property({ type: Boolean, attribute: 'without-nav', reflect: true })
+  withoutNav = false;
   /** Renders nothing when zero or one page exists. */
   @property({ type: Boolean, attribute: 'hide-single-page', reflect: true })
   hideSinglePage = false;
@@ -389,10 +409,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   /** Resolve a URL only for a control that can navigate. Configured link mode keeps inactive
    * controls as anchors without invoking a consumer callback or exposing an `href`. */
-  private pageLink(
-    page: number,
-    inactive: boolean,
-  ): { href: string | null; renderAnchor: boolean } {
+  private pageLink(page: number, inactive: boolean): { href: string | null; renderAnchor: boolean } {
     if (!this.hasHrefTemplate) return { href: null, renderAnchor: false };
     if (inactive || page < 1 || page > this.pageCount) {
       return { href: null, renderAnchor: true };
@@ -411,8 +428,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   private summaryText(): string {
     const total = this.normalizedTotalItems;
-    const itemLabel =
-      this.itemLabel || this.localize(total === 1 ? 'item' : 'items');
+    const itemLabel = this.itemLabel || this.localize(total === 1 ? 'item' : 'items');
     if (this.pageCount === 0) {
       return this.localize('paginationEmptySummary', undefined, {
         total: this.formatNumber(0),
@@ -459,9 +475,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       !this.focusTargetIsInside(active);
     this.clearPendingFocus();
     if (this.currentPage !== requestedPage || focusMovedOutside) return;
-    const target = this.format === 'compact'
-      ? this.pageInput
-      : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]');
+    const target =
+      this.format === 'compact' ? this.pageInput : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]');
     target?.focus();
   }
 
@@ -669,7 +684,9 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       @click=${() => this.requestPage(target)}
       @focus=${this.onControlFocus}
       @blur=${this.onControlBlur}
-    >…</button>`;
+    >
+      …
+    </button>`;
   }
 
   private renderPageList(): TemplateResult {
@@ -677,14 +694,14 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       this.currentPage,
       this.pageCount,
       this.normalizedSiblingCount,
-      this.normalizedBoundaryCount,
+      this.normalizedBoundaryCount
     );
 
     return html`<ul part="pages" role="list">
       ${items.map((item) =>
         item.type === 'gap'
           ? html`<li role="listitem">${this.renderEllipsis(item.target)}</li>`
-          : html`<li role="listitem">${this.renderPage(item.page)}</li>`,
+          : html`<li role="listitem">${this.renderPage(item.page)}</li>`
       )}
     </ul>`;
   }
@@ -717,18 +734,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   override render(): TemplateResult | typeof nothing {
     if (this.hideSinglePage && this.pageCount <= 1) return nothing;
-    const navigationLabel =
-      this.accessibleLabel || this.label || this.localize('paginationLabel');
+    const navigationLabel = this.accessibleLabel || this.label || this.localize('paginationLabel');
 
     return html`
-      <nav
-        part="base pagination"
-        aria-label=${navigationLabel}
-        aria-busy=${this.loading ? 'true' : 'false'}
-      >
-        ${!this.withSummary
-          ? nothing
-          : html`<span part="summary">${this.summaryText()}</span>`}
+      <nav part="base pagination" aria-label=${navigationLabel} aria-busy=${this.loading ? 'true' : 'false'}>
+        ${!this.withSummary ? nothing : html`<span part="summary">${this.summaryText()}</span>`}
         <div part="controls">
           ${this.withEdges ? this.renderEdgeButton('first') : nothing}
           ${this.withoutNav ? nothing : this.renderNavButton('previous')}

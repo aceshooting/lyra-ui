@@ -127,7 +127,7 @@ describe('overflow behavior', () => {
     expect(avatars.map((a) => a.hidden)).to.deep.equal([false, false, false, true, true]);
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(badge).to.exist;
+    expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+2');
     // The ordinary (not-sole-visible) case keeps the normal overlap margin --
     // contrasted against the max=0 regression test below.
@@ -146,7 +146,7 @@ describe('overflow behavior', () => {
     expect(avatars.every((a) => a.hidden)).to.be.true;
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(badge).to.exist;
+    expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+3');
     // The badge is the first *visible* thing in the row here (every avatar is
     // hidden), so its own margin-inline-start must be zeroed rather than
@@ -204,7 +204,7 @@ describe('dynamic children', () => {
     await el.updateComplete;
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(badge).to.exist;
+    expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+1');
     expect((extra as HTMLElement).hidden).to.be.true;
   });
@@ -257,7 +257,7 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     }
 
     const badge = group.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
-    expect(badge).to.exist;
+    expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+1');
     const forwardedAvatars = Array.from(host.querySelectorAll('lr-avatar')) as HTMLElement[];
     expect(forwardedAvatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, true]);

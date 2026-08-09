@@ -21,7 +21,8 @@ plain text, including its title, start/end time, location, and description. No H
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
+`activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and

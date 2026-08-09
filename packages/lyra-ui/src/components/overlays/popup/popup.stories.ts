@@ -32,6 +32,28 @@ export const Default: StoryObj = {
   `,
 };
 
+export const RightToLeft: StoryObj = {
+  name: 'RTL fixed-width geometry',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The physical coordinates produced by the shared positioner remain authoritative under RTL: a fixed-width popup stays fixed-width and centered against its anchor rather than stretching to the containing block\'s opposite edge.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="position: relative; inline-size: 32rem; block-size: 12rem;">
+      <lr-popup active placement="bottom">
+        <button slot="anchor" style="position: absolute; left: 5rem; top: 2rem; inline-size: 7rem;">
+          مرساة
+        </button>
+        <div style="inline-size: 10rem;">${panel('نافذة ثابتة العرض')}</div>
+      </lr-popup>
+    </div>
+  `,
+};
+
 export const WithArrow: StoryObj = {
   parameters: {
     docs: {
@@ -173,5 +195,30 @@ export const DirectAnchor: StoryObj = {
         ${panel('Anchored through `.anchor`')}
       </lr-popup>
     </div>
+  `,
+};
+
+export const VirtualAnchorRect: StoryObj = {
+  name: 'Virtual rectangle anchor',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`virtualAnchor` accepts a plain viewport rectangle for canvas, chart, selection, or other non-element targets. Omitted dimensions default to zero, negative dimensions clamp to zero, and a rect containing `NaN` or infinity is ignored rather than reaching layout. Every successful coordinate recomputation emits `lr-reposition`, even when the resolved side stays unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-popup
+      ${ref((node?: Element) => {
+        const popup = node as LyraPopup | undefined;
+        if (popup) popup.virtualAnchor = { x: 240, y: 160, width: -20, height: -10 };
+      })}
+      active
+      strategy="fixed"
+      placement="bottom"
+    >
+      ${panel('Negative dimensions normalize to a point anchor')}
+    </lr-popup>
   `,
 };

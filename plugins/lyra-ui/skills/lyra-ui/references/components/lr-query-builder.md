@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,6 +20,11 @@ AND/OR combinator.
 
 **Properties:** `fields`, `value`, `disabled`.
 
+For a field declared as `type: 'number'`, non-finite controlled values normalize to `undefined`.
+The same applies when field metadata arrives after `value`, and when a numeric input string
+overflows to positive or negative infinity. The rendered blank number field therefore agrees with
+the model, and serializing the query cannot silently turn infinity into JSON `null`.
+
 **Methods:** `addCondition()` appends a condition using the first available field and emits
 `lr-add-condition`; it is a no-op while disabled or when there are no fields.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
@@ -28,3 +33,7 @@ no-op while disabled or when the id is absent.
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
 `condition`, `field-select`, `operator-select`, `value`, `combinator`, `add-button`,
 `remove-button`, `empty`.
+
+At allocations of 320px or less, each condition stacks its composed field/operator/value controls
+into one column. Long field labels and localized operator text remain contained and ellipsize inside
+the nested `lr-select` triggers in both LTR and RTL; they do not widen the host or document.

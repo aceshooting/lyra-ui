@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -17,7 +17,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -84,7 +84,9 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @csspart cell-highlight - A cell (`role="cell"`) covered by a `highlights` entry; wraps the
  *   `cell-highlight-action` button.
  * @csspart cell-highlight-action - The native button filling a highlighted cell -- focusable,
- *   emits `lr-highlight-activate` on click or Enter/Space.
+ *   emits `lr-highlight-activate` on click or Enter/Space. Its accessible name localizes the
+ *   complete cell-value and annotation message through separate `{value}` and `{label}`
+ *   placeholders.
  * @csspart spinner - The loading status region.
  * @csspart error - The error message region.
  * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
@@ -103,6 +105,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
     collapse: LYRA_DEFAULT_collapse,
     datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
     datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
@@ -125,7 +128,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
-  /** Display name used for the table's accessible name after an explicit host `aria-label`. */
+  /** Display name used for the table's accessible name when the host has no `aria-label`. Host
+   *  `aria-label` wins by attribute presence, including an empty value. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -299,9 +303,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (!colHighlights.length) return html`<div part=${part} role=${role}>${value}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
-    const accessibleLabel = this.localize('highlightWithLabel', undefined, {
-      label: primary.highlight.label ? `${value} — ${primary.highlight.label}` : value,
-    });
+    const accessibleLabel = primary.highlight.label
+      ? this.localize('cellHighlightWithLabel', undefined, {
+          value,
+          label: primary.highlight.label,
+        })
+      : this.localize('highlightWithLabel', undefined, { label: value });
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
     // cell) remains valid; the activation affordance is a nested native <button>, which carries
@@ -439,7 +446,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       case 'loaded': {
         const { fields, rows } = this.fetchState.table;
         const localizedCount = getNumberFormat(this.effectiveLocale).format(rows.length);
-        const label = this.getAttribute('aria-label') || (this.name
+        const label = hostAriaLabel(this) ?? (this.name
           ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: localizedCount })
           : this.localize('datasetViewerCaption', undefined, { count: localizedCount }));
         const headerHighlights = this.cellHighlightsForRow(1);

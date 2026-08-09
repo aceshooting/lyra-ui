@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.js';
 import { styles } from './message-feedback.styles.js';
@@ -14,6 +14,7 @@ it('defaults to value null, no reasons, not commentable, detailFor "down"', asyn
   expect(el.reasons).to.deep.equal([]);
   expect(el.commentable).to.be.false;
   expect(el.detailFor).to.equal('down');
+  expect(el.pending).to.be.false;
 });
 
 it('localizes thumb accessible names with the built-in English fallback and via .strings override', async () => {
@@ -23,7 +24,10 @@ it('localizes thumb accessible names with the built-in English fallback and via 
   expect(up.getAttribute('aria-label')).to.equal('Good response');
   expect(down.getAttribute('aria-label')).to.equal('Bad response');
 
-  el.strings = { feedbackPositive: 'Bonne réponse', feedbackNegative: 'Mauvaise réponse' };
+  el.strings = {
+    feedbackPositive: 'Bonne réponse',
+    feedbackNegative: 'Mauvaise réponse',
+  };
   await el.updateComplete;
   expect(up.getAttribute('aria-label')).to.equal('Bonne réponse');
   expect(down.getAttribute('aria-label')).to.equal('Mauvaise réponse');
@@ -59,7 +63,7 @@ describe('thumbs-only (no reasons, not commentable)', () => {
 describe('detail panel (reasons + commentable, detailFor "down")', () => {
   it('opens the panel only for the thumb detailFor applies to', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
     )) as LyraMessageFeedback;
     const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
     up.click();
@@ -74,7 +78,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('toggles reason chips and includes only selected ids in lr-submit', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -83,20 +87,26 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     const chips = el.shadowRoot!.querySelectorAll('[part="reasons"] lr-chip');
     expect(chips.length).to.equal(2);
     (chips[0] as HTMLElement).dispatchEvent(
-      new CustomEvent('lr-chip-select', { detail: { selected: true }, bubbles: true, composed: true }),
+      new CustomEvent('lr-chip-select', {
+        detail: { selected: true },
+        bubbles: true,
+        composed: true,
+      })
     );
     await el.updateComplete;
 
     const submitPromise = oneEvent(el, 'lr-submit');
     (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
     const ev = await submitPromise;
-    expect(ev.detail).to.deep.equal({ value: 'down', reasonIds: ['wrong'], comment: '' });
+    expect(ev.detail).to.deep.equal({
+      value: 'down',
+      reasonIds: ['wrong'],
+      comment: '',
+    });
   });
 
   it('includes the trimmed comment in lr-submit when commentable', async () => {
-    const el = (await fixture(
-      html`<lr-message-feedback commentable></lr-message-feedback>`,
-    )) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
@@ -109,13 +119,60 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     const submitPromise = oneEvent(el, 'lr-submit');
     (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
     const ev = await submitPromise;
-    expect(ev.detail).to.deep.equal({ value: 'down', reasonIds: [], comment: 'too slow' });
+    expect(ev.detail).to.deep.equal({
+      value: 'down',
+      reasonIds: [],
+      comment: 'too slow',
+    });
+  });
+
+  it('holds a prevented submit pending until the host finalizes or reverts it', async () => {
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
+    const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
+    down.click();
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+    textarea.value = 'persist me';
+    textarea.dispatchEvent(new Event('input'));
+
+    let submitCancelable = false;
+    el.addEventListener('lr-submit', (event) => {
+      submitCancelable = event.cancelable;
+      event.preventDefault();
+    });
+    const submit = el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement;
+    submit.click();
+    await el.updateComplete;
+
+    expect(submitCancelable).to.equal(true);
+    expect(el.pending).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.equal(true);
+    expect(textarea.disabled).to.equal(true);
+    const liveText = (): string =>
+      el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+    expect(liveText()).to.equal('');
+
+    el.revertPendingSubmit();
+    await el.updateComplete;
+    expect(el.pending).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.equal(true);
+    expect(textarea.disabled).to.equal(false);
+    expect(textarea.value).to.equal('persist me');
+
+    submit.click();
+    await el.updateComplete;
+    expect(el.pending).to.equal(true);
+    el.finalizePendingSubmit();
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(el.pending).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.equal(false);
+    expect(liveText()).to.equal('Feedback submitted');
+    expect(el.shadowRoot!.activeElement === down).to.equal(true);
   });
 
   it('closes the panel and returns focus to the active thumb on submit', async () => {
-    const el = (await fixture(
-      html`<lr-message-feedback commentable></lr-message-feedback>`,
-    )) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
@@ -123,28 +180,30 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
     expect(el.value).to.equal('down'); // submit does not clear the rating
-    expect(el.shadowRoot!.activeElement).to.equal(down);
+    expect(el.shadowRoot!.activeElement === down).to.equal(true);
   });
 
   it('closes the panel on Escape, keeps value, and returns focus to the active thumb', async () => {
-    const el = (await fixture(
-      html`<lr-message-feedback commentable></lr-message-feedback>`,
-    )) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
-    el.shadowRoot!
-      .querySelector('[part="panel"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="panel"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        composed: true,
+      })
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
     expect(el.value).to.equal('down');
-    expect(el.shadowRoot!.activeElement).to.equal(down);
+    expect(el.shadowRoot!.activeElement === down).to.equal(true);
   });
 
   it('re-opens the panel with the prior draft intact when the pressed thumb is clicked again after Escape', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -154,9 +213,13 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     textarea.dispatchEvent(new Event('input'));
     await el.updateComplete;
 
-    el.shadowRoot!
-      .querySelector('[part="panel"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="panel"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        composed: true,
+      })
+    );
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
 
@@ -168,14 +231,12 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     expect(el.value).to.equal('down');
     expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement).value).to.equal(
-      'draft in progress',
+      'draft in progress'
     );
   });
 
   it('clears value when the pressed thumb (with its panel already open) is clicked again', async () => {
-    const el = (await fixture(
-      html`<lr-message-feedback commentable></lr-message-feedback>`,
-    )) as LyraMessageFeedback;
+    const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
     await el.updateComplete;
@@ -189,7 +250,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('resets drafts when switching from one thumb to the other', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
     down.click();
@@ -209,7 +270,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('prunes selected draft reasons when the controlled reasons collection changes', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`
     )) as LyraMessageFeedback;
     (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
@@ -218,7 +279,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
         detail: { selected: true },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
 
@@ -232,7 +293,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('clears a hidden comment draft when commentable is revoked', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
     )) as LyraMessageFeedback;
     (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
@@ -250,7 +311,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it('closes and clears an open draft when value or detail ownership changes externally', async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .reasons=${reasons} commentable detail-for="both"></lr-message-feedback>`,
+      html`<lr-message-feedback .reasons=${reasons} commentable detail-for="both"></lr-message-feedback>`
     )) as LyraMessageFeedback;
     (el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
@@ -269,7 +330,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
 it('respects a host-set disabled value as a read-only display', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback value="up" disabled></lr-message-feedback>`,
+    html`<lr-message-feedback value="up" disabled></lr-message-feedback>`
   )) as LyraMessageFeedback;
   const up = el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement;
   expect(up.disabled).to.be.true;
@@ -280,9 +341,7 @@ it('respects a host-set disabled value as a read-only display', async () => {
 });
 
 it('disables the comment textarea and submit button (not just the thumbs) once disabled is set while the panel is already open', async () => {
-  const el = (await fixture(
-    html`<lr-message-feedback commentable></lr-message-feedback>`,
-  )) as LyraMessageFeedback;
+  const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;
   const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
   down.click(); // detailFor defaults to 'down' -- opens the panel
   await el.updateComplete;
@@ -300,7 +359,7 @@ it('disables the comment textarea and submit button (not just the thumbs) once d
 
 it('keeps the collapsed detail panel out of focus and the accessibility tree with no visible chrome', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
   )) as LyraMessageFeedback;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.inert).to.be.true;
@@ -329,7 +388,7 @@ it('host click activates the current thumb and is inert while disabled', async (
 
 it('disables reason chips and ignores their events while the whole control is disabled', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback value="down" .reasons=${reasons} disabled></lr-message-feedback>`,
+    html`<lr-message-feedback value="down" .reasons=${reasons} disabled></lr-message-feedback>`
   )) as LyraMessageFeedback;
   const chip = el.shadowRoot!.querySelector('lr-chip')!;
   expect(chip.disabled).to.be.true;
@@ -340,7 +399,7 @@ it('disables reason chips and ignores their events while the whole control is di
 
 it('stops the internal lr-chip-select event from leaking past the host in the reason-chip handler', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
+    html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`
   )) as LyraMessageFeedback;
   const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
   down.click();
@@ -349,15 +408,19 @@ it('stops the internal lr-chip-select event from leaking past the host in the re
   let leaked = false;
   el.addEventListener('lr-chip-select', () => (leaked = true));
   const chip = el.shadowRoot!.querySelector('[part="reasons"] lr-chip') as HTMLElement;
-  chip.dispatchEvent(new CustomEvent('lr-chip-select', { detail: { selected: true }, bubbles: true, composed: true }));
+  chip.dispatchEvent(
+    new CustomEvent('lr-chip-select', {
+      detail: { selected: true },
+      bubbles: true,
+      composed: true,
+    })
+  );
   await el.updateComplete;
   expect(leaked).to.be.false;
 });
 
 it('keeps the comment hover rule low-specificity for consumer part overrides', () => {
-  expect(styles.cssText.replace(/\s+/g, ' ')).to.match(
-    /:where\(\[part='comment'\]\):hover:where\(:not\(:disabled\)\)/,
-  );
+  expect(styles.cssText.replace(/\s+/g, ' ')).to.match(/:where\(\[part='comment'\]\):hover:where\(:not\(:disabled\)\)/);
 });
 
 describe('comment textarea blur/focus bubbling', () => {
@@ -416,7 +479,7 @@ it('never conveys value by color alone -- aria-pressed is present for both thumb
 it('focus() delegates to the thumb matching the current value', async () => {
   const el = (await fixture(html`<lr-message-feedback value="down"></lr-message-feedback>`)) as LyraMessageFeedback;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="down-button"]'));
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="down-button"]')).to.equal(true);
 });
 
 it('gives the up/down thumb buttons the shared minimum hit area', async () => {
@@ -474,7 +537,7 @@ function renderedRuleFilter(el: HTMLElement, selector: string): string {
 
 it('escalates the submit button from resting to hover to pressed with the shared colour-mix tokens', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
+    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`
   )) as LyraMessageFeedback;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="submit-button"]').length).to.equal(1);
@@ -496,16 +559,16 @@ it('escalates the submit button from resting to hover to pressed with the shared
       el,
       'background',
       'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))',
-      'background-color',
-    ),
+      'background-color'
+    )
   );
   expect(pressed).to.equal(
     resolveInShadow(
       el,
       'background',
       'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-      'background-color',
-    ),
+      'background-color'
+    )
   );
 
   // No filter in either state: brightness() applies to the subtree, so it would dim the label along
@@ -519,14 +582,14 @@ it('is accessible in every configuration', async () => {
   await expect(plain).to.be.accessible();
 
   const withPanel = (await fixture(
-    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
+    html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`
   )) as LyraMessageFeedback;
   await expect(withPanel).to.be.accessible();
 });
 
 it('is accessible with the detail panel genuinely open, not just present with unopened content', async () => {
   const el = (await fixture(
-    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
   )) as LyraMessageFeedback;
   (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -587,23 +650,28 @@ describe('pressed-state cssprops', () => {
   });
 });
 
-it("colors the comment field's placeholder text instead of leaving the UA default", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='comment'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+it("renders the comment field's placeholder in the live quiet-text token color", async () => {
+  const el = (await fixture(html`
+    <lr-message-feedback commentable style="--lr-color-text-quiet: rgb(12, 34, 56)"></lr-message-feedback>
+  `)) as LyraMessageFeedback;
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+
+  expect(getComputedStyle(textarea, '::placeholder').color).to.equal('rgb(12, 34, 56)');
 });
 
 it('blur() releases whichever vote button held focus', async () => {
   const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.exist;
+  expect(el.shadowRoot!.activeElement != null).to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 
   el.value = 'down';
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement, 'focus follows the current vote').to.exist;
+  expect(el.shadowRoot!.activeElement != null, 'focus follows the current vote').to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });

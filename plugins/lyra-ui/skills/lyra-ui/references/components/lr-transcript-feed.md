@@ -25,7 +25,7 @@ string; speaker?: string; text: string; interim?: boolean; timestamp?: number }`
 module; `timestamp` is epoch **milliseconds**). Reconciled keyed by `id` via Lit's `repeat()`: a
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
-exactly once. Interim entries render *after* the log container — visible, but structurally outside
+exactly once. Interim entries render _after_ the log container — visible, but structurally outside
 it — so per-token mutations are never spoken by assistive tech. `follow: boolean = true`
 (reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
 (epochMs: number) => string` (attribute: false), `maxRenderedEntries: number = 0` (attribute
@@ -35,7 +35,9 @@ it — so per-token mutations are never spoken by assistive tech. `follow: boole
 (attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
 the localized default; attribute-reflects from a host-level `aria-label`.
 
-**Methods:** `scrollToBottom()` re-engages `follow` and scrolls to the latest entry.
+**Methods:** `scrollToBottom()` performs an instant scroll to the current latest entry without
+changing `follow`. Set `follow = true` (or activate the built-in jump button) when the caller also
+wants to re-engage automatic following.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
@@ -44,5 +46,5 @@ the localized default; attribute-reflects from a host-level `aria-label`.
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
-an interim row), `interim-area` (the wrapper holding the interim row, present whether or not an
-interim entry is showing), `jump-button` (shown only while `follow` is `false`), and `empty`.
+an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
+interim entry exists), `jump-button` (shown only while `follow` is `false`), and `empty`.

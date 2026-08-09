@@ -40,7 +40,7 @@ rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
 
-**CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
+**CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/

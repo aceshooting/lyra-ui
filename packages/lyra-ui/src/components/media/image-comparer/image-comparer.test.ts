@@ -86,6 +86,24 @@ it('renders the handle slot and resolves both upstream sizing properties', async
   expect(getComputedStyle(handleVisual).blockSize).to.equal('31px');
 });
 
+it('keeps interactive descendants of the decorative handle slot out of focus and the accessibility tree', async () => {
+  const el = (await fixture(html`<lr-image-comparer aria-label="Compare images">
+    <div slot="before">Before</div>
+    <div slot="after">After</div>
+    <button slot="handle" type="button">Decorative button</button>
+  </lr-image-comparer>`)) as LyraImageComparer;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const decorativeButton = el.querySelector('[slot="handle"]') as HTMLButtonElement;
+
+  input.focus();
+  decorativeButton.focus();
+
+  expect(document.activeElement?.localName).to.equal('lr-image-comparer');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
+  await expect(el).to.be.accessible();
+});
+
 it('publishes dragging only for the active pointer gesture and clears it on cancellation', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
@@ -152,7 +170,7 @@ it('forwards host focus(), blur(), and click() to the range handle', async () =>
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   el.click();
   expect(clicks).to.equal(1);
 });

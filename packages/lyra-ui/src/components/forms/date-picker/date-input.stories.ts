@@ -228,3 +228,22 @@ export const SsrSlotHints: Story = {
     </lr-date-input>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow RTL long adornment (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Unbroken trailing metadata stays capped while the editable field and fixed calendar action remain reachable.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+      <lr-date-input label="תאריך פגישה מקומי" style="max-inline-size:100%">
+        <span slot="end">${'LocalizedUnbrokenDateMetadata'.repeat(16)}</span>
+      </lr-date-input>
+    </div>
+  `,
+};

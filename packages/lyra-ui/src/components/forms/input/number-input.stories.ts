@@ -29,3 +29,68 @@ export const StepperVariants: StoryObj = {
     </div>
   `,
 };
+
+/** Shared input theme values remain inheritable by the number-input subclass. */
+export const AncestorTheme: StoryObj = {
+  render: () => html`
+    <div style="--lr-input-radius: var(--lr-radius-pill)">
+      <lr-number-input label="Quantity" value="2" min="0" max="10"></lr-number-input>
+    </div>
+  `,
+};
+
+/** Stepper-bearing rows use the shared hit-floor-aware control ladder at every size. */
+export const Sizes: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      ${['2xs', 'xs', 's', 'm', 'l', 'xl'].map(
+        (size) => html`<lr-number-input size=${size} label=${size} value="2"></lr-number-input>`,
+      )}
+    </div>
+  `,
+};
+
+/** Mirrored Web Awesome/Shoelace size spellings retain the canonical number-input geometry. */
+export const MappedSizeAliases: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      ${[['small', 's'], ['medium', 'm'], ['large', 'l']].map(
+        ([alias, canonical]) => html`
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--lr-space-s)">
+            <lr-number-input size=${alias} label=${alias} value="2"></lr-number-input>
+            <lr-number-input size=${canonical} label=${canonical} value="2"></lr-number-input>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};
+
+/** The shared input action hooks independently retheme number steppers. */
+export const StateTheme: StoryObj = {
+  render: () => html`
+    <div
+      style="
+        --lr-input-action-color: var(--lr-color-brand);
+        --lr-input-action-hover-color: var(--lr-color-danger);
+        --lr-input-action-active-bg: var(--lr-color-danger-quiet);
+      "
+    >
+      <lr-number-input label="Quantity" value="2"></lr-number-input>
+    </div>
+  `,
+};
+
+/** Exact 320px RTL allocation with an unbroken label, hint, and both steppers. */
+export const NarrowRightToLeft: StoryObj = {
+  name: 'Narrow RTL (320px)',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%">
+      <lr-number-input
+        value="2"
+        label="InternationalizedUnbrokenQuantityLabelThatMustRemainInsideTheAllocation"
+        hint="Supporting copy wraps within the same narrow allocation."
+      ></lr-number-input>
+    </div>
+  `,
+};

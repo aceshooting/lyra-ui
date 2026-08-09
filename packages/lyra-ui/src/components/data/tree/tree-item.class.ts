@@ -14,17 +14,15 @@ import {
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
-import type { TreeItem, TreeSelection } from './tree-types.js';
+import { TREE_MAX_RENDER_DEPTH, type TreeIdentityContext, type TreeItem, type TreeSelection } from './tree-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-
-const MAX_RENDER_DEPTH = 64;
 
 /** Internal slot nested `<lr-tree-item>` children are moved into, so the default slot can stay the
  *  label the way `wa-tree-item`/`sl-tree-item` markup expects. Assigned by this component. */
@@ -64,7 +62,9 @@ export interface LyraTreeItemEventMap {
  * In the declarative model, flattened real-content presence chooses between the visual slot and
  * `label` fallback, so decorative or element-only visuals remain rendered. Spoken `nodeLabel`
  * text is resolved separately from accessibility-visible assigned content and updates through
- * forwarding slots; a host `aria-label` keeps precedence by presence.
+ * forwarding slots; a host `aria-label` keeps precedence by presence in both models. A data
+ * item's `accessibleLabel` is reflected only while the component owns that attribute, so an
+ * initial or later author override survives object refreshes.
  *
  * `role="treeitem"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/
  * `aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on
@@ -128,6 +128,15 @@ export interface LyraTreeItemEventMap {
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row.
+ * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border.
+ * @cssprop [--lr-tree-checkbox-checked-bg=var(--lr-color-brand)] - Checked control background.
+ * @cssprop [--lr-tree-checkbox-checked-color=var(--lr-color-on-brand)] - Checked glyph color.
+ * @cssprop [--lr-tree-checkbox-indeterminate-border-color=var(--lr-color-brand)] - Indeterminate
+ *   control border.
+ * @cssprop [--lr-tree-checkbox-indeterminate-bg=var(--lr-color-brand)] - Indeterminate control
+ *   background.
+ * @cssprop [--lr-tree-checkbox-indeterminate-color=var(--lr-color-on-brand)] - Indeterminate glyph
+ *   color.
  * @cssprop [--lr-tree-badge-neutral-color=var(--lr-color-text-quiet)] - Neutral badge text color.
  * @cssprop [--lr-tree-badge-neutral-bg=var(--lr-color-surface)] - Neutral badge background.
  * @cssprop [--lr-tree-badge-brand-color=var(--lr-color-brand)] - Brand badge text color.
@@ -148,14 +157,29 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
     item: LYRA_DEFAULT_item,
     open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  private readonly itemInternals = this.attachInternals();
+  /** Custom states are progressive enhancement. DOM shims and partial polyfills may omit, throw
+   *  from, or return no value from `attachInternals()`; none may make the public item unconstructible. */
+  private readonly itemInternals = attachInternalsSafely(this);
+  private managedItemAriaLabel: string | null = null;
+  private writingItemAriaLabel = false;
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'aria-label' && !this.writingItemAriaLabel) {
+      // Any author write, including writing the same value the data model had reflected, transfers
+      // ownership. A later item refresh must not silently replace that explicit host name.
+      this.managedItemAriaLabel = null;
+    }
+  }
 
   /**
    * The data model: the whole subtree as one object, assigned by `<lr-tree>` from its `data`. When
@@ -216,6 +240,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
 
   private treeSelection: TreeSelection = 'single';
   private treeOwnsSelection = false;
+  private treeIdentityContext?: TreeIdentityContext;
   private expandIconSource: Element | null = null;
   private collapseIconSource: Element | null = null;
   private lifecycleGeneration = 0;
@@ -284,7 +309,20 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
 
   /** Whether this item is disabled, in whichever child model is in use. */
   get isDisabled(): boolean {
-    return this.item ? Boolean(this.item.disabled) : this.disabled;
+    return this.item ? Boolean(this.item.disabled || this.hasDuplicateDataId) : this.disabled;
+  }
+
+  /** Whether this rendered occurrence conflicts with an earlier data item that owns the same
+   * public id. The owner is deterministic depth-first order; later occurrences fail closed. */
+  private get hasDuplicateDataId(): boolean {
+    const context = this.treeIdentityContext;
+    const item = this.item;
+    return Boolean(
+      context &&
+        item &&
+        context.collisionIds.has(item.id) &&
+        context.ownerPaths.get(item.id) !== context.path
+    );
   }
 
   /**
@@ -294,10 +332,42 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    * `label` attribute fallback.
    */
   get nodeLabel(): string {
-    if (this.item) return this.item.accessibleLabel || this.item.label;
     const ariaLabel = this.getAttribute('aria-label');
     if (ariaLabel !== null) return ariaLabel;
+    if (this.item) return this.item.accessibleLabel || this.item.label;
     return this.slottedLabelText || this.label;
+  }
+
+  /** Reflects the data model's richer spoken name without taking ownership of an author-supplied
+   * host name. Component-owned attributes may be refreshed or removed; author-owned ones are
+   * presence-authoritative until the author removes them. */
+  private syncItemAriaLabel(): void {
+    const current = this.getAttribute('aria-label');
+    if (this.managedItemAriaLabel === null && current !== null) return;
+
+    const next = this.item?.accessibleLabel || null;
+    if (next === null) {
+      if (this.managedItemAriaLabel !== null && current === this.managedItemAriaLabel) {
+        this.writingItemAriaLabel = true;
+        try {
+          this.removeAttribute('aria-label');
+        } finally {
+          this.writingItemAriaLabel = false;
+        }
+      }
+      this.managedItemAriaLabel = null;
+      return;
+    }
+
+    if (current !== next) {
+      this.writingItemAriaLabel = true;
+      try {
+        this.setAttribute('aria-label', next);
+      } finally {
+        this.writingItemAriaLabel = false;
+      }
+    }
+    this.managedItemAriaLabel = next;
   }
 
   /**
@@ -340,6 +410,21 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (changed) this.requestUpdate();
   }
 
+  /** Internal collision-analysis context supplied by the owning data-driven tree.
+   * @internal */
+  setTreeIdentityContext(context: TreeIdentityContext | undefined): void {
+    const old = this.treeIdentityContext;
+    if (
+      old?.path === context?.path &&
+      old?.ownerPaths === context?.ownerPaths &&
+      old?.collisionIds === context?.collisionIds
+    ) {
+      return;
+    }
+    this.treeIdentityContext = context;
+    this.requestUpdate();
+  }
+
   /**
    * Internal selection-controller seam. The public state remains `selected`/`indeterminate`.
    * @internal
@@ -372,11 +457,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     });
   }
 
-  private accessibleLabelText(
-    node: Node,
-    inheritedTextVisible?: boolean,
-    requireComposedVisibility = false,
-  ): string {
+  private accessibleLabelText(node: Node, inheritedTextVisible?: boolean, requireComposedVisibility = false): string {
     if (node.nodeType === 3) {
       if (inheritedTextVisible === undefined) {
         const parent = this.composedParentForLabelNode(node);
@@ -397,16 +478,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (ariaLabel) return ariaLabel;
     const forwardingSlot = element.localName === 'slot' ? (element as HTMLSlotElement) : null;
     const hasAssignment = forwardingSlot !== null && forwardingSlot.assignedNodes().length > 0;
-    const children = hasAssignment
-      ? forwardingSlot.assignedNodes({ flatten: true })
-      : Array.from(element.childNodes);
+    const children = hasAssignment ? forwardingSlot.assignedNodes({ flatten: true }) : Array.from(element.childNodes);
     return Array.from(children)
       .map((child) => {
         const externalAssignment = hasAssignment && !this.contains(child);
         return this.accessibleLabelText(
           child,
           externalAssignment ? undefined : ownTextVisible,
-          requireComposedVisibility || externalAssignment,
+          requireComposedVisibility || externalAssignment
         );
       })
       .join(' ');
@@ -431,14 +510,13 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (!renderRoot) return [];
     const slot = renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
     if (slot) return slot.assignedNodes({ flatten: true });
-    return this.declarativeLabelRoots()
-      .flatMap((node) => {
-        if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
-        const forwardingSlot = node as HTMLSlotElement;
-        return forwardingSlot.assignedNodes().length > 0
-          ? forwardingSlot.assignedNodes({ flatten: true })
-          : Array.from(forwardingSlot.childNodes);
-      });
+    return this.declarativeLabelRoots().flatMap((node) => {
+      if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
+      const forwardingSlot = node as HTMLSlotElement;
+      return forwardingSlot.assignedNodes().length > 0
+        ? forwardingSlot.assignedNodes({ flatten: true })
+        : Array.from(forwardingSlot.childNodes);
+    });
   }
 
   /** Whether the default slot has real label content — any element that is not a nested item, or a
@@ -477,16 +555,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (node.nodeType !== 1) return;
     this.childObserver.observe(node, {
       attributes: true,
-      attributeFilter: [
-        'aria-hidden',
-        'aria-label',
-        'class',
-        'hidden',
-        'inert',
-        'open',
-        'slot',
-        'style',
-      ],
+      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'open', 'slot', 'style'],
       childList: true,
       characterData: true,
       subtree: true,
@@ -534,10 +603,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   private handleLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    if (
-      target.getRootNode() !== this.renderRoot &&
-      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
-    ) return;
+    if (target.getRootNode() !== this.renderRoot && !this.labelForwardingSlots().includes(target as HTMLSlotElement))
+      return;
     this.bindChildObserverTargets();
     this.requestUpdate();
   };
@@ -597,7 +664,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   }
 
   get hasChildren(): boolean {
-    if (this.depth >= MAX_RENDER_DEPTH) return false;
+    if (this.depth >= TREE_MAX_RENDER_DEPTH) return false;
     // `item` is required in the data model (`<lr-tree>` always assigns it), but a bare
     // `document.createElement('lr-tree-item')` reaches the first update with it unset — fall through
     // to the declarative model's own children instead of throwing mid-lifecycle.
@@ -630,22 +697,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     this.setAttribute('aria-posinset', String(this.posInSet));
     if (this.hasChildren) this.setAttribute('aria-expanded', String(this.expanded));
     else this.removeAttribute('aria-expanded');
-    // Only the data model owns `aria-label` (from `item.accessibleLabel`). In the declarative model
-    // the attribute is the author's own, so it is never written *or* removed here. Guarded the same
-    // way `assignChildSlots()` guards its own `slot` write: `setAttribute`/`removeAttribute` queue a
-    // MutationObserver record even when the value does not change, and `bindChildObserverTargets()`
-    // has this item observe its own attributes -- an unconditional write here reliably retriggered
-    // its own observer, which calls `requestUpdate()`, which re-ran `willUpdate()` and wrote again,
-    // forever (never resolving `updateComplete`).
-    if (this.item) {
-      if (this.item.accessibleLabel) {
-        if (this.getAttribute('aria-label') !== this.item.accessibleLabel) {
-          this.setAttribute('aria-label', this.item.accessibleLabel);
-        }
-      } else if (this.hasAttribute('aria-label')) {
-        this.removeAttribute('aria-label');
-      }
-    }
+    // Guarded writes inside syncItemAriaLabel() distinguish the component's reflected data label
+    // from an author's host override and avoid a self-triggering MutationObserver loop.
+    this.syncItemAriaLabel();
     // A bare data-model item keeps the prior tri-state contract: omitted item.selected means the
     // standalone element does not express selection. An owning tree always manages selection, so
     // every treeitem then renders an explicit true/false value as stateful ARIA requires.
@@ -668,6 +722,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     super.updated(changed);
     const children = this.childItems();
     children.forEach((child, index) => {
+      child.setTreeIdentityContext(this.childIdentityContext(index));
       child.depth = this.depth + 1;
       child.activeId = this.activeId;
       child.setSize = children.length;
@@ -678,6 +733,16 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
         collapseIcon: this.collapseIconSource,
       });
     });
+  }
+
+  private childIdentityContext(index: number): TreeIdentityContext | undefined {
+    const context = this.treeIdentityContext;
+    if (!context) return undefined;
+    return {
+      path: `${context.path}/${index}`,
+      ownerPaths: context.ownerPaths,
+      collisionIds: context.collisionIds,
+    };
   }
 
   /** Expand this node (no-op if already expanded, disabled, loading, or a leaf). */
@@ -709,10 +774,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     this.emit('lr-lazy-load', { item: this, generation });
   }
 
-  private finishLazyLoad(
-    generation: number,
-    hasResolvedChildren = this.actualChildItems().length > 0,
-  ): void {
+  private finishLazyLoad(generation: number, hasResolvedChildren = this.actualChildItems().length > 0): void {
     if (!this._loading || generation !== this.lazyGeneration) return;
     this._loading = false;
     this.emit('lr-lazy-change', { item: this, loading: false });
@@ -768,9 +830,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (prefersReducedMotion(owner)) return 0;
     const property = expanded ? '--show-duration' : '--hide-duration';
     const ownStyle = owner.getComputedStyle(this);
-    const raw =
-      ownStyle.getPropertyValue(property).trim() ||
-      ownStyle.getPropertyValue('--lr-duration-base').trim();
+    const raw = ownStyle.getPropertyValue(property).trim() || ownStyle.getPropertyValue('--lr-duration-base').trim();
     const match = /^([0-9]*\.?[0-9]+)(ms|s)$/.exec(raw);
     if (!match) return 0;
     const amount = Number(match[1]);
@@ -850,9 +910,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
 
   private renderDisclosureIcon(): TemplateResult {
     const slotName = this.expanded ? 'expand-icon' : 'collapse-icon';
-    const inherited = this.inheritedIcon(
-      this.expanded ? this.expandIconSource : this.collapseIconSource,
-    );
+    const inherited = this.inheritedIcon(this.expanded ? this.expandIconSource : this.collapseIconSource);
     return html`<slot name=${slotName}>${inherited === nothing ? chevronIcon() : inherited}</slot>`;
   }
 
@@ -895,12 +953,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   /** The row itself, shared by both child models — same disclosure toggle, hit area, indent
    *  plumbing and click-to-select behavior either way. `icon`/`description`/`badges` only ever
    *  come from the data model; the declarative one passes `nothing` for all three. */
-  private renderRow(content: {
-    icon: unknown;
-    label: unknown;
-    description: unknown;
-    badges: unknown;
-  }): TemplateResult {
+  private renderRow(content: { icon: unknown; label: unknown; description: unknown; badges: unknown }): TemplateResult {
     return html`
       <div part="row" style=${`--lr-tree-depth:${this.depth}`} @click=${() => this.select()}>
         <span part="indentation" aria-hidden="true"></span>
@@ -921,8 +974,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
             ${this._loading ? this.renderSpinner() : this.hasChildren ? this.renderDisclosureIcon() : nothing}
           </button>
         </span>
-        ${this.renderCheckbox()}
-        ${content.icon}
+        ${this.renderCheckbox()} ${content.icon}
         <span part="content">
           <span part="checkbox__label">
             <span part="label">${content.label}</span>
@@ -946,15 +998,15 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
         <div part=${this.itemPartNames()}>
           ${this.renderRow({
             icon: nothing,
-            label: this.slottedLabel
-              ? html`<slot @slotchange=${this.handleLabelSlotChange}></slot>`
-              : this.label,
+            label: this.slottedLabel ? html`<slot @slotchange=${this.handleLabelSlotChange}></slot>` : this.label,
             description: nothing,
             badges: nothing,
           })}
         </div>
         ${this.expanded && this.slottedChildren
-          ? html`<div part="group" role="group"><div part="children"><slot name=${CHILDREN_SLOT}></slot></div></div>`
+          ? html`<div part="group" role="group">
+              <div part="children"><slot name=${CHILDREN_SLOT}></slot></div>
+            </div>`
           : nothing}
       </div>`;
     }
@@ -963,42 +1015,48 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
         ${this.renderRow({
           icon: item.icon != null ? html`<span part="icon" aria-hidden="true">${item.icon}</span>` : nothing,
           label: item.label,
-          description: item.description
-            ? html`<span part="description">${item.description}</span>`
-            : nothing,
+          description: item.description ? html`<span part="description">${item.description}</span>` : nothing,
           badges: html`${item.badge != null ? html`<span part="badge">${item.badge}</span>` : nothing}
           ${(item.badges ?? []).map(
             (b) => html`<span part="badge" data-tone=${b.tone ?? 'neutral'} aria-label=${b.label ?? b.text}
               >${b.text}</span
-            >`,
+            >`
           )}`,
         })}
       </div>
-      ${!this.isDisabled &&
-      this.depth < MAX_RENDER_DEPTH &&
-      item.children?.length &&
-      !this.ancestry.includes(item)
+      ${!this.isDisabled && this.depth < TREE_MAX_RENDER_DEPTH && item.children?.length && !this.ancestry.includes(item)
         ? html`<div part="group" role="group" ?hidden=${!this.expanded}>
             <div part="children">
               ${repeat(
-                item.children,
-                (child) => child.id,
-                (child, i) => html`<lr-tree-item
+                this.keyedChildren(item.children),
+                (entry) => entry.key,
+                ({ child }, i) => html`<lr-tree-item
                   .item=${child}
+                  .treeIdentityContext=${this.childIdentityContext(i)}
                   .depth=${this.depth + 1}
                   .ancestry=${[...this.ancestry, item]}
                   .activeId=${this.activeId}
                   .setSize=${item.children!.length}
                   .posInSet=${i + 1}
-                ></lr-tree-item>`,
+                ></lr-tree-item>`
               )}
             </div>
           </div>`
         : nothing}
     </div>`;
   }
-}
 
+  /** Stable sibling-local reconciliation keys remain unique even when invalid input repeats an
+   * id. The occurrence suffix preserves normal id-based reuse for valid data. */
+  private keyedChildren(children: TreeItem[]): Array<{ child: TreeItem; key: string }> {
+    const occurrences = new Map<string, number>();
+    return children.map((child) => {
+      const occurrence = occurrences.get(child.id) ?? 0;
+      occurrences.set(child.id, occurrence + 1);
+      return { child, key: `${child.id}\u0000${occurrence}` };
+    });
+  }
+}
 
 declare global {
   interface HTMLElementTagNameMap {

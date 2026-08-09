@@ -4,6 +4,33 @@ import './radio.js';
 import './radio-group.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+it('themes the button-content gap for both button authoring paths', async () => {
+  for (const markup of [
+    html`<lr-radio-button style="--lr-radio-button-gap: 13px">Label</lr-radio-button>`,
+    html`<lr-radio appearance="button" style="--lr-radio-button-gap: 13px">Label</lr-radio>`,
+  ]) {
+    const el = await fixture(markup);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(base).columnGap).to.equal('13px');
+  }
+});
+
+it('contains a standalone unbroken button label at 320px in LTR and RTL', async () => {
+  const label = 'InternationalizedStandaloneRadioButtonLabelWithoutAnyNaturalBreakOpportunity';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-radio-button value="choice">${label}</lr-radio-button>
+      </div>
+    `);
+    const radio = wrapper.querySelector('lr-radio-button')!;
+    expect(wrapper.scrollWidth, `dir=${direction} wrapper`).to.be.at.most(wrapper.clientWidth);
+    expect(radio.getBoundingClientRect().width, `dir=${direction} host`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
+  }
+});
+
 it('renders button chrome with the radio role and encodes checked state in the part name', async () => {
   const el = await fixture(html`<lr-radio-button value="a" checked>Alpha</lr-radio-button>`);
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -20,6 +47,13 @@ it('renders aria-checked="false" rather than omitting it when unchecked', async 
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('aria-checked')).to.equal('false');
   expect(base.getAttribute('part')!.split(/\s+/)).to.not.include('checked');
+});
+
+it('preserves an explicitly empty host aria-label on the internal radio owner', async () => {
+  const el = await fixture(html`<lr-radio-button aria-label="">Visible label</lr-radio-button>`);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-label')).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('');
 });
 
 it('participates in a radio group alongside a plain radio', async () => {
@@ -172,4 +206,57 @@ describe('lr-radio-button hover and press feedback', () => {
       }
     });
   }
+
+  it('themes unchecked and checked pointer-state longhands independently', async () => {
+    const unchecked = await fixture(html`
+      <lr-radio-button
+        style="
+          --lr-transition-fast: 0s;
+          --lr-radio-button-hover-bg: rgb(1, 2, 3);
+          --lr-radio-button-hover-border-color: rgb(4, 5, 6);
+          --lr-radio-button-active-bg: rgb(7, 8, 9);
+          --lr-radio-button-active-border-color: rgb(10, 11, 12);
+        "
+      >Unchecked</lr-radio-button>
+    `);
+    const uncheckedBase = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(uncheckedBase) });
+      expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(uncheckedBase).borderTopColor).to.equal('rgb(4, 5, 6)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(uncheckedBase).borderTopColor).to.equal('rgb(10, 11, 12)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+
+    const checked = await fixture(html`
+      <lr-radio-button
+        checked
+        style="
+          --lr-transition-fast: 0s;
+          --lr-radio-button-checked-bg: rgb(13, 14, 15);
+          --lr-radio-button-checked-border-color: rgb(16, 17, 18);
+          --lr-radio-button-checked-color: rgb(19, 20, 21);
+          --lr-radio-button-checked-hover-bg: rgb(22, 23, 24);
+          --lr-radio-button-checked-active-bg: rgb(25, 26, 27);
+        "
+      >Checked</lr-radio-button>
+    `);
+    const checkedBase = checked.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(13, 14, 15)');
+    expect(getComputedStyle(checkedBase).borderTopColor).to.equal('rgb(16, 17, 18)');
+    expect(getComputedStyle(checkedBase).color).to.equal('rgb(19, 20, 21)');
+    try {
+      await sendMouse({ type: 'move', position: centerOf(checkedBase) });
+      expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(22, 23, 24)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(25, 26, 27)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
 });

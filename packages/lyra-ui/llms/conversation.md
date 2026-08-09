@@ -8,6 +8,9 @@ instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
 
+If an instance disconnects and reconnects before that shared promise settles, only the current
+connection applies the result and reparses; the stale connection callback is generation-guarded.
+
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
@@ -18,14 +21,15 @@ is attempted while `streaming` is `true` — it applies once a stream settles, a
 while content is still arriving.
 
 **Properties:**
+
 - `content: string = ''` — the Markdown source to render
 - `tabSize: number = 4` (attribute `tab-size`) — tab-stop width used to expand tabs in leading
   indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
   invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
   how tabs already inside rendered code are displayed.
 - `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the peer-neutral configurable
-  `marked.Marked` parser shared by every `<lr-markdown>` instance on the page. It is `undefined`
-  while the optional peer is still resolving or unavailable; configuration installed with
+  `marked.Marked` parser shared by every `<lr-markdown>` and `<lr-markdown-core>` instance on the
+  page. It is `undefined` while the optional peer is still resolving or unavailable; configuration installed with
   variadic `marked.use(...extensions)` is copied into each parse. The peer-neutral type deliberately
   models Lyra's stable `defaults`/`use()`/`parse()` configuration surface; consumers using
   version-specific Marked tokenizers, constructors, or helpers should type that local reference
@@ -45,7 +49,7 @@ while content is still arriving.
   empty string via `link-target=""`) omits `target`/`rel` entirely instead of always defaulting to
   `_blank`, so rendered links open in the same tab
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
-  whose `href` *attribute* (not the browser-resolved `.href` property) starts with this prefix is
+  whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
   intercepted on click and reported via `lr-link-click` instead of navigating; empty (the default)
   means every link is treated as external
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
@@ -55,7 +59,7 @@ while content is still arriving.
   `<h${token.depth}>` output
 - `eagerLoad: boolean = false` (attribute `eager-load`) — when `true`, `connectedCallback()` skips
   awaiting the async `loadMarkdownDeps()` import and renders synchronously if the shared
-  `marked`/`dompurify` module cache is *already* warm (e.g. an earlier `<lr-markdown>` instance on
+  `marked`/`dompurify` module cache is _already_ warm (e.g. an earlier `<lr-markdown>` instance on
   the page already finished loading); falls back to the normal async path (with its brief
   plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
   byte-identical to always taking the async path
@@ -84,13 +88,16 @@ while content is still arriving.
   component resolves for the shared anchor-target contract.
 
 **Methods:**
+
 - `renderMarkdown(): void` — immediately reruns the current content through the parse, sanitize,
   and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
   it safely no-ops while the optional parser is unresolved.
-- `getHeadingTree()` — returns the document-ordered heading outline (`{ level, text, slug }[]`)
+- `getHeadingTree(): MarkdownHeadingItem[]` — returns the document-ordered heading outline
+  (`{ id, label, level }[]`)
   computed on every parse, regardless of `headingAnchors`.
 
 **Events:**
+
 - `lr-link-click` (`detail: { href: string; internal: true }`) — fired, with the click prevented,
   when a rendered link's `href` starts with `internal-link-prefix`; ordinary external links navigate
   normally and never fire this
@@ -138,23 +145,26 @@ instance; call `renderMarkdown()` after `marked.use(...)` to refresh content tha
   internal-link-prefix="/docs/"
 ></lr-markdown>
 <script>
-  document.querySelector('lr-markdown').addEventListener('lr-link-click', (e) => {
-    router.navigate(e.detail.href);
-  });
+  document
+    .querySelector("lr-markdown")
+    .addEventListener("lr-link-click", (e) => {
+      router.navigate(e.detail.href);
+    });
 </script>
 ```
 
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no
 HTML parsing at all — the raw `content` string itself) and fires `lr-render-error`. If `sanitize`
-is `true` (the default) and `dompurify` fails to load, the component *also* falls back to plain text
-+ `lr-render-error` — it never renders `marked`'s raw HTML output when sanitization was requested
-(or defaulted to) but is unavailable, even though `marked` itself loaded fine. If `sanitize` is
-explicitly `false`, `marked`'s raw output renders as-is regardless of whether `dompurify` is
-installed. While the optional peers are still resolving, the host carries `aria-busy="true"` (set/
-cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
-rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
-legible text in the meantime.
+is `true` (the default) and `dompurify` fails to load, the component _also_ falls back to plain text
+
+- `lr-render-error` — it never renders `marked`'s raw HTML output when sanitization was requested
+  (or defaulted to) but is unavailable, even though `marked` itself loaded fine. If `sanitize` is
+  explicitly `false`, `marked`'s raw output renders as-is regardless of whether `dompurify` is
+  installed. While the optional peers are still resolving, the host carries `aria-busy="true"` (set/
+  cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
+  rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
+  legible text in the meantime.
 
 **One tab width for every code surface.** `--lr-code-block-tab-size` is deliberately the same
 property name and default (`2`) that `<lr-code-block>` and `<lr-code-editor>` use, so a consumer sets
@@ -163,11 +173,12 @@ of use, never on `:host`** — a `:host` declaration is re-stamped on every inst
 inherited value, so a page- or container-level declaration could never reach it. This element carries
 its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
 **sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
-can cover the other. The same value can still *look* different between the two — a markdown code
+can cover the other. The same value can still _look_ different between the two — a markdown code
 block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
 restart at the beginning of each visual line, so a wrapped line's tabs land differently.
 
 **Known gotchas:**
+
 - a malformed percent-escape or lone UTF-16 surrogate in a link's raw `href` makes the internal
   `encodeURI`-based validity guard throw, silently dropping just that anchor (the link text still
   renders, with no `href`) — mirrors `marked`'s own default `link()` renderer's defensive behavior.
@@ -175,11 +186,11 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
 - a fresh internal `marked.Marked()` instance (with a fresh renderer) is built on every parse so
-  the renderer's `link()` override always closes over the *current* `linkTarget`. The public
+  the renderer's `link()` override always closes over the _current_ `linkTarget`. The public
   `marked` parser is still shared: its current configured defaults are copied into that fresh
   instance on each pass, avoiding a stale closure while preserving `marked.use(...)` hooks and
   extensions.
-- `internal-link-prefix` matching compares against the raw `href` *attribute*, not the resolved
+- `internal-link-prefix` matching compares against the raw `href` _attribute_, not the resolved
   `.href` IDL property (always an absolute URL in the browser) — a prefix like `/docs/` matches a
   relative markdown link but would never match against the resolved property.
 - rendered output goes through `unsafeHTML`; with `sanitize="false"` the component renders whatever
@@ -220,7 +231,11 @@ section above for the full write-up of shared behavior. There is no `languagesOn
 meaningless without a full-table fallback to gate, matching `<lr-code-block-core>` having none
 either.
 
-**Properties:** `content: string = ''`, `sanitize: boolean = true`, `escapeHtml: boolean = false`
+**Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
+finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
+or non-finite values fall back to `4`, independently of rendered code's
+`--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the
+same peer-neutral configurable parser shared by both Markdown variants; `sanitize: boolean = true`, `escapeHtml: boolean = false`
 (attribute `escape-html`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `eagerLoad: boolean = false` (attribute
@@ -231,7 +246,9 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 `math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment',
 'text-quote']`.
 
-**Methods:** `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
+**Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
+sanitize, highlight, and fallback pipeline after changing shared `marked` configuration; safely
+no-ops while the parser is unresolved. `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result` — identical detail shapes to `<lr-markdown>`'s own.
@@ -251,17 +268,19 @@ container-level value reaches it, and carried here in its own right because this
 differently on a wrapped line.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
-(for `math`). Does *not* depend on the full `shiki` package's default entry point — only
+(for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
 `shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
 `<lr-code-block-core>` depends on.
 
 ```html
 <lr-markdown-core
   content="# Report&#10;&#10;\`\`\`python&#10;print('hi')&#10;\`\`\`"
-  .languages=${{ python }}
+  .languages="${{"
+  python
+  }}
 ></lr-markdown-core>
 <script type="module">
-  import python from 'shiki/langs/python.mjs';
+  import python from "shiki/langs/python.mjs";
 </script>
 ```
 
@@ -279,7 +298,7 @@ differently on a wrapped line.
 
 ## `lr-chat-message`
 
-A role-based message bubble *shell* for a chat/agent conversation surface. It renders none of the
+A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
 chrome: alignment/coloring by `role`, an avatar/badges header row, an optional collapse toggle, an
@@ -291,6 +310,7 @@ and `<lr-code-block>`'s copy-affordance event name/shape, for anything listening
 conversation-surface level).
 
 **Properties:**
+
 - `role: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`) — reflects to
   `data-role`, **not** the bare `role` attribute (those role strings aren't valid ARIA role tokens
   and reflecting to `role` would collide with the element's own ARIA role); a plain `role="..."`
@@ -365,7 +385,7 @@ Two matching geometry properties cover the bubble's box:
   library.
 
 **Use these instead of a `::part(bubble)` padding/radius override.** A `::part` declaration written
-in the consumer's tree outranks *every* rule inside this component's shadow tree, so a
+in the consumer's tree outranks _every_ rule inside this component's shadow tree, so a
 `::part(bubble) { padding: … }` rule silently suppresses the per-`status` treatments layered on the
 same element — `status="failed"`'s danger tint, `status="streaming"`'s border — along with the
 per-role fills above. The two properties are declared as `var()` fallbacks at the point of use and
@@ -386,7 +406,7 @@ via `::part(bubble)`) so message bubbles stay visually distinct from the surroun
 > Retheming a bubble from outside `<lr-chat-message>` (e.g. per-thread or per-role colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
 component, auto-imported alongside this one, not an npm peer) for the status-transition
@@ -400,12 +420,14 @@ announcements described below.
   <button slot="actions">Copy</button>
 </lr-chat-message>
 <script>
-  document.querySelector('lr-chat-message').addEventListener('lr-retry', () => resend());
+  document
+    .querySelector("lr-chat-message")
+    .addEventListener("lr-retry", () => resend());
 </script>
 ```
 
 Accessibility of `status`: the current status is always available as plain visible text
-(`[part="status-text"]`), never color alone. A transition *to* `"failed"`, or *from* `"streaming"` to
+(`[part="status-text"]`), never color alone. A transition _to_ `"failed"`, or _from_ `"streaming"` to
 `"sent"` (a stream finishing), is additionally announced through the internal `<lr-live-region>` —
 `"failed"` announces assertively (`"Message failed to send."`), a streaming→sent completion announces
 politely (`"Message complete."`) — so a screen-reader user not currently focused on this message
@@ -416,9 +438,10 @@ since that component only ever announces once (its own mount); this component's 
 between several values across a single element's lifetime.
 
 **Known gotchas:**
+
 - mounting a message with `status="failed"` (or any other non-`"sent"` status) already set does
-  **not** announce anything — only a genuine *later* transition (`changed.get('status') !==
-  undefined`, i.e. not the very first update) triggers the live-region announcement.
+  **not** announce anything — only a genuine _later_ transition (`changed.get('status') !==
+undefined`, i.e. not the very first update) triggers the live-region announcement.
 - `lr-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
   and is omitted otherwise.
 - the header/footer/avatar/badges/attachments/actions wrappers are shown/hidden via the `hidden`
@@ -459,6 +482,7 @@ quieter cue for a tight space, e.g. next to an avatar), `cursor` (a blinking ver
 sit inline at the tail end of streamed text still being appended to).
 
 **Properties:**
+
 - `variant: TypingIndicatorVariant = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = 'Thinking…'` — the accessible name, exposed via `role="status"`; not re-announced
   on every animation frame, only on mount and on any later change to this property
@@ -508,12 +532,13 @@ Accessibility: since this indicator typically mounts and unmounts around a real 
 updates of its own, it does **not** route through `<lr-live-region>`/the internal `Announcer` —
 that machinery exists to coalesce many rapidly-changing announcements into one, and there is only
 ever a single announcement here: the mount itself. `role="status"` plus an accessible name derived
-from `label` is set both as `aria-label` on the host *and* as a visually-hidden text node
+from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
 (`.sr-only`) in the shadow tree, so the name survives even if only one of the two is picked up by a
 given assistive-tech/browser pairing. The animated shape itself is `aria-hidden="true"` — it's
 decorative; `label` is the entire accessible content, nothing narrates individual animation frames.
 
 **Known gotchas:**
+
 - under `prefers-reduced-motion: reduce`, every variant collapses to its plain, fully-visible resting
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
@@ -552,6 +577,7 @@ The inner textarea mirrors `required` through native `required`/`aria-required`.
 reveals the invalid state, and `form.reset()` clears the touched presentation.
 
 **Properties (own):**
+
 - `placeholder: string = ''`
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
@@ -562,7 +588,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   `'plain'` drops `[part="base"]`'s border, background, padding and corner radius so a composer
   docked inside a chat panel, dialog footer or toolbar that already draws its own border doesn't
   double it. Named `frame`, not `appearance`: `appearance` is the library's vocabulary for how a
-  *control fills itself*, and one property name cannot mean both. The focus affordance is swapped,
+  _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
@@ -584,7 +610,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   the native textarea
 - `input: HTMLTextAreaElement | null` — readonly reference to the rendered native textarea
 - `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
-  'forward' | 'backward' | 'none' | null` — native selection getters/setters
+'forward' | 'backward' | 'none' | null` — native selection getters/setters
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
 `setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
@@ -593,6 +619,7 @@ disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
 validity and recomputes the current intrinsic constraints.
 
 **Events:**
+
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
@@ -607,9 +634,11 @@ validity and recomputes the current intrinsic constraints.
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
-**Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
-attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button
-entirely when it has assigned content)
+**Slots:** `start` (content before the textarea, e.g. an attach-file trigger button), `end`
+(overrides the built-in send/stop button entirely when it has assigned content), `chips` (an
+attachment tray rendered above the input row), plus the deprecated compatibility aliases `leading`
+for `start` and `trailing` for `end`. Canonical and compatibility spellings may coexist; either end
+spelling suppresses the built-in action until both end slots are empty.
 
 **CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
 
@@ -634,22 +663,22 @@ user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--l
   max-rows="8"
 ></lr-chat-composer>
 <script type="module">
-  const composer = document.getElementById('composer');
-  composer.addEventListener('lr-submit', (e) => {
+  const composer = document.getElementById("composer");
+  composer.addEventListener("lr-submit", (e) => {
     sendMessage(e.detail.value);
-    composer.value = ''; // the composer never clears itself
-    composer.status = 'sending';
+    composer.value = ""; // the composer never clears itself
+    composer.status = "sending";
   });
-  composer.addEventListener('lr-stop', () => stopGeneration());
+  composer.addEventListener("lr-stop", () => stopGeneration());
 </script>
 ```
 
-Auto-resize (`resizeTextarea()`) reads the textarea's own *computed* line-height/padding/border at
+Auto-resize (`resizeTextarea()`) reads the textarea's own _computed_ line-height/padding/border at
 call time rather than assuming a fixed px-per-row constant, so it stays correct under a consumer's
 own font-size/line-height overrides; it grows between `min-rows` and `max-rows`, then switches to
 internal scrolling (`overflow-y: auto`) past `max-rows`. A `ResizeObserver` on the textarea itself
 also re-runs this fit (one animation frame later, to avoid a `ResizeObserver`-loop console error)
-whenever the textarea's own *width* changes — a sidebar collapsing, a responsive breakpoint, a
+whenever the textarea's own _width_ changes — a sidebar collapsing, a responsive breakpoint, a
 window resize — even though `value`/`min-rows`/`max-rows` never did, since the same text now wraps
 across a different number of lines. Enter-to-send only fires while
 `submit-on-enter` is `true` (the default): plain Enter submits and prevents the default newline;
@@ -662,6 +691,7 @@ while a previous one is in flight. While idle, `submitDisabled` suppresses Enter
 and disables only the built-in Send button; editing and busy-state Stop behavior remain available.
 
 **Known gotchas:**
+
 - `lr-submit` never clears `value` — the consumer must clear it once a submission is actually
   accepted, so a failed send can leave the text in place for retry.
 - While `status !== 'idle'`, only the built-in button's behavior changes (it emits `lr-stop`
@@ -670,9 +700,9 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - Auto-resize requires a concrete, unitless `line-height` on the textarea (the component sets
   `line-height: 1.5` in its own styles) — the UA default of `normal` has no single resolved px
   figure to measure rows against, so overriding `line-height` to a keyword breaks row sizing.
-- The `trailing` slot fully replaces the built-in action button rather than rendering alongside it —
+- The `end` slot (or its deprecated `trailing` alias) fully replaces the built-in action button rather than rendering alongside it —
   once it has assigned content, the library's send/stop icon, its `aria-label`, and its
-  `status`-driven busy styling all disappear, so a custom trailing control needs its own send/stop
+  `status`-driven busy styling all disappear, so a custom end control needs its own send/stop
   handling.
 - `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
@@ -690,13 +720,14 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
 host drives `phase` directly for `idle`/`connecting`/`streaming`, and calls the imperative
-`recordActivity()` method on every *semantic* frame received while streaming — a real content
+`recordActivity()` method on every _semantic_ frame received while streaming — a real content
 chunk, never a transport-level keep-alive ping. This component has no payload-inspection logic of
 its own: "ignore heartbeats" is entirely call-site discipline, which is exactly why a connection
 that's only sending keep-alives (no real content) for longer than `stall-threshold-ms` correctly
 reads as stalled.
 
 **Properties:**
+
 - `phase: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected) — current
   connection phase. Fully public and directly settable by the host at any time, including a manual
   override to `'stalled'`; the component never fights a host-driven reassignment.
@@ -708,6 +739,7 @@ reads as stalled.
   `recordActivity()` call or phase change.
 
 **Methods:**
+
 - `recordActivity(): void` — call on every semantic (non-heartbeat) frame received while
   streaming.
   - While `phase === 'streaming'`: (re)arms the stall timer, pushing the stall deadline
@@ -722,7 +754,7 @@ reads as stalled.
 from any other phase, whether timer-driven or via a direct host assignment. `lr-recover` (no
 detail payload) — fires whenever `phase` transitions out of `'stalled'` to any other phase,
 whether via `recordActivity()` or a direct host assignment. Neither fires for a same-value
-reassignment, and neither fires for whatever phase the element happens to *mount* with — only a
+reassignment, and neither fires for whatever phase the element happens to _mount_ with — only a
 later change counts as a transition.
 
 **Slots:** default (custom copy shown only while `phase="stalled"`, e.g. "Taking longer than
@@ -749,10 +781,11 @@ wins through the shadow cascade and is the supported per-instance override.
   <span slot="actions"><button>Stop</button></span>
 </lr-stream-status>
 ```
+
 ```ts
-const status = document.querySelector('lr-stream-status')!;
-status.addEventListener('lr-stall', () => console.warn('stream stalled'));
-status.addEventListener('lr-recover', () => console.info('stream recovered'));
+const status = document.querySelector("lr-stream-status")!;
+status.addEventListener("lr-stall", () => console.warn("stream stalled"));
+status.addEventListener("lr-recover", () => console.info("stream recovered"));
 
 // on every real content chunk from the transport (never on a keep-alive ping):
 status.recordActivity();
@@ -767,13 +800,13 @@ on. Phase transitions into/out of `'stalled'` are announced through an internal
 `<lr-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
 "Connection stalled." with `mode="assertive"` (a stall can need the user's attention before they
 give up and navigate away). Leaving `'stalled'` always announces with `mode="polite"` (good news
-doesn't need to interrupt), but the *wording* depends on the destination phase: "Connection
+doesn't need to interrupt), but the _wording_ depends on the destination phase: "Connection
 restored." only when leaving `'stalled'` for `'streaming'` (a genuine recovery, typically via
 `recordActivity()`); a neutral "No longer stalled." when the destination is `'idle'`/`'connecting'`
 instead (the host gave up on the stream, which is not the same thing as it recovering — a
 screen-reader user must not be told the opposite of what a sighted user sees). Calling
 `recordActivity()` itself never announces anything, no
-matter how often the host calls it — only the phase *transition* announces, exactly once. The
+matter how often the host calls it — only the phase _transition_ announces, exactly once. The
 decorative indicator dot is `aria-hidden` (a color/motion cue only) and only pulses while
 `phase="streaming"`; `'stalled'` is styled as a warning tone, not danger, since a stall is usually
 recoverable — a host that wants to escalate after N stalls can scope its own CSS off
@@ -781,11 +814,12 @@ recoverable — a host that wants to escalate after N stalls can scope its own C
 instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce`.
 
 **Known gotchas:**
+
 - `recordActivity()` is a plain instance method, not a reactive property — there's nothing to bind
   to in a template; call it directly from streaming/application code on every real chunk received.
 - Never call `recordActivity()` for a heartbeat/keep-alive ping. This component has no
   payload-inspection logic of its own, so a connection that's only sending pings (no real content)
-  for longer than `stall-threshold-ms` is *supposed* to read as stalled — that's the entire
+  for longer than `stall-threshold-ms` is _supposed_ to read as stalled — that's the entire
   point of the API.
 - Setting `stallThresholdMs` to `0`, a negative number, or a non-finite value disables the stall
   timer outright; the component will stay `'streaming'` forever until the host manually changes
@@ -809,6 +843,7 @@ A selectable row representing one chat session in a history sidebar list. Usable
 First-party invention (no Web Awesome equivalent).
 
 **Properties:**
+
 - `title: string = ''` — the session's display title. Falls back to "Untitled conversation" when empty
   (display only — the property itself is never mutated by that fallback).
 - `excerpt: string = ''` — a short preview snippet of the last message. Omit for no excerpt line.
@@ -854,11 +889,13 @@ as an implicit cancel), `blur` (no detail — re-dispatched from the in-place re
 in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 
 **Slots:**
+
 - `actions` — overflow/icon-button controls rendered at the trailing edge of the row (e.g. a
   pin/delete control); only visually shown once it actually has assigned elements. The only slot that
   may hold focusable content.
-- `leading` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
-  selectable region before the title/excerpt content.
+- `start` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
+  selectable region before the title/excerpt content. The deprecated `leading` compatibility alias
+  shares the same wrapper and may coexist with `start`.
 - `content` — replaces the built-in title + excerpt + meta content area with host-supplied
   non-interactive row content.
 - `excerpt` — full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`);
@@ -866,16 +903,17 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 - `meta` — small, non-focusable structured fields below the title/excerpt (a day label, cost, request
   count); entirely app-supplied, this component computes none of it.
 
-`leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
+`start`/`leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
 **CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`), `option`,
-`content`, `title`, `title-input`, `rename-button`, `excerpt`, `timestamp`, `actions`
+`leading`, `content`, `title`, `title-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
+`actions`
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
 (default `var(--lr-color-text)`) — the text color of `[part='excerpt']` and `[part='timestamp']`
 while `active`. Both are declared as inline `var()` fallbacks at the point of use and never on
-`:host`, so either can be set on the element *or on any ancestor* (a thread-list wrapper, a page
+`:host`, so either can be set on the element _or on any ancestor_ (a thread-list wrapper, a page
 theme layer); `::part(base)[active]` is not valid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — so the only previous lever was overriding the library-wide `--lr-color-brand-quiet`
 token and repainting everything else reading it. Unset, each falls back to exactly the token its rule
@@ -884,7 +922,7 @@ used before.
 **These two are a contrast-sensitive pair — override them together, never one alone.** The
 `-active-color` hook exists precisely because the quiet text tone only reaches about 4.25:1 against
 the default active background; keep any override at 4.5:1 or better against it. And note that
-`[part='title']` is *not* restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
+`[part='title']` is _not_ restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
 custom active background needs its own title color set alongside them, or the title drops below
 contrast while the excerpt stays legible.
 
@@ -901,7 +939,7 @@ the row is inactive.
 inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
 retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
 `compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
-[part='base']` is ordered *before* `:host([active]) [part='base']` (equal specificity), so a row that
+[part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
 is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
 
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
@@ -929,12 +967,13 @@ valid semantics both standalone and inside a larger history-list layout: it acti
 session rather than being a listbox option, so it requires no particular owner role. Selection is
 conveyed via `aria-current="true"` while `active`, not `aria-selected`. Because `role="button"`
 forbids focusable descendants (axe-core's `nested-interactive` rule), the rename button and the
-`actions` slot are rendered as DOM *siblings* of `[part="option"]` inside `[part="base"]`, not nested
+`actions` slot are rendered as DOM _siblings_ of `[part="option"]` inside `[part="base"]`, not nested
 inside it — the same constraint the in-place rename `<input>` runs into one level deeper, which is
 why `[part="option"]` sheds its `role`/`tabindex`/`aria-current`/`aria-label` entirely for the
-duration of an edit rather than just visually swapping content (a row mid-edit *is* a text field).
+duration of an edit rather than just visually swapping content (a row mid-edit _is_ a text field).
 
 **Known gotchas:**
+
 - `lr-select` carries no detail payload at all — read the session id off the event's own `target`/
   `currentTarget`, not a `detail` field.
 - Renaming is a controlled interaction: committing `lr-rename` never updates `title` locally: the
@@ -972,22 +1011,24 @@ Session-history/autofill restoration synchronously restores the model id and for
 emitting `lr-change`.
 
 **Exported types:**
+
 - `LyraModelCatalogEntry { id: string; label: string }` — one catalog row.
 - `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
   as both id and label) or every entry is a full `{ id, label }` row; the two shapes are not meant to be
   mixed within one array.
 
 **Properties:**
+
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
 - `catalog?: LyraModelCatalog` (attribute: false) — the full model list. Omit (or leave empty) to fall
   back to plain free-text entry.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
-- `label: string = ''` — optional visible title above the control, mirroring `<lr-select>`'s own
-  `label` exactly: rendered via a `[part="form-control-label"]` `<label>` paired with the control's
-  id, and once non-empty it takes over as the accessible-name source (an `aria-label` override is
-  then only consulted as the fallback). Empty (the default) keeps the original
-  `aria-label || placeholder || 'Model'` accessible-name chain untouched.
+- `label: string = ''` — optional visible title above the control, rendered alongside the `label`
+  slot in a `[part="form-control-label"]` `<label>` paired with the active control's id. A host
+  `aria-label` remains the authoritative override by presence; otherwise either visible-label
+  source names the control through the native label association. Leaving both sources empty keeps
+  the original `aria-label || placeholder || 'Model'` accessible-name chain untouched.
 - `hint: string = ''` — hint text below the field. Unset (the default): no hint chrome renders.
 - `errorText: string = ''` (attribute `error-text`) — error text below the field (overridden by
   slotted `error` content). Unset (the default): no error chrome renders.
@@ -1028,6 +1069,11 @@ emitting `lr-change`.
 - `form: HTMLFormElement | null = null` — browser-resolved owner (and an assignable external owner);
   readonly `labels: NodeList`, `validity: ValidityState`, `validationMessage: string`,
   `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state.
+- `input: HTMLInputElement | null` — readonly native input reference in free-text mode; `null` in
+  closed-dropdown mode and before render.
+- `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
+LyraModelSelectSelectionDirection | null` — native caret/selection state in free-text mode;
+  getters return `null` and setters are inert when no text input is rendered.
 
 **Methods:** `click()` (override) — forwards to whichever internal control the active mode renders,
 since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
@@ -1041,6 +1087,10 @@ behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` h
 itself.
 
 `focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+
+`select()` and `setSelectionRange()` forward to the native input in free-text mode.
+`setRangeText()` applies the native range edit and silently synchronizes `value`, the form entry,
+and validity; none of these editing methods has an effect in closed-dropdown mode or before render.
 
 `getForm()` returns the browser-resolved owning form. `checkValidity()` / `reportValidity()` behave
 as on any form-associated control.
@@ -1070,6 +1120,7 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 `catalog` + `value` on every access, without ever mutating the `catalog` property itself.
 
 **Events:**
+
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -1086,9 +1137,11 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
-**Slots:** `hint` (custom hint content), `error` (custom error content).
+**Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom
+error content).
 
-**The required marker and barred validity.** With `required` set and `label` non-empty,
+**The required marker and barred validity.** With `required` set and either visible-label source
+non-empty,
 `[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
 every labelled control in the library uses, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
@@ -1098,13 +1151,13 @@ constraint validation — its own `disabled`, or an ancestor `<fieldset disabled
 `readonly` — it reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
-**CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
-the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's
+**CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),
+`form-control-label` (the `<label>` element containing the `label` property and slot), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
 both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+stale-value row), `empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
@@ -1151,8 +1204,9 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 ```
 
 **Known gotchas:**
+
 - `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label }` objects, not
-  a mix; `LyraModelCatalog` is a union of two array *types*, not an array of a union item type.
+  a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
@@ -1172,10 +1226,11 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 
 A token-coalescing incremental text renderer for streaming assistant output, with an optional
 blinking cursor and auto-detected Markdown rendering. First-party invention (no Web Awesome
-equivalent). The host is expected to assign the *entire* current text on every update to `content`,
+equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
 not a delta — this component does no accumulation or ordering of its own.
 
 **Properties:**
+
 - `content: string = ''` — the full current text so far.
 - `streaming: boolean = false` (reflected) — shows the blinking cursor after the rendered text;
   reflects so a host can also target `lr-streaming-text[streaming]` in CSS.
@@ -1210,15 +1265,20 @@ component-specific, since no shared "inline cursor bar" token exists, the same p
 `--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
 cycle length).
 
-**Optional peer deps:** none — internally imports and auto-registers `<lr-markdown>` for
-Markdown-mode rendering (a side-effect import; the host never needs to import or register it
-itself).
+**Optional peer deps:** the registration entry imports and auto-registers `<lr-markdown>` (the host
+does not register it separately), so its optional-peer module graph includes `marked`, `dompurify`,
+`shiki`, and `katex`. The runtime matrix is narrower: `markdown="false"` and auto-detected plain text
+stay on the peer-free plain-text path; Markdown rendering lazy-loads `marked` plus the default
+`dompurify` sanitizer and falls back to readable plain text if either is unavailable. Fenced code
+can additionally use `shiki`, whose absence only leaves code unhighlighted. The composed Markdown
+implementation contains the opt-in `katex` loader, but this wrapper does not enable its `math`
+property and therefore never requests `katex` itself.
 
 ```html
 <lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
 <script type="module">
-  const out = document.getElementById('out');
-  let text = '';
+  const out = document.getElementById("out");
+  let text = "";
   for await (const token of tokenStream) {
     text += token;
     out.content = text; // always the full string so far, never a delta
@@ -1230,10 +1290,10 @@ itself).
 Token-by-token streaming can update `content` far faster than a human can usefully perceive a
 re-render, so updates funnel through `Announcer` (`../../internal/announcer.js`), reused here
 purely as a generic "coalesce rapid calls, flush the latest" timing primitive — with none of that
-class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the *last* `content` value
+class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the _last_ `content` value
 assigned actually reaches the rendered DOM. Two cases always bypass the throttle and flush
 immediately: the very first `content` assignment after mount, and any transition of `streaming`
-between `true` and `false` in *either* direction — so the final chunk of a finished stream can
+between `true` and `false` in _either_ direction — so the final chunk of a finished stream can
 never be left stranded mid-window, and a stream restarting on a reused element can never keep
 showing the previous stream's stale final content for the length of the window.
 
@@ -1246,9 +1306,10 @@ below the rendered content instead of attempting to splice into whatever nested 
 happens to end with.
 
 **Known gotchas:**
+
 - `content` must always be the complete string so far, never a delta — this component does no
   accumulation of its own.
-- Only the very *first* `content` assignment after mount bypasses `coalesceMs` unconditionally —
+- Only the very _first_ `content` assignment after mount bypasses `coalesceMs` unconditionally —
   every later assignment is throttled normally except when it lands in the same update as a
   `streaming` transition (either `true → false` or `false → true`), which also forces an immediate
   flush.
@@ -1267,6 +1328,7 @@ count, and token-throughput, plus a built-in Stop button. First-party invention 
 equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 
 **Properties:**
+
 - `active: boolean = false` (reflected) — whether generation is currently in progress. The
   elapsed-time ticker (a ~1s `setInterval`) runs only while this is `true`.
 - `startedAt?: number` (attribute `started-at`) — epoch-ms timestamp of when generation began.
@@ -1283,7 +1345,7 @@ equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
   presence-based `type: Boolean`), so a plain-HTML `show-stop="false"` content attribute correctly
   turns it off — the literal string `"false"` maps to `false`; the attribute's mere presence with any
   other value (or no value) maps to `true`. A Lit template can instead use a `.showStop=${false}`
-  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute *binding* still can't turn
+  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute _binding_ still can't turn
   it off when the attribute was never present in markup to begin with — that binding only ever
   removes the attribute when falsy, and removing an attribute that's already absent fires no
   `attributeChangedCallback` (see AGENTS.md); use `.showStop=${false}` or the plain
@@ -1310,15 +1372,22 @@ and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-ic
 **Optional peer deps:** none.
 
 ```html
-<lr-generation-status active started-at="1732000000000" token-count="340" show-stop></lr-generation-status>
+<lr-generation-status
+  active
+  started-at="1732000000000"
+  token-count="340"
+  show-stop
+></lr-generation-status>
 <script type="module">
-  document.querySelector('lr-generation-status').addEventListener('lr-stop', () => {
-    controller.abort(); // stop the host's own generation
-  });
+  document
+    .querySelector("lr-generation-status")
+    .addEventListener("lr-stop", () => {
+      controller.abort(); // stop the host's own generation
+    });
 </script>
 ```
 
-This is deliberately a *different* concern than `<lr-stream-status>`: that component is about
+This is deliberately a _different_ concern than `<lr-stream-status>`: that component is about
 transport/connection health (idle/connecting/streaming/stalled, heartbeat-aware stall detection),
 while this one is a user-facing metrics readout for a generation both components' hosts typically
 already know is healthily in progress. Neither imports or depends on the other; compose both side
@@ -1331,16 +1400,17 @@ reads better as a completed-state summary than the readout blanking out the inst
 ends.
 
 This readout ticks roughly once per second while active, which is exactly the kind of
-high-frequency update `<lr-live-region>`/`Announcer` exists to *prevent* from being read aloud
+high-frequency update `<lr-live-region>`/`Announcer` exists to _prevent_ from being read aloud
 verbatim — this component therefore carries no `role="status"`/`aria-live` of its own and never
 announces anything. A host that wants generation-start/-end announced should pair this with
-something that announces state *transitions* instead. The Stop button gets a normal, always-present
+something that announces state _transitions_ instead. The Stop button gets a normal, always-present
 `aria-label="Stop generating"`, no different from any other icon-only button in this library.
 
 **Known gotchas:**
+
 - `showStop` defaults to `true` and is not a reflected property. Its `ComplexAttributeConverter`
   makes the plain content attribute `show-stop="false"` work correctly, but a `?show-stop=${false}`
-  Lit boolean-attribute *binding* still can't turn it off starting from absent markup — see the
+  Lit boolean-attribute _binding_ still can't turn it off starting from absent markup — see the
   property list above for the exact footgun.
 - The derived `tokens-per-second` figure only appears once `elapsedMs >= 1000`; before that, the
   `throughput` part simply doesn't render — supply `tokens-per-second` yourself for a stable figure
@@ -1361,10 +1431,11 @@ Fenced code display with optional lazy syntax highlighting and a copy button. Fi
 `code-loader.ts`) for the actual tokenizing, and includes a compact GreyCat/GCL grammar because
 Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
 `language` is unset/unrecognized. That
-fallback is the *default* rendering path, not a degraded one: unhighlighted code is perfectly usable,
+fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
 
 **Properties:**
+
 - `code: string = ''` — the raw source text
 - `language: string = ''` — a shiki-recognized language id or alias (e.g. `"javascript"`, `"python"`,
   `"json"`); when unset, or when shiki doesn't recognize it, the code renders as plain unhighlighted
@@ -1458,7 +1529,7 @@ so it inherits: set it on the element, on an ancestor, or at the theme level.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
-`github-dark` "dual themes" and *zero* language grammars up front; each `language` a
+`github-dark` "dual themes" and _zero_ language grammars up front; each `language` a
 `<lr-code-block>` actually requests is loaded incrementally on first use via
 `loadShikiLanguage()`, and a language id that fails to load once is remembered and never retried. If
 `shiki` isn't installed, `loadShikiHighlighter()` resolves to `null` with a one-time `console.warn`
@@ -1482,7 +1553,7 @@ raw `code` value or the `lr-copy` event payload.
 A decorative `<lr-skeleton variant="rect">` placeholder (with its own announcements disabled and
 `aria-busy="true"` on the host) stands in only while shiki itself is loading for the very first time
 on the page and `language` is set — it is
-deliberately *not* shown again for a later per-language grammar fetch (that's typically fast, and the
+deliberately _not_ shown again for a later per-language grammar fetch (that's typically fast, and the
 plain-text fallback already reads fine as a placeholder for it). Internally, a shiki `transformer`
 (`partTransformer`) rewrites shiki's generated `<pre>`/`<code>` nodes in a single pass to carry this
 component's own `part="pre"`/`part="code"` hooks and strips shiki's default `tabindex="0"` from
@@ -1496,11 +1567,12 @@ overrides instead of consulting `prefers-color-scheme` directly. Shiki's generat
 one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
+
 - `copyable` defaults to `true` and reflects — see the property note above about overriding it with a
   property binding, not a boolean-attribute binding.
 - an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
   that arrives before a previous load resolves never applies a stale result — only the load matching
-  the *current* `language` is ever rendered.
+  the _current_ `language` is ever rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
   plain text silently, not a blank code block.
 - the "Copied!" label reverts to "Copy" after a fixed 1500ms, regardless of whether the clipboard
@@ -1517,13 +1589,13 @@ covers every language it will ever render. Where `<lr-code-block>` unconditional
 lookup table a bundler can't statically narrow away even when a consumer never actually uses it —
 this component's own module never imports or calls that function at all. It only ever calls
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
-plus an explicit oniguruma engine, seeded with *only* the grammars in `languages`), so a consumer
+plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
 A `language` value absent from `languages` always renders the plain `<pre><code>` fallback — there is
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
-path for an unmapped language. That fallback is the *default* rendering path, not a degraded one,
+path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
 same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/`language`/
 `filename`/`copyable`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
@@ -1531,6 +1603,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 (this component reuses `code-block.styles.ts` directly).
 
 **Properties:**
+
 - `code: string = ''` — the raw source text.
 - `language: string = ''` — a shiki-recognized language id or alias; when unset, or when it isn't a
   key in `languages`, the code renders as plain unhighlighted text — this component has no
@@ -1562,6 +1635,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
+  Replacing the map while connected starts a new loading generation; an older map that settles
+  later cannot clear the current map's loading state or replace its highlighted output.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
@@ -1606,6 +1681,7 @@ module-level `languages` constant on every render builds it only once.
 ```
 
 **Known gotchas:**
+
 - there is no default highlighter and no dynamic-import fallback table — a `language` you haven't
   added to `languages` will never highlight, no matter how common that language is elsewhere. Reach
   for `<lr-code-block>` instead if you need to support an open-ended set of languages without
@@ -1628,10 +1704,11 @@ the same/similar name — see `lr-model-select` and `lr-slider` themselves for t
 of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureStep`.
 
 **Properties:**
+
 - `provider: string = ''` — informational provider badge, passed straight through to the internal
   `lr-model-select`.
 - `catalog?: LyraModelCatalog` (attribute: false, JS-only) — `string[] | { id: string; label: string
-  }[]` (every entry must be one shape or the other, never mixed); passed straight through to the
+}[]` (every entry must be one shape or the other, never mixed); passed straight through to the
   internal `lr-model-select`.
 - `modelValue: string = ''` (attribute `model-value`) — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
@@ -1645,13 +1722,13 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
 - `layout: 'vertical' | 'compact' = 'vertical'` (reflected) — `vertical` stacks full-width rows with
   visible labels; `compact` runs the same two rows side by side with a smaller, uppercase temperature
   caption, for toolbars/sidebars where the vertical layout's height doesn't fit.
-- `disabled: boolean = false` (reflected) — disables the panel as a unit by forwarding to *both*
+- `disabled: boolean = false` (reflected) — disables the panel as a unit by forwarding to _both_
   internal `lr-model-select` and `lr-slider`; a wrapping `<fieldset disabled>` alone would not
   reach either, since a form-associated control's own `disabled` IDL property/attribute is never
   mutated by fieldset cascading.
 
 **Events:** `lr-change` — `detail: { modelValue: string; inCatalog: boolean; temperature: number }`.
-Fires whenever *either* child control's own `lr-change` fires, and always carries the full current
+Fires whenever _either_ child control's own `lr-change` fires, and always carries the full current
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
 `catalog`/`modelValue` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `modelValue` was just
@@ -1684,7 +1761,7 @@ The internal `lr-slider` renders with its own value readout suppressed (`.showVa
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
 shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
-panel's own `temperature` property mirrors the nested slider's *live* value on every one of its
+panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
 the visible readout) tick continuously during a drag, but the panel's own `lr-change` event only
 fires once the slider's own `lr-change` commits (pointerup/keyup) or the model changes; reading
@@ -1692,6 +1769,7 @@ fires once the slider's own `lr-change` commits (pointerup/keyup) or the model c
 yet for it.
 
 **Known gotchas:**
+
 - `catalog` is JS-only (`attribute: false`) — set it via a property binding (`.catalog=`), never as
   an HTML attribute, same requirement as the underlying `lr-model-select`.
 - `layout="compact"` removes the host's own `max-inline-size` cap (`28rem` in `vertical` layout)
@@ -1812,16 +1890,25 @@ panel is currently open, in which case that click re-opens the panel instead.
 **Properties:** `value: 'up' | 'down' | null = null` (reflected), `reasons: MessageFeedbackReason[] =
 []` (attribute: false, each `{ id, label }`), `commentable: boolean = false` (reflected) adds a
 free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detail-for`) — which
-rating opens the detail panel, and `disabled: boolean = false` (reflected) for a read-only display.
+rating opens the detail panel, `disabled: boolean = false` (reflected) for a read-only display, and
+`pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
+submission while host persistence is unresolved; all feedback controls are disabled and the panel
+reports busy until that state is resolved.
 
 **Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
+`finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
+panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
+the pending state after failure without clearing the draft or announcing success, leaving the panel
+open for retry. Both are no-ops when no submit is pending.
 
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
 string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating). The optional comment `<textarea>`'s native `focus` and `blur` are re-dispatched
-as bubbling, composed host events.
+for a set rating). It is cancelable: `preventDefault()` holds the panel open in `pending` and delays
+success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
+When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
+`<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
@@ -1836,8 +1923,8 @@ trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-acti
 `--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
 `var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
 border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
-fallbacks at the point of use and never on `:host`, so each can be set on the element *or on any
-ancestor* — a whole transcript's feedback controls retint from one declaration. That shape is
+fallbacks at the point of use and never on `:host`, so each can be set on the element _or on any
+ancestor_ — a whole transcript's feedback controls retint from one declaration. That shape is
 required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow Parts forbids an
 attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
@@ -1862,6 +1949,11 @@ true` (attribute `show-timer`), `disabled: boolean = false` (reflected), plus tw
 properties: `state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' = 'idle'` (reflected to
 `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
+
+`levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
+them starts or stops their audio-analysis, deadline, or elapsed-time work immediately. A changed
+maximum remains measured from the original recording start rather than granting a fresh duration;
+setting it to `0` removes the deadline.
 
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
@@ -1912,7 +2004,7 @@ string; speaker?: string; text: string; interim?: boolean; timestamp?: number }`
 module; `timestamp` is epoch **milliseconds**). Reconciled keyed by `id` via Lit's `repeat()`: a
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
-exactly once. Interim entries render *after* the log container — visible, but structurally outside
+exactly once. Interim entries render _after_ the log container — visible, but structurally outside
 it — so per-token mutations are never spoken by assistive tech. `follow: boolean = true`
 (reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
 (epochMs: number) => string` (attribute: false), `maxRenderedEntries: number = 0` (attribute
@@ -1922,7 +2014,9 @@ it — so per-token mutations are never spoken by assistive tech. `follow: boole
 (attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
 the localized default; attribute-reflects from a host-level `aria-label`.
 
-**Methods:** `scrollToBottom()` re-engages `follow` and scrolls to the latest entry.
+**Methods:** `scrollToBottom()` performs an instant scroll to the current latest entry without
+changing `follow`. Set `follow = true` (or activate the built-in jump button) when the caller also
+wants to re-engage automatic following.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
@@ -1931,8 +2025,8 @@ the localized default; attribute-reflects from a host-level `aria-label`.
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
-an interim row), `interim-area` (the wrapper holding the interim row, present whether or not an
-interim entry is showing), `jump-button` (shown only while `follow` is `false`), and `empty`.
+an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
+interim entry exists), `jump-button` (shown only while `follow` is `false`), and `empty`.
 
 ## `lr-handoff-divider`
 
@@ -1954,8 +2048,8 @@ around the `avatar` slot, only shown while the slot has content), and `label`.
 
 The transcript scroll container: owns stick-to-bottom behavior while an answer streams, the "jump to
 latest" pill, and the unread divider. Two supported content shapes, auto-detected: ordinary element
-children (typically `lr-chat-message`s — *slotted mode*), or exactly one `lr-virtual-list`
-(*virtual mode*, detected via `instanceof`). In virtual mode this component defers all scrolling to
+children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-virtual-list`
+(_virtual mode_, detected via `instanceof`). In virtual mode this component defers all scrolling to
 the slotted list's own `scrollToIndex()`. Follow/release state machine: while `follow` is engaged,
 content growth re-scrolls to the end; release happens only on a user-intent gesture (wheel,
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
@@ -2010,7 +2104,7 @@ scroll inside `lr-virtual-list`'s `24rem` default no matter how tall the viewpor
 `block-size` on the slotted list is what makes that resolvable: without it the list host is
 auto-height, its own base percentage chains to `auto`, and the two size each other circularly.
 `<lr-thread-list>` solves the same problem by turning the internal list's shipped `24rem` into a
-flex-basis through `::part(base)`, which is not available here — that list lives in the *consumer's*
+flex-basis through `::part(base)`, which is not available here — that list lives in the _consumer's_
 light DOM, and `::slotted()` cannot be followed by `::part()`. Virtual mode therefore inherits this
 component's existing requirement of a height-bounded parent, exactly as slotted mode's own
 `[part='scroll']` already does. A document-tree declaration on the list (a consumer's own rule or an
@@ -2035,15 +2129,17 @@ Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacin
 mid-conversation preserves focus on any chip whose `id` survives.
 
 **Properties:** `suggestions: ChatSuggestion[] = []` (attribute: false) — `ChatSuggestion { id:
-string; label: string; detail?: string }` (exported here); `detail` is an optional secondary line.
-Empty renders nothing at all. `wrap: boolean = false`
+string; label: string; icon?: string; detail?: string }` (exported here); `icon` is an optional
+peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
+`detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
 string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
 
 **Events:** `lr-suggestion-select` — `detail: { id, label }`.
 
-**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
-text), `chip-detail` (the secondary line, only rendered when `detail` is set).
+**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-icon` (the optional
+decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary line, only
+rendered when `detail` is set).
 
 **Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
 `var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`
@@ -2067,19 +2163,21 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
 ## `lr-thread-list`
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
-affordances. *Data mode* (non-empty `threads`, or empty `threads` with nothing slotted) renders every
+affordances. _Data mode_ (non-empty `threads`, or empty `threads` with nothing slotted) renders every
 row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
 construction, scroll position and per-row state survive a `threads` replacement; zero rows renders
-the built-in empty state. *Slotted mode* (empty `threads` *and* real slotted content) renders
+the built-in empty state. _Slotted mode_ (empty `threads` _and_ real slotted content) renders
 host-supplied `lr-conversation-item`s from the default slot as-is: no grouping, virtualization, or
 row actions in that mode. No thread CRUD or persistence — every mutation
-(`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the *requested* new
+(`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
 
 ArrowUp/ArrowDown/Home/End navigation skips rows that are disabled, hidden, `aria-hidden`, or
-`inert` (including an inert ancestor introduced by `wrapRow`). At a virtual-window edge the scan
-continues through the complete item model and mounts the next available row before moving focus,
-so an unavailable row cannot strand keyboard navigation.
+`inert` (including an inert ancestor introduced by `wrapRow`). Arrow navigation continues through
+the complete item model at a virtual-window edge and mounts the next available row before moving
+focus. Home/End always resolve the first/last thread from that complete model, even when focus
+starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
+are skipped rather than becoming false boundaries.
 
 **Properties:** `threads: ChatThread[] = []` (attribute: false) — `ChatThread { id: string; title:
 string; excerpt?: string; timestamp?: Date | string; pinned?: boolean; archived?: boolean }`
@@ -2097,7 +2195,9 @@ string) => number)` (attribute: false) supplies an explicit order or comparator;
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
 the virtual list while its conversation rows are removed from the virtual-list item/measurement
-set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRowAction[] = []`
+set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
+internal key namespaces, so every public `activeId` remains a raw thread id — even a value such as
+`group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
@@ -2138,9 +2238,12 @@ metadata in the row's meta region.
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
 built-in date-group labels (use `formatGroup` for custom groups). `formatDate?: (date: Date) =>
-string` (attribute: false) — overrides month-group date formatting. `wrapRow` remains wholly
-host-owned and therefore receives no library-added wrapper part; use the focused `row-*` hook parts
-or add the host's own styling hook inside that callback.
+string` (attribute: false) — overrides month-group date formatting. When `wrapRow` is set, its
+returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
+complete built-in row, including built-in `rowActions` and appended `renderActions` content inside
+the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, `row-actions` for
+the callback-output region, and the `row-item-*` parts for the conversation item's own internals.
+With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -2184,10 +2287,10 @@ prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-it
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
 
-**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
+**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,
 `renderRowContent`, `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's
-*internals*. Row density
+_internals_. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
 `::part(row-item-base)` is the supported way to build a dense sidebar.
 
@@ -2196,8 +2299,12 @@ own density knob. The `row-item-*` parts remain the lever for tuning beyond it (
 size, a different padding ratio):
 
 ```css
-lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }
-lr-thread-list::part(row-item-title) { font-size: 0.8125rem; }
+lr-thread-list::part(row-item-base) {
+  padding-block: 0.25rem;
+}
+lr-thread-list::part(row-item-title) {
+  font-size: 0.8125rem;
+}
 ```
 
 Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. That is a whole-subtree
@@ -2207,12 +2314,12 @@ density can be tuned without that blast radius.
 
 **Sizing:** the internal list fills whatever height this component is given, with no consumer CSS —
 `[part='viewport']` is the real scroll container, and it falls back to `lr-virtual-list`'s own `24rem`
-default only when the container has no resolvable height. This is deliberately *not* implemented by
+default only when the container has no resolvable height. This is deliberately _not_ implemented by
 setting `--lr-virtual-list-height: 100%`: that percentage resolves against this host, which is a flex
 item, so in an auto-height container it chains to `auto` and the viewport either collapses to zero
 (with no rows) or grows to the full un-virtualized content height (with rows) — defeating
 virtualization in both directions. Instead the list host is made a column flex container, which turns
-the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
+the shipped `24rem` into a _flex-basis_: it grows to fill a bounded pane, shrinks below `24rem` in a
 short one, and falls back to exactly `24rem` in an auto-height container.
 
 `sticky-groups` keeps the current date group's header visible while scrolling through a long sidebar;
@@ -2300,9 +2407,14 @@ segment or the default slot has content), `tokens-in`, `tokens-out`, `cost`, `la
 
 ```html
 <lr-chat-message data-role="assistant" status="sent">
-  <lr-usage-badge slot="badges" tokens-in="1204" tokens-out="386"
-    cost-text="$0.012" latency-ms="2350"></lr-usage-badge>
-  <lr-markdown .content=${answer}></lr-markdown>
+  <lr-usage-badge
+    slot="badges"
+    tokens-in="1204"
+    tokens-out="386"
+    cost-text="$0.012"
+    latency-ms="2350"
+  ></lr-usage-badge>
+  <lr-markdown .content="${answer}"></lr-markdown>
 </lr-chat-message>
 ```
 
@@ -2321,8 +2433,9 @@ narrow: a versioned document may bind an allowlisted primitive prop to a JSON Po
 must apply every requested change itself.
 
 **Exported types:**
+
 - `WidgetNode { type: string; id?: string; props?: Record<string, unknown>; children?: (WidgetNode |
-  string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
+string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
   reconciliation key (falling back to a structural path), `slot` is honored only when the parent
   type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is echoed
   back in `lr-widget-action`.
@@ -2333,8 +2446,10 @@ must apply every requested change itself.
   optional controlled binding state.
 
 **Properties:**
+
 - `tree: WidgetNode | null = null` (property only) — the unversioned declarative widget tree;
-  `null` renders an empty base.
+  `null` renders an empty base. A malformed root or reachable nested node fails closed, clears any
+  prior rendered tree, and emits exactly one `lr-render-error` for that update.
 - `document: LyraWidgetDocument | null = null` (property only) — versioned document form; when set,
   its `root` takes precedence over `tree`. A version other than `'1'` fails closed with
   `lr-render-error`.
@@ -2367,27 +2482,36 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 'image' }`).
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
-channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
-value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update. The
-renderer never mutates `state` or `document.state`; assign a new `state` value to complete the
-controlled update.
+channel. `lr-render-error` — `detail: { error }`, the root or a reachable nested node was
+structurally unusable (including a non-object node, invalid `props`/`children` shape, or a tree the
+depth/size caps made empty). The rejected update clears prior rendered content and emits this event
+once rather than throwing. `lr-widget-state-change` — `detail: { path, value, nodeId, prop }`,
+emitted when a state-bound mapped control requests a controlled update. The renderer never mutates
+`state` or `document.state`; assign a new `state` value to complete the controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
 
-Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop per
-instance. Reconciliation is keyed by `id ?? structural path`, so a streamed re-send patches in
-place and user state (an open `<details>`, focus, scroll) survives.
+Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop within
+the current effective root/registry generation. Re-resolving that same root for a controlled
+`state` update stays quiet; assigning a different streamed root or registry releases the prior
+generation's arbitrary warning keys before resolving the replacement, so a long-lived renderer
+cannot accumulate attacker-chosen type/prop names forever. Reconciliation is keyed by `id ??
+structural path`, so a streamed re-send patches in place and user state (an open `<details>`, focus,
+scroll) survives.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js';
-import '@aceshooting/lyra-ui/components/forms/input/input.js';
-import { registerWidgetType } from '@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js';
-import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
+import "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
+import "@aceshooting/lyra-ui/components/data/sparkline/sparkline.js";
+import { registerWidgetType } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
+import { tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 
-registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string' } });
+registerWidgetType("sparkline", {
+  tag: tag("sparkline"),
+  props: { data: "string" },
+});
 ```
+
 ```html
 <lr-widget-renderer .tree=${msg.widget}
   @lr-widget-action=${(e) => sendToAgent(e.detail.actionId, e.detail.payload)}
@@ -2395,39 +2519,52 @@ registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string'
 ```
 
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
-`state` (this one-field example binds `/name`):
+`state` (this one-field example binds `/name`). This is also the lean registration route: it imports
+the side-effect-free renderer class, defines only `lr-widget-renderer`, and imports only the mapped
+input registration. Do not import `widget-renderer.js` on this route; that entry intentionally
+installs the full default registry.
 
 ```html
 <lr-widget-renderer id="bound-widget"></lr-widget-renderer>
 ```
 
 ```js
-const renderer = document.querySelector('#bound-widget');
+import { LyraWidgetRenderer } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.class.js";
+import { defineElement, tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
+import "@aceshooting/lyra-ui/components/forms/input/input.js";
+
+defineElement("widget-renderer", LyraWidgetRenderer);
+
+const renderer = document.querySelector("#bound-widget");
 renderer.registry = new Map([
-  ['bound-input', {
-    tag: tag('input'),
-    props: { label: 'string', value: 'string' },
-    bindings: { value: { event: 'lr-input' } },
-  }],
+  [
+    "bound-input",
+    {
+      tag: tag("input"),
+      props: { label: "string", value: "string" },
+      bindings: { value: { event: "lr-input" } },
+    },
+  ],
 ]);
 renderer.document = {
-  version: '1',
-  state: { name: 'Ada' },
+  version: "1",
+  state: { name: "Ada" },
   root: {
-    type: 'bound-input',
-    id: 'name',
-    props: { label: 'Name', value: { $bind: '/name', fallback: '' } },
+    type: "bound-input",
+    id: "name",
+    props: { label: "Name", value: { $bind: "/name", fallback: "" } },
   },
 };
-renderer.addEventListener('lr-widget-state-change', (event) => {
+renderer.addEventListener("lr-widget-state-change", (event) => {
   renderer.state = { name: event.detail.value };
 });
 ```
 
-**Optional peer deps:** none new — the default-registry entry directly imports the eight mapped
-components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). A host wanting a
-leaner dependency graph registers a custom registry (via the `registry` property) and imports only
-the components it maps.
+**Optional peer deps:** none new — the normal registration entry directly imports the eight mapped
+components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). The manual class
+route above is the verified lean path: its real peer-inclusive esbuild metafile excludes
+`default-registry.js` and all eight default mapped class modules, while the consumer explicitly
+imports only the component registrations its per-instance registry maps.
 
 ## `lr-voice-picker`
 
@@ -2444,7 +2581,9 @@ persist selection; not a persona picker; `lr-model-select` stays for LLMs.
 **Exported types:** `LyraVoiceCatalogEntry { id: string; label: string; language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
 `[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
-homogeneous, same union contract as `LyraModelCatalog`.
+homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
+canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
+`LyraSize`.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
@@ -2456,7 +2595,15 @@ boolean = true` (reflected) — whether to render preview affordances at all. `l
 string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
 `inputMode: string = ''` (attribute `inputmode`), `enterKeyHint: string = ''` (attribute
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
-identically-named properties.
+identically-named properties. `size: LyraSize = 'm'` (reflected) selects the shared
+`2xs`/`xs`/`s`/`m`/`l`/`xl` control ladder; `small`/`medium`/`large` render as aliases of
+`s`/`m`/`l`. It scales both closed and free-text field chrome through the shared
+`--lr-form-control-*` metrics. The separate preview button retains the library-wide 40px minimum
+hit area at compact tiers and grows with `l`/`xl`.
+
+The `label` property and `label` slot share one native label in the standard `form-control` frame.
+Slotted label content participates in the accessible name in both closed-dropdown and free-text
+modes; an explicit host `aria-label` remains the highest-precedence name.
 
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: live,
 non-reflecting `value: string = ''` (the current voice id), reflected
@@ -2491,7 +2638,7 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 `focus`/`blur` (picker-family contract, same as `lr-model-select`), and one bubbling/composed
 `lr-invalid` alias when native validity fails.
 
-**Slots:** `hint`, `error`.
+**Slots:** `label` (custom visible label content), `hint`, `error`.
 
 **The required marker and barred validity.** Identical to `lr-model-select`'s (see that section): a
 `required` picker with a non-empty `label` paints the shared required marker on
@@ -2501,7 +2648,7 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
 here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
 
-**CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
+**CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
 stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabindex="-1"`,
@@ -2521,6 +2668,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 ```
 
 **Known gotchas:**
+
 - Listbox options must not contain tab-focusable controls, so preview is accessible via the
   standalone `[part="preview-button"]` beside the trigger (previews the active option while open,
   else the committed value) — the per-row `[part="option-preview"]` icon is a pointer-only
@@ -2554,9 +2702,10 @@ This is the single component that binds the most of the provider-neutral vocabul
 adapters.
 
 **Properties (transcript):**
+
 - `messages: ChatMessage[] = []` (attribute: false) — **`ChatMessage` from
   `@aceshooting/lyra-ui/ai`**: `{ id: string; role: ChatMessageRole; status?: ChatMessageStatus;
-  timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
+timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
   `lr-chat-message` whose `role`/`status`/`timestamp` come straight across, with `text` rendered as
   sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
   richer bodies. Host owns ordering, updates, and persistence
@@ -2564,42 +2713,44 @@ adapters.
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
 
 **Properties (details pane):**
+
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; status: AgentStatus; startedAt?: number; endedAt?: number; model?: string;
-  costEstimate?: number; steps: AgentStep[] }` (epoch-ms timestamps). `null` omits the run section
+costEstimate?: number; steps: AgentStep[] }` (epoch-ms timestamps). `null` omits the run section
 - `metrics: AgentRunMetric[] = []` (attribute: false) — `lr-agent-run`'s own
   `AgentRunMetric { id: string; label: string; value: string | number; variant?: BadgeVariant }`,
   e.g. token counts or latency
 - `tools: ToolTimelineEntry[] = []` (attribute: false) — `lr-tool-timeline`'s
   `ToolTimelineEntry extends ToolInvocation` (i.e. `{ id, name, args, status, result?, error? }` from
   `@aceshooting/lyra-ui/ai`) plus `{ startedAt?: number; endedAt?: number; retryCount?: number;
-  redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
+redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
 - `retrievalChunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk` from
   `@aceshooting/lyra-ui/ai`**: `{ id, text, score, source: DocumentRef, metadata? }`, forwarded to
   `lr-retrieval-results`
 - `selectedRetrievalIds: string[] = []` (attribute: false) — controlled selection forwarded to
   `lr-retrieval-results.selectedIds`
 - `retrievalLoading: boolean = false` (attribute `retrieval-loading`), `retrievalHasMore: boolean =
-  false` (attribute `retrieval-has-more`), `retrievalError: string = ''` (attribute
+false` (attribute `retrieval-has-more`), `retrievalError: string = ''` (attribute
   `retrieval-error`, caller-supplied text) — all forwarded to `lr-retrieval-results`
 - `groundingAssessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`
   from `@aceshooting/lyra-ui/ai`**: `{ supportedClaims, unsupportedClaims, coverage, confidence?,
-  warnings? }`
+warnings? }`
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**,
   shown alongside the grounding summary
 - `contextSegments: ContextInspectorSegment[] = []` (attribute: false) — `lr-context-inspector`'s
   `{ id: string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?:
-  Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
+Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
 - `contextTotal: number = 0` (attribute `context-total`) — the overall context-window token budget
 - `showDetails: boolean = true` (attribute `show-details`, reflected) — whether the details pane is
   available at all when data is present
 
 **Properties (composer / chrome):**
+
 - `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
   composer renders when no `composer` slot is supplied
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
-  'streaming'`, `lr-chat-composer`'s own union
+'streaming'`, `lr-chat-composer`'s own union
 - `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
@@ -2608,20 +2759,21 @@ adapters.
   override for the internal `role="region"` root
 
 **Events:**
+
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: undefined`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks:
-  RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
+RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.
 - `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
-  { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
+{ args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step).
 - `lr-cancel` (`detail: undefined`) / `lr-retry` (`detail: RetryEventDetail` = `{ attempt: number;
-  messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the built-in agent run.
+messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the built-in agent run.
 
 **Slots:** `messages` (replaces the data-driven transcript message list), `details` (replaces the
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
@@ -2642,6 +2794,10 @@ optional-peer fallback.
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
+Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint, coalescing
+parse/highlight work; replacing that same-id part with `state: 'complete'` flushes the final content.
+Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
+allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
 (attribute `render-markdown`, reflected) and `showReasoning: boolean = true` (attribute
@@ -2672,7 +2828,7 @@ message or the localized fallback. Existing history and reconnect renders stay s
 error id and later adding it again creates a new announcement.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
+import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
 **Additional API surface:**
@@ -2698,7 +2854,10 @@ import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
-upload, retrieval, or model call.
+upload, retrieval, or model call. It is deliberately not form-associated: the complete interaction
+state includes attachments, source scope, model, voice, and queued turns rather than one successful
+string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the submission
+request. `label` names the prompt section; it is not generic field chrome.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected);
@@ -2735,7 +2894,7 @@ mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, a
 **Optional peer deps:** none of its own.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
+import "@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js";
 ```
 
 ## `lr-prompt-queue`
@@ -2762,7 +2921,7 @@ these events propose complete next values without mutating `items`.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
+import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js";
 ```
 
 ## `lr-selection-toolbar`
@@ -2775,6 +2934,10 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 `actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
+
+When a controlled `actions` refresh replaces the focused action, focus follows the same action id
+through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when
+the action set becomes empty. A newer focus destination is never overridden.
 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
@@ -2791,7 +2954,7 @@ provide their own fixed-position anchor.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
+import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";
 ```
 
 **Additional API surface:**
@@ -2812,13 +2975,25 @@ LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflec
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
 converter); `errorCode: string = ''` (attribute `error-code`); `label: string = ''`.
 
+`errorCode` is host-readable provider diagnostic metadata, not a presentation switch. Assigning a
+different code does not change the localized generic error text, assertive announcement, CSS
+parts, emitted events, or `state`; use it in host logging or provider-specific UI outside the
+shell. This avoids rendering opaque provider codes or maintaining a misleading universal taxonomy
+for transport SDKs the component does not own.
+
 When a state transition removes a focused session action, focus moves to the replacement
 connect/disconnect action. Setting `showCapture` to `false` applies that handoff only when the
 capture control owned focus; a surviving built-in, slotted, or external focus destination is not
 moved.
 
-**Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
-composed push-to-talk events continue bubbling.
+**Events:** session intents are `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), and
+`lr-interrupt`. The composed capture's complete public event surface bubbles through unchanged and
+is also included in `LyraRealtimeSessionEventMap`: `lr-record-start` (`{ stream }`),
+`lr-record-chunk` (`{ blob }`), `lr-record-stop` (`{ blob, durationMs }`), `lr-record-cancel` (no
+detail), `lr-record-error` (`{ error }`), `lr-level` (`{ level }`), and
+`lr-state-change` (`{ state }`). These are the child's original bubbling/composed events rather than
+parent re-emissions;
+normal Shadow DOM retargeting means a listener outside the session observes the session as `target`.
 
 **Slots:** `controls` adds provider-specific actions beside the built-in session controls.
 
@@ -2835,5 +3010,5 @@ silent, and sinks follow the component's `ownerDocument` when it is adopted.
 remain host-owned.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';
+import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js";
 ```

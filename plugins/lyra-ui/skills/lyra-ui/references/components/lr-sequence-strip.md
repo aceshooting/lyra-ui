@@ -29,10 +29,26 @@ actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>
 to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
 below the strip, so the color-to-category mapping is readable without visiting each cell.
 
+A standard host `aria-label` dynamically names the internal list and wins over the
+`accessible-label` alias, which in turn wins over the generated category-count summary. When an
+`items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
+clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
+refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
+identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
+focus an unrelated cell that merely inherited the old numeric index.
+
+High-cardinality strips use a dense-collapse policy rather than a horizontal scrollport: cells may
+flex below their ordinary 2px visual target to keep 200 items inside the 320px responsive baseline;
+above 320 items the decorative 1px gaps collapse too, keeping 500 items contained. Every item still
+renders as its own named `role="listitem"`, remains reachable through the same roving keyboard model,
+and shows its detail tooltip on focus — density changes only the visual spacing, never the data or
+accessibility surface.
+
 **Properties:**
+
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
-  subagent-dispatched turn); `label` is per-item hover/focus tooltip text *and* that cell's own
+  subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
   `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
@@ -45,16 +61,16 @@ below the strip, so the color-to-category mapping is readable without visiting e
   vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
-  summary from `items`/`categories`
+  summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
-  order. The key describes the *scheme*, not the current data: a category with no matching item
+  order. The key describes the _scheme_, not the current data: a category with no matching item
   still gets a row, and an item whose `category` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
   once — and it wraps onto further rows in a narrow allocation rather than overflowing
-- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
+- `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
   `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
@@ -93,20 +109,21 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 ```html
 <lr-sequence-strip></lr-sequence-strip>
 <script>
-  const strip = document.querySelector('lr-sequence-strip');
+  const strip = document.querySelector("lr-sequence-strip");
   strip.categories = [
-    { key: 'text', color: '#4f46e5', label: 'Text' },
-    { key: 'tool', color: '#16a34a', label: 'Tool' },
+    { key: "text", color: "#4f46e5", label: "Text" },
+    { key: "tool", color: "#16a34a", label: "Tool" },
   ];
   strip.items = [
-    { id: '1', category: 'text', label: 'Turn 1: text' },
-    { id: '2', category: 'tool', marker: true, label: 'Turn 2: tool call' },
-    { id: '3', category: 'text', label: 'Turn 3: text' },
+    { id: "1", category: "text", label: "Turn 1: text" },
+    { id: "2", category: "tool", marker: true, label: "Turn 2: tool call" },
+    { id: "3", category: "text", label: "Turn 3: text" },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - there is no `lr-cell-click`/keyboard-interaction model at all — unlike `lr-heatmap`'s
   canvas cells, a strip cell is purely a hover target; build a click handler outside this component
   (e.g. on a wrapping element) if per-item activation is needed.

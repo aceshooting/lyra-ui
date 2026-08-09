@@ -114,6 +114,17 @@ export const Sizes: Story = {
   `,
 };
 
+/** Compact action-bearing rows grow to the shared hit floor; large tiers keep their ladder height. */
+export const ActionBearingSizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      ${['2xs', 'xs', 's', 'm', 'l', 'xl'].map(
+        (size) => html`<lr-input size=${size} clearable value="content" label=${size}></lr-input>`,
+      )}
+    </div>
+  `,
+};
+
 /** The `small`/`medium`/`large` spellings render exactly what `s`/`m`/`l` render. */
 export const SizeSpellings: Story = {
   name: 'Both size spellings',
@@ -170,4 +181,46 @@ export const ImplicitSubmission: Story = {
 
 export const Disabled: Story = {
   render: () => html`<lr-input label="Name" value="Ada Lovelace" disabled></lr-input>`,
+};
+
+/** Ancestor theme values override size, appearance, and pill fallbacks. */
+export const AncestorTheme: Story = {
+  render: () => html`
+    <div
+      style="
+        --lr-input-control-min-height: var(--lr-size-3rem);
+        --lr-input-padding-block: var(--lr-space-s);
+        --lr-input-padding-inline: var(--lr-space-l);
+        --lr-input-font-size: var(--lr-font-size-lg);
+        --lr-input-gap: var(--lr-space-m);
+        --lr-input-radius: var(--lr-radius-xs);
+        --lr-input-fill: var(--lr-color-brand-quiet);
+        --lr-input-border-color: var(--lr-color-brand);
+        --lr-input-focus-border-color: var(--lr-color-danger);
+        --lr-input-action-color: var(--lr-color-brand);
+        --lr-input-action-hover-color: var(--lr-color-danger);
+        --lr-input-action-active-bg: var(--lr-color-danger-quiet);
+      "
+    >
+      <lr-input size="xs" appearance="filled" pill clearable autofocus label="Inherited theme" value="Theme wrapper"></lr-input>
+    </div>
+  `,
+};
+
+/** Exact 320px RTL allocation with long label, support text, adornments, and a clear action. */
+export const NarrowRightToLeft: Story = {
+  name: 'Narrow RTL (320px)',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%">
+      <lr-input
+        clearable
+        value="content"
+        label="InternationalizedUnbrokenFieldLabelThatMustRemainInsideTheAllocation"
+        hint="Supporting copy wraps within the same narrow allocation."
+      >
+        <span slot="start">VeryLongLeadingAdornment</span>
+        <span slot="end">VeryLongTrailingAdornment</span>
+      </lr-input>
+    </div>
+  `,
 };

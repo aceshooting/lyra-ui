@@ -145,6 +145,7 @@ export interface LyraSwitchEventMap {
  * @csspart hint - The hint message.
  * @csspart form-control-help-text - Shoelace name for the same hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-switch-gap=var(--lr-space-s)] - Gap between the track and label.
  * @cssprop [--lr-switch-track-inline-size=calc(var(--lr-switch-track-block-size) * 1.8)] - Inline
  *   size of the track, and (with the block size) the distance the thumb travels when checked.
  *   Derived from the block size, so re-sizing the track keeps its aspect ratio.
@@ -154,8 +155,11 @@ export interface LyraSwitchEventMap {
  * @cssprop [--lr-switch-thumb-offset=var(--lr-size-2px)] - Inset of the thumb from the track's
  *   edges.
  * @cssprop [--lr-switch-track-fill=var(--lr-color-border)] - Resting fill of `[part='track']`,
- *   re-pointed at `var(--lr-color-brand)` while `checked`. The hover and press states mix away from
- *   whichever of the two is current, so retinting this retints all four renderings at once.
+ *   used as the source for the hover and press fallbacks.
+ * @cssprop [--lr-switch-checked-track-fill=var(--lr-color-brand)] - Track fill while checked.
+ * @cssprop [--lr-switch-track-hover-fill=color-mix(...)] - Track fill while hovered.
+ * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed.
+ * @cssprop [--lr-switch-thumb-fill=var(--lr-color-surface)] - Thumb fill in either checked state.
  * @cssprop [--width=var(--lr-switch-track-inline-size)] - WA/Shoelace alias for the track's inline
  * size.
  * @cssprop [--height=var(--lr-switch-track-block-size)] - WA/Shoelace alias for the track's block

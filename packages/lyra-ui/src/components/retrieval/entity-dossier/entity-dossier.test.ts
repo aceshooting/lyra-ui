@@ -60,7 +60,7 @@ it('defaults to a null entity, empty collections, and showFocusButton=true', asy
 it('renders the noData empty state and no tabs when entity is null', async () => {
   const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No data');
   expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
 });

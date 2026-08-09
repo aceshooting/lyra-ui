@@ -52,14 +52,64 @@ export const Default: Story = {
   render: () => html` <lr-filter-bar style="max-width: 48rem" .filters=${dashboardFilters}></lr-filter-bar> `,
 };
 
+/** A host `aria-label` names the internal group ahead of `label`. Presence is authoritative, so
+ *  an explicitly empty attribute also suppresses the label fallback. */
+export const AccessibleNamePrecedence: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-l);max-inline-size:48rem">
+      <lr-filter-bar
+        label="Report filters"
+        aria-label="Author filters"
+        .filters=${dashboardFilters}
+      ></lr-filter-bar>
+      <lr-filter-bar
+        label="Suppressed fallback"
+        aria-label=""
+        .filters=${dashboardFilters}
+      ></lr-filter-bar>
+    </div>
+  `,
+};
+
+/** Semantic forwarded parts theme the same field/input tier across every built-in filter type. */
+export const ForwardedControlParts: Story = {
+  render: () => html`
+    <div class="forwarded-control-parts" style="max-inline-size:48rem;">
+      <style>
+        .forwarded-control-parts lr-filter-bar::part(filter-control-field) {
+          outline: var(--lr-border-width-thick) solid var(--lr-color-brand);
+          outline-offset: var(--lr-border-width-thin);
+        }
+        .forwarded-control-parts lr-filter-bar::part(filter-control-input) {
+          color: var(--lr-color-brand);
+        }
+      </style>
+      <lr-filter-bar .filters=${dashboardFilters}></lr-filter-bar>
+    </div>
+  `,
+};
+
 /** A prefilled `value` renders each control's current selection and a matching row of removable
- *  active-filter chips. Removing a chip clears just that filter. */
+ *  active-filter chips. Removing a chip clears just that filter. The reset action uses the same
+ *  default `m` height tier as the adjacent built-in fields. */
 export const WithActiveFilters: Story = {
   render: () => html`
     <lr-filter-bar
       style="max-width: 48rem"
       .filters=${dashboardFilters}
       .value=${{ status: 'open', owners: ['ada', 'grace'], period: '2026-01-01/2026-01-31' }}
+    ></lr-filter-bar>
+  `,
+};
+
+/** Invalid provider-supplied ISO dates stay verbatim in active chips instead of silently rolling
+ * into another month/year; the valid year 0099 retains its literal early-year meaning. */
+export const StrictDateChipFormatting: Story = {
+  render: () => html`
+    <lr-filter-bar
+      style="max-width: 48rem"
+      .filters=${dashboardFilters}
+      .value=${{ created: '2026-02-31', period: '0099-01-01/0099-01-31' }}
     ></lr-filter-bar>
   `,
 };
@@ -120,7 +170,8 @@ export const ResetWithDefaults: Story = {
 };
 
 /** Live `lr-input`/`lr-validity-change`/`lr-reset` events, mirroring what a host would listen for
- *  to serialize `value` into a URL querystring on every change. */
+ *  to serialize `value` into a URL querystring on every change. Each edit produces one bar-owned
+ *  `lr-input`; child-control `lr-input`/`lr-change` aliases stay inside the wrapper. */
 export const LiveEvents: Story = {
   render: () => {
     const onEvent = (e: Event) => {
@@ -296,14 +347,25 @@ export const CustomControls: Story = {
   },
 };
 
-/** A narrow (320px) allocation wraps the filter controls onto multiple lines instead of
- *  overflowing, matching this library's own narrow-panel/dialog responsive contract. */
+/** A narrow (320px) RTL allocation wraps the filter controls onto multiple lines and contains an
+ *  unbroken localized active-chip value, matching this library's narrow-panel/dialog contract. */
 export const NarrowAllocation: Story = {
-  render: () => html`
-    <lr-filter-bar
-      style="max-width: 320px"
-      .filters=${dashboardFilters}
-      .value=${{ status: 'open' }}
-    ></lr-filter-bar>
-  `,
+  render: () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: 'status',
+        label: 'الحالة',
+        type: 'select',
+        options: [
+          { value: 'open', label: 'قيمةحالةمحليةطويلةجداًبدونأيفرصةللفصلأوالالتفافالتلقائي' },
+        ],
+      },
+      ...dashboardFilters.slice(1),
+    ];
+    return html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-filter-bar style="inline-size: 100%;" .filters=${filters} .value=${{ status: 'open' }}></lr-filter-bar>
+      </div>
+    `;
+  },
 };

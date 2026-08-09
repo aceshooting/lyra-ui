@@ -20,6 +20,22 @@ export type PageView = 'mobile' | 'desktop';
 /** The logical edge that owns navigation in either Page presentation. */
 export type PageNavigationPlacement = 'start' | 'end';
 
+interface CustomToggleState {
+  readonly element: HTMLElement;
+  readonly expandedHad: boolean;
+  readonly expandedValue: string | null;
+  expandedGenerated?: string;
+  ownsExpanded: boolean;
+  readonly controlsHad: boolean;
+  readonly controlsValue: string | null;
+  controlsGenerated?: string | null;
+  ownsControls: boolean;
+  readonly labelHad: boolean;
+  readonly labelValue: string | null;
+  labelGenerated?: string;
+  ownsLabel: boolean;
+}
+
 function navigationIcon(): SVGTemplateResult {
   return svg`
     <svg
@@ -54,6 +70,11 @@ function navigationIcon(): SVGTemplateResult {
  * `menu`, and `aside`. A token only disables that region; unrelated sticky regions keep working.
  * Slotted controls carrying `data-toggle-nav` toggle the mobile drawer, matching the documented
  * light-DOM Page pattern without adding a stale `nav-state` property.
+ * A custom `navigation-toggle` receives component-owned `aria-expanded` and, when unnamed, a
+ * localized label while assigned. Its `aria-controls` targets the Page host as the resolvable
+ * light-DOM bridge to the private drawer. Replacement, removal, and disconnect restore the
+ * consumer's prior attributes only while the component-owned values are still present; a later
+ * consumer write is never overwritten.
  *
  * @customElement lr-page
  * @slot - Main content.
@@ -67,7 +88,8 @@ function navigationIcon(): SVGTemplateResult {
  * @slot navigation - Primary navigation content.
  * @slot navigation-footer - Content after the navigation links.
  * @slot navigation-header - Content before the navigation links.
- * @slot navigation-toggle - A custom control that toggles mobile navigation.
+ * @slot navigation-toggle - A custom control that toggles mobile navigation and receives the
+ * managed ARIA relationship described above.
  * @slot navigation-toggle-icon - Replaces the default toggle's menu glyph.
  * @slot skip-to-content - Replaces the localized skip-link text.
  * @slot subheader - A secondary header row.
@@ -155,9 +177,7 @@ export class LyraPage extends LyraElement {
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
   private navigationTrigger?: HTMLElement;
-  private customToggle?: HTMLElement;
-  private customToggleOwnsLabel = false;
-  private customToggleGeneratedLabel?: string;
+  private customToggleState?: CustomToggleState;
 
   @query('[part~="main"]') private mainElement?: HTMLElement;
   @query('[part~="drawer"]') private drawerElement?: HTMLElement;
@@ -176,6 +196,7 @@ export class LyraPage extends LyraElement {
       else this.syncOverlay();
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
+    if (this.hasUpdated) queueMicrotask(() => this.isConnected && this.syncCustomToggle());
   }
 
   override disconnectedCallback(): void {
@@ -184,6 +205,7 @@ export class LyraPage extends LyraElement {
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
+    this.restoreCustomToggle();
     super.disconnectedCallback();
   }
 
@@ -270,27 +292,110 @@ export class LyraPage extends LyraElement {
 
   private syncCustomToggle(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="navigation-toggle"]');
-    const next = slot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
-    if (next !== this.customToggle) {
-      this.customToggle = next;
-      this.customToggleOwnsLabel = Boolean(next && !next.hasAttribute('aria-label'));
-      this.customToggleGeneratedLabel = undefined;
+    const candidate = slot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    // With no assigned light-DOM node, assignedElements({ flatten: true }) may return the fallback
+    // shadow button. That control is rendered declaratively and must not enter the custom-toggle
+    // ownership lifecycle below.
+    const next = candidate?.getRootNode() === this.shadowRoot ? undefined : candidate;
+    if (next !== this.customToggleState?.element) {
+      this.restoreCustomToggle();
+      if (next) this.customToggleState = this.captureCustomToggle(next);
     }
-    if (!next) return;
-    next.setAttribute('aria-expanded', this.navOpen ? 'true' : 'false');
-    next.setAttribute('aria-controls', this.drawerId);
-    if (this.customToggleOwnsLabel) {
-      const currentLabel = next.getAttribute('aria-label');
-      if (currentLabel !== null && currentLabel !== this.customToggleGeneratedLabel) {
-        // The consumer supplied a label after assignment; it wins from this point onward.
-        this.customToggleOwnsLabel = false;
-        this.customToggleGeneratedLabel = undefined;
+    const state = this.customToggleState;
+    if (!state) return;
+    const { element } = state;
+
+    if (state.ownsExpanded) {
+      const current = element.getAttribute('aria-expanded');
+      if (state.expandedGenerated !== undefined && current !== state.expandedGenerated) {
+        state.ownsExpanded = false;
+      } else {
+        const expanded = this.navOpen ? 'true' : 'false';
+        element.setAttribute('aria-expanded', expanded);
+        state.expandedGenerated = expanded;
+      }
+    }
+
+    if (state.ownsControls) this.syncCustomToggleControls(state);
+
+    if (state.ownsLabel) {
+      const currentLabel = element.getAttribute('aria-label');
+      if (state.labelGenerated !== undefined && currentLabel !== state.labelGenerated) {
+        // A label supplied after assignment wins from this point onward.
+        state.ownsLabel = false;
+      } else {
+        const label = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
+        element.setAttribute('aria-label', label);
+        state.labelGenerated = label;
+      }
+    }
+  }
+
+  private captureCustomToggle(element: HTMLElement): CustomToggleState {
+    return {
+      element,
+      expandedHad: element.hasAttribute('aria-expanded'),
+      expandedValue: element.getAttribute('aria-expanded'),
+      ownsExpanded: true,
+      controlsHad: element.hasAttribute('aria-controls'),
+      controlsValue: element.getAttribute('aria-controls'),
+      ownsControls: true,
+      labelHad: element.hasAttribute('aria-label'),
+      labelValue: element.getAttribute('aria-label'),
+      ownsLabel: !element.hasAttribute('aria-label'),
+    };
+  }
+
+  private syncCustomToggleControls(state: CustomToggleState): void {
+    const { element } = state;
+    if (state.controlsGenerated !== undefined) {
+      const serializedStillOwned = element.getAttribute('aria-controls') === state.controlsGenerated;
+      if (!serializedStillOwned) {
+        state.ownsControls = false;
         return;
       }
-      const label = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
-      next.setAttribute('aria-label', label);
-      this.customToggleGeneratedLabel = label;
     }
+
+    // A light-DOM IDREF cannot resolve the private drawer inside this component's shadow root.
+    // Point custom controls at the page host as the resolvable public bridge; the host contains and
+    // owns the drawer, while the built-in same-shadow button can keep targeting drawerId exactly.
+    element.setAttribute('aria-controls', this.id);
+    state.controlsGenerated = element.getAttribute('aria-controls');
+  }
+
+  private restoreCustomToggle(): void {
+    const state = this.customToggleState;
+    if (!state) return;
+    const { element } = state;
+
+    if (
+      state.ownsExpanded &&
+      state.expandedGenerated !== undefined &&
+      element.getAttribute('aria-expanded') === state.expandedGenerated
+    ) {
+      if (state.expandedHad) element.setAttribute('aria-expanded', state.expandedValue ?? '');
+      else element.removeAttribute('aria-expanded');
+    }
+
+    if (
+      state.ownsControls &&
+      state.controlsGenerated !== undefined &&
+      element.getAttribute('aria-controls') === state.controlsGenerated
+    ) {
+      if (state.controlsHad) element.setAttribute('aria-controls', state.controlsValue ?? '');
+      else element.removeAttribute('aria-controls');
+    }
+
+    if (
+      state.ownsLabel &&
+      state.labelGenerated !== undefined &&
+      element.getAttribute('aria-label') === state.labelGenerated
+    ) {
+      if (state.labelHad) element.setAttribute('aria-label', state.labelValue ?? '');
+      else element.removeAttribute('aria-label');
+    }
+
+    this.customToggleState = undefined;
   }
 
   private rememberTriggerAndToggle(trigger: HTMLElement): void {

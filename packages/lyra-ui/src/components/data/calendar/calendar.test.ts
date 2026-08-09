@@ -59,9 +59,9 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
   expect(title, 'expected the view to have rolled forward to August').to.contain('august');
 
   const focused = el.shadowRoot!.querySelector('[data-date="2026-08-14"]') as HTMLElement;
-  expect(focused, 'expected Aug 14 to be rendered once the view rolled to August').to.exist;
+  expect((focused) != null, 'expected Aug 14 to be rendered once the view rolled to August').to.equal(true);
   expect(focused.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.activeElement).to.equal(focused);
+  expect((el.shadowRoot!.activeElement) === (focused)).to.equal(true);
 });
 
 it('gives the previous/next month nav buttons the shared minimum hit area and matching chrome', async () => {
@@ -103,6 +103,39 @@ it("decouples the selected-day background from the shared --lr-color-brand-quiet
   const selectedRule = /\[part='day'\]\[data-selected='true'\]\s*\{([^}]+)\}/.exec(css);
   expect(selectedRule, "expected a [part='day'][data-selected='true'] rule").to.not.equal(null);
   expect(selectedRule![1]).to.match(/background:\s*var\(--lr-calendar-day-selected-bg/);
+});
+
+it('inherits independent selected, outside-month, and today paint hooks from a theme ancestor', async () => {
+  const wrapper = (await fixture(html`
+    <div
+      style="
+        --lr-calendar-day-selected-bg: rgb(1, 2, 3);
+        --lr-calendar-day-outside-color: rgb(4, 5, 6);
+        --lr-calendar-day-outside-bg: rgb(7, 8, 9);
+      "
+    >
+      <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[data-selected="true"]')!;
+  const outside = el.shadowRoot!.querySelector<HTMLElement>('[data-outside="true"]')!;
+  expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(outside).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(outside).backgroundColor).to.equal('rgb(7, 8, 9)');
+
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const todayWrapper = (await fixture(html`
+    <div style="--lr-calendar-day-today-outline-color: rgb(10, 11, 12)">
+      <lr-calendar .viewDate=${currentMonth}></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const todayCalendar = todayWrapper.querySelector('lr-calendar') as LyraCalendar;
+  await todayCalendar.updateComplete;
+  const today = todayCalendar.shadowRoot!.querySelector<HTMLElement>('[data-today="true"]')!;
+  expect(getComputedStyle(today).outlineColor).to.equal('rgb(10, 11, 12)');
 });
 
 it('is accessible', async () => {
@@ -251,7 +284,7 @@ it('renders month events as valid focusable controls that keyboard users can act
   )) as LyraCalendar;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLButtonElement;
   expect(marker.localName).to.equal('button');
-  expect(marker.closest('button')).to.equal(marker);
+  expect((marker.closest('button')) === (marker)).to.equal(true);
   marker.focus();
   const selected = oneEvent(el, 'lr-event-select');
   marker.click();
@@ -274,6 +307,28 @@ it('keeps month-event buttons at least 24px in both axes in a narrow allocation'
   const rect = marker.getBoundingClientRect();
   expect(rect.width).to.be.at.least(24);
   expect(rect.height).to.be.at.least(24);
+});
+
+it('contains long RTL month content in an exact 320px allocation', async () => {
+  const wrapper = (await fixture(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-calendar
+        aria-label="جدول الإصدارات والمراجعات الشهرية"
+        view-date="2026-07-01"
+        .events=${[
+          { date: '2026-07-15', title: 'مراجعة تخطيط الإصدار لجميع مناطق النشر والإنتاج' },
+          { date: '2026-07-22', title: 'release-approval-with-an-intentionally-unbroken-identifier' },
+        ]}
+      ></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  expect(wrapper.clientWidth).to.equal(320);
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(grid.scrollWidth).to.be.at.most(grid.clientWidth);
+  expect(getComputedStyle(el).direction).to.equal('rtl');
 });
 
 it('locale-formats visible month day numbers and agenda dates', async () => {

@@ -258,6 +258,7 @@ export interface LyraLiteChartEventMap {
  * @csspart data-list - A visually hidden list of all plotted data points (single-series only).
  * @csspart data-table - A visually hidden category×series data table, rendered instead of `data-list` when there is more than one dataset so a screen-reader user hears series grouping rather than one flattened N×M sequence.
  * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
+ * @cssprop [--lr-lite-chart-selected-outline-width=var(--lr-size-2px)] - Stroke width for a bar/point whose category index is in `selectedIndex`.
  * @status stable
  * @since 4.0.0
  */
@@ -366,7 +367,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  that index, across every
    *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the
    *  default) reproduces today's exact output: no mark carries `data-selected`. Style the highlight
-   *  via the `--lr-lite-chart-selected-outline-color` custom property -- selectors such as
+   *  via the `--lr-lite-chart-selected-outline-color` and
+   *  `--lr-lite-chart-selected-outline-width` custom properties -- selectors such as
    *  `::part(bar)[data-selected]` and `::part(point)[data-selected]` are invalid CSS (Shadow Parts
    *  forbids an attribute selector after `::part()`), so the outline is
    *  painted inside the shadow root and exposed through that token. This component takes no opinion

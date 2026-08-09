@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,14 +42,16 @@ its computed color swatches.
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
-`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+`legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
+`legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
 announced through the shared document-level light-DOM assertive sink)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same host-level mechanism, token names, and defaults as `lr-chart`
-(also `getComputedStyle`-resolved on every draw), but declared in its own stylesheet, not a
+(also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
+concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
 so `--lr-theme-color-chart-*` retheming reaches box plots too.

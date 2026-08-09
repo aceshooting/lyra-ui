@@ -23,20 +23,23 @@ export const styles = css`
     cursor: pointer;
   }
   [part="base"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
   }
   /* Pressed travels further along the same axis hover moved on: the identical brand-quiet fill,
      mixed toward --lr-color-mix-partner (which follows the text colour), so it deepens on a light
      theme and lightens on a dark one rather than depending on which way a brightness multiplier
      happens to push this particular fill. */
   [part="base"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-app-rail-item-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-app-rail-item-active-color, var(--lr-color-brand));
   }
   [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

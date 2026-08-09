@@ -565,6 +565,24 @@ it('uses a nonempty host label as announcement context without replacing visible
   expect(sink.lastElementChild?.textContent).to.equal('Disk is nearly full');
 });
 
+it('localizes the complete context-and-content announcement order and punctuation', async () => {
+  const el = (await fixture(html`
+    <lr-callout
+      aria-label="Storage warning"
+      .strings=${{ calloutAnnouncementWithContext: '{content} ← {context}' }}
+    >Initial message</lr-callout>
+  `)) as LyraCallout;
+  await settleLiveRegion(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.firstChild!.textContent = 'Disk is nearly full';
+  await flushMutations();
+
+  expect(sink.lastElementChild?.textContent).to.equal('Disk is nearly full ← Storage warning');
+});
+
 it('gives the close button the shared minimum hit area in both the default and inline variants, shrinking only the visible glyph', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;

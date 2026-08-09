@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './test-results.js';
-import type { LyraTestResults, TestSuiteResult } from './test-results.js';
+import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
 import { styles } from './test-results.styles.js';
 
 const suites: TestSuiteResult[] = [
@@ -272,6 +272,39 @@ describe('lr-test-results', () => {
     expect(second?.assignedElements().map((node) => node.textContent)).to.deep.equal(['second detail']);
   });
 
+  it('derives distinct canonical slots for colliding ids with isolated UTF-16 surrogates', async () => {
+    const malformed = '\uD800';
+    const collisionSuites: TestSuiteResult[] = [
+      {
+        id: `a-${malformed}`,
+        name: 'First suite',
+        tests: [{ id: 'b', name: 'First test', status: 'passed' }],
+      },
+      {
+        id: 'a',
+        name: 'Second suite',
+        tests: [{ id: `${malformed}-b`, name: 'Second test', status: 'passed' }],
+      },
+    ];
+    const firstSlot = testResultDetailSlotName(collisionSuites[0]!.id, collisionSuites[0]!.tests[0]!.id);
+    const secondSlot = testResultDetailSlotName(collisionSuites[1]!.id, collisionSuites[1]!.tests[0]!.id);
+    expect(firstSlot).to.equal('detail-a-%uD800:b');
+    expect(secondSlot).to.equal('detail-a:%uD800-b');
+
+    const el = (await fixture(html`
+      <lr-test-results .suites=${collisionSuites}>
+        <div slot=${firstSlot}>first malformed detail</div>
+        <div slot=${secondSlot}>second malformed detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    const slots = [...el.shadowRoot!.querySelectorAll<HTMLSlotElement>('slot[name^="detail-"]')];
+    const assignments = slots.map((slot) => [slot.name, ...slot.assignedElements().map((node) => node.textContent)]);
+    expect(assignments).to.deep.include([firstSlot, 'first malformed detail']);
+    expect(assignments).to.deep.include([secondSlot, 'second malformed detail']);
+  });
+
   it('preserves detail-{testId} as the fallback slot when the test id is globally unique', async () => {
     const el = (await fixture(html`
       <lr-test-results .suites=${suites}>
@@ -393,7 +426,7 @@ describe('lr-test-results', () => {
     expect(ids.some((id) => /\s/.test(id))).to.be.false;
     for (const control of el.shadowRoot!.querySelectorAll('[aria-controls], [aria-describedby]')) {
       const target = control.getAttribute('aria-controls') ?? control.getAttribute('aria-describedby');
-      expect(el.shadowRoot!.getElementById(target!)).to.exist;
+      expect((el.shadowRoot!.getElementById(target!)) != null).to.equal(true);
     }
   });
 

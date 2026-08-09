@@ -210,12 +210,6 @@
       "upstream": "wa-dropdown-item"
     },
     {
-      "component": "lr-carousel",
-      "from": "currentSlide",
-      "to": "current-slide",
-      "upstream": "wa-carousel"
-    },
-    {
       "component": "lr-pagination",
       "from": "total",
       "to": "total",

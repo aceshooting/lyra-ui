@@ -66,6 +66,16 @@ export const styles = css`
     transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast);
   }
+  :host([data-standalone]) [part="trigger"] {
+    display: none;
+  }
+  :host([data-standalone]) [part="popup"] {
+    position: relative;
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
   @media (prefers-reduced-motion: reduce) {
     [part="popup"] {
       transition: none !important;

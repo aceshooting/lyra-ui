@@ -16,6 +16,10 @@
 ## `lr-svg-viewer`
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
+The inline profile removes author `<style>`/`style`, SVG animation elements, and external
+resource or paint-server references before insertion, preventing fetched SVG content from escaping
+the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
+raster data remain available.
 
 Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
 anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`

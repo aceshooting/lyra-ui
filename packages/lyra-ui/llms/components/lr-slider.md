@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,6 +38,7 @@ A named range slider submits **two same-name entries**, lower then upper. For ex
 single numeric string entry.
 
 **Properties:**
+
 - `min: number = 0`
 - `max: number = 100`
 - `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
@@ -46,7 +47,7 @@ single numeric string entry.
   Assigning past `maxValue` pushes `maxValue` to the same number
 - `maxValue: number = 50` (attribute `max-value`) — the upper handle's value. Assigning below
   `minValue` pushes `minValue` to the same number. Only the `min-value`/`max-value`
-  *attributes* are captured as the `form.reset()` defaults, so a later property assignment never
+  _attributes_ are captured as the `form.reset()` defaults, so a later property assignment never
   redefines what a reset restores to
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which axis carries the
   value. `'horizontal'` maps values to the inline axis (mirroring under RTL); `'vertical'` maps them
@@ -70,7 +71,9 @@ single numeric string entry.
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
 - `label: string = ''`, `hint: string = ''` — visible form context above/below the track, with rich
-  `label`/`hint` slots. A host `aria-label` still wins for the interactive accessible name.
+  `label`/`hint` slots. A host `aria-label` wins for the interactive accessible name by attribute
+  presence, including an explicitly empty value; range mode then suppresses `aria-labelledby` on
+  its group owner as well.
 - `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
 - `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
   presence hints; hydrated instances also discover populated slots automatically.
@@ -120,6 +123,10 @@ methods.
 **Slots:** `label`, `hint`, Shoelace alias `help-text`, and `reference`. Empty chrome stays hidden
 and contributes no accessible relationship.
 
+The standalone slider has a zero intrinsic flex minimum and a 100% allocation ceiling. Its label,
+reference, and hint regions wrap even unbroken content in LTR and RTL; the fixed numeric readout and
+track remain contained. An exact-320px story covers this composition.
+
 **CSS parts:** `base slider form-control form-control-input input control` are tokens on the
 interactive row (`role="group"` in range mode). `label form-control-label` share the visible label
 node; `references` wraps the endpoint/unit slot; `hint form-control-help-text` share the hint node.
@@ -129,8 +136,8 @@ value, or between the two handles in `range` mode.
 tick), `thumb` (a draggable handle, `role="slider"` — present on every handle including both range
 ones), `thumb-min` and `thumb-max` (the lower and upper range handles; each carries `thumb` as
 well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one), `tooltip` (the
-live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added *to the
-`tooltip` element's part list* while that handle is focused or dragged — visibility is encoded in
+live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added _to the
+`tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
 `tooltip__arrow`. `value` is the opt-in numeric readout.
@@ -155,6 +162,9 @@ a slider always has a value, so the marker never accompanies a `valueMissing` vi
 them all without a per-tier rule, and the values in brackets are what they resolve to at the default
 `m`:
 
+`--lr-slider-gap` (default `var(--lr-space-s)`) controls the row/column gap between the track,
+value readout, label, references, and hint as those flex items wrap.
+
 - `--lr-slider-thumb-size` (default `calc(var(--lr-form-control-height) * 0.4)`; `1rem`) — the
   diameter of each draggable handle. The transparent drag area around it never drops below
   1.75rem/28px whatever this is set to, so shrinking the visible dot cannot cost you the pointer
@@ -170,7 +180,11 @@ track's length in `orientation="vertical"`; a horizontal track fills its contain
 token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
 consumer value set on any ancestor is never shadowed. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
-than overriding this runtime value. Everything else is shared tokens —
+than overriding this runtime value. The thumb has independent paint hooks:
+`--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
+(default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
+`var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the
+hover ring). Everything else is shared tokens —
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -217,6 +231,7 @@ default when the attribute was absent. A slider therefore always represents a nu
 is present for upstream form-surface parity but adds no missing-value constraint.
 
 **Known gotchas:**
+
 - `valueAsNumber` always returns a real, clamped number — never `NaN` or `""` — even reading it in the
   brief window right after a `form.reset()`.
 - Under `direction: rtl`, physical ArrowRight/ArrowLeft swap which one counts as "forward" (increasing
@@ -245,7 +260,7 @@ is present for upstream form-surface parity but adds no missing-value constraint
 - The visible thumb is deliberately below the library's usual 40px icon-button floor — 16px at the
   default `m` tier, and smaller at the tighter ones. A transparent `::before` carries the hit/drag
   area at `max(28px, calc(var(--lr-slider-thumb-size) * 1.75))`, which clears WCAG 2.5.8's 24px
-  minimum at **every** tier, while a 40px *visible* thumb would make two range handles overlap
+  minimum at **every** tier, while a 40px _visible_ thumb would make two range handles overlap
   across 40px of track and hijack track clicks. The pseudo-element has no DOM node of its own, so a
   pointerdown inside it still reports the thumb as `e.target`.
 

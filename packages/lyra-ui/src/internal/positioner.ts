@@ -214,6 +214,7 @@ export function place(
   const sync = opts.sync;
   const autoSize = opts.autoSize;
   const hoverBridge = opts.hoverBridge;
+  let disposed = false;
 
   // `sync` is the only option here that writes inline sizing nothing else rewrites, so dropping it
   // has to release that sizing. Released on *setup* rather than in the returned cleanup: a caller
@@ -240,6 +241,7 @@ export function place(
     sync
       ? size({
           apply({ rects, elements }) {
+            if (disposed) return;
             elements.floating.style.width =
               sync === 'width' || sync === 'both' ? `${rects.reference.width}px` : '';
             elements.floating.style.height =
@@ -271,6 +273,7 @@ export function place(
       boundary: opts.boundary as Boundary | undefined,
       padding,
       apply({ availableWidth, availableHeight, elements }) {
+        if (disposed) return;
         elements.floating.style.setProperty(
           '--lr-positioner-available-inline-size',
           `${Math.max(0, availableWidth)}px`,
@@ -287,6 +290,7 @@ export function place(
           boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
           padding: opts.autoSizePadding ?? 0,
           apply({ availableWidth, availableHeight, elements }) {
+            if (disposed) return;
             if (autoSize === 'horizontal' || autoSize === 'both') {
               elements.floating.style.setProperty(
                 '--lr-positioner-available-inline-size',
@@ -304,12 +308,14 @@ export function place(
       : undefined,
   ].filter((entry) => entry !== undefined);
 
-  const update = () =>
-    computePosition(anchor, popup, {
+  const update = (): void => {
+    if (disposed) return;
+    void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
       middleware,
     }).then(({ x, y, placement, middlewareData }) => {
+      if (disposed) return;
       popup.style.left = `${x}px`;
       popup.style.top = `${y}px`;
       // Read both rects back after the write: the hover bridge spans the rendered gap, and under
@@ -324,6 +330,7 @@ export function place(
       }
       opts.onPlaced?.({ placement, arrow: middlewareData.arrow });
     });
+  };
 
   const stopAutoUpdate = autoUpdate(anchor, popup, update);
   // The visual viewport changes independently of the layout viewport when a
@@ -338,6 +345,7 @@ export function place(
   visualViewport?.addEventListener('scroll', updateFromVisualViewport);
 
   return () => {
+    disposed = true;
     stopAutoUpdate();
     visualViewport?.removeEventListener('resize', updateFromVisualViewport);
     visualViewport?.removeEventListener('scroll', updateFromVisualViewport);

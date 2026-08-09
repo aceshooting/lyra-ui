@@ -99,6 +99,35 @@ describe('meta slot', () => {
   });
 });
 
+describe('start/leading adornment slots', () => {
+  it('accepts the canonical start alias alongside leading and hides the shared wrapper only when both empty', async () => {
+    const el = (await fixture(html`
+      <lr-conversation-item title="Session">
+        <span id="start" slot="start">Start icon</span>
+        <span id="leading" slot="leading">Leading icon</span>
+      </lr-conversation-item>
+    `)) as LyraConversationItem;
+    const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="leading"]')!;
+    const startSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
+    const leadingSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="leading"]')!;
+    expect(wrapper.hidden).to.be.false;
+    expect(startSlot.assignedElements().map((item) => item.id)).to.deep.equal(['start']);
+    expect(leadingSlot.assignedElements().map((item) => item.id)).to.deep.equal(['leading']);
+
+    let slotChanged = oneEvent(startSlot, 'slotchange');
+    el.querySelector('#start')!.remove();
+    await slotChanged;
+    await el.updateComplete;
+    expect(wrapper.hidden).to.be.false;
+
+    slotChanged = oneEvent(leadingSlot, 'slotchange');
+    el.querySelector('#leading')!.remove();
+    await slotChanged;
+    await el.updateComplete;
+    expect(wrapper.hidden).to.be.true;
+  });
+});
+
 describe('excerpt slot (wins over the excerpt property)', () => {
   it('renders the excerpt property in [part="excerpt"] when no slot content is present (unchanged default)', async () => {
     const el = (await fixture(
@@ -300,7 +329,7 @@ describe('inline rename', () => {
     await el.updateComplete;
 
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
-    expect(input).to.exist;
+    expect((input) != null).to.equal(true);
     expect(input.value).to.equal('Original');
     expect((el.shadowRoot!.querySelector('slot[name="content"]') as HTMLSlotElement).hidden).to.be.true;
 
@@ -343,9 +372,9 @@ describe('inline rename', () => {
 
     expect(el.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
-    expect(input).to.exist;
+    expect((input) != null).to.equal(true);
     expect(input.value).to.equal('Old name');
-    expect(el.shadowRoot!.activeElement).to.equal(input);
+    expect((el.shadowRoot!.activeElement) === (input)).to.equal(true);
   });
 
   it('restores rename focus when the same editing row reconnects', async () => {
@@ -877,7 +906,7 @@ it('click() activates the row, and targets the rename input while renaming', asy
   (el as unknown as { renaming: boolean }).renaming = true;
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector('input');
-  expect(input, 'renaming swaps in a text input').to.exist;
+  expect((input) != null, 'renaming swaps in a text input').to.equal(true);
   el.click();
   await el.updateComplete;
   expect(selected, 'while renaming, click() must not re-select the row').to.equal(1);

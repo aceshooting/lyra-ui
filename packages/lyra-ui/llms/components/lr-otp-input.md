@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,9 @@ so none of them can produce a value another could not. Characters the current `t
 dropped silently: pasting or assigning `"ABC-123"` to a numeric field yields `123`. Programmatic,
 reset, and restoration paths remain event-silent and preserve native dirty/default-value semantics.
 
+Public `--lr-otp-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper
+can override appearance fallbacks; a value set directly on the element still wins.
+
 **Properties:** `label`, `hint`, `errorText` (`error-text`);
 `appearance: 'outlined' | 'filled' | 'filled-outlined' | 'contained' = 'outlined'` (reflected);
 `autofocus: boolean = false`; `autosubmit: boolean = false` (reflected);
@@ -50,13 +53,18 @@ form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom
 `required`, `form`, `validity`, `validationMessage`, `willValidate`, `getForm()`, `checkValidity()`,
 `reportValidity()`, and `setCustomValidity()`).
 
-**Methods:** `focus()`, `blur()`, `click()`, `select()`, `clear()`, `resetValidity()`, and
-`formStateRestoreCallback(state, reason)`. `clear()` empties a nonempty code, emits `lr-clear`, and
-returns focus to the real input. `resetValidity()` clears only a consumer-supplied custom error and
-recomputes the intrinsic required/completeness constraints. The browser restoration callback
-sanitizes string state and restores unsupported state shapes as the empty value. `select()` selects
-the real compact-string value; typing replaces its selected occupied cells at the first selected
-cell, while Backspace/Delete clears them in one edit.
+**Methods:** `focus()`, `blur()`, `click()`, `select()`,
+`setSelectionRange(start, end, direction?)`, `setRangeText(replacement, start?, end?, selectMode?)`,
+`clear()`, `resetValidity()`, and `formStateRestoreCallback(state, reason)`. `clear()` empties a
+nonempty code, emits `lr-clear`, and returns focus to the real input. `resetValidity()` clears only
+a consumer-supplied custom error and recomputes the intrinsic required/completeness constraints.
+The browser restoration callback sanitizes string state and restores unsupported state shapes as
+the empty value. `select()` selects the real compact-string value; typing replaces its selected
+occupied cells at the first selected cell, while Backspace/Delete clears them in one edit.
+`setRangeText()` applies a programmatic compact-string edit through the same character, case, and
+length sanitizer as every other value path, synchronizes the visual cells, submitted value, and
+validity, and emits no user-input event. When sanitizing removes a replacement character, the
+returned selection offsets are remapped onto the accepted compact string.
 
 **Read-only:** `input: HTMLInputElement | null` exposes the real native input and
 `validationTarget: HTMLInputElement | null` exposes the same element as the native validation-UI
@@ -67,6 +75,12 @@ as unset, so `length` supplies the segments and no literal-only row renders. Lit
 coalesced into one separator cell, and an adversarially long format is still bounded to 32
 segments. This is the number `value` is truncated to and the field is validated against, so read it
 instead of re-deriving it from `length`.
+
+**Selection facade:** `selectionStart`, `selectionEnd`, and `selectionDirection` forward native
+compact-string getters and setters; each reads `null` before the input renders, and pre-render
+writes and range-method calls are safe no-ops. A collapsed selection also moves the fixed-cell
+keyboard target, so the next typed character replaces the cell at that compact offset rather than
+the previously active cell.
 
 **Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
 `lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
@@ -81,7 +95,10 @@ still veto it; it then goes through the same resolved default button as Enter-to
 `SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
-detail). `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
+detail). Replacing the live or default code, resetting/restoring the form state, or disconnecting
+the component before the deferred task runs retires that completion's submission; a task for code
+A can never submit a later full code B.
+`lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
 Programmatic value/default/reset/state-restoration writes do not emit `input`, `change`, or
 `lr-complete`.
 
@@ -113,12 +130,14 @@ here too.
 `segment` carries `active`, `masked`, `placeholder-mask`, and `invalid` as additional part tokens.
 
 **Themeable custom properties:** `--mask-char` (mapped mask-glyph alias, defaulting to the retained
-`--lr-otp-input-mask-char`; the value must be a *quoted* CSS string), `--segment-border-radius`
+`--lr-otp-input-mask-char`; the value must be a _quoted_ CSS string), `--segment-border-radius`
 (default `var(--lr-form-control-radius, var(--lr-radius))`), `--segment-gap` (default
 `var(--lr-space-xs)`, ignored by `contained`), and `--segment-size` (default `2.5em` at standalone
 `size="m"`), which is the exact inline and block size of each non-shrinking cell. The segment row,
 rather than each cell, carries the shared minimum target floor and becomes horizontally scrollable
 when the allocated inline size is too small; label, hint, and error copy wrap within that allocation.
+The exact-320px RTL story covers an eight-cell row and an unbroken localized label while retaining
+horizontal reachability for every cell.
 The internal role token `--lr-otp-input-segment-size` supplies that `2.5em` default and can be
 retuned through `--lr-theme-otp-input-segment-size` when the `--segment-size` override is absent.
 
@@ -129,6 +148,10 @@ form-control radius). `filled` uses the raised-surface fill with a transparent c
 `filled-outlined` adds the shared border; `outlined` keeps the transparent fill and shared border.
 `contained` makes individual cells transparent, borderless, square segments inside the single
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
+Active and invalid states are independently themeable through
+`--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
+`--lr-otp-input-invalid-border-color`, with the shared focus and danger colors retained as
+fallbacks.
 
 **CSS custom states:** `--blank`, `--filled`, `disabled`, and `readonly`, plus the shared
 form-associated validity states.

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, render } from 'lit';
 import type { TableColumn } from '../../../lyra.js';
+import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 interface DemoRow {
   id: string;
@@ -35,8 +36,7 @@ export const ResizableColumns: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          'Drag a separator, or focus it and use ArrowLeft/ArrowRight (10px), Shift+Arrow (50px), Home, and End.',
+        story: 'Drag a separator, or focus it and use ArrowLeft/ArrowRight (10px), Shift+Arrow (50px), Home, and End.',
       },
     },
   },
@@ -105,8 +105,7 @@ export const CellTitles: Story = {
       },
     },
   },
-  render: () =>
-    html`<lr-table .columns=${titledColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
+  render: () => html`<lr-table .columns=${titledColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
 };
 
 export const FixedLayout: Story = {
@@ -154,27 +153,70 @@ export const SelectedRowColor: Story = {
 };
 
 export const ActiveSort: Story = {
-  render: () =>
-    html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,
+  render: () => html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,
 };
 
 export const SelectedRow: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows} .selectedKey=${'b'}></lr-table>`,
 };
 
+export const ControlledCollectionFocus: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The first button focuses the final roving row and then removes it from the controlled `rows` array. Focus clamps to the nearest surviving row, so ArrowUp/ArrowDown keep working. Reordering while a keyed row survives preserves that logical row; moving focus outside before an update prevents restoration.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s);">
+      <div style="display: flex; gap: var(--lr-space-xs); flex-wrap: wrap;">
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const table = (event.currentTarget as HTMLElement)
+              .closest('div')
+              ?.parentElement?.querySelector('lr-table') as HTMLElement & {
+              rows: DemoRow[];
+              shadowRoot: ShadowRoot;
+            };
+            const renderedRows = table?.shadowRoot.querySelectorAll<HTMLElement>('[part="row"]');
+            renderedRows?.[renderedRows.length - 1]?.focus();
+            if (table) table.rows = table.rows.slice(0, -1);
+          }}
+        >
+          Focus and remove last row
+        </button>
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const table = (event.currentTarget as HTMLElement)
+              .closest('div')
+              ?.parentElement?.querySelector('lr-table') as (HTMLElement & { rows: DemoRow[] }) | null;
+            if (table) table.rows = rows;
+          }}
+        >
+          Reset rows
+        </button>
+      </div>
+      <lr-table
+        accessible-label="Controlled collection focus"
+        .columns=${columns}
+        .rows=${rows}
+        .rowKey=${(row: DemoRow) => row.id}
+      ></lr-table>
+    </div>
+  `,
+};
+
 export const LoadMore: Story = {
-  render: () =>
-    html`<lr-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lr-table>`,
+  render: () => html`<lr-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lr-table>`,
 };
 
 export const Filterable: Story = {
   render: () =>
-    html`<lr-table
-      filterable
-      .columns=${columns}
-      .rows=${rows}
-      .rowKey=${(r: DemoRow) => r.id}
-    ></lr-table>`,
+    html`<lr-table filterable .columns=${columns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
 };
 
 export const Paginated: Story = {
@@ -182,11 +224,7 @@ export const Paginated: Story = {
     html`<lr-table
       page-size="2"
       .columns=${columns}
-      .rows=${[
-        ...rows,
-        { id: 'd', name: 'Delta', score: 68 },
-        { id: 'e', name: 'Epsilon', score: 64 },
-      ]}
+      .rows=${[...rows, { id: 'd', name: 'Delta', score: 68 }, { id: 'e', name: 'Epsilon', score: 64 }]}
       .rowKey=${(r: DemoRow) => r.id}
     ></lr-table>`,
 };
@@ -266,9 +304,7 @@ function renderRateTable(): unknown {
     .rows=${rateRows}
     .rowKey=${(r: RateRow) => r.id}
     @lr-cell-edit=${(e: CustomEvent<{ row: RateRow; value: string | number }>) => {
-      rateRows = rateRows.map((row) =>
-        row.id === e.detail.row.id ? { ...row, rate: Number(e.detail.value) } : row,
-      );
+      rateRows = rateRows.map((row) => (row.id === e.detail.row.id ? { ...row, rate: Number(e.detail.value) } : row));
       // Storybook's `render()` return value isn't reactive on its own -- force a
       // re-render the same way ExpandableRows below does.
       const root = (e.currentTarget as HTMLElement).parentElement;
@@ -355,13 +391,59 @@ const actionColumns: TableColumn<DemoRow>[] = [
   {
     key: 'actions',
     label: 'Actions',
-    cell: (r) =>
-      html`<button type="button" @click=${() => alert(`Editing ${r.name}`)}>Edit</button>`,
+    cell: (r) => html`<button type="button" @click=${() => alert(`Editing ${r.name}`)}>Edit</button>`,
   },
 ];
 
 export const RowActions: Story = {
   render: () => html`<lr-table .columns=${actionColumns} .rows=${rows}></lr-table>`,
+};
+
+const narrowPriorityActionColumns: TableColumn<DetailRow>[] = [
+  {
+    key: 'name',
+    label: 'Very long localized resource name',
+    sticky: true,
+    cell: (row) => row.name,
+  },
+  { key: 'score', label: 'Quality score', align: 'end', cell: (row) => row.score },
+  { key: 'region', label: 'Deployment region', priority: 'medium', cell: (row) => row.region },
+  { key: 'updated', label: 'Last synchronization timestamp', priority: 'low', cell: (row) => row.updated },
+  {
+    key: 'actions',
+    label: 'Actions',
+    cell: (row) => html`<button type="button" @click=${() => alert(`Editing ${row.name}`)}>Review</button>`,
+  },
+];
+
+export const NarrowPriorityActions: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paired LTR/RTL allocations at the default 20rem (320px) contract exercise priority hiding, a sticky long label, and row actions together.',
+      },
+    },
+  },
+  render: () =>
+    narrowStoryFrames(
+      (direction) => html`
+        <lr-table
+          accessible-label=${direction === 'rtl' ? 'موارد النشر' : 'Bereitstellungsressourcen'}
+          .columns=${narrowPriorityActionColumns}
+          .rows=${[
+            {
+              ...detailRows[0]!,
+              name:
+                direction === 'rtl'
+                  ? 'موردمترجملطويلجداًوغيرقابلللالتفاف'
+                  : 'SehrLangerNichtUmbrechbarerRessourcenname',
+            },
+            detailRows[1]!,
+          ]}
+        ></lr-table>
+      `
+    ),
 };
 
 // expandedKeys is consumer-owned (mirrors selectedKey/sortKey) -- this story
@@ -375,9 +457,7 @@ function renderExpandableRows(): unknown {
     .rows=${detailRows}
     .rowKey=${(r: DetailRow) => r.id}
     .expandedContent=${(r: DetailRow) =>
-      html`<div style="padding: 4px 8px;">
-        <strong>${r.name}</strong> — region ${r.region}, updated ${r.updated}
-      </div>`}
+      html`<div style="padding: 4px 8px;"><strong>${r.name}</strong> — region ${r.region}, updated ${r.updated}</div>`}
     .expandedKeys=${expandableExpandedKeys}
     @lr-row-expand-toggle=${(e: CustomEvent<{ key: string | number }>) => {
       const key = e.detail.key;
@@ -470,4 +550,26 @@ export const PivotWithTotalsAndHeatTint: Story = {
       .rowTotal=${(r: PivotRow) => r.mon + r.tue + r.wed}
       .grandTotal=${(rs: PivotRow[]) => rs.reduce((sum, r) => sum + r.mon + r.tue + r.wed, 0)}
     ></lr-table>`,
+};
+
+export const AncestorThemeHooks: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Heat-tint and resize hooks inherit from a theme wrapper. A value set directly on the table still wins through the normal cascade.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-table-heat-tint-lo: var(--lr-color-success-quiet); --lr-table-heat-tint-hi: var(--lr-color-success); --lr-table-resize-min-width: var(--lr-size-8rem); --lr-table-resize-handle-opacity: var(--lr-opacity-disabled)"
+    >
+      <lr-table
+        .columns=${pivotColumns.map((column) => ({ ...column, resizable: true }))}
+        .rows=${pivotRows}
+        .rowKey=${(row: PivotRow) => row.id}
+      ></lr-table>
+    </div>
+  `,
 };

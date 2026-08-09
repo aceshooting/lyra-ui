@@ -18,13 +18,14 @@
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
 host drives `phase` directly for `idle`/`connecting`/`streaming`, and calls the imperative
-`recordActivity()` method on every *semantic* frame received while streaming — a real content
+`recordActivity()` method on every _semantic_ frame received while streaming — a real content
 chunk, never a transport-level keep-alive ping. This component has no payload-inspection logic of
 its own: "ignore heartbeats" is entirely call-site discipline, which is exactly why a connection
 that's only sending keep-alives (no real content) for longer than `stall-threshold-ms` correctly
 reads as stalled.
 
 **Properties:**
+
 - `phase: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected) — current
   connection phase. Fully public and directly settable by the host at any time, including a manual
   override to `'stalled'`; the component never fights a host-driven reassignment.
@@ -36,6 +37,7 @@ reads as stalled.
   `recordActivity()` call or phase change.
 
 **Methods:**
+
 - `recordActivity(): void` — call on every semantic (non-heartbeat) frame received while
   streaming.
   - While `phase === 'streaming'`: (re)arms the stall timer, pushing the stall deadline
@@ -50,7 +52,7 @@ reads as stalled.
 from any other phase, whether timer-driven or via a direct host assignment. `lr-recover` (no
 detail payload) — fires whenever `phase` transitions out of `'stalled'` to any other phase,
 whether via `recordActivity()` or a direct host assignment. Neither fires for a same-value
-reassignment, and neither fires for whatever phase the element happens to *mount* with — only a
+reassignment, and neither fires for whatever phase the element happens to _mount_ with — only a
 later change counts as a transition.
 
 **Slots:** default (custom copy shown only while `phase="stalled"`, e.g. "Taking longer than
@@ -77,10 +79,11 @@ wins through the shadow cascade and is the supported per-instance override.
   <span slot="actions"><button>Stop</button></span>
 </lr-stream-status>
 ```
+
 ```ts
-const status = document.querySelector('lr-stream-status')!;
-status.addEventListener('lr-stall', () => console.warn('stream stalled'));
-status.addEventListener('lr-recover', () => console.info('stream recovered'));
+const status = document.querySelector("lr-stream-status")!;
+status.addEventListener("lr-stall", () => console.warn("stream stalled"));
+status.addEventListener("lr-recover", () => console.info("stream recovered"));
 
 // on every real content chunk from the transport (never on a keep-alive ping):
 status.recordActivity();
@@ -95,13 +98,13 @@ on. Phase transitions into/out of `'stalled'` are announced through an internal
 `<lr-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
 "Connection stalled." with `mode="assertive"` (a stall can need the user's attention before they
 give up and navigate away). Leaving `'stalled'` always announces with `mode="polite"` (good news
-doesn't need to interrupt), but the *wording* depends on the destination phase: "Connection
+doesn't need to interrupt), but the _wording_ depends on the destination phase: "Connection
 restored." only when leaving `'stalled'` for `'streaming'` (a genuine recovery, typically via
 `recordActivity()`); a neutral "No longer stalled." when the destination is `'idle'`/`'connecting'`
 instead (the host gave up on the stream, which is not the same thing as it recovering — a
 screen-reader user must not be told the opposite of what a sighted user sees). Calling
 `recordActivity()` itself never announces anything, no
-matter how often the host calls it — only the phase *transition* announces, exactly once. The
+matter how often the host calls it — only the phase _transition_ announces, exactly once. The
 decorative indicator dot is `aria-hidden` (a color/motion cue only) and only pulses while
 `phase="streaming"`; `'stalled'` is styled as a warning tone, not danger, since a stall is usually
 recoverable — a host that wants to escalate after N stalls can scope its own CSS off
@@ -109,11 +112,12 @@ recoverable — a host that wants to escalate after N stalls can scope its own C
 instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce`.
 
 **Known gotchas:**
+
 - `recordActivity()` is a plain instance method, not a reactive property — there's nothing to bind
   to in a template; call it directly from streaming/application code on every real chunk received.
 - Never call `recordActivity()` for a heartbeat/keep-alive ping. This component has no
   payload-inspection logic of its own, so a connection that's only sending pings (no real content)
-  for longer than `stall-threshold-ms` is *supposed* to read as stalled — that's the entire
+  for longer than `stall-threshold-ms` is _supposed_ to read as stalled — that's the entire
   point of the API.
 - Setting `stallThresholdMs` to `0`, a negative number, or a non-finite value disables the stall
   timer outright; the component will stay `'streaming'` forever until the host manually changes

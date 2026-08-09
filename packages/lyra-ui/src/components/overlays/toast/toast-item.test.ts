@@ -362,14 +362,11 @@ it('keeps focus on the close button once hiding starts, instead of dropping it t
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
 
   button.focus();
-  expect(el.shadowRoot!.activeElement).to.equal(button);
+  expect((el.shadowRoot!.activeElement) === (button)).to.equal(true);
 
   button.click();
   await el.updateComplete;
-  expect(
-    el.shadowRoot!.activeElement,
-    'close button should remain focused, not blurred to <body>',
-  ).to.equal(button);
+  expect((el.shadowRoot!.activeElement) === (button), 'close button should remain focused, not blurred to <body>').to.equal(true);
 });
 
 it('rehomes focus to an adjacent toast when a focused action toast is removed', async () => {
@@ -395,7 +392,7 @@ it('rehomes focus to an adjacent toast when a focused action toast is removed', 
   void first.hide();
   await afterHide;
 
-  expect(second.shadowRoot!.activeElement).to.equal(secondClose);
+  expect((second.shadowRoot!.activeElement) === (secondClose)).to.equal(true);
 });
 
 it('restores pre-toast focus when the only toast closes from its focused close button', async () => {
@@ -417,7 +414,7 @@ it('restores pre-toast focus when the only toast closes from its focused close b
   close.click();
   await afterHide;
 
-  expect(document.activeElement).to.equal(before);
+  expect((document.activeElement) === (before)).to.equal(true);
 });
 
 it('stays paused on pointerleave while focus still holds it paused', async () => {
@@ -739,7 +736,7 @@ it('renders the shared close icon svg instead of a literal times-entity glyph', 
     html`<lr-toast-item duration="0">hi</lr-toast-item>`,
   )) as LyraToastItem;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
-  expect(button.querySelector('svg')).to.exist;
+  expect((button.querySelector('svg')) != null).to.equal(true);
   expect(button.textContent?.trim()).to.equal('');
 });
 

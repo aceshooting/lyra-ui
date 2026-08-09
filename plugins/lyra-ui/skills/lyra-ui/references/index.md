@@ -100,7 +100,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-app-rail-item` · lr-app-rail-item.js · `stable` since `4.0.0` — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-responsive-panel` · lr-responsive-panel.js · `stable` since `4.0.0` — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
 - `lr-menu-label` · lr-menu-label.js · `stable` since `8.0.0` — a non-interactive section heading inside `<lr-menu>`'s default slot.
-- `lr-menu` · lr-menu.js · `stable` since `4.0.0` — an anchored dropdown of `<lr-menu-item>` actions, opened from a consumer-supplied trigger (typically an icon button).
+- `lr-menu` · lr-menu.js · `stable` since `4.0.0` — a menu of `<lr-menu-item>` actions.
 - `lr-menu-item` · lr-menu-item.js · `stable` since `4.0.0` — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · lr-dropdown-item.js · `stable` since `4.0.0` — the Web Awesome-compatible name for a menu item.
 - `lr-dock-panel` · lr-dock-panel.js · `stable` since `4.0.0` — a single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.

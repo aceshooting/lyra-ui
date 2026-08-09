@@ -6,7 +6,7 @@
  * unregistered `type` is rejected outright (its whole subtree is skipped), and a prop not declared
  * in `props` is silently dropped rather than forwarded.
  */
-import type { WidgetTypeRegistry } from './registry.js';
+import type { WidgetTypeRegistry } from "./registry.js";
 
 export interface WidgetNode {
   type: string;
@@ -24,14 +24,14 @@ export interface WidgetBinding {
 }
 
 export interface LyraWidgetDocument {
-  version: '1';
+  version: "1";
   root: WidgetNode;
   state?: unknown;
 }
 
 export interface ResolvedText {
   key: string;
-  kind: 'text';
+  kind: "text";
   text: string;
   slot?: string;
 }
@@ -41,7 +41,7 @@ export interface ResolvedElement {
   /** Collision-free internal identity. Unlike the public/authored `key`, this remains unique when
    * an agent supplies the same `id` at more than one tree position. */
   identityKey: string;
-  kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped';
+  kind: "builtin-row" | "builtin-col" | "builtin-text" | "mapped";
   tag?: string;
   /** Whether the mapped type exposes an action contract and therefore must not contain another
    * actionable mapped type. */
@@ -72,9 +72,9 @@ const MAX_DEPTH = 32;
 const MAX_NODES = 5000;
 
 const ROW_COL_PROP_ENUMS: Record<string, string[]> = {
-  gap: ['s', 'm', 'l'],
-  align: ['start', 'center', 'end', 'stretch'],
-  justify: ['start', 'center', 'end', 'between'],
+  gap: ["s", "m", "l"],
+  align: ["start", "center", "end", "stretch"],
+  justify: ["start", "center", "end", "between"],
 };
 
 function warnOnce(ctx: ResolveContext, key: string, message: string): void {
@@ -84,21 +84,36 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
 }
 
 function isBinding(value: unknown): value is WidgetBinding {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value) && typeof (value as WidgetBinding).$bind === 'string');
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof (value as WidgetBinding).$bind === "string"
+  );
 }
 
 function readPointer(root: unknown, path: string): unknown {
-  if (path === '') return root;
-  if (!path.startsWith('/')) return undefined;
+  if (path === "") return root;
+  if (!path.startsWith("/")) return undefined;
   let current = root;
-  for (const raw of path.slice(1).split('/')) {
-    const segment = raw.replace(/~1/g, '/').replace(/~0/g, '~');
-    if (segment === '__proto__' || segment === 'prototype' || segment === 'constructor') return undefined;
+  for (const raw of path.slice(1).split("/")) {
+    const segment = raw.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (
+      segment === "__proto__" ||
+      segment === "prototype" ||
+      segment === "constructor"
+    )
+      return undefined;
     if (Array.isArray(current)) {
       const index = Number(segment);
-      if (!Number.isInteger(index) || index < 0 || index >= current.length) return undefined;
+      if (!Number.isInteger(index) || index < 0 || index >= current.length)
+        return undefined;
       current = current[index];
-    } else if (current && typeof current === 'object' && Object.hasOwn(current, segment)) {
+    } else if (
+      current &&
+      typeof current === "object" &&
+      Object.hasOwn(current, segment)
+    ) {
       current = (current as Record<string, unknown>)[segment];
     } else {
       return undefined;
@@ -107,7 +122,10 @@ function readPointer(root: unknown, path: string): unknown {
   return current;
 }
 
-function resolveValue(value: unknown, ctx: ResolveContext): { value: unknown; path?: string } {
+function resolveValue(
+  value: unknown,
+  ctx: ResolveContext
+): { value: unknown; path?: string } {
   if (!isBinding(value)) return { value };
   const resolved = readPointer(ctx.state, value.$bind);
   return {
@@ -116,12 +134,14 @@ function resolveValue(value: unknown, ctx: ResolveContext): { value: unknown; pa
   };
 }
 
-function filterRowColProps(props: Record<string, unknown> | undefined): Record<string, unknown> {
+function filterRowColProps(
+  props: Record<string, unknown> | undefined
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (!props) return out;
   for (const [key, allowed] of Object.entries(ROW_COL_PROP_ENUMS)) {
     const value = props[key];
-    if (typeof value === 'string' && allowed.includes(value)) out[key] = value;
+    if (typeof value === "string" && allowed.includes(value)) out[key] = value;
   }
   return out;
 }
@@ -129,13 +149,16 @@ function filterRowColProps(props: Record<string, unknown> | undefined): Record<s
 function filterMappedProps(
   props: Record<string, unknown> | undefined,
   def: {
-    props?: Record<string, 'string' | 'number' | 'boolean'>;
+    props?: Record<string, "string" | "number" | "boolean">;
     forcedProps?: Record<string, unknown>;
     bindings?: Record<string, { event: string }>;
   },
   ctx: ResolveContext,
-  type: string,
-): { props: Record<string, unknown>; bindings: Array<{ prop: string; path: string; event?: string }> } {
+  type: string
+): {
+  props: Record<string, unknown>;
+  bindings: Array<{ prop: string; path: string; event?: string }>;
+} {
   const out: Record<string, unknown> = {};
   const bindings: Array<{ prop: string; path: string; event?: string }> = [];
   const allowlist = def.props ?? {};
@@ -144,23 +167,96 @@ function filterMappedProps(
       const expectedType = allowlist[key];
       const { value, path } = resolveValue(rawValue, ctx);
       if (expectedType === undefined || typeof value !== expectedType) {
-        warnOnce(ctx, `${type}:${key}`, `skipped disallowed or mistyped prop "${key}" on type "${type}"`);
+        warnOnce(
+          ctx,
+          `${type}:${key}`,
+          `skipped disallowed or mistyped prop "${key}" on type "${type}"`
+        );
         continue;
       }
       out[key] = value;
-      if (path) bindings.push({ prop: key, path, event: def.bindings?.[key]?.event });
+      if (path)
+        bindings.push({ prop: key, path, event: def.bindings?.[key]?.event });
     }
   }
   return { props: { ...out, ...(def.forcedProps ?? {}) }, bindings };
 }
 
-function budgetExceeded(budget: { remaining: number }, ctx: ResolveContext): boolean {
+function budgetExceeded(
+  budget: { remaining: number },
+  ctx: ResolveContext
+): boolean {
   if (budget.remaining <= 0) {
-    warnOnce(ctx, '__node-cap__', `stopped resolving after the ${MAX_NODES}-node cap was reached`);
+    warnOnce(
+      ctx,
+      "__node-cap__",
+      `stopped resolving after the ${MAX_NODES}-node cap was reached`
+    );
     return true;
   }
   budget.remaining--;
   return false;
+}
+
+/** Validates only the portion of the input that the bounded resolver can reach. Values beyond the
+ * depth/node caps are never dereferenced by `resolveNode()`, so inspecting them here would turn the
+ * safety caps into an unbounded validation pass. */
+function isStructurallyValidTree(
+  root: unknown,
+  registry: WidgetTypeRegistry
+): root is WidgetNode {
+  const budget = { remaining: MAX_NODES };
+  const ancestors = new Set<object>();
+
+  const visit = (value: unknown, depth: number): boolean => {
+    if (depth > MAX_DEPTH || budget.remaining <= 0) return true;
+    if (value === null || typeof value !== "object" || Array.isArray(value))
+      return false;
+    if (ancestors.has(value)) return false;
+    budget.remaining--;
+
+    const node = value as Record<string, unknown>;
+    const type = node["type"];
+    if (typeof type !== "string") return false;
+    if (node["id"] !== undefined && typeof node["id"] !== "string")
+      return false;
+    if (node["slot"] !== undefined && typeof node["slot"] !== "string")
+      return false;
+    if (node["actionId"] !== undefined && typeof node["actionId"] !== "string")
+      return false;
+
+    const props = node["props"];
+    if (
+      props !== undefined &&
+      (props === null || typeof props !== "object" || Array.isArray(props))
+    ) {
+      return false;
+    }
+
+    const children = node["children"];
+    if (children !== undefined && !Array.isArray(children)) return false;
+    if (children === undefined) return true;
+
+    const isBuiltin = type === "row" || type === "col" || type === "text";
+    if (!isBuiltin && !registry.has(type)) return true;
+
+    ancestors.add(value);
+    try {
+      for (const child of children) {
+        if (budget.remaining <= 0) break;
+        if (typeof child === "string") {
+          budget.remaining--;
+        } else if (!visit(child, depth + 1)) {
+          return false;
+        }
+      }
+    } finally {
+      ancestors.delete(value);
+    }
+    return true;
+  };
+
+  return visit(root, 0);
 }
 
 function resolveChild(
@@ -168,17 +264,17 @@ function resolveChild(
   ctx: ResolveContext,
   path: string,
   depth: number,
-  budget: { remaining: number },
+  budget: { remaining: number }
 ): ResolvedNode | null {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     if (budgetExceeded(budget, ctx)) return null;
-    return { key: path, kind: 'text', text: value };
+    return { key: path, kind: "text", text: value };
   }
   return resolveNode(value, ctx, path, depth, budget);
 }
 
 function containsInteractive(node: ResolvedNode): boolean {
-  if (node.kind === 'text') return false;
+  if (node.kind === "text") return false;
   return node.interactive || node.children.some(containsInteractive);
 }
 
@@ -187,22 +283,26 @@ function resolveNode(
   ctx: ResolveContext,
   path: string,
   depth: number,
-  budget: { remaining: number },
+  budget: { remaining: number }
 ): ResolvedElement | null {
   if (depth > MAX_DEPTH) {
-    warnOnce(ctx, '__depth-cap__', `stopped resolving after the ${MAX_DEPTH}-level depth cap was reached`);
+    warnOnce(
+      ctx,
+      "__depth-cap__",
+      `stopped resolving after the ${MAX_DEPTH}-level depth cap was reached`
+    );
     return null;
   }
   if (budgetExceeded(budget, ctx)) return null;
 
-  const authoredId = typeof node.id === 'string' ? node.id : undefined;
+  const authoredId = typeof node.id === "string" ? node.id : undefined;
   const key = authoredId ?? path;
   const identityKey =
     authoredId !== undefined && ctx.authoredIdCounts?.get(authoredId) === 1
       ? `id:${authoredId}`
       : `path:${path}`;
 
-  let kind: ResolvedElement['kind'];
+  let kind: ResolvedElement["kind"];
   let tag: string | undefined;
   let interactive = false;
   let props: Record<string, unknown>;
@@ -210,23 +310,28 @@ function resolveNode(
   let bindings: Array<{ prop: string; path: string; event?: string }> = [];
   let slots: string[] = [];
 
-  if (node.type === 'row' || node.type === 'col') {
-    kind = node.type === 'row' ? 'builtin-row' : 'builtin-col';
+  if (node.type === "row" || node.type === "col") {
+    kind = node.type === "row" ? "builtin-row" : "builtin-col";
     props = filterRowColProps(node.props);
-  } else if (node.type === 'text') {
-    kind = 'builtin-text';
-    const resolved = resolveValue(node.props?.['value'], ctx);
-    props = typeof resolved.value === 'string' || typeof resolved.value === 'number'
-      ? { value: String(resolved.value) }
-      : {};
-    if (resolved.path) bindings = [{ prop: 'value', path: resolved.path }];
+  } else if (node.type === "text") {
+    kind = "builtin-text";
+    const resolved = resolveValue(node.props?.["value"], ctx);
+    props =
+      typeof resolved.value === "string" || typeof resolved.value === "number"
+        ? { value: String(resolved.value) }
+        : {};
+    if (resolved.path) bindings = [{ prop: "value", path: resolved.path }];
   } else {
     const def = ctx.registry.get(node.type);
     if (!def) {
-      warnOnce(ctx, node.type, `skipped unknown widget type "${node.type}" (and its subtree)`);
+      warnOnce(
+        ctx,
+        node.type,
+        `skipped unknown widget type "${node.type}" (and its subtree)`
+      );
       return null;
     }
-    kind = 'mapped';
+    kind = "mapped";
     tag = def.tag;
     interactive = def.action !== undefined;
     const filtered = filterMappedProps(node.props, def, ctx, node.type);
@@ -240,17 +345,26 @@ function resolveNode(
 
   const children: ResolvedNode[] = [];
   for (const [i, child] of (node.children ?? []).entries()) {
-    const resolvedChild = resolveChild(child, ctx, `${path}.${i}`, depth + 1, budget);
+    const resolvedChild = resolveChild(
+      child,
+      ctx,
+      `${path}.${i}`,
+      depth + 1,
+      budget
+    );
     if (!resolvedChild) continue;
     if (interactive && containsInteractive(resolvedChild)) {
       warnOnce(
         ctx,
         `__nested-interactive__:${node.type}`,
-        `skipped an interactive descendant inside actionable type "${node.type}"`,
+        `skipped an interactive descendant inside actionable type "${node.type}"`
       );
       continue;
     }
-    if (resolvedChild.slot !== undefined && !slots.includes(resolvedChild.slot)) {
+    if (
+      resolvedChild.slot !== undefined &&
+      !slots.includes(resolvedChild.slot)
+    ) {
       resolvedChild.slot = undefined;
     }
     children.push(resolvedChild);
@@ -272,9 +386,14 @@ function resolveNode(
   };
 }
 
-function countAuthoredIds(root: WidgetNode, registry: WidgetTypeRegistry): Map<string, number> {
+function countAuthoredIds(
+  root: WidgetNode,
+  registry: WidgetTypeRegistry
+): Map<string, number> {
   const counts = new Map<string, number>();
-  const pending: Array<{ node: WidgetNode; depth: number }> = [{ node: root, depth: 0 }];
+  const pending: Array<{ node: WidgetNode; depth: number }> = [
+    { node: root, depth: 0 },
+  ];
   let remaining = MAX_NODES;
 
   while (pending.length > 0 && remaining > 0) {
@@ -283,16 +402,17 @@ function countAuthoredIds(root: WidgetNode, registry: WidgetTypeRegistry): Map<s
     remaining--;
 
     const { node } = current;
-    const isBuiltin = node.type === 'row' || node.type === 'col' || node.type === 'text';
+    const isBuiltin =
+      node.type === "row" || node.type === "col" || node.type === "text";
     if (!isBuiltin && !registry.has(node.type)) continue;
 
-    if (typeof node.id === 'string') {
+    if (typeof node.id === "string") {
       counts.set(node.id, (counts.get(node.id) ?? 0) + 1);
     }
     if (!Array.isArray(node.children)) continue;
     for (let index = node.children.length - 1; index >= 0; index--) {
       const child = node.children[index];
-      if (child && typeof child === 'object' && !Array.isArray(child)) {
+      if (child && typeof child === "object" && !Array.isArray(child)) {
         pending.push({ node: child, depth: current.depth + 1 });
       }
     }
@@ -304,12 +424,19 @@ function countAuthoredIds(root: WidgetNode, registry: WidgetTypeRegistry): Map<s
 /** Resolves `root` through `ctx.registry`'s allowlist. Returns `null` for a structurally unusable
  *  root (non-object) or a root whose own `type` is unknown/over-cap -- the caller treats a `null`
  *  result for a non-null `root` input as a render error. */
-export function resolveTree(root: WidgetNode | null | undefined, ctx: ResolveContext): ResolvedNode | null {
-  if (root == null || typeof root !== 'object') return null;
-  const budget = { remaining: MAX_NODES };
-  const resolveContext: ResolveContext = {
-    ...ctx,
-    authoredIdCounts: countAuthoredIds(root, ctx.registry),
-  };
-  return resolveNode(root, resolveContext, '0', 0, budget);
+export function resolveTree(
+  root: WidgetNode | null | undefined,
+  ctx: ResolveContext
+): ResolvedNode | null {
+  try {
+    if (!isStructurallyValidTree(root, ctx.registry)) return null;
+    const budget = { remaining: MAX_NODES };
+    const resolveContext: ResolveContext = {
+      ...ctx,
+      authoredIdCounts: countAuthoredIds(root, ctx.registry),
+    };
+    return resolveNode(root, resolveContext, "0", 0, budget);
+  } catch {
+    return null;
+  }
 }

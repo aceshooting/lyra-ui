@@ -26,10 +26,11 @@ the same/similar name — see `lr-model-select` and `lr-slider` themselves for t
 of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureStep`.
 
 **Properties:**
+
 - `provider: string = ''` — informational provider badge, passed straight through to the internal
   `lr-model-select`.
 - `catalog?: LyraModelCatalog` (attribute: false, JS-only) — `string[] | { id: string; label: string
-  }[]` (every entry must be one shape or the other, never mixed); passed straight through to the
+}[]` (every entry must be one shape or the other, never mixed); passed straight through to the
   internal `lr-model-select`.
 - `modelValue: string = ''` (attribute `model-value`) — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
@@ -43,13 +44,13 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
 - `layout: 'vertical' | 'compact' = 'vertical'` (reflected) — `vertical` stacks full-width rows with
   visible labels; `compact` runs the same two rows side by side with a smaller, uppercase temperature
   caption, for toolbars/sidebars where the vertical layout's height doesn't fit.
-- `disabled: boolean = false` (reflected) — disables the panel as a unit by forwarding to *both*
+- `disabled: boolean = false` (reflected) — disables the panel as a unit by forwarding to _both_
   internal `lr-model-select` and `lr-slider`; a wrapping `<fieldset disabled>` alone would not
   reach either, since a form-associated control's own `disabled` IDL property/attribute is never
   mutated by fieldset cascading.
 
 **Events:** `lr-change` — `detail: { modelValue: string; inCatalog: boolean; temperature: number }`.
-Fires whenever *either* child control's own `lr-change` fires, and always carries the full current
+Fires whenever _either_ child control's own `lr-change` fires, and always carries the full current
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
 `catalog`/`modelValue` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `modelValue` was just
@@ -82,7 +83,7 @@ The internal `lr-slider` renders with its own value readout suppressed (`.showVa
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
 shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
-panel's own `temperature` property mirrors the nested slider's *live* value on every one of its
+panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
 the visible readout) tick continuously during a drag, but the panel's own `lr-change` event only
 fires once the slider's own `lr-change` commits (pointerup/keyup) or the model changes; reading
@@ -90,6 +91,7 @@ fires once the slider's own `lr-change` commits (pointerup/keyup) or the model c
 yet for it.
 
 **Known gotchas:**
+
 - `catalog` is JS-only (`attribute: false`) — set it via a property binding (`.catalog=`), never as
   an HTML attribute, same requirement as the underlying `lr-model-select`.
 - `layout="compact"` removes the host's own `max-inline-size` cap (`28rem` in `vertical` layout)

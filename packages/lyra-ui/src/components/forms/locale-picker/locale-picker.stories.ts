@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraLocalePickerSize } from './locale-picker.js';
+import type { LyraLocalePicker, LyraLocalePickerSize } from './locale-picker.js';
 import './locale-picker.js';
 
 const meta: Meta = {
@@ -30,6 +30,33 @@ export const CustomCatalog: Story = {
       label="Language"
       .locales=${[{ tag: 'fr' }, { tag: 'de' }, { tag: 'es', label: 'Español (coming soon)' }]}
     ></lr-locale-picker>
+  `,
+};
+
+export const LiveCatalogShrink: Story = {
+  name: 'Live catalog shrink',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem);">
+      <lr-locale-picker
+        open
+        label="Language"
+        .locales=${['fr', 'de', 'it']}
+      ></lr-locale-picker>
+      <button
+        type="button"
+        @click=${(event: Event) => {
+          const picker = (event.currentTarget as HTMLElement).parentElement?.querySelector(
+            'lr-locale-picker',
+          ) as LyraLocalePicker | null;
+          if (picker) {
+            picker.locales = ['fr'];
+            picker.open = true;
+          }
+        }}
+      >
+        Replace with one locale
+      </button>
+    </div>
   `,
 };
 
@@ -110,6 +137,25 @@ export const Events: Story = {
         }}
       ></lr-locale-picker>
       <p id="locale-picker-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
+    </div>
+  `,
+};
+
+/** Ancestor theme values override the active size tier's private fallbacks. */
+export const AncestorTheme: Story = {
+  render: () => html`
+    <div
+      style="
+        --lr-locale-picker-trigger-padding: var(--lr-space-m);
+        --lr-locale-picker-trigger-min-height: var(--lr-size-3rem);
+        --lr-locale-picker-font-size: var(--lr-font-size-lg);
+        --lr-locale-picker-expand-size: var(--lr-size-1-5rem);
+        --lr-locale-picker-gap: var(--lr-space-m);
+        --lr-locale-picker-radius: var(--lr-radius);
+        --lr-locale-picker-option-selected-font-weight: var(--lr-font-weight-normal);
+      "
+    >
+      <lr-locale-picker size="2xs" open value="fr" label="Language" .locales=${['fr', 'de']}></lr-locale-picker>
     </div>
   `,
 };

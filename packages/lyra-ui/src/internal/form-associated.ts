@@ -356,6 +356,18 @@ export interface FormAssociatedInterface<TValue = string> {
   [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: string): void;
 }
 
+/** Subclass-only transaction seam retained in the mixin's explicit constructor return type. */
+export declare class FormAssociatedSubclassInterface<TValue = string> {
+  protected captureLiveValueCheckpoint(): {
+    readonly value: TValue;
+    readonly dirty: boolean;
+  };
+  protected restoreLiveValueCheckpoint(checkpoint: {
+    readonly value: TValue;
+    readonly dirty: boolean;
+  }): void;
+}
+
 /**
  * Minimal ElementInternals substitute for DOM implementations that expose
  * form-associated custom elements but do not implement `attachInternals()` yet.
@@ -461,7 +473,7 @@ export function attachInternalsSafely(host: HTMLElement): ElementInternals {
 export function FormAssociated<T extends Constructor<LitElement>, TValue = string>(
   Base: T,
   valueAdapter?: FormValueAdapter<TValue>,
-): T & Constructor<FormAssociatedInterface<TValue>> {
+): T & Constructor<FormAssociatedInterface<TValue> & FormAssociatedSubclassInterface<TValue>> {
   const adapter = resolveFormValueAdapter<TValue>(valueAdapter);
 
   // Installed ONLY when a caller supplied an adapter. The string case keeps Lit's own default
@@ -711,6 +723,29 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       const old = this._value;
       this._value = next ?? adapter.empty;
       if (!this.settingDefaultValue) this._valueDirty = true;
+      this.commitFormValue(this._value);
+      this.updateValidity();
+      this.requestUpdate('value', old);
+    }
+
+    /**
+     * Captures the live value together with its native dirty/default relationship so a subclass
+     * can offer a reversible preview without turning that preview into a permanent value write.
+     * The value itself is retained by identity; callers whose value type is mutable must snapshot
+     * that mutable payload before changing it.
+     */
+    protected captureLiveValueCheckpoint(): { readonly value: TValue; readonly dirty: boolean } {
+      return { value: this._value, dirty: this._valueDirty };
+    }
+
+    /** Restores a reversible preview without emitting events or changing default-value ownership. */
+    protected restoreLiveValueCheckpoint(checkpoint: {
+      readonly value: TValue;
+      readonly dirty: boolean;
+    }): void {
+      const old = this._value;
+      this._value = checkpoint.value;
+      this._valueDirty = checkpoint.dirty;
       this.commitFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
@@ -1034,5 +1069,6 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     }
   }
 
-  return FormAssociatedElement as unknown as T & Constructor<FormAssociatedInterface<TValue>>;
+  return FormAssociatedElement as unknown as T &
+    Constructor<FormAssociatedInterface<TValue> & FormAssociatedSubclassInterface<TValue>>;
 }

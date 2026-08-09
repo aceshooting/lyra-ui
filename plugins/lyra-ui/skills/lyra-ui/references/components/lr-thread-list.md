@@ -16,14 +16,21 @@
 ## `lr-thread-list`
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
-affordances. *Data mode* (non-empty `threads`, or empty `threads` with nothing slotted) renders every
+affordances. _Data mode_ (non-empty `threads`, or empty `threads` with nothing slotted) renders every
 row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
 construction, scroll position and per-row state survive a `threads` replacement; zero rows renders
-the built-in empty state. *Slotted mode* (empty `threads` *and* real slotted content) renders
+the built-in empty state. _Slotted mode_ (empty `threads` _and_ real slotted content) renders
 host-supplied `lr-conversation-item`s from the default slot as-is: no grouping, virtualization, or
 row actions in that mode. No thread CRUD or persistence — every mutation
-(`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the *requested* new
+(`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
+
+ArrowUp/ArrowDown/Home/End navigation skips rows that are disabled, hidden, `aria-hidden`, or
+`inert` (including an inert ancestor introduced by `wrapRow`). Arrow navigation continues through
+the complete item model at a virtual-window edge and mounts the next available row before moving
+focus. Home/End always resolve the first/last thread from that complete model, even when focus
+starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
+are skipped rather than becoming false boundaries.
 
 **Properties:** `threads: ChatThread[] = []` (attribute: false) — `ChatThread { id: string; title:
 string; excerpt?: string; timestamp?: Date | string; pinned?: boolean; archived?: boolean }`
@@ -41,7 +48,9 @@ string) => number)` (attribute: false) supplies an explicit order or comparator;
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
 the virtual list while its conversation rows are removed from the virtual-list item/measurement
-set; `lr-group-toggle` requests the matching state change. `rowActions: ThreadRowAction[] = []`
+set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
+internal key namespaces, so every public `activeId` remains a raw thread id — even a value such as
+`group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
@@ -82,9 +91,12 @@ metadata in the row's meta region.
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
 built-in date-group labels (use `formatGroup` for custom groups). `formatDate?: (date: Date) =>
-string` (attribute: false) — overrides month-group date formatting. `wrapRow` remains wholly
-host-owned and therefore receives no library-added wrapper part; use the focused `row-*` hook parts
-or add the host's own styling hook inside that callback.
+string` (attribute: false) — overrides month-group date formatting. When `wrapRow` is set, its
+returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
+complete built-in row, including built-in `rowActions` and appended `renderActions` content inside
+the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, `row-actions` for
+the callback-output region, and the `row-item-*` parts for the conversation item's own internals.
+With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -128,10 +140,10 @@ prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-it
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
 
-**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
+**Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,
 `renderRowContent`, `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's
-*internals*. Row density
+_internals_. Row density
 in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
 `::part(row-item-base)` is the supported way to build a dense sidebar.
 
@@ -140,8 +152,12 @@ own density knob. The `row-item-*` parts remain the lever for tuning beyond it (
 size, a different padding ratio):
 
 ```css
-lr-thread-list::part(row-item-base) { padding-block: 0.25rem; }
-lr-thread-list::part(row-item-title) { font-size: 0.8125rem; }
+lr-thread-list::part(row-item-base) {
+  padding-block: 0.25rem;
+}
+lr-thread-list::part(row-item-title) {
+  font-size: 0.8125rem;
+}
 ```
 
 Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. That is a whole-subtree
@@ -151,12 +167,12 @@ density can be tuned without that blast radius.
 
 **Sizing:** the internal list fills whatever height this component is given, with no consumer CSS —
 `[part='viewport']` is the real scroll container, and it falls back to `lr-virtual-list`'s own `24rem`
-default only when the container has no resolvable height. This is deliberately *not* implemented by
+default only when the container has no resolvable height. This is deliberately _not_ implemented by
 setting `--lr-virtual-list-height: 100%`: that percentage resolves against this host, which is a flex
 item, so in an auto-height container it chains to `auto` and the viewport either collapses to zero
 (with no rows) or grows to the full un-virtualized content height (with rows) — defeating
 virtualization in both directions. Instead the list host is made a column flex container, which turns
-the shipped `24rem` into a *flex-basis*: it grows to fill a bounded pane, shrinks below `24rem` in a
+the shipped `24rem` into a _flex-basis_: it grows to fill a bounded pane, shrinks below `24rem` in a
 short one, and falls back to exactly `24rem` in an auto-height container.
 
 `sticky-groups` keeps the current date group's header visible while scrolling through a long sidebar;

@@ -17,9 +17,12 @@
 
 The canvas's button cluster: zoom in/out, fit, and interaction lock, so every flow surface ships the
 same affordances without hosts rebuilding them. Manipulates only view state, never `nodes`/`edges` —
-no editing commands live here.
+no editing commands live here. Zoom-in/out disabled state reads the canvas snapshot's effective
+finite, sorted bounds, so invalid or reversed raw `minZoom`/`maxZoom` values cannot disable an
+otherwise available direction.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
@@ -52,6 +55,7 @@ hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-colo
 ```
 
 **Known gotchas:**
+
 - `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
   the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
   its types, so registration order between them and the canvas never matters.

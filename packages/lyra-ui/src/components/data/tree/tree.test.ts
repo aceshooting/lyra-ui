@@ -54,6 +54,72 @@ it('does not choose a hidden child of a collapsed disabled branch as the roving 
   expect(visible.tabIndex).to.equal(0);
 });
 
+it('fails closed on duplicate data ids instead of giving multiple rows one interactive identity', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    { id: 'duplicate', label: 'Canonical row' },
+    { id: 'duplicate', label: 'Conflicting row' },
+  ];
+  await el.updateComplete;
+  const [canonical, conflicting] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+
+  expect([canonical, conflicting].filter((node) => node.tabIndex === 0).length).to.equal(1);
+  expect(canonical.getAttribute('aria-disabled')).to.equal('false');
+  expect(conflicting.getAttribute('aria-disabled')).to.equal('true');
+
+  let selectEvents = 0;
+  el.addEventListener('lr-node-select', () => selectEvents++);
+  conflicting.select();
+  await el.updateComplete;
+  expect(selectEvents).to.equal(0);
+  expect(el.selectedItems.length).to.equal(0);
+});
+
+it('applies duplicate-id ownership across nested paths and releases it after a valid refresh', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'root',
+      label: 'Root',
+      children: [
+        { id: 'shared', label: 'Canonical nested row' },
+        { id: 'shared', label: 'Conflicting nested row' },
+      ],
+    },
+    { id: 'shared', label: 'Conflicting top-level row' },
+  ];
+  await el.updateComplete;
+  const [root, topLevelConflict] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  root.expand();
+  await el.updateComplete;
+  const nested = [...root.shadowRoot!.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+
+  expect(nested.length).to.equal(2);
+  expect(nested.map((node) => node.item.label)).to.deep.equal([
+    'Canonical nested row',
+    'Conflicting nested row',
+  ]);
+  expect(nested.map((node) => node.getAttribute('aria-disabled'))).to.deep.equal(['false', 'true']);
+  expect(topLevelConflict.getAttribute('aria-disabled')).to.equal('true');
+
+  let selectEvents = 0;
+  el.addEventListener('lr-node-select', () => selectEvents++);
+  nested[1].select();
+  topLevelConflict.select();
+  expect(selectEvents).to.equal(0);
+  nested[0].select();
+  await el.updateComplete;
+  expect(selectEvents).to.equal(1);
+  expect(el.selectedItems.map((node) => node.item.label)).to.deep.equal(['Canonical nested row']);
+
+  el.data = [{ id: 'shared', label: 'Unique survivor' }];
+  await el.updateComplete;
+  const survivor = el.querySelector('lr-tree-item') as LyraTreeItem;
+  expect(survivor.item.label).to.equal('Unique survivor');
+  expect(survivor.getAttribute('aria-disabled')).to.equal('false');
+  expect(survivor.tabIndex).to.equal(0);
+});
+
 it('stops rendering a cyclic item graph instead of recursing indefinitely', async () => {
   const cyclic = { id: 'cycle', label: 'Cycle' } as TreeItem;
   cyclic.children = [cyclic];
@@ -219,7 +285,7 @@ it('a mousedown on the toggle button focuses the host node rather than the hidde
   const mousedown = new MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true });
   toggle.dispatchEvent(mousedown);
 
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 });
 
 it('a mouse click on a node\'s toggle syncs activeId to that node, not just the previously-focused item', async () => {
@@ -245,7 +311,7 @@ it('a mouse click on a node\'s toggle syncs activeId to that node, not just the 
   y.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   const y1 = y.shadowRoot!.querySelector('lr-tree-item');
-  expect(deepActiveElement()).to.equal(y1);
+  expect((deepActiveElement()) === (y1)).to.equal(true);
 });
 
 it('a mouse click that collapses an expanded ancestor of the active node leaves exactly one node with a roving tabindex of 0', async () => {
@@ -504,14 +570,14 @@ it('refocuses the newly active node when a data reassignment removes the node th
   await el.updateComplete;
   const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   (root as unknown as HTMLElement).focus();
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 
   el.data = [{ id: '2', label: 'Leaf' }];
   await el.updateComplete;
 
   const newRoot = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(newRoot.item.id).to.equal('2');
-  expect(deepActiveElement()).to.equal(newRoot as unknown as Element);
+  expect((deepActiveElement()) === (newRoot as unknown as Element)).to.equal(true);
 });
 
 it('is accessible', async () => {

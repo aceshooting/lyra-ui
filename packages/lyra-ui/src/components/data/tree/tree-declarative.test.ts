@@ -202,6 +202,36 @@ describe('tree declarative child model', () => {
       fromIndex: 0,
       toIndex: 1,
     });
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement;
+    expect((region.shadowRoot?.textContent ?? '').trim()).to.equal('');
+  });
+
+  it('announces a nested declarative reorder only after the host moves the requested node', async () => {
+    const el = (await fixture(html`
+      <lr-tree label="Docs" reorderable>
+        <lr-tree-item label="Guides" expanded>
+          <lr-tree-item label="Install"></lr-tree-item>
+          <lr-tree-item label="Usage"></lr-tree-item>
+        </lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    await el.updateComplete;
+    const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
+    const [install] = [...guides.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    install.focus();
+    install.select();
+    await el.updateComplete;
+    el.addEventListener('lr-reorder', () => guides.append(install));
+
+    install.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, ctrlKey: true }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement;
+    expect(region.shadowRoot?.textContent).to.contain('Install');
+    expect(region.shadowRoot?.textContent).to.contain('2');
   });
 
   it('renders a nested item that a host promotes to the top level', async () => {

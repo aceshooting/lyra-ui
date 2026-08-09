@@ -71,6 +71,49 @@ describe('<lr-dropdown-item>', () => {
     expect(item.submenuOpen).to.equal(false);
   });
 
+  it('accepts the normalized upstream submenuopen attribute as a synchronized alias', async () => {
+    const authored = (await fixture(html`
+      <div role="menu" aria-label="Share actions">
+        <lr-dropdown-item submenuOpen>
+          Share
+          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+        </lr-dropdown-item>
+      </div>
+    `)).querySelector('lr-dropdown-item') as LyraDropdownItem;
+    for (let frame = 0; frame < 20 && !authored.hasSubmenu; frame += 1) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await authored.updateComplete;
+    }
+    await waitForSubmenuState(authored, true);
+    expect(authored.submenuOpen).to.equal(true);
+    expect(authored.hasAttribute('submenuopen')).to.equal(true);
+    expect(authored.hasAttribute('submenu-open')).to.equal(true);
+
+    const item = await submenuParent();
+
+    item.setAttribute('submenuopen', '');
+    await waitForSubmenuState(item, true);
+    expect(item.submenuOpen).to.equal(true);
+    expect(item.hasAttribute('submenu-open')).to.equal(true);
+
+    item.removeAttribute('submenuopen');
+    await waitForSubmenuState(item, false);
+    expect(item.submenuOpen).to.equal(false);
+    expect(item.hasAttribute('submenu-open')).to.equal(false);
+
+    item.setAttribute('submenuopen', '');
+    await waitForSubmenuState(item, true);
+    item.removeAttribute('submenu-open');
+    await item.updateComplete;
+    expect(item.submenuOpen).to.equal(true);
+    expect(item.hasAttribute('submenu-open')).to.equal(true);
+
+    item.removeAttribute('submenuopen');
+    await waitForSubmenuState(item, false);
+    expect(item.submenuOpen).to.equal(false);
+    expect(item.hasAttribute('submenu-open')).to.equal(false);
+  });
+
   it('declares the mapped submenu methods on this class and preserves their promise settlement', async () => {
     expect(Object.hasOwn(LyraDropdownItem.prototype, 'openSubmenu')).to.equal(true);
     expect(Object.hasOwn(LyraDropdownItem.prototype, 'closeSubmenu')).to.equal(true);

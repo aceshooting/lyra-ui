@@ -74,7 +74,7 @@ describe('document preview integration', () => {
     const file = makeFile('notes.txt', 'text/plain', 12);
     const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const preview = el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement;
-    expect(preview).to.exist;
+    expect((preview) != null).to.equal(true);
 
     const eventPromise = oneEvent(el, 'lr-preview');
     preview.click();
@@ -201,7 +201,7 @@ describe('independent name/bytes/mime-type props', () => {
       html`<lr-attachment-chip name="pic.png" thumbnail-src="https://example.test/thumb.png"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const img = el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement;
-    expect(img).to.exist;
+    expect((img) != null).to.equal(true);
     expect(img.getAttribute('src')).to.equal('https://example.test/thumb.png');
   });
 
@@ -210,15 +210,15 @@ describe('independent name/bytes/mime-type props', () => {
       html`<lr-attachment-chip name="pic.png" thumbnail-src="javascript:alert(1)"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
-    expect(thumb.querySelector('img')).to.not.exist;
-    expect(thumb.querySelector('svg')).to.exist;
+    expect((thumb.querySelector('img')) == null).to.equal(true);
+    expect((thumb.querySelector('svg')) != null).to.equal(true);
   });
 
   it('renders a generic file glyph (no img) when neither file nor thumbnail-src is set', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
-    expect(thumb.querySelector('img')).to.not.exist;
-    expect(thumb.querySelector('svg')).to.exist;
+    expect((thumb.querySelector('img')) == null).to.equal(true);
+    expect((thumb.querySelector('svg')) != null).to.equal(true);
   });
 });
 
@@ -236,7 +236,7 @@ describe('the file property', () => {
     const file = makeFile('photo.png', 'image/png');
     const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const img = el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement;
-    expect(img).to.exist;
+    expect((img) != null).to.equal(true);
     expect(img.getAttribute('src')).to.match(/^blob:/);
   });
 
@@ -244,8 +244,8 @@ describe('the file property', () => {
     const file = makeFile('report.pdf', 'application/pdf');
     const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
-    expect(thumb.querySelector('img')).to.not.exist;
-    expect(thumb.querySelector('svg')).to.exist;
+    expect((thumb.querySelector('img')) == null).to.equal(true);
+    expect((thumb.querySelector('svg')) != null).to.equal(true);
   });
 
   it('ignores thumbnail-src once file is set (file always wins)', async () => {
@@ -296,8 +296,8 @@ describe('the file property', () => {
       await el.updateComplete;
       expect(revoked).to.equal(firstSrc);
       const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
-      expect(thumb.querySelector('img')).to.not.exist;
-      expect(thumb.querySelector('svg')).to.exist;
+      expect((thumb.querySelector('img')) == null).to.equal(true);
+      expect((thumb.querySelector('svg')) != null).to.equal(true);
     } finally {
       URL.revokeObjectURL = original;
     }
@@ -373,7 +373,7 @@ describe('status accents and progress', () => {
       html`<lr-attachment-chip name="a.zip" status="uploading"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-    expect(spinner).to.exist;
+    expect((spinner) != null).to.equal(true);
     expect(spinner.getAttribute('role')).to.equal(null);
     expect(spinner.getAttribute('aria-hidden')).to.equal('true');
     expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
@@ -398,7 +398,7 @@ describe('status accents and progress', () => {
       html`<lr-attachment-chip name="a.zip" status="uploading" progress="42"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const bar = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
-    expect(bar).to.exist;
+    expect((bar) != null).to.equal(true);
     expect(bar.getAttribute('role')).to.equal('progressbar');
     expect(bar.getAttribute('aria-valuenow')).to.equal('42');
     expect(bar.getAttribute('aria-valuemin')).to.equal('0');
@@ -676,7 +676,7 @@ describe('hit area', () => {
     `)) as LyraAttachmentChip;
     for (const part of ['retry-button', 'preview-button', 'remove-button']) {
       const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      expect(btn, `[part="${part}"] should render`).to.exist;
+      expect((btn) != null, `[part="${part}"] should render`).to.equal(true);
       expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
       expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
     }

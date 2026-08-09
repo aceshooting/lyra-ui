@@ -89,6 +89,7 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lr-select-gap);
     inline-size: 100%;
+    min-inline-size: 0;
     min-block-size: var(--lr-select-trigger-height, var(--lr-select-trigger-min-height));
     box-sizing: border-box;
     block-size: var(--lr-select-trigger-height, auto);
@@ -110,14 +111,14 @@ export const styles = css`
      matches lr-model-select's/lr-attachment-trigger's fixed convention, so a consumer's own
      ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressed: the same quiet brand tint the hover lands on, carried further toward
      --lr-color-mix-partner (which follows the text colour), so the press is visibly deeper than
      the hover instead of a repeat of it. Same :where() zeroing as the hover above, so a consumer's
      ::part(trigger):active still wins. */
   :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-select-trigger-active-bg, color-mix(in oklab, var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* Appearance treatments. outlined is the base rule above, so only the other four restate
      what they change. Each keeps the same box, border width and radius -- only the fill, the
@@ -155,25 +156,25 @@ export const styles = css`
   :host([appearance='filled']) :where([part='trigger']):hover:where(:not(:disabled)),
   :host([appearance='filled-outlined']) :where([part='trigger']):hover:where(:not(:disabled)),
   :host([appearance='plain']) :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
   :host([appearance='filled']) :where([part='trigger']):active:where(:not(:disabled)),
   :host([appearance='filled-outlined']) :where([part='trigger']):active:where(:not(:disabled)),
   :host([appearance='plain']) :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-select-trigger-active-bg, color-mix(in oklab, var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* The loud fill has no quieter tint to move to, so it shifts toward --lr-color-mix-partner --
      which follows the text colour, i.e. darkens in the light theme and lightens in the dark one,
      both times away from the fill. Same two shares every other pressed/hovered surface in the
      library uses, rather than the hand-written 12% this pair carried before 8.0.0. */
   :host([appearance='accent']) :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-select-trigger-hover-bg, color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
   :host([appearance='accent']) :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-select-trigger-active-bg, color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   :host([open]) [part='trigger'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-select-open-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part='trigger'] {
     /* Shared library-wide disabled-state token -- see lr-combobox. */

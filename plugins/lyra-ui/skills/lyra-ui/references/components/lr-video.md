@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -60,6 +60,11 @@ immediate host `timeupdate`, before a browser's eventual native seek notificatio
 `pause-icon`, `play-icon`, `poster-icon`, and `volume-icon` customize the control surface. Consumer
 source/track nodes remain in light DOM: the component inserts fresh private clones containing only
 safe URL, source (`type`, `media`), and track (`kind`, `srclang`, `label`, `default`) attributes.
+The seven `*-icon` slots are decorative glyph overrides: assigned content renders in an inert,
+`aria-hidden`, pointer-transparent visual layer beside the named native button, never inside its
+flat-tree descendants. An accidentally supplied link, button, or input therefore cannot create a
+nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
+composition slots and may intentionally contain interactive controls.
 
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,

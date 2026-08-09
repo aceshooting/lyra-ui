@@ -66,7 +66,9 @@ inside), `cue-match` (added alongside `cue` on a row matching the current search
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
 playback, or unsafe-source failure appends the localized message to the document's pre-mounted
 `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains visible but does
-not interrupt on mount; identical later failures append distinct children.
+not interrupt on mount; identical later failures append distinct children. `[part="base"]` remains
+a named `role="region"` in the unsafe-source branch and across a safe-to-unsafe transition, so the
+player does not lose its landmark or accessible name when its media is replaced by the error.
 
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a

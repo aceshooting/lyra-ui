@@ -453,7 +453,7 @@ it('renders x/y axis titles only when xLabel/yLabel are set', async () => {
 
 it('handles empty labels/datasets without throwing', async () => {
   const el = await mount(html`<lr-lite-chart></lr-lite-chart>`);
-  expect(el.shadowRoot!.querySelector('svg')).to.exist;
+  expect((el.shadowRoot!.querySelector('svg')) != null).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(0);
 });
 
@@ -730,7 +730,7 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     // First mount: connectedCallback() cannot create the observer while svgEl is still absent, so
     // firstUpdated() creates and arms it -- exactly one observe() call, on the real <svg>.
     expect(observeCalls.length).to.equal(1);
-    expect(observeCalls[0]).to.equal(svgEl);
+    expect((observeCalls[0]) === (svgEl)).to.equal(true);
 
     const parent = el.parentNode!;
     parent.removeChild(el); // disconnectedCallback() disconnects the old observer
@@ -741,7 +741,7 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     // svgEl is already populated by the time connectedCallback() runs here --
     // unlike on first mount).
     expect(observeCalls.length).to.equal(2);
-    expect(observeCalls[1]).to.equal(svgEl);
+    expect((observeCalls[1]) === (svgEl)).to.equal(true);
 
     // Prove it's not just "observe() was called" theater: feed the *new*
     // (post-reconnect) observer's callback a synthetic resize entry, the way
@@ -783,7 +783,7 @@ it('tolerates a realm with no ResizeObserver constructor instead of throwing', a
     )) as LyraLiteChart;
     await el.updateComplete;
     expect((el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver).to.be.undefined;
-    expect(el.shadowRoot!.querySelector('svg')).to.exist;
+    expect((el.shadowRoot!.querySelector('svg')) != null).to.equal(true);
   } finally {
     (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
   }
@@ -1184,7 +1184,7 @@ it('roundedBars renders each bar as a rounded-corner path instead of a plain rec
   const mark = el.shadowRoot!.querySelector('[part="bar"]')!;
   expect(mark.tagName.toLowerCase()).to.equal('path');
   expect(mark.getAttribute('d')).to.include('Q');
-  expect(mark.querySelector('title')).to.exist;
+  expect((mark.querySelector('title')) != null).to.equal(true);
 });
 
 it('renders square-cornered rects by default (roundedBars unset, regression)', async () => {
@@ -1682,7 +1682,7 @@ describe('multi-series screen-reader data table', () => {
     ];
     await el.updateComplete;
     const table = el.shadowRoot!.querySelector('table[part="data-table"]');
-    expect(table).to.exist;
+    expect((table) != null).to.equal(true);
     expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.not.exist;
     const headerCells = table!.querySelectorAll('thead th');
     // The corner cell carries a visible category header (the localized 'chartCategory' string,
@@ -1811,6 +1811,27 @@ it('can shrink to a 320px allocation with long chart content', async () => {
 // --- selectedIndex -------------------------------------------------------------------
 
 describe('selectedIndex', () => {
+  it('renders selected bar and point outline color and width from component hooks', async () => {
+    for (const type of ['bar', 'line'] as const) {
+      const el = await mount(html`
+        <lr-lite-chart
+          type=${type}
+          style="
+            --lr-lite-chart-selected-outline-color: rgb(1, 2, 3);
+            --lr-lite-chart-selected-outline-width: 7px;
+          "
+          .labels=${['a']}
+          .datasets=${[{ label: 'x', data: [1] }]}
+          .selectedIndex=${[0]}
+        ></lr-lite-chart>
+      `);
+      const mark = el.shadowRoot!.querySelector<SVGElement>(`[part="${type === 'bar' ? 'bar' : 'point'}"]`)!;
+      const computed = getComputedStyle(mark);
+      expect(computed.stroke).to.equal('rgb(1, 2, 3)');
+      expect(computed.strokeWidth).to.equal('7px');
+    }
+  });
+
   it('reflects data-selected onto every bar at the given category index, across datasets', async () => {
     const el = (await fixture(html`
       <lr-lite-chart
@@ -1965,7 +1986,7 @@ it('re-announces via onMarkFocus() instead of a redundant .focus() when the addr
   `);
   const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
   marks()[0]!.focus(); // real focus (unlike the synthetic-dispatch tests elsewhere in this file)
-  expect(el.shadowRoot!.activeElement).to.equal(marks()[0]);
+  expect((el.shadowRoot!.activeElement) === (marks()[0])).to.equal(true);
 
   const liveRegion = el.shadowRoot!.querySelector('lr-live-region') as any;
   const original = liveRegion.announce.bind(liveRegion);
@@ -1984,7 +2005,7 @@ it('re-announces via onMarkFocus() instead of a redundant .focus() when the addr
   await aTimeout(0);
 
   expect(announcements).to.equal(1);
-  expect(el.shadowRoot!.activeElement).to.equal(marks()[0]);
+  expect((el.shadowRoot!.activeElement) === (marks()[0])).to.equal(true);
 });
 
 // --- barValueToY() scale="sqrt" domainMax fallback for a non-positive hi ------------------------
@@ -2150,7 +2171,7 @@ it('handles a stacked+sqrt category whose only positive-side value is exactly ze
   await el.updateComplete;
   await aTimeout(0);
   const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
-  expect(bar).to.exist;
+  expect((bar) != null).to.equal(true);
   expect(bar.getAttribute('height')).to.not.contain('NaN');
   expect(Number(bar.getAttribute('height'))).to.equal(0);
 });

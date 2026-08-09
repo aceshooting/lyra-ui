@@ -26,3 +26,6 @@ parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
+Internal search `lr-input`, tag-filter `change`, and checkbox `lr-change` events stop at the
+component's translation boundary. Listen for `lr-filter-change` and `lr-selection-change`; one
+interaction emits one documented host contract without also leaking the composed child event.

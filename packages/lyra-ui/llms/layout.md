@@ -380,8 +380,8 @@ entry, used instead of the default slot
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
-`view-toggle` (a single view toggle button), `collapse-button`, `fullscreen-button`, `body`,
-`backdrop`
+`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
+(a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
@@ -464,7 +464,10 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 **Properties:**
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
   slide in the active page. `index: number = 0` (attribute `index`, reflected) is the established
-  Lyra alias; setting either name updates and reflects both through one clamped state value.
+  Lyra alias; setting either name updates and reflects both through one clamped state value. The
+  pinned Web Awesome markup spelling `currentSlide` is also accepted through HTML's normalized
+  `currentslide` attribute as a permanent compatibility alias. When both spellings are present on
+  initial markup, canonical `current-slide` wins.
 - `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
@@ -502,7 +505,7 @@ defaults to `false`. The autoplay interval also changes from Lyra's former 5000m
 - `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide;
   `goTo(index, behavior)` is the Lyra compatibility alias
 - `addSlide(slide: LyraCarouselItem)` appends a slide and `removeSlide(index)` removes one; page
-  count, reflected `slides`, active range, inertness, loop endcaps, and pagination reconcile
+  count, reflected `slides`, active range, inertness, eligible loop snapshots, and pagination reconcile
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
@@ -516,9 +519,14 @@ slide keeps its layout box but becomes `inert` and `aria-hidden="true"`, so visi
 pages remain fully operable while off-page links are unreachable. Native mandatory scroll snap
 owns touch, trackpad, momentum, and rubber-band behavior. Settling adopts the nearest page once and
 emits one event for the whole gesture. Programmatic movement scrolls the same track; first mount
-and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden endcaps so
-forward/backward wrapping continues in the requested direction, then silently resets to the
-matching original slide. Clone idrefs and form-identifying attributes are not duplicated.
+and reduced-motion alignment are instant. Loop mode adds inert, accessibility-hidden snapshots only
+for side-effect-free plain HTML, so forward/backward wrapping can continue in the requested
+direction before silently resetting to the matching original slide. Those snapshots refresh after
+light-DOM content or attribute changes, and their idrefs/form-identifying attributes are removed. A
+slide containing a custom element, media/resource owner, form state, script/style, or non-HTML
+descendant is never cloned; wrapping falls back to the original slide instead, avoiding duplicate
+lifecycle, network/playback, and state owners even when the physical wrap cannot use an endcap in
+the requested direction.
 
 Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
 announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
@@ -559,6 +567,13 @@ aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot
 active `indicator-dot`. `--lr-carousel-slide-basis` remains a compatibility escape hatch that
 overrides the basis computed from `slidesPerPage`; prefer the property for normal multi-slide
 layouts because it also updates paging and accessibility state.
+Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
+`--lr-carousel-navigation-hover-border-color`, `--lr-carousel-navigation-active-bg`, and
+`--lr-carousel-navigation-active-border-color` hooks. Pagination dots use the corresponding
+`--lr-carousel-pagination-hover-bg`, `--lr-carousel-pagination-hover-border-color`,
+`--lr-carousel-pagination-active-bg`, and `--lr-carousel-pagination-active-border-color` hooks.
+All are inline fallbacks at their state rules, inherit from ancestors, and retain the previous
+brand/active-mix rendering when unset.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
@@ -1682,6 +1697,11 @@ color; component-specific since no shared token exists), plus shared tokens (`--
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
+The mobile toggle's hover/pressed background and foreground are independently inheritable through
+`--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
+`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. The resizer track uses
+`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
+fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
 **Optional peer deps:** none.
 
@@ -1773,6 +1793,9 @@ removing the label from the accessibility tree.
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
 
+**Methods:** `click(): void` activates the internal native link or button; it is a no-op while
+`disabled`.
+
 **Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
 when the item has an explicit `aria-label`).
 
@@ -1789,6 +1812,10 @@ including on `<lr-app-rail>` or a wrapper above it, to tint every item's active 
 `::part()`), so before these hooks the only lever was overriding the library-wide
 `--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
 them. Unset, each falls back to the token its rule used before.
+Ordinary interaction states are independently inheritable through
+`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
+`--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
+brand/active-mix values as fallbacks.
 
 **Optional peer deps:** none.
 
@@ -1930,10 +1957,13 @@ internals would not resolve — idrefs do not cross a shadow boundary.
 
 ## `lr-menu` / `lr-menu-item`
 
-An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
-assigned to the `trigger` slot. It is not a first-party invention: the pair mirrors `sl-menu` /
-`sl-menu-item`, and `<lr-dropdown-item>` below is the `wa-dropdown-item`-compatible name for the
-same item element. Web Awesome's `wa-dropdown` maps to `<lr-dropdown>` in the overlays family; that
+An action menu that becomes an anchored dropdown when a consumer-supplied trigger element
+(typically an icon button) is assigned to the `trigger` slot. With no trigger or `anchor`, the
+exact mapped `<sl-menu>` authoring shape renders inline and always visible, with one roving
+keyboard entry point; adding a trigger switches it to the closed-by-default popup presentation.
+The pair mirrors `sl-menu` / `sl-menu-item`, and `<lr-dropdown-item>` below is the
+`wa-dropdown-item`-compatible name for the same item element. Web Awesome's `wa-dropdown` maps to
+`<lr-dropdown>` in the overlays family; that
 component keeps the distinct trigger/popup host while containing this same menu interaction engine,
 and accepts direct mapped items or a consumer-supplied `lr-menu`. Either way it is a close,
 drop-in-shaped replacement for reaching outside this library for a
@@ -1946,7 +1976,9 @@ the WAI-ARIA "menu button" pattern —
 ### `lr-menu`
 
 **Properties:**
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected) — controls the anchored/trigger-owned popup. A triggerless,
+  unanchored standalone menu remains visible so an exact `sl-menu` → `lr-menu` tag rename keeps its
+  presentation
 - `placement?: Placement` (reflected — resolved through `rtlAwarePlacement()` (`internal/rtl.ts`),
   then forwarded to `place()`; defaults to whatever `place()` itself defaults to. A `left`/`right`
   side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
@@ -2162,9 +2194,14 @@ the same implementation, so `value`, `size` (including the `small`/`medium`/`lar
 and menu roving focus behave identically.
 
 On this mapped tag, `submenuOpen: boolean = false` also reflects to `submenu-open`, and changing the
-attribute drives the same submenu state as assigning the property. `openSubmenu()` defaults to
-focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains available,
-with `'none'` appropriate for pointer or declarative control that must not steal focus.
+attribute drives the same submenu state as assigning the property. Web Awesome's published
+mixed-case `submenuOpen` attribute is normalized by HTML to `submenuopen`; that lowercase token is
+a permanent compatibility alias. It works in initial markup even when the submenu connects after
+the attribute callback. Removing `submenuopen` closes the submenu and clears the canonical
+reflection; removing only `submenu-open` while the upstream alias remains restores the canonical
+reflection because the authored upstream input still requests the open state. `openSubmenu()`
+defaults to focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains
+available, with `'none'` appropriate for pointer or declarative control that must not steal focus.
 
 **Events:** the focusable host emits the platform's native `focus` and `blur` `FocusEvent`s. They
 are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The inherited
@@ -2502,6 +2539,10 @@ or by Enter/Space on `[part='activation-button']`. Only fired while `interactive
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
+**Methods:** `click(): void` activates the native whole-card owner: the linked root when `href` is
+safe, or the activation button while `interactive` is set without a link. Passive cards remain
+inert.
+
 **Slots:** default (the card body), `header` (vertical header content), `media` and `image` (aliases
 for media above the header vertically or at logical start horizontally), `footer` (vertical footer
 content), `header-actions` and `footer-actions` (controls aligned with those vertical sections), and
@@ -2522,6 +2563,11 @@ gap around card sections. Shoelace-compatible `--padding` is its fallback; `--bo
 tokens — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
+Appearance and interaction paint can be rethemed independently through `--lr-card-filled-bg`,
+`--lr-card-filled-outlined-bg`, `--lr-card-accent-border-color`,
+`--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
+`--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
+former brand and active-mix values when unset.
 
 **Optional peer deps:** none.
 
@@ -2606,8 +2652,9 @@ fired before the command's own `onSelect` runs and before the palette closes).
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
 input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
-heading), `command` (a `role="option"` button), `icon` (a command's leading icon glyph; only
-rendered when the command has one), `description`, `shortcut`, `empty`.
+heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
+`icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
+`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`
@@ -2627,7 +2674,11 @@ that token, so rendering is unchanged.
 - `part="command-group"` — A labeled ARIA group containing visible command options.
 - `part="list-spacer"` — Virtual result extent inside the scrolling list.
 - `--lr-command-palette-row-height` — Virtual command-row height. Default: `var(--lr-size-3rem)`.
-- `--lr-command-palette-group-height` — Virtual group-heading height. Default: `var(--lr-size-2rem)`.
+  Its live resolved value drives the painted height, row transforms, keyboard-scroll coordinates,
+  and result extent together.
+- `--lr-command-palette-group-height` — Virtual group-heading height. Default:
+  `var(--lr-size-2rem)`. Its live resolved value drives heading/row transforms and the result extent
+  together.
 
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
@@ -2743,6 +2794,18 @@ when set. The Details compatibility hooks `--lr-details-font-size` and `--lr-det
 continue to affect an accordion item. Panel and icon transitions stop under
 `prefers-reduced-motion: reduce`.
 
+Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
+`var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
+`var(--lr-color-border)`); `--lr-accordion-filled-bg` (default
+`var(--lr-color-surface-raised)`) and `--lr-accordion-filled-border-color` (default `transparent`);
+and `--lr-accordion-filled-outlined-bg` (default `var(--lr-color-surface-raised)`) plus
+`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border)`). Direct item
+surfaces have matching `--lr-accordion-item-outlined-bg`, `--lr-accordion-item-filled-bg`, and
+`--lr-accordion-item-filled-outlined-bg` hooks with the same surface fallbacks. Item trigger paint
+uses `--lr-accordion-item-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-accordion-item-button-active-bg` (default the existing active `color-mix(...)`). These hooks
+are read as inline fallbacks rather than declared on the host, so an ancestor theme can set them.
+
 Details exposes `--lr-details-font-size` (default
 `var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
 `--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
@@ -2754,6 +2817,17 @@ whereas the ladder's own block padding exists to fit text inside a fixed control
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
+`--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon
+gap, and `--lr-details-radius` (default `var(--lr-radius)`) controls the surface corners. Both use
+inline fallbacks, inherit from ancestors, and remain independent of the `size` density ladder.
+Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
+`--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
+`--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are
+respectively the existing surface/border, brand-quiet/transparent, and brand-quiet/border values.
+Summary interaction paint uses `--lr-details-summary-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-details-summary-active-bg` (default the existing active
+`color-mix(...)`). All eight are inheritable inline-fallback hooks, so they isolate one disclosure
+theme without requiring shared-token changes or shadow-part selectors.
 
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>
@@ -2801,6 +2875,9 @@ non-link form; assigning `undefined` clears it and reads back as the canonical `
 `rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
 sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
 
+**`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
+is a no-op for the current-page label.
+
 **Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
 copied to every item without an item-level override. An item's default slot is its label;
 `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and `separator`
@@ -2818,6 +2895,8 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `::part()`), so tinting the current item previously meant overriding the library-wide
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
+`--lr-breadcrumb-item-active-bg` independently themes a non-current link/button's pressed fill;
+unset, it retains the former transparent active mix.
 
 **Additional API surface:**
 
@@ -2843,6 +2922,15 @@ Move, resize, and collision feedback is appended to the shared light-DOM polite 
 sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
 **Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
+
+In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
+interactive-action block-size (`--lr-icon-button-size`). The handle is absolutely positioned and
+cannot contribute intrinsic size itself; the state-aware floor prevents it from overlapping the
+preceding cell or gap while readonly and locked short cells retain content-derived sizing.
+Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
+inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
+stack. This does not seize overflow from child-owned widgets: custom content can still declare
+`overflow: auto` and `white-space: nowrap` to retain a contained internal scrollport.
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
@@ -2880,12 +2968,26 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 - `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
 - `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
   writes are shallow-copied.
-- `label: string = ''` — accessible name for the internal `role="group"`.
+- `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
+  `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
 - `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+
+The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
+height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
+inside the same controls row.
+The host, root, controls, active-filter row, composed chip group, and chips all zero nested flex
+auto minima and cap themselves to the allocated inline size. A single unbroken localized active
+value therefore stays inside a 320px LTR or RTL bar, with the chip's own label ellipsis retaining
+overflow ownership rather than widening the page.
+
+Each edit exposes one filter-bar `lr-input` carrying the complete value object. A built-in or
+custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
+detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
+composed controls continue bubbling normally.
 
 **Methods:** `checkValidity(): boolean` returns whether every required filter is set without
 revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
@@ -2893,7 +2995,19 @@ required-field error; `reset(): void` restores each definition's `defaultValue` 
 unless the bar is disabled.
 
 **Events:** `lr-input`, `lr-reset`, `lr-validity-change`. **CSS parts:** `base`, `controls`,
-`filter-control`, `active-filters`, `chips`, `chip`, `reset-button`, `status`.
+`filter-control`, `filter-control-label`, `filter-control-field`, `filter-control-input`,
+`filter-control-start`, `filter-control-end`, `filter-control-listbox`, `filter-control-option`,
+`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
+`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
+`chip`, `reset-button`, `status`.
+
+The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
+surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
+text/date input wrapper; `filter-control-input` reaches the corresponding display or editable input.
+Listbox/option aliases apply to select and combobox filters, while expand-button/popup apply to date
+filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(...)` without
+depending on the built-in control type selected by a filter definition. Custom renderers retain
+ownership of their own part forwarding.
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their
@@ -2902,6 +3016,11 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
+
+Date and date-range chips localize only round-trip-valid ISO `YYYY-MM-DD` segments. Four-digit
+years `0000`–`0099` retain those literal years rather than inheriting JavaScript's 1900 offset;
+impossible days/months, malformed values, and a range with either invalid endpoint stay verbatim
+instead of silently rolling into another date.
 
 A `'text'` filter is the one control that is **not** a fully controlled `.value=` binding.
 Re-rendering a text field from `value` mid-typing would push a stale value back in and drop the
@@ -3003,8 +3122,13 @@ The default mobile toggle is a native button with localized open/close names and
 `aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus
 trapping, stacking, reconnect suspension, and focus return. A custom `navigation-toggle` element is
-wired to the same state and receives synchronized `aria-expanded`, `aria-controls`, and a localized
-label when it did not supply its own.
+wired to the same state and receives synchronized `aria-expanded` plus a localized label when it
+did not supply its own. Its light-DOM `aria-controls` points to the Page host, a resolvable public
+bridge to the private shadow drawer; supporting browsers therefore report the Page in
+`ariaControlsElements` instead of an empty list for an unresolvable shadow ID. When that toggle is
+replaced, removed, or its Page disconnects, component-owned attributes are restored to their prior
+author values (or removed when they were absent). A consumer write made after assignment wins and
+is not restored over.
 
 The focus-visible skip link has a localized `Skip to content` fallback and focuses the unique
 internal `<main>`. Native URL fragments cannot address an id inside a shadow root, so the Page host

@@ -42,7 +42,7 @@ it('ArrowDown moves the roving tabindex to the next visible item', async () => {
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   expect((leaf as unknown as HTMLElement).tabIndex).to.equal(0);
-  expect(deepActiveElement()).to.equal(leaf);
+  expect((deepActiveElement()) === (leaf)).to.equal(true);
 });
 
 it('ArrowRight expands a collapsed node without moving focus, then a 2nd press steps into its first child', async () => {
@@ -55,12 +55,12 @@ it('ArrowRight expands a collapsed node without moving focus, then a 2nd press s
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(root.expanded).to.be.true;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   const firstChild = root.shadowRoot!.querySelector('lr-tree-item');
-  expect(deepActiveElement()).to.equal(firstChild);
+  expect((deepActiveElement()) === (firstChild)).to.equal(true);
 });
 
 it('Home/End jump to the first/last visible item', async () => {
@@ -71,11 +71,11 @@ it('Home/End jump to the first/last visible item', async () => {
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(deepActiveElement()).to.equal(leaf as unknown as Element);
+  expect((deepActiveElement()) === (leaf as unknown as Element)).to.equal(true);
 
   leaf.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 });
 
 it('Enter fires lr-node-select on the focused item', async () => {
@@ -99,11 +99,11 @@ it('ArrowUp moves the roving tabindex to the previous visible item', async () =>
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(deepActiveElement()).to.equal(leaf as unknown as Element);
+  expect((deepActiveElement()) === (leaf as unknown as Element)).to.equal(true);
 
   leaf.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
   expect((root as unknown as HTMLElement).tabIndex).to.equal(0);
   expect((leaf as unknown as HTMLElement).tabIndex).to.equal(-1);
 });
@@ -121,7 +121,7 @@ it('ArrowLeft collapses an expanded node without moving focus off it', async () 
   await el.updateComplete;
 
   expect(root.expanded).to.be.false;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 });
 
 it('ArrowLeft on a collapsed or leaf node moves focus to its nearest ancestor', async () => {
@@ -136,12 +136,12 @@ it('ArrowLeft on a collapsed or leaf node moves focus to its nearest ancestor', 
   await el.updateComplete;
 
   const childA = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
-  expect(deepActiveElement()).to.equal(childA as unknown as Element);
+  expect((deepActiveElement()) === (childA as unknown as Element)).to.equal(true);
 
   childA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
   await el.updateComplete;
 
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
   expect((root as unknown as HTMLElement).tabIndex).to.equal(0);
 });
 
@@ -155,7 +155,7 @@ it('swaps which arrow key expands/collapses under dir="rtl"', async () => {
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(root.expanded).to.be.true;
-  expect(deepActiveElement()).to.equal(root as unknown as Element);
+  expect((deepActiveElement()) === (root as unknown as Element)).to.equal(true);
 
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;

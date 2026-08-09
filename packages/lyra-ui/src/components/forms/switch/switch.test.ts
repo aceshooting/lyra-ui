@@ -5,6 +5,26 @@ import type { LyraSwitch } from './switch.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
+it('contains long label and hint content at 320px in LTR and RTL', async () => {
+  const label = 'InternationalizedSwitchLabelWithoutAnyNaturalBreakOpportunity';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
+        <lr-switch hint=${label}>${label}</lr-switch>
+      </div>
+    `);
+    expect(wrapper.scrollWidth, `dir=${direction}`).to.be.at.most(wrapper.clientWidth);
+  }
+});
+
+it('themes the track-to-label gap through a component-scoped hook', async () => {
+  const el = (await fixture(html`
+    <lr-switch style="--lr-switch-gap: 13px">Label</lr-switch>
+  `)) as LyraSwitch;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  expect(getComputedStyle(base).columnGap).to.equal('13px');
+});
+
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`<lr-switch required>Enable</lr-switch>`)) as LyraSwitch;
   const aliases: CustomEvent[] = [];
@@ -155,6 +175,40 @@ it('moves the checked track under the pointer too, away from its own brand fill'
   }
 });
 
+it('themes checked track, thumb, hover, and pressed paint through component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-switch
+      checked
+      style="
+        --lr-transition-fast: 0s;
+        --lr-switch-checked-track-fill: rgb(1, 2, 3);
+        --lr-switch-thumb-fill: rgb(4, 5, 6);
+        --lr-switch-track-hover-fill: rgb(7, 8, 9);
+        --lr-switch-track-active-fill: rgb(10, 11, 12);
+      "
+    >Label</lr-switch>
+  `)) as LyraSwitch;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const track = el.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part="thumb"]')!;
+  expect(getComputedStyle(track).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(thumb).backgroundColor).to.equal('rgb(4, 5, 6)');
+  const rect = base.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(track).backgroundColor).to.equal('rgb(7, 8, 9)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(track).backgroundColor).to.equal('rgb(10, 11, 12)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it('forwards host click() to the internal control, toggling checked', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   expect(el.checked).to.be.false;
@@ -185,7 +239,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect((el!.form) === (null)).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -480,7 +534,7 @@ it('forwards focus() and blur() to the internal switch control', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
@@ -497,7 +551,7 @@ it('relays exactly one native focus/blur pair plus one prefixed alias pair', asy
     'base', 'switch', 'wrapper',
   ]);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
@@ -1207,7 +1261,7 @@ describe('ElementInternals fallback (lr-switch)', () => {
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, async (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect(internals.form).to.be.null;
+      expect((internals.form) === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;

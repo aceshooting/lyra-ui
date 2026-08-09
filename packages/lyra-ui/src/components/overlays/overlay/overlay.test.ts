@@ -42,7 +42,7 @@ it('targets the public popover host from a native trigger aria-controls relation
 
   expect(el.id).to.not.equal('');
   expect(controls).to.equal(el.id);
-  expect((el.getRootNode() as Document | ShadowRoot).getElementById(controls!)).to.equal(el);
+  expect(((el.getRootNode() as Document | ShadowRoot).getElementById(controls!)) === (el)).to.equal(true);
 });
 
 it("resolves a popover host onto lr-button's focused internal control", async () => {
@@ -58,7 +58,7 @@ it("resolves a popover host onto lr-button's focused internal control", async ()
   expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
   if ('ariaControlsElements' in focusedControl) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
-    expect(focusedControl.ariaControlsElements?.[0]).to.equal(el);
+    expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
     expect(focusedControl.getAttribute('aria-controls')).to.equal('');
   } else {
     expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
@@ -81,7 +81,7 @@ it("resolves a dropdown host onto lr-icon-button's focused internal control", as
   expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
   if ('ariaControlsElements' in focusedControl) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
-    expect(focusedControl.ariaControlsElements?.[0]).to.equal(el);
+    expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
     expect(focusedControl.getAttribute('aria-controls')).to.equal('');
   } else {
     expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
@@ -127,7 +127,7 @@ it('shows a tooltip after focus and describes the trigger', async () => {
   expect(description.textContent).to.equal('Helpful text');
   if ('ariaDescribedByElements' in trigger) {
     expect(trigger.ariaDescribedByElements?.length).to.equal(1);
-    expect(trigger.ariaDescribedByElements?.[0]).to.equal(description);
+    expect((trigger.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(trigger.getAttribute('aria-describedby')).to.equal(description.id);
   } else {
     expect(trigger.hasAttribute('aria-describedby')).to.be.true;
@@ -153,7 +153,7 @@ it("resolves a tooltip popup onto lr-button's focused internal control", async (
 
   if ('ariaDescribedByElements' in focusedControl) {
     expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
-    expect(focusedControl.ariaDescribedByElements?.[0]).to.equal(description);
+    expect((focusedControl.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
   } else {
     expect(focusedControl.hasAttribute('aria-describedby')).to.be.true;
@@ -178,7 +178,7 @@ it("resolves a tooltip popup onto lr-icon-button's focused internal control", as
 
   if ('ariaDescribedByElements' in focusedControl) {
     expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
-    expect(focusedControl.ariaDescribedByElements?.[0]).to.equal(description);
+    expect((focusedControl.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
   } else {
     expect(focusedControl.hasAttribute('aria-describedby')).to.be.true;
@@ -285,7 +285,7 @@ it('dismisses an open tooltip on Escape while the trigger keeps focus', async ()
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(document.activeElement, 'Escape must not move focus off the trigger').to.equal(trigger);
+  expect((document.activeElement) === (trigger), 'Escape must not move focus off the trigger').to.equal(true);
 });
 
 it('does not re-emit lr-show/lr-hide when only placement or distance changes on an already-open popover', async () => {
@@ -685,7 +685,7 @@ it('returns focus to options.returnFocusTo on Escape after showAt()', async () =
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(document.activeElement, 'Escape must return focus to returnFocusTo').to.equal(returnTarget);
+  expect((document.activeElement) === (returnTarget), 'Escape must return focus to returnFocusTo').to.equal(true);
   returnTarget.remove();
 });
 
@@ -729,7 +729,7 @@ it('keeps slotted-trigger Escape focus return when showAt() is never used', asyn
   trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
   expect((el as HTMLElement).hasAttribute('open')).to.be.false;
-  expect(document.activeElement, 'Escape must return focus to the real slotted trigger, as before').to.equal(trigger);
+  expect((document.activeElement) === (trigger), 'Escape must return focus to the real slotted trigger, as before').to.equal(true);
 });
 
 it('opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger', async () => {
@@ -764,7 +764,7 @@ it('returns focus to options.returnFocusTo on Escape after tooltip showAt()', as
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(document.activeElement, 'Escape must return focus to returnFocusTo').to.equal(returnTarget);
+  expect((document.activeElement) === (returnTarget), 'Escape must return focus to returnFocusTo').to.equal(true);
   returnTarget.remove();
 });
 
@@ -953,7 +953,7 @@ it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is ne
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(document.activeElement, 'Escape must not move focus off the trigger, as before').to.equal(trigger);
+  expect((document.activeElement) === (trigger), 'Escape must not move focus off the trigger, as before').to.equal(true);
 });
 
 describe('overlay semantic and lifecycle regressions', () => {
@@ -1074,7 +1074,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
 
     trigger.blur();
     trigger.focus();
@@ -1296,7 +1296,7 @@ describe('lr-popover focus return', () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
   });
 
   it('returns focus to the trigger after a programmatic open=false assignment', async () => {
@@ -1307,7 +1307,7 @@ describe('lr-popover focus return', () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
   });
 
   it('returns focus to the trigger after Escape on the trigger', async () => {
@@ -1318,7 +1318,7 @@ describe('lr-popover focus return', () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
   });
 
   it('returns focus to the trigger after Escape in the popup', async () => {
@@ -1329,7 +1329,7 @@ describe('lr-popover focus return', () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
   });
 });
 
@@ -1347,7 +1347,7 @@ describe('lr-popover hide()', () => {
       el.hide();
       await el.updateComplete;
       expect(el.open).to.be.false;
-      expect(document.activeElement).to.equal(trigger);
+      expect((document.activeElement) === (trigger)).to.equal(true);
     } finally {
       document.body.removeChild(outside);
     }
@@ -1365,7 +1365,7 @@ describe('lr-popover hide()', () => {
       el.hide({ focusTrigger: false });
       await el.updateComplete;
       expect(el.open).to.be.false;
-      expect(document.activeElement).to.equal(outside);
+      expect((document.activeElement) === (outside)).to.equal(true);
     } finally {
       document.body.removeChild(outside);
     }
@@ -1380,7 +1380,7 @@ describe('lr-popover hide()', () => {
     el.hide({ focusTrigger: true });
     await el.updateComplete;
     expect(el.open).to.be.false;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
   });
 
   it('is a no-op when already closed', async () => {
@@ -1585,7 +1585,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
     await popover.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
-    expect(arrow).to.exist;
+    expect((arrow) != null).to.equal(true);
     const parts = (arrow.getAttribute('part') ?? '').split(/\s+/);
     expect(parts).to.include('arrow');
     expect(parts.some((token) => ['arrow-top', 'arrow-bottom', 'arrow-left', 'arrow-right'].includes(token))).to
@@ -1876,7 +1876,9 @@ describe('mapped popover and tooltip compatibility', () => {
 
     const triggerSlot = el.shadowRoot!.querySelector('[part="trigger"] slot:not([name])') as HTMLSlotElement;
     const contentSlot = el.shadowRoot!.querySelector('[part="body"] slot[name="content"]') as HTMLSlotElement;
-    expect(triggerSlot.assignedElements()).to.deep.equal([trigger]);
+    const assignedTriggers = triggerSlot.assignedElements();
+    expect(assignedTriggers.length).to.equal(1);
+    expect(assignedTriggers[0] === trigger).to.equal(true);
     expect(contentSlot.assignedElements()[0]?.textContent).to.equal('Default-trigger help');
     expect(el.open).to.equal(true);
     expect(trigger.getAttribute('aria-describedby')).to.not.equal(null);

@@ -104,7 +104,7 @@ describe('text/* and application/json dispatch', () => {
       await aTimeout(20);
       await el.updateComplete;
       const pre = el.shadowRoot!.querySelector('[part="body"] pre') as HTMLElement;
-      expect(pre).to.exist;
+      expect((pre) != null).to.equal(true);
       expect(pre.textContent).to.equal('line one\nline two');
     } finally {
       unstub();
@@ -138,7 +138,7 @@ describe('text/* and application/json dispatch', () => {
         <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
       `)) as LyraDocumentPreview;
       const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-      expect(spinner).to.exist;
+      expect((spinner) != null).to.equal(true);
       expect(spinner.getAttribute('role')).to.equal(null);
       expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Loading document…');
       resolveFetch(textResponse('done'));
@@ -167,7 +167,7 @@ describe('text/* and application/json dispatch', () => {
       expect(ev.detail.error).to.exist;
       await el.updateComplete;
       const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-      expect(error).to.exist;
+      expect((error) != null).to.equal(true);
       expect(error.getAttribute('role')).to.equal(null);
       expect(error.textContent).to.equal('Failed to load document.');
       // A fetch failure is this component's own rendering concern, not the
@@ -262,7 +262,7 @@ describe('text/* and application/json dispatch', () => {
       expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
       expect(el.shadowRoot!.querySelector('[part="body"] pre')).to.not.exist;
       const emptyNote = el.shadowRoot!.querySelector('[part="body"] .empty-note');
-      expect(emptyNote).to.exist;
+      expect((emptyNote) != null).to.equal(true);
       expect(emptyNote!.textContent).to.equal('No document to display.');
     } finally {
       unstub();
@@ -413,7 +413,7 @@ describe('image/* dispatch', () => {
       ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
-    expect(img).to.exist;
+    expect((img) != null).to.equal(true);
     expect(img.getAttribute('src')).to.equal('https://example.test/photo.png');
     expect(img.getAttribute('alt')).to.equal('photo.png');
   });
@@ -496,7 +496,7 @@ describe('generic-download fallback', () => {
       ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
-    expect(link).to.exist;
+    expect((link) != null).to.equal(true);
     expect(link.getAttribute('href')).to.equal('https://example.test/report.pdf');
     expect(link.getAttribute('download')).to.equal('report.pdf');
     expect(el.shadowRoot!.querySelector('.fallback-text')!.textContent).to.contain('report.pdf');
@@ -610,7 +610,7 @@ describe('status="converting"', () => {
       ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-    expect(spinner).to.exist;
+    expect((spinner) != null).to.equal(true);
     expect(spinner.getAttribute('role')).to.equal(null);
     expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Converting document…');
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
@@ -704,10 +704,10 @@ describe('status="error"', () => {
       ></lr-document-preview>
     `)) as LyraDocumentPreview;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
-    expect(error).to.exist;
+    expect((error) != null).to.equal(true);
     expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('Conversion failed: unsupported source encoding.');
-    expect(el.shadowRoot!.querySelector('pre')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('pre')) == null).to.equal(true);
   });
 
   it('suppresses a mounted error, then announces a later identical transition in light DOM', async () => {
@@ -952,7 +952,7 @@ describe('zoomable (image format)', () => {
     await el.updateComplete;
     const frame = el.shadowRoot!.querySelector('lr-pan-zoom');
     expect(frame).to.exist;
-    expect(frame!.querySelector('img')).to.exist;
+    expect((frame!.querySelector('img')) != null).to.equal(true);
   });
 
   it('does not expose the internal pan-zoom event', async () => {
@@ -1163,7 +1163,7 @@ describe('back-compat (image format)', () => {
       html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
     )) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('img')).to.exist;
+    expect((el.shadowRoot!.querySelector('img')) != null).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(0);
   });
 

@@ -20,10 +20,11 @@ Fenced code display with optional lazy syntax highlighting and a copy button. Fi
 `code-loader.ts`) for the actual tokenizing, and includes a compact GreyCat/GCL grammar because
 Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
 `language` is unset/unrecognized. That
-fallback is the *default* rendering path, not a degraded one: unhighlighted code is perfectly usable,
+fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
 
 **Properties:**
+
 - `code: string = ''` — the raw source text
 - `language: string = ''` — a shiki-recognized language id or alias (e.g. `"javascript"`, `"python"`,
   `"json"`); when unset, or when shiki doesn't recognize it, the code renders as plain unhighlighted
@@ -49,7 +50,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   with, and renders identically to, any `line-range` entries there.
 - `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
-  Has no effect while `lineNumbers` is unset.
+  Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
+  focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
 - `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
@@ -116,7 +118,7 @@ so it inherits: set it on the element, on an ancestor, or at the theme level.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
-`github-dark` "dual themes" and *zero* language grammars up front; each `language` a
+`github-dark` "dual themes" and _zero_ language grammars up front; each `language` a
 `<lr-code-block>` actually requests is loaded incrementally on first use via
 `loadShikiLanguage()`, and a language id that fails to load once is remembered and never retried. If
 `shiki` isn't installed, `loadShikiHighlighter()` resolves to `null` with a one-time `console.warn`
@@ -140,7 +142,7 @@ raw `code` value or the `lr-copy` event payload.
 A decorative `<lr-skeleton variant="rect">` placeholder (with its own announcements disabled and
 `aria-busy="true"` on the host) stands in only while shiki itself is loading for the very first time
 on the page and `language` is set — it is
-deliberately *not* shown again for a later per-language grammar fetch (that's typically fast, and the
+deliberately _not_ shown again for a later per-language grammar fetch (that's typically fast, and the
 plain-text fallback already reads fine as a placeholder for it). Internally, a shiki `transformer`
 (`partTransformer`) rewrites shiki's generated `<pre>`/`<code>` nodes in a single pass to carry this
 component's own `part="pre"`/`part="code"` hooks and strips shiki's default `tabindex="0"` from
@@ -154,11 +156,12 @@ overrides instead of consulting `prefers-color-scheme` directly. Shiki's generat
 one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
+
 - `copyable` defaults to `true` and reflects — see the property note above about overriding it with a
   property binding, not a boolean-attribute binding.
 - an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
   that arrives before a previous load resolves never applies a stale result — only the load matching
-  the *current* `language` is ever rendered.
+  the _current_ `language` is ever rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
   plain text silently, not a blank code block.
 - the "Copied!" label reverts to "Copy" after a fixed 1500ms, regardless of whether the clipboard

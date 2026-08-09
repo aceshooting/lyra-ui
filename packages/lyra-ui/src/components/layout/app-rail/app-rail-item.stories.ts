@@ -7,6 +7,29 @@ const meta: Meta = { title: 'Navigation/App rail item', component: 'lr-app-rail-
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>` };
 
+export const ProgrammaticActivation: StoryObj = {
+  name: 'Programmatic click()',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Calling `click()` on the custom-element host forwards to its native link or button. Disabled items remain inert.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-app-rail-item id="programmatic-app-rail-item">Open settings</lr-app-rail-item>
+      <button
+        type="button"
+        @click=${() => document.getElementById('programmatic-app-rail-item')?.click()}
+      >
+        Call host click()
+      </button>
+    </div>
+  `,
+};
+
 /** The `active`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`
  *  and `--lr-app-rail-item-current-color`. Neither is declared on `:host`, so setting them on an
  *  ancestor is never shadowed, and they recolor only the current item — not everything else that
@@ -17,15 +40,32 @@ export const ThemedCurrent: StoryObj = {
     docs: {
       description: {
         story:
-          'Set `--lr-app-rail-item-current-bg` and `--lr-app-rail-item-current-color` on the element or any ancestor to recolor the current item without hijacking the library-wide brand tokens.',
+          'Set the scoped current, hover, and active hooks on the element or any ancestor to recolor each state without hijacking the library-wide brand tokens.',
       },
     },
   },
   render: () => html`
     <div
-      style="display: flex; flex-direction: column; gap: 0.25rem; inline-size: 12rem; --lr-app-rail-item-current-bg: ${storyColor(
-        'successQuiet',
-      )}; --lr-app-rail-item-current-color: ${storyColor('success')};"
+      style="
+        display: flex;
+        flex-direction: column;
+        gap: var(--lr-space-xs);
+        inline-size: var(--lr-size-12rem);
+        --lr-app-rail-item-current-bg: ${storyColor('successQuiet')};
+        --lr-app-rail-item-current-color: ${storyColor(
+        'success',
+      )};
+        --lr-app-rail-item-hover-bg: ${storyColor(
+        'warningQuiet',
+      )};
+        --lr-app-rail-item-hover-color: ${storyColor(
+        'warning',
+      )};
+        --lr-app-rail-item-active-bg: ${storyColor(
+        'dangerQuiet',
+      )};
+        --lr-app-rail-item-active-color: ${storyColor('danger')};
+      "
     >
       <lr-app-rail-item href="/home" active>Home</lr-app-rail-item>
       <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>

@@ -28,6 +28,8 @@ focusable `part="cell-highlight-action"` native button, keeping the ARIA table t
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+Host `aria-label` names the table by attribute presence, including an explicitly empty value;
+`name` and the localized row-count caption are fallbacks.
 `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
 values for the shared anchor-target contract).
 
@@ -36,7 +38,9 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. PapaParse
+diagnostics also emit this event when the recoverable partial table remains rendered, so malformed
+or extra cells are never silently presented as a clean parse.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
@@ -45,7 +49,9 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 **CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
-`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`. `data-row`, `cell`,
+`lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `spinner`,
+and `error`. `data-row`, `cell`,
 `cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
 forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
 stylesheet.

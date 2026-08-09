@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
@@ -41,6 +42,11 @@ export interface SequenceStripCategory {
  * emit an activation event. A host `aria-label` names the internal list ahead of the
  * `accessible-label` alias and generated summary. Controlled item refreshes preserve the focused
  * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
+ * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
+ * or reconnecting before that update settles cannot focus the same numeric index in a new model.
+ * Cells flex below their ordinary 2px visual target when the allocation cannot fit every item;
+ * above 320 items the decorative 1px gaps collapse as well. The dense policy keeps the strip
+ * contained at the 320px responsive baseline without dropping any listitem or keyboard stop.
  *
  * @customElement lr-sequence-strip
  * @csspart base - The root strip wrapper (`role="list"`).
@@ -111,6 +117,7 @@ export class LyraSequenceStrip extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('items')) {
+      this.focusRestoreGeneration++;
       this.hoverIndex = null;
       const renderedCells = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ?? [])];
       const focusedIndex = renderedCells.indexOf(this.shadowRoot?.activeElement as HTMLElement);
@@ -129,7 +136,6 @@ export class LyraSequenceStrip extends LyraElement {
       this.keyboardIndex = nextIndex >= 0 ? nextIndex : null;
       this.pendingFocusTarget = nextIndex >= 0 ? nextIndex : 'base';
       this.restoringOwnedFocus = true;
-      this.focusRestoreGeneration++;
     }
   }
 
@@ -172,7 +178,11 @@ export class LyraSequenceStrip extends LyraElement {
     if (counts.size === 0) return this.localize('sequenceStripEmpty');
     const clauses = [...counts.entries()].map(([key, count]) => {
       const label = this.categories.find((c) => c.key === key)?.label ?? key;
-      return this.localize('sequenceStripCategoryCount', undefined, { label, count });
+      return this.localize('sequenceStripCategoryCount', undefined, {
+        label,
+        count: getNumberFormat(this.effectiveLocale).format(count),
+        pluralCount: count,
+      });
     });
     // The marker is a second, independent axis, so it gets its own trailing clause rather than
     // folding into any category's count -- and only once `markerLabel` names it, since the summary
@@ -181,7 +191,11 @@ export class LyraSequenceStrip extends LyraElement {
     // the same '{label}: {count}' string is reused so it translates through one key.
     const markerCount = this.items.filter((item) => item.marker).length;
     if (this.markerLabel && markerCount > 0) {
-      clauses.push(this.localize('sequenceStripCategoryCount', undefined, { label: this.markerLabel, count: markerCount }));
+      clauses.push(this.localize('sequenceStripCategoryCount', undefined, {
+        label: this.markerLabel,
+        count: getNumberFormat(this.effectiveLocale).format(markerCount),
+        pluralCount: markerCount,
+      }));
     }
     return clauses.join(', ');
   }
@@ -219,17 +233,29 @@ export class LyraSequenceStrip extends LyraElement {
     else if (e.key === 'End') next = this.items.length - 1;
     else if (e.key === forwardKey) next = Math.min(this.items.length - 1, index + 1);
     else if (e.key === backwardKey) next = Math.max(0, index - 1);
+    const items = this.items;
+    const targetId = items[next]?.id;
+    if (targetId === undefined) return;
+    const generation = this.focusRestoreGeneration;
     this.keyboardIndex = next;
     void this.updateComplete.then(() => {
-      this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[next]?.focus();
+      if (
+        generation !== this.focusRestoreGeneration ||
+        !this.isConnected ||
+        this.items !== items
+      ) {
+        return;
+      }
+      const target = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[next];
+      if (target?.dataset['itemId'] === targetId) target.focus();
     });
   }
 
-  /** The legend repeats, in visible form, exactly the category names the strip already announces
-   *  through `[part="base"]`'s `role="img"` + `aria-label` summary. Exposing it to assistive
-   *  technology as well would read the same scheme out twice, so the whole subtree is
-   *  `aria-hidden` — it is a decorative duplicate, and it renders outside the `role="img"` element
-   *  so hiding it removes nothing from the announced summary. */
+  /** The legend repeats, in visible form, the category names already exposed by the named
+   *  `role="list"` summary and its individually named `role="listitem"` cells. Exposing the key to
+   *  assistive technology as well would read the same scheme twice, so the whole subtree is
+   *  `aria-hidden` — it is a decorative duplicate rendered outside the list, and hiding it removes
+   *  nothing from the inspectable sequence. */
   private renderLegend(): TemplateResult {
     return html`
       <div part="legend" aria-hidden="true">
@@ -262,7 +288,14 @@ export class LyraSequenceStrip extends LyraElement {
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
     const tabStop = this.keyboardIndex ?? 0;
     return html`
-      <div part="base" role="list" aria-label=${ariaLabel} tabindex="-1" @focusout=${this.onStripFocusOut}>
+      <div
+        part="base"
+        role="list"
+        aria-label=${ariaLabel}
+        tabindex="-1"
+        ?data-dense=${this.items.length > 320}
+        @focusout=${this.onStripFocusOut}
+      >
         ${this.items.map(
           (item, index) => html`
             <span

@@ -87,7 +87,7 @@ it('renders the description as body text when provided, omits it when not', asyn
 
   const withoutDesc = confirm({ title: 'Proceed?' });
   const dialogWithoutDesc = getMountedDialog();
-  expect(dialogWithoutDesc.querySelector('p')).to.not.exist;
+  expect((dialogWithoutDesc.querySelector('p')) == null).to.equal(true);
   footerButtons(dialogWithoutDesc)[0].click();
   await withoutDesc;
 });

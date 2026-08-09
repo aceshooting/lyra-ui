@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './test-results.js';
-import type { TestSuiteResult } from './test-results.class.js';
+import { testResultDetailSlotName, type TestSuiteResult } from './test-results.class.js';
 
 const meta: Meta = {
   title: 'Test Results',
@@ -65,19 +65,23 @@ export const Narrow320: Story = {
 
 export const SuiteScopedDetails: Story = {
   name: 'Duplicate test ids with suite-scoped details',
-  render: () => html`
-    <lr-test-results
-      style="max-width:32rem"
-      .autoExpandFailures=${false}
-      .suites=${[
-        { id: 'unit', name: 'Unit', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
-        { id: 'integration', name: 'Integration', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
-      ]}
-    >
-      <p slot="detail-unit:same">Unit detail</p>
-      <p slot="detail-integration:same">Integration detail</p>
-    </lr-test-results>
-  `,
+  render: () => {
+    const unitSlot = testResultDetailSlotName('unit', 'same');
+    const integrationSlot = testResultDetailSlotName('integration', 'same');
+    return html`
+      <lr-test-results
+        style="max-width:32rem"
+        .autoExpandFailures=${false}
+        .suites=${[
+          { id: 'unit', name: 'Unit', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
+          { id: 'integration', name: 'Integration', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
+        ]}
+      >
+        <p slot=${unitSlot}>Unit detail</p>
+        <p slot=${integrationSlot}>Integration detail</p>
+      </lr-test-results>
+    `;
+  },
 };
 
 export const RetintedActiveFilter: Story = {

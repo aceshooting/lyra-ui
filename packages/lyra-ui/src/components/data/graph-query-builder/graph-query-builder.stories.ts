@@ -82,6 +82,58 @@ export const Populated: Story = {
   `,
 };
 
+/** Edit the populated query, then use the native reset button to restore its normalized initial
+ * model rather than an unrelated empty query. */
+export const FormResetDefault: Story = {
+  render: () => html`
+    <form style="display: grid; gap: var(--lr-space-m); max-width: 40rem">
+      <lr-graph-query-builder
+        name="query"
+        .relationshipTypeOptions=${relationshipTypeOptions}
+        .nodeTypeOptions=${nodeTypeOptions}
+        .value=${populatedValue}
+      ></lr-graph-query-builder>
+      <button type="reset">Reset query</button>
+    </form>
+  `,
+};
+
+export const RetintedActionStates: Story = {
+  name: 'Retinted action states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Rest, hover, and pressed colors for Run, Save, Load, and delete are independently inheritable. Hover and press the actions to inspect the scoped state hooks.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        max-width: 40rem;
+        --lr-graph-query-builder-run-bg: var(--lr-color-success);
+        --lr-graph-query-builder-run-border-color: var(--lr-color-success);
+        --lr-graph-query-builder-run-hover-bg: var(--lr-color-success-quiet);
+        --lr-graph-query-builder-run-active-bg: var(--lr-color-warning);
+        --lr-graph-query-builder-save-hover-bg: var(--lr-color-warning-quiet);
+        --lr-graph-query-builder-save-active-bg: var(--lr-color-warning);
+        --lr-graph-query-builder-saved-load-active-bg: var(--lr-color-brand-quiet);
+        --lr-graph-query-builder-saved-delete-hover-color: var(--lr-color-warning);
+        --lr-graph-query-builder-saved-delete-active-color: var(--lr-color-on-danger);
+        --lr-graph-query-builder-saved-delete-active-bg: var(--lr-color-danger);
+      "
+    >
+      <lr-graph-query-builder
+        .relationshipTypeOptions=${relationshipTypeOptions}
+        .nodeTypeOptions=${nodeTypeOptions}
+        .savedQueries=${savedQueries}
+        .value=${populatedValue}
+      ></lr-graph-query-builder>
+    </div>
+  `,
+};
+
 /** Remove a focused filter chip to follow its adjacent chip/picker, or activate a saved-query
  * delete action. This fixture immediately accepts the controlled delete request, so focus follows
  * the nearest saved row (and eventually the save-name input). */
@@ -95,10 +147,7 @@ export const ControlledRemovalFocus: Story = {
         ...populatedValue,
         relationshipTypes: ['works_for', 'founded_by'],
       }}
-      .savedQueries=${[
-        ...savedQueries,
-        { ...savedQueries[0]!, id: 'saved-2', name: 'Second saved traversal' },
-      ]}
+      .savedQueries=${[...savedQueries, { ...savedQueries[0]!, id: 'saved-2', name: 'Second saved traversal' }]}
       @lr-query-delete=${(event: CustomEvent<{ id: string }>) => {
         const builder = event.currentTarget as LyraGraphQueryBuilder;
         builder.savedQueries = builder.savedQueries.filter((item) => item.id !== event.detail.id);

@@ -316,7 +316,7 @@ it('renders the play/pause button content as an SVG icon, not a literal glyph, a
   const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
   const button = () => el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
 
-  expect(button().querySelector('svg')).to.exist;
+  expect((button().querySelector('svg')) != null).to.equal(true);
   expect(button().textContent).to.not.include('▶');
   expect(button().textContent).to.not.include('❚❚');
   const playMarkup = button().innerHTML;
@@ -324,7 +324,7 @@ it('renders the play/pause button content as an SVG icon, not a literal glyph, a
   el.playing = true;
   await el.updateComplete;
 
-  expect(button().querySelector('svg')).to.exist;
+  expect((button().querySelector('svg')) != null).to.equal(true);
   expect(button().innerHTML).to.not.equal(playMarkup);
 });
 
@@ -357,7 +357,7 @@ it('forwards public focus and blur to the play button', async () => {
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('play-button');
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
 it('forwards host click() to the play button', async () => {

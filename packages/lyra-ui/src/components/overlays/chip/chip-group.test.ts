@@ -213,7 +213,7 @@ describe('overflow behavior', () => {
     expect(chips.map((c) => c.hidden)).to.deep.equal([false, false, false, true, true]);
 
     const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
-    expect(indicator).to.exist;
+    expect((indicator) != null).to.equal(true);
     expect(indicator.textContent!.trim()).to.equal('+2');
     expect(indicator.getAttribute('aria-expanded')).to.equal('false');
   });
@@ -312,7 +312,7 @@ describe('dynamic children', () => {
     await el.updateComplete;
 
     const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
-    expect(indicator).to.exist;
+    expect((indicator) != null).to.equal(true);
     expect(indicator.textContent!.trim()).to.equal('+1');
     expect((extra as HTMLElement).hidden).to.be.true;
   });
@@ -359,7 +359,7 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     // childCount reassignment causing exactly one extra render pass here is
     // the accepted structural trade-off noted in `firstUpdated()`'s comment.
     const indicator = group.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
-    expect(indicator).to.exist;
+    expect((indicator) != null).to.equal(true);
     expect(indicator.textContent!.trim()).to.equal('+1');
     const forwardedChips = Array.from(host.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(forwardedChips.map((chip) => chip.hidden)).to.deep.equal([false, false, true]);

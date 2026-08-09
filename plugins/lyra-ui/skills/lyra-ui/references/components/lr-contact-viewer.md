@@ -26,7 +26,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
+`activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and

@@ -6,7 +6,8 @@
 - **Class** `LyraChatComposer`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated slot** `leading` since `8.2.3`; use slot `slot="start"`; removal not before `10.0.0` — The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window.
+- **Deprecated slot** `trailing` since `8.2.3`; use slot `slot="end"`; removal not before `10.0.0` — The end slot follows the shared adornment vocabulary; trailing remains available as a compatibility alias during the deprecation window.
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -33,6 +34,7 @@ The inner textarea mirrors `required` through native `required`/`aria-required`.
 reveals the invalid state, and `form.reset()` clears the touched presentation.
 
 **Properties (own):**
+
 - `placeholder: string = ''`
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
@@ -43,7 +45,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   `'plain'` drops `[part="base"]`'s border, background, padding and corner radius so a composer
   docked inside a chat panel, dialog footer or toolbar that already draws its own border doesn't
   double it. Named `frame`, not `appearance`: `appearance` is the library's vocabulary for how a
-  *control fills itself*, and one property name cannot mean both. The focus affordance is swapped,
+  _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
@@ -65,7 +67,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   the native textarea
 - `input: HTMLTextAreaElement | null` — readonly reference to the rendered native textarea
 - `selectionStart: number | null`, `selectionEnd: number | null`, and `selectionDirection:
-  'forward' | 'backward' | 'none' | null` — native selection getters/setters
+'forward' | 'backward' | 'none' | null` — native selection getters/setters
 
 **Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
 `setRangeText()` forward to the textarea; `click()` focuses it when the composer is not effectively
@@ -74,6 +76,7 @@ disabled. `setRangeText()` synchronizes reactive/form value and auto-sizing.
 validity and recomputes the current intrinsic constraints.
 
 **Events:**
+
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
@@ -88,9 +91,11 @@ validity and recomputes the current intrinsic constraints.
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
-**Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
-attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button
-entirely when it has assigned content)
+**Slots:** `start` (content before the textarea, e.g. an attach-file trigger button), `end`
+(overrides the built-in send/stop button entirely when it has assigned content), `chips` (an
+attachment tray rendered above the input row), plus the deprecated compatibility aliases `leading`
+for `start` and `trailing` for `end`. Canonical and compatibility spellings may coexist; either end
+spelling suppresses the built-in action until both end slots are empty.
 
 **CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
 
@@ -115,22 +120,22 @@ user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--l
   max-rows="8"
 ></lr-chat-composer>
 <script type="module">
-  const composer = document.getElementById('composer');
-  composer.addEventListener('lr-submit', (e) => {
+  const composer = document.getElementById("composer");
+  composer.addEventListener("lr-submit", (e) => {
     sendMessage(e.detail.value);
-    composer.value = ''; // the composer never clears itself
-    composer.status = 'sending';
+    composer.value = ""; // the composer never clears itself
+    composer.status = "sending";
   });
-  composer.addEventListener('lr-stop', () => stopGeneration());
+  composer.addEventListener("lr-stop", () => stopGeneration());
 </script>
 ```
 
-Auto-resize (`resizeTextarea()`) reads the textarea's own *computed* line-height/padding/border at
+Auto-resize (`resizeTextarea()`) reads the textarea's own _computed_ line-height/padding/border at
 call time rather than assuming a fixed px-per-row constant, so it stays correct under a consumer's
 own font-size/line-height overrides; it grows between `min-rows` and `max-rows`, then switches to
 internal scrolling (`overflow-y: auto`) past `max-rows`. A `ResizeObserver` on the textarea itself
 also re-runs this fit (one animation frame later, to avoid a `ResizeObserver`-loop console error)
-whenever the textarea's own *width* changes — a sidebar collapsing, a responsive breakpoint, a
+whenever the textarea's own _width_ changes — a sidebar collapsing, a responsive breakpoint, a
 window resize — even though `value`/`min-rows`/`max-rows` never did, since the same text now wraps
 across a different number of lines. Enter-to-send only fires while
 `submit-on-enter` is `true` (the default): plain Enter submits and prevents the default newline;
@@ -143,6 +148,7 @@ while a previous one is in flight. While idle, `submitDisabled` suppresses Enter
 and disables only the built-in Send button; editing and busy-state Stop behavior remain available.
 
 **Known gotchas:**
+
 - `lr-submit` never clears `value` — the consumer must clear it once a submission is actually
   accepted, so a failed send can leave the text in place for retry.
 - While `status !== 'idle'`, only the built-in button's behavior changes (it emits `lr-stop`
@@ -151,9 +157,9 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - Auto-resize requires a concrete, unitless `line-height` on the textarea (the component sets
   `line-height: 1.5` in its own styles) — the UA default of `normal` has no single resolved px
   figure to measure rows against, so overriding `line-height` to a keyword breaks row sizing.
-- The `trailing` slot fully replaces the built-in action button rather than rendering alongside it —
+- The `end` slot (or its deprecated `trailing` alias) fully replaces the built-in action button rather than rendering alongside it —
   once it has assigned content, the library's send/stop icon, its `aria-label`, and its
-  `status`-driven busy styling all disappear, so a custom trailing control needs its own send/stop
+  `status`-driven busy styling all disappear, so a custom end control needs its own send/stop
   handling.
 - `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of

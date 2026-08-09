@@ -24,16 +24,25 @@ panel is currently open, in which case that click re-opens the panel instead.
 **Properties:** `value: 'up' | 'down' | null = null` (reflected), `reasons: MessageFeedbackReason[] =
 []` (attribute: false, each `{ id, label }`), `commentable: boolean = false` (reflected) adds a
 free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detail-for`) — which
-rating opens the detail panel, and `disabled: boolean = false` (reflected) for a read-only display.
+rating opens the detail panel, `disabled: boolean = false` (reflected) for a read-only display, and
+`pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
+submission while host persistence is unresolved; all feedback controls are disabled and the panel
+reports busy until that state is resolved.
 
 **Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
+`finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
+panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
+the pending state after failure without clearing the draft or announcing success, leaving the panel
+open for retry. Both are no-ops when no submit is pending.
 
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
 string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating). The optional comment `<textarea>`'s native `focus` and `blur` are re-dispatched
-as bubbling, composed host events.
+for a set rating). It is cancelable: `preventDefault()` holds the panel open in `pending` and delays
+success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
+When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
+`<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
@@ -48,8 +57,8 @@ trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-acti
 `--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
 `var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
 border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
-fallbacks at the point of use and never on `:host`, so each can be set on the element *or on any
-ancestor* — a whole transcript's feedback controls retint from one declaration. That shape is
+fallbacks at the point of use and never on `:host`, so each can be set on the element _or on any
+ancestor_ — a whole transcript's feedback controls retint from one declaration. That shape is
 required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow Parts forbids an
 attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element

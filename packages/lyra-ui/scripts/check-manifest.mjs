@@ -13,7 +13,10 @@ const manifestPath = path.join(packageDir, 'custom-elements.json');
 // normalizes it to `currenttime` at runtime, and the component also retains `current-time` as a
 // compatibility alias. Keep the manifest exception tag-scoped so no other noncanonical attribute
 // can enter the package unnoticed.
-const REVIEWED_NONCANONICAL_ATTRIBUTES = new Set(['lr-video\0currentTime']);
+const REVIEWED_NONCANONICAL_ATTRIBUTES = new Set([
+  'lr-carousel\0currentSlide',
+  'lr-video\0currentTime',
+]);
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -77,6 +80,25 @@ function namesFromTemplates(source) {
     for (const mapping of match[1].split(',')) {
       const [inner, outer] = mapping.split(':').map((part) => part.trim());
       if (outer || inner) names.add(outer || inner);
+    }
+  }
+  // A reusable export-parts vocabulary is normally assembled once as a string-valued constant and
+  // bound with Lit (`exportparts=${CONTROL_EXPORT_PARTS}`). Resolve the finite quoted mappings in
+  // that constant expression just as the dynamic `part=${pickerPart}` pass below resolves its
+  // source identifier. This keeps semantic aliases shared across render branches without making
+  // the manifest check mistake the indirection for an undocumented/unrendered part.
+  for (const match of source.matchAll(/\bexportparts\s*=\s*\$\{\s*(\w+)\s*\}/g)) {
+    const identifier = match[1];
+    const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const declaration = source.match(
+      new RegExp(`\\bconst\\s+${escapedIdentifier}\\s*=([\\s\\S]*?);`),
+    );
+    if (!declaration) continue;
+    for (const literal of stringLiterals(declaration[1])) {
+      for (const mapping of literal.split(',')) {
+        const [inner, outer] = mapping.split(':').map((part) => part.trim());
+        if (outer || inner) names.add(outer || inner);
+      }
     }
   }
   // A single dynamic part name resolved by a ternary chain into a local `part` variable (e.g.

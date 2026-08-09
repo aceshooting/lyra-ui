@@ -28,22 +28,27 @@ trigger showing the selected alpha-2 code plus a design-system chevron — long 
 clip the closed control and the adjacent calling code isn't repeated. With `flags`, the trigger
 also shows the selected country's `<lr-flag>`.
 
+Public `--lr-phone-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper
+can override size and pill fallbacks; a value set directly on the element still wins.
+The native country-selector target retains the shared icon-button hit floor, and the wrapper uses
+the same rendered action-height ladder as input, number-input, and segmented time-input.
+
 **Types:**
 
 ```ts
 type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 
 interface PhoneCountry {
-  code: string;         // ISO 3166-1 alpha-2
-  callingCode: string;  // no leading "+"
-  label?: string;       // overrides Intl.DisplayNames
+  code: string; // ISO 3166-1 alpha-2
+  callingCode: string; // no leading "+"
+  label?: string; // overrides Intl.DisplayNames
 }
 
 interface PhoneNumberParseResult {
   status: PhoneNumberStatus;
-  e164?: string;       // required for status: 'valid'
-  formatted?: string;  // best-effort editable display text
-  country?: string;    // detected ISO alpha-2 code
+  e164?: string; // required for status: 'valid'
+  formatted?: string; // best-effort editable display text
+  country?: string; // detected ISO alpha-2 code
 }
 
 interface PhoneNumberAdapter {
@@ -60,7 +65,7 @@ interface PhoneNumberAdapter {
   form-control properties supplied by `FormAssociated`; inherited disabled fieldsets are included
   through `effectiveDisabled`.
 - `defaultValue: string = ''` (attribute `value`) is the reset target, and `customError: string |
-  null` (attribute `custom-error`) carries a consumer-supplied validation message.
+null` (attribute `custom-error`) carries a consumer-supplied validation message.
 - `adapter?: PhoneNumberAdapter` (attribute: false) — synchronous numbering-plan parser/formatter.
   No metadata implementation is imported by the component itself.
 - `countries: readonly PhoneCountry[] = []` (attribute: false) — explicit selector rows; takes
@@ -71,7 +76,7 @@ interface PhoneNumberAdapter {
   `<lr-flag variant="compact" aria-label="">` (decorative; the native select already announces the
   country name). The `<lr-flag>` element definition is registered lazily the first time any
   `lr-phone-input` enables this, so nothing flag-related is bundled while it stays off. Flag
-  *artwork* still follows the standalone `<lr-flag>` contract: install the optional
+  _artwork_ still follows the standalone `<lr-flag>` contract: install the optional
   `@aceshooting/lyra-flags` peer and import
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once; without that registration the
   trigger simply omits the image. The open popup list stays text-only — a native `<option>` cannot
@@ -164,8 +169,9 @@ description path instead of being duplicated by a second live-region announcemen
 `--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
 With no label text the part is hidden and no glyph is painted.
 
-**Themeable custom properties:** `--lr-phone-input-padding-block`, `--lr-phone-input-font-size`,
-and `--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`
+**Themeable custom properties:** `--lr-phone-input-padding-block` (scaled through the shared
+form-control padding ladder), `--lr-phone-input-font-size`, and
+`--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`
 to pin an exact input-wrapper height (both floors and caps it — use it for pixel-matching an
 `<lr-input>` or `<lr-select>` in the same toolbar row; undeclared by default, leaving the min height
 as a floor only). The phone-number input and calling code are deliberately `dir="ltr"`/isolated
@@ -179,8 +185,7 @@ numbering metadata enters a bundle that does not opt in.
 
 ```ts
 import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';
-import { loadLibphonenumberAdapter } from
-  '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js';
+import { loadLibphonenumberAdapter } from '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js';
 
 const phone = document.querySelector('lr-phone-input');
 phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));

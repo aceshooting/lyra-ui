@@ -32,6 +32,7 @@ import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.
 import { tag } from '../../../internal/prefix.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import {
   isOptionSelectedDirty,
   wasOptionInitiallySelected,
@@ -150,9 +151,14 @@ export interface LyraComboboxEventMap {
  * the platform can never do it here).
  * Standard size tiers share their outer control height with sibling Lyra controls; the decorative
  * expand icon scales inside that allocation without creating an independent action target.
+ * If local options or async rows change while a row is keyboard-active, the active descendant
+ * clamps to the nearest enabled survivor and clears when none remain.
  * An async `source` failure renders as a disabled listbox row, not a shadow-root live region; each
  * current post-mount rejection appends the localized `comboboxLoadError` message to the shared
  * light-DOM assertive announcement sink. Raw caught error text is never exposed to users.
+ * The floating listbox is a nonmodal shared-overlay-manager entry. Visual stack order, Escape,
+ * outside-pointer dismissal, and focus handoff are therefore owned by only the newest Lyra
+ * overlay, including when another popup such as `lr-color-picker` remains open underneath it.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -180,7 +186,8 @@ export interface LyraComboboxEventMap {
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
  *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
- *   already-removed element closing on disconnect cannot honour a veto.
+ *   already-removed element closing on disconnect cannot honour a veto. A connected veto also
+ *   preserves the live filter query, active option, and async rows exactly.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-clear - The value was cleared.
  * @event {CustomEvent<{ inputValue: string }>} lr-create - Cancelable request to create a
@@ -206,7 +213,8 @@ export interface LyraComboboxEventMap {
  * @csspart combobox-input - The text input.
  * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
  * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
- * @csspart listbox - The options popover.
+ * @csspart listbox - The managed nonmodal options popover; its stack depth comes from
+ *   `--lr-overlay-stack-index` with `--lr-layer-dropdown` as the standalone fallback.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
  * @csspart option-icon - An async option row's optional decorative leading visual.
@@ -474,10 +482,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private listId = nextId('combobox-list');
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
+  private overlayHandle?: OverlayHandle;
+  private restoreFocusOnClose = true;
+  private restoringOverlayFocus = false;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private _isFirstUpdate = true;
   private openVetoed = false;
+  /** Set only by `hide()`. Cleanup is applied in `willUpdate()` after `lr-hide` accepts the close,
+   * so a veto remains an atomic no-op for the query, active row, and async result set. */
+  private closeCleanupPending = false;
   private transitionToken = 0;
   private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   private _selected: string[] = [];
@@ -663,6 +677,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   adoptedCallback(): void {
     this.cleanup?.();
     this.cleanup = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.unbindDocumentPointer();
     this.clearSourceTimer();
     this.sourceToken += 1;
@@ -696,6 +712,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
     this.announceOpenTransition(changed);
+    if (changed.has('open') && this.openVetoed) {
+      this.closeCleanupPending = false;
+    } else if (changed.has('open') && !this.open) {
+      this.finalizeCloseState();
+    }
     if (changed.has('source')) {
       this.clearSourceTimer();
       this.sourceAbort?.abort();
@@ -1030,6 +1051,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // Cancel any in-flight source request so its fetch is aborted on disconnect.
     this.sourceAbort?.abort();
     this.sourceAbort = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.unbindDocumentPointer();
     this.resolveTransitionWaiters('lr-after-show');
     this.resolveTransitionWaiters('lr-after-hide');
@@ -1047,6 +1070,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.options = slot
       .assignedElements({ flatten: true })
       .filter((el): el is LyraOption => el instanceof LyraOption);
+    this.normalizeActiveIndex();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
       // Seed the initial selection — and the reset default — from
@@ -1130,6 +1154,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.refreshOptionDefaults();
       this.reflectSelected();
       this.options = [...this.options];
+      this.normalizeActiveIndex();
     });
   };
 
@@ -1226,6 +1251,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return { rows: capped, overflow: all.length - capped.length + (create ? 1 : 0) };
   }
 
+  /** Keeps the roving index inside the current source-agnostic enabled-row set without turning an
+   *  untouched `-1` cursor into an implicit selection. Local slot refreshes, option property
+   *  changes, and async responses all pass through this one clamp. */
+  private normalizeActiveIndex(): void {
+    if (this.activeIndex < 0) return;
+    const navigableCount = this.renderedRows.rows.filter((row) => !row.disabled).length;
+    const next = navigableCount > 0 ? Math.min(this.activeIndex, navigableCount - 1) : -1;
+    if (next !== this.activeIndex) this.activeIndex = next;
+  }
+
   private get filtered(): LyraOption[] {
     // `toLocaleLowerCase()` (not the invariant-Unicode `toLowerCase()`) so a
     // `tr`/`az` locale's dotted/dotless I case-folds the way that locale
@@ -1288,7 +1323,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (!this.open) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-show');
     const settled = this.waitForTransition('lr-after-hide');
+    this.closeCleanupPending = true;
     this.open = false;
+    return settled;
+  }
+
+  private finalizeCloseState(): void {
+    if (!this.closeCleanupPending) return;
+    this.closeCleanupPending = false;
     this.activeIndex = -1;
     // Single-select mode only shows `query` while `open` (see `displayValue`
     // above) -- but dismissing without picking a row (blur, Escape, or an
@@ -1306,11 +1348,55 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         this.sourceFailed = false;
       }
     }
-    return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.hide();
+    if (e.composedPath().includes(this)) return;
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.dismissBackdrop();
+      return;
+    }
+    this.restoreFocusOnClose = false;
+    void this.hide();
   };
+
+  private activateListboxOverlay(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.restoreFocusOnClose = true;
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null,
+      onEscape: () => void this.hide(),
+      onBackdrop: () => {
+        this.restoreFocusOnClose = false;
+        void this.hide();
+      },
+      restoreFocusTo: this.inputEl ?? null,
+      modal: false,
+      trapFocus: false,
+    });
+    this.bindDocumentPointer();
+    const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (anchor && listbox) {
+      this.cleanup = place(anchor, listbox, { placement: `${this.placement}-start` });
+    }
+  }
+
+  private teardownListboxOverlay(restoreFocus = this.restoreFocusOnClose): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.restoringOverlayFocus = restoreFocus;
+    try {
+      this.overlayHandle?.deactivate({ restoreFocus });
+    } finally {
+      this.restoringOverlayFocus = false;
+    }
+    this.overlayHandle = undefined;
+    this.unbindDocumentPointer();
+    this.restoreFocusOnClose = true;
+  }
 
   private bindDocumentPointer(): void {
     if (!this.isConnected) return;
@@ -1330,12 +1416,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     };
     this.pointerListenerDocument = ownerDocument;
     this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
+    ownerDocument.addEventListener('pointerdown', listener, true);
   }
 
   private unbindDocumentPointer(): void {
     if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener, true);
     }
     this.pointerListenerDocument = undefined;
     this.pointerListener = undefined;
@@ -1343,13 +1429,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private reconnectOpenPopup(): void {
     if (!this.isConnected || !this.open) return;
-    this.cleanup?.();
-    this.bindDocumentPointer();
-    const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
-    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchor && listbox) {
-      this.cleanup = place(anchor, listbox, { placement: `${this.placement}-start` });
-    }
+    this.activateListboxOverlay();
     if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
   }
 
@@ -1360,35 +1440,30 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // while nothing about the state actually moved: tearing down and rebuilding the popup
     // machinery here would undo the veto it was meant to honour.
     if (changed.has('open') && !this.openVetoed) {
-      this.cleanup?.();
-      this.cleanup = undefined;
       // All `open`-driven side effects (positioning and the click-outside listener) live here
       // rather than in show()/hide() so they run however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
       // itself runs one step earlier, in willUpdate().
       if (this.open && this.isConnected) {
-        this.bindDocumentPointer();
+        this.activateListboxOverlay();
         // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-combobox open>`) --
         // only for an actual closed-to-open transition.
         if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-show');
         }
-        const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
-        const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        if (anchor && listbox) {
-          this.cleanup = place(anchor, listbox, { placement: `${this.placement}-start` });
-        }
         if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
       } else if (!this.open) {
-        this.unbindDocumentPointer();
+        this.teardownListboxOverlay();
         if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-hide');
         }
       } else {
-        this.unbindDocumentPointer();
+        this.teardownListboxOverlay(false);
       }
+    } else if (changed.has('open') && this.openVetoed) {
+      this.restoreFocusOnClose = true;
     }
     if (changed.has('name')) this.syncFormValue();
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
@@ -1593,10 +1668,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           }
           this.asyncRows = rows;
           this.sourceFailed = false;
-          const navigableCount = rows.filter((row) => !row.disabled).length;
-          if (this.activeIndex >= navigableCount) {
-            this.activeIndex = navigableCount ? navigableCount - 1 : -1;
-          }
+          this.normalizeActiveIndex();
           const selected = new Set(this._selected);
           for (const row of rows) {
             if (selected.has(row.value)) this._selectedRowCache.set(row.value, row);
@@ -1653,12 +1725,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // dismiss the listbox short of Escape -- tabbing focus away from the
     // input should close it too, the same as it would for a native
     // `<select>`'s popup.
+    this.restoreFocusOnClose = false;
     this.hide();
     this.emit('blur');
   };
 
   private onInputFocus = (): void => {
-    this.show();
+    if (!this.restoringOverlayFocus) this.show();
     this.emit('focus');
   };
 
@@ -1707,7 +1780,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         break;
       }
       case 'Escape':
-        if (this.open) {
+        if (this.open && (!this.overlayHandle?.isActive() || this.overlayHandle.isTopmost())) {
           e.preventDefault();
           this.hide();
         }

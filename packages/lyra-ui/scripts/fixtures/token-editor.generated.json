@@ -2196,27 +2196,27 @@
     },
     {
       "name": "--lr-theme-border-radius-pill",
-      "description": "Application input for --lr-radius-pill; falls back to the shared token default.",
+      "description": "Application theme input for --lr-radius-pill.",
       "references": []
     },
     {
       "name": "--lr-theme-border-radius-xs",
-      "description": "Application input for --lr-radius-xs; falls back to the shared token default.",
+      "description": "Application theme input for --lr-radius-xs.",
       "references": []
     },
     {
       "name": "--lr-theme-border-width-medium",
-      "description": "Application input for --lr-border-width-medium; falls back to the shared token default.",
+      "description": "Application theme input for --lr-border-width-medium.",
       "references": []
     },
     {
       "name": "--lr-theme-border-width-thick",
-      "description": "Application input for --lr-border-width-thick; falls back to the shared token default.",
+      "description": "Application theme input for --lr-border-width-thick.",
       "references": []
     },
     {
       "name": "--lr-theme-border-width-thin",
-      "description": "Application input for --lr-border-width-thin; falls back to the shared token default.",
+      "description": "Application theme input for --lr-border-width-thin.",
       "references": []
     },
     {
@@ -2361,17 +2361,17 @@
     },
     {
       "name": "--lr-theme-color-mix-active",
-      "description": "Application input for --lr-color-mix-active; falls back to the shared token default.",
+      "description": "Application theme input for --lr-color-mix-active.",
       "references": []
     },
     {
       "name": "--lr-theme-color-mix-hover",
-      "description": "Application input for --lr-color-mix-hover; falls back to the shared token default.",
+      "description": "Application theme input for --lr-color-mix-hover.",
       "references": []
     },
     {
       "name": "--lr-theme-color-mix-partner",
-      "description": "Application input for --lr-color-mix-partner; falls back to the shared token default.",
+      "description": "Application theme input for --lr-color-mix-partner.",
       "references": []
     },
     {
@@ -2436,7 +2436,7 @@
     },
     {
       "name": "--lr-theme-color-shadow",
-      "description": "Application input for --lr-color-shadow; falls back to the shared token default.",
+      "description": "Application theme input for --lr-color-shadow.",
       "references": []
     },
     {
@@ -2561,37 +2561,37 @@
     },
     {
       "name": "--lr-theme-duration-fast",
-      "description": "Application input for --lr-duration-fast; falls back to the shared token default.",
+      "description": "Application theme input for --lr-duration-fast.",
       "references": []
     },
     {
       "name": "--lr-theme-duration-icon",
-      "description": "Application input for --lr-duration-icon; falls back to the shared token default.",
+      "description": "Application theme input for --lr-duration-icon.",
       "references": []
     },
     {
       "name": "--lr-theme-duration-normal",
-      "description": "Application input for --lr-duration-base; falls back to the shared token default.",
+      "description": "Application theme input for --lr-duration-base.",
       "references": []
     },
     {
       "name": "--lr-theme-duration-slow",
-      "description": "Application input for --lr-duration-ambient; falls back to the shared token default.",
+      "description": "Application theme input for --lr-duration-ambient.",
       "references": []
     },
     {
       "name": "--lr-theme-easing-emphasized",
-      "description": "Application input for --lr-easing-emphasized; falls back to the shared token default.",
+      "description": "Application theme input for --lr-easing-emphasized.",
       "references": []
     },
     {
       "name": "--lr-theme-easing-linear",
-      "description": "Application input for --lr-easing-linear; falls back to the shared token default.",
+      "description": "Application theme input for --lr-easing-linear.",
       "references": []
     },
     {
       "name": "--lr-theme-easing-standard",
-      "description": "Application input for --lr-easing-standard; falls back to the shared token default.",
+      "description": "Application theme input for --lr-easing-standard.",
       "references": []
     },
     {
@@ -2666,22 +2666,22 @@
     },
     {
       "name": "--lr-theme-font-weight-bold",
-      "description": "Application input for --lr-font-weight-bold; falls back to the shared token default.",
+      "description": "Application theme input for --lr-font-weight-bold.",
       "references": []
     },
     {
       "name": "--lr-theme-font-weight-medium",
-      "description": "Application input for --lr-font-weight-medium; falls back to the shared token default.",
+      "description": "Application theme input for --lr-font-weight-medium.",
       "references": []
     },
     {
       "name": "--lr-theme-font-weight-normal",
-      "description": "Application input for --lr-font-weight-normal; falls back to the shared token default.",
+      "description": "Application theme input for --lr-font-weight-normal.",
       "references": []
     },
     {
       "name": "--lr-theme-font-weight-semibold",
-      "description": "Application input for --lr-font-weight-semibold; falls back to the shared token default.",
+      "description": "Application theme input for --lr-font-weight-semibold.",
       "references": []
     },
     {
@@ -2726,7 +2726,7 @@
     },
     {
       "name": "--lr-theme-hover-brightness",
-      "description": "Application input for --lr-hover-brightness; falls back to the shared token default.",
+      "description": "Application theme input for --lr-hover-brightness.",
       "references": []
     },
     {
@@ -2736,57 +2736,57 @@
     },
     {
       "name": "--lr-theme-line-height-1-4",
-      "description": "Application input for --lr-line-height-1-4; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-1-4.",
       "references": []
     },
     {
       "name": "--lr-theme-line-height-compact",
-      "description": "Application input for --lr-line-height-compact; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-compact.",
       "references": []
     },
     {
       "name": "--lr-theme-line-height-loose",
-      "description": "Application input for --lr-line-height-loose; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-loose.",
       "references": []
     },
     {
       "name": "--lr-theme-line-height-none",
-      "description": "Application input for --lr-line-height-none; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-none.",
       "references": []
     },
     {
       "name": "--lr-theme-line-height-normal",
-      "description": "Application input for --lr-line-height-normal; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-normal.",
       "references": []
     },
     {
       "name": "--lr-theme-line-height-snug",
-      "description": "Application input for --lr-line-height-snug; falls back to the shared token default.",
+      "description": "Application theme input for --lr-line-height-snug.",
       "references": []
     },
     {
       "name": "--lr-theme-opacity-disabled",
-      "description": "Application input for --lr-opacity-disabled; falls back to the shared token default.",
+      "description": "Application theme input for --lr-opacity-disabled.",
       "references": []
     },
     {
       "name": "--lr-theme-opacity-muted",
-      "description": "Application input for --lr-opacity-muted; falls back to the shared token default.",
+      "description": "Application theme input for --lr-opacity-muted.",
       "references": []
     },
     {
       "name": "--lr-theme-otp-input-segment-size",
-      "description": "Application input for --lr-otp-input-segment-size; falls back to the shared token default.",
+      "description": "Application theme input for --lr-otp-input-segment-size.",
       "references": []
     },
     {
       "name": "--lr-theme-popover-viewport-clamp",
-      "description": "Application input for --lr-popover-viewport-clamp; falls back to the shared token default.",
+      "description": "Application theme input for --lr-popover-viewport-clamp.",
       "references": []
     },
     {
       "name": "--lr-theme-scroll-fade-size",
-      "description": "Application input for --lr-scroll-fade-size; falls back to the shared token default.",
+      "description": "Application theme input for --lr-scroll-fade-size.",
       "references": []
     },
     {
@@ -2821,447 +2821,447 @@
     },
     {
       "name": "--lr-theme-size-0-02em",
-      "description": "Application input for --lr-size-0-02em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-02em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-03em",
-      "description": "Application input for --lr-size-0-03em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-03em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-04em",
-      "description": "Application input for --lr-size-0-04em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-04em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-05rem",
-      "description": "Application input for --lr-size-0-05rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-05rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-0625rem",
-      "description": "Application input for --lr-size-0-0625rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-0625rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-09375rem",
-      "description": "Application input for --lr-size-0-09375rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-09375rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-125rem",
-      "description": "Application input for --lr-size-0-125rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-125rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-15rem",
-      "description": "Application input for --lr-size-0-15rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-15rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-1875rem",
-      "description": "Application input for --lr-size-0-1875rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-1875rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-1rem",
-      "description": "Application input for --lr-size-0-1rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-1rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-25rem",
-      "description": "Application input for --lr-size-0-25rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-25rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-3125rem",
-      "description": "Application input for --lr-size-0-3125rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-3125rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-35em",
-      "description": "Application input for --lr-size-0-35em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-35em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-375rem",
-      "description": "Application input for --lr-size-0-375rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-375rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-3em",
-      "description": "Application input for --lr-size-0-3em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-3em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-4375rem",
-      "description": "Application input for --lr-size-0-4375rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-4375rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-4em",
-      "description": "Application input for --lr-size-0-4em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-4em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-4rem",
-      "description": "Application input for --lr-size-0-4rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-4rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-5em",
-      "description": "Application input for --lr-size-0-5em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-5em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-5rem",
-      "description": "Application input for --lr-size-0-5rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-5rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-625rem",
-      "description": "Application input for --lr-size-0-625rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-625rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-6875rem",
-      "description": "Application input for --lr-size-0-6875rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-6875rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-6rem",
-      "description": "Application input for --lr-size-0-6rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-6rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-75em",
-      "description": "Application input for --lr-size-0-75em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-75em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-75rem",
-      "description": "Application input for --lr-size-0-75rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-75rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-7em",
-      "description": "Application input for --lr-size-0-7em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-7em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-875em",
-      "description": "Application input for --lr-size-0-875em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-875em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-8rem",
-      "description": "Application input for --lr-size-0-8rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-8rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-0-9375rem",
-      "description": "Application input for --lr-size-0-9375rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-0-9375rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-0625rem",
-      "description": "Application input for --lr-size-1-0625rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-0625rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-1rem",
-      "description": "Application input for --lr-size-1-1rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-1rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-25rem",
-      "description": "Application input for --lr-size-1-25rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-25rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-5em",
-      "description": "Application input for --lr-size-1-5em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-5em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-5rem",
-      "description": "Application input for --lr-size-1-5rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-5rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-75rem",
-      "description": "Application input for --lr-size-1-75rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-75rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1-875rem",
-      "description": "Application input for --lr-size-1-875rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1-875rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-10px",
-      "description": "Application input for --lr-size-10px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-10px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-10rem",
-      "description": "Application input for --lr-size-10rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-10rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-12em",
-      "description": "Application input for --lr-size-12em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-12em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-12rem",
-      "description": "Application input for --lr-size-12rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-12rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-14px",
-      "description": "Application input for --lr-size-14px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-14px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-14rem",
-      "description": "Application input for --lr-size-14rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-14rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-15rem",
-      "description": "Application input for --lr-size-15rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-15rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-16px",
-      "description": "Application input for --lr-size-16px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-16px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-16rem",
-      "description": "Application input for --lr-size-16rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-16rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-18rem",
-      "description": "Application input for --lr-size-18rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-18rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1em",
-      "description": "Application input for --lr-size-1em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1px",
-      "description": "Application input for --lr-size-1px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-1rem",
-      "description": "Application input for --lr-size-1rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-1rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-2-25rem",
-      "description": "Application input for --lr-size-2-25rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-2-25rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-2-5ch",
-      "description": "Application input for --lr-size-2-5ch; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-2-5ch.",
       "references": []
     },
     {
       "name": "--lr-theme-size-2-5rem",
-      "description": "Application input for --lr-size-2-5rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-2-5rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-20rem",
-      "description": "Application input for --lr-size-20rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-20rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-22rem",
-      "description": "Application input for --lr-size-22rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-22rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-24px",
-      "description": "Application input for --lr-size-24px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-24px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-24rem",
-      "description": "Application input for --lr-size-24rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-24rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-280px",
-      "description": "Application input for --lr-size-280px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-280px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-28px",
-      "description": "Application input for --lr-size-28px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-28px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-28rem",
-      "description": "Application input for --lr-size-28rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-28rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-2px",
-      "description": "Application input for --lr-size-2px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-2px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-2rem",
-      "description": "Application input for --lr-size-2rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-2rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-3-5em",
-      "description": "Application input for --lr-size-3-5em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-3-5em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-3-5rem",
-      "description": "Application input for --lr-size-3-5rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-3-5rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-30rem",
-      "description": "Application input for --lr-size-30rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-30rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-32rem",
-      "description": "Application input for --lr-size-32rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-32rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-36rem",
-      "description": "Application input for --lr-size-36rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-36rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-38rem",
-      "description": "Application input for --lr-size-38rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-38rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-3ch",
-      "description": "Application input for --lr-size-3ch; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-3ch.",
       "references": []
     },
     {
       "name": "--lr-theme-size-3px",
-      "description": "Application input for --lr-size-3px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-3px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-3rem",
-      "description": "Application input for --lr-size-3rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-3rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-48rem",
-      "description": "Application input for --lr-size-48rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-48rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-4ch",
-      "description": "Application input for --lr-size-4ch; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-4ch.",
       "references": []
     },
     {
       "name": "--lr-theme-size-4px",
-      "description": "Application input for --lr-size-4px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-4px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-4rem",
-      "description": "Application input for --lr-size-4rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-4rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-5em",
-      "description": "Application input for --lr-size-5em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-5em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-5rem",
-      "description": "Application input for --lr-size-5rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-5rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-6ch",
-      "description": "Application input for --lr-size-6ch; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-6ch.",
       "references": []
     },
     {
       "name": "--lr-theme-size-6em",
-      "description": "Application input for --lr-size-6em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-6em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-6px",
-      "description": "Application input for --lr-size-6px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-6px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-6rem",
-      "description": "Application input for --lr-size-6rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-6rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-7rem",
-      "description": "Application input for --lr-size-7rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-7rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-8em",
-      "description": "Application input for --lr-size-8em; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-8em.",
       "references": []
     },
     {
       "name": "--lr-theme-size-8rem",
-      "description": "Application input for --lr-size-8rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-8rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-0-15rem",
-      "description": "Application input for --lr-size-neg-0-15rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-0-15rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-0-25rem",
-      "description": "Application input for --lr-size-neg-0-25rem; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-0-25rem.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-1px",
-      "description": "Application input for --lr-size-neg-1px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-1px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-4px",
-      "description": "Application input for --lr-size-neg-4px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-4px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-6px",
-      "description": "Application input for --lr-size-neg-6px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-6px.",
       "references": []
     },
     {
       "name": "--lr-theme-size-neg-8px",
-      "description": "Application input for --lr-size-neg-8px; falls back to the shared token default.",
+      "description": "Application theme input for --lr-size-neg-8px.",
       "references": []
     },
     {
@@ -3456,17 +3456,17 @@
     },
     {
       "name": "--lr-theme-transition-fast",
-      "description": "Application input for --lr-transition-fast; falls back to the shared token default.",
+      "description": "Application theme input for --lr-transition-fast.",
       "references": []
     },
     {
       "name": "--lr-theme-transition-normal",
-      "description": "Application input for --lr-transition-base; falls back to the shared token default.",
+      "description": "Application theme input for --lr-transition-base.",
       "references": []
     },
     {
       "name": "--lr-theme-transition-slow",
-      "description": "Application input for --lr-transition-ambient; falls back to the shared token default.",
+      "description": "Application theme input for --lr-transition-ambient.",
       "references": []
     },
     {

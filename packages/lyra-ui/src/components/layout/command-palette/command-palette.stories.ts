@@ -38,3 +38,25 @@ export const NarrowAllocation: Story = {
     ]}
   ></lr-command-palette>`,
 };
+
+export const CustomVirtualPitch: Story = {
+  name: 'Custom virtual row and group heights',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The documented row and group height tokens drive painted sizes, virtual transforms, keyboard-scroll coordinates, and the spacer extent together—even when changed while open.',
+      },
+    },
+  },
+  render: (_args, context) => html`<lr-command-palette
+    style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px;"
+    .open=${context.viewMode !== 'docs'}
+    .commands=${[
+      { id: 'new', label: 'New document', group: 'File' },
+      { id: 'open', label: 'Open document', group: 'File' },
+      { id: 'search', label: 'Search workspace', group: 'Navigation' },
+      { id: 'symbols', label: 'Go to symbol', group: 'Navigation' },
+    ]}
+  ></lr-command-palette>`,
+};

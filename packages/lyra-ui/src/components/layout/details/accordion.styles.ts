@@ -8,16 +8,17 @@ export const styles = css`
   [part='base'] {
     min-inline-size: 0;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-accordion-outlined-border-color, var(--lr-color-border));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-accordion-outlined-bg, var(--lr-color-surface));
   }
   :host([appearance='filled']) [part='base'] {
-    border-color: transparent;
-    background: var(--lr-color-surface-raised);
+    border-color: var(--lr-accordion-filled-border-color, transparent);
+    background: var(--lr-accordion-filled-bg, var(--lr-color-surface-raised));
   }
   :host([appearance='filled-outlined']) [part='base'] {
-    background: var(--lr-color-surface-raised);
+    border-color: var(--lr-accordion-filled-outlined-border-color, var(--lr-color-border));
+    background: var(--lr-accordion-filled-outlined-bg, var(--lr-color-surface-raised));
   }
   :host([appearance='plain']) [part='base'] {
     overflow: visible;

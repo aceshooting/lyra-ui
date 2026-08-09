@@ -94,6 +94,14 @@ export const LogicalEndNavigationRtl: Story = {
 };
 
 export const CustomToggleAndSkipLink: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The assigned custom toggle receives synchronized `aria-expanded`; its `aria-controls` points to the Page host as a resolvable bridge to the private drawer. Removing or replacing the toggle restores attributes still owned by the component.',
+      },
+    },
+  },
   render: () => html`
     <lr-page style="inline-size:320px; --lr-page-header-height:3rem;">
       <span slot="skip-to-content">Skip straight to the dashboard</span>

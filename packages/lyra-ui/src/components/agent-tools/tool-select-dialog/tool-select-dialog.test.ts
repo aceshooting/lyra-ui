@@ -3,6 +3,7 @@ import './tool-select-dialog.js';
 import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-dialog.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
 import { styles } from './tool-select-dialog.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('provides hover feedback for the native search input', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -521,7 +522,7 @@ describe('focus management', () => {
     el.open = true;
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="search-input"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="search-input"]'))).to.equal(true);
   });
 
   it('returns focus to the element that was focused before the dialog opened', async () => {
@@ -535,11 +536,11 @@ describe('focus management', () => {
     )) as LyraToolSelectDialog;
     el.open = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="search-input"]'));
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="search-input"]'))).to.equal(true);
 
     el.close('api');
     await el.updateComplete;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
 
     trigger.remove();
   });
@@ -583,7 +584,7 @@ describe('focus management', () => {
     const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     document.dispatchEvent(tabForward);
     expect(tabForward.defaultPrevented).to.be.true;
-    expect(el.shadowRoot!.activeElement).to.equal(searchInput);
+    expect((el.shadowRoot!.activeElement) === (searchInput)).to.equal(true);
 
     const tabBackward = new KeyboardEvent('keydown', {
       key: 'Tab',
@@ -593,7 +594,7 @@ describe('focus management', () => {
     });
     document.dispatchEvent(tabBackward);
     expect(tabBackward.defaultPrevented).to.be.true;
-    expect(document.activeElement).to.equal(last);
+    expect((document.activeElement) === (last)).to.equal(true);
   });
 
   it('traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root', async () => {
@@ -613,12 +614,12 @@ describe('focus management', () => {
     const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     document.dispatchEvent(tabForward);
     expect(tabForward.defaultPrevented).to.be.true;
-    expect(el.shadowRoot!.activeElement).to.equal(searchInput);
+    expect((el.shadowRoot!.activeElement) === (searchInput)).to.equal(true);
 
     const tabBackward = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
     document.dispatchEvent(tabBackward);
     expect(tabBackward.defaultPrevented).to.be.true;
-    expect(shadowHost.shadowRoot!.activeElement).to.equal(input);
+    expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
   });
 });
 
@@ -690,15 +691,37 @@ it('is accessible while open with grouped, disabled, and use-defaults-locked too
   await expect(el).to.be.accessible();
 });
 
-it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/);
+it("renders the search-input's placeholder with the live quiet color at full opacity", async () => {
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      style="--lr-color-text-quiet: rgb(1, 2, 3)"
+      .tools=${TOOLS}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  const placeholder = getComputedStyle(input, '::placeholder');
+  expect(placeholder.color).to.equal('rgb(1, 2, 3)');
+  expect(placeholder.opacity).to.equal('1');
 });
 
-it('resets the native search-cancel glyph on the search field', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
-  expect(css).to.match(/\[part='search-input'\]::-webkit-search-decoration/);
+it('renders the native search field without cancel or decoration chrome', async () => {
+  const el = (await fixture(html`<lr-tool-select-dialog open .tools=${TOOLS}></lr-tool-select-dialog>`)) as LyraToolSelectDialog;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  expect(input.type).to.equal('search');
+  expect(getComputedStyle(input).appearance).to.equal('textfield');
+  input.value = 'python';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  const bounds = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [Math.floor(bounds.right - 8), Math.floor(bounds.top + bounds.height / 2)],
+    });
+    expect(input.value).to.equal('python');
+    expect(el.query).to.equal('python');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('uses locale-aware case folding for the built-in search', async () => {

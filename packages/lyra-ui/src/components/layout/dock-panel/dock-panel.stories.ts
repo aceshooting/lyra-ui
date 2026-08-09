@@ -90,6 +90,40 @@ export const RtlDockedEnd: Story = {
   `,
 };
 
+export const NarrowRtlLongContent: Story = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An exact 320px allocation exercises `extent`, `min-extent`, long independently scrolling dock/main content, logical RTL end placement, and the collapsed rail with restored expansion size.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      dir="rtl"
+      style="display:flex;inline-size:320px;max-inline-size:100%;block-size:16rem;overflow:hidden;border:1px solid var(--lr-color-border)"
+    >
+      <main style="flex:1 1 0;min-inline-size:0;overflow:auto;padding:var(--lr-space-s)">
+        <strong>مساحة العمل الرئيسية ذات العنوان الطويل جدًا</strong>
+        <p>MainWorkspaceContentWithoutAnyNaturalBreakOpportunityMainWorkspaceContentWithoutAnyNaturalBreakOpportunity</p>
+      </main>
+      <lr-dock-panel
+        edge="end"
+        extent="240px"
+        min-extent="160px"
+        max-extent="280px"
+        collapsible
+      >
+        <div style="padding:var(--lr-space-s);white-space:nowrap">
+          DockPanelLocalizedContentWithoutAnyNaturalBreakOpportunityDockPanelLocalizedContentWithoutAnyNaturalBreakOpportunity
+        </div>
+      </lr-dock-panel>
+    </div>
+  `,
+};
+
 export const NotResizable: Story = {
   render: () => html`
     <div style="position: relative; height: 12rem; border: 1px solid var(--lr-color-border); display: flex;">

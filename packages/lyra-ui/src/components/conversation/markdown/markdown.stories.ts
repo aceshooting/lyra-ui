@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional `marked` + `dompurify` peer dependencies, lazy-loaded on first use. Without those peers installed — or when sanitization is requested but `dompurify` is unavailable — content renders as safe plain text and a `lr-render-error` event fires instead of shipping broken or unsanitized markup.',
+          'Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional `marked` + `dompurify` peer dependencies, lazy-loaded on first use. Without those peers installed — or when sanitization is requested but `dompurify` is unavailable — content renders as safe plain text and a `lr-render-error` event fires instead of shipping broken or unsanitized markup. A disconnect/reconnect during the shared load applies only the current connection settlement.',
       },
     },
   },
@@ -49,8 +49,7 @@ export const GithubFlavored: Story = {
   render: () => html`<lr-markdown gfm .content=${gfmSample}></lr-markdown>`,
 };
 
-const codeSample =
-  '```ts\nexport function greet(name: string): string {\n  return `Hello, ${name}!`;\n}\n```\n';
+const codeSample = '```ts\nexport function greet(name: string): string {\n  return `Hello, ${name}!`;\n}\n```\n';
 
 export const CodeBlocks: Story = {
   render: () => html`<lr-markdown .content=${codeSample}></lr-markdown>`,
@@ -66,9 +65,7 @@ export const LeadingTabWidth: Story = {
       },
     },
   },
-  render: () => html`
-    <lr-markdown tab-size="2" .content=${'Intro\n\n\tA tab-indented paragraph'}></lr-markdown>
-  `,
+  render: () => html` <lr-markdown tab-size="2" .content=${'Intro\n\n\tA tab-indented paragraph'}></lr-markdown> `,
 };
 
 export const SharedParserRefresh: Story = {
@@ -101,7 +98,9 @@ export const SharedParserRefresh: Story = {
             parser.defaults = originalDefaults;
           }
         }}
-      >Refresh with shared parser</button>
+      >
+        Refresh with shared parser
+      </button>
       <lr-markdown .content=${'CONFIGURED_TOKEN'}></lr-markdown>
     </div>
   `,
@@ -162,9 +161,8 @@ export const InternalLinks: Story = {
         }}
       ></lr-markdown>
       <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
-        Click "the setup guide" — its href matches <code>internal-link-prefix</code>, so the click is
-        intercepted and reported via <code>lr-link-click</code> instead of navigating. "our site" is
-        external and opens normally.
+        Click "the setup guide" — its href matches <code>internal-link-prefix</code>, so the click is intercepted and
+        reported via <code>lr-link-click</code> instead of navigating. "our site" is external and opens normally.
       </p>
     </div>
   `,

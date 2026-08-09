@@ -364,7 +364,7 @@ it('safely no-ops for a non-finite date: skips scheduling, reports no relative s
   `)) as LyraRelativeTime;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
-  expect(el.shadowRoot?.querySelector('time')).to.equal(null);
+  expect((el.shadowRoot?.querySelector('time')) === (null)).to.equal(true);
   expect((el as unknown as { timer?: number }).timer, 'an unparseable date must not schedule a wake timer').to.equal(
     undefined,
   );
@@ -559,7 +559,7 @@ it('falls back to slotted content instead of throwing when value is non-finite',
   const el = await fixture(html`<lr-format-bytes value="abc">Unknown size</lr-format-bytes>`);
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-  expect(slot).to.exist;
+  expect((slot) != null).to.equal(true);
   expect(el.textContent?.trim()).to.equal('Unknown size');
 });
 

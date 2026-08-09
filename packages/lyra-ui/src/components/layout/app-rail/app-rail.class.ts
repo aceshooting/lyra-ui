@@ -173,6 +173,14 @@ export interface LyraAppRailEventMap {
  *   capped at `85vw`.
  * @cssprop [--lr-app-rail-overlay-color=var(--lr-color-overlay)] - The mobile overlay scrim's
  *   background.
+ * @cssprop [--lr-app-rail-toggle-hover-bg=var(--lr-color-brand-quiet)] - Toggle hover background.
+ * @cssprop [--lr-app-rail-toggle-hover-color=var(--lr-color-brand)] - Toggle hover foreground.
+ * @cssprop --lr-app-rail-toggle-active-bg - Toggle pressed background; defaults to the former
+ *   brand-quiet active mix.
+ * @cssprop [--lr-app-rail-toggle-active-color=var(--lr-color-brand)] - Toggle pressed foreground.
+ * @cssprop [--lr-app-rail-resizer-hover-bg=var(--lr-color-brand)] - Resizer-track hover background.
+ * @cssprop --lr-app-rail-resizer-active-bg - Resizer-track pressed background; defaults to the
+ *   former brand active mix.
  *
  * @example
  * Use the item contract so the visible label collapses while its accessible

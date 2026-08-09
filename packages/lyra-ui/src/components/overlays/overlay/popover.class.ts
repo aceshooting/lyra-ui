@@ -148,7 +148,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return this._open;
   }
   set open(next: boolean) {
-    const normalized = Boolean(next);
+    const normalized = Boolean(next) && this.canOpen;
     if (normalized === this._open) return;
     // Before the first render this is initial markup state, not a transition.
     if (!this.hasUpdated) {
@@ -261,6 +261,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Subclasses can retain a different arrow default without forking rendering/positioning. */
   protected get rendersArrow(): boolean {
     return this.arrow && !this.withoutArrow;
+  }
+
+  /** Subclass opening invariant, checked for initial property/attribute replay and every later
+   * imperative `show()`. Generic popovers are always eligible to open. */
+  protected get canOpen(): boolean {
+    return true;
   }
 
   /** Generic popovers project their default slot directly. A mapped subclass can insert an owned
@@ -649,7 +655,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Open the popover. Emits `lr-show` first — vetoing it leaves the popover closed — and
    *  `lr-after-show` once the popup's transition has finished. */
   show(): Promise<void> {
-    if (this._open) return Promise.resolve();
+    if (this._open || !this.canOpen) return Promise.resolve();
     if (this.emitCancelableLifecycle('lr-show').defaultPrevented) {
       this.syncOpenAttribute();
       return Promise.resolve();

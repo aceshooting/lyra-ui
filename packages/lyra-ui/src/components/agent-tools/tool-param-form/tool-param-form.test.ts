@@ -3,6 +3,7 @@ import './tool-param-form.js';
 import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
 import { styles } from './tool-param-form.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('provides hover feedback for native text and number controls', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -46,7 +47,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable
       // rather than merely swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect((el!.form) === (null)).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -59,7 +60,7 @@ describe('ElementInternals availability', () => {
     };
     try {
       const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
-      expect(el.form).to.equal(null);
+      expect((el.form) === (null)).to.equal(true);
       expect(el.reportValidity()).to.be.true;
     } finally {
       HTMLElement.prototype.attachInternals = original;
@@ -82,7 +83,7 @@ it('renders one control per property, in schema key order, matched to its type',
   expect(field(el, 'units').querySelector('lr-select')).to.exist;
   expect(field(el, 'units').querySelectorAll('lr-option').length).to.equal(2);
   const daysInput = field(el, 'days').querySelector('input[type="number"]') as HTMLInputElement;
-  expect(daysInput).to.exist;
+  expect((daysInput) != null).to.equal(true);
   expect(daysInput.step).to.equal('1');
   expect(field(el, 'notify').querySelector('lr-checkbox')).to.exist;
 });
@@ -555,7 +556,7 @@ it('surfaces a form-level required error for a key listed in required but absent
   };
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   // No rendered field exists for "ghost" -- it isn't a schema property -- yet it still blocks validity.
-  expect(field(el, 'ghost')).to.be.null;
+  expect((field(el, 'ghost')) === null).to.equal(true);
   expect(el.errors.ghost).to.equal('This field is required.');
   expect(el.checkValidity()).to.be.false;
 
@@ -582,10 +583,10 @@ it('renders and focuses a localized error for an unmet required key that has no 
   await Promise.resolve();
 
   const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"][data-missing-property]');
-  expect(error).to.exist;
+  expect((error) != null).to.equal(true);
   expect(error!.textContent).to.equal('Missing schema property: ghost');
   expect(error!.tabIndex).to.equal(-1);
-  expect(el.shadowRoot!.activeElement).to.equal(error);
+  expect((el.shadowRoot!.activeElement) === (error)).to.equal(true);
 });
 
 it('formStateRestoreCallback recovers to {} on invalid persisted JSON, and restores valid JSON normally', async () => {
@@ -1115,10 +1116,22 @@ it('is accessible in a populated state with a required, unfilled field revealed'
   await expect(el).to.be.accessible();
 });
 
-it('resets the native number spin-button on numeric control fields', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/input\.control\s*\{[^}]*appearance:\s*textfield/);
-  expect(css).to.match(/input\.control::-webkit-inner-spin-button/);
+it('renders numeric controls with textfield chrome and no native spin buttons', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const input = field(el, 'days').querySelector<HTMLInputElement>('input.control')!;
+  expect(input.type).to.equal('number');
+  expect(getComputedStyle(input).appearance).to.equal('textfield');
+  const bounds = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [Math.floor(bounds.right - 4), Math.floor(bounds.top + bounds.height / 4)],
+    });
+    expect(input.value).to.equal('3');
+    expect(Object.hasOwn(el.value, 'days')).to.be.false;
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('associates enum and boolean descriptions/errors without imposing must-check semantics', async () => {

@@ -24,6 +24,10 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
 
+When a controlled `actions` refresh replaces the focused action, focus follows the same action id
+through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when
+the action set becomes empty. A newer focus destination is never overridden.
+
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
 the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
@@ -39,7 +43,7 @@ provide their own fixed-position anchor.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
+import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";
 ```
 
 **Additional API surface:**

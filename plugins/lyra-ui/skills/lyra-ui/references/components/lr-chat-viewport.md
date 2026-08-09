@@ -17,8 +17,8 @@
 
 The transcript scroll container: owns stick-to-bottom behavior while an answer streams, the "jump to
 latest" pill, and the unread divider. Two supported content shapes, auto-detected: ordinary element
-children (typically `lr-chat-message`s — *slotted mode*), or exactly one `lr-virtual-list`
-(*virtual mode*, detected via `instanceof`). In virtual mode this component defers all scrolling to
+children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-virtual-list`
+(_virtual mode_, detected via `instanceof`). In virtual mode this component defers all scrolling to
 the slotted list's own `scrollToIndex()`. Follow/release state machine: while `follow` is engaged,
 content growth re-scrolls to the end; release happens only on a user-intent gesture (wheel,
 touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
@@ -73,7 +73,7 @@ scroll inside `lr-virtual-list`'s `24rem` default no matter how tall the viewpor
 `block-size` on the slotted list is what makes that resolvable: without it the list host is
 auto-height, its own base percentage chains to `auto`, and the two size each other circularly.
 `<lr-thread-list>` solves the same problem by turning the internal list's shipped `24rem` into a
-flex-basis through `::part(base)`, which is not available here — that list lives in the *consumer's*
+flex-basis through `::part(base)`, which is not available here — that list lives in the _consumer's_
 light DOM, and `::slotted()` cannot be followed by `::part()`. Virtual mode therefore inherits this
 component's existing requirement of a height-bounded parent, exactly as slotted mode's own
 `[part='scroll']` already does. A document-tree declaration on the list (a consumer's own rule or an

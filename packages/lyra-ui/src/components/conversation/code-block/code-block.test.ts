@@ -92,6 +92,25 @@ it('defaults to no language/filename, collapsible=false, collapsed=false, copyab
   expect(el.lineNumbers).to.be.false;
 });
 
+it('uses the shared copyable presence-reflection matrix', async () => {
+  const el = (await fixture(html`<lr-code-block></lr-code-block>`)) as LyraCodeBlock;
+  expect(el.copyable).to.be.true;
+  expect(el.getAttribute('copyable')).to.equal('');
+
+  el.copyable = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('copyable')).to.be.false;
+
+  el.copyable = true;
+  await el.updateComplete;
+  expect(el.getAttribute('copyable')).to.equal('');
+
+  el.setAttribute('copyable', 'false');
+  await el.updateComplete;
+  expect(el.copyable).to.be.false;
+  expect(el.getAttribute('copyable')).to.equal('false');
+});
+
 it('renders optional line numbers for plain code without changing the copied source', async () => {
   const el = (await fixture(
     html`<lr-code-block line-numbers .code=${'first\nsecond\nthird'}></lr-code-block>`,
@@ -108,11 +127,11 @@ it('renders plain <pre><code> immediately, HTML-escaped, when language is unset 
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   const pre = el.shadowRoot!.querySelector('[part="pre"]');
   const code = el.shadowRoot!.querySelector('[part="code"]');
-  expect(pre).to.exist;
-  expect(code).to.exist;
+  expect((pre) != null).to.equal(true);
+  expect((code) != null).to.equal(true);
   // Lit's normal text binding escapes this -- no raw <script> tag should
   // ever land in the rendered DOM.
-  expect(code!.querySelector('script')).to.not.exist;
+  expect((code!.querySelector('script')) == null).to.equal(true);
   expect(code!.textContent).to.equal('<script>alert(1)</script>');
 });
 

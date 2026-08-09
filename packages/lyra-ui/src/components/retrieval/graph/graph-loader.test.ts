@@ -36,10 +36,10 @@ function createD3PeerApis() {
 it('resolves the d3 modules', async () => {
   const mods = await loadD3();
   expect(mods).to.not.be.null;
-  expect(mods!.forceSimulation).to.exist;
-  expect(mods!.drag).to.exist;
-  expect(mods!.zoom).to.exist;
-  expect(mods!.select).to.exist;
+  expect((mods!.forceSimulation) != null).to.equal(true);
+  expect((mods!.drag) != null).to.equal(true);
+  expect((mods!.zoom) != null).to.equal(true);
+  expect((mods!.select) != null).to.equal(true);
 });
 
 it('caches the module — a second call returns the same promise result', async () => {
@@ -51,7 +51,7 @@ it('caches the module — a second call returns the same promise result', async 
 it('exposes zoomIdentity and zoomTransform for programmatic camera control (focusNode/fit)', async () => {
   const mods = await loadD3();
   expect(mods!.zoomIdentity).to.exist;
-  expect(mods!.zoomTransform).to.exist;
+  expect((mods!.zoomTransform) != null).to.equal(true);
 });
 
 describe('loadD3Modules (uncached, dependency-injectable)', () => {
@@ -66,12 +66,12 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     );
 
     expect(modules).to.not.equal(null);
-    expect(modules!.forceSimulation).to.equal(peers.force.forceSimulation);
-    expect(modules!.drag).to.equal(peers.drag.drag);
-    expect(modules!.zoom).to.equal(peers.zoom.zoom);
+    expect((modules!.forceSimulation) === (peers.force.forceSimulation)).to.equal(true);
+    expect((modules!.drag) === (peers.drag.drag)).to.equal(true);
+    expect((modules!.zoom) === (peers.zoom.zoom)).to.equal(true);
     expect(modules!.zoomIdentity).to.equal(peers.zoom.zoomIdentity);
-    expect(modules!.zoomTransform).to.equal(peers.zoom.zoomTransform);
-    expect(modules!.select).to.equal(peers.selection.select);
+    expect((modules!.zoomTransform) === (peers.zoom.zoomTransform)).to.equal(true);
+    expect((modules!.select) === (peers.selection.select)).to.equal(true);
   });
 
   it('prefers usable D3 APIs on module namespaces over their default exports', async () => {
@@ -86,10 +86,10 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     );
 
     expect(modules).to.not.equal(null);
-    expect(modules!.forceSimulation).to.equal(direct.force.forceSimulation);
-    expect(modules!.drag).to.equal(direct.drag.drag);
-    expect(modules!.zoom).to.equal(direct.zoom.zoom);
-    expect(modules!.select).to.equal(direct.selection.select);
+    expect((modules!.forceSimulation) === (direct.force.forceSimulation)).to.equal(true);
+    expect((modules!.drag) === (direct.drag.drag)).to.equal(true);
+    expect((modules!.zoom) === (direct.zoom.zoom)).to.equal(true);
+    expect((modules!.select) === (direct.selection.select)).to.equal(true);
   });
 
   it('fails closed when a default-wrapped D3 peer lacks a required API', async () => {

@@ -57,7 +57,12 @@
     }
   },
   "stories": [
-    { "id": "checkbox--default", "profile": "standard" },
+    {
+      "id": "checkbox--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The checkbox target-floor, form-chrome, and constrained-label fixes change the current capture, which awaits human visual review."
+    },
     { "id": "input--default", "profile": "standard" },
     { "id": "input-native-time-input--default", "profile": "standard" },
     {
@@ -67,7 +72,12 @@
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
     { "id": "input-radio-group--default", "profile": "standard" },
-    { "id": "forms-radio-button--default", "profile": "standard" },
+    {
+      "id": "forms-radio-button--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The radio-button target-floor and constrained-label fixes change the current capture, which awaits human visual review."
+    },
     { "id": "switch--default", "profile": "standard" },
     {
       "id": "textarea--default",
@@ -103,9 +113,19 @@
     { "id": "overlay-dropdown--default", "profile": "standard" },
     { "id": "overlay-popover--default", "profile": "standard" },
     { "id": "overlay-tooltip--default", "profile": "standard" },
-    { "id": "overlays-popup--with-arrow", "profile": "standard" },
+    {
+      "id": "overlays-popup--with-arrow",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The physical positioning baseline that prevents RTL popup stretching changes the current capture, which awaits human visual review."
+    },
     { "id": "toast--triggers", "profile": "standard" },
-    { "id": "toolapprovaldialog--open-initially", "profile": "standard" },
+    {
+      "id": "toolapprovaldialog--open-initially",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The constrained-button sizing fix changes the current approval-dialog capture, which awaits human visual review."
+    },
     { "id": "menu--gear-menu", "profile": "standard" },
     {
       "id": "charts-litechart--default",
@@ -174,7 +194,12 @@
     { "id": "threadlist--default", "profile": "standard" },
     { "id": "documentviewer-notebookviewer--default", "profile": "standard" },
     { "id": "neighbor-list--default", "profile": "standard" },
-    { "id": "retrieval-results--default", "profile": "standard" },
+    {
+      "id": "retrieval-results--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The composed checkbox target-floor and form-chrome fixes change the current retrieval-row capture, which awaits human visual review."
+    },
     { "id": "activityfeed--live-expanded", "profile": "standard" },
     { "id": "documentviewer-datasetviewer--default", "profile": "standard" },
     { "id": "archiveviewer--default", "profile": "standard" },
@@ -193,8 +218,18 @@
     },
     { "id": "navigation-tree-node--declarative", "profile": "standard" },
     { "id": "media-pan-zoom--slotted-content", "profile": "standard" },
-    { "id": "media-video--full-controls", "profile": "standard" },
-    { "id": "media-video-playlist--full-controls", "profile": "standard" },
+    {
+      "id": "media-video--full-controls",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
+    },
+    {
+      "id": "media-video-playlist--full-controls",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The inherited inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
+    },
     { "id": "apprail--forced-icon-only", "profile": "standard" },
     {
       "id": "layout-menu-label--default",
@@ -332,7 +367,7 @@
     "reviewedAt": null,
     "knownLimitations": [
       "The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.",
-      "Four forced-colors/narrow captures and 42 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
+      "Four forced-colors/narrow captures and 63 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
       "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
       "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
     ]

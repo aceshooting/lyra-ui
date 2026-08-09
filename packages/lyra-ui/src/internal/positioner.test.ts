@@ -102,6 +102,53 @@ it('keeps tracking the anchor via autoUpdate until stop() is called', async () =
   expect(parseFloat(p.style.top)).to.equal(trackedTop);
 });
 
+it('invalidates an in-flight placement before cleanup returns', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="a" style="position:absolute; top:100px; left:100px;">x</button>
+      <div id="p" style="width:50px; height:20px;">pop</div>
+    </div>
+  `);
+  const anchor = wrap.querySelector('#a') as HTMLElement;
+  const popup = wrap.querySelector('#p') as HTMLElement;
+  let placedCount = 0;
+
+  const stop = place(anchor, popup, { onPlaced: () => placedCount++ });
+  stop();
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+  expect(popup.style.left).to.equal('');
+  expect(popup.style.top).to.equal('');
+  expect(placedCount).to.equal(0);
+});
+
+it('lets a replacement placement win while the cleaned-up run is still in flight', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="first" style="position:absolute; top:40px; left:40px;">first</button>
+      <button id="second" style="position:absolute; top:180px; left:300px;">second</button>
+      <div id="popup" style="width:50px; height:20px;">pop</div>
+    </div>
+  `);
+  const first = wrap.querySelector('#first') as HTMLElement;
+  const second = wrap.querySelector('#second') as HTMLElement;
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  let obsoletePlacements = 0;
+  let currentPlacements = 0;
+
+  const stopFirst = place(first, popup, { onPlaced: () => obsoletePlacements++ });
+  stopFirst();
+  const stopSecond = place(second, popup, { onPlaced: () => currentPlacements++ });
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+  expect(obsoletePlacements).to.equal(0);
+  expect(currentPlacements).to.be.greaterThan(0);
+  expect(parseFloat(popup.style.left)).to.be.closeTo(300, 1);
+  stopSecond();
+});
+
 it('honors a custom offset from PlaceOptions', async () => {
   const wrap = await fixture(html`
     <div>

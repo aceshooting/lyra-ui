@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-call-chip.js';
 import type { LyraToolCallChip } from './tool-call-chip.js';
-import { styles } from './tool-call-chip.styles.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 it('defaults to status="pending" with empty name/category/summary/icon/call-id and no duration', async () => {
   const el = (await fixture(html`<lr-tool-call-chip></lr-tool-call-chip>`)) as LyraToolCallChip;
@@ -102,7 +102,7 @@ it('renders a distinct built-in glyph per status as the icon slot fallback conte
     const el = (await fixture(html`<lr-tool-call-chip status=${status}></lr-tool-call-chip>`)) as LyraToolCallChip;
     const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
     const svg = slot.querySelector('svg');
-    expect(svg, `status=${status} should render a built-in svg glyph`).to.exist;
+    expect((svg) != null, `status=${status} should render a built-in svg glyph`).to.equal(true);
     markups.add(svg!.innerHTML);
   }
   expect(markups.size, 'every status should render a visually distinct glyph').to.equal(statuses.length);
@@ -160,14 +160,6 @@ it('interpolates duration values through localized message templates', async () 
 });
 
 it('uses themeable motion values for running and pending statuses', async () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    'animation: lr-tool-call-chip-spin var(--lr-tool-call-chip-spin) infinite;',
-  );
-  expect(css).to.include(
-    'animation: lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite;',
-  );
-
   const running = (await fixture(html`
     <lr-tool-call-chip
       status="running"
@@ -175,23 +167,38 @@ it('uses themeable motion values for running and pending statuses', async () => 
     ></lr-tool-call-chip>
   `)) as LyraToolCallChip;
   const runningGlyph = running.shadowRoot!.querySelector('[part="icon"] svg')!;
+  expect(getComputedStyle(runningGlyph).animationName).to.equal('lr-tool-call-chip-spin');
   expect(getComputedStyle(runningGlyph).animationDuration).to.equal('2.5s');
 
-  // The pulse rule matched via the cssText check above must actually reach a
-  // rendered status="pending" chip's icon too, not just exist as a string in
-  // the stylesheet -- proven live against the token's real default resolved
-  // value (--lr-transition-ambient defaults to 1.8s), mirroring
-  // lr-thinking-panel's own pending pulse-dot check.
   const pending = (await fixture(html`<lr-tool-call-chip status="pending"></lr-tool-call-chip>`)) as LyraToolCallChip;
   const pendingGlyph = pending.shadowRoot!.querySelector('[part="icon"] svg')!;
+  expect(getComputedStyle(pendingGlyph).animationName).to.equal('lr-tool-call-chip-pulse');
   expect(getComputedStyle(pendingGlyph).animationDuration).to.equal('1.8s');
 });
 
-it('disables the infinite running/pending glyph animations under prefers-reduced-motion: reduce', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  // The media block also resets [part='base']'s hover/focus transition first, so the match must
-  // span across that nested rule's own closing brace rather than stopping at the first `}`.
-  expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important;/);
+it('disables rendered running and pending glyph animations under prefers-reduced-motion: reduce', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-tool-call-chip status="running"></lr-tool-call-chip>
+        <lr-tool-call-chip status="pending"></lr-tool-call-chip>
+      </div>
+    `);
+    const glyphs = [...wrapper.querySelectorAll<LyraToolCallChip>('lr-tool-call-chip')].map(
+      (chip) => chip.shadowRoot!.querySelector('[part="icon"] svg')!,
+    );
+    expect(glyphs.map((glyph) => getComputedStyle(glyph).animationName)).to.deep.equal([
+      'lr-tool-call-chip-spin',
+      'lr-tool-call-chip-pulse',
+    ]);
+
+    await setReducedMotion('reduce');
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.be.true;
+    expect(glyphs.map((glyph) => getComputedStyle(glyph).animationName)).to.deep.equal(['none', 'none']);
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('emits lr-tool-call-chip-select with { name, callId } on click', async () => {
@@ -264,14 +271,14 @@ describe('icon override precedence', () => {
     // the slot's own fallback content (the built-in svg below) once nothing
     // is actually assigned, per the platform's own slot-fallback semantics.
     expect(slot.assignedElements()).to.have.length(0);
-    expect(slot.querySelector('svg')).to.exist;
+    expect((slot.querySelector('svg')) != null).to.equal(true);
   });
 
   it('renders the icon prop as literal fallback text when the icon slot is empty', async () => {
     const el = (await fixture(html`<lr-tool-call-chip icon="🔍"></lr-tool-call-chip>`)) as LyraToolCallChip;
     const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
     expect(slot.assignedElements()).to.have.length(0);
-    expect(slot.querySelector('svg')).to.not.exist;
+    expect((slot.querySelector('svg')) == null).to.equal(true);
     expect(slot.textContent!.trim()).to.equal('🔍');
   });
 
@@ -365,7 +372,7 @@ describe('detail tooltip', () => {
     // Still focused -- the pointer leaving shouldn't close a tooltip that's
     // open because of focus, not hover.
     expect(tooltip.hidden).to.be.false;
-    expect(el.shadowRoot!.activeElement).to.equal(base);
+    expect((el.shadowRoot!.activeElement) === (base)).to.equal(true);
 
     base.blur();
     await el.updateComplete;

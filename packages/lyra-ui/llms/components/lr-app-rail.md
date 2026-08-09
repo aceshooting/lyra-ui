@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -135,6 +135,11 @@ color; component-specific since no shared token exists), plus shared tokens (`--
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
+The mobile toggle's hover/pressed background and foreground are independently inheritable through
+`--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
+`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. The resizer track uses
+`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
+fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
 **Optional peer deps:** none.
 
@@ -226,6 +231,9 @@ removing the label from the accessibility tree.
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
 
+**Methods:** `click(): void` activates the internal native link or button; it is a no-op while
+`disabled`.
+
 **Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
 when the item has an explicit `aria-label`).
 
@@ -242,6 +250,10 @@ including on `<lr-app-rail>` or a wrapper above it, to tint every item's active 
 `::part()`), so before these hooks the only lever was overriding the library-wide
 `--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
 them. Unset, each falls back to the token its rule used before.
+Ordinary interaction states are independently inheritable through
+`--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
+`--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
+brand/active-mix values as fallbacks.
 
 **Optional peer deps:** none.
 

@@ -44,6 +44,26 @@ it('renders the optional detail line only when set', async () => {
   );
 });
 
+it('renders an optional literal icon as decorative content without changing chip focus ownership', async () => {
+  const el = (await fixture(
+    html`<lr-suggestion-chips
+      .suggestions=${[
+        { id: 'icon', label: 'Investigate', icon: '🔎' },
+        { id: 'plain', label: 'Summarize' },
+      ]}
+    ></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  const icons = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip-icon"]');
+
+  expect(icons.length).to.equal(1);
+  expect(icons[0]!.textContent).to.equal('🔎');
+  expect(icons[0]!.getAttribute('aria-hidden')).to.equal('true');
+  chips[0]!.focus();
+  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('icon');
+  await expect(el).to.be.accessible();
+});
+
 it('emits lr-suggestion-select with id and label on activation', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
@@ -98,7 +118,7 @@ it('roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLe
   await el.updateComplete;
   expect(chips[0].tabIndex).to.equal(-1);
   expect(chips[1].tabIndex).to.equal(0);
-  expect(el.shadowRoot!.activeElement).to.equal(chips[1]);
+  expect((el.shadowRoot!.activeElement) === (chips[1])).to.equal(true);
 });
 
 it('wraps around from the last chip to the first with ArrowRight, and swaps under RTL', async () => {
@@ -137,8 +157,8 @@ it('preserves focus on a chip whose id survives a suggestions replacement (keyed
   await el.updateComplete;
 
   const stillSecondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
-  expect(stillSecondChip).to.equal(secondChip); // same DOM node, not remounted
-  expect(el.shadowRoot!.activeElement).to.equal(secondChip);
+  expect((stillSecondChip) === (secondChip)).to.equal(true); // same DOM node, not remounted
+  expect((el.shadowRoot!.activeElement) === (secondChip)).to.equal(true);
 });
 
 it('keeps active identity through reorder and transfers focus when that chip is removed', async () => {

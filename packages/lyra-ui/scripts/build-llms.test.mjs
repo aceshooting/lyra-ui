@@ -16,6 +16,56 @@ const inventory = JSON.parse(
 );
 const migration = buildMigration();
 
+const conversationReference = readFileSync(new URL('../llms/conversation.md', import.meta.url), 'utf8');
+const dataReference = readFileSync(new URL('../llms/data.md', import.meta.url), 'utf8');
+const markdownSharedSource = readFileSync(
+  new URL('../src/components/conversation/markdown/markdown-shared.ts', import.meta.url),
+  'utf8',
+);
+const headingItemBody = markdownSharedSource.match(
+  /export interface MarkdownHeadingItem\s*{(?<body>[^}]*)}/,
+)?.groups?.body;
+assert.ok(headingItemBody, 'MarkdownHeadingItem must remain a declared public interface');
+const headingItemKeys = [...headingItemBody.matchAll(/^\s*(?<key>[A-Za-z_$][\w$]*)\??:/gm)].map(
+  ({ groups }) => groups.key,
+);
+const conversationLines = conversationReference.split('\n');
+const headingTreeContractIndex = conversationLines.findIndex((line) =>
+  line.startsWith('- `getHeadingTree()'),
+);
+assert.notEqual(
+  headingTreeContractIndex,
+  -1,
+  'the authored Markdown reference must document getHeadingTree()',
+);
+const headingTreeContract = conversationLines
+  .slice(headingTreeContractIndex, headingTreeContractIndex + 3)
+  .join(' ');
+assert.ok(
+  headingTreeContract.includes('MarkdownHeadingItem[]') &&
+    headingTreeContract.includes(`\`{ ${headingItemKeys.join(', ')} }[]\``),
+  'getHeadingTree() prose must name its exported return type and exact object keys',
+);
+
+const flowCanvasSection = dataReference
+  .split('## `lr-flow-canvas`')[1]
+  ?.split('\n## `lr-')[0];
+assert.ok(flowCanvasSection, 'the authored data reference must contain lr-flow-canvas');
+const flowCanvasExample = flowCanvasSection.match(/```html\n(?<html>[\s\S]*?)\n```/)?.groups?.html;
+assert.ok(flowCanvasExample, 'lr-flow-canvas must retain a canonical HTML example');
+const flowCanvasElement = flowCanvasExample.match(/<lr-flow-canvas\b[\s\S]*?<\/lr-flow-canvas>/)?.[0];
+assert.ok(flowCanvasElement, 'the canonical example must contain a complete lr-flow-canvas');
+assert.match(
+  flowCanvasElement,
+  /<lr-flow-controls\b[^>]*slot="bottom-start"[^>]*><\/lr-flow-controls>/,
+  'the canonical flow controls must be assigned inside the canvas bottom-start slot',
+);
+assert.match(
+  flowCanvasElement,
+  /<lr-flow-minimap\b[^>]*slot="bottom-end"[^>]*><\/lr-flow-minimap>/,
+  'the canonical minimap must be assigned inside the canvas bottom-end slot',
+);
+
 const compactFacts = readTagFacts(compactManifest(createManifestInheritanceFixture()));
 assert.deepEqual(
   compactFacts.get('lr-fixture-child').cssParts.map(({ name }) => name),
@@ -108,15 +158,22 @@ const tokens = [...artifacts].find(([file]) => file.endsWith('/llms/tokens.md'))
 const peers = [...artifacts].find(([file]) => file.endsWith('/llms/peers.md'))?.[1];
 const index = [...artifacts].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
 const table = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-table.md'))?.[1];
+const streamingText = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-streaming-text.md'))?.[1];
 assert.ok(tokens, 'build({ write: false }) must produce llms/tokens.md');
 assert.ok(peers, 'build({ write: false }) must produce llms/peers.md');
 assert.ok(index, 'build({ write: false }) must produce llms/index.md');
 assert.ok(table, 'build({ write: false }) must produce per-tag component docs');
+assert.ok(streamingText, 'build({ write: false }) must produce lr-streaming-text docs');
 
 assert.match(index, /components\/lr-table\.js/);
 assert.doesNotMatch(index, /path is NOT `components\/<tag>\/`/);
 assert.match(table, /import '@aceshooting\/lyra-ui\/components\/lr-table\.js';/);
 assert.match(table, /components\/data\/table\/table\.class\.js/);
+assert.match(
+  streamingText,
+  /- \*\*Optional peers\*\* `dompurify`, `katex`, `marked`, `shiki` — see `llms\/peers\.md`/,
+  'transitive peers must follow the double-quoted side-effect lr-streaming-text → lr-markdown registration edge',
+);
 
 assert.match(
   tokens,

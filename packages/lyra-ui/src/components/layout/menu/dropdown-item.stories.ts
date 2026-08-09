@@ -71,6 +71,20 @@ export const SubmenuControl: Story = {
   `,
 };
 
+/** Web Awesome publishes the mixed-case `submenuOpen` attribute. HTML normalizes that spelling to
+ * `submenuopen`; Lyra accepts it permanently alongside the canonical `submenu-open` reflection. */
+export const UpstreamSubmenuOpenAttribute: Story = {
+  render: () => html`
+    <div role="menu" aria-label="Share actions" style="inline-size: 18rem;">
+      <lr-dropdown-item submenuOpen>
+        Share
+        <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+        <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+      </lr-dropdown-item>
+    </div>
+  `,
+};
+
 export const Sizes: Story = {
   parameters: {
     docs: {

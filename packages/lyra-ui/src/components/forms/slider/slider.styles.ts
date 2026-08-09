@@ -16,12 +16,15 @@ export const styles = css`
        underneath the track row instead of squeezing it. Without wrapping
        allowed the whole control would collapse into one over-long row. */
     flex-wrap: wrap;
-    gap: var(--lr-space-s);
+    gap: var(--lr-slider-gap, var(--lr-space-s));
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part~='base'] {
     position: relative;
     flex: 1 1 auto;
+    min-inline-size: 0;
     block-size: var(--lr-slider-row-size);
   }
   [part='track'] {
@@ -64,8 +67,8 @@ export const styles = css`
     inline-size: var(--thumb-width, var(--thumb-size, var(--lr-slider-thumb-size)));
     block-size: var(--thumb-height, var(--thumb-size, var(--lr-slider-thumb-size)));
     border-radius: 50%;
-    background: var(--lr-color-brand);
-    border: var(--lr-border-width-medium) solid var(--lr-color-surface);
+    background: var(--lr-slider-thumb-bg, var(--lr-color-brand));
+    border: var(--lr-border-width-medium) solid var(--lr-slider-thumb-border-color, var(--lr-color-surface));
     /* Resting chrome, not an overlay: a knob riding on its own track, so it sits one step above
        the track rather than at the anchored-panel tier. */
     box-shadow: var(--lr-shadow-s);
@@ -124,9 +127,11 @@ export const styles = css`
     /* Same elevation tier as the resting thumb -- hover adds the ring, it must not also change
        how high the thumb reads. */
     box-shadow: var(--lr-shadow-s), 0 0 0 var(--lr-slider-track-thickness)
-      var(--lr-color-brand-quiet);
+      var(--lr-slider-thumb-hover-ring-color, var(--lr-color-brand-quiet));
   }
-  [part~='thumb']:active {
+  :host(:not(:disabled):not([readonly])) [part~='thumb']:active {
+    box-shadow: var(--lr-shadow-s), 0 0 0 var(--lr-slider-track-thickness)
+      var(--lr-slider-thumb-active-ring-color, var(--lr-slider-thumb-hover-ring-color, var(--lr-color-brand-quiet)));
     cursor: grabbing;
   }
   /* Live value bubble for with-tooltip. It is anchored at the handle point and then moved to the
@@ -213,6 +218,9 @@ export const styles = css`
   [part~='label'],
   [part='references'] {
     flex: 1 0 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part~='label'] {
     font-weight: var(--lr-font-weight-semibold);
@@ -244,6 +252,9 @@ export const styles = css`
     /* Full basis so the hint always occupies its own wrapped line under the
        track row, however wide the track and readout are. */
     flex: 1 0 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }

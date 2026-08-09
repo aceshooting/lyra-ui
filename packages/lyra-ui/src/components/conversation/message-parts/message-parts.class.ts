@@ -1,11 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import type {
-  CitationMessagePart,
-  CitationSelectEventDetail,
-  MessagePart,
-} from '../../../ai/types.js';
+import type { CitationMessagePart, CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
 import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
@@ -23,7 +19,6 @@ import { styles } from './message-parts.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
@@ -45,6 +40,9 @@ export interface LyraMessagePartsEventMap
  * `<lr-message-parts>` — renders ordered, interleavable provider-neutral AI message parts. It
  * composes Lyra's existing Markdown, reasoning, tool, citation, attachment, widget, JSON, and
  * media primitives while keeping streaming order stable by part id.
+ * Streaming text and reasoning parts forward that state into their nested Markdown renderer, so
+ * parsing/highlighting coalesces until the same-id part becomes complete.
+ * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
@@ -171,10 +169,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     this.suppressNextErrorAnnouncement = false;
   }
 
-  private citationIndex(index: number): number {
-    return this.parts.slice(0, index + 1).filter((part) => part.type === 'citation').length;
-  }
-
   private selectCitation(event: Event, part: CitationMessagePart): void {
     event.stopPropagation();
     this.emit('lr-citation-select', { citation: part.citation });
@@ -215,18 +209,21 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return parts.join(' ');
   }
 
-  private renderBuiltin(part: MessagePart, index: number): unknown {
+  private renderBuiltin(part: MessagePart, citationRank: number): unknown {
     switch (part.type) {
       case 'text':
         return this.renderMarkdown
-          ? html`<lr-markdown .content=${part.text}></lr-markdown>`
+          ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
           : part.text;
       case 'reasoning':
         return html`<lr-thinking-panel
           .label=${this.localize('thinkingPanelLabel')}
           .mode=${part.state === 'streaming' ? 'live' : 'post-hoc'}
           ?expanded=${part.collapsed === false}
-        >${this.renderMarkdown ? html`<lr-markdown .content=${part.text}></lr-markdown>` : part.text}</lr-thinking-panel>`;
+          >${this.renderMarkdown
+            ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
+            : part.text}</lr-thinking-panel
+        >`;
       case 'tool-call':
         return html`<lr-tool-call-chip
           .callId=${part.invocation.id}
@@ -242,11 +239,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         ></lr-tool-result-view>`;
       case 'citation':
         return html`<lr-citation-badge
-          .index=${this.citationIndex(index)}
+          .index=${citationRank}
           .sourceId=${part.citation.sourceId ?? ''}
           .label=${part.citation.label ?? ''}
           @lr-citation-activate=${(event: Event) => this.selectCitation(event, part)}
-        >${part.citation.quote ?? nothing}</lr-citation-badge>`;
+          >${part.citation.quote ?? nothing}</lr-citation-badge
+        >`;
       case 'attachment':
         return html`<lr-attachment-chip
           .id=${part.document.id}
@@ -265,36 +263,43 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       case 'audio': {
         const src = safeMediaSrc(part.src);
         return html`${src ? html`<audio part="audio" controls src=${src}></audio>` : nothing}
-          ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
+        ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
       }
       case 'error':
-        return html`<span>${part.message || this.localize('messagePartError')}</span>
-          ${part.retryable
+        return html`<span>${part.message || this.localize('messagePartError')}</span> ${part.retryable
             ? html`<lr-button
                 part="retry"
                 size="s"
                 variant="neutral"
                 aria-label=${this.localize('messagePartRetry')}
                 @click=${() => this.emit('lr-part-retry', { part })}
-              >${this.localize('retry')}</lr-button>`
+                >${this.localize('retry')}</lr-button
+              >`
             : nothing}`;
     }
   }
 
-  private renderOne(part: MessagePart, index: number): TemplateResult | typeof nothing {
+  private renderOne(part: MessagePart, index: number, citationRank: number): TemplateResult | typeof nothing {
     if (part.type === 'reasoning' && !this.showReasoning) return nothing;
     const custom = this.renderPart?.(part, index);
-    return html`<div
-      part=${this.partNames(part)}
-      data-type=${part.type}
-      data-state=${part.state ?? 'complete'}
-    >${custom === undefined ? this.renderBuiltin(part, index) : custom}</div>`;
+    return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}>
+      ${custom === undefined ? this.renderBuiltin(part, citationRank) : custom}
+    </div>`;
   }
 
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('messagePartsLabel');
+    const citationRanks = new Array<number>(this.parts.length).fill(0);
+    let citationRank = 0;
+    for (let index = 0; index < this.parts.length; index++) {
+      if (this.parts[index]?.type === 'citation') citationRanks[index] = ++citationRank;
+    }
     return html`<div part="base" role="group" aria-label=${label}>
-      ${repeat(this.parts, (part) => part.id, (part, index) => this.renderOne(part, index))}
+      ${repeat(
+        this.parts,
+        (part) => part.id,
+        (part, index) => this.renderOne(part, index, citationRanks[index] ?? 0)
+      )}
     </div>`;
   }
 }

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,7 +28,9 @@ persist selection; not a persona picker; `lr-model-select` stays for LLMs.
 **Exported types:** `LyraVoiceCatalogEntry { id: string; label: string; language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
 `[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
-homogeneous, same union contract as `LyraModelCatalog`.
+homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
+canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
+`LyraSize`.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
@@ -40,7 +42,15 @@ boolean = true` (reflected) — whether to render preview affordances at all. `l
 string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
 `inputMode: string = ''` (attribute `inputmode`), `enterKeyHint: string = ''` (attribute
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
-identically-named properties.
+identically-named properties. `size: LyraSize = 'm'` (reflected) selects the shared
+`2xs`/`xs`/`s`/`m`/`l`/`xl` control ladder; `small`/`medium`/`large` render as aliases of
+`s`/`m`/`l`. It scales both closed and free-text field chrome through the shared
+`--lr-form-control-*` metrics. The separate preview button retains the library-wide 40px minimum
+hit area at compact tiers and grows with `l`/`xl`.
+
+The `label` property and `label` slot share one native label in the standard `form-control` frame.
+Slotted label content participates in the accessible name in both closed-dropdown and free-text
+modes; an explicit host `aria-label` remains the highest-precedence name.
 
 **Form association:** hand-rolled via `attachInternals()`, mirroring `lr-model-select`: live,
 non-reflecting `value: string = ''` (the current voice id), reflected
@@ -75,7 +85,7 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 `focus`/`blur` (picker-family contract, same as `lr-model-select`), and one bubbling/composed
 `lr-invalid` alias when native validity fails.
 
-**Slots:** `hint`, `error`.
+**Slots:** `label` (custom visible label content), `hint`, `error`.
 
 **The required marker and barred validity.** Identical to `lr-model-select`'s (see that section): a
 `required` picker with a non-empty `label` paints the shared required marker on
@@ -85,7 +95,7 @@ started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` a
 constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
 here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
 
-**CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
+**CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
 stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabindex="-1"`,
@@ -105,6 +115,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 ```
 
 **Known gotchas:**
+
 - Listbox options must not contain tab-focusable controls, so preview is accessible via the
   standalone `[part="preview-button"]` beside the trigger (previews the active option while open,
   else the committed value) — the per-row `[part="option-preview"]` icon is a pointer-only

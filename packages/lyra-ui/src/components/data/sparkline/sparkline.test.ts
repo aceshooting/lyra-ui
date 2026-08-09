@@ -123,7 +123,7 @@ it('applies the image role and generated accessible name to the semantic SVG', a
 
   const path = el.shadowRoot!.querySelector('[part="line"]');
   const svg = el.shadowRoot!.querySelector('svg')!;
-  expect(path).to.exist;
+  expect((path) != null).to.equal(true);
   expect(el.hasAttribute('role')).to.equal(false);
   expect(svg.getAttribute('role')).to.equal('img');
   expect(svg.getAttribute('aria-label')).to.contain('4');

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,8 +46,13 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
-input. `getForm()` returns the browser-resolved owning form. `setCustomValidity(message)` carries a
+glyph), `input`, `hint`, `error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
+internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
+writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
+`setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.
+`setRangeText()` synchronizes the pending draft without emitting `input`/`change`, so the next
+delimiter, Enter, or blur commit consumes the edited text. `getForm()` returns the browser-resolved
+owning form. `setCustomValidity(message)` carries a
 rejection no client-side constraint can express
 ("that tag is reserved"): a non-empty message raises `customError` and blocks submission, `''`
 restores the control's own computed validity so a `required` control with no tokens goes back to
@@ -63,17 +68,23 @@ to an empty list, and emits no user events.
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a
 roving tab stop (one Tab stop for the whole row): click, Enter, Space, or F2 opens an inline
 editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RTL, since they mean
-previous/next *visually*), Home/End jump to the first/last. Inside the editor, Enter commits and
+previous/next _visually_), Home/End jump to the first/last. Inside the editor, Enter commits and
 returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
-enclosing dialog or popover does not also close), and blurring commits *without* pulling focus
+enclosing dialog or popover does not also close), and blurring commits _without_ pulling focus
 back — a blur means the user already aimed focus elsewhere. `lr-token-edit` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
-duplicate draft is skipped rather than rejecting the whole entry.
+duplicate draft is skipped rather than rejecting the whole entry. Own or fieldset-cascaded
+disablement removes every token label's tabindex, renders `aria-disabled="true"`, retires any
+internal focus/editor state, and suppresses enabled hover/active paint. Re-enabling renders
+`aria-disabled="false"` and restores exactly one roving token stop.
+Host `focus()` and `click()` are also synchronous no-ops under own or fieldset-cascaded disablement,
+including the same task that sets `disabled` before Lit has updated the still-rendered native draft.
+`blur()` remains available to release existing focus.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — *only when it is exactly one
-character* — it is the keystroke that commits the draft. A multi-character delimiter still splits a
+jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
+character_ — it is the keystroke that commits the draft. A multi-character delimiter still splits a
 pasted or committed draft, but no keystroke can ever match it, so nothing commits on typing.
 Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
 does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
@@ -92,7 +103,10 @@ text the part is hidden and no glyph is painted.
 `--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
 `--lr-token-input-control-height` (exact input-wrapper height — undeclared by default, leaving the
 `--lr-token-input-control-min-height` floor only; set it to a length to both floor and cap the row,
-e.g. to pixel-match a sibling field in the same toolbar row), `--lr-token-input-input-inline-size`
+e.g. to pixel-match a sibling field in the same toolbar row). An uncapped row grows as tokens wrap.
+A capped row explicitly clips inline overflow and becomes a block-axis scrollport, preserving every
+wrapped token and 40px-floored remove/edit action instead of clipping them; keyboard focus scrolls
+the destination token into view. `--lr-token-input-input-inline-size`
 (the editable input's `flex-basis` inside the wrapped token row; undeclared by default, falling back
 inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
@@ -105,6 +119,12 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
 - `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
 - `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-token-input-action-hover-bg` — Edit/remove hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
+  background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label
+  hover and pressed backgrounds. The hover hook falls back to
+  `--lr-token-input-action-hover-bg`; the pressed hook defaults to its active-state mix.
+- `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
+  and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
 - `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.

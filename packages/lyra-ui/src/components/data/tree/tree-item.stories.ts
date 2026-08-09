@@ -6,6 +6,30 @@ const meta: Meta = { title: 'Navigation/Tree node', component: 'lr-tree-item', t
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-tree-item .item=${{ id: 'root', label: 'Root', children: [] }}></lr-tree-item>` };
 
+export const AccessibleNameOverride: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-label` is author-owned and remains authoritative when the assigned item or its `accessibleLabel` refreshes. Removing the host attribute restores the current data-model name.',
+      },
+    },
+  },
+  render: () => html`
+    <div role="tree" aria-label="Cases" style="max-width: 20rem">
+      <lr-tree-item
+        aria-label="Author-defined case name"
+        .item=${{
+          id: 'case',
+          label: 'C-42/24',
+          accessibleLabel: 'Data-defined case name',
+          children: [],
+        }}
+      ></lr-tree-item>
+    </div>
+  `,
+};
+
 /**
  * The declarative child model — no `item` object. The label is the default slot's content (or the
  * `label` attribute when nothing is slotted), and nested `<lr-tree-item>` children carry the

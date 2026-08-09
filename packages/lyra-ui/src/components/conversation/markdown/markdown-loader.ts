@@ -5,7 +5,7 @@ import {
 } from '../../../internal/optional-peer-capabilities.js';
 
 /**
- * The configurable parser capability exposed by `LyraMarkdown.marked`.
+ * The configurable parser capability exposed by both Markdown variants' `marked` getter.
  * It is intentionally owned by Lyra so core declarations remain usable when
  * the optional `marked` peer is not installed.
  */

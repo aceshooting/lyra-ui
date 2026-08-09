@@ -1,12 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './otp-input.js';
+import type { LyraOtpInput } from './otp-input.class.js';
 
 const meta: Meta = { title: 'Forms/OTP input', component: 'lr-otp-input', tags: ['autodocs'] };
 export default meta;
 
 export const Default: StoryObj = {
-  render: () => html`<lr-otp-input label="Verification code" hint="Check your email for a 6-digit code."></lr-otp-input>`,
+  render: () =>
+    html`<lr-otp-input label="Verification code" hint="Check your email for a 6-digit code."></lr-otp-input>`,
 };
 
 export const Length: StoryObj = {
@@ -49,7 +51,7 @@ export const CustomSegments: StoryObj = {
     docs: {
       description: {
         story:
-          'Mapped `--segment-*` properties control geometry; the retained `--lr-otp-input-segment-*` hooks independently retune each cell\'s fill, border color, and radius.',
+          "Mapped `--segment-*` properties control geometry; the retained `--lr-otp-input-segment-*` hooks independently retune each cell's fill, border color, and radius.",
       },
     },
   },
@@ -75,10 +77,7 @@ export const CustomSegments: StoryObj = {
 
 export const AutoSubmitAndClear: StoryObj = {
   render: () => html`
-    <form
-      style="display: grid; gap: var(--lr-space-s);"
-      @submit=${(event: SubmitEvent) => event.preventDefault()}
-    >
+    <form style="display: grid; gap: var(--lr-space-s);" @submit=${(event: SubmitEvent) => event.preventDefault()}>
       <lr-otp-input
         name="code"
         label="Auto-submitting code"
@@ -97,10 +96,76 @@ export const AutoSubmitAndClear: StoryObj = {
   `,
 };
 
+export const ReplacedCompletionCancelsAutoSubmit: StoryObj = {
+  name: 'Replaced completion cancels auto-submit',
+  render: () => html`
+    <form
+      style="display: grid; gap: var(--lr-space-s);"
+      @submit=${(event: SubmitEvent) => {
+        event.preventDefault();
+        const output = (event.currentTarget as HTMLFormElement).querySelector('output');
+        if (output) output.textContent = 'Unexpected stale submission';
+      }}
+    >
+      <lr-otp-input
+        name="code"
+        label="Replacement-safe code"
+        hint="Entering 123 replaces it with 456 and retires the queued submit for 123."
+        length="3"
+        autosubmit
+        @lr-complete=${(event: CustomEvent<{ value: string }>) => {
+          const field = event.currentTarget as LyraOtpInput;
+          field.value = event.detail.value === '123' ? '456' : event.detail.value;
+          const output = field.parentElement?.querySelector('output');
+          if (output) output.textContent = `Live code is now ${field.value}; no stale submit ran.`;
+        }}
+      ></lr-otp-input>
+      <output aria-live="polite">Enter 123 to replace the completed code.</output>
+    </form>
+  `,
+};
+
+/**
+ * The host selection facade edits the compact code without reaching into the shadow root. Range
+ * replacements stay sanitized and synchronize the form value without emitting user-input events.
+ */
+export const SelectionEditingFacade: StoryObj = {
+  render: () => {
+    const fieldFor = (event: Event) =>
+      (event.currentTarget as HTMLElement)
+        .closest('[data-selection-demo]')
+        ?.querySelector<LyraOtpInput>('lr-otp-input');
+    return html`
+      <div data-selection-demo style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem);">
+        <lr-otp-input
+          name="code"
+          label="Editable compact code"
+          hint="The replacement is uppercased and the dash is discarded by the field sanitizer."
+          length="4"
+          type="alphanumeric"
+          case="upper"
+          value="12AB"
+        ></lr-otp-input>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs);">
+          <button type="button" @click=${(event: Event) => fieldFor(event)?.select()}>Select code</button>
+          <button type="button" @click=${(event: Event) => fieldFor(event)?.setRangeText('z-', 1, 3, 'select')}>
+            Replace middle range
+          </button>
+        </div>
+      </div>
+    `;
+  },
+};
+
 export const Required: StoryObj = {
   render: () => html`
     <form @submit=${(e: Event) => e.preventDefault()}>
-      <lr-otp-input name="code" label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
+      <lr-otp-input
+        name="code"
+        label="Verification code"
+        required
+        error-text="Enter the code we sent you."
+      ></lr-otp-input>
       <button type="submit">Verify</button>
     </form>
   `,
@@ -108,5 +173,38 @@ export const Required: StoryObj = {
 
 export const RightToLeft: StoryObj = {
   name: 'RTL',
-  render: () => html`<div dir="rtl"><lr-otp-input label="رمز التحقق" hint="تحقق من بريدك الإلكتروني."></lr-otp-input></div>`,
+  render: () =>
+    html`<div dir="rtl"><lr-otp-input label="رمز التحقق" hint="تحقق من بريدك الإلكتروني."></lr-otp-input></div>`,
+};
+
+/** Ancestor theme values override appearance fallbacks without an inline host override. */
+export const AncestorTheme: StoryObj = {
+  render: () => html`
+    <div
+      style="
+        --lr-otp-input-segment-fill: var(--lr-color-brand-quiet);
+        --lr-otp-input-segment-border-color: var(--lr-color-brand);
+        --lr-otp-input-segment-radius: var(--lr-radius);
+        --lr-otp-input-active-border-color: var(--lr-color-danger);
+        --lr-otp-input-active-ring-color: var(--lr-color-danger);
+        --lr-otp-input-invalid-border-color: var(--lr-color-warning);
+      "
+    >
+      <lr-otp-input appearance="filled-outlined" autofocus label="Verification code"></lr-otp-input>
+    </div>
+  `,
+};
+
+/** Exact 320px RTL allocation with long copy and a horizontally reachable fixed-cell row. */
+export const NarrowRightToLeft: StoryObj = {
+  name: 'Narrow RTL (320px)',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%">
+      <lr-otp-input
+        length="8"
+        label="InternationalizedUnbrokenVerificationCodeLabelThatMustRemainInsideItsAllocation"
+        hint="Supporting copy wraps while every fixed cell remains horizontally reachable."
+      ></lr-otp-input>
+    </div>
+  `,
 };

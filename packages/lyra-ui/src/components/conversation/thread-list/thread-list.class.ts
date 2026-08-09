@@ -1,11 +1,4 @@
-import {
-  html,
-  nothing,
-  svg,
-  type PropertyValues,
-  type SVGTemplateResult,
-  type TemplateResult,
-} from 'lit';
+import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
@@ -19,7 +12,6 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_date, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface ChatThread {
   id: string;
@@ -125,8 +117,9 @@ function defaultFilter(thread: ChatThread, query: string, locale: string): boole
  * No thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
  * Arrow/Home/End navigation skips unavailable rows, including a row placed below an `inert`
- * ancestor by `wrapRow`; at a virtual-window edge it continues scanning the complete item model
- * until the next available row is mounted and focusable.
+ * ancestor by `wrapRow`. Arrow navigation continues through the complete item model at a virtual
+ * window edge; Home/End always resolve the first/last complete-model thread even from a middle
+ * window, mounting candidates until an available row can receive focus.
  *
  * Data mode: a host needing content with no home in `lr-conversation-item`'s own
  * `title`/`excerpt`/`meta`/`actions` surface sets `wrapRow` to wrap the already-built row. For
@@ -247,7 +240,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. */
   @property({ attribute: false }) threads: ChatThread[] = [];
 
-  /** Data mode: marks the matching row `active`/`aria-current` and scrolls it into view. */
+  /**
+   * Data mode: marks the matching raw thread id `active`/`aria-current` and scrolls it into view.
+   * Internal group and thread keys are separately namespaced, so ids such as `group:today` remain
+   * ordinary thread ids rather than colliding with a group header.
+   */
   @property({ attribute: 'active-id' }) activeId = '';
 
   /** Shows the built-in search field. */
@@ -264,10 +261,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ attribute: false }) groupBy?: (thread: ChatThread) => string;
 
   /** `grouping="custom"`: renders a group label. Receives the id and matching visible threads. */
-  @property({ attribute: false }) formatGroup?: (
-    id: string,
-    threads: ChatThread[],
-  ) => string | TemplateResult;
+  @property({ attribute: false }) formatGroup?: (id: string, threads: ChatThread[]) => string | TemplateResult;
 
   /** `grouping="custom"`: explicit group-id order, or a comparator. Unlisted ids follow in their
    *  first-seen order when an array is supplied. */
@@ -413,7 +407,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       if (this.threads.length > 0 && defaultSlotted.length > 0) {
         this.restoreInjectedListItemRoles();
         console.warn(
-          '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
+          '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.'
         );
       } else if (this.threads.length === 0) {
         this.markAsListItems(defaultSlotted);
@@ -473,7 +467,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const withArchiveFilter = this.threads.filter((t) => this.showArchived || !t.archived);
     if (q === '') return withArchiveFilter;
     return withArchiveFilter.filter((t) =>
-      this.filter ? this.filter(t, q) : defaultFilter(t, q, this.effectiveLocale),
+      this.filter ? this.filter(t, q) : defaultFilter(t, q, this.effectiveLocale)
     );
   }
 
@@ -515,8 +509,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       case 'archived':
         return this.localize('threadGroupArchived');
       default: {
-        return this.formatDate?.(groupDate!) ??
-          getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(groupDate!);
+        return (
+          this.formatDate?.(groupDate!) ??
+          getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(groupDate!)
+        );
       }
     }
   }
@@ -540,7 +536,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private groupedItems(
     grouped: Map<string, ChatThread[]>,
     order: string[],
-    format: (id: string, threads: ChatThread[]) => string | TemplateResult,
+    format: (id: string, threads: ChatThread[]) => string | TemplateResult
   ): ThreadListItem[] {
     const collapsedIds = new Set(this.collapsedGroupIds);
     const items: ThreadListItem[] = [];
@@ -579,7 +575,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       return this.groupedItems(
         grouped,
         this.orderedCustomGroupIds(grouped),
-        (id, groupedThreads) => this.formatGroup?.(id, groupedThreads) ?? id,
+        (id, groupedThreads) => this.formatGroup?.(id, groupedThreads) ?? id
       );
     }
 
@@ -622,7 +618,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       this.localize('threadListMatchAnnounce', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(count),
         pluralCount: count,
-      }),
+      })
     );
   }
 
@@ -669,17 +665,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const option = this.optionEl(row);
     return Boolean(
       option &&
-      option.getAttribute('role') === 'button' &&
-      row.hidden === false &&
-      row.getAttribute('aria-hidden') !== 'true' &&
-      row.getAttribute('aria-disabled') !== 'true' &&
-      !row.inert &&
-      row.closest('[inert]') === null &&
-      option.hidden === false &&
-      option.getAttribute('aria-hidden') !== 'true' &&
-      option.getAttribute('aria-disabled') !== 'true' &&
-      !option.inert &&
-      option.closest('[inert]') === null,
+        option.getAttribute('role') === 'button' &&
+        row.hidden === false &&
+        row.getAttribute('aria-hidden') !== 'true' &&
+        row.getAttribute('aria-disabled') !== 'true' &&
+        !row.inert &&
+        row.closest('[inert]') === null &&
+        option.hidden === false &&
+        option.getAttribute('aria-hidden') !== 'true' &&
+        option.getAttribute('aria-disabled') !== 'true' &&
+        !option.inert &&
+        option.closest('[inert]') === null
     );
   }
 
@@ -691,14 +687,75 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return rows.findIndex((row) => activeElementIn(row.shadowRoot) != null);
   }
 
+  /**
+   * Mounts and focuses the first navigable thread at or beyond a complete-model item index. Group
+   * records and unavailable rendered rows are skipped in `direction`; a newer navigation, search,
+   * disconnect, or list replacement invalidates the pending focus task.
+   */
+  private focusVirtualThreadFromItemIndex(
+    list: LyraVirtualList,
+    items: ThreadListItem[],
+    initialItemIndex: number,
+    direction: 1 | -1,
+    focusGeneration: number
+  ): void {
+    void (async () => {
+      let targetItemIndex = initialItemIndex;
+      while (targetItemIndex >= 0 && targetItemIndex < items.length) {
+        while (items[targetItemIndex]?.kind === 'group') targetItemIndex += direction;
+        const targetItem = items[targetItemIndex];
+        if (!targetItem || targetItem.kind !== 'thread') return;
+        const targetId = targetItem.thread.id;
+        list.scrollToIndex(targetItemIndex, { align: 'auto', behavior: 'auto' });
+
+        // A focus-induced scroll for the old row and the virtual list's coalesced render may both
+        // still be queued. The second pass covers a measurement update that mounts the exact target
+        // one frame later.
+        let targetRow: LyraConversationItem | undefined;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          await new Promise<void>((resolve) => {
+            const view = this.ownerDocument.defaultView;
+            if (view) view.requestAnimationFrame(() => resolve());
+            else requestAnimationFrame(() => resolve());
+          });
+          if (focusGeneration !== this.focusTaskGeneration || !this.isConnected || this.virtualListEl !== list) {
+            return;
+          }
+          await list.updateComplete;
+          if (focusGeneration !== this.focusTaskGeneration || !this.isConnected || this.virtualListEl !== list) {
+            return;
+          }
+          targetRow = this.rowElements().find((row) => row.id === targetId);
+          if (targetRow) break;
+        }
+        if (targetRow && this.isNavigableRow(targetRow)) {
+          this.optionEl(targetRow)?.focus();
+          return;
+        }
+        targetItemIndex += direction;
+      }
+    })();
+  }
+
   private onListKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
     const origin = e.composedPath()[0];
-    if (
-      (origin as Partial<Node> | undefined)?.nodeType === 1 &&
-      (origin as Element).closest('[part="group-toggle"]')
-    ) return;
+    if ((origin as Partial<Node> | undefined)?.nodeType === 1 && (origin as Element).closest('[part="group-toggle"]'))
+      return;
     const focusGeneration = ++this.focusTaskGeneration;
+    const list = this.virtualListEl;
+    if (this.dataMode && (e.key === 'Home' || e.key === 'End') && list?.scrollContainer) {
+      const items = list.items as ThreadListItem[];
+      e.preventDefault();
+      this.focusVirtualThreadFromItemIndex(
+        list,
+        items,
+        e.key === 'Home' ? 0 : items.length - 1,
+        e.key === 'Home' ? 1 : -1,
+        focusGeneration
+      );
+      return;
+    }
     const rows = this.navigableRows();
     if (rows.length === 0) return;
     const currentIndex = this.focusedRowIndex(rows);
@@ -718,63 +775,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     // folded into a render. Focusing an overscanned edge row may itself move the viewport; choosing
     // whichever row happens to land at the new rendered edge can therefore skip several threads on
     // browsers that apply that focus scroll later in the frame.
-    const list = this.virtualListEl;
     if (!list?.scrollContainer) return;
     const currentRow = rows[currentIndex];
     if (!currentRow) return;
     const items = list.items as ThreadListItem[];
-    const currentItemIndex = items.findIndex(
-      (item) => item.kind === 'thread' && item.thread.id === currentRow.id,
-    );
+    const currentItemIndex = items.findIndex((item) => item.kind === 'thread' && item.thread.id === currentRow.id);
     if (currentItemIndex < 0) return;
     const direction = e.key === 'ArrowDown' ? 1 : -1;
-    void (async () => {
-      let targetItemIndex = currentItemIndex + direction;
-      while (targetItemIndex >= 0 && targetItemIndex < items.length) {
-        while (items[targetItemIndex]?.kind === 'group') targetItemIndex += direction;
-        const targetItem = items[targetItemIndex];
-        if (!targetItem || targetItem.kind !== 'thread') return;
-        const targetId = targetItem.thread.id;
-        list.scrollToIndex(targetItemIndex, { align: 'auto', behavior: 'auto' });
-
-        // The browser may still have a focus-induced scroll queued for the old edge row. Give both
-        // that native scroll and the virtual list's coalesced scroll render a frame to settle; the
-        // second pass covers a measurement update that mounts the exact target one frame later.
-        let targetRow: LyraConversationItem | undefined;
-        for (let attempt = 0; attempt < 2; attempt += 1) {
-          await new Promise<void>((resolve) => {
-            const view = this.ownerDocument.defaultView;
-            if (view) view.requestAnimationFrame(() => resolve());
-            else requestAnimationFrame(() => resolve());
-          });
-          if (
-            focusGeneration !== this.focusTaskGeneration ||
-            !this.isConnected ||
-            this.virtualListEl !== list
-          ) {
-            return;
-          }
-          await list.updateComplete;
-          if (
-            focusGeneration !== this.focusTaskGeneration ||
-            !this.isConnected ||
-            this.virtualListEl !== list
-          ) {
-            return;
-          }
-          targetRow = this.rowElements().find((row) => row.id === targetId);
-          if (targetRow) break;
-        }
-        if (targetRow && this.isNavigableRow(targetRow)) {
-          this.optionEl(targetRow)?.focus();
-          return;
-        }
-        // A newly-mounted row can be disabled, semantically unavailable, or inside an inert
-        // `wrapRow`. Keep scanning the complete item model rather than committing focus to a
-        // target that will silently reject it.
-        targetItemIndex += direction;
-      }
-    })();
+    this.focusVirtualThreadFromItemIndex(list, items, currentItemIndex + direction, direction, focusGeneration);
   };
 
   private renderRowActions(thread: ChatThread): TemplateResult {
@@ -821,7 +829,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  be a second one the moment both are in the DOM at once. */
   private renderGroupHeader(
     item: Extract<ThreadListItem, { kind: 'group' }>,
-    options: { sticky?: boolean } = {},
+    options: { sticky?: boolean } = {}
   ): TemplateResult {
     const nextCollapsed = !item.collapsed;
     return html`
@@ -885,9 +893,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${thread.pinned
           ? html`<span slot="meta" part="row-meta pin-glyph" aria-hidden="true">${pinIcon()}</span>`
           : nothing}
-        ${this.renderMeta
-          ? html`<span slot="meta" part="row-meta" inert>${this.renderMeta(thread)}</span>`
-          : nothing}
+        ${this.renderMeta ? html`<span slot="meta" part="row-meta" inert>${this.renderMeta(thread)}</span>` : nothing}
         ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
     `;
@@ -927,8 +933,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private itemKey = (item: unknown): string => {
     const listItem = item as ThreadListItem;
-    return listItem.kind === 'group' ? `group:${listItem.id}` : listItem.thread.id;
+    return listItem.kind === 'group' ? this.groupItemKey(listItem.id) : this.threadItemKey(listItem.thread.id);
   };
+
+  /** Internal namespaces keep unrestricted public thread ids distinct from group-header keys. */
+  private groupItemKey(id: string): string {
+    return `group:${id}`;
+  }
+
+  private threadItemKey(id: string): string {
+    return `thread:${id}`;
+  }
 
   private onDefaultSlotChange = (e: Event): void => {
     const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
@@ -966,11 +981,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     // Slotted rows are invisible to a server renderer, which therefore always emits data mode; a
     // hydrating list has to reuse that markup rather than discard it on its corrective update.
     return html`
-      <div
-        part="base"
-        role=${this.dataMode ? 'region' : nothing}
-        aria-label=${this.dataMode ? label : nothing}
-      >
+      <div part="base" role=${this.dataMode ? 'region' : nothing} aria-label=${this.dataMode ? label : nothing}>
         ${this.searchable ? this.renderSearch() : nothing}
         ${this.dataMode ? this.renderDataList() : this.renderSlottedList(label)}
       </div>
@@ -988,28 +999,28 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const items = this.buildItems(visible);
     const showEmpty = visible.length === 0 && !this.hasEmptySlot;
     return html`
-        <div part="list" @keydown=${this.onListKeyDown}>
-          ${showEmpty
-            ? html`<div part="empty">${
-                this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
-              }</div>`
-            : html`<lr-virtual-list
-                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-active-indicator:row-item-active-indicator, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
-                row-height="auto"
-                .items=${items}
-                .groups=${this.stickyGroups ? this.stickyAnchors(items) : undefined}
-                .renderStickyGroup=${this.stickyGroups ? this.renderStickyGroup : undefined}
-                .renderItem=${this.renderItem}
-                .keyFunction=${this.itemKey}
-                .activeId=${this.activeId}
-              ></lr-virtual-list>`}
-          <slot
-            name="empty"
-            ?hidden=${!(visible.length === 0 && this.hasEmptySlot)}
-            @slotchange=${this.onEmptySlotChange}
-          ></slot>
-        </div>
-        <lr-live-region></lr-live-region>
+      <div part="list" @keydown=${this.onListKeyDown}>
+        ${showEmpty
+          ? html`<div part="empty">${
+              this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
+            }</div>`
+          : html`<lr-virtual-list
+              exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-active-indicator:row-item-active-indicator, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+              row-height="auto"
+              .items=${items}
+              .groups=${this.stickyGroups ? this.stickyAnchors(items) : undefined}
+              .renderStickyGroup=${this.stickyGroups ? this.renderStickyGroup : undefined}
+              .renderItem=${this.renderItem}
+              .keyFunction=${this.itemKey}
+              .activeId=${this.activeId ? this.threadItemKey(this.activeId) : ''}
+            ></lr-virtual-list>`}
+        <slot
+          name="empty"
+          ?hidden=${!(visible.length === 0 && this.hasEmptySlot)}
+          @slotchange=${this.onEmptySlotChange}
+        ></slot>
+      </div>
+      <lr-live-region></lr-live-region>
     `;
   }
 }

@@ -1,6 +1,7 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import "./app-rail-item.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it("renders a labeled link with icon and label parts", async () => {
   const el = (await fixture(html`
@@ -14,6 +15,32 @@ it("renders a labeled link with icon and label parts", async () => {
   expect(el.textContent).to.include("Inbox");
 });
 
+it('inherits independent hover and pressed paint from an ancestor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-app-rail-item-hover-bg: rgb(1, 2, 3);
+      --lr-app-rail-item-hover-color: rgb(4, 5, 6);
+      --lr-app-rail-item-active-bg: rgb(7, 8, 9);
+      --lr-app-rail-item-active-color: rgb(10, 11, 12);
+    ">
+      <lr-app-rail-item>Reports</lr-app-rail-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(target).color).to.equal('rgb(4, 5, 6)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(target).color).to.equal('rgb(10, 11, 12)');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("renders a disabled button when no href is available", async () => {
   const el = (await fixture(
     html`<lr-app-rail-item disabled>Settings</lr-app-rail-item>`
@@ -24,6 +51,40 @@ it("renders a disabled button when no href is available", async () => {
   expect(button.tagName).to.equal("BUTTON");
   expect(button.disabled).to.be.true;
   expect(button.getAttribute("aria-disabled")).to.equal("true");
+});
+
+describe("host click()", () => {
+  for (const [name, markup] of [
+    ["button", html`<lr-app-rail-item>Settings</lr-app-rail-item>`],
+    ["link", html`<lr-app-rail-item href="/settings">Settings</lr-app-rail-item>`],
+  ] as const) {
+    it(`activates the internal ${name}`, async () => {
+      const el = (await fixture(markup)) as LyraAppRailItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      let activations = 0;
+      base.addEventListener("click", (event) => {
+        event.preventDefault();
+        activations += 1;
+      });
+
+      el.click();
+
+      expect(activations).to.equal(1);
+    });
+  }
+
+  it("does not activate the internal button while disabled", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item disabled>Settings</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    let activations = 0;
+    base.addEventListener("click", () => (activations += 1));
+
+    el.click();
+
+    expect(activations).to.equal(0);
+  });
 });
 
 it('renders aria-disabled="false" on an enabled item', async () => {
@@ -145,11 +206,11 @@ describe("tooltip", () => {
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
-    expect(flyout).to.not.exist;
+    expect((flyout) == null).to.equal(true);
     base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
     await el.updateComplete;
     flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
-    expect(flyout).to.exist;
+    expect((flyout) != null).to.equal(true);
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
     base.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
     await el.updateComplete;

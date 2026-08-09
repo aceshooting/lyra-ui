@@ -3,7 +3,12 @@ import { html } from 'lit';
 import './archive-viewer.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
-const meta: Meta = { title: 'ArchiveViewer', component: 'lr-archive-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'ArchiveViewer',
+  component: 'lr-archive-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A host `aria-label` names the archive region by attribute presence, including an explicitly empty value; `name` is the fallback.' } } },
+};
 export default meta;
 type Story = StoryObj;
 const source = 'data:application/zip;base64,UEsDBAoAAAAAAEyY71zIWnOsFAAAABQAAAAKAAAAUkVBRE1FLnR4dGhlbGxvIGZyb20gU3Rvcnlib29rUEsDBAoAAAAAAEyY71wAAAAAAAAAAAAAAAAEAAAAc3JjL1BLAQIUAAoAAAAAAEyY71zIWnOsFAAAABQAAAAKAAAAAAAAAAAAAAAAAAAAAABSRUFETUUudHh0UEsBAhQACgAAAAAATJjvXAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAQAAAAPAAAAHNyYy9QSwUGAAAAAAIAAgBqAAAAXgAAAAAA';

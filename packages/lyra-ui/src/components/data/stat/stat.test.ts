@@ -4,20 +4,17 @@ import './stat.js';
 import type { LyraStat } from './stat.js';
 import { styles } from './stat.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders label, value, and unit', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>`)) as LyraStat;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Revenue');
   expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent!.trim()).to.equal('12.4');
   expect(el.shadowRoot!.querySelector('[part="unit"]')!.textContent).to.equal('k€');
 });
 
 it('renders a real semantic link only when href is safe and forwards target, deriving rel', async () => {
-  const plain = (await fixture(html`
-    <lr-stat label="Memories" value="128"></lr-stat>
-  `)) as LyraStat;
+  const plain = (await fixture(html` <lr-stat label="Memories" value="128"></lr-stat> `)) as LyraStat;
   expect(plain.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
 
   const linked = (await fixture(html`
@@ -32,7 +29,7 @@ it('renders a real semantic link only when href is safe and forwards target, der
   expect(linked.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
 
   const unsafe = (await fixture(html`
-    <lr-stat label="Unsafe" value="0" href="java\tscript:alert(1)"></lr-stat>
+    <lr-stat label="Unsafe" value="0" href="java	script:alert(1)"></lr-stat>
   `)) as LyraStat;
   expect(unsafe.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
 });
@@ -46,9 +43,7 @@ it('derives rel="noopener noreferrer" automatically from target alone (reverse-t
 });
 
 it('omits rel entirely when target is unset', async () => {
-  const el = (await fixture(html`
-    <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
-  `)) as LyraStat;
+  const el = (await fixture(html` <lr-stat label="Memories" value="128" href="/memories"></lr-stat> `)) as LyraStat;
   const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
   expect(anchor.hasAttribute('rel')).to.be.false;
 });
@@ -60,6 +55,65 @@ it('avoids nested focus targets when an exact-value stat is linked', async () =>
   expect(el.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('a');
   expect(el.shadowRoot!.querySelector('[part="value"]')!.hasAttribute('tabindex')).to.be.false;
   await expect(el).to.be.accessible();
+});
+
+it('keeps interactive slotted content outside the linked stat anchor and independently operable', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Revenue" value="12.4" href="#revenue-details">
+      <button id="stat-slot-action" slot="caption">Compare periods</button>
+    </lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  const action = el.querySelector<HTMLButtonElement>('#stat-slot-action')!;
+  let anchorClicks = 0;
+  let actionClicks = 0;
+  anchor.addEventListener('click', (event) => {
+    anchorClicks += 1;
+    event.preventDefault();
+  });
+  action.addEventListener('click', () => {
+    actionClicks += 1;
+  });
+
+  expect(anchor.contains(action)).to.be.false;
+  action.click();
+  expect(actionClicks).to.equal(1);
+  expect(anchorClicks).to.equal(0);
+  await expect(el).to.be.accessible();
+});
+
+it('keeps whole-card activation for non-interactive slotted content outside the link', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="Revenue" value="12.4" href="#revenue-details">
+      <span id="stat-plain-caption" slot="caption">Open details</span>
+    </lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  let anchorClicks = 0;
+  anchor.addEventListener('click', (event) => {
+    anchorClicks += 1;
+    event.preventDefault();
+  });
+
+  el.querySelector<HTMLElement>('#stat-plain-caption')!.click();
+  expect(anchorClicks).to.equal(1);
+});
+
+it('forwards a live host aria-label to the linked stat anchor and restores natural naming when removed', async () => {
+  const el = (await fixture(html`
+    <lr-stat aria-label="Open revenue details" label="Revenue" value="12.4" unit="k€" href="/revenue"></lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  expect(anchor.getAttribute('aria-label')).to.equal('Open revenue details');
+
+  el.setAttribute('aria-label', 'Open archived revenue');
+  await el.updateComplete;
+  expect(anchor.getAttribute('aria-label')).to.equal('Open archived revenue');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(anchor.hasAttribute('aria-label')).to.be.false;
+  expect(anchor.textContent?.replace(/\s+/g, ' ').trim()).to.equal('Revenue 12.4 k€');
 });
 
 it('hides the trend pill when trend is NaN, shows it with direction otherwise', async () => {
@@ -83,9 +137,7 @@ it('hides the trend pill again after the trend attribute is removed', async () =
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="Revenue" value="12.4" trend="3"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="Revenue" value="12.4" trend="3"></lr-stat>`)) as LyraStat;
   await expect(el).to.be.accessible();
 });
 
@@ -101,7 +153,7 @@ it('preserves NaN/null as the deliberate "no trend" sentinel, but normalizes Inf
   expect(el.trend).to.equal(0); // normalized to a flat, finite trend instead of "Infinity%"
   await el.updateComplete;
   let trend = el.shadowRoot!.querySelector('[part="trend"]')!;
-  expect(trend).to.exist;
+  expect(trend != null).to.equal(true);
   expect(trend.textContent).to.not.contain('Infinity');
 
   el.trend = -Infinity;
@@ -111,7 +163,7 @@ it('preserves NaN/null as the deliberate "no trend" sentinel, but normalizes Inf
   expect(trend.textContent).to.not.contain('Infinity');
 });
 
-it('stretches [part=base] to fill the host, matching lr-word-cloud/lr-context-meter\'s convention', async () => {
+it("stretches [part=base] to fill the host, matching lr-word-cloud/lr-context-meter's convention", async () => {
   const el = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   el.style.blockSize = '200px';
   await el.updateComplete;
@@ -126,11 +178,38 @@ it('collapses the icon part when no default-slot content is provided', async () 
 });
 
 it('does not collapse the icon part when icon content is slotted', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1"><span>icon</span></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1"><span>icon</span></lr-stat>`)) as LyraStat;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(icon.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders the canonical start slot ahead of the legacy default icon and falls back live', async () => {
+  const el = (await fixture(html`
+    <lr-stat label="x" value="1">
+      <span id="legacy-icon">legacy</span>
+      <span id="start-icon" slot="start">start</span>
+    </lr-stat>
+  `)) as LyraStat;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const startSlot = el.shadowRoot!.querySelector('slot[name="start"]') as HTMLSlotElement | null;
+  const defaultSlot = el.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement | null;
+  const startIcon = el.querySelector('#start-icon') as HTMLElement;
+  const legacyIcon = el.querySelector('#legacy-icon') as HTMLElement;
+
+  expect(startSlot?.localName).to.equal('slot');
+  expect(defaultSlot?.localName).to.equal('slot');
+  expect(startSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['start-icon']);
+  expect(defaultSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['legacy-icon']);
+  expect(icon.hasAttribute('hidden')).to.be.false;
+  expect(startIcon.getClientRects().length > 0).to.be.true;
+  expect(legacyIcon.getClientRects().length).to.equal(0);
+
+  const changed = oneEvent(startSlot!, 'slotchange');
+  startIcon.remove();
+  await changed;
+  await el.updateComplete;
+  expect(icon.hasAttribute('hidden')).to.be.false;
+  expect(legacyIcon.getClientRects().length > 0).to.be.true;
 });
 
 it('collapses the caption part when there is no caption attribute or slot', async () => {
@@ -140,18 +219,14 @@ it('collapses the caption part when there is no caption attribute or slot', asyn
 });
 
 it('does not collapse the caption part when a caption attribute is present', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" caption="attr caption"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" caption="attr caption"></lr-stat>`)) as LyraStat;
   const caption = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
   expect(caption.hasAttribute('hidden')).to.be.false;
 });
 
 it('lets the caption slot override the caption attribute instead of concatenating both', async () => {
   const el = (await fixture(
-    html`<lr-stat label="x" value="1" caption="attr"
-      ><span slot="caption">rich</span></lr-stat
-    >`,
+    html`<lr-stat label="x" value="1" caption="attr"><span slot="caption">rich</span></lr-stat>`
   )) as LyraStat;
   // The `caption` attribute's fallback text lives *inside* the `<slot>` in
   // the shadow tree, so it is only ever painted when nothing is slotted —
@@ -167,46 +242,40 @@ it('lets the caption slot override the caption attribute instead of concatenatin
 });
 
 it('defaults goodDirection to "up": a negative trend renders data-polarity="bad"', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="-12"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="-12"></lr-stat>`)) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.getAttribute('data-polarity')).to.equal('bad');
 });
 
 it('goodDirection="down" inverts polarity: the same negative trend renders data-polarity="good"', async () => {
   const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="-12" good-direction="down"></lr-stat>`,
+    html`<lr-stat label="x" value="1" trend="-12" good-direction="down"></lr-stat>`
   )) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.getAttribute('data-polarity')).to.equal('good');
 });
 
 it('renders a rotatable chevron icon for up/down trend, and a plain en dash for flat trend', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="5"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="5"></lr-stat>`)) as LyraStat;
   let trend = el.shadowRoot!.querySelector('[part="trend"]')!;
-  expect(trend.querySelector('svg')).to.exist;
+  expect(trend.querySelector('svg') != null).to.equal(true);
   expect(trend.textContent).to.not.include('▲');
 
   el.trend = -5;
   await el.updateComplete;
   trend = el.shadowRoot!.querySelector('[part="trend"]')!;
-  expect(trend.querySelector('svg')).to.exist;
+  expect(trend.querySelector('svg') != null).to.equal(true);
   expect(trend.textContent).to.not.include('▼');
 
   el.trend = 0;
   await el.updateComplete;
   trend = el.shadowRoot!.querySelector('[part="trend"]')!;
-  expect(trend.querySelector('svg')).to.not.exist;
+  expect(trend.querySelector('svg') == null).to.equal(true);
   expect(trend.textContent).to.include('–');
 });
 
 it('rotates the trend chevron oppositely for up vs down via CSS on the wrapping part, not inline styles', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="5"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="5"></lr-stat>`)) as LyraStat;
   const upSvg = el.shadowRoot!.querySelector('[part="trend"] svg') as SVGElement;
   expect(upSvg.getAttribute('style')).to.be.null;
   const upTransform = getComputedStyle(upSvg).transform;
@@ -223,17 +292,13 @@ it('rotates the trend chevron oppositely for up vs down via CSS on the wrapping 
 });
 
 it('uses the --lr-space-xs token for the trend chip gap', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="5"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="5"></lr-stat>`)) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
   expect(getComputedStyle(trend).gap).to.equal('4px');
 });
 
 it('omits data-polarity for a flat (zero) trend', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="0"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="0"></lr-stat>`)) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.hasAttribute('data-polarity')).to.be.false;
 });
@@ -265,15 +330,13 @@ it('lets each headline value variant color be rethemed independently', async () 
 
 describe('trend pill tint decoupled from the headline value tint', () => {
   it("defaults the 'good' trend pill's color to the same shared --lr-color-success token the headline value's variant=\"success\" tint reads, byte-identical to before", async () => {
-    const el = (await fixture(
-      html`<lr-stat label="x" value="1" trend="5" variant="success"></lr-stat>`,
-    )) as LyraStat;
+    const el = (await fixture(html`<lr-stat label="x" value="1" trend="5" variant="success"></lr-stat>`)) as LyraStat;
     const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
     const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
     expect(getComputedStyle(trend).color).to.equal(getComputedStyle(value).color);
   });
 
-  it("lets --lr-stat-trend-good-color/-bg retint just the trend pill without touching the headline value's variant=\"success\" color", async () => {
+  it('lets --lr-stat-trend-good-color/-bg retint just the trend pill without touching the headline value\'s variant="success" color', async () => {
     const wrapper = (await fixture(html`
       <div style="--lr-stat-trend-good-color: rgb(1, 2, 3); --lr-stat-trend-good-bg: rgb(4, 5, 6);">
         <lr-stat label="x" value="1" trend="5" variant="success"></lr-stat>
@@ -308,24 +371,18 @@ it('reflects variant onto the host attribute and gives each variant a distinct v
   expect(neutral.getAttribute('variant')).to.equal('neutral');
   const neutralColor = getComputedStyle(neutral.shadowRoot!.querySelector('[part="value"]')!).color;
 
-  const success = (await fixture(
-    html`<lr-stat label="x" value="1" variant="success"></lr-stat>`,
-  )) as LyraStat;
+  const success = (await fixture(html`<lr-stat label="x" value="1" variant="success"></lr-stat>`)) as LyraStat;
   expect(success.getAttribute('variant')).to.equal('success');
   const successColor = getComputedStyle(success.shadowRoot!.querySelector('[part="value"]')!).color;
   expect(successColor).to.not.equal(neutralColor);
 
-  const warning = (await fixture(
-    html`<lr-stat label="x" value="1" variant="warning"></lr-stat>`,
-  )) as LyraStat;
+  const warning = (await fixture(html`<lr-stat label="x" value="1" variant="warning"></lr-stat>`)) as LyraStat;
   expect(warning.getAttribute('variant')).to.equal('warning');
   const warningColor = getComputedStyle(warning.shadowRoot!.querySelector('[part="value"]')!).color;
   expect(warningColor).to.not.equal(neutralColor);
   expect(warningColor).to.not.equal(successColor);
 
-  const danger = (await fixture(
-    html`<lr-stat label="x" value="1" variant="danger"></lr-stat>`,
-  )) as LyraStat;
+  const danger = (await fixture(html`<lr-stat label="x" value="1" variant="danger"></lr-stat>`)) as LyraStat;
   expect(danger.getAttribute('variant')).to.equal('danger');
   const dangerColor = getComputedStyle(danger.shadowRoot!.querySelector('[part="value"]')!).color;
   expect(dangerColor).to.not.equal(neutralColor);
@@ -374,9 +431,7 @@ it('reacts to icon and caption content added or removed after initial mount (slo
 });
 
 it('announces trend direction and good/bad polarity as sr-only text, since the icon rotation and color are not perceivable by screen readers', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1" trend="-12"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1" trend="-12"></lr-stat>`)) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   const srOnly = trend.querySelector('.sr-only')!;
   expect(srOnly.textContent).to.equal('decreased 12%, bad');
@@ -407,16 +462,14 @@ it('interpolates the trend value into a locale override instead of concatenating
         statTrendGood: '',
         statTrendAnnouncement: '{trend}{polarity}',
       }}
-    ></lr-stat>`,
+    ></lr-stat>`
   )) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.querySelector('.sr-only')!.textContent).to.equal('12% de plus');
 });
 
 it('formats the trend as a locale-aware percentage in both visible and announced text', async () => {
-  const el = (await fixture(
-    html`<lr-stat lang="de-DE" label="x" value="1" trend="12.5"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat lang="de-DE" label="x" value="1" trend="12.5"></lr-stat>`)) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   const expectedPercent = new Intl.NumberFormat('de-DE', {
     style: 'percent',
@@ -438,12 +491,10 @@ it('localizes the full trend announcement so direction and polarity can be reord
         statTrendGood: 'favorable',
         statTrendAnnouncement: '[{polarity}] {trend}',
       }}
-    ></lr-stat>`,
+    ></lr-stat>`
   )) as LyraStat;
 
-  expect(el.shadowRoot!.querySelector('[part="trend"] .sr-only')!.textContent).to.equal(
-    '[favorable] 12% higher',
-  );
+  expect(el.shadowRoot!.querySelector('[part="trend"] .sr-only')!.textContent).to.equal('[favorable] 12% higher');
 });
 
 it('contains long unbroken content inside a 320px allocation', async () => {
@@ -476,9 +527,7 @@ it('collapses the spark part when no spark content is slotted', async () => {
 });
 
 it('does not collapse the spark part when spark content is slotted', async () => {
-  const el = (await fixture(
-    html`<lr-stat label="x" value="1"><span slot="spark">spark</span></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1"><span slot="spark">spark</span></lr-stat>`)) as LyraStat;
   const spark = el.shadowRoot!.querySelector('[part="spark"]') as HTMLElement;
   expect(spark.hasAttribute('hidden')).to.be.false;
 });
@@ -529,12 +578,8 @@ it('renders a breakdown row for each label/value pair, in order', async () => {
   expect(rows.hasAttribute('hidden')).to.be.false;
   const rowEls = el.shadowRoot!.querySelectorAll('[part="row"]');
   expect(rowEls.length).to.equal(3);
-  const labels = Array.from(rowEls).map(
-    (row) => row.querySelector('[part="row-label"]')!.textContent,
-  );
-  const values = Array.from(rowEls).map(
-    (row) => row.querySelector('[part="row-value"]')!.textContent,
-  );
+  const labels = Array.from(rowEls).map((row) => row.querySelector('[part="row-label"]')!.textContent);
+  const values = Array.from(rowEls).map((row) => row.querySelector('[part="row-value"]')!.textContent);
   expect(labels).to.deep.equal(['Direct', 'Referral', 'Other']);
   expect(values).to.deep.equal(['64%', '21%', '15%']);
 });
@@ -588,9 +633,7 @@ it('reflects emphasis onto the host attribute and adds an accent border to the b
   const plainBase = plain.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const plainBorder = getComputedStyle(plainBase).borderInlineStartWidth;
 
-  const emphasized = (await fixture(
-    html`<lr-stat label="x" value="1" emphasis></lr-stat>`,
-  )) as LyraStat;
+  const emphasized = (await fixture(html`<lr-stat label="x" value="1" emphasis></lr-stat>`)) as LyraStat;
   expect(emphasized.getAttribute('emphasis')).to.equal('');
   const emphasizedBase = emphasized.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const emphasizedBorder = getComputedStyle(emphasizedBase).borderInlineStartWidth;
@@ -601,42 +644,49 @@ it('reflects emphasis onto the host attribute and adds an accent border to the b
 
 it('colors the value with the brand accent when emphasis is set and variant is neutral', async () => {
   const neutral = (await fixture(html`<lr-stat label="x" value="1"></lr-stat>`)) as LyraStat;
-  const neutralColor = getComputedStyle(
-    neutral.shadowRoot!.querySelector('[part="value"]')!,
-  ).color;
+  const neutralColor = getComputedStyle(neutral.shadowRoot!.querySelector('[part="value"]')!).color;
 
-  const emphasized = (await fixture(
-    html`<lr-stat label="x" value="1" emphasis></lr-stat>`,
-  )) as LyraStat;
-  const emphasizedColor = getComputedStyle(
-    emphasized.shadowRoot!.querySelector('[part="value"]')!,
-  ).color;
+  const emphasized = (await fixture(html`<lr-stat label="x" value="1" emphasis></lr-stat>`)) as LyraStat;
+  const emphasizedColor = getComputedStyle(emphasized.shadowRoot!.querySelector('[part="value"]')!).color;
 
   expect(emphasizedColor).to.not.equal(neutralColor);
 });
 
+it('themes emphasis border and value independently without retinting the brand variant', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-stat-value-brand-color:rgb(10, 11, 12); --lr-stat-emphasis-border-color:rgb(1, 2, 3); --lr-stat-emphasis-value-color:rgb(4, 5, 6)"
+    >
+      <lr-stat label="Emphasized" value="1" emphasis></lr-stat>
+      <lr-stat label="Brand variant" value="2" variant="brand"></lr-stat>
+    </div>
+  `);
+  const [emphasized, brand] = [...wrapper.querySelectorAll('lr-stat')] as LyraStat[];
+  await emphasized!.updateComplete;
+  await brand!.updateComplete;
+
+  const emphasizedBase = emphasized!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const emphasizedValue = emphasized!.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  const brandValue = brand!.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  expect(getComputedStyle(emphasizedBase).borderInlineStartColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(emphasizedValue).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(brandValue).color).to.equal('rgb(10, 11, 12)');
+});
+
 it('does not let emphasis override a non-neutral variant value color', async () => {
-  const dangerOnly = (await fixture(
-    html`<lr-stat label="x" value="1" variant="danger"></lr-stat>`,
-  )) as LyraStat;
-  const dangerColor = getComputedStyle(
-    dangerOnly.shadowRoot!.querySelector('[part="value"]')!,
-  ).color;
+  const dangerOnly = (await fixture(html`<lr-stat label="x" value="1" variant="danger"></lr-stat>`)) as LyraStat;
+  const dangerColor = getComputedStyle(dangerOnly.shadowRoot!.querySelector('[part="value"]')!).color;
 
   const dangerEmphasized = (await fixture(
-    html`<lr-stat label="x" value="1" variant="danger" emphasis></lr-stat>`,
+    html`<lr-stat label="x" value="1" variant="danger" emphasis></lr-stat>`
   )) as LyraStat;
-  const dangerEmphasizedColor = getComputedStyle(
-    dangerEmphasized.shadowRoot!.querySelector('[part="value"]')!,
-  ).color;
+  const dangerEmphasizedColor = getComputedStyle(dangerEmphasized.shadowRoot!.querySelector('[part="value"]')!).color;
 
   expect(dangerEmphasizedColor).to.equal(dangerColor);
 });
 
 it('shows the exact value as a title tooltip on the headline value, and makes it focusable', async () => {
-  const el = (await fixture(
-    html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`)) as LyraStat;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(valueEl.getAttribute('title')).to.equal('$1,204.37');
   expect(valueEl.getAttribute('tabindex')).to.equal('0');
@@ -645,14 +695,12 @@ it('shows the exact value as a title tooltip on the headline value, and makes it
 it("gives [part='value']/[part='row-value'] a token-driven :focus-visible outline, since exactValue makes them keyboard-focusable", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
-    "[part='value']:focus-visible, [part='row-value']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }",
+    "[part='value']:focus-visible, [part='row-value']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }"
   );
 });
 
 it("gives the same focusable [part='value']/[part='row-value'] a mouse-user :hover affordance, wrapped in :where() so a consumer ::part(value):hover / ::part(row-value):hover override wins without !important", async () => {
-  const el = (await fixture(
-    html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`)) as LyraStat;
   const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
     .flatMap((sheet) => Array.from(sheet.cssRules))
     .map((rule) => rule.cssText.replace(/"/g, "'"))
@@ -663,14 +711,12 @@ it("gives the same focusable [part='value']/[part='row-value'] a mouse-user :hov
 
 it('scopes the value/row-value hover affordance to the focusable ([tabindex]) state only', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    ":where([part='value'][tabindex]):hover, :where([part='row-value'][tabindex]):hover",
-  );
+  expect(css).to.include(":where([part='value'][tabindex]):hover, :where([part='row-value'][tabindex]):hover");
 });
 
 it('associates the focusable value with its label via aria-labelledby', async () => {
   const el = (await fixture(
-    html`<lr-stat label="Revenue" value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
+    html`<lr-stat label="Revenue" value="$1.2K" exact-value="$1,204.37"></lr-stat>`
   )) as LyraStat;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   const labelledBy = valueEl.getAttribute('aria-labelledby');
@@ -717,18 +763,14 @@ it('does not make the value focusable when exact-value is unset', async () => {
 
 it('renders a sub line distinct from caption', async () => {
   const el = (await fixture(
-    html`<lr-stat value="42" sub="vs. last week" caption="Updated 2h ago"></lr-stat>`,
+    html`<lr-stat value="42" sub="vs. last week" caption="Updated 2h ago"></lr-stat>`
   )) as LyraStat;
   expect(el.shadowRoot!.querySelector('[part="sub"]')!.textContent!.trim()).to.equal('vs. last week');
-  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent!.trim()).to.equal(
-    'Updated 2h ago',
-  );
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent!.trim()).to.equal('Updated 2h ago');
 });
 
 it('lets the sub slot override the sub attribute instead of concatenating both', async () => {
-  const el = (await fixture(
-    html`<lr-stat value="1" sub="attr"><span slot="sub">rich</span></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat value="1" sub="attr"><span slot="sub">rich</span></lr-stat>`)) as LyraStat;
   // Same reasoning as the caption test above: the `sub` attribute's fallback
   // text lives *inside* the `<slot>` in the shadow tree, so `textContent`
   // (which walks the un-flattened shadow tree) always reports it regardless
@@ -773,12 +815,7 @@ const baseChrome = (el: LyraStat) => {
 };
 
 it('leaves the card rendering untouched when both new axes are left unset (they default to card/vertical)', async () => {
-  const markup = html`<lr-stat
-    label="Revenue"
-    value="12.4"
-    unit="k€"
-    caption="Last 30 days"
-  ></lr-stat>`;
+  const markup = html`<lr-stat label="Revenue" value="12.4" unit="k€" caption="Last 30 days"></lr-stat>`;
   const implicit = (await fixture(markup)) as LyraStat;
   const explicit = (await fixture(html`<lr-stat
     label="Revenue"
@@ -805,10 +842,8 @@ it('leaves the card rendering untouched when both new axes are left unset (they 
   expect(chrome.borderTopStyle).to.equal('solid');
   expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
-  expect(
-    getComputedStyle(implicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize,
-  ).to.equal(
-    getComputedStyle(explicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize,
+  expect(getComputedStyle(implicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize).to.equal(
+    getComputedStyle(explicit.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blockSize
   );
 });
 
@@ -840,7 +875,7 @@ it('drops border, background, padding and the block-size stretch under frame="pl
 
 it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity padding reset wins', () => {
   const css = styles.cssText;
-  const compactAt = css.indexOf(":host([compact])");
+  const compactAt = css.indexOf(':host([compact])');
   const plainAt = css.indexOf(":host([frame='plain'])");
   expect(compactAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(-1);
@@ -848,35 +883,37 @@ it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificit
 });
 
 it('lets plain win over compact when both are set (equal specificity, source order decides)', async () => {
-  const el = (await fixture(html`<lr-stat
-    compact
-    frame="plain"
-    label="Revenue"
-    value="12.4"
-  ></lr-stat>`)) as LyraStat;
+  const el = (await fixture(html`<lr-stat compact frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const s = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(s.paddingTop).to.equal('0px');
   expect(s.paddingLeft).to.equal('0px');
   expect(s.borderTopWidth).to.equal('0px');
 });
 
-it("gives a linked plain stat a text-underline hover/focus affordance, since it has no border to shift", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  // The card affordance is a border-color shift, which is invisible once `plain` removes the
-  // border — a linked plain stat must still look interactive.
-  expect(css).to.include(
-    ":host([frame='plain']) [part='base'][href]:hover [part='value'], :host([frame='plain']) [part='base'][href]:focus-visible [part='value'] { text-decoration: underline; }",
-  );
-  // …and the card's lift shadow is suppressed, since there is no card to lift.
-  expect(css).to.include(
-    ":host([frame='plain']) [part='base'][href]:hover { box-shadow: none; }",
-  );
+it('gives a linked plain stat a rendered text-underline hover/focus affordance, since it has no border to shift', async () => {
+  const el = (await fixture(html`
+    <lr-stat frame="plain" label="Memories" value="128" href="/memories"></lr-stat>
+  `)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  const value = el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
+  const rect = value.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(value).textDecorationLine).to.contain('underline');
+    expect(getComputedStyle(anchor).boxShadow).to.equal('none');
+  } finally {
+    await resetMouse();
+  }
+
+  anchor.focus();
+  expect(getComputedStyle(value).textDecorationLine).to.contain('underline');
 });
 
 it("wraps the internal [part='base'][href]:hover rule in :where() so a consumer ::part(base):hover override wins without !important", async () => {
-  const el = (await fixture(html`
-    <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
-  `)) as LyraStat;
+  const el = (await fixture(html` <lr-stat label="Memories" value="128" href="/memories"></lr-stat> `)) as LyraStat;
   const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
     .flatMap((sheet) => Array.from(sheet.cssRules))
     .map((rule) => rule.cssText.replace(/"/g, "'"))
@@ -896,7 +933,7 @@ it('keeps the focus ring on a linked plain stat (an outline needs no border)', a
   expect(anchor.localName).to.equal('a');
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
-    "[part='base'][href]:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }",
+    "[part='base'][href]:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }"
   );
   anchor.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
@@ -931,11 +968,7 @@ it('puts value, unit and caption on one baseline row under orientation="horizont
 });
 
 it('keeps rows and spark stacked on their own line beneath the horizontal row', async () => {
-  const el = (await fixture(html`<lr-stat
-    orientation="horizontal"
-    value="87"
-    unit="/100"
-    caption="42 of 48 clean"
+  const el = (await fixture(html`<lr-stat orientation="horizontal" value="87" unit="/100" caption="42 of 48 clean"
     ><span slot="spark">spark</span></lr-stat
   >`)) as LyraStat;
   el.rows = [
@@ -944,9 +977,7 @@ it('keeps rows and spark stacked on their own line beneath the horizontal row', 
   ];
   await el.updateComplete;
 
-  const valueRect = (
-    el.shadowRoot!.querySelector('[part="value-row"]') as HTMLElement
-  ).getBoundingClientRect();
+  const valueRect = (el.shadowRoot!.querySelector('[part="value-row"]') as HTMLElement).getBoundingClientRect();
   const spark = el.shadowRoot!.querySelector('[part="spark"]') as HTMLElement;
   const rows = el.shadowRoot!.querySelector('[part="rows"]') as HTMLElement;
   expect(spark.hasAttribute('hidden')).to.be.false;
@@ -955,9 +986,7 @@ it('keeps rows and spark stacked on their own line beneath the horizontal row', 
   expect(getComputedStyle(spark).flexBasis).to.equal('100%');
   expect(getComputedStyle(rows).flexBasis).to.equal('100%');
   expect(spark.getBoundingClientRect().top).to.be.greaterThanOrEqual(valueRect.bottom);
-  expect(rows.getBoundingClientRect().top).to.be.greaterThanOrEqual(
-    spark.getBoundingClientRect().bottom,
-  );
+  expect(rows.getBoundingClientRect().top).to.be.greaterThanOrEqual(spark.getBoundingClientRect().bottom);
 });
 
 it('keeps prose\'s hidden unit hidden under orientation="horizontal"', async () => {
@@ -971,12 +1000,8 @@ it('keeps prose\'s hidden unit hidden under orientation="horizontal"', async () 
   const unit = el.shadowRoot!.querySelector('[part="unit"]') as HTMLElement;
   expect(getComputedStyle(unit).display).to.equal('none');
 
-  const valueRect = (
-    el.shadowRoot!.querySelector('[part="value"]') as HTMLElement
-  ).getBoundingClientRect();
-  const captionRect = (
-    el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement
-  ).getBoundingClientRect();
+  const valueRect = (el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).getBoundingClientRect();
+  const captionRect = (el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement).getBoundingClientRect();
   expect(captionRect.top).to.be.lessThan(valueRect.bottom);
   expect(captionRect.left).to.be.greaterThanOrEqual(valueRect.right);
 });
@@ -987,18 +1012,14 @@ it('hides the label part only when label is empty, and never when it is set', as
   expect(emptyLabel.hasAttribute('hidden')).to.be.true;
   expect(getComputedStyle(emptyLabel).display).to.equal('none');
 
-  const labelled = (await fixture(
-    html`<lr-stat label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const labelled = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const label = labelled.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   expect(label.hasAttribute('hidden')).to.be.false;
   expect(getComputedStyle(label).display).to.not.equal('none');
 });
 
 it('keeps aria-labelledby resolving to the visible label once a label is set after mount', async () => {
-  const el = (await fixture(
-    html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`)) as LyraStat;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(valueEl.hasAttribute('aria-labelledby')).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.be.true;
@@ -1017,20 +1038,13 @@ it('keeps aria-labelledby resolving to the visible label once a label is set aft
 });
 
 it("drops emphasis's accent edge under plain (it is card chrome) while keeping its brand value tint", async () => {
-  const el = (await fixture(html`<lr-stat
-    frame="plain"
-    emphasis
-    label="Revenue"
-    value="12.4"
-  ></lr-stat>`)) as LyraStat;
+  const el = (await fixture(html`<lr-stat frame="plain" emphasis label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).borderInlineStartWidth).to.equal('0px');
 
-  const cardNeutral = (await fixture(
-    html`<lr-stat label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const cardNeutral = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   expect(getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!).color).to.not.equal(
-    getComputedStyle(cardNeutral.shadowRoot!.querySelector('[part="value"]')!).color,
+    getComputedStyle(cardNeutral.shadowRoot!.querySelector('[part="value"]')!).color
   );
 });
 
@@ -1067,7 +1081,9 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
   // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g.
   // src/internal/motion.test.ts's window.matchMedia stub) to prove LyraStat's own
   // willUpdate() override actually calls super.willUpdate(...) rather than shadowing it silently.
-  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const proto = LyraElement.prototype as unknown as {
+    willUpdate: (changed: PropertyValues) => void;
+  };
   const original = proto.willUpdate;
   let called = false;
   proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
@@ -1085,15 +1101,11 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
 
 it('tints the headline value with the brand tone under variant="brand"', async () => {
   const neutral = (await fixture(html`<lr-stat label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
-  const brand = (await fixture(
-    html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const brand = (await fixture(html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   // `emphasis` on a neutral stat already paints [part='value'] with --lr-color-brand, so it pins
   // the new variant to the same *resolved* token rather than to a literal colour string that a
   // palette regeneration would invalidate.
-  const emphasized = (await fixture(
-    html`<lr-stat emphasis label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const emphasized = (await fixture(html`<lr-stat emphasis label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const valueColor = (el: LyraStat) =>
     getComputedStyle(el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).color;
 
@@ -1104,23 +1116,17 @@ it('tints the headline value with the brand tone under variant="brand"', async (
 });
 
 it('lets --lr-stat-value-brand-color retint just the brand headline, like its success/warning/danger siblings', async () => {
-  const el = (await fixture(
-    html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const el = (await fixture(html`<lr-stat variant="brand" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   el.style.setProperty('--lr-stat-value-brand-color', 'rgb(1, 2, 3)');
   await el.updateComplete;
-  expect(
-    getComputedStyle(el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).color,
-  ).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).color).to.equal(
+    'rgb(1, 2, 3)'
+  );
 });
 
 it('keeps card chrome under frame="card" and drops it under frame="plain"', async () => {
-  const card = (await fixture(
-    html`<lr-stat frame="card" label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
-  const plain = (await fixture(
-    html`<lr-stat frame="plain" label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const card = (await fixture(html`<lr-stat frame="card" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+  const plain = (await fixture(html`<lr-stat frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
 
   expect(card.frame).to.equal('card');
   expect(plain.frame).to.equal('plain');
@@ -1138,9 +1144,7 @@ it('keeps card chrome under frame="card" and drops it under frame="plain"', asyn
 });
 
 it('no longer answers to the pre-8.0.0 appearance attribute — frame replaced it outright', async () => {
-  const legacy = (await fixture(
-    html`<lr-stat appearance="plain" label="Revenue" value="12.4"></lr-stat>`,
-  )) as LyraStat;
+  const legacy = (await fixture(html`<lr-stat appearance="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   expect(legacy.frame).to.equal('card');
   const chrome = baseChrome(legacy);
   expect(chrome.borderTopWidth).to.equal('1px');

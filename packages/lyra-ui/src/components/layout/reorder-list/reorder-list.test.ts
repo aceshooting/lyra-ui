@@ -302,10 +302,7 @@ describe("<lr-reorder-list>", () => {
     const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
     expect(movedItem.value).to.equal("a");
     const active = movedItem.shadowRoot!.activeElement;
-    expect(
-      active,
-      "focus lands on a real element inside the moved item, not lost to document.body"
-    ).to.exist;
+    expect((active) != null, "focus lands on a real element inside the moved item, not lost to document.body").to.equal(true);
     expect(active?.tagName).to.equal("BUTTON");
     expect(
       (active as HTMLButtonElement).disabled,
@@ -345,10 +342,7 @@ describe("<lr-reorder-list>", () => {
     const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
     expect(movedItem.value).to.equal("a");
     const active = movedItem.shadowRoot!.activeElement;
-    expect(
-      active,
-      "focus lands on a real element inside the moved item, not lost to document.body"
-    ).to.exist;
+    expect((active) != null, "focus lands on a real element inside the moved item, not lost to document.body").to.equal(true);
     expect(active?.tagName).to.equal("BUTTON");
     expect(
       (active as HTMLButtonElement).disabled,
@@ -432,7 +426,7 @@ describe("<lr-reorder-list>", () => {
     ) as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
-    expect(region, "renders a live region").to.exist;
+    expect((region) != null, "renders a live region").to.equal(true);
     await region.updateComplete;
 
     const upButton = itemsOf(el)[1].shadowRoot!.querySelector(
@@ -499,10 +493,7 @@ describe("<lr-reorder-list>", () => {
       activeInB?.getAttribute("part"),
       'focus lands on a button inside "b", the second (most recent) move\'s target'
     ).to.equal("move-down-button");
-    expect(
-      itemA.shadowRoot!.activeElement,
-      'the stale first move\'s target, "a", must not hold or steal focus'
-    ).to.be.null;
+    expect((itemA.shadowRoot!.activeElement) === null, 'the stale first move\'s target, "a", must not hold or steal focus').to.equal(true);
   });
 
   it("is accessible in a populated state", async () => {

@@ -41,18 +41,21 @@ export const styles = css`
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 2);
   }
   [part='toggle']:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-app-rail-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-toggle-hover-color, var(--lr-color-brand));
   }
   /* The fill hover already uses, mixed further toward --lr-color-mix-partner (the text colour), so
      the pressed step is always deeper than the hover step whichever way the theme runs. */
   [part='toggle']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-app-rail-toggle-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-app-rail-toggle-active-color, var(--lr-color-brand));
   }
   [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -121,15 +124,18 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='resizer']:hover [part='resizer-track'] {
-    background: var(--lr-color-brand);
+    background: var(--lr-app-rail-resizer-hover-bg, var(--lr-color-brand));
   }
   /* The drag itself: pointer capture keeps :active on the resizer for the whole gesture, so the
      track stays at the deeper mix until the pointer is released. */
   [part='resizer']:active [part='resizer-track'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-app-rail-resizer-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part='resizer']:focus-visible {

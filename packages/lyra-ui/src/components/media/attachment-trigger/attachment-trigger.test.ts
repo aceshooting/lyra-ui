@@ -121,7 +121,7 @@ it('uses a camera-specific aria-label and renders no hidden file input for a sin
   el.capabilities = ['camera'];
   await el.updateComplete;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Use camera');
-  expect(hiddenInput(el)).to.be.null;
+  expect((hiddenInput(el)) === null).to.equal(true);
 });
 
 it('clicking the single camera trigger fires lr-camera-request with null detail', async () => {
@@ -246,7 +246,7 @@ describe('host control forwarding', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.be.null;
+    expect((el.shadowRoot!.activeElement) === null).to.equal(true);
 
     const request = oneEvent(el, 'lr-camera-request');
     el.click();
@@ -270,17 +270,25 @@ describe('host control forwarding', () => {
   });
 
   it('bridges focus and blur from the actual single/menu trigger buttons', async () => {
-    const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
-    const focusEvent = oneEvent(el, 'focus');
-    trigger(el).focus();
-    expect((await focusEvent).composed).to.be.true;
+    const single = (await fixture(
+      html`<lr-attachment-trigger></lr-attachment-trigger>`,
+    )) as LyraAttachmentTrigger;
+    const singleFocusEvent = oneEvent(single, 'focus');
+    trigger(single).focus();
+    expect((await singleFocusEvent).composed).to.be.true;
+    const singleBlurEvent = oneEvent(single, 'blur');
+    trigger(single).blur();
+    expect((await singleBlurEvent).bubbles).to.be.true;
 
-    el.capabilities = ['files', 'camera'];
-    await el.updateComplete;
-    const blurEvent = oneEvent(el, 'blur');
-    menuTriggerButton(el).focus();
-    menuTriggerButton(el).blur();
-    expect((await blurEvent).bubbles).to.be.true;
+    const menu = (await fixture(html`
+      <lr-attachment-trigger .capabilities=${['files', 'camera']}></lr-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    const menuFocusEvent = oneEvent(menu, 'focus');
+    menuTriggerButton(menu).focus();
+    expect((await menuFocusEvent).composed).to.be.true;
+    const menuBlurEvent = oneEvent(menu, 'blur');
+    menuTriggerButton(menu).blur();
+    expect((await menuBlurEvent).bubbles).to.be.true;
   });
 });
 
@@ -294,7 +302,7 @@ it('renders a lr-menu with one item per capability, in order, once more than one
   expect(el.shadowRoot!.querySelector('[part="trigger"]'), 'no single-capability trigger part while multi').to.be
     .null;
   const menu = el.shadowRoot!.querySelector('[part="menu"]');
-  expect(menu).to.exist;
+  expect((menu) != null).to.equal(true);
   expect(menu!.tagName.toLowerCase()).to.equal('lr-menu');
 
   const items = menuItems(el);
@@ -315,8 +323,8 @@ it('gives the multi-capability trigger its own stylable part and a disclosure ch
   expect(btn.getAttribute('part')).to.equal('menu-trigger');
 
   const expandIcon = btn.querySelector('[part="expand-icon"]');
-  expect(expandIcon, 'chevron disclosure cue, matching combobox/select').to.exist;
-  expect(expandIcon!.querySelector('svg')).to.exist;
+  expect((expandIcon) != null, 'chevron disclosure cue, matching combobox/select').to.equal(true);
+  expect((expandIcon!.querySelector('svg')) != null).to.equal(true);
 });
 
 it('gives both the single-capability and multi-capability trigger buttons the shared minimum hit area', async () => {
@@ -520,7 +528,7 @@ describe('audio capability', () => {
     el.capabilities = ['audio'];
     await el.updateComplete;
     expect(trigger(el).getAttribute('aria-label')).to.equal('Record audio');
-    expect(hiddenInput(el)).to.be.null;
+    expect((hiddenInput(el)) === null).to.equal(true);
   });
 
   it('clicking the single audio trigger fires lr-audio-request with null detail, and never clicks a hidden input', async () => {

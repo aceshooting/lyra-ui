@@ -12,11 +12,12 @@ import type { LyraTreeItem } from './tree-item.class.js';
 
 // Data types live in ./tree-item.js (extracted to break a type-only import cycle with
 // tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
-import type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection } from './tree-types.js';
+import type { TreeBadgeTone, TreeBadge, TreeIdentityContext, TreeItem, TreeSelection } from './tree-types.js';
+import { TREE_MAX_RENDER_DEPTH } from './tree-types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { TreeBadgeTone, TreeBadge, TreeItem, TreeSelection };
@@ -35,6 +36,15 @@ export interface LyraTreeEventMap {
 }
 
 const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'leaf-multiple']);
+
+interface PendingTreeReorder {
+  node: LyraTreeItem;
+  parent: LyraTreeItem | null;
+  originalSiblings: LyraTreeItem[];
+  targetSibling: LyraTreeItem;
+  fromIndex: number;
+  toIndex: number;
+}
 
 /**
  * Whether `node` is inert *because of markup inside this tree* — its own `inert`, or that of an
@@ -69,6 +79,10 @@ function isInertWithin(node: Element, root: Element): boolean {
  * library's own original shape and remains fully supported. A tree containing any author-written
  * `<lr-tree-item>` child is read purely as the declarative model and `data` is ignored, so the two
  * never interleave ambiguously; the empty state renders only when neither model has any items.
+ * Data-model `TreeItem.id` values are global identities and must be unique across the reachable
+ * hierarchy. Invalid duplicates stay visible for diagnosis, but only the first depth-first
+ * occurrence owns the id; every later occurrence is disabled and excluded from focus, selection,
+ * expansion, and reorder requests until the host supplies unique data.
  *
  * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
  * `tabindex` (tracked here as `activeId`, pushed down to every
@@ -93,11 +107,14 @@ function isInertWithin(node: Element, root: Element): boolean {
  * `<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on
  * Windows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from
  * `nodes` on every render and keyed by filesystem path, an order it does not own.
+ * The reorder live region announces success only after a rendered sibling-order change confirms
+ * the host accepted the exact requested swap. Ignored, delayed, or rejected requests never claim
+ * that a move already happened; unrelated updates keep an asynchronous request pending.
  *
  * @customElement lr-tree
  * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown moved the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent.
+ * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent. Success is announced only after the rendered sibling order confirms the request.
  * @event lr-selection-change - Selection changed. `detail: { selection }`, where `selection` is the current `selectedItems` array.
  * @event lr-expand - Bubbles from the item whose expansion began. `detail: { item }`.
  * @event lr-after-expand - Bubbles after an item's expansion motion completes. `detail: { item }`.
@@ -126,14 +143,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    restore: LYRA_DEFAULT_restore,
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Object child model. Every reachable `TreeItem.id` must be globally unique; later duplicate
+   * occurrences fail closed as disabled rows so one public id can never own multiple actions. */
   @property({ attribute: false }) data: TreeItem[] = [];
   /**
    * Accessible name forwarded to the internal `role="tree"` element. A host `aria-label` is also
@@ -175,6 +196,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  child model -- an identity set is the only reliable way to tell the two apart, since a
    *  generated node and an authored one are the same tag. */
   private readonly generatedNodes = new WeakSet<LyraTreeItem>();
+  /** First depth-first path owning each public data id, plus the ids seen at later paths. */
+  private dataIdOwnerPaths: ReadonlyMap<string, string> = new Map();
+  private dataIdCollisions: ReadonlySet<string> = new Set();
   private selectionSyncPending = true;
   private dataSyncPending = false;
   /** Set when the child observer reports an `inert` attribute mutation, consumed by
@@ -185,6 +209,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private lastFocusedNodeId: string | null = null;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private pendingReorder?: PendingTreeReorder;
 
   /** Top-level items only. Deliberately `:scope >`: in the declarative child model nested items are
    *  light-DOM descendants of *this* element too, and a plain descendant query would flatten the
@@ -406,77 +431,106 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     return undefined;
   }
 
-  private firstEnabledId(items: TreeItem[]): string | null {
-    const stack = [...items].reverse();
-    const seen = new Set<TreeItem>();
+  private isDuplicateDataPath(item: TreeItem, path: string): boolean {
+    return this.dataIdCollisions.has(item.id) && this.dataIdOwnerPaths.get(item.id) !== path;
+  }
+
+  /** Analyze every reachable occurrence without recursion so adversarially deep data cannot
+   * overflow the call stack. Cycles count the repeated rendered occurrence, then stop at it. */
+  private rebuildDataIdentity(): void {
+    const ownerPaths = new Map<string, string>();
+    const collisionIds = new Set<string>();
+    const ancestry = new Set<TreeItem>();
+    const stack: Array<{
+      items: TreeItem[];
+      index: number;
+      parentPath: string;
+      depth: number;
+      owner?: TreeItem;
+    }> = [{ items: this.data, index: 0, parentPath: '', depth: 0 }];
+
     while (stack.length > 0) {
-      const item = stack.pop()!;
-      if (seen.has(item)) continue;
-      seen.add(item);
-      if (item.disabled) continue;
+      const frame = stack[stack.length - 1]!;
+      if (frame.index >= frame.items.length) {
+        if (frame.owner) ancestry.delete(frame.owner);
+        stack.pop();
+        continue;
+      }
+      const index = frame.index++;
+      const item = frame.items[index];
+      if (!item) continue;
+      const path = frame.parentPath === '' ? String(index) : `${frame.parentPath}/${index}`;
+      if (ownerPaths.has(item.id)) collisionIds.add(item.id);
+      else ownerPaths.set(item.id, path);
+
+      if (frame.depth >= TREE_MAX_RENDER_DEPTH || ancestry.has(item) || !item.children?.length) continue;
+      ancestry.add(item);
+      stack.push({
+        items: item.children,
+        index: 0,
+        parentPath: path,
+        depth: frame.depth + 1,
+        owner: item,
+      });
+    }
+
+    this.dataIdOwnerPaths = ownerPaths;
+    this.dataIdCollisions = collisionIds;
+  }
+
+  private treeIdentityAt(path: string): TreeIdentityContext {
+    return {
+      path,
+      ownerPaths: this.dataIdOwnerPaths,
+      collisionIds: this.dataIdCollisions,
+    };
+  }
+
+  private firstEnabledId(items: TreeItem[]): string | null {
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (!item || item.disabled || this.isDuplicateDataPath(item, String(index))) continue;
       return item.id;
     }
     return null;
   }
 
   private isEnabledReachableId(items: TreeItem[], id: string): boolean {
-    const stack = [...items].reverse();
+    const stack = items
+      .map((item, index) => ({ item, path: String(index) }))
+      .reverse();
     const seen = new Set<TreeItem>();
     while (stack.length > 0) {
-      const item = stack.pop()!;
+      const { item, path } = stack.pop()!;
       if (seen.has(item)) continue;
       seen.add(item);
-      if (item.disabled) continue;
+      if (item.disabled || this.isDuplicateDataPath(item, path)) continue;
       if (item.id === id) return true;
       if (item.children) {
         for (let i = item.children.length - 1; i >= 0; i--) {
           const child = item.children[i];
-          if (child) stack.push(child);
+          if (child) stack.push({ item: child, path: `${path}/${i}` });
         }
       }
     }
     return false;
   }
 
-  /**
-   * The sibling list `id` belongs to, plus its position in it and its parent's
-   * id (`null` at the top level). This is the *sibling* index space, which is
-   * what a reorder operates in -- deliberately not the flattened visible-list
-   * index space the arrow keys navigate, since that one crosses parents and
-   * skips collapsed subtrees.
-   */
-  private findSiblings(
-    id: string,
-    items: TreeItem[] = this.data,
-    parentId: string | null = null,
-  ): { parentId: string | null; total: number; index: number } | undefined {
-    const stack: Array<{ items: TreeItem[]; parentId: string | null }> = [{ items, parentId }];
-    const seen = new Set<TreeItem[]>();
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      if (seen.has(current.items)) continue;
-      seen.add(current.items);
-      const index = current.items.findIndex((item) => item.id === id);
-      if (index >= 0) return { parentId: current.parentId, total: current.items.length, index };
-      for (let i = current.items.length - 1; i >= 0; i--) {
-        const item = current.items[i];
-        if (item?.children) stack.push({ items: item.children, parentId: item.id });
-      }
-    }
-    return undefined;
-  }
-
-  /** The declarative child model's answer to `findSiblings()`: the sibling list is the node's own
-   *  parent element's child items (or the top-level ones), in the same sibling index space. */
-  private findSlottedSiblings(
+  /** Resolve the exact rendered sibling list for either child model. Data descendants live in
+   * their parent item's shadow root; declarative descendants remain light-DOM children. */
+  private findRenderedSiblings(
     node: LyraTreeItem,
-  ): { parentId: string | null; total: number; index: number } | undefined {
-    const parent = node.parentElement;
-    const parentItem = parent?.localName === tag('tree-item') ? (parent as LyraTreeItem) : null;
+  ): { parent: LyraTreeItem | null; siblings: LyraTreeItem[]; index: number } | undefined {
+    const root = node.getRootNode() as Document | ShadowRoot;
+    const shadowHost = 'host' in root ? root.host : null;
+    const shadowParent = shadowHost?.localName === tag('tree-item') ? (shadowHost as LyraTreeItem) : null;
+    const lightParent =
+      node.parentElement?.localName === tag('tree-item') ? (node.parentElement as LyraTreeItem) : null;
+    const parentItem = shadowParent ?? lightParent;
     const siblings = parentItem ? parentItem.childItems() : this.nodeElements;
     const index = siblings.indexOf(node);
     if (index < 0) return undefined;
-    return { parentId: parentItem ? parentItem.nodeId : null, total: siblings.length, index };
+    return { parent: parentItem, siblings, index };
   }
 
   /**
@@ -560,6 +614,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       this.dataSyncPending = false;
       const focused = this.deepFocusedNode();
       const focusedId = focused?.nodeId ?? null;
+      this.rebuildDataIdentity();
       this.syncNodes();
       const activeItem = this.activeId ? this.findItem(this.data, this.activeId) : undefined;
       if (
@@ -675,6 +730,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.pendingReorder = undefined;
     this.resetChildObserver();
   }
 
@@ -691,31 +747,32 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`. */
   private syncNodes(): void {
-    const existingById = new Map<string, LyraTreeItem>();
+    const existingById = new Map<string, LyraTreeItem[]>();
     for (const node of this.nodeElements) {
-      if (node.item) existingById.set(node.item.id, node);
+      if (!node.item) continue;
+      const matches = existingById.get(node.item.id) ?? [];
+      matches.push(node);
+      existingById.set(node.item.id, matches);
     }
-    const seen = new Set<string>();
     let previousSibling: LyraTreeItem | null = null;
-    for (const item of this.data) {
-      const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
-      let node = reused;
+    for (let index = 0; index < this.data.length; index++) {
+      const item = this.data[index]!;
+      const matches = existingById.get(item.id);
+      let node = matches?.shift();
       if (!node) {
         node = this.ownerDocument.createElement(tag('tree-item')) as LyraTreeItem;
         this.generatedNodes.add(node);
       }
       node.item = item;
+      node.setTreeIdentityContext(this.treeIdentityAt(String(index)));
       node.depth = 0;
-      seen.add(item.id);
       const targetPosition: Element | null = previousSibling
         ? previousSibling.nextElementSibling
         : this.firstElementChild;
       if (targetPosition !== node) this.insertBefore(node, targetPosition);
       previousSibling = node;
     }
-    for (const [id, node] of existingById) {
-      if (!seen.has(id)) node.remove();
-    }
+    for (const nodes of existingById.values()) for (const node of nodes) node.remove();
   }
 
   private focusNode(node: LyraTreeItem | undefined): void {
@@ -790,6 +847,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       this.normalizeSelection();
     }
     await cascadeUpdateComplete(this.nodeElements);
+    this.confirmPendingReorder();
     if (this.pendingFocusId != null) {
       const id = this.pendingFocusId;
       this.pendingFocusId = null;
@@ -819,17 +877,56 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   private requestReorder(node: LyraTreeItem, delta: 1 | -1): void {
     const id = node.nodeId;
-    const found = this.hasAuthoredItems ? this.findSlottedSiblings(node) : this.findSiblings(id);
+    const found = this.findRenderedSiblings(node);
     if (!found) return;
-    const { parentId, total, index } = found;
+    const { parent, siblings, index } = found;
+    const total = siblings.length;
     const toIndex = index + delta;
     if (toIndex < 0 || toIndex >= total) return;
-    this.emit('lr-reorder', { id, parentId, fromIndex: index, toIndex });
+    this.pendingReorder = {
+      node,
+      parent,
+      originalSiblings: [...siblings],
+      targetSibling: siblings[toIndex]!,
+      fromIndex: index,
+      toIndex,
+    };
+    this.emit('lr-reorder', {
+      id,
+      parentId: parent?.nodeId ?? null,
+      fromIndex: index,
+      toIndex,
+    });
+  }
+
+  /** Announce only after the rendered sibling order proves that the host accepted the request.
+   * Unrelated updates retain the request; a divergent sibling change rejects and clears it. */
+  private confirmPendingReorder(): void {
+    const pending = this.pendingReorder;
+    if (!pending) return;
+    const found = this.findRenderedSiblings(pending.node);
+    if (!found) {
+      this.pendingReorder = undefined;
+      return;
+    }
+    const orderChanged =
+      found.siblings.length !== pending.originalSiblings.length ||
+      found.siblings.some((node, index) => node !== pending.originalSiblings[index]);
+    if (!orderChanged) return;
+
+    this.pendingReorder = undefined;
+    if (
+      found.parent !== pending.parent ||
+      found.index !== pending.toIndex ||
+      found.siblings[pending.fromIndex] !== pending.targetSibling
+    ) {
+      return;
+    }
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
-        label: node.nodeLabel,
-        index: this.formatCount(toIndex + 1),
-        total: this.formatCount(total),
+        label: pending.node.nodeLabel,
+        index: this.formatCount(found.index + 1),
+        total: this.formatCount(found.siblings.length),
       }),
       // A discrete, user-initiated action: never coalesce it behind the
       // announcer's throttle window the way streaming status text is.

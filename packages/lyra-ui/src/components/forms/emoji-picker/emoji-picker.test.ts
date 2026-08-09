@@ -71,11 +71,11 @@ async function connectEmojiPicker(
   return el;
 }
 
-it('scales the emoji item box across every tier, floored at the 24px primary-control hit area', async () => {
+it('scales every emoji tier while keeping the shared 40px hit-area floor', async () => {
   const expected: Record<string, string> = {
-    '2xs': '24px',
-    xs: '28px',
-    s: '32px',
+    '2xs': '40px',
+    xs: '40px',
+    s: '40px',
     m: '40px',
     l: '48px',
     xl: '56px',
@@ -285,10 +285,25 @@ it('sets value and fires lr-change when an emoji is picked', async () => {
 it('gives each emoji button the shared minimum hit area without enlarging the glyph', async () => {
   const el = await connectEmojiPicker();
   el.groups = groups;
+  el.style.setProperty('--lr-emoji-picker-item-size', '1rem');
+  el.style.setProperty('--lr-emoji-picker-glyph-size', '0.75rem');
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
   expect(getComputedStyle(button).minInlineSize).to.equal('40px');
   expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(button).inlineSize).to.equal('40px');
+  expect(getComputedStyle(button).blockSize).to.equal('40px');
+  expect(getComputedStyle(button).fontSize).to.equal('12px');
+});
+
+it('clips cross-axis overflow instead of creating a phantom horizontal grid scrollbar', async () => {
+  const el = await connectEmojiPicker();
+  el.style.inlineSize = '2rem';
+  el.groups = groups;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  expect(grid.scrollWidth).to.be.greaterThan(grid.clientWidth);
+  expect(getComputedStyle(grid).overflowX).to.equal('hidden');
 });
 
 describe('search filtering', () => {
@@ -750,6 +765,30 @@ describe('active/hover cssprop', () => {
     return el;
   }
 
+  it('inherits public geometry hooks from an ancestor across a size tier', async () => {
+    const el = await themedPicker(`
+      --lr-emoji-picker-item-size: 46px;
+      --lr-emoji-picker-glyph-size: 23px;
+      --lr-emoji-picker-gap: 11px;
+      --lr-emoji-picker-control-gap: 13px;
+      --lr-emoji-picker-radius: 17px;
+      --lr-emoji-picker-item-radius: 19px;
+    `);
+    el.size = '2xs';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const formControl = el.shadowRoot!.querySelector('[part="form-control"]') as HTMLElement;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const emoji = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
+
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal('17px');
+    expect(getComputedStyle(formControl).gap).to.equal('13px');
+    expect(getComputedStyle(grid).gap).to.equal('11px');
+    expect(emoji.getBoundingClientRect().width).to.equal(46);
+    expect(getComputedStyle(emoji).fontSize).to.equal('23px');
+    expect(getComputedStyle(emoji).borderTopLeftRadius).to.equal('19px');
+  });
+
   /** Drives the roving grid focus one step so exactly one emoji carries `data-active` (it is set
    *  imperatively by keyboard navigation, never on the initial render). */
   async function activateAnEmoji(el: LyraEmojiPicker): Promise<HTMLElement> {
@@ -762,7 +801,7 @@ describe('active/hover cssprop', () => {
   it('recolors the active emoji from an ancestor, not a :host-declared prop', async () => {
     const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
     const active = await activateAnEmoji(el);
-    expect(active).to.exist;
+    expect((active) != null).to.equal(true);
     expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 

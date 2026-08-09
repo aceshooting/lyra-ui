@@ -16,7 +16,8 @@
 ## `lr-mcp-app`
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
-with injected CSP; remote documents are URL-validated. The frame can only request tool calls,
+with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text
+head decoys therefore cannot bypass the policy. Remote documents are URL-validated. The frame can only request tool calls,
 messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
 unless explicitly enabled in `resource.permissions`.
 

@@ -110,6 +110,11 @@ const stringArrayConverter = {
  * the implicit form submission a native text field would (see `internal/submit-on-enter.ts` — the
  * internal input is in a shadow root and has no form owner, so the platform can never do it here).
  * A `delimiter` keystroke stays purely a commit key and never submits.
+ * `select()`, the selection getters/setters, `setSelectionRange()`, and `setRangeText()` expose the
+ * native draft input's editing surface. Range edits synchronize the pending draft without
+ * emitting user events, so a later delimiter/Enter/blur commit consumes the edited text.
+ * `focus()` and `click()` are synchronous no-ops under own or fieldset-cascaded disablement,
+ * including the same task that begins the disabled transition before Lit updates the draft input.
  * @customElement lr-token-input
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -130,7 +135,9 @@ const stringArrayConverter = {
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
  * @csspart token - Individual token.
- * @csspart token-label - The token's text, as the roving-focus edit trigger. Rendered only while `editable` is set.
+ * @csspart token-label - The token's text, as the roving-focus edit trigger. Rendered only while
+ *   `editable` is set. Effective disablement removes every token label's tabindex, exposes
+ *   `aria-disabled="true"`, and retires internal focus; re-enabling restores one roving stop.
  * @csspart token-editor - The inline text field replacing a token's text while it is being edited. Rendered only while `editable` is set and that token is open for editing.
  * @csspart remove - Token remove button.
  * @csspart input - Native text input.
@@ -147,6 +154,14 @@ const stringArrayConverter = {
  *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
+ * @cssprop [--lr-token-input-edit-hover-bg=var(--lr-token-input-action-hover-bg)] - Editable token
+ *   label hover background, independently themeable from the remove action.
+ * @cssprop --lr-token-input-edit-pressed-bg - Editable token label pressed background; defaults to
+ *   an active-state mix of `--lr-token-input-edit-hover-bg`.
+ * @cssprop [--lr-token-input-remove-hover-bg=var(--lr-token-input-action-hover-bg)] - Remove action
+ *   hover background, independently themeable from the editable label.
+ * @cssprop --lr-token-input-remove-pressed-bg - Remove action pressed background; defaults to an
+ *   active-state mix of `--lr-token-input-remove-hover-bg`.
  * @cssprop [--lr-token-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-token-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
  * @cssprop --lr-token-input-font-size - Input-wrapper/token font size, scaled by `size`.
@@ -155,9 +170,11 @@ const stringArrayConverter = {
  *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
  * @cssprop --lr-token-input-control-height - Exact input-wrapper height. Unset by default, which
  *   leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor
- *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
- *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
- *   as well as inline on the element.
+ *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). An uncapped row
+ *   grows as tokens wrap; a capped row clips inline overflow and intentionally scrolls in the
+ *   block axis so wrapped tokens and their hit-area-floored actions remain reachable. Because it
+ *   is never declared by the component itself, it can be set from an ancestor or an outer-tree
+ *   rule as well as inline on the element.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -237,7 +254,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders
-   *  exactly as it does without this feature and stays non-focusable. */
+   *  exactly as it does without this feature and stays non-focusable. Own or fieldset-cascaded
+   *  disablement removes every edit trigger from focus and marks it `aria-disabled="true"`; one
+   *  roving stop is restored when the control becomes enabled again. */
   private _editable = false;
   @property({ attribute: 'editable', type: Boolean, reflect: true })
   get editable(): boolean { return this._editable; }
@@ -354,8 +373,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   get disabled(): boolean { return this._disabled; }
   set disabled(next: boolean) {
     const old = this._disabled;
+    const wasEffectivelyDisabled = this.effectiveDisabled;
     this._disabled = Boolean(next);
-    if (this._disabled) this.discardTransientState(true);
+    if (!wasEffectivelyDisabled && this.effectiveDisabled) this.retireDisabledInteraction();
     this.toggleAttribute('disabled', this._disabled);
     // Disabling bars constraint validation, so the violation itself is recomputed here rather than
     // left raised on a control the browser will never enforce.
@@ -394,8 +414,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * fieldset re-enabling instead of being permanently overwritten.
    */
   formDisabledCallback(disabled: boolean): void {
+    const wasEffectivelyDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
-    if (disabled) this.discardTransientState(true);
+    if (!wasEffectivelyDisabled && this.effectiveDisabled) this.retireDisabledInteraction();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.syncValidity();
     this.requestUpdate();
@@ -433,7 +454,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // never touches the custom layer the line above just set.
     this.syncValidity();
   }
-  override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
+  override focus(options?: FocusOptions): void {
+    if (this.effectiveDisabled || this.matches(':disabled')) return;
+    this.inputEl?.focus(options);
+  }
   override blur(): void { this.inputEl?.blur(); }
   /** Focuses the draft text input, mirroring what a real click on the token row would land on --
    *  `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
@@ -441,6 +465,49 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   override click(): void {
     if (this.effectiveDisabled) return;
     this.inputEl?.focus();
+  }
+  /** Selects the complete pending draft in the internal native text input. */
+  select(): void { this.inputEl?.select(); }
+  /** Native draft selection start, or `null` before the internal input renders. */
+  get selectionStart(): number | null { return this.inputEl?.selectionStart ?? null; }
+  set selectionStart(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionStart = value ?? 0;
+  }
+  /** Native draft selection end, or `null` before the internal input renders. */
+  get selectionEnd(): number | null { return this.inputEl?.selectionEnd ?? null; }
+  set selectionEnd(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
+  }
+  /** Native draft selection direction, or `null` before the internal input renders. */
+  get selectionDirection(): HTMLInputElement['selectionDirection'] {
+    return this.inputEl?.selectionDirection ?? null;
+  }
+  set selectionDirection(value: HTMLInputElement['selectionDirection']) {
+    if (this.inputEl) this.inputEl.selectionDirection = value ?? 'none';
+  }
+  /** Passthrough to the native draft input's selection range. */
+  setSelectionRange(
+    selectionStart: number,
+    selectionEnd: number,
+    selectionDirection: HTMLInputElement['selectionDirection'] = 'none',
+  ): void {
+    this.inputEl?.setSelectionRange(selectionStart, selectionEnd, selectionDirection ?? 'none');
+  }
+  /** Applies a native event-silent range edit and synchronizes the pending draft. */
+  setRangeText(
+    replacement: string,
+    start?: number,
+    end?: number,
+    selectMode: SelectionMode = 'preserve',
+  ): void {
+    const input = this.inputEl;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.draft = input.value;
   }
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
@@ -515,6 +582,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (clearDraft) {
       this.draft = '';
       if (this.inputEl) this.inputEl.value = '';
+    }
+  }
+
+  /** Retire every focus/edit surface when own or fieldset disablement becomes effective. */
+  private retireDisabledInteraction(): void {
+    this.discardTransientState(true);
+    const active = this.shadowRoot?.activeElement;
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
     }
   }
 
@@ -699,7 +775,12 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       const index = this.focusTokenPending;
       this.focusTokenPending = -1;
       const labels = this.renderRoot?.querySelectorAll('[part="token-label"]');
-      (labels?.[index] as HTMLElement | undefined)?.focus();
+      const label = labels?.[index] as HTMLElement | undefined;
+      label?.focus();
+      // WebKit does not consistently scroll a newly programmatically-focused shadow descendant
+      // inside this capped block-axis scrollport. Make the keyboard destination explicit while
+      // keeping both axes at their nearest positions so the page itself does not jump.
+      label?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }
   private renderRemoveButton(token: string, index: number): TemplateResult {
@@ -709,7 +790,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.editingIndex === index) {
       return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @keydown=${this.onEditKeyDown} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
     }
-    return html`<span part="token"><span part="token-label" role="button" tabindex=${index === this.activeTokenIndex ? 0 : -1} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
+    return html`<span part="token"><span part="token-label" role="button" tabindex=${this.effectiveDisabled ? nothing : index === this.activeTokenIndex ? 0 : -1} aria-disabled=${String(this.effectiveDisabled)} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
   }
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

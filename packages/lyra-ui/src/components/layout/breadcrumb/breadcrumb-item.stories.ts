@@ -8,6 +8,31 @@ const meta: Meta = { title: 'Navigation/Breadcrumb item', component: 'lr-breadcr
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-breadcrumb-item href="/docs">Documentation</lr-breadcrumb-item>` };
 
+export const ProgrammaticActivation: StoryObj = {
+  name: 'Programmatic click()',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Calling `click()` on a non-current item forwards to its native link or button. A current-page label remains inert.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-breadcrumb>
+        <lr-breadcrumb-item id="programmatic-breadcrumb-item">Open section</lr-breadcrumb-item>
+      </lr-breadcrumb>
+      <button
+        type="button"
+        @click=${() => document.getElementById('programmatic-breadcrumb-item')?.click()}
+      >
+        Call host click()
+      </button>
+    </div>
+  `,
+};
+
 export const UndefinedHrefClears: StoryObj = {
   parameters: {
     docs: {
@@ -45,12 +70,14 @@ export const ThemedCurrent: StoryObj = {
     docs: {
       description: {
         story:
-          'Set `--lr-breadcrumb-current-color` on the element or any ancestor to recolor the current-page item without hijacking the library-wide `--lr-color-text-quiet` token.',
+          'Set `--lr-breadcrumb-current-color` and `--lr-breadcrumb-item-active-bg` on the element or any ancestor to theme current and pressed states independently.',
       },
     },
   },
   render: () => html`
-    <lr-breadcrumb style="--lr-breadcrumb-current-color: ${storyColor('brand')};">
+    <lr-breadcrumb style="--lr-breadcrumb-current-color: ${storyColor(
+      'brand',
+    )}; --lr-breadcrumb-item-active-bg: ${storyColor('warningQuiet')};">
       <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
       <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
       <lr-breadcrumb-item current>Q3 summary</lr-breadcrumb-item>

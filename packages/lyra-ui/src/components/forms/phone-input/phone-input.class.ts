@@ -218,6 +218,12 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * trigger simply omits the image). Native `<option>`s cannot contain
  * elements, so the open popup remains text-only by platform design.
  *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override size and pill fallbacks. A value set directly on the phone
+ * input still wins through normal custom-property inheritance.
+ * The country selector retains the shared `--lr-icon-button-size` hit floor, and its row uses the
+ * same action-bearing height ladder as input, number-input, and time-input.
+ *
  * @customElement lr-phone-input
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
@@ -245,7 +251,8 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @csspart hint - The hint message.
  * @csspart error - Ordinary error/validation text referenced by the native telephone input
  *   through `aria-describedby`; it is not a live region, avoiding duplicate validation feedback.
- * @cssprop --lr-phone-input-padding-block - Input block-padding, scaled by `size`.
+ * @cssprop --lr-phone-input-padding-block - Input block-padding, scaled by `size` through the
+ *   shared form-control ladder.
  * @cssprop --lr-phone-input-font-size - Input/flag/country-code/calling-code font size, scaled by `size`.
  * @cssprop --lr-phone-input-flag-size - Selected flag size, scaled by `size`.
  * @cssprop --lr-phone-input-glyph-size - Country selector glyph size, scaled by `size`.

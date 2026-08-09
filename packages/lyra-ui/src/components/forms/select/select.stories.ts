@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Select',
   component: 'lr-select',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A select-only combobox. Host `aria-label` wins on the trigger by attribute presence, including an explicitly empty override.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -19,6 +27,51 @@ export const Default: Story = {
       <lr-option value="c">Cherry</lr-option>
       <lr-option value="d">Date</lr-option>
     </lr-select>
+  `,
+};
+
+/**
+ * Open the list and move the keyboard-active row before using these controls. Reordering preserves
+ * the active option by identity; removing or disabling it rehomes activity to the nearest enabled
+ * survivor so the next Enter still commits a real row.
+ */
+export const DynamicOptions: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 20rem;">
+      <lr-select open label="Dynamic fruit options">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <button
+          type="button"
+          @mousedown=${(event: MouseEvent) => event.preventDefault()}
+          @click=${(event: Event) => {
+            const select = (event.currentTarget as HTMLElement).closest('div')!.previousElementSibling as LyraSelect;
+            const banana = select.querySelector<LyraOption>('lr-option[value="b"]');
+            if (banana) select.append(banana);
+          }}
+        >Move Banana last</button>
+        <button
+          type="button"
+          @mousedown=${(event: MouseEvent) => event.preventDefault()}
+          @click=${(event: Event) => {
+            const select = (event.currentTarget as HTMLElement).closest('div')!.previousElementSibling as LyraSelect;
+            const cherry = select.querySelector<LyraOption>('lr-option[value="c"]');
+            if (cherry) cherry.disabled = true;
+          }}
+        >Disable Cherry</button>
+        <button
+          type="button"
+          @mousedown=${(event: MouseEvent) => event.preventDefault()}
+          @click=${(event: Event) => {
+            const select = (event.currentTarget as HTMLElement).closest('div')!.previousElementSibling as LyraSelect;
+            select.querySelector('lr-option[value="c"]')?.remove();
+          }}
+        >Remove Cherry</button>
+      </div>
+    </div>
   `,
 };
 
@@ -162,6 +215,54 @@ export const Adornments: Story = {
           >Primary-production-region-with-an-intentionally-long-identifier</lr-option
         >
         <lr-option value="backup">Backup region</lr-option>
+      </lr-select>
+    </div>
+  `,
+};
+
+/** Long selected labels and multiple tag rows remain inside exact-320px LTR/RTL allocations. */
+export const SelectedValuesNarrow: Story = {
+  name: 'Selected values narrow LTR/RTL (320px)',
+  render: () => {
+    const values = ['alpha', 'beta', 'gamma'];
+    return html`
+      <div style="display: grid; gap: var(--lr-space-m)">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div dir=${direction} style="display: grid; gap: var(--lr-space-s); inline-size: 320px; max-inline-size: 100%">
+              <lr-select value="primary" label="Single selection">
+                <span slot="start" aria-hidden="true">◉</span>
+                <kbd slot="end">R</kbd>
+                <lr-option value="primary"
+                  >PrimaryProductionRegionWithAnIntentionallyUnbrokenGeneratedIdentifier</lr-option
+                >
+              </lr-select>
+              <lr-select multiple .value=${values} label="Multiple selection">
+                ${values.map(
+                  (value) => html`<lr-option value=${value}
+                    >${value}GeneratedSelectionIdentifierWithoutNaturalBreaks</lr-option
+                  >`,
+                )}
+              </lr-select>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
+};
+
+/** A long localized placeholder ellipsizes without widening its constrained flex allocation. */
+export const LongLocalizedPlaceholder: Story = {
+  render: () => html`
+    <div style="display:flex; inline-size:228px; max-inline-size:100%; min-inline-size:0;">
+      <lr-select
+        label="Deployment environment"
+        placeholder="Sélectionnez un environnement de déploiement disponible dans cette région"
+        style="min-inline-size:0; flex:1 1 auto;"
+      >
+        <lr-option value="production">Production</lr-option>
+        <lr-option value="staging">Staging</lr-option>
       </lr-select>
     </div>
   `,
@@ -312,6 +413,20 @@ export const Appearances: Story = {
       </div>
     `;
   },
+};
+
+export const IndependentTriggerStateTheme: Story = {
+  name: 'Independent trigger state theme',
+  render: () => html`
+    <lr-select
+      label="State hooks"
+      placeholder="Hover, press, or open"
+      style="max-inline-size: var(--lr-size-20rem); --lr-select-trigger-hover-bg: var(--lr-color-success-quiet); --lr-select-trigger-active-bg: var(--lr-color-warning-quiet); --lr-select-open-border-color: var(--lr-color-danger);"
+    >
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `,
 };
 
 /** `placement` picks the preferred side; `flip`/`shift` still keep the listbox in view. */

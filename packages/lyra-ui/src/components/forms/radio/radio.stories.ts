@@ -6,6 +6,18 @@ const meta: Meta = { title: 'Form/Radio', component: 'lr-radio-group', tags: ['a
 export default meta;
 export const Group: StoryObj = { render: () => html`<lr-radio-group label="Format" name="format"><lr-radio value="json">JSON</lr-radio><lr-radio value="csv">CSV</lr-radio></lr-radio-group>` };
 
+export const IndependentPointerTheme: StoryObj = {
+  name: 'Independent hover and pressed theme',
+  render: () => html`
+    <lr-radio-group label="Pointer state hooks" name="radio-state-theme">
+      <lr-radio
+        value="custom"
+        style="--lr-radio-hover-border-color: var(--lr-color-success); --lr-radio-active-border-color: var(--lr-color-danger); --lr-radio-active-ring-color: var(--lr-color-warning-quiet);"
+      >Hover and press me</lr-radio>
+    </lr-radio-group>
+  `,
+};
+
 export const ButtonAppearance: StoryObj = {
   name: 'WA button appearance on lr-radio',
   render: () => html`
@@ -44,6 +56,24 @@ export const EventOwnership: StoryObj = {
         </lr-radio-group>
         <output>Group: not selected</output>
       </section>
+    </div>
+  `,
+};
+
+/** Standalone, exact-320px allocation with an adversarial unbroken label in both directions. */
+export const StandaloneNarrow: StoryObj = {
+  name: 'Standalone narrow LTR/RTL (320px)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+            <lr-radio value=${direction}
+              >InternationalizedStandaloneRadioLabelWithoutAnyNaturalBreakOpportunity</lr-radio
+            >
+          </div>
+        `,
+      )}
     </div>
   `,
 };

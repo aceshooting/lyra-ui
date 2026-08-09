@@ -428,7 +428,7 @@ describe('selected', () => {
 
     expect(el.toggleable).to.be.true;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
-    expect(button).to.exist;
+    expect((button) != null).to.equal(true);
     expect(button.getAttribute('aria-pressed')).to.equal('false');
   });
 
@@ -524,7 +524,7 @@ describe('selected', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle-button');
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
     el.click();
     expect(el.selected).to.be.true;
   });

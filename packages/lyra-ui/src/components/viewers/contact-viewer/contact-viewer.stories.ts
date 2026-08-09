@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './contact-viewer.js';
 
-const meta: Meta = { title: 'DocumentViewer/ContactViewer', component: 'lr-contact-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'DocumentViewer/ContactViewer',
+  component: 'lr-contact-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A host `aria-label` names the contact region by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks.' } } },
+};
 export default meta;
 type Story = StoryObj;
 

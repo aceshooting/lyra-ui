@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `markdown` auto-detects (via a lightweight heuristic) whether to route content through `<lr-markdown>` or render it as plain text, and can be forced either way. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
+          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `markdown` auto-detects (via a lightweight heuristic) whether to route content through `<lr-markdown>` or render it as plain text, and can be forced either way. The plain-text path loads no optional peers; Markdown uses the composed renderer\'s lazy `marked` parser, default `dompurify` sanitizer, and optional `shiki` fenced-code highlighting. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
       },
     },
   },

@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./card.js";
 import "../../forms/button/button.js";
 import type { LyraCard } from "./card.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function base(el: LyraCard): HTMLElement {
   return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -45,7 +46,7 @@ describe("lr-card", () => {
     const anchor = linked.shadowRoot!.querySelector(
       'a[part="base"]'
     ) as HTMLAnchorElement;
-    expect(anchor).to.exist;
+    expect((anchor) != null).to.equal(true);
     expect(anchor.getAttribute("href")).to.equal("/x");
   });
 
@@ -259,6 +260,48 @@ describe("lr-card", () => {
       const fired = oneEvent(el, "lr-card-activate");
       activation.click();
       await fired;
+    });
+
+    it("forwards host click() to the native activation button exactly once", async () => {
+      const el = (await fixture(
+        html`<lr-card interactive>body</lr-card>`
+      )) as LyraCard;
+      let activations = 0;
+      el.addEventListener("lr-card-activate", () => (activations += 1));
+
+      el.click();
+
+      expect(activations).to.equal(1);
+    });
+
+    it("forwards host click() to the linked root without emitting lr-card-activate", async () => {
+      const el = (await fixture(
+        html`<lr-card href="/reports">body</lr-card>`
+      )) as LyraCard;
+      const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+      let linkActivations = 0;
+      let cardActivations = 0;
+      anchor.addEventListener("click", (event) => {
+        event.preventDefault();
+        linkActivations += 1;
+      });
+      el.addEventListener("lr-card-activate", () => (cardActivations += 1));
+
+      el.click();
+
+      expect(linkActivations).to.equal(1);
+      expect(cardActivations).to.equal(0);
+    });
+
+    it("keeps host click() inert for a passive card", async () => {
+      const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
+      const root = base(el);
+      let rootClicks = 0;
+      root.addEventListener("click", () => (rootClicks += 1));
+
+      el.click();
+
+      expect(rootClicks).to.equal(0);
     });
 
     it("forwards the host aria-label to the native activation owner and keeps it live", async () => {
@@ -497,4 +540,42 @@ describe("lr-card", () => {
       await expect(el).to.be.accessible();
     });
   });
+});
+
+it('inherits independent appearance and interactive-state paint from an ancestor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-transition-fast: 0ms;
+      --lr-card-filled-bg: rgb(1, 2, 3);
+      --lr-card-filled-outlined-bg: rgb(4, 5, 6);
+      --lr-card-accent-border-color: rgb(7, 8, 9);
+      --lr-card-interactive-hover-border-color: rgb(10, 11, 12);
+      --lr-card-interactive-active-border-color: rgb(13, 14, 15);
+      --lr-card-interactive-active-overlay: rgb(16, 17, 18);
+    ">
+      <lr-card appearance="filled">Filled</lr-card>
+      <lr-card appearance="filled-outlined">Filled outlined</lr-card>
+      <lr-card appearance="accent">Accent</lr-card>
+      <lr-card interactive>Interactive</lr-card>
+    </div>
+  `);
+  const cards = wrapper.querySelectorAll<LyraCard>('lr-card');
+  expect(getComputedStyle(base(cards[0])).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(base(cards[1])).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base(cards[2])).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
+
+  const target = base(cards[3]);
+  cards[3].style.setProperty('--lr-transition-fast', '0ms');
+  target.scrollIntoView();
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    expect(getComputedStyle(target).borderTopColor).to.equal('rgb(10, 11, 12)');
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(target);
+    expect(pressed.borderTopColor).to.equal('rgb(13, 14, 15)');
+    expect(pressed.backgroundImage).to.include('rgb(16, 17, 18)');
+  } finally {
+    await resetMouse();
+  }
 });

@@ -31,7 +31,7 @@ it('names the listbox via label, with a host aria-label winning over both label 
   const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
   await el.updateComplete;
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
-  expect(listbox.getAttribute('aria-label')).to.equal('Node palette');
+  expect((listbox.getAttribute('aria-label')) === ('Node palette')).to.equal(true);
 
   el.label = 'Workflow nodes';
   await el.updateComplete;

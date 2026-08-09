@@ -175,6 +175,76 @@ describe('lr-button', () => {
     expect(input.value).to.equal('');
   });
 
+  it('lets a canceled host click veto the submit default action', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.addEventListener('click', (event) => event.preventDefault());
+
+    el.click();
+    await Promise.resolve();
+    expect(submitted).to.equal(false);
+  });
+
+  it('lets a canceled host click veto the reset default action', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="field" value="initial" />
+        <lr-button type="reset">Reset</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    input.value = 'changed';
+    const el = form.querySelector('lr-button') as LyraButton;
+    el.addEventListener('click', (event) => event.preventDefault());
+
+    el.click();
+    await Promise.resolve();
+    expect(input.value).to.equal('changed');
+  });
+
+  it('still performs the submit default action when propagation stops without cancellation', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.addEventListener('click', (event) => event.stopPropagation());
+
+    el.click();
+    await Promise.resolve();
+    expect(submitted).to.equal(true);
+  });
+
+  it('reads submitter state changed by the host click before performing the default action', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let action: FormDataEntryValue | null = null;
+    el.addEventListener('click', () => {
+      el.name = 'action';
+      el.value = 'save-after-click';
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      action = new FormData(form, event.submitter).get('action');
+    });
+
+    el.click();
+    expect(action).to.equal('save-after-click');
+  });
+
   it('submits and resets through an external form owner, including submitter overrides', async () => {
     const root = await fixture(html`
       <div>
@@ -417,6 +487,24 @@ describe('lr-button', () => {
       const el = (await fixture(html`<lr-button size=${size}>Go</lr-button>`)) as LyraButton;
       const baseEl = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       expect(getComputedStyle(baseEl).minBlockSize, `size=${size}`).to.equal(px);
+    }
+  });
+
+  it('keeps compact circle and icon-only buttons on the shared minimum target floor', async () => {
+    for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
+      const fixtures = [
+        html`<lr-button size=${size} circle aria-label="Settings"></lr-button>`,
+        html`<lr-button size=${size} aria-label="Settings"><svg aria-hidden="true"></svg></lr-button>`,
+      ];
+
+      for (const markup of fixtures) {
+        const el = (await fixture(markup)) as LyraButton;
+        await el.updateComplete;
+        const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+        const rect = base.getBoundingClientRect();
+        expect(rect.width, `${size} compact target width`).to.be.at.least(40);
+        expect(rect.height, `${size} compact target height`).to.be.at.least(40);
+      }
     }
   });
 
@@ -739,7 +827,7 @@ describe('lr-button', () => {
         html`<lr-button href="https://example.com">Go</lr-button>`,
       )) as LyraButton;
       const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
-      expect(anchor).to.exist;
+      expect((anchor) != null).to.equal(true);
       expect(anchor.getAttribute('href')).to.equal('https://example.com');
       expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.not.exist;
     });
@@ -784,7 +872,7 @@ describe('lr-button', () => {
         html`<lr-button href="mailto:hello@example.com">Email</lr-button>`,
       )) as LyraButton;
       const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
-      expect(anchor).to.exist;
+      expect((anchor) != null).to.equal(true);
       expect(anchor.getAttribute('href')).to.equal('mailto:hello@example.com');
     });
 
@@ -849,7 +937,7 @@ describe('lr-button', () => {
           html`<lr-button disabled href="https://example.com">Go</lr-button>`,
         )) as LyraButton;
         const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
-        expect(anchor).to.exist;
+        expect((anchor) != null).to.equal(true);
         expect(anchor.hasAttribute('href'), 'a disabled link button must not carry href').to.be
           .false;
         expect(anchor.getAttribute('aria-disabled')).to.equal('true');
@@ -1722,10 +1810,28 @@ it('exposes the native validation surface of its form association', async () => 
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-button') as LyraButton;
-  expect(el.form).to.equal(form);
-  expect(el.getForm()).to.equal(form);
+  expect((el.form) === (form)).to.equal(true);
+  expect((el.getForm()) === (form)).to.equal(true);
   expect(el.willValidate).to.equal(true);
   expect(el.validity.valid).to.equal(true);
   expect(el.validationMessage).to.equal('');
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['send-label']);
+});
+
+it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation', async () => {
+  const unbroken = 'LocalizedButtonLabel'.repeat(48);
+  const adornment = 'EndAdornment'.repeat(48);
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px; overflow: auto">
+        <lr-button style="max-inline-size: 100%">
+          ${unbroken}<span slot="end">${adornment}</span>
+        </lr-button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-button') as LyraButton;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(base.scrollWidth, `${direction} base scroll width`).to.be.at.most(base.clientWidth);
+  }
 });

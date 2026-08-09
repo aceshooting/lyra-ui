@@ -91,7 +91,7 @@ describe('parsing and rendering', () => {
     await waitUntil(() => rowRoot(el).querySelector('[part~="output"][data-output-type="error"]') !== null);
     const output = rowRoot(el).querySelector('[part~="output"][data-output-type="error"]')!;
     const label = output.querySelector('[part="error-output-label"]')!;
-    expect(label).to.exist;
+    expect((label) != null).to.equal(true);
     expect(label.textContent).to.equal('Error');
     expect(output.textContent).to.include("NameError: name 'x' is not defined");
     expect(output.textContent).to.include('Traceback line 1');
@@ -112,7 +112,7 @@ describe('parsing and rendering', () => {
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.textContent).to.equal('red text plain');
     const styledSpan = output.querySelector('span')!;
-    expect(styledSpan).to.exist;
+    expect((styledSpan) != null).to.equal(true);
     expect(styledSpan.textContent).to.equal('red text');
     expect(styledSpan.style.color).to.equal('var(--lr-terminal-color-red)');
   });
@@ -133,7 +133,7 @@ describe('parsing and rendering', () => {
     const output = rowRoot(el).querySelector('[part~="output"][data-output-type="error"]')!;
     expect(output.textContent).to.include('bold frame plain frame');
     const styledSpan = [...output.querySelectorAll('span')].find((s) => s.textContent === 'bold frame');
-    expect(styledSpan).to.exist;
+    expect((styledSpan) != null).to.equal(true);
     expect(styledSpan!.style.fontWeight).to.equal('bold');
   });
 
@@ -552,8 +552,8 @@ describe('rendering non-text outputs', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part~="output"] circle') !== null);
     const output = rowRoot(el).querySelector('[part~="output"]')!;
-    expect(output.querySelector('script')).to.not.exist;
-    expect(output.querySelector('circle')).to.exist;
+    expect((output.querySelector('script')) == null).to.equal(true);
+    expect((output.querySelector('circle')) != null).to.equal(true);
     expect(output.getAttribute('role')).to.equal('img');
     expect(output.getAttribute('aria-label')).to.equal('Code cell 1');
   });
@@ -569,7 +569,7 @@ describe('rendering non-text outputs', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part~="output"] h1') !== null);
     const output = rowRoot(el).querySelector('[part~="output"]')!;
-    expect(output.querySelector('script')).to.not.exist;
+    expect((output.querySelector('script')) == null).to.equal(true);
     expect(output.textContent).to.include('Safe');
   });
 
@@ -688,7 +688,7 @@ describe('output collapsing', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
     const toggle = rowRoot(el).querySelector('[part="output-toggle"]') as HTMLButtonElement;
-    expect(toggle).to.exist;
+    expect((toggle) != null).to.equal(true);
     toggle.click();
     await el.updateComplete;
     expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
@@ -992,7 +992,7 @@ describe('virtualized cell part styling', () => {
     await el.scrollToAnchor({ kind: 'node-path', path: [0] });
     await el.updateComplete;
     const cell = vlistRoot.querySelector('[part~="cell-active"]') as HTMLElement;
-    expect(cell, 'a cell is marked active').to.exist;
+    expect((cell) != null, 'a cell is marked active').to.equal(true);
     expect(cell.hasAttribute('data-active'), 'the active cell still carries data-active').to.equal(true);
     return { el, vlistRoot, cell };
   }

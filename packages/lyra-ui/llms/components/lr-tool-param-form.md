@@ -176,7 +176,9 @@ establish a silent baseline, so pre-existing validation state is not replayed.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
-value is a whole object: `formResetCallback()` clears `value`/touched state back to `{}`, and
+value is a whole object: the value present on first connection is cloned as the native default, and
+`formResetCallback()` restores a fresh clone of that default while clearing touched/interaction state.
+Consumer-set custom validity remains in force until explicitly cleared, matching native controls. The
 `formDisabledCallback(disabled)` tracks inherited fieldset state separately from the author-owned
 `disabled` property. JSON serialization is guarded: circular values, `BigInt`, throwing getters/`toJSON`, and
 non-finite numbers cannot escape from an assignment or leave stale form data; the form entry is

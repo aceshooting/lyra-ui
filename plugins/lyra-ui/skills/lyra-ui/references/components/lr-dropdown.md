@@ -39,7 +39,8 @@ methods, events, slots, parts, and theme variables are documented in the layout-
 - `size: LyraSize = 'm'` (reflected) — propagated to directly owned mapped items. Accepts the
   six-step Lyra ladder and `small`/`medium`/`large` aliases.
 - `disabled: boolean = false` (reflected) — prevents pointer/keyboard/programmatic opening and
-  dismisses an already-open dropdown when enabled.
+  dismisses an already-open dropdown when enabled. Initial `disabled` plus `open` markup or
+  pre-upgrade property writes normalize closed regardless of assignment/attribute order.
 - `stayOpenOnSelect: boolean = false` (attribute `stay-open-on-select`, reflected) — suppresses the
   default selection close for direct and nested selections.
 - `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
@@ -61,7 +62,9 @@ Lyra's virtual-anchor compatibility surface.
 `detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
 open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
 not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
-event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+event. The contained menu's standalone `lr-menu-select` compatibility alias is stopped inside the
+dropdown for direct, nested, and consumer-supplied menu shapes. `lr-show` (cancelable),
+`lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
 the Popover lifecycle; none fires for initial open markup.
 
 Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;

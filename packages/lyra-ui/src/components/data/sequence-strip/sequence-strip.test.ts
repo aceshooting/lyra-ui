@@ -49,6 +49,44 @@ it('renders one cell per item, colored by its category', async () => {
   expect(cells[0].style.backgroundColor).to.not.equal(cells[1].style.backgroundColor);
 });
 
+it('densely contains 200 and 500 items at 320px in LTR and RTL without sacrificing roving focus', async () => {
+  for (const count of [200, 500] as const) {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = (await fixture(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+          <lr-sequence-strip></lr-sequence-strip>
+        </div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+      el.categories = categories;
+      el.items = Array.from({ length: count }, (_, index) => ({
+        id: `item-${index + 1}`,
+        category: index % 2 === 0 ? 'text' : 'tool',
+        label: `Item ${index + 1}`,
+      }));
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
+
+      expect(cells.length, `${count} ${direction} cell count`).to.equal(count);
+      expect(wrapper.scrollWidth, `${count} ${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
+      expect(base.scrollWidth, `${count} ${direction} strip`).to.be.at.most(base.clientWidth + 1);
+      expect(
+        Math.min(...cells.map((cell) => cell.getBoundingClientRect().width)),
+        `${count} ${direction} visible cell width`,
+      ).to.be.greaterThan(0);
+
+      cells[0]!.focus();
+      cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+      await el.updateComplete;
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.equal(`item-${count}`);
+      expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal([
+        `item-${count}`,
+      ]);
+    }
+  }
+});
+
 it('renders a marker on cells whose item sets marker: true, and none otherwise', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.items = items;
@@ -76,6 +114,18 @@ it('is a labeled list whose items expose their individual details', async () => 
   expect(cells.map((cell) => cell.getAttribute('role'))).to.deep.equal(['listitem', 'listitem', 'listitem']);
   expect(cells.map((cell) => cell.getAttribute('aria-label'))).to.deep.equal(['Text', 'Tool', 'Text']);
   expect(cells.map((cell) => cell.tabIndex)).to.deep.equal([0, -1, -1]);
+});
+
+it('formats generated category counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-sequence-strip locale="fa-IR"></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')!;
+  const number = new Intl.NumberFormat('fa-IR');
+
+  expect(label).to.include(`Text: ${number.format(2)}`);
+  expect(label).to.include(`Tool: ${number.format(1)}`);
 });
 
 it('uses accessibleLabel verbatim instead of the auto-generated summary when set', async () => {
@@ -181,13 +231,13 @@ describe('hover tooltip', () => {
     cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
-    expect(el.shadowRoot!.activeElement).to.equal(cells[1]);
+    expect((el.shadowRoot!.activeElement) === (cells[1])).to.equal(true);
     expect(cells.map((cell) => cell.tabIndex)).to.deep.equal([-1, 0]);
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 2: tool');
 
     cells[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement).to.equal(cells[0]);
+    expect((el.shadowRoot!.activeElement) === (cells[0])).to.equal(true);
   });
 
   it('preserves real focus and the sole roving stop by item id across a controlled refresh', async () => {
@@ -204,6 +254,48 @@ describe('hover tooltip', () => {
     const focusedId = cells.find((cell) => cell === el.shadowRoot!.activeElement)?.dataset['itemId'];
     expect(focusedId).to.equal('2');
     expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal(['2']);
+  });
+
+  it('cancels a queued arrow focus when the item model is replaced in the same turn', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[0]!;
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    el.items = [
+      { id: 'replacement-a', category: 'text', label: 'Replacement A' },
+      { id: 'replacement-b', category: 'tool', label: 'Replacement B' },
+    ];
+    await el.updateComplete;
+
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId'],
+      'controlled refresh owns focus repair; the stale numeric ArrowRight target is ignored',
+    ).to.equal('replacement-a');
+  });
+
+  it('cancels a queued arrow focus across disconnect and reconnect', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[0]!;
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.be.undefined;
+    expect(
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')]
+        .filter((cell) => cell.tabIndex === 0)
+        .map((cell) => cell.dataset['itemId']),
+    ).to.deep.equal(['1']);
   });
 
   it('clamps owned focus to a survivor and then the stable base as items shrink', async () => {

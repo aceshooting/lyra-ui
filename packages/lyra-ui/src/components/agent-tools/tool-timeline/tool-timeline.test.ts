@@ -298,7 +298,7 @@ it('renders a retry badge with the localized "Retry" label and formatted count o
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   const rows = entriesEl(el);
   const badge = rows[0].querySelector('[part="entry-retries"]');
-  expect(badge).to.exist;
+  expect((badge) != null).to.equal(true);
   expect(rows[0].querySelector('[part="entry-retries-label"]')!.textContent).to.equal('Retry');
   expect(rows[0].querySelector('[part="entry-retries-count"]')!.textContent).to.equal('2');
   expect(rows[1].querySelector('[part="entry-retries"]')).to.not.exist;

@@ -29,7 +29,7 @@ it('renders latest metric cards, a selected trend, and filters runs by slice', a
   }
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(2);
   const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { datasets: unknown[] };
-  expect(chart).to.exist;
+  expect((chart) != null).to.equal(true);
   expect(chart.datasets).to.deep.equal([{ label: 'Groundedness', data: [0.8, 0.91] }]);
 });
 

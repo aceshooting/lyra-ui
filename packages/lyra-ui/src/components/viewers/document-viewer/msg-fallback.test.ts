@@ -34,10 +34,10 @@ describe('.msg (Outlook) registry decision', () => {
     `)) as LyraDocumentViewer;
     await el.updateComplete;
     const preview = el.shadowRoot!.querySelector('[part="body"] lr-document-preview');
-    expect(preview).to.exist;
+    expect((preview) != null).to.equal(true);
     expect(preview!.getAttribute('filename')).to.equal('quarterly-update.msg');
     const downloadLink = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
-    expect(downloadLink).to.exist;
+    expect((downloadLink) != null).to.equal(true);
     expect(downloadLink.href).to.equal('https://example.test/quarterly-update.msg');
     expect(downloadLink.download).to.equal('quarterly-update.msg');
   });

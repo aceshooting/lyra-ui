@@ -306,7 +306,7 @@ describe('lr-pdf-viewer', () => {
       expect(canvas.style.width).to.equal('200px');
       expect(canvas.style.height).to.equal('300px');
       await waitUntil(() => list.shadowRoot!.querySelector('[part="text-layer"]') !== null);
-      expect(FakeTextLayer.lastContainer).to.exist;
+      expect((FakeTextLayer.lastContainer) != null).to.equal(true);
       expect(FakeTextLayer.lastContainer!.style.width).to.equal('200px');
     } finally { restore(); }
   });

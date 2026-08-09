@@ -122,11 +122,11 @@ describe('lr-agent-trace', () => {
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="handoff"]')] as HTMLButtonElement[];
     const rootButton = buttons.find((b) => b.getAttribute('aria-label') === 'Transferred to Trip Planner');
-    expect(rootButton).to.exist;
+    expect((rootButton) != null).to.equal(true);
     const subAgentButton = buttons.find(
       (b) => b.getAttribute('aria-label') === 'Transferred from Trip Planner to Research Agent',
     );
-    expect(subAgentButton).to.exist;
+    expect((subAgentButton) != null).to.equal(true);
   });
 
   it('does not announce a direct non-agent parent as the source agent of a handoff', async () => {
@@ -157,10 +157,8 @@ describe('lr-agent-trace', () => {
     `)) as LyraAgentTrace;
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="handoff"]')] as HTMLButtonElement[];
-    expect(buttons.find((button) => button.getAttribute('aria-label') === 'Transféré vers Trip Planner')).to.exist;
-    expect(
-      buttons.find((button) => button.getAttribute('aria-label') === 'Transféré de Trip Planner vers Research Agent'),
-    ).to.exist;
+    expect((buttons.find((button) => button.getAttribute('aria-label') === 'Transféré vers Trip Planner')) != null).to.equal(true);
+    expect((buttons.find((button) => button.getAttribute('aria-label') === 'Transféré de Trip Planner vers Research Agent')) != null).to.equal(true);
   });
 
   it('omits the handoffs section entirely when there are no agent-kind spans', async () => {
@@ -287,7 +285,7 @@ describe('lr-agent-trace', () => {
       el.style.setProperty('--lr-agent-trace-handoff-active-bg', 'rgb(10, 20, 30)');
       const active = el.shadowRoot!.querySelector('[part="handoff"][data-active]') as HTMLElement;
       const inactive = el.shadowRoot!.querySelector('[part="handoff"]:not([data-active])') as HTMLElement;
-      expect(active).to.exist;
+      expect((active) != null).to.equal(true);
       expect(getComputedStyle(active).backgroundColor).to.equal('rgb(10, 20, 30)');
       expect(getComputedStyle(inactive).backgroundColor).to.not.equal('rgb(10, 20, 30)');
     });

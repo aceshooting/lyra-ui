@@ -906,7 +906,7 @@ describe('lr-tour', () => {
 
     await el.updateComplete;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    expect(popover).to.exist;
+    expect((popover) != null).to.equal(true);
     expect(popover.hasAttribute('data-unanchored')).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="backdrop"] .cutout')).to.not.exist;
   });
@@ -973,7 +973,7 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const firstPrevious = tour.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
-    expect(firstPrevious).to.exist;
+    expect((firstPrevious) != null).to.equal(true);
     expect(firstPrevious.disabled).to.be.true;
 
     tour.next();
@@ -983,7 +983,7 @@ describe('lr-tour', () => {
     tour.next();
     await tour.updateComplete;
     const thirdPrevious = tour.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
-    expect(thirdPrevious).to.exist;
+    expect((thirdPrevious) != null).to.equal(true);
     expect(thirdPrevious.disabled).to.be.false;
   });
 
@@ -1185,11 +1185,11 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     tour.start();
     await tour.updateComplete;
-    expect(document.activeElement).to.not.equal(trigger);
+    expect((document.activeElement) !== (trigger)).to.equal(true);
 
     tour.end('api');
     await tour.updateComplete;
-    expect(document.activeElement).to.equal(trigger);
+    expect((document.activeElement) === (trigger)).to.equal(true);
 
     trigger.remove();
   });

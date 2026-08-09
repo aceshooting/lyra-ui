@@ -142,6 +142,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Accessible-name override forwarded to the internal radiogroup. Attribute presence wins,
+   * including an explicitly empty `aria-label`, which also suppresses visible-label linkage. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
@@ -679,13 +681,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
+    const hasAccessibleLabel = this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
     const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText) || this.withHint;
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`
       <div part="base" role="radiogroup"
-        aria-label=${this.accessibleLabel || nothing}
-        aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
+        aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
+        aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing}
         aria-describedby=${described}
         aria-required=${this.required ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}

@@ -37,7 +37,8 @@ export interface LyraDropdownEventMap extends LyraPopoverEventMap {
  * @event lr-hide - The dropdown is about to close. Cancelable.
  * @event lr-after-hide - The dropdown is closed and its transition has finished.
  * @event lr-select - A menu item was activated. `detail: { item }`. Cancelable; preventing the
- *   event keeps the dropdown and any selected submenu open.
+ *   event keeps the dropdown and any selected submenu open. The contained menu's standalone
+ *   `lr-menu-select` compatibility alias does not escape this wrapper.
  * @method show - `show(): Promise<void>` — opens unless disabled and resolves after
  *   `lr-after-show`.
  * @method hide - `hide(options?): Promise<void>` — closes, returns focus by default, and resolves
@@ -84,7 +85,8 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   /** Density propagated to directly owned mapped items. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /** Prevents the dropdown from opening. Becoming disabled also dismisses an open dropdown. */
+  /** Prevents the dropdown from opening. Becoming disabled also dismisses an open dropdown;
+   * initial `disabled` plus `open` markup/property state normalizes closed in either order. */
   private _disabled = false;
   @property({ type: Boolean, reflect: true })
   get disabled(): boolean {
@@ -96,7 +98,10 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     const old = this._disabled;
     this._disabled = normalized;
     this.requestUpdate('disabled', old);
-    if (normalized && this.hasUpdated && this.open) void this.hide();
+    if (normalized && this.open) {
+      if (this.hasUpdated) void this.hide();
+      else this.open = false;
+    }
   }
 
   /** Keeps the menu open after a selection unless the selected branch closes independently. */
@@ -133,6 +138,10 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override get animationNamespace(): string {
     return 'dropdown';
+  }
+
+  protected override get canOpen(): boolean {
+    return !this.disabled;
   }
 
   protected override animationDurationProperties(showing: boolean): readonly string[] {
@@ -193,6 +202,13 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     this.configureMenu(next ?? this.menuEngine);
   };
 
+  /** `lr-menu-select` remains part of standalone `lr-menu`, but dropdown consumers have one
+   * documented selection event with the complete item and veto contract. Catch the alias before
+   * it crosses this wrapper's shadow boundary for both generated and consumer-supplied menus. */
+  private onMenuSelectAlias = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   protected override onTriggerKeyDown(event: KeyboardEvent): void {
     if (this.disabled || this.open) return;
     let focus: MenuFocusTarget | undefined;
@@ -204,11 +220,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     this.configureMenu(menu);
     if (menu) menu.show(focus);
     else this.show();
-  }
-
-  override show(): Promise<void> {
-    if (this.disabled) return Promise.resolve();
-    return super.show();
   }
 
   /** Re-run positioning after an imperative anchor/layout change. */
@@ -236,7 +247,10 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override renderPopupContent(): TemplateResult {
     if (this.consumerMenu) {
-      return html`<slot @slotchange=${this.onContentSlotChange}></slot>`;
+      return html`<slot
+        @slotchange=${this.onContentSlotChange}
+        @lr-menu-select=${this.onMenuSelectAlias}
+      ></slot>`;
     }
     return staticHtml`
       <${menuTag}
@@ -246,6 +260,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
         .dropdownStayOpenOnSelect=${this.stayOpenOnSelect}
         .dropdownSize=${this.size}
         .open=${this.open}
+        @lr-menu-select=${this.onMenuSelectAlias}
       >
         <slot @slotchange=${this.onContentSlotChange}></slot>
       </${menuTag}>

@@ -44,7 +44,7 @@ export const Elided: Story = {
         with-edges
         with-summary
         @lr-page-change=${apply}
-      ></lr-pagination>`,
+      ></lr-pagination>`
     ),
 };
 
@@ -62,7 +62,7 @@ export const WindowSize: Story = {
           sibling-count="0"
           boundary-count="1"
           @lr-page-change=${apply}
-        ></lr-pagination>`,
+        ></lr-pagination>`
       )}
       ${controlled(
         (apply) => html`<lr-pagination
@@ -72,7 +72,7 @@ export const WindowSize: Story = {
           sibling-count="3"
           boundary-count="2"
           @lr-page-change=${apply}
-        ></lr-pagination>`,
+        ></lr-pagination>`
       )}
     </div>
   `,
@@ -90,8 +90,8 @@ export const Appearance: Story = {
             page="4"
             appearance=${appearance}
             @lr-page-change=${apply}
-          ></lr-pagination>`,
-        ),
+          ></lr-pagination>`
+        )
       )}
     </div>
   `,
@@ -105,20 +105,10 @@ export const Sizes: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; justify-items: start;">
       ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
-        (size) => html`<lr-pagination
-          size=${size}
-          total="200"
-          page-size="20"
-          page="3"
-        ></lr-pagination>`,
+        (size) => html`<lr-pagination size=${size} total="200" page-size="20" page="3"></lr-pagination>`
       )}
       ${(['small', 'medium', 'large'] as const).map(
-        (size) => html`<lr-pagination
-          size=${size}
-          total="200"
-          page-size="20"
-          page="3"
-        ></lr-pagination>`,
+        (size) => html`<lr-pagination size=${size} total="200" page-size="20" page="3"></lr-pagination>`
       )}
     </div>
   `,
@@ -129,13 +119,7 @@ export const Sizes: Story = {
  *  controls deliberately have no `href`. */
 export const Links: Story = {
   render: () => html`
-    <lr-pagination
-      total="200"
-      page-size="20"
-      page="3"
-      with-edges
-      href-template="#page/{page}"
-    ></lr-pagination>
+    <lr-pagination total="200" page-size="20" page="3" with-edges href-template="#page/{page}"></lr-pagination>
   `,
 };
 
@@ -150,7 +134,7 @@ export const Compact: Story = {
         page-size="20"
         with-summary
         @lr-page-change=${apply}
-      ></lr-pagination>`,
+      ></lr-pagination>`
     ),
 };
 
@@ -209,17 +193,19 @@ export const ProgrammaticFocus: Story = {
           total="237"
           page-size="20"
           @lr-page-change=${apply}
-        ></lr-pagination>`,
+        ></lr-pagination>`
       )}
       <button
         type="button"
         @click=${(event: Event) => {
           const pagination = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lr-pagination',
+            'lr-pagination'
           ) as LyraPagination;
           pagination.focus();
         }}
-      >Focus the page field</button>
+      >
+        Focus the page field
+      </button>
     </div>
   `,
 };
@@ -246,17 +232,13 @@ export const Empty: Story = {
 };
 
 export const Loading: Story = {
-  render: () => html`
-    <lr-pagination total="237" page-size="20" page="4" loading></lr-pagination>
-  `,
+  render: () => html` <lr-pagination total="237" page-size="20" page="4" loading></lr-pagination> `,
 };
 
 /** The public `disabled` property also publishes `:state(disabled)` for host-level theming. The
  * separate loading and empty-data conditions disable the controls without claiming that state. */
 export const Disabled: Story = {
-  render: () => html`
-    <lr-pagination total="237" page-size="20" page="4" disabled></lr-pagination>
-  `,
+  render: () => html` <lr-pagination total="237" page-size="20" page="4" disabled></lr-pagination> `,
 };
 
 export const ControlPadding: Story = {
@@ -277,5 +259,64 @@ export const ControlPadding: Story = {
       page="4"
       style="--lr-pagination-control-padding: 0.5rem"
     ></lr-pagination>
+  `,
+};
+
+export const RetunedLayoutGaps: Story = {
+  name: 'Retuned layout gaps',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The summary-to-controls, control-group, and numbered-page gaps are independently inheritable. The same hooks remain active when the exact 320px container layout wraps.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        inline-size: 320px;
+        max-inline-size: 100%;
+        --lr-pagination-base-gap: var(--lr-space-2xl);
+        --lr-pagination-controls-gap: var(--lr-space-l);
+        --lr-pagination-pages-gap: var(--lr-space-s);
+      "
+    >
+      <lr-pagination total="237" page-size="20" page="4" with-summary></lr-pagination>
+    </div>
+  `,
+};
+
+export const RetintedControlStates: Story = {
+  name: 'Retinted control states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Resting, current, hover, and pressed longhands inherit independent pagination hooks. Hover and press ordinary and current page controls to inspect each state.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-pagination-control-bg: var(--lr-color-surface-raised);
+        --lr-pagination-control-border-color: var(--lr-color-success);
+        --lr-pagination-control-color: var(--lr-color-success);
+        --lr-pagination-current-bg: var(--lr-color-success);
+        --lr-pagination-current-border-color: var(--lr-color-success);
+        --lr-pagination-current-color: var(--lr-color-on-success);
+        --lr-pagination-hover-bg: var(--lr-color-success-quiet);
+        --lr-pagination-hover-border-color: var(--lr-color-success);
+        --lr-pagination-active-bg: var(--lr-color-warning-quiet);
+        --lr-pagination-active-border-color: var(--lr-color-warning);
+        --lr-pagination-current-hover-bg: var(--lr-color-warning);
+        --lr-pagination-current-hover-border-color: var(--lr-color-warning);
+        --lr-pagination-current-active-bg: var(--lr-color-danger);
+        --lr-pagination-current-active-border-color: var(--lr-color-danger);
+      "
+    >
+      <lr-pagination total="237" page-size="20" page="4" with-summary></lr-pagination>
+    </div>
   `,
 };

@@ -20,6 +20,7 @@ count, and token-throughput, plus a built-in Stop button. First-party invention 
 equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 
 **Properties:**
+
 - `active: boolean = false` (reflected) — whether generation is currently in progress. The
   elapsed-time ticker (a ~1s `setInterval`) runs only while this is `true`.
 - `startedAt?: number` (attribute `started-at`) — epoch-ms timestamp of when generation began.
@@ -36,7 +37,7 @@ equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
   presence-based `type: Boolean`), so a plain-HTML `show-stop="false"` content attribute correctly
   turns it off — the literal string `"false"` maps to `false`; the attribute's mere presence with any
   other value (or no value) maps to `true`. A Lit template can instead use a `.showStop=${false}`
-  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute *binding* still can't turn
+  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute _binding_ still can't turn
   it off when the attribute was never present in markup to begin with — that binding only ever
   removes the attribute when falsy, and removing an attribute that's already absent fires no
   `attributeChangedCallback` (see AGENTS.md); use `.showStop=${false}` or the plain
@@ -63,15 +64,22 @@ and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-ic
 **Optional peer deps:** none.
 
 ```html
-<lr-generation-status active started-at="1732000000000" token-count="340" show-stop></lr-generation-status>
+<lr-generation-status
+  active
+  started-at="1732000000000"
+  token-count="340"
+  show-stop
+></lr-generation-status>
 <script type="module">
-  document.querySelector('lr-generation-status').addEventListener('lr-stop', () => {
-    controller.abort(); // stop the host's own generation
-  });
+  document
+    .querySelector("lr-generation-status")
+    .addEventListener("lr-stop", () => {
+      controller.abort(); // stop the host's own generation
+    });
 </script>
 ```
 
-This is deliberately a *different* concern than `<lr-stream-status>`: that component is about
+This is deliberately a _different_ concern than `<lr-stream-status>`: that component is about
 transport/connection health (idle/connecting/streaming/stalled, heartbeat-aware stall detection),
 while this one is a user-facing metrics readout for a generation both components' hosts typically
 already know is healthily in progress. Neither imports or depends on the other; compose both side
@@ -84,16 +92,17 @@ reads better as a completed-state summary than the readout blanking out the inst
 ends.
 
 This readout ticks roughly once per second while active, which is exactly the kind of
-high-frequency update `<lr-live-region>`/`Announcer` exists to *prevent* from being read aloud
+high-frequency update `<lr-live-region>`/`Announcer` exists to _prevent_ from being read aloud
 verbatim — this component therefore carries no `role="status"`/`aria-live` of its own and never
 announces anything. A host that wants generation-start/-end announced should pair this with
-something that announces state *transitions* instead. The Stop button gets a normal, always-present
+something that announces state _transitions_ instead. The Stop button gets a normal, always-present
 `aria-label="Stop generating"`, no different from any other icon-only button in this library.
 
 **Known gotchas:**
+
 - `showStop` defaults to `true` and is not a reflected property. Its `ComplexAttributeConverter`
   makes the plain content attribute `show-stop="false"` work correctly, but a `?show-stop=${false}`
-  Lit boolean-attribute *binding* still can't turn it off starting from absent markup — see the
+  Lit boolean-attribute _binding_ still can't turn it off starting from absent markup — see the
   property list above for the exact footgun.
 - The derived `tokens-per-second` figure only appears once `elapsedMs >= 1000`; before that, the
   `throughput` part simply doesn't render — supply `tokens-per-second` yourself for a stable figure

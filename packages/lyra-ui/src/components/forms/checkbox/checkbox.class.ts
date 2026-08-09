@@ -129,11 +129,15 @@ export interface LyraCheckboxEventMap {
  * direct-`ElementInternals` shape with a non-string value.
  *
  * Supporting text is optional through either Web Awesome's `hint` spelling or Shoelace's
- * `help-text` spelling. Both render on the same described-by surface; an externally-owned host
- * `aria-describedby` relationship remains additive.
+ * `help-text` spelling. `errorText` and the `error` slot provide the matching owned error surface;
+ * all rendered messages share an additive described-by relationship with external host ids.
+ * Deliberately no separate top-of-field label property/slot/part: the default slot already is the
+ * visible, clickable checkbox label, matching `lr-switch`'s form-control shape.
  * Default-slot presence follows flattened rendered assignment and updates when forwarded content
  * changes. Visual elements, including decorative `aria-hidden` icons, keep the label wrapper;
  * accessible naming remains the browser's slot semantics unless a host `aria-label` is present.
+ * The public label and supporting/error text wrap at arbitrary boundaries in constrained rows;
+ * the fixed checkbox square and shared interactive target never shrink to make that fit.
  *
  * @customElement lr-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
@@ -142,6 +146,7 @@ export interface LyraCheckboxEventMap {
  * `aria-label` is forwarded by presence, including an explicitly empty value.
  * @slot hint - Web Awesome-compatible supporting text.
  * @slot help-text - Shoelace-compatible supporting text; the same surface as `hint`.
+ * @slot error - Custom error content on the owned error surface.
  * A host `aria-describedby` attribute is resolved onto the internal `role="checkbox"` through
  * `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow
  * boundary.
@@ -171,9 +176,11 @@ export interface LyraCheckboxEventMap {
  * @cssstate checked - Matches while the live checked state is true.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @cssstate indeterminate - Matches while the visual mixed state is true.
+ * @csspart form-control - The outer wrapper around the checkbox, error, and hint.
  * @csspart base - Compatibility name for the interactive control; use `checkbox`.
  * @csspart checkbox - The whole interactive control (`role="checkbox"`); wraps the box and label.
- *   It is the same node as `base`.
+ *   It is the same node as `base` and retains the shared `--lr-icon-button-size` minimum target at
+ *   every size tier, including when the label slot is empty.
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart control - WA/Shoelace name for `box`.
  * @csspart control--checked - Shoelace state alias on the control while checked.
@@ -184,6 +191,7 @@ export interface LyraCheckboxEventMap {
  * @csspart label - The wrapper around the default slot.
  * @csspart hint - Web Awesome name for the supporting-text wrapper.
  * @csspart form-control-help-text - Shoelace name for the same supporting-text wrapper.
+ * @csspart error - The error message.
  * @cssprop [--lr-checkbox-label-indent=calc(var(--lr-checkbox-box-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the box's
  * own floor plus the gap next to it — so it tracks `size` along with the box. Published so a
@@ -198,6 +206,12 @@ export interface LyraCheckboxEventMap {
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
+ * @cssprop [--lr-checkbox-hover-border=var(--lr-color-brand)] - Box border while the enabled
+ * interactive control is hovered.
+ * @cssprop [--lr-checkbox-active-border=var(--lr-color-brand)] - Box border while pressed.
+ * @cssprop [--lr-checkbox-active-ring=var(--lr-color-brand-quiet)] - Outer box ring while pressed.
+ * @cssprop [--lr-checkbox-invalid-border=var(--lr-color-danger)] - Box border while invalid chrome
+ * is visible.
  * @cssprop [--checked-icon-color=currentColor] - WA-compatible color of the checked or
  * indeterminate glyph.
  * @cssprop [--checked-icon-scale=1] - WA-compatible scale of the checked or indeterminate glyph.
@@ -259,6 +273,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   @property() hint = '';
   /** Shoelace alias for {@link hint}. */
   @property({ attribute: 'help-text' }) helpText = '';
+  /** Error text associated with the inner checkbox; custom markup can use the `error` slot. */
+  @property({ attribute: 'error-text' }) errorText = '';
   /** Shoelace's separate reset-default attribute. The public IDL remains `defaultChecked`. */
   @property({ type: Boolean, attribute: 'default-checked' })
   private shoelaceDefaultChecked = false;
@@ -276,6 +292,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasHelpTextSlot = false;
+  @state() private hasErrorSlot = false;
   // Set on the control's first `blur`; gates the `data-invalid`/`aria-invalid`
   // reflection below so validity styling never flashes on first render,
   // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
@@ -460,21 +477,24 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     if (this.hasUpdated) {
       // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
       this.recomputeHasLabelSlot();
+      this.refreshNamedSlotState();
     } else {
       // Browser-only mounts still seed before their first paint. During hydration the base helper
       // defers this browser-only light-DOM sample until the server render has been reproduced.
       this.seedFirstRenderState(() => {
         this.recomputeHasLabelSlot();
-        const children = (this as unknown as { children?: HTMLCollection }).children;
-        if (!children) return;
-        this.hasHintSlot = Array.from(children).some(
-          (element) => element.getAttribute('slot') === 'hint',
-        );
-        this.hasHelpTextSlot = Array.from(children).some(
-          (element) => element.getAttribute('slot') === 'help-text',
-        );
+        this.refreshNamedSlotState();
       });
     }
+  }
+
+  private refreshNamedSlotState(): void {
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    if (!children) return;
+    const elements = Array.from(children);
+    this.hasHintSlot = elements.some((element) => element.getAttribute('slot') === 'hint');
+    this.hasHelpTextSlot = elements.some((element) => element.getAttribute('slot') === 'help-text');
+    this.hasErrorSlot = elements.some((element) => element.getAttribute('slot') === 'error');
   }
 
   override disconnectedCallback(): void {
@@ -499,17 +519,29 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     super.updated(changed);
     const describedBy = this.getAttribute('aria-describedby');
     const hint = this.renderRoot.querySelector<HTMLElement>('#checkbox-hint');
-    if (!describedBy && !this.hasSyncedDescribedByElements && (!hint || hint.hidden)) return;
+    const error = this.renderRoot.querySelector<HTMLElement>('#checkbox-error');
+    if (
+      !describedBy &&
+      !this.hasSyncedDescribedByElements &&
+      (!hint || hint.hidden) &&
+      (!error || error.hidden)
+    ) return;
     const control = this.renderRoot.querySelector<HTMLElement>('[part~="base"]') ?? undefined;
     this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
       this,
       control,
       describedBy,
     );
-    if (hint && !hint.hidden && control && 'ariaDescribedByElements' in control) {
+    if (control && 'ariaDescribedByElements' in control) {
       const reflected = control as HTMLElement & { ariaDescribedByElements: Element[] | null };
       const current = reflected.ariaDescribedByElements ?? [];
-      reflected.ariaDescribedByElements = [...current.filter((element) => element !== hint), hint];
+      const internal = [error, hint].filter(
+        (element): element is HTMLElement => Boolean(element && !element.hidden),
+      );
+      reflected.ariaDescribedByElements = [
+        ...current.filter((element) => element !== hint && element !== error),
+        ...internal,
+      ];
     }
   }
 
@@ -691,6 +723,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.hasHelpTextSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onErrorSlotChange = (event: Event): void => {
+    this.hasErrorSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private isDefaultLabelNode(node: Node): boolean {
     if (node.nodeType !== 1) return true;
     const slotName = (node as Element).getAttribute('slot');
@@ -802,17 +838,22 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   override render(): TemplateResult {
     const mixed = this.indeterminate;
     const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const controlParts = [
       'box',
       'control',
       this.checked ? 'checked control--checked' : '',
       mixed ? 'indeterminate control--indeterminate' : '',
     ].filter(Boolean).join(' ');
-    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasHint ? 'checkbox-hint' : '']
+    const describedBy = [
+      this.getAttribute('aria-describedby') ?? '',
+      hasError ? 'checkbox-error' : '',
+      hasHint ? 'checkbox-hint' : '',
+    ]
       .filter(Boolean)
       .join(' ');
     return html`
-      <div>
+      <div part="form-control">
         <span
           part="base checkbox"
           role="checkbox"
@@ -835,6 +876,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
             <slot @slotchange=${this.onSlotChange}></slot>
           </span>
         </span>
+        <div id="checkbox-error" part="error" ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        </div>
         <div id="checkbox-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
           ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot
           ><slot name="help-text" @slotchange=${this.onHelpTextSlotChange}></slot>

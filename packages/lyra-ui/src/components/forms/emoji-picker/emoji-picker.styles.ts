@@ -5,13 +5,13 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    --lr-emoji-picker-item-size: var(--lr-icon-button-size);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-lg);
-    --lr-emoji-picker-gap: var(--lr-space-2xs);
-    --lr-emoji-picker-control-gap: var(--lr-space-xs);
-    --lr-emoji-picker-radius: var(--lr-radius);
-    --lr-emoji-picker-item-radius: var(--lr-radius-xs);
-    --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
+    --_lr-emoji-picker-item-size-default: var(--lr-icon-button-size);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-lg);
+    --_lr-emoji-picker-gap-default: var(--lr-space-2xs);
+    --_lr-emoji-picker-control-gap-default: var(--lr-space-xs);
+    --_lr-emoji-picker-radius-default: var(--lr-radius);
+    --_lr-emoji-picker-item-radius-default: var(--lr-radius-xs);
+    --_lr-emoji-picker-row-height-default: calc(max(var(--lr-icon-button-size), var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default))) + var(--lr-space-l));
   }
   /* An emoji cell is a square tap target in a dense grid, not a form-control row, so this is the
      component's own ladder rather than the shared --lr-form-control-height one: the two agree from
@@ -19,31 +19,31 @@ export const styles = css`
      under a comfortable tap target. It still matches both spellings of every tier, the same way
      internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
-    --lr-emoji-picker-item-size: var(--lr-size-1-5rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-sm);
+    --_lr-emoji-picker-item-size-default: var(--lr-size-1-5rem);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-sm);
   }
   :host([size='xs']) {
-    --lr-emoji-picker-item-size: var(--lr-size-1-75rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-md-sm);
+    --_lr-emoji-picker-item-size-default: var(--lr-size-1-75rem);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-md-sm);
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-emoji-picker-item-size: var(--lr-size-2rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-m);
+    --_lr-emoji-picker-item-size-default: var(--lr-size-2rem);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-m);
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-emoji-picker-item-size: var(--lr-size-3rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-xl);
+    --_lr-emoji-picker-item-size-default: var(--lr-size-3rem);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-xl);
   }
   :host([size='xl']) {
-    --lr-emoji-picker-item-size: var(--lr-size-3-5rem);
-    --lr-emoji-picker-glyph-size: var(--lr-font-size-2xl);
+    --_lr-emoji-picker-item-size-default: var(--lr-size-3-5rem);
+    --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-2xl);
   }
   [part='form-control'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-emoji-picker-control-gap);
+    gap: var(--lr-emoji-picker-control-gap, var(--_lr-emoji-picker-control-gap-default));
   }
   [part='form-control-label'] {
     color: var(--lr-color-text);
@@ -69,9 +69,9 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-emoji-picker-control-gap);
+    gap: var(--lr-emoji-picker-control-gap, var(--_lr-emoji-picker-control-gap-default));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-emoji-picker-radius);
+    border-radius: var(--lr-emoji-picker-radius, var(--_lr-emoji-picker-radius-default));
     padding: var(--lr-space-s);
     background: var(--lr-color-surface);
   }
@@ -91,7 +91,7 @@ export const styles = css`
   [part='search'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-emoji-picker-item-radius);
+    border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
@@ -113,9 +113,10 @@ export const styles = css`
   [part='grid'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-emoji-picker-gap);
+    gap: var(--lr-emoji-picker-gap, var(--_lr-emoji-picker-gap-default));
     max-block-size: var(--lr-size-16rem);
-    overflow-y: auto;
+    overflow-block: auto;
+    overflow-inline: hidden;
   }
   [part='grid'] {
     scrollbar-gutter: stable;
@@ -141,14 +142,14 @@ export const styles = css`
   [data-probe='item'] {
     /* Mirrors [part='emoji']'s inline box, shared minimum included, so the resolved item size is
        the size actually painted. */
-    inline-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: var(--lr-size-1-5rem);
+    inline-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
+    min-inline-size: var(--lr-icon-button-size);
   }
   [data-probe='gap'] {
-    inline-size: var(--lr-emoji-picker-gap);
+    inline-size: var(--lr-emoji-picker-gap, var(--_lr-emoji-picker-gap-default));
   }
   [data-probe='row'] {
-    inline-size: var(--lr-emoji-picker-row-height);
+    inline-size: var(--lr-emoji-picker-row-height, var(--_lr-emoji-picker-row-height-default));
   }
   [part='virtual-spacer'] {
     position: relative;
@@ -158,12 +159,12 @@ export const styles = css`
     position: absolute;
     inset-inline: 0;
     inset-block-start: 0;
-    min-block-size: var(--lr-emoji-picker-row-height);
+    min-block-size: var(--lr-emoji-picker-row-height, var(--_lr-emoji-picker-row-height-default));
   }
   [part='virtual-items'] {
     display: flex;
-    gap: var(--lr-emoji-picker-gap);
-    min-block-size: var(--lr-emoji-picker-item-size);
+    gap: var(--lr-emoji-picker-gap, var(--_lr-emoji-picker-gap-default));
+    min-block-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
   }
   [part='virtual-label'] {
     block-size: var(--lr-space-l);
@@ -183,14 +184,14 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-emoji-picker-item-size);
-    block-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: max(var(--lr-size-1-5rem), var(--lr-emoji-picker-item-size));
-    min-block-size: max(var(--lr-size-1-5rem), var(--lr-emoji-picker-item-size));
+    inline-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
+    block-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
-    border-radius: var(--lr-emoji-picker-item-radius);
+    border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: transparent;
-    font-size: var(--lr-emoji-picker-glyph-size);
+    font-size: var(--lr-emoji-picker-glyph-size, var(--_lr-emoji-picker-glyph-size-default));
     cursor: pointer;
   }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any

@@ -31,6 +31,7 @@ import {
   type DateRange,
   type LyraDatePickerDayContent,
   type LyraDatePickerDisabledDates,
+  type LyraDatePickerFirstDayOfWeek,
   type LyraDatePickerPageBy,
 } from './date-picker.class.js';
 import './date-picker.class.js';
@@ -122,8 +123,8 @@ export type LyraDateInputPlacement =
   | 'right' | 'right-start' | 'right-end'
   | 'bottom' | 'bottom-start' | 'bottom-end'
   | 'left' | 'left-start' | 'left-end';
-export type LyraDateInputFirstDayOfWeek =
-  | 'auto' | 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+/** Source-compatible date-input name for the shared picker weekday vocabulary. */
+export type LyraDateInputFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
 export type LyraDateInputValidatorResult = void | boolean | string | ValidityStateFlags;
 /** Result shape accepted from object validators used by the upstream form-control contract. */
 export interface LyraDateInputObjectValidatorResult {
@@ -195,6 +196,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
  * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
  * tier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.
+ * In a constrained row the editable input shrinks first, while each public `start`/`end`
+ * adornment is capped at 40% so unbroken consumer content cannot widen the field.
  *
  * @customElement lr-date-input
  * @event {InputEvent} input - Fired on edits as a bubbling, composed, non-cancelable native event.

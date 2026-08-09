@@ -42,7 +42,7 @@ it('normalizes a Date, an ISO string, and an invalid string for timestamp', asyn
   el.timestamp = date;
   await el.updateComplete;
   let time = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
-  expect(time).to.exist;
+  expect((time) != null).to.equal(true);
   expect(time.getAttribute('datetime')).to.equal(date.toISOString());
 
   el.timestamp = '2024-03-01T10:30:00Z';
@@ -122,7 +122,7 @@ it('only renders the built-in retry button when status="failed", and it emits lr
   el.status = 'failed';
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
-  expect(button).to.exist;
+  expect((button) != null).to.equal(true);
 
   let fired = false;
   el.addEventListener('lr-retry', () => (fired = true));
@@ -151,8 +151,8 @@ it('keeps focus inside the message when a lr-retry listener flips status away fr
 
   expect(el.shadowRoot!.querySelector('[part="retry-button"]'), 'the retry button is gone once status flips').to.not
     .exist;
-  expect(el.shadowRoot!.activeElement, 'focus must not have silently reverted to <body>').to.not.be.null;
-  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
+  expect((el.shadowRoot!.activeElement) !== null, 'focus must not have silently reverted to <body>').to.equal(true);
+  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
 });
 
 it('does not steal focus from retry when the host leaves the failed state unchanged', async () => {
@@ -616,7 +616,7 @@ describe('failure slot', () => {
     expect(assigned).to.have.lengthOf(1);
     expect(assigned[0].getAttribute('role')).to.equal('alert');
     expect(assigned[0].textContent).to.contain('Send failed');
-    expect(assigned[0].querySelector('button')).to.exist;
+    expect((assigned[0].querySelector('button')) != null).to.equal(true);
   });
 
   it('lets the consumer failure content lay out exactly as authored, without any ::part(failure) override', async () => {
@@ -742,14 +742,14 @@ describe('failure slot', () => {
     });
 
     button.focus();
-    expect(document.activeElement).to.equal(button);
+    expect((document.activeElement) === (button)).to.equal(true);
     button.click();
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelector('slot[name="failure"]'), 'the failure slot is gone once status flips').to
       .not.exist;
-    expect(document.activeElement, 'focus must not have silently reverted to <body>').to.not.equal(document.body);
-    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
+    expect((document.activeElement) !== (document.body), 'focus must not have silently reverted to <body>').to.equal(true);
+    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
   });
 
   it('rescues focus through the adopted owner document when iframe failure content is removed', async () => {
@@ -937,7 +937,7 @@ describe('bubble geometry cssprops', () => {
 
     for (const part of ['collapse-button', 'retry-button']) {
       const node = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      expect(node, `[part="${part}"] must be rendered for this assertion to mean anything`).to.exist;
+      expect((node) != null, `[part="${part}"] must be rendered for this assertion to mean anything`).to.equal(true);
       expect(getComputedStyle(node).borderTopLeftRadius, part).to.equal(shared);
     }
   });

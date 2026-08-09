@@ -112,13 +112,13 @@ export const styles = css`
   [part='progress'] {
     inline-size: 100%;
     block-size: var(--lr-size-2px);
-    background: var(--lr-color-border);
+    background: var(--lr-flow-node-progress-track-color, var(--lr-color-border));
     border-radius: var(--lr-radius-pill);
     overflow: hidden;
   }
   .progress-fill {
     block-size: 100%;
-    background: var(--lr-color-brand);
+    background: var(--lr-flow-node-progress-fill-color, var(--lr-color-brand));
   }
   [part='body']:empty {
     display: none;

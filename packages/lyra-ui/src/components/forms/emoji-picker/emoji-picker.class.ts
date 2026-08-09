@@ -94,6 +94,10 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * `disabled` (from the `FormAssociated` mixin) gates every self-rendered interactive
  * sub-control — the search input and every emoji button — not just one of them.
  *
+ * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
+ * ancestor theme wrapper override the active size tier. A value set directly on the picker still
+ * wins through normal custom-property inheritance.
+ *
  * @customElement lr-emoji-picker
  * @event input - Native-style composed event emitted after a user picks an emoji.
  * @event change - Native-style composed commit event emitted with `input`.
@@ -111,11 +115,12 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
- * @csspart grid - The keyboard-navigable emoji grid.
+ * @csspart grid - The keyboard-navigable emoji grid. It scrolls only in the block axis and clips
+ *   inline overflow, avoiding a second scrollbar when the allocation is narrower than one option.
  * @csspart group-label - Each group's heading, rendered above its emojis.
  * @csspart emoji - Each emoji's own `<button>`; its box and glyph both scale with the `size`
- *   property (`--lr-emoji-picker-item-size`/`-glyph-size`), with the hit area floored at a flat
- *   24px (WCAG 2.5.8) rather than the shared `--lr-icon-button-size`.
+ *   property (`--lr-emoji-picker-item-size`/`-glyph-size`), while its interactive box remains
+ *   floored at the shared `--lr-icon-button-size`.
  * @csspart empty - The empty-state message, shown when the search matches nothing.
  * @csspart virtual-spacer - The full-height scroll spacer that gives the grid its scrollbar while
  *   only the visible rows exist in the DOM. Rendered on the windowed path only.
@@ -127,7 +132,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-emoji-picker-item-size=var(--lr-icon-button-size)] - Each emoji button's box.
- *   Floored at 24px; the small size tiers can stay denser than the shared 40px icon-button size.
+ *   Floored at the shared `--lr-icon-button-size`; small size tiers scale the glyph without
+ *   shrinking the interactive target.
  * @cssprop [--lr-emoji-picker-glyph-size=var(--lr-font-size-lg)] - Font size of the emoji glyph,
  *   scaled by the `size` property to keep the glyph proportional to the item box.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
@@ -204,8 +210,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  the localized default grid label. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
-  /** Visual size — scales the emoji grid item box proportionally, floored at 24px
-   *  (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
+  /** Visual size — scales the emoji glyph and preferred item box while keeping the interactive
+   *  target floored at `--lr-icon-button-size`; not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';

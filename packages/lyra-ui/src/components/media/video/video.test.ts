@@ -207,7 +207,7 @@ describe('lr-video public contract', () => {
       <lr-video src="javascript:alert(1)" poster="javascript:alert(2)"></lr-video>
     `);
     expect(nativeVideo(el).hasAttribute('src')).to.be.false;
-    expect(el.shadowRoot!.querySelector('img')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('img')) === (null)).to.equal(true);
   });
 
   it('proxies playback methods, preserves the native play promise, and guards numeric inputs', async () => {
@@ -333,6 +333,71 @@ describe('lr-video public contract', () => {
     expect(el.shadowRoot!.querySelector('slot:not([name])') !== null).to.be.true;
   });
 
+  it('keeps interactive icon overrides inert and outside every native control button', async () => {
+    const fullscreenEnabledDescriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const fullscreenElementDescriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    const requestFullscreenDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'requestFullscreen',
+    );
+    const iconSlots = [
+      'exit-fullscreen-icon',
+      'fullscreen-icon',
+      'mute-icon',
+      'pause-icon',
+      'play-icon',
+      'poster-icon',
+      'volume-icon',
+    ];
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      const el = await fixture<LyraVideo>(html`
+        <lr-video controls="full" poster="https://example.test/poster.jpg" title="Demo">
+          ${iconSlots.map(
+            (name) => html`<button slot=${name} data-icon-slot=${name}>${name}</button>`,
+          )}
+        </lr-video>
+      `);
+
+      for (const name of iconSlots) {
+        const slot = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${name}"]`)!;
+        expect(slot.closest('button') === null, `${name} is outside the native button`).to.be.true;
+        expect(
+          slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
+          `${name} is in decorative inert chrome`,
+        ).to.equal('true');
+      }
+
+      for (const name of ['poster-icon', 'play-icon', 'volume-icon', 'fullscreen-icon']) {
+        el.querySelector<HTMLButtonElement>(`[data-icon-slot="${name}"]`)!.focus();
+        expect(document.activeElement?.getAttribute('data-icon-slot'), `${name} refuses focus`).to.not.equal(name);
+      }
+      await expect(el).to.be.accessible();
+
+      el.playing = true;
+      el.muted = true;
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        value: el.shadowRoot!.querySelector('[part~="video-wrapper"]'),
+      });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      await el.updateComplete;
+      for (const name of ['pause-icon', 'mute-icon', 'exit-fullscreen-icon']) {
+        el.querySelector<HTMLButtonElement>(`[data-icon-slot="${name}"]`)!.focus();
+        expect(document.activeElement?.getAttribute('data-icon-slot'), `${name} refuses focus`).to.not.equal(name);
+      }
+      await expect(el).to.be.accessible();
+    } finally {
+      restoreOwnProperty(document, 'fullscreenEnabled', fullscreenEnabledDescriptor);
+      restoreOwnProperty(document, 'fullscreenElement', fullscreenElementDescriptor);
+      restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', requestFullscreenDescriptor);
+    }
+  });
+
   it('honors none/standard/full presets and feature-gates optional controls', async () => {
     const fsDescriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
     const pipDescriptor = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
@@ -347,7 +412,7 @@ describe('lr-video public contract', () => {
       expect(button(standard, 'play') !== null).to.be.true;
       expect(button(standard, 'fullscreen') !== null).to.be.true;
       expect(standard.shadowRoot!.querySelector('[data-control="rate"]')).to.equal(null);
-      expect(button(standard, 'picture-in-picture')).to.equal(null);
+      expect((button(standard, 'picture-in-picture')) === (null)).to.equal(true);
       const full = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
       expect(full.shadowRoot!.querySelector('[data-control="rate"]') !== null).to.be.true;
       expect(button(full, 'picture-in-picture') !== null).to.be.true;
@@ -359,8 +424,8 @@ describe('lr-video public contract', () => {
       Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false });
       Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: false });
       const unsupported = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
-      expect(button(unsupported, 'fullscreen')).to.equal(null);
-      expect(button(unsupported, 'picture-in-picture')).to.equal(null);
+      expect((button(unsupported, 'fullscreen')) === (null)).to.equal(true);
+      expect((button(unsupported, 'picture-in-picture')) === (null)).to.equal(true);
     } finally {
       restoreOwnProperty(document, 'fullscreenEnabled', fsDescriptor);
       restoreOwnProperty(document, 'pictureInPictureEnabled', pipDescriptor);
@@ -1384,7 +1449,7 @@ describe('lr-video coverage gap-filling', () => {
       captionTracks: unknown[];
     };
     internal.mediaRef(undefined);
-    expect(el.getVideoElement()).to.equal(undefined);
+    expect((el.getVideoElement()) === (undefined)).to.equal(true);
 
     expect(() => internal.bindCaptionTracks()).to.not.throw();
     expect(internal.captionTracks.length).to.equal(0);
@@ -1437,7 +1502,7 @@ describe('lr-video coverage gap-filling', () => {
 
       const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
       const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
-      expect(wrapper).to.not.equal(null);
+      expect((wrapper) !== (null)).to.equal(true);
       expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
 
       Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
@@ -1476,7 +1541,7 @@ describe('lr-video coverage gap-filling', () => {
       const media = nativeVideo(el);
       media.disablePictureInPicture = true;
       const pip = button(el, 'picture-in-picture');
-      expect(pip).to.not.equal(null);
+      expect((pip) !== (null)).to.equal(true);
       pip!.click();
       await el.updateComplete;
       expect(requests, 'the guard must block the request when PiP is disabled on this element').to.equal(0);

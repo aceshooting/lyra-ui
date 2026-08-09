@@ -10,9 +10,7 @@ import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import { styles } from './thread-list.styles.js';
 
 type ChatThreadLike = { id: string };
-type RenderedThreadListItem =
-  | { kind: 'group'; id: string; label: string }
-  | { kind: 'thread'; thread: ChatThreadLike };
+type RenderedThreadListItem = { kind: 'group'; id: string; label: string } | { kind: 'thread'; thread: ChatThreadLike };
 
 function renderedItems(el: LyraThreadList): RenderedThreadListItem[] {
   const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
@@ -74,9 +72,7 @@ const threads = [
 
 it('defaults to slotted mode (empty threads) and only fires lr-filter-change in that mode', async () => {
   const el = (await fixture(
-    html`<lr-thread-list searchable
-      ><lr-conversation-item title="Manual row"></lr-conversation-item
-    ></lr-thread-list>`,
+    html`<lr-thread-list searchable><lr-conversation-item title="Manual row"></lr-conversation-item></lr-thread-list>`
   )) as LyraThreadList;
   expect(el.threads).to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
@@ -116,9 +112,7 @@ it('applies the host accessible name to the element that owns the list role', as
       <lr-conversation-item title="Manual row"></lr-conversation-item>
     </lr-thread-list>
   `)) as LyraThreadList;
-  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal(
-    'Saved chats',
-  );
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('Saved chats');
 });
 
 it('restores injected slotted roles outside slotted mode and reapplies them on return/reconnect', async () => {
@@ -201,7 +195,7 @@ it('restores a removed slotted child and marks its replacement as a list item', 
 describe('data mode', () => {
   it('renders one lr-conversation-item per non-archived thread by default, grouped by date', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -211,7 +205,7 @@ describe('data mode', () => {
 
   it('includes archived threads in a trailing Archived group when showArchived is set', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} show-archived></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} show-archived></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     expect(renderedGroupLabels(el)).to.deep.equal(['Pinned', 'Today', 'Yesterday', 'Archived']);
@@ -219,7 +213,7 @@ describe('data mode', () => {
 
   it('uses the same controlled collapse model for built-in date groups', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     el.collapsedGroupIds = ['today'];
     await el.updateComplete;
@@ -227,9 +221,11 @@ describe('data mode', () => {
 
     expect(renderedGroupLabels(el)).to.include('Today');
     expect(renderedThreadIds(el)).to.not.include('t1');
-    const todayToggle = [...el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll<HTMLElement>(
-      '[part~="group-toggle"]',
-    )].find((button) => button.textContent?.includes('Today'))!;
+    const todayToggle = [
+      ...el
+        .shadowRoot!.querySelector('lr-virtual-list')!
+        .shadowRoot!.querySelectorAll<HTMLElement>('[part~="group-toggle"]'),
+    ].find((button) => button.textContent?.includes('Today'))!;
     expect(todayToggle.getAttribute('aria-expanded')).to.equal('false');
   });
 
@@ -239,12 +235,14 @@ describe('data mode', () => {
     // `row-action` rule in this same file), the same convention `<lr-artifact-panel>`'s own
     // hover-coverage test already uses for exactly this defect class.
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/lr-virtual-list::part\(group-toggle\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface-raised\)/);
+    expect(css).to.match(
+      /lr-virtual-list::part\(group-toggle\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface-raised\)/
+    );
   });
 
   it('grouping="none" renders every visible thread in host order with no group headers', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none" show-archived></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     expect(renderedGroupLabels(el)).to.deep.equal([]);
@@ -268,17 +266,16 @@ describe('data mode', () => {
 
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const groupLabels = [...list.shadowRoot!.querySelectorAll('span[part~="group-label"]')].map((group) =>
-      group.textContent?.trim(),
+      group.textContent?.trim()
     );
     expect(groupLabels).to.deep.equal(['beta:1', 'alpha:2']);
     expect(dataRows(el).map((row) => row.id)).to.deep.equal(['b1', 'a1', 'a2']);
     const toggles = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="group-toggle"]')];
     expect(toggles.every((toggle) => !toggle.hasAttribute('aria-label'))).to.be.true;
-    expect(
-      toggles.map((toggle) =>
-        toggle.querySelector('[part~="group-label"]')?.textContent?.trim(),
-      ),
-    ).to.deep.equal(['beta:1', 'alpha:2']);
+    expect(toggles.map((toggle) => toggle.querySelector('[part~="group-label"]')?.textContent?.trim())).to.deep.equal([
+      'beta:1',
+      'alpha:2',
+    ]);
   });
 
   it('keeps group collapse controlled and removes collapsed rows from virtual-list measurement', async () => {
@@ -296,7 +293,7 @@ describe('data mode', () => {
 
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const alphaToggle = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')].find(
-      (button) => button.textContent?.includes('alpha'),
+      (button) => button.textContent?.includes('alpha')
     )!;
     expect(alphaToggle.getAttribute('aria-expanded')).to.equal('false');
     expect(alphaToggle.getAttribute('aria-label')).to.equal('Expand alpha');
@@ -315,7 +312,7 @@ describe('data mode', () => {
     expect(
       [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')]
         .find((button) => button.textContent?.includes('alpha'))!
-        .getAttribute('aria-label'),
+        .getAttribute('aria-label')
     ).to.equal('Ouvrir alpha');
 
     el.collapsedGroupIds = [];
@@ -327,7 +324,7 @@ describe('data mode', () => {
 
   it('marks the row matching activeId as active', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} active-id="t1"></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} active-id="t1"></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -336,9 +333,50 @@ describe('data mode', () => {
     expect(activeRow.shadowRoot!.querySelectorAll('[part="active-indicator"]').length).to.equal(1);
   });
 
+  it('keeps an off-window thread active when its id collides with a group key', async () => {
+    const collidingThreads = Array.from({ length: 30 }, (_, index) => ({
+      id: index === 29 ? 'group:today' : `ordinary-${index}`,
+      title: `Thread ${index}`,
+      group: 'today',
+    }));
+    const el = (await fixture(html`
+      <lr-thread-list
+        style="block-size:200px"
+        grouping="custom"
+        .threads=${collidingThreads}
+        .groupBy=${(thread: { group: string }) => thread.group}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+
+    el.activeId = 'group:today';
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    expect(list.activeId).to.equal('thread:group:today');
+    const targetIndex = (list.items as Array<{ kind: string; thread?: { id: string } }>).findIndex(
+      (item) => item.kind === 'thread' && item.thread?.id === 'group:today'
+    );
+    expect(targetIndex).to.be.greaterThan(0);
+    expect(list.keyFunction?.(list.items[targetIndex], targetIndex)).to.equal('thread:group:today');
+    await waitUntil(
+      () => dataRows(el).some((row) => row.id === 'group:today'),
+      'the namespaced active thread was not mounted',
+      { timeout: 3000 }
+    );
+    const target = dataRows(el).find((row) => row.id === 'group:today');
+    expect(target !== undefined, 'the active thread is mounted instead of the colliding header').to.equal(true);
+    expect(target?.active).to.equal(true);
+    expect(viewportEl(el).scrollTop, 'the off-window thread was scrolled into view').to.be.greaterThan(0);
+  });
+
   it('re-emits lr-select/lr-thread-rename with the thread id attached, and never leaks the original bare lr-select', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -350,16 +388,14 @@ describe('data mode', () => {
     await el.updateComplete;
     expect(
       selectEvents.length,
-      'exactly one lr-select must reach the list, not the re-emit plus a leaked original',
+      'exactly one lr-select must reach the list, not the re-emit plus a leaked original'
     ).to.equal(1);
     expect(selectEvents[0]!.detail).to.deep.equal({ id: 't1' });
 
     const rawRenames: CustomEvent[] = [];
     el.addEventListener('lr-rename', (event) => rawRenames.push(event as CustomEvent));
     const renamePromise = oneEvent(el, 'lr-thread-rename');
-    row.dispatchEvent(
-      new CustomEvent('lr-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }),
-    );
+    row.dispatchEvent(new CustomEvent('lr-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }));
     expect((await renamePromise).detail).to.deep.equal({ id: 't1', title: 'New title' });
     expect(rawRenames).to.have.length(0);
   });
@@ -369,7 +405,7 @@ describe('data mode', () => {
       const el = (await fixture(
         html`<lr-thread-list style="block-size:400px" .threads=${threads}>
           <div slot="empty" id="custom-empty">No conversations.</div>
-        </lr-thread-list>`,
+        </lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
@@ -384,7 +420,7 @@ describe('data mode', () => {
       const el = (await fixture(
         html`<lr-thread-list>
           <div slot="empty" id="custom-empty">No conversations.</div>
-        </lr-thread-list>`,
+        </lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const custom = el.querySelector('#custom-empty')!;
@@ -400,7 +436,7 @@ describe('data mode', () => {
 
     it('keeps hasEmptySlot accurate for content slotted after connect even while threads stay populated', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const custom = document.createElement('div');
@@ -421,7 +457,7 @@ describe('data mode', () => {
 
   it('forwards editable via a property binding so editable=false actually disables row rename', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -437,7 +473,7 @@ describe('data mode', () => {
 
   it('disables row rename via the plain editable="false" attribute, not just a property binding', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable="false"></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} editable="false"></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -448,7 +484,11 @@ describe('data mode', () => {
 
   it('renders row actions with controlled pin/archive/delete events carrying the requested state', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
+      html`<lr-thread-list
+        style="block-size:400px"
+        .threads=${threads}
+        .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -472,7 +512,11 @@ describe('data mode', () => {
 
   it('gives every row-action button the shared minimum hit area', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
+      html`<lr-thread-list
+        style="block-size:400px"
+        .threads=${threads}
+        .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -488,7 +532,7 @@ describe('data mode', () => {
 
   it('shows a small pin glyph in the meta slot for a pinned row', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -501,7 +545,11 @@ describe('data mode', () => {
   describe('renderActions', () => {
     it('leaves rowActions output byte-for-byte unchanged when unset (regression guard)', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
+        html`<lr-thread-list
+          style="block-size:400px"
+          .threads=${threads}
+          .rowActions=${['pin', 'archive', 'delete']}
+        ></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
@@ -515,7 +563,7 @@ describe('data mode', () => {
 
     it("renders the callback's content in each row's actions slot, appended after rowActions, and its events reach the host", async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin']}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads} .rowActions=${['pin']}></lr-thread-list>`
       )) as LyraThreadList;
       el.renderActions = (thread) =>
         html`<button
@@ -543,7 +591,7 @@ describe('data mode', () => {
 
     it('does not fire lr-select when a custom action is activated', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       el.renderActions = (thread) =>
         html`<button type="button" class="custom-action" data-thread-id=${thread.id}>Rename</button>`;
@@ -574,15 +622,13 @@ describe('data mode', () => {
               <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
             </lr-menu>
           `}
-        ></lr-thread-list>`,
+        ></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
 
       const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
-      const rowBoxes = [
-        ...list.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
-      ];
+      const rowBoxes = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
       const firstMenu = dataRows(el)[0].querySelector<LyraMenu>('lr-menu')!;
       const firstRowBox = rowBoxes.find((row) => row.querySelector('#menu-p1'))!;
       expect(getComputedStyle(firstRowBox).zIndex).to.equal('auto');
@@ -593,9 +639,7 @@ describe('data mode', () => {
       expect(firstMenu.open).to.equal(true);
       expect(getComputedStyle(firstRowBox).zIndex).to.equal('1');
 
-      const popupRect = firstMenu.shadowRoot!
-        .querySelector<HTMLElement>('[part="popup"]')!
-        .getBoundingClientRect();
+      const popupRect = firstMenu.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!.getBoundingClientRect();
       const overlappingLaterRow = rowBoxes
         .filter((row) => row !== firstRowBox)
         .find((row) => {
@@ -608,25 +652,17 @@ describe('data mode', () => {
       expect(overlappingLaterRow !== undefined).to.equal(true);
 
       const laterRect = overlappingLaterRow!.getBoundingClientRect();
-      const x =
-        (Math.max(popupRect.left, laterRect.left) +
-          Math.min(popupRect.right, laterRect.right)) /
-        2;
-      const y =
-        (Math.max(popupRect.top, laterRect.top) +
-          Math.min(popupRect.bottom, laterRect.bottom)) /
-        2;
+      const x = (Math.max(popupRect.left, laterRect.left) + Math.min(popupRect.right, laterRect.right)) / 2;
+      const y = (Math.max(popupRect.top, laterRect.top) + Math.min(popupRect.bottom, laterRect.bottom)) / 2;
       const topmost = list.shadowRoot!.elementFromPoint(x, y);
-      expect(topmost === firstMenu || (topmost !== null && firstMenu.contains(topmost))).to.equal(
-        true,
-      );
+      expect(topmost === firstMenu || (topmost !== null && firstMenu.contains(topmost))).to.equal(true);
     });
 
     it('is re-invoked per row with the current thread on every render (not memoized)', async () => {
       const received: string[] = [];
       const localThreads = [{ id: 't1', title: 'Today thread', timestamp: now }];
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${localThreads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${localThreads}></lr-thread-list>`
       )) as LyraThreadList;
       el.renderActions = (thread) => {
         received.push(thread.title);
@@ -648,7 +684,7 @@ describe('data mode', () => {
 
     it('composes with wrapRow -- the custom actions still render inside the wrapped row', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       el.renderActions = (thread) =>
         html`<button type="button" class="custom-action" data-thread-id=${thread.id}>Rename</button>`;
@@ -664,7 +700,7 @@ describe('data mode', () => {
   describe('wrapRow', () => {
     it('renders the built-in row unwrapped when unset (default)', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
@@ -677,7 +713,7 @@ describe('data mode', () => {
 
     it('lets wrapRow wrap the built-in row with host-supplied content that has no home in its own slots (e.g. a leading purpose icon)', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       el.wrapRow = (thread, row) =>
         html`<div class="row-wrapper" data-thread-id=${thread.id}><span class="purpose-icon">*</span>${row}</div>`;
@@ -694,7 +730,7 @@ describe('data mode', () => {
 
     it('still fires lr-select from a wrapped row', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       el.wrapRow = (_thread, row) => html`<div class="row-wrapper">${row}</div>`;
       await el.updateComplete;
@@ -709,7 +745,7 @@ describe('data mode', () => {
   describe('search', () => {
     it('filters synchronously and fires lr-filter-change with the match count', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -723,7 +759,7 @@ describe('data mode', () => {
 
     it('matches against excerpt too, case-insensitively', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -757,9 +793,7 @@ describe('data mode', () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       expect(renderedThreadIds(el)).to.deep.equal(['one', 'two']);
       const region = liveRegion.shadowRoot!.querySelector('[part="region"]')!;
-      expect(region.textContent).to.equal(
-        `MATCHES ${new Intl.NumberFormat('tr-u-nu-arab').format(2)}`,
-      );
+      expect(region.textContent).to.equal(`MATCHES ${new Intl.NumberFormat('tr-u-nu-arab').format(2)}`);
     });
 
     it('supports a custom filter override', async () => {
@@ -769,7 +803,7 @@ describe('data mode', () => {
           searchable
           .threads=${threads}
           .filter=${(t: { id: string }, q: string) => t.id.includes(q)}
-        ></lr-thread-list>`,
+        ></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -780,14 +814,12 @@ describe('data mode', () => {
     });
 
     it('shows threadListEmpty with no query and noMatches once a query has zero results', async () => {
-      const el = (await fixture(
-        html`<lr-thread-list searchable .threads=${[]}></lr-thread-list>`,
-      )) as LyraThreadList;
+      const el = (await fixture(html`<lr-thread-list searchable .threads=${[]}></lr-thread-list>`)) as LyraThreadList;
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No conversations yet');
 
       const withThreads = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await withThreads.updateComplete;
       const input = withThreads.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -799,7 +831,7 @@ describe('data mode', () => {
 
     it('ArrowDown from the search field moves focus into the first row', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       await nextFrame();
@@ -807,12 +839,12 @@ describe('data mode', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
       await el.updateComplete;
       const firstRow = dataRows(el)[0];
-      expect(firstRow.shadowRoot!.activeElement).to.exist;
+      expect(firstRow.shadowRoot!.activeElement != null).to.equal(true);
     });
 
     it("colors the search-input's placeholder text instead of leaving the UA default", async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -831,7 +863,7 @@ describe('data mode', () => {
 
     it('bridges native focus/blur on the search input to the host, since neither crosses the shadow boundary on its own', async () => {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" searchable .threads=${threads}></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
@@ -848,7 +880,7 @@ describe('data mode', () => {
 
   it('ArrowDown/ArrowUp rove focus across rendered rows', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none"></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads} grouping="none"></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -856,13 +888,13 @@ describe('data mode', () => {
     const firstOption = rows[0].shadowRoot!.querySelector('[part="option"]') as HTMLElement;
     firstOption.focus();
 
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await nextFrame();
     const secondOption = rows[1].shadowRoot!.querySelector('[part="option"]');
-    expect(document.activeElement).to.exist; // focus moved somewhere inside the shadow tree
-    expect(rows[1].shadowRoot!.activeElement).to.equal(secondOption);
+    expect(document.activeElement != null).to.equal(true); // focus moved somewhere inside the shadow tree
+    expect(rows[1].shadowRoot!.activeElement === secondOption).to.equal(true);
   });
 
   it('skips a row whose wrapRow ancestor is inert instead of stranding arrow focus', async () => {
@@ -883,14 +915,13 @@ describe('data mode', () => {
     await nextFrame();
     dataRow(el, 'first').shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
 
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await nextFrame();
 
     const focusedId =
-      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
-      'none';
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ?? 'none';
     expect(focusedId).to.equal('third');
   });
 
@@ -908,13 +939,9 @@ describe('data mode', () => {
     `)) as LyraThreadList;
     await nextFrame();
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const toggles = [
-      ...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]'),
-    ];
+    const toggles = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')];
     toggles[1]!.focus();
-    toggles[1]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
-    );
+    toggles[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
     expect(list.shadowRoot!.activeElement?.textContent?.trim()).to.contain('second');
   });
 
@@ -924,8 +951,9 @@ describe('data mode', () => {
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
       const el = (await fixture(
-        html`<lr-thread-list style="block-size:400px" .threads=${threads}><lr-conversation-item title="ignored"></lr-conversation-item
-        ></lr-thread-list>`,
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}
+          ><lr-conversation-item title="ignored"></lr-conversation-item
+        ></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
@@ -938,13 +966,18 @@ describe('data mode', () => {
 
 it('is accessible in both modes', async () => {
   const dataMode = (await fixture(
-    html`<lr-thread-list style="block-size:400px" searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>`,
+    html`<lr-thread-list
+      style="block-size:400px"
+      searchable
+      .threads=${threads}
+      .rowActions=${['pin', 'archive', 'delete']}
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await dataMode.updateComplete;
   await expect(dataMode).to.be.accessible();
 
   const slottedMode = (await fixture(
-    html`<lr-thread-list><lr-conversation-item title="Row"></lr-conversation-item></lr-thread-list>`,
+    html`<lr-thread-list><lr-conversation-item title="Row"></lr-conversation-item></lr-thread-list>`
   )) as LyraThreadList;
   await expect(slottedMode).to.be.accessible();
 });
@@ -957,7 +990,7 @@ it('renders first-class leading, meta, and row-content hooks inside virtualized 
       .renderLeading=${() => html`<span data-testid="leading">Purpose</span>`}
       .renderMeta=${() => html`<span data-testid="meta">3 sources</span>`}
       .renderRowContent=${() => html`<strong data-testid="content">Custom row body</strong>`}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -985,19 +1018,19 @@ it('makes injected row-content hooks noninteractive inside the selectable option
   expect(row.querySelector(':focus')?.localName).to.not.equal('button');
 });
 
-it('renders a renderExcerpt hook into the row item\'s excerpt slot, winning over the excerpt property', async () => {
+it("renders a renderExcerpt hook into the row item's excerpt slot, winning over the excerpt property", async () => {
   const el = (await fixture(
     html`<lr-thread-list
       grouping="none"
       .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
       .renderExcerpt=${() => html`<mark data-testid="excerpt">rich <b>match</b></mark>`}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
   const row = dataRows(el)[0];
   const slotted = row.querySelector('[slot="excerpt"] [data-testid="excerpt"]');
-  expect(slotted).to.exist;
+  expect(slotted != null).to.equal(true);
   expect(slotted!.textContent).to.contain('rich');
 
   await row.updateComplete;
@@ -1024,7 +1057,7 @@ it('gives renderExcerpt marks token-driven default highlight styling', async () 
         ></span>
         <mark data-testid="highlight">match</mark>
       `}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -1053,7 +1086,7 @@ it('themes renderExcerpt marks through component-scoped custom properties', asyn
       "
       .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
       .renderExcerpt=${() => html`<mark data-testid="highlight">match</mark>`}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -1077,7 +1110,7 @@ it('does not apply excerpt-highlight hooks to marks outside renderExcerpt', asyn
       "
       .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
       .renderRowContent=${() => html`<mark data-testid="content-mark">content</mark>`}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -1093,7 +1126,7 @@ it('leaves rendering unchanged when renderExcerpt is unset', async () => {
     html`<lr-thread-list
       grouping="none"
       .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -1107,7 +1140,9 @@ it('exports the real viewport and hook wrappers as externally styleable parts', 
   const wrapper = await fixture(html`
     <div>
       <style>
-        lr-thread-list::part(viewport) { scrollbar-gutter: stable; }
+        lr-thread-list::part(viewport) {
+          scrollbar-gutter: stable;
+        }
         lr-thread-list::part(row-leading) {
           color: rgb(12, 34, 56);
           --lr-theme-color-brand-fill-loud: rgb(21, 43, 65);
@@ -1147,7 +1182,7 @@ it('allows group labels and month dates to be formatted by the host', async () =
     html`<lr-thread-list
       .threads=${threads}
       .formatGroupLabel=${(key: string, date?: Date) => `custom:${key}:${date?.getFullYear() ?? ''}`}
-    ></lr-thread-list>`,
+    ></lr-thread-list>`
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
@@ -1253,7 +1288,7 @@ describe('wrapRow row-wrapper part', () => {
   function rowBoxHeights(el: LyraThreadList): number[] {
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     return [...list.shadowRoot!.querySelectorAll('[part="row"]')].map((row) =>
-      Number(row.getBoundingClientRect().height.toFixed(2)),
+      Number(row.getBoundingClientRect().height.toFixed(2))
     );
   }
 
@@ -1263,7 +1298,7 @@ describe('wrapRow row-wrapper part', () => {
         style="block-size:400px"
         grouping="none"
         .threads=${manyThreads.slice(0, 12)}
-      ></lr-thread-list>`,
+      ></lr-thread-list>`
     )) as LyraThreadList;
     if (wrapRow) el.wrapRow = wrapRow;
     await el.updateComplete;
@@ -1313,7 +1348,7 @@ describe('wrapRow row-wrapper part', () => {
 
   it('never wraps group headers -- the part is row-only', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     el.wrapRow = (_thread, row) => row;
     await el.updateComplete;
@@ -1331,7 +1366,7 @@ describe('wrapRow row-wrapper part', () => {
         searchable
         grouping="none"
         .threads=${manyThreads.slice(0, 6)}
-      ></lr-thread-list>`,
+      ></lr-thread-list>`
     )) as LyraThreadList;
     el.wrapRow = (_thread, row) => html`<span>${row}</span>`;
     await el.updateComplete;
@@ -1342,13 +1377,13 @@ describe('wrapRow row-wrapper part', () => {
     const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
     await el.updateComplete;
-    expect(rows[0].shadowRoot!.activeElement).to.equal(rows[0].shadowRoot!.querySelector('[part="option"]'));
+    expect(rows[0].shadowRoot!.activeElement === rows[0].shadowRoot!.querySelector('[part="option"]')).to.equal(true);
 
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await nextFrame();
-    expect(rows[1].shadowRoot!.activeElement).to.equal(rows[1].shadowRoot!.querySelector('[part="option"]'));
+    expect(rows[1].shadowRoot!.activeElement === rows[1].shadowRoot!.querySelector('[part="option"]')).to.equal(true);
   });
 
   it('is accessible with wrapped rows', async () => {
@@ -1359,7 +1394,7 @@ describe('wrapRow row-wrapper part', () => {
         grouping="none"
         .threads=${manyThreads.slice(0, 6)}
         .rowActions=${['pin', 'archive', 'delete']}
-      ></lr-thread-list>`,
+      ></lr-thread-list>`
     )) as LyraThreadList;
     el.wrapRow = (thread, row) => html`<span data-thread-id=${thread.id}>${row}</span>`;
     await el.updateComplete;
@@ -1399,12 +1434,10 @@ describe('data-mode row part forwarding', () => {
         .renderLeading=${() => html`<span>L</span>`}
         .renderMeta=${() => html`<span>M</span>`}
         .renderActions=${() =>
-          html`<span
-            class="probe"
-            style="padding-block: var(--lr-space-s); font-size: var(--lr-font-size-md-sm)"
+          html`<span class="probe" style="padding-block: var(--lr-space-s); font-size: var(--lr-font-size-md-sm)"
             >⋯</span
           >`}
-      ></lr-thread-list>`,
+      ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -1434,7 +1467,7 @@ describe('data-mode row part forwarding', () => {
       'actions',
     ];
     injectStyle(
-      names.map((name, i) => `lr-thread-list::part(row-item-${name}) { padding-block-start: ${i + 1}px; }`).join('\n'),
+      names.map((name, i) => `lr-thread-list::part(row-item-${name}) { padding-block-start: ${i + 1}px; }`).join('\n')
     );
     const { row } = await mountRow();
     for (const [i, name] of names.entries()) {
@@ -1527,11 +1560,99 @@ describe('keyboard navigation past the rendered window', () => {
     const rendered = dataRows(el);
     const last = rendered[rendered.length - 1]!;
     (last.shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     return rendered[0]!.id;
   }
+
+  it('moves Home and End to the complete model boundaries from a middle virtual window', async () => {
+    const el = await mountKeyboardWindow();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    const listRegion = el.shadowRoot!.querySelector('[part="list"]')!;
+
+    const focusMiddleWindow = async (): Promise<void> => {
+      list.scrollToIndex(10, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+      await list.updateComplete;
+      const middle = dataRows(el).find((row) => row.id !== 'm0' && row.id !== 'm19')!;
+      middle.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
+    };
+
+    await focusMiddleWindow();
+    listRegion.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+    await waitUntil(
+      () =>
+        dataRows(el).some((row) => row.id === 'm0' && row.shadowRoot!.activeElement?.getAttribute('part') === 'option'),
+      'Home did not focus the first full-model thread',
+      { timeout: 3000 }
+    );
+
+    await focusMiddleWindow();
+    listRegion.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+    await waitUntil(
+      () =>
+        dataRows(el).some(
+          (row) => row.id === 'm19' && row.shadowRoot!.activeElement?.getAttribute('part') === 'option'
+        ),
+      'End did not focus the last full-model thread',
+      { timeout: 3000 }
+    );
+  });
+
+  it('skips collapsed groups and unavailable endpoint rows for full-model Home and End', async () => {
+    const groupedThreads = [
+      { id: 'hidden-first', title: 'Collapsed first', group: 'collapsed-first' },
+      ...Array.from({ length: 20 }, (_, index) => ({
+        id: `visible-${index}`,
+        title: `Visible ${index}`,
+        group: 'visible',
+      })),
+      { id: 'hidden-last', title: 'Collapsed last', group: 'collapsed-last' },
+    ];
+    const el = (await fixture(html`
+      <lr-thread-list
+        style="block-size:200px"
+        grouping="custom"
+        .threads=${groupedThreads}
+        .groupBy=${(thread: { group: string }) => thread.group}
+        .groupOrder=${['collapsed-first', 'visible', 'collapsed-last']}
+        .collapsedGroupIds=${['collapsed-first', 'collapsed-last']}
+        .wrapRow=${(thread: { id: string }, row: unknown) =>
+          thread.id === 'visible-0' || thread.id === 'visible-19' ? html`<div inert>${row}</div>` : row}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    const listRegion = el.shadowRoot!.querySelector('[part="list"]')!;
+    list.scrollToIndex(12, { align: 'start', behavior: 'auto' });
+    await nextFrame();
+    await list.updateComplete;
+    dataRows(el)[0]!.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
+
+    listRegion.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+    await waitUntil(
+      () =>
+        dataRows(el).some(
+          (row) => row.id === 'visible-1' && row.shadowRoot!.activeElement?.getAttribute('part') === 'option'
+        ),
+      'Home did not skip the collapsed group and inert first visible row',
+      { timeout: 3000 }
+    );
+
+    list.scrollToIndex(12, { align: 'start', behavior: 'auto' });
+    await nextFrame();
+    await list.updateComplete;
+    dataRows(el)[0]!.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
+    listRegion.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+    await waitUntil(
+      () =>
+        dataRows(el).some(
+          (row) => row.id === 'visible-18' && row.shadowRoot!.activeElement?.getAttribute('part') === 'option'
+        ),
+      'End did not skip the collapsed group and inert last visible row',
+      { timeout: 3000 }
+    );
+  });
 
   it('mounts and focuses the next row without dispatching a synthetic scroll event', async () => {
     // Pinning each row box to exactly the internal list's own unmeasured-row estimate keeps this
@@ -1547,11 +1668,7 @@ describe('keyboard navigation past the rendered window', () => {
             overflow: hidden;
           }
         </style>
-        <lr-thread-list
-          style="block-size:200px"
-          grouping="none"
-          .threads=${manyThreads.slice(0, 20)}
-        ></lr-thread-list>
+        <lr-thread-list style="block-size:200px" grouping="none" .threads=${manyThreads.slice(0, 20)}></lr-thread-list>
       </div>
     `);
     const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
@@ -1569,14 +1686,13 @@ describe('keyboard navigation past the rendered window', () => {
     expect(rowsBefore.length).to.be.greaterThan(1);
     expect(rowsBefore.length, 'the window is smaller than the full list').to.be.lessThan(20);
     const lastId = rowsBefore[rowsBefore.length - 1].id;
-    const expectedNextId =
-      manyThreads[manyThreads.findIndex((thread) => thread.id === lastId) + 1]!.id;
+    const expectedNextId = manyThreads[manyThreads.findIndex((thread) => thread.id === lastId) + 1]!.id;
     (rowsBefore[rowsBefore.length - 1].shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
 
     const scrollComplete = oneEvent(list, 'lr-scroll');
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await scrollComplete;
     await list.updateComplete;
     await nextFrame();
@@ -1585,18 +1701,15 @@ describe('keyboard navigation past the rendered window', () => {
     const rowsAfter = dataRows(el);
     const newLast = rowsAfter[rowsAfter.length - 1];
     const focusedRowId =
-      rowsAfter.find((row) => row.shadowRoot?.activeElement?.getAttribute('part') === 'option')?.id ??
-      'no focused row';
+      rowsAfter.find((row) => row.shadowRoot?.activeElement?.getAttribute('part') === 'option')?.id ?? 'no focused row';
     expect(newLast.id, 'a further row mounted past the previous window edge').to.not.equal(lastId);
     expect(viewport.scrollTop, 'the list actually scrolled').to.be.greaterThan(0);
-    expect(focusedRowId, 'focus reaches the next row beyond the old window edge').to.equal(
-      expectedNextId,
-    );
+    expect(focusedRowId, 'focus reaches the next row beyond the old window edge').to.equal(expectedNextId);
 
     expect(scrollEvents.length, 'the scroll really happened').to.be.greaterThan(0);
     expect(
       scrollEvents.every((trusted) => trusted),
-      'no synthetic scroll event is dispatched at the child',
+      'no synthetic scroll event is dispatched at the child'
     ).to.be.true;
   });
 
@@ -1607,42 +1720,45 @@ describe('keyboard navigation past the rendered window', () => {
     const lastIndex = manyThreads.findIndex((thread) => thread.id === last.id);
     const inertId = manyThreads[lastIndex + 1]!.id;
     const expectedId = manyThreads[lastIndex + 2]!.id;
-    el.wrapRow = (thread, row) =>
-      thread.id === inertId ? html`<div inert>${row}</div>` : row;
+    el.wrapRow = (thread, row) => (thread.id === inertId ? html`<div inert>${row}</div>` : row);
     await el.updateComplete;
     const currentLast = dataRows(el).find((row) => row.id === last.id)!;
     await currentLast.updateComplete;
     currentLast.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!.focus();
 
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await waitUntil(
-      () => dataRows(el).some(
-        (row) => row.id === expectedId && row.shadowRoot!.activeElement?.getAttribute('part') === 'option',
-      ),
+      () =>
+        dataRows(el).some(
+          (row) => row.id === expectedId && row.shadowRoot!.activeElement?.getAttribute('part') === 'option'
+        ),
       'focus did not continue past the inert virtual row',
-      { timeout: 3000 },
+      { timeout: 3000 }
     );
 
     const focusedId =
-      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
-      'none';
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ?? 'none';
     expect(focusedId).to.equal(expectedId);
   });
 
   it('does nothing at the very end of the list', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" grouping="none" .threads=${manyThreads.slice(0, 3)}></lr-thread-list>`,
+      html`<lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${manyThreads.slice(0, 3)}
+      ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
     const rows = dataRows(el);
     (rows[rows.length - 1].shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
 
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true })
+    );
     await nextFrame();
     await nextFrame();
     expect(viewportEl(el).scrollTop).to.equal(0);
@@ -1653,15 +1769,14 @@ describe('keyboard navigation past the rendered window', () => {
   it('does not let an older two-frame task override newer keyboard navigation', async () => {
     const el = await mountKeyboardWindow();
     const firstId = startPastRenderedEdge(el);
-    el.shadowRoot!
-      .querySelector('[part="list"]')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true })
+    );
 
     await nextFrame();
     await nextFrame();
     const focusedId =
-      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
-      'none';
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ?? 'none';
     expect(focusedId).to.equal(firstId);
   });
 
@@ -1689,8 +1804,7 @@ describe('keyboard navigation past the rendered window', () => {
     await nextFrame();
     await nextFrame();
     const focusedId =
-      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
-      'none';
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ?? 'none';
     expect(focusedId).to.equal('none');
   });
 });
@@ -1717,7 +1831,11 @@ describe('sticky group headers', () => {
 
   async function mount(sticky: boolean): Promise<LyraThreadList> {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:300px" ?sticky-groups=${sticky} .threads=${groupedThreads}></lr-thread-list>`,
+      html`<lr-thread-list
+        style="block-size:300px"
+        ?sticky-groups=${sticky}
+        .threads=${groupedThreads}
+      ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -1839,7 +1957,7 @@ describe('sticky group headers', () => {
 describe('compact forwarding', () => {
   it('forwards compact onto every data-mode row', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" compact .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" compact .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
@@ -1851,7 +1969,7 @@ describe('compact forwarding', () => {
 
   it('leaves data-mode rows without the compact attribute while unset, and toggles them live', async () => {
     const el = (await fixture(
-      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();

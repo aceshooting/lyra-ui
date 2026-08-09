@@ -471,7 +471,7 @@ it("moves focus into the panel to the first focusable element when opened in the
   el.open = true;
   await el.updateComplete;
 
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 });
 
 it("does not move focus for the inline presentation when opened", async () => {
@@ -488,7 +488,7 @@ it("does not move focus for the inline presentation when opened", async () => {
   el.open = true;
   await el.updateComplete;
 
-  expect(document.activeElement).to.equal(outside);
+  expect((document.activeElement) === (outside)).to.equal(true);
   outside.remove();
 });
 
@@ -511,7 +511,7 @@ it("traps Tab focus inside the panel while overlay chrome is active, wrapping la
   });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 
   const tabBackward = new KeyboardEvent("keydown", {
     key: "Tab",
@@ -521,7 +521,7 @@ it("traps Tab focus inside the panel while overlay chrome is active, wrapping la
   });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 });
 
 it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root", async () => {
@@ -540,7 +540,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   ) as HTMLInputElement;
   const last = el.querySelector('[slot="footer"] button') as HTMLButtonElement;
 
-  expect(shadowHost.shadowRoot!.activeElement).to.equal(input);
+  expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
 
   const shiftTab = new KeyboardEvent("keydown", {
     key: "Tab",
@@ -550,7 +550,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   });
   document.dispatchEvent(shiftTab);
   expect(shiftTab.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 });
 
 it("hides the header/footer wrappers when nothing is slotted into them, shows them once slotted", async () => {
@@ -805,7 +805,7 @@ it("captures lastTrigger only on a genuine open transition, so it survives a lat
   el.close("escape");
   await el.updateComplete;
 
-  expect(document.activeElement).to.equal(outsideTrigger);
+  expect((document.activeElement) === (outsideTrigger)).to.equal(true);
   outsideTrigger.remove();
 });
 

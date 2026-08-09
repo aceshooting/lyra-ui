@@ -195,6 +195,9 @@ A dialog-hosted, format-dispatching full viewer for one document or attachment. 
 renderer registry and falls back to `<lr-document-preview>` when no renderer matches the file's MIME
 type. First-party invention.
 
+A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty
+value, without suppressing the visible `name` heading.
+
 **Properties:**
 - `open: boolean = false` (reflected) — opens or closes the viewer dialog.
 - `name: string = ''` — display name passed to the renderer and used as the dialog heading.
@@ -290,8 +293,10 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). `maxHeight` caps the scrollable document body; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
+`max-height`). A host `aria-label` names the rendered document by attribute presence, including an
+explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
+scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
 'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
@@ -409,7 +414,8 @@ plain text, including its title, start/end time, location, and description. No H
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
+`activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -449,8 +455,8 @@ declared-expansion ceilings. The list composes
 `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
-precedence over
-`name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
+precedence over `name` by attribute presence, including an explicitly empty value, when naming the
+`role="region"` listing. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
@@ -741,6 +747,8 @@ focusable `part="cell-highlight-action"` native button, keeping the ARIA table t
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+Host `aria-label` names the table by attribute presence, including an explicitly empty value;
+`name` and the localized row-count caption are fallbacks.
 `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
 values for the shared anchor-target contract).
 
@@ -760,7 +768,9 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 **CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
-`lr-highlight-activate` on click or Enter/Space), `spinner`, and `error`. `data-row`, `cell`,
+`lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `spinner`,
+and `error`. `data-row`, `cell`,
 `cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
 forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
 stylesheet.
@@ -794,7 +804,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
+`activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -949,7 +960,9 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 
 **CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
-filling a highlighted cell; focusable and emits `lr-highlight-activate`), `rows`, `spinner`, and
+filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
+name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
+placeholders), `rows`, `spinner`, and
 `error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
 internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
@@ -979,6 +992,8 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
+Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
+explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
@@ -997,9 +1012,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+**CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
 cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
-highlighted cell; emits `lr-highlight-activate`), `rows`, `spinner`, and `error`. `data-row`,
+highlighted cell; emits `lr-highlight-activate`; its complete accessible name uses the localized
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `rows`,
+`spinner`, and `error`. `data-row`,
 `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
 `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
@@ -1367,6 +1384,9 @@ instruction children rather than only element descendants.
 
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
+
+A host `aria-label` names the comparison group by attribute presence, including an explicitly empty
+value; the localized comparison label is used only when that attribute is absent.
 
 **Properties:**
 

@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './dropdown.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
-import type { LyraDropdown } from './dropdown.class.js';
+import { LyraDropdown } from './dropdown.class.js';
 import type { LyraDropdownItem } from '../../layout/menu/dropdown-item.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
 
@@ -105,10 +105,14 @@ it('emits one cancelable lr-select with detail.item, closes, and returns focus',
   trigger(el).click();
   await el.updateComplete;
   let count = 0;
+  let legacyAliasCount = 0;
   let event: CustomEvent<{ item: LyraDropdownItem }> | undefined;
   el.addEventListener('lr-select', (received) => {
     count += 1;
     event = received as CustomEvent<{ item: LyraDropdownItem }>;
+  });
+  el.addEventListener('lr-menu-select', () => {
+    legacyAliasCount += 1;
   });
 
   const selected = items(el)[1]!;
@@ -119,6 +123,7 @@ it('emits one cancelable lr-select with detail.item, closes, and returns focus',
   expect(event?.detail.item.localName).to.equal('lr-dropdown-item');
   expect(event?.detail.item.value).to.equal('archive');
   expect(count).to.equal(1);
+  expect(legacyAliasCount).to.equal(0);
   expect(el.open).to.equal(false);
   expect((document.activeElement as HTMLElement).localName).to.equal('button');
 });
@@ -167,6 +172,56 @@ it('disabled blocks pointer and keyboard opening and closes an already-open drop
   expect(el.open).to.equal(false);
 });
 
+it('normalizes disabled plus open initial markup to closed in either attribute order', async () => {
+  const cases = [
+    html`<lr-dropdown disabled open>
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>`,
+    html`<lr-dropdown open disabled>
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>`,
+  ];
+  for (const [index, template] of cases.entries()) {
+    const el = (await fixture(template)) as LyraDropdown;
+    await el.updateComplete;
+    const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+    const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+    expect(el.open, `case ${index}`).to.equal(false);
+    expect(el.hasAttribute('open'), `case ${index}`).to.equal(false);
+    expect(popup.hasAttribute('data-hidden'), `case ${index}`).to.equal(true);
+    expect(engine.open, `case ${index}`).to.equal(false);
+  }
+});
+
+it('normalizes disabled plus open property writes made before custom-element upgrade', async () => {
+  const localName = `lr-test-dropdown-disabled-${Math.random().toString(36).slice(2)}`;
+  const first = document.createElement(localName) as HTMLElement & {
+    open: boolean;
+    disabled: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  const second = document.createElement(localName) as typeof first;
+  first.open = true;
+  first.disabled = true;
+  second.disabled = true;
+  second.open = true;
+  document.body.append(first, second);
+  customElements.define(localName, class extends LyraDropdown {});
+  await Promise.all([first.updateComplete, second.updateComplete]);
+  try {
+    for (const el of [first, second]) {
+      expect(el.open).to.equal(false);
+      expect(el.hasAttribute('open')).to.equal(false);
+      expect(el.disabled).to.equal(true);
+    }
+  } finally {
+    first.remove();
+    second.remove();
+  }
+});
+
 it('propagates the dropdown size to mapped items without changing the shared item ladder', async () => {
   const el = (await fixture(html`
     <lr-dropdown size="small">
@@ -195,9 +250,21 @@ it('accepts a consumer-supplied lr-menu as the owned content without adding a se
   await el.updateComplete;
   await supplied.updateComplete;
 
+  let selectCount = 0;
+  let legacyAliasCount = 0;
+  el.addEventListener('lr-select', () => {
+    selectCount += 1;
+  });
+  el.addEventListener('lr-menu-select', () => {
+    legacyAliasCount += 1;
+  });
+  (supplied.querySelector('[value="rename"]') as LyraDropdownItem).select();
+  await el.updateComplete;
+
   expect(el.shadowRoot!.querySelectorAll('lr-menu[part~="menu"]').length).to.equal(0);
   expect(supplied.shadowRoot!.querySelector('[role="menu"]')).to.equal(null);
-  expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('rename');
+  expect(selectCount).to.equal(1);
+  expect(legacyAliasCount).to.equal(0);
 });
 
 it('rejoins the contained menu engine after an open dropdown is reparented', async () => {
@@ -251,15 +318,20 @@ it('uses the direct-item WA submenu shape for nested keyboard selection and one 
 
   let selectedValue = '';
   let selectCount = 0;
+  let legacyAliasCount = 0;
   el.addEventListener('lr-select', (event) => {
     selectedValue = event.detail.item.value;
     selectCount += 1;
+  });
+  el.addEventListener('lr-menu-select', () => {
+    legacyAliasCount += 1;
   });
   (document.activeElement as LyraDropdownItem).select();
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   expect(selectedValue).to.equal('email');
   expect(selectCount).to.equal(1);
+  expect(legacyAliasCount).to.equal(0);
   expect(el.open).to.equal(false);
   expect((document.activeElement as HTMLElement).textContent).to.equal('Actions');
 });

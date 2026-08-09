@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,9 +23,16 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
 see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
+Public `--lr-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper can
+override size, appearance, and pill fallbacks; a value set directly on the element still wins.
+When a clear or password action is present, `2xs` through `m` grow only enough to contain its
+shared hit target (42px including the row border at the default theme); `l` and `xl` retain their
+48px and 56px shared control heights.
+
 **Properties:**
+
 - `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
-  'date' | 'datetime-local' | 'tel' | 'url'`
+'date' | 'datetime-local' | 'tel' | 'url'`
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
@@ -82,7 +89,7 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
   — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
+  `type="time"`. On `lr-input` itself the `min`/`max` _attributes_ are number-converted, so a
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
   `lr-time-input` does exactly that. Inert for the other types
@@ -147,7 +154,7 @@ Three more native passthroughs:
   platform gives no allowed value step (it throws `InvalidStateError` for those, which is swallowed
   here), and as is `disabled` or `readonly`. `type="number"` and `type="time"` are the two that step
   — on a time field the unit is seconds, matching its `step`.
-  `<lr-number-input>`'s stepper buttons build on these and *do* emit, because a button press is a
+  `<lr-number-input>`'s stepper buttons build on these and _do_ emit, because a button press is a
   user edit.
 
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
@@ -165,8 +172,12 @@ sequence). `lr-invalid` (no detail) fires when a validity check finds the input 
 `input-wrapper` (compatibility names on the row wrapping the native input and actions), `input`,
 `password-toggle`, `password-toggle-button`
 (present only when `type="password"` **and** `password-toggle` is set), `start`, `end`,
+`prefix` (alias of `start`), `suffix` (alias of `end`),
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
+Long `start`/`end` adornments shrink and ellipsize inside their flex allocation rather than
+widening a narrow field; label, hint, and error text wrap at unbroken boundaries. The
+`Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -186,7 +197,7 @@ grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wr
 retunable without a `::part(input-wrapper)` rule and, unlike the four properties above, does not
 vary by `size` — the adornment gap a text field wants between an adornment and the caret is looser
 than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (default
-`--lr-form-control-radius`, its corner radius) is retunable the same way but *does* follow the tier:
+`--lr-form-control-radius`, its corner radius) is retunable the same way but _does_ follow the tier:
 the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
 lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
 unchanged.
@@ -194,9 +205,13 @@ unchanged.
 `--lr-input-fill` (default `transparent`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
 `appearance` rather than by `size`, and the documented defaults are `appearance="outlined"`'s
-values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
-reflected yet still paints the committed default). Setting either directly retunes the surface
+values. Private fallback roles preserve that default without declaring the public hooks on the
+host, so ancestor theme wrappers still win. Setting either directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
+`--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
+actions and `lr-number-input` steppers share `--lr-input-action-color`,
+`--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
+`--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
 
 ### Shared form vocabulary — `size`, `appearance`, `pill`, and custom validity
 
@@ -215,7 +230,7 @@ what is specific to it.
   with `--lr-theme-form-control-height-*` rather than per component.
 - **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
   `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
-  (both) and `plain` (neither). It used to double as a *container* treatment on other components;
+  (both) and `plain` (neither). It used to double as a _container_ treatment on other components;
   that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
   library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
   (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
@@ -225,7 +240,7 @@ what is specific to it.
   component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
   part, so the knob stays the single corner-radius override point and a consumer's own value still
   wins over it.
-- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated *value* control
+- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated _value_ control
   here** — every one
   that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
   (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
@@ -234,7 +249,7 @@ what is specific to it.
   "that email is already registered". A non-empty message raises `customError` and becomes
   `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
   `:invalid`/`:state(invalid)`.
-  `''` clears it and republishes the control's *own* computed validity rather than forcing it valid:
+  `''` clears it and republishes the control's _own_ computed validity rather than forcing it valid:
   a required-and-empty field goes back to `valueMissing`. The message survives every intrinsic
   recomputation and a `form.reset()`, exactly like a native control; `setCustomValidity('')` or
   `resetValidity()` clears it. `resetValidity()` affects only that consumer layer and recomputes the
@@ -270,7 +285,7 @@ rather than an approximation of them:
 submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a newline, which is the
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
-in the calendar grid. The controls that *do* wire it are `lr-input` (and its `lr-number-input`/
+in the calendar grid. The controls that _do_ wire it are `lr-input` (and its `lr-number-input`/
 `lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
 `lr-otp-input`.
 
@@ -286,7 +301,7 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
   `block-size: var(--lr-x-height, auto)` — so leaving it unset is what makes the per-tier floor
   and the content-driven height work at all.
 - **Setting one to `auto` is not the same as leaving it unset.** `auto` is a perfectly valid
-  *declared* value, and a declared value wins over the `var()` fallback arm — so `auto` silently
+  _declared_ value, and a declared value wins over the `var()` fallback arm — so `auto` silently
   turns the per-tier `*-min-height` floor into dead code, and nothing anywhere reports it. To
   return a control to default behavior, **remove** the declaration; never neutralize it with
   `auto`.
@@ -322,6 +337,7 @@ attribute form is enough to turn each on. `autofocus` is likewise `false`-defaul
 these four needs the property form to be reset.
 
 **Known gotchas:**
+
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
   own browser-computed `validity` (format/range/step), bridged into this element's own
   `ElementInternals` — not a second hand-rolled regex check. The same bridge carries
@@ -329,7 +345,7 @@ these four needs the property form to be reset.
   `typeMismatch`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `tooShort`, `tooLong`,
   `patternMismatch`, and `badInput`.
 - **`tooShort`/`tooLong` also fire for a value assigned from script.** The native flags are raised
-  only for a value the *user* edited, so the component recomputes both from its own `value` and ORs
+  only for a value the _user_ edited, so the component recomputes both from its own `value` and ORs
   them in; `el.value = <over-length>` reports `tooLong` rather than silently submitting. Lengths
   count UTF-16 code units, matching the native control (one emoji counts as two). `patternMismatch`
   needs no such handling — the platform applies `pattern` to script-assigned values already.

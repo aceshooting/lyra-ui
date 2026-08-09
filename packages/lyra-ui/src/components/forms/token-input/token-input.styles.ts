@@ -86,7 +86,7 @@ export const styles = css`
      per-tier font-size never exceeds the ladder's), so wherever lr-input's floor wins this row's
      floor wins too, and the two line up in a toolbar on every machine. Widen the block padding past
      the ladder and the font's metrics -- not the ladder -- start deciding the height. */
-  [part='input-wrapper'] { display: flex; flex-wrap: wrap; min-inline-size: 0; max-inline-size: 100%; overflow-x: hidden; align-items: center; gap: var(--lr-token-input-gap); min-block-size: var(--lr-token-input-control-height, var(--lr-token-input-control-min-height)); block-size: var(--lr-token-input-control-height, auto); padding: var(--lr-token-input-padding); font-size: var(--lr-token-input-font-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-token-input-radius); background: var(--lr-color-surface); }
+  [part='input-wrapper'] { display: flex; flex-wrap: wrap; min-inline-size: 0; max-inline-size: 100%; overflow-x: hidden; overflow-y: auto; align-items: center; gap: var(--lr-token-input-gap); min-block-size: var(--lr-token-input-control-height, var(--lr-token-input-control-min-height)); block-size: var(--lr-token-input-control-height, auto); padding: var(--lr-token-input-padding); font-size: var(--lr-token-input-font-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-token-input-radius); background: var(--lr-color-surface); }
   [part='input-wrapper']:focus-within { border-color: var(--lr-token-input-focus-border-color, var(--lr-color-brand)); outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   /* padding-block: 0 rather than the UA's own 1px default -- same neutralisation lr-input applies
      to its [part='input']. The wrapper above already owns this row's block padding; leaving the
@@ -110,8 +110,8 @@ export const styles = css`
      growing itself, so the dense token row keeps its own compact glyph even though the button's own
      hit-target box grows. */
   [part='remove'] { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; }
-  [part='remove']:hover { background: var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)); }
-  [part='remove']:active { background: color-mix(in oklab, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='remove']:hover { background: var(--lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))); }
+  [part='remove']:active { background: var(--lr-token-input-remove-pressed-bg, color-mix(in oklab, var(--lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   [part='remove']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
      non-focusable text span and its exact current metrics. */
@@ -121,8 +121,8 @@ export const styles = css`
     border-radius: var(--lr-token-input-radius);
     cursor: pointer;
   }
-  [part='token-label']:hover { background: var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)); }
-  [part='token-label']:active { background: color-mix(in oklab, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  :host(:where(:not(:disabled))) [part='token-label']:hover { background: var(--lr-token-input-edit-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))); }
+  :host(:where(:not(:disabled))) [part='token-label']:active { background: var(--lr-token-input-edit-pressed-bg, color-mix(in oklab, var(--lr-token-input-edit-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   [part='token-label']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host(:disabled) [part='token-label'] { cursor: default; }
   [part='token-editor'] { inline-size: var(--lr-token-input-editor-inline-size, var(--lr-size-6rem)); max-inline-size: 100%; border: 0; outline: 0; padding: 0; background: transparent; color: inherit; font: inherit; }

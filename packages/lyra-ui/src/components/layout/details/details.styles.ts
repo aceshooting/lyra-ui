@@ -14,20 +14,21 @@ export const styles = css`
     --lr-details-spacing: var(--lr-form-control-padding-inline);
   }
   [part~='base'] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-details-outlined-border-color, var(--lr-color-border));
+    border-radius: var(--lr-details-radius, var(--lr-radius));
+    background: var(--lr-details-outlined-bg, var(--lr-color-surface));
     min-inline-size: 0;
     max-inline-size: 100%;
     font-size: var(--lr-details-font-size);
     overflow: clip;
   }
   :host([appearance='filled']) [part~='base'] {
-    border-color: transparent;
-    background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-details-filled-border-color, transparent);
+    background: var(--lr-details-filled-bg, var(--lr-color-brand-quiet));
   }
   :host([appearance='filled-outlined']) [part~='base'] {
-    background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-details-filled-outlined-border-color, var(--lr-color-border));
+    background: var(--lr-details-filled-outlined-bg, var(--lr-color-brand-quiet));
   }
   :host([appearance='plain']) [part~='base'] {
     border-color: transparent;
@@ -50,7 +51,7 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-s);
+    gap: var(--lr-details-gap, var(--lr-space-s));
     min-inline-size: 0;
   }
   .summary-content {
@@ -58,8 +59,19 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='summary']::-webkit-details-marker { display: none; }
-  [part='summary']:hover { background: var(--lr-color-brand-quiet); }
-  [part='summary']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='summary']:hover {
+    background: var(--lr-details-summary-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part='summary']:active {
+    background: var(
+      --lr-details-summary-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+  }
   [part='summary']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
   [part~='icon'] {
     display: inline-flex;

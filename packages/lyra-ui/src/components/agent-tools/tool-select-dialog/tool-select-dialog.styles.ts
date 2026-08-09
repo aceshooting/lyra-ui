@@ -64,6 +64,7 @@ export const styles = css`
     padding: var(--lr-space-m) var(--lr-space-l) 0;
   }
   [part='search-input'] {
+    appearance: textfield;
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-s) var(--lr-space-m);

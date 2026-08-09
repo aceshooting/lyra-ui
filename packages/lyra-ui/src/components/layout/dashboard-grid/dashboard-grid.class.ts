@@ -142,7 +142,12 @@ export interface LyraDashboardGridEventMap {
  * Responsive: below a ~40rem container allocation (`@container`, not the viewport -- a dashboard
  * grid is commonly embedded in a panel of varying width), cells stack into a single flowing
  * column in the same row-major order the grid itself renders them in, instead of overflowing or
- * shrinking columns unreadably.
+ * shrinking columns unreadably. A cell that currently owns a resize handle retains the shared
+ * interactive-action block-size floor, so the absolute handle cannot overlap the preceding cell
+ * or gap when consumer-authored content is shorter than the handle. Host, grid, cell, and slotted
+ * custom-content boundaries all permit intrinsic shrinkage and inherit `overflow-wrap: anywhere`,
+ * so an unbroken direct text run cannot widen the stack; a consumer-owned scrollport can still
+ * opt into `overflow: auto`/`white-space: nowrap` and contains its own extent.
  *
  * @customElement lr-dashboard-grid
  * @slot cell-{id} - A `layout` entry's cell content; auto-populated by a default composed
@@ -990,6 +995,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       tabindex=${active ? "0" : "-1"}
       aria-label=${this.cellLabel(cell)}
       data-cell-id=${cell.id}
+      ?data-resizable=${resizableHere}
       style=${styleMap(this.cellStyle(cell))}
       @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, cell)}
       @focus=${() => this.onCellFocus(cell.id)}

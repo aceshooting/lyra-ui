@@ -41,7 +41,7 @@ it('defaults to an empty path, empty types, and showFocusButton=true', async () 
 it('renders a "no item selected" empty state and no breadcrumb when path is empty', async () => {
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No item selected');
   expect(el.shadowRoot!.querySelector('lr-breadcrumb')).to.not.exist;
 });
@@ -51,7 +51,7 @@ it('renders the noData empty state when the current node has no content in any c
   el.path = [{ id: 'datum-3', label: 'Empty datum' }];
   await el.updateComplete;
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
-  expect(empty).to.exist;
+  expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No data');
   // The breadcrumb still renders -- only the content area is empty.
   expect(el.shadowRoot!.querySelector('lr-breadcrumb')).to.exist;
@@ -93,7 +93,7 @@ it('renders a single category directly with no lr-tab-group chrome when only one
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
   const category = el.shadowRoot!.querySelector('[part="category"]');
-  expect(category).to.exist;
+  expect((category) != null).to.equal(true);
   expect(category!.getAttribute('aria-label')).to.equal('Sources');
   expect(category!.querySelector('lr-source-card')).to.exist;
 });

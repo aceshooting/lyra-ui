@@ -90,7 +90,7 @@ it('focus() delegates to the enabled chevron button', async () => {
   )) as LyraBranchPicker;
   el.focus();
   const next = el.shadowRoot!.querySelector('[part="next-button"]');
-  expect(el.shadowRoot!.activeElement).to.equal(next);
+  expect((el.shadowRoot!.activeElement) === (next)).to.equal(true);
 });
 
 it('click() delegates to the enabled chevron button', async () => {
@@ -234,7 +234,7 @@ it('blur() releases whichever step button held focus', async () => {
   )) as LyraBranchPicker;
   await el.updateComplete;
   el.focus();
-  expect(el.shadowRoot!.activeElement).to.exist;
+  expect((el.shadowRoot!.activeElement) != null).to.equal(true);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.be.null;
+  expect((el.shadowRoot!.activeElement) === null).to.equal(true);
 });

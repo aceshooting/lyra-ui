@@ -18,6 +18,9 @@
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
 
+A host `aria-label` names the comparison group by attribute presence, including an explicitly empty
+value; the localized comparison label is used only when that attribute is absent.
+
 **Properties:**
 
 - `oldVersion?: DocumentCompareVersion`, `newVersion?: DocumentCompareVersion` (attribute: false) —

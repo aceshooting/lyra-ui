@@ -195,12 +195,12 @@ it('starts with tabIndex -1 before any parent menu manages roving focus', async 
 it('forces tabIndex to -1 and blurs itself the moment disabled flips true while it holds real focus', async () => {
   const el = await fixtureInMenu(html`<lr-menu-item tabindex="0">Rename</lr-menu-item>`);
   el.focus();
-  expect(document.activeElement).to.equal(el);
+  expect((document.activeElement) === (el)).to.equal(true);
 
   el.disabled = true;
   await el.updateComplete;
   expect(el.tabIndex).to.equal(-1);
-  expect(document.activeElement).to.not.equal(el);
+  expect((document.activeElement) !== (el)).to.equal(true);
 });
 
 it('hides the icon part when the icon slot is empty, shows it once populated', async () => {

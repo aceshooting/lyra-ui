@@ -10,6 +10,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+/** Click a legend item to hide its dataset; hidden items retain a line-through state and part hook. */
 export const Default: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
@@ -267,6 +268,33 @@ export const ThemedTokens: Story = {
       ></lr-chart>
     `;
   },
+};
+
+/**
+ * Hover and press the legend, generated-table values, and reset-zoom button after zooming. Each
+ * surface has its own state hooks, so retheming one does not repaint the other two.
+ */
+export const IndependentControlStateHooks: Story = {
+  render: () => html`
+    <lr-chart
+      type="bar"
+      legend
+      zoom
+      show-data-table
+      height="16rem"
+      style="
+        inline-size: 22rem;
+        --lr-chart-legend-item-hover-bg: var(--lr-color-success-quiet);
+        --lr-chart-legend-item-active-bg: var(--lr-color-success);
+        --lr-chart-data-table-button-hover-bg: var(--lr-color-warning-quiet);
+        --lr-chart-data-table-button-active-bg: var(--lr-color-warning);
+        --lr-chart-reset-zoom-button-hover-bg: var(--lr-color-danger-quiet);
+        --lr-chart-reset-zoom-button-active-bg: var(--lr-color-danger);
+      "
+      .labels=${['Q1', 'Q2', 'Q3']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19, 14] }]}
+    ></lr-chart>
+  `,
 };
 
 /** Every mirrored geometry/color hook is scoped to one chart and backed by Lyra tokens. */

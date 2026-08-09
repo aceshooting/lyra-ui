@@ -18,12 +18,14 @@
 Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
 `jszip` peer. It is listing-only: entry content is never rendered or previewed. Each entry's size is
 read straight from JSZip's local file header (`uncompressedSize`) when available, falling back to
-fully decompressing only the rare entry missing that header field. The list composes
+fully decompressing only the rare entry missing that header field. Before JSZip materializes its
+entry graph, the viewer checks the ZIP central directory against its 10,000-entry and 100 MB
+declared-expansion ceilings. The list composes
 `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
-precedence over
-`name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
+precedence over `name` by attribute presence, including an explicitly empty value, when naming the
+`role="region"` listing. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide

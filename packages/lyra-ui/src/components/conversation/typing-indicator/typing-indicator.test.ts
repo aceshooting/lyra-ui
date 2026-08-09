@@ -119,14 +119,14 @@ it('renders a visually-hidden text node carrying the label, independent of aria-
     html`<lr-typing-indicator label="Working on it…"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   const srText = el.shadowRoot!.querySelector('.sr-only');
-  expect(srText).to.exist;
+  expect((srText) != null).to.equal(true);
   expect(srText!.textContent).to.equal('Working on it…');
 });
 
 it('marks the decorative shape aria-hidden and renders three dots for the dots variant', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   const base = el.shadowRoot!.querySelector('[part="base"]');
-  expect(base).to.exist;
+  expect((base) != null).to.equal(true);
   expect(base!.getAttribute('aria-hidden')).to.equal('true');
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(3);
   expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;

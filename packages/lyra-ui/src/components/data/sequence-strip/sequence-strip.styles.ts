@@ -11,10 +11,16 @@ export const styles = css`
     gap: var(--lr-size-1px);
     block-size: var(--lr-sequence-strip-height, var(--lr-size-1-5rem));
   }
+  /* Above the documented 320-item dense threshold, retaining a 1px gap per item would make the
+     gaps alone wider than the 320px responsive baseline. Collapse only that decorative spacing;
+     every semantic cell stays rendered, colored, named, and keyboard reachable. */
+  [part='base'][data-dense] {
+    gap: 0;
+  }
   [part='cell'] {
     position: relative;
     flex: 1 1 0;
-    min-inline-size: var(--lr-size-2px);
+    min-inline-size: 0;
     display: flex;
     align-items: flex-end;
     justify-content: center;

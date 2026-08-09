@@ -226,7 +226,7 @@ it('adopts the composer draft from the embedded composer\'s lr-input', async () 
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
   await el.updateComplete;
   const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement;
-  expect(composer, 'the composer renders by default').to.exist;
+  expect((composer) != null, 'the composer renders by default').to.equal(true);
 
   composer.dispatchEvent(
     new CustomEvent('lr-input', { detail: { value: 'draft text' }, bubbles: true, composed: true }),

@@ -39,6 +39,40 @@ export const ExternalPlacement: Story = {
   `,
 };
 
+export const CanceledDragKeepsMapClick: Story = {
+  name: 'Canceled drag keeps the next map click',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'If a touch-scroll takeover cancels a viewport drag, the next genuine map click still recenters the canvas. Only the browser-synthesized click after a completed pointerup is consumed.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `,
+};
+
+export const InteractionAnnouncements: Story = {
+  name: 'Viewport interaction announcements',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Keyboard navigation, click-to-center, wheel zoom, and a completed viewport drag all announce the applied viewport through the shared polite sink. Dense wheel updates follow the canvas snapshot cadence, and a drag announces its final position once.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `,
+};
+
 export const RetintedRunStates: Story = {
   name: 'Retinted run states',
   parameters: {

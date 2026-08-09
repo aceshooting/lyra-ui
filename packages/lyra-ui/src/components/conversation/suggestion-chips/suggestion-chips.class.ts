@@ -14,6 +14,8 @@ import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings
 export interface ChatSuggestion {
   id: string;
   label: string;
+  /** Optional literal icon hint (for example, an emoji). Rendered decoratively before the text. */
+  icon?: string;
   /** An optional secondary line (Perplexity-style related questions). */
   detail?: string;
 }
@@ -35,6 +37,7 @@ export interface LyraSuggestionChipsEventMap {
  * @event lr-suggestion-select - `detail: { id, label }`.
  * @csspart base - The labeled group.
  * @csspart chip - Each suggestion button.
+ * @csspart chip-icon - Optional decorative literal icon.
  * @csspart chip-label - The primary text.
  * @csspart chip-detail - The secondary line (only rendered when `detail` is set).
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
@@ -127,8 +130,13 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}
       >
-        <span part="chip-label">${suggestion.label}</span>
-        ${suggestion.detail ? html`<span part="chip-detail">${suggestion.detail}</span>` : nothing}
+        ${suggestion.icon
+          ? html`<span part="chip-icon" aria-hidden="true">${suggestion.icon}</span>`
+          : nothing}
+        <span class="content">
+          <span part="chip-label">${suggestion.label}</span>
+          ${suggestion.detail ? html`<span part="chip-detail">${suggestion.detail}</span>` : nothing}
+        </span>
       </button>
     `;
   }

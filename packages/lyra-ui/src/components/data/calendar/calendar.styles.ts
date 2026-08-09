@@ -10,12 +10,6 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     --lr-calendar-day-min-block-size: var(--lr-size-6rem);
-    /* Component-scoped indirection over the shared --lr-color-brand-quiet token, so a consumer
-       can retint the persistent selected-day highlight without also recoloring
-       button[part='nav']:hover/[part='agenda-event']:hover below, which consume that shared
-       token directly for a visually distinct purpose (transient hover feedback). Defaults to
-       exactly the value the selected-day background already used before this token existed. */
-    --lr-calendar-day-selected-bg: var(--lr-color-brand-quiet);
   }
   [part='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-s); }
   [part='title'] { font-weight: var(--lr-font-weight-semibold); }
@@ -62,9 +56,9 @@ export const styles = css`
   [part='grid'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='week'] { display: contents; }
   [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
-  [part='day'][data-outside='true'] { color: var(--lr-color-text-quiet); background: var(--lr-color-surface); }
-  [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); outline-offset: calc(var(--lr-border-width-medium) * -1); }
-  [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg); }
+  [part='day'][data-outside='true'] { color: var(--lr-calendar-day-outside-color, var(--lr-color-text-quiet)); background: var(--lr-calendar-day-outside-bg, var(--lr-color-surface)); }
+  [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-calendar-day-today-outline-color, var(--lr-color-brand)); outline-offset: calc(var(--lr-border-width-medium) * -1); }
+  [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet)); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   /* An event chip's fill is per-event data (CalendarEvent.color) written as an inline

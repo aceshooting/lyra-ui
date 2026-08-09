@@ -23,8 +23,8 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
 
   assert.equal(new Set(captures.map(({ story }) => story.id)).size, 83);
   assert.equal(captures.length, 253);
-  assert.equal(evidenceOnly.length, 49);
-  assert.equal(captures.length - evidenceOnly.length, 204);
+  assert.equal(evidenceOnly.length, 70);
+  assert.equal(captures.length - evidenceOnly.length, 183);
 });
 
 test('creates deterministic, disjoint, exhaustive, balanced capture shards', () => {

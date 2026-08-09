@@ -81,3 +81,40 @@ export const LiveAndDefaultSelection: StoryObj = {
     `;
   },
 };
+
+export const ScopedStateTheme: StoryObj = {
+  name: 'Scoped current / selected theme',
+  parameters: { docs: { description: { story: 'Focus, hover, and press the standalone options to exercise their independent state hooks.' } } },
+  render: () => html`
+    <div role="listbox" aria-label="Themed options" style="display:grid;gap:var(--lr-space-xs);max-inline-size:var(--lr-size-20rem)">
+      <lr-option
+        role="option"
+        value="alpha"
+        selected
+        tabindex="0"
+        style="--lr-option-hover-bg: var(--lr-color-warning-quiet); --lr-option-current-bg: var(--lr-color-success-quiet); --lr-option-current-color: var(--lr-color-text); --lr-option-selected-font-weight: var(--lr-font-weight-bold); --lr-option-checked-icon-color: var(--lr-color-danger)"
+      >Alpha</lr-option>
+      <lr-option role="option" value="beta" tabindex="-1">Beta</lr-option>
+    </div>
+  `,
+};
+
+export const NarrowLongContent: StoryObj = {
+  name: 'Narrow RTL long content (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The label ellipsizes and trailing metadata stays capped inside an exact 320px RTL option row.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl" role="listbox" aria-label="Narrow options" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+      <lr-option role="option" value="narrow">
+        ${'LocalizedUnbrokenOptionLabel'.repeat(16)}
+        <span slot="end">${'UnbrokenMetadata'.repeat(16)}</span>
+      </lr-option>
+    </div>
+  `,
+};

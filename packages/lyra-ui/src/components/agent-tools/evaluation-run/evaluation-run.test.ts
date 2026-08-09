@@ -2,7 +2,8 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './evaluation-run.js';
 import type { LyraEvaluationRun, EvaluationExampleResult } from './evaluation-run.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';
-import type { ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
+import type { LyraToolTimeline, ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
+import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 
 const examples: EvaluationExampleResult[] = [
   {
@@ -143,7 +144,7 @@ it('composes lr-grounding-summary with the example assessment and citations when
   const el = (await fixture(html`<lr-evaluation-run .examples=${withCitations}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el);
   const section = row.querySelector('[part="grounding-section"]') as HTMLElement;
-  expect(section).to.exist;
+  expect((section) != null).to.equal(true);
   const summary = section.querySelector('[part="grounding-summary"]') as HTMLElement;
   expect(summary.tagName.toLowerCase()).to.equal('lr-grounding-summary');
   expect((summary as unknown as { assessment: GroundingAssessment }).assessment).to.deep.equal(examples[0]!.grounding);
@@ -253,6 +254,40 @@ it('correlates a nested tool-approval decision with its example id via lr-exampl
     approved: true,
     args: { query: 'refund policy' },
   });
+});
+
+it('keeps the real nested approval pending when the correlated wrapper decision is vetoed', async () => {
+  const pendingTrace: ToolTimelineEntry[] = [
+    {
+      id: 'call-pending',
+      name: 'search',
+      args: { query: 'refund policy' },
+      status: 'pending',
+      needsApproval: true,
+    },
+  ];
+  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
+  const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const row = await expandExample(el);
+  const timeline = row.querySelector<LyraToolTimeline>('[part="tool-trace"]')!;
+  const chip = timeline.shadowRoot!.querySelector('lr-tool-call-chip')!;
+
+  chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
+  await timeline.updateComplete;
+  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  expect(dialog.open).to.be.true;
+
+  let wrapperCancelable = false;
+  el.addEventListener('lr-example-tool-approval-decide', (event) => {
+    wrapperCancelable = event.cancelable;
+    event.preventDefault();
+  }, { once: true });
+  dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await dialog.updateComplete;
+
+  expect(wrapperCancelable).to.be.true;
+  expect(dialog.open).to.be.true;
+  expect(dialog.pending).to.equal('approve');
 });
 
 describe('status-change announcements', () => {

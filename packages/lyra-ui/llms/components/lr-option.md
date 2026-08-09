@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-combobox` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,9 +20,14 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
 shared `FormAssociated` mixin — see gotchas).
 
+An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
+`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
+therefore cannot widen a 320px LTR or RTL picker.
+
 ### `lr-combobox`
 
 **Properties:**
+
 - `multiple: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected — the shared control ladder, so both `2xs`/`xs`/`s`/`m`/`l`/`xl`
   and the `small`/`medium`/`large` spellings are accepted; also scales the "+N" overflow tag and
@@ -50,7 +55,7 @@ shared `FormAssociated` mixin — see gotchas).
 - `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
-  clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
+  clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below
 - `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
   either one enables the same clear button. Not deprecated: Web Awesome names this attribute
@@ -82,7 +87,7 @@ shared `FormAssociated` mixin — see gotchas).
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
   matches `label`/`searchText` case-insensitively; ignored while `source` is set)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
-  AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lr-option>`
+AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lr-option>`
   list with an async lookup, debounced by `sourceDelay` ms after each keystroke and re-run on
   clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
   newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
@@ -120,8 +125,8 @@ selected by the `form` attribute.
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
 blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
 combobox with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
-  every selection change and a `form.reset()` — like a native control, only another
-  `setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
+every selection change and a `form.reset()` — like a native control, only another
+`setCustomValidity('')` or `resetValidity()` clears it — and is used verbatim, never localized.
 
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
@@ -136,6 +141,10 @@ render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
 internal row model.
 
+When a local option is removed or becomes disabled, or an async response shrinks, an existing
+keyboard-active row clamps to the nearest enabled survivor. If every row is disabled or removed,
+`aria-activedescendant` clears; an untouched list with no active row remains untouched.
+
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
@@ -148,7 +157,7 @@ control. Re-picking the current single value and programmatic/default/reset/rest
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
 `input`/`change`/`lr-change` triple.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
-keystroke — the live as-you-typed search string, deliberately *not* `value`, which is the committed
+keystroke — the live as-you-typed search string, deliberately _not_ `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
 `lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
@@ -157,7 +166,10 @@ carrying different strings. It fires for user input only: picking a row, the cle
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
 `lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
 cancelable veto point; `lr-hide` is cancelable while connected, but the disconnect-driven close is
-non-cancelable because an already-removed control cannot honour a veto. `lr-after-show` and
+non-cancelable because an already-removed control cannot honour a veto. Vetoing a connected close
+is atomic: the filter query, active option, async result rows, reflected `open` state, and overlay
+ownership remain unchanged, so the host can defer dismissal without reconstructing the search.
+`lr-after-show` and
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
@@ -175,7 +187,7 @@ something to clear, and one press clears both:
   `value` and deliberately **no** `change` and **no** `lr-clear`. There was no selection
   transition to report, so announcing one would be a lie. Don't listen for `lr-clear` to detect
   "the user emptied the field" — listen for `lr-filter` when you care about the query.
-- The query half of the render gate is scoped to states where the query is actually *visible*: an
+- The query half of the render gate is scoped to states where the query is actually _visible_: an
   open listbox in single-select, or any time in `multiple` mode. A closed single-select shows the
   selected label rather than the query, so a stale query alone never surfaces a button offering to
   clear text the user cannot see.
@@ -208,6 +220,7 @@ What that means in practice:
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), plus two adornment slots:
+
 - `start` — content at the inline-start of the trigger row, before the selected-value tags and the
   filter input. It is decorative chrome, **not** an option: only `<lr-option>` elements in the
   default slot are ever collected into the option list.
@@ -268,6 +281,7 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 ### `lr-option`
 
 **Properties:**
+
 - `value: string = ''`
 - `disabled: boolean = false`
 - `defaultSelected: boolean = false` (attribute `selected`; property writes do not reflect) — the
@@ -304,6 +318,12 @@ trailing wrapper.
 the keyboard-current row. **CSS custom states:** `current` (the host is the roving-focus target),
 `selected`, `disabled`, and `hover` (pointer presence, including drag sessions).
 
+Own-anatomy state hooks are `--lr-option-hover-bg`, `--lr-option-active-bg`,
+`--lr-option-current-bg`, `--lr-option-current-color`, `--lr-option-selected-font-weight`, and
+`--lr-option-checked-icon-color`. Their defaults preserve brand-quiet hover/current paint, the
+shared active mix, semibold selected text, and the brand checkmark. The current-color hook falls
+back through upstream `--current-text-color`, so existing themes keep working.
+
 The stock `lr-combobox` and `lr-select` intentionally treat each option as light-DOM data and
 render normalized rows in their own shadow roots. Style those rows through the parent's `option`,
 `option-label`, and related parts; the parts above style an option's own anatomy when it is rendered
@@ -328,10 +348,10 @@ by a custom owner.
     return rows.map((r) => ({
       value: r.id,
       label: r.name,
-      icon: renderFruitIcon(r),       // decorative; hidden from assistive technology
+      icon: renderFruitIcon(r), // decorative; hidden from assistive technology
       badge: r.category,
       accessibleLabel: `${r.name}, ${r.category}`,
-      data: r,                        // retained in cb2.selectedRows after selection
+      data: r, // retained in cb2.selectedRows after selection
     }));
   };
 </script>
@@ -349,6 +369,7 @@ collection, while `form.reset()` still returns to the declarative selected defau
 synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Known gotchas:**
+
 - `with-clear` and `clearable` are equivalent and both are supported indefinitely; prefer
   `clearable` in new code. `lr-input` and `lr-select` accept both spellings too.
 - a host-level `aria-label` attribute on `<lr-combobox>` now takes priority over `label`/
@@ -373,6 +394,10 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   later-slotted option or post-mount `defaultSelected` change updates that baseline and updates the
   live selection only while it is pristine. A user pick or direct `option.selected` write makes the
   live selection dirty and never rewrites the declarative `selected` attribute/reset default.
+- The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
+  `--lr-overlay-stack-index`, Escape owner, outside-pointer dismissal, and focus handoff follow the
+  newest open Lyra overlay. Opening it above a color picker (or vice versa) therefore closes only
+  the visual top layer per Escape/pointer action rather than both popups.
 
 **Additional API surface:**
 

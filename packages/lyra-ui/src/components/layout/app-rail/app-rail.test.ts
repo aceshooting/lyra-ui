@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './app-rail.js';
 import { computeAppRailMode, type LyraAppRail, type AppRailModeChangeDetail, type AppRailToggleDetail } from './app-rail.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)
@@ -20,6 +21,62 @@ beforeEach(() => {
       addEventListener: () => {},
       removeEventListener: () => {},
     }) as unknown as MediaQueryList) as typeof window.matchMedia;
+});
+
+it('inherits independent toggle and resizer hover/pressed paint from an ancestor', async () => {
+  const mobileWrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-app-rail-toggle-hover-bg: rgb(1, 2, 3);
+      --lr-app-rail-toggle-hover-color: rgb(4, 5, 6);
+      --lr-app-rail-toggle-active-bg: rgb(7, 8, 9);
+      --lr-app-rail-toggle-active-color: rgb(10, 11, 12);
+    ">
+      <lr-app-rail mode="mobile"></lr-app-rail>
+    </div>
+  `);
+  const mobile = mobileWrapper.querySelector('lr-app-rail') as LyraAppRail;
+  const toggle = mobile.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  toggle.scrollIntoView();
+  let rect = toggle.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(toggle).color).to.equal('rgb(4, 5, 6)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(toggle).color).to.equal('rgb(10, 11, 12)');
+  } finally {
+    await resetMouse();
+  }
+  mobileWrapper.remove();
+
+  const fullWrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-transition-fast: 0ms;
+      --lr-app-rail-resizer-hover-bg: rgb(13, 14, 15);
+      --lr-app-rail-resizer-active-bg: rgb(16, 17, 18);
+    ">
+      <lr-app-rail
+        mode="full"
+        resizable
+        style="inline-size: var(--lr-app-rail-width); block-size: var(--lr-size-10rem);"
+      ></lr-app-rail>
+    </div>
+  `);
+  const full = fullWrapper.querySelector('lr-app-rail') as LyraAppRail;
+  full.style.setProperty('--lr-transition-fast', '0ms');
+  const resizer = full.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
+  const track = full.shadowRoot!.querySelector<HTMLElement>('[part="resizer-track"]')!;
+  resizer.scrollIntoView();
+  rect = resizer.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + 10), Math.round(rect.top + rect.height / 2)] });
+    expect(getComputedStyle(track).backgroundColor).to.equal('rgb(13, 14, 15)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(track).backgroundColor).to.equal('rgb(16, 17, 18)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 afterEach(() => {
@@ -569,7 +626,7 @@ it('moves focus to the first focusable nav item when the overlay opens', async (
   el.open = true;
   await el.updateComplete;
 
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 });
 
 it('focuses the panel itself as a fallback when there is nothing focusable', async () => {
@@ -581,7 +638,7 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   // Compared by id, not `.to.equal(panel)` -- a live-DOM-node equality failure would carry two
   // Elements into @web/test-runner-mocha's session-finished message, which structuredClone can't
   // serialize, silently hanging the whole file until the per-file watchdog kills it.
-  expect(active, 'the panel must be the focused element').to.not.equal(null);
+  expect((active) !== (null), 'the panel must be the focused element').to.equal(true);
   expect(active!.id).to.equal(panel.id);
   expect(active!.getAttribute('part')).to.equal('panel');
 });
@@ -602,7 +659,7 @@ it('traps Tab focus across header, nav, and footer slots, wrapping last->first a
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(first);
+  expect((document.activeElement) === (first)).to.equal(true);
 
   const tabBackward = new KeyboardEvent('keydown', {
     key: 'Tab',
@@ -612,7 +669,7 @@ it('traps Tab focus across header, nav, and footer slots, wrapping last->first a
   });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect(document.activeElement).to.equal(last);
+  expect((document.activeElement) === (last)).to.equal(true);
 });
 
 it('returns focus to the toggle button after closing', async () => {
@@ -628,7 +685,7 @@ it('returns focus to the toggle button after closing', async () => {
   // slotted light-DOM nav items focused elsewhere in this file) -- focusing
   // it makes `document.activeElement` resolve to the *host*, not the button
   // itself, so the check has to look inside the shadow root directly.
-  expect(el.shadowRoot!.activeElement).to.equal(toggle);
+  expect((el.shadowRoot!.activeElement) === (toggle)).to.equal(true);
 });
 
 it('returns focus to whatever triggered it (via Escape) even when opened by setting `open` directly rather than clicking the built-in toggle', async () => {
@@ -643,7 +700,7 @@ it('returns focus to whatever triggered it (via Escape) even when opened by sett
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(document.activeElement).to.equal(outsideTrigger);
+  expect((document.activeElement) === (outsideTrigger)).to.equal(true);
   outsideTrigger.remove();
 });
 
@@ -1281,5 +1338,37 @@ describe('layout: resizer anchor, overflow, and mobile containing block', () => 
     // A non-none transform (even translateX(0) -> matrix(1,0,0,1,0,0)) establishes a containing
     // block for position:fixed. The open state must compute to 'none'.
     expect(getComputedStyle(panel).transform).to.equal('none');
+  });
+
+  it('contains long localized header, item, and footer content in an open 320px RTL mobile rail', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-app-rail
+          label="التنقل الرئيسي"
+          mode="mobile"
+          open
+          style="--lr-app-rail-mobile-width: 320px;"
+        >
+          <span slot="header">عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span>
+          <lr-app-rail-item href="#reports">
+            <span slot="icon" aria-hidden="true">📊</span>
+            تقرير-تحليلي-طويل-جداً-غير-قابل-للفصل
+          </lr-app-rail-item>
+          <span slot="footer">حساب-مستخدم-طويل-جداً-غير-قابل-للفصل</span>
+        </lr-app-rail>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-app-rail') as LyraAppRail;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const nav = el.shadowRoot!.querySelector<HTMLElement>('[part="nav"]')!;
+    const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!;
+
+    expect(Math.ceil(panel.getBoundingClientRect().width)).to.be.at.most(320);
+    expect(header.scrollWidth).to.be.at.most(header.clientWidth);
+    expect(nav.scrollWidth).to.be.at.most(nav.clientWidth);
+    expect(footer.scrollWidth).to.be.at.most(footer.clientWidth);
+    expect(getComputedStyle(panel).direction).to.equal('rtl');
   });
 });

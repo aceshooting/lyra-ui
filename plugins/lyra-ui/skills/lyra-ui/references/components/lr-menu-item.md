@@ -16,10 +16,13 @@
 
 ## `lr-menu` / `lr-menu-item`
 
-An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
-assigned to the `trigger` slot. It is not a first-party invention: the pair mirrors `sl-menu` /
-`sl-menu-item`, and `<lr-dropdown-item>` below is the `wa-dropdown-item`-compatible name for the
-same item element. Web Awesome's `wa-dropdown` maps to `<lr-dropdown>` in the overlays family; that
+An action menu that becomes an anchored dropdown when a consumer-supplied trigger element
+(typically an icon button) is assigned to the `trigger` slot. With no trigger or `anchor`, the
+exact mapped `<sl-menu>` authoring shape renders inline and always visible, with one roving
+keyboard entry point; adding a trigger switches it to the closed-by-default popup presentation.
+The pair mirrors `sl-menu` / `sl-menu-item`, and `<lr-dropdown-item>` below is the
+`wa-dropdown-item`-compatible name for the same item element. Web Awesome's `wa-dropdown` maps to
+`<lr-dropdown>` in the overlays family; that
 component keeps the distinct trigger/popup host while containing this same menu interaction engine,
 and accepts direct mapped items or a consumer-supplied `lr-menu`. Either way it is a close,
 drop-in-shaped replacement for reaching outside this library for a
@@ -32,7 +35,9 @@ the WAI-ARIA "menu button" pattern —
 ### `lr-menu`
 
 **Properties:**
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected) — controls the anchored/trigger-owned popup. A triggerless,
+  unanchored standalone menu remains visible so an exact `sl-menu` → `lr-menu` tag rename keeps its
+  presentation
 - `placement?: Placement` (reflected — resolved through `rtlAwarePlacement()` (`internal/rtl.ts`),
   then forwarded to `place()`; defaults to whatever `place()` itself defaults to. A `left`/`right`
   side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
@@ -248,9 +253,14 @@ the same implementation, so `value`, `size` (including the `small`/`medium`/`lar
 and menu roving focus behave identically.
 
 On this mapped tag, `submenuOpen: boolean = false` also reflects to `submenu-open`, and changing the
-attribute drives the same submenu state as assigning the property. `openSubmenu()` defaults to
-focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains available,
-with `'none'` appropriate for pointer or declarative control that must not steal focus.
+attribute drives the same submenu state as assigning the property. Web Awesome's published
+mixed-case `submenuOpen` attribute is normalized by HTML to `submenuopen`; that lowercase token is
+a permanent compatibility alias. It works in initial markup even when the submenu connects after
+the attribute callback. Removing `submenuopen` closes the submenu and clears the canonical
+reflection; removing only `submenu-open` while the upstream alias remains restores the canonical
+reflection because the authored upstream input still requests the open state. `openSubmenu()`
+defaults to focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains
+available, with `'none'` appropriate for pointer or declarative control that must not steal focus.
 
 **Events:** the focusable host emits the platform's native `focus` and `blur` `FocusEvent`s. They
 are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The inherited

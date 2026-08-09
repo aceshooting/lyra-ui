@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,11 @@ own increment/decrement stepper pair. Its constructor and `connectedCallback()` 
 `type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
 
 **Inherits:** all public surface from `lr-input`.
+
+The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
+subclass does not redeclare them on its host.
+It also installs the shared six-tier size sheet: stepper-bearing rows follow the same rendered
+action-height ladder as `lr-input` instead of remaining at the default tier for every `size`.
 
 **Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
 `label`, `hint`, `errorText`
@@ -43,7 +48,7 @@ Stepper switches:
   so the component's own steppers are never shown alongside the browser's built-in spin buttons.
   It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
   brings the native pair back. The two properties are independent: `steppers="false"
-  without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
+without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
 - `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — the positive
   upstream spelling for hiding the custom pair. It does not invert `steppers`: either
   `without-steppers` or `steppers="false"` hides the same controls, and both unset leaves them on.
@@ -90,6 +95,9 @@ but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` ti
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
 minimum box from `--lr-icon-button-size`.
+The inherited `--lr-input-focus-border-color` and four `--lr-input-action-*` hooks also apply to
+the numeric row and its steppers, so their state paint can be isolated from other form controls.
+The exact-320px RTL story keeps long label/hint copy and both fixed-size steppers within the host.
 
 ```html
 <lr-number-input label="Quantity" min="0" max="99" step="1" value="1"></lr-number-input>
@@ -101,9 +109,10 @@ minimum box from `--lr-icon-button-size`.
 ```
 
 **Known gotchas:**
+
 - **`steppers` and `without-spin-buttons` both default to `true` here.** Only the literal string
   `"false"` parses as `false`; every other attribute value — including an empty one, and including
-  *removing* the attribute — parses as `true`. So `?attr=${false}` and a removed attribute cannot
+  _removing_ the attribute — parses as `true`. So `?attr=${false}` and a removed attribute cannot
   reset either; use the `="false"` attribute value or the `.prop=${false}` property binding. The
   two also serialize differently when reflected: `steppers` is absent while `true` and appears as
   `steppers="false"` while `false`, whereas `without-spin-buttons` appears empty while `true` and is

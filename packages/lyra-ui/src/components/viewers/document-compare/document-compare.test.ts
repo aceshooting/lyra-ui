@@ -17,7 +17,7 @@ describe('lr-document-compare', () => {
       `)) as LyraDocumentCompare;
       expect(el.view).to.equal('diff');
       const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string; newText: string };
-      expect(diff).to.exist;
+      expect((diff) != null).to.equal(true);
       expect(diff.oldText).to.equal('a\nb');
       expect(diff.newText).to.equal('a\nc');
       expect(el.shadowRoot!.querySelector('[part="panes"]')).to.not.exist;
@@ -28,6 +28,13 @@ describe('lr-document-compare', () => {
       const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string; newText: string };
       expect(diff.oldText).to.equal('');
       expect(diff.newText).to.equal('');
+    });
+
+    it('preserves an explicitly empty host aria-label on the comparison group', async () => {
+      const el = (await fixture(html`<lr-document-compare aria-label=""></lr-document-compare>`)) as LyraDocumentCompare;
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      expect(base.hasAttribute('aria-label')).to.be.true;
+      expect(base.getAttribute('aria-label')).to.equal('');
     });
 
     it('forwards diff-layout, copyable, language, and languages to the internal lr-diff-view', async () => {

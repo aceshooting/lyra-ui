@@ -58,7 +58,7 @@ export const styles = css`
     max-inline-size: 100%;
     padding-block: var(--lr-space-xs);
   }
-  [part='legend-item'] {
+  [part~='legend-item'] {
     display: inline-flex;
     align-items: center;
     /* Both axes, matching <lr-chart>'s legend item: a short series name leaves the swatch+label
@@ -79,17 +79,21 @@ export const styles = css`
     overflow-wrap: anywhere;
     cursor: pointer;
   }
-  [part='legend-item']:where(:hover) {
+  [part~='legend-item']:where(:hover) {
     background: var(--lr-color-brand-quiet);
   }
   /* Pressed, matching <lr-chart>'s legend item: the same quiet brand tint pushed further toward
      the text colour, so the mousedown that toggles the series reads as distinct from hovering. */
-  [part='legend-item']:where(:active) {
+  [part~='legend-item']:where(:active) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='legend-item']:where(:focus-visible) {
+  [part~='legend-item']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~='legend-item']:where([part~='legend-item-hidden']) {
+    text-decoration-line: line-through;
+    text-decoration-thickness: var(--lr-border-width-medium);
   }
   [part='legend-swatch'] {
     inline-size: var(--lr-space-s);

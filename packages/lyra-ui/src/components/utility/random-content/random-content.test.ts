@@ -632,7 +632,7 @@ it('exposes randomize as a prototype method, not an instance callback field', as
     <lr-random-content><div>One</div><div>Two</div></lr-random-content>
   `)) as LyraRandomContent;
   const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'randomize');
-  expect(descriptor?.value).to.equal(el.randomize);
+  expect((descriptor?.value) === (el.randomize)).to.equal(true);
   expect(el.randomize()).to.have.length(1);
 });
 

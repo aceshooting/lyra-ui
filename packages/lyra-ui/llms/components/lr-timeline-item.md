@@ -42,9 +42,11 @@ inactive).
 **Events:** none on either element. Listen to the native `slotchange` if you need item-count changes.
 
 **Slots:** `lr-timeline`'s default slot holds the items, in display order. On an item the **default
-slot is the title** (there is no `title` slot), plus `icon` (marker glyph override; falls back to a
-color-coded dot), `timestamp` (wins outright over the `timestamp` property whenever it has assigned
-content), and `description` (its part is hidden entirely when empty).
+slot is the title** (there is no `title` slot), plus `marker-icon` (canonical marker glyph override),
+`icon` (legacy marker-glyph alias retained as the fallback; `marker-icon` takes precedence when both
+are filled, and an empty pair falls back to a color-coded dot), `timestamp` (wins outright over the
+`timestamp` property whenever it has assigned content), and `description` (its part is hidden
+entirely when empty).
 
 **CSS parts:** timeline `base` — the `role="list"` flex container (no separate `list` part). Item:
 `base`, `track` (marker + rail spine, always the opposite axis from `base`), `marker`
@@ -59,8 +61,8 @@ inter-item spacing and the length each rail bridges. On the item: `--lr-timeline
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, swapped per `variant`; setting it directly on an item wins over the
-variant default).
+`var(--lr-color-text-quiet)`, swapped per `variant`). All four item hooks inherit from theme
+ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 **Internal, not public:** `--lr-timeline-item-direction`, `--lr-timeline-item-track-direction`,
 `--lr-timeline-item-gap-block-end` and `--lr-timeline-item-gap-inline-end` (set by `lr-timeline`'s

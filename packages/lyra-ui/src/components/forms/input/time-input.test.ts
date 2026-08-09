@@ -17,6 +17,71 @@ const paste = (target: Element, value: string): Event => {
 };
 
 describe('lr-time-input segmented field', () => {
+  it('inherits component-scoped gap and radius hooks across size and pill fallbacks', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="--lr-time-input-gap: 13px; --lr-time-input-radius: 17px">
+        <lr-time-input size="2xs" pill value="10:00"></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
+    expect(getComputedStyle(row).gap).to.equal('13px');
+    expect(getComputedStyle(row).borderRadius).to.equal('17px');
+  });
+
+  it('uses scoped open and selected-option paint inherited from an ancestor', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div
+        style="
+          --lr-time-input-focus-border-color: rgb(1, 2, 3);
+          --lr-time-input-column-selected-bg: rgb(4, 5, 6);
+          --lr-time-input-column-selected-color: rgb(7, 8, 9);
+          --lr-time-input-column-selected-font-weight: 350;
+        "
+      >
+        <lr-time-input value="10:00"></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    await el.show();
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part~="column-item-selected"]')!;
+    expect(getComputedStyle(row).borderTopColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(selected).color).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(selected).fontWeight).to.equal('350');
+  });
+
+  it('keeps picker-bearing rows on the shared hit-floor-aware height ladder', async () => {
+    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+    for (const [size, height] of Object.entries(expected)) {
+      const el = await fixture<LyraTimeInput>(html`<lr-time-input size=${size} value="10:00"></lr-time-input>`);
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
+      expect(row.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+    }
+  });
+
+  it('contains a long RTL open-seconds composition in an exact 320px allocation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">
+        <lr-time-input
+          open
+          step="15"
+          value="10:00:15"
+          label="InternationalizedUnbrokenAppointmentLabelThatMustRemainInsideTheAllocation"
+          hint="Supporting copy wraps within the same narrow allocation."
+        ></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    await el.updateComplete;
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
+    expect(label.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
+  });
+
   it('reflects the pinned Web Awesome positioning, format, and range properties', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
     el.distance = 12;
@@ -74,12 +139,12 @@ describe('lr-time-input segmented field', () => {
     const ltr = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
     segment(ltr, 'hour').focus();
     key(segment(ltr, 'hour'), 'ArrowRight');
-    expect(ltr.shadowRoot!.activeElement).to.equal(segment(ltr, 'minute'));
+    expect((ltr.shadowRoot!.activeElement) === (segment(ltr, 'minute'))).to.equal(true);
 
     const rtl = await fixture<LyraTimeInput>(html`<lr-time-input dir="rtl" hour-format="24"></lr-time-input>`);
     segment(rtl, 'hour').focus();
     key(segment(rtl, 'hour'), 'ArrowLeft');
-    expect(rtl.shadowRoot!.activeElement).to.equal(segment(rtl, 'minute'));
+    expect((rtl.shadowRoot!.activeElement) === (segment(rtl, 'minute'))).to.equal(true);
   });
 
   it('pastes a canonical time as one native-style edit and ignores invalid text', async () => {
@@ -124,7 +189,7 @@ describe('lr-time-input segmented field', () => {
     `);
     const form = root.querySelector('form')!;
     const el = root.querySelector('lr-time-input') as LyraTimeInput;
-    expect(el.getForm()).to.equal(form);
+    expect((el.getForm()) === (form)).to.equal(true);
     expect(new FormData(form).get('start')).to.equal('09:30');
 
     el.formStateRestoreCallback('17:45', 'restore');
@@ -169,6 +234,24 @@ describe('lr-time-input segmented field', () => {
     await el.updateComplete;
     el.blur();
     expect(seen).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  });
+
+  it('rejects host focus while directly or fieldset disabled without relaying focus events', async () => {
+    const direct = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
+    const form = await fixture<HTMLFormElement>(html`
+      <form><fieldset disabled><lr-time-input value="10:00"></lr-time-input></fieldset></form>
+    `);
+    const inherited = form.querySelector('lr-time-input') as LyraTimeInput;
+
+    for (const el of [direct, inherited]) {
+      const seen: string[] = [];
+      el.addEventListener('focus', () => seen.push('focus'));
+      el.addEventListener('lr-focus', () => seen.push('lr-focus'));
+      el.focus();
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+      expect(seen).to.deep.equal([]);
+    }
   });
 });
 
@@ -300,6 +383,17 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(el.open).to.equal(false);
   });
 
+  it('clips cross-axis column overflow instead of creating a phantom horizontal scrollbar', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input value="10:00" style="--column-width: 1rem"></lr-time-input>
+    `);
+    await el.show();
+    await el.updateComplete;
+    const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
+    expect(column.scrollWidth).to.be.greaterThan(column.clientWidth);
+    expect(getComputedStyle(column).overflowX).to.equal('hidden');
+  });
+
   it('closes the popup on Escape and returns focus to the active segment', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
     await el.show();
@@ -420,13 +514,13 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
   it('forwards a host click to the active segment unless disabled', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:00"></lr-time-input>`);
     el.click();
-    expect(el.shadowRoot!.activeElement).to.equal(segment(el, 'hour'));
+    expect((el.shadowRoot!.activeElement) === (segment(el, 'hour'))).to.equal(true);
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 
     const disabled = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
     disabled.click();
-    expect(disabled.shadowRoot!.activeElement).to.equal(null);
+    expect((disabled.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('keeps focus transitions and relayed FocusEvents in an adopted owner realm', async () => {
@@ -619,9 +713,7 @@ describe('lr-time-input segment editing edge cases', () => {
     key(segment(el, 'hour'), '9');
     await el.updateComplete;
     expect(segment(el, 'hour').textContent?.trim()).to.equal('09');
-    expect(el.shadowRoot!.activeElement, 'auto-advances since no second digit could complete a valid hour').to.equal(
-      segment(el, 'minute'),
-    );
+    expect((el.shadowRoot!.activeElement) === (segment(el, 'minute')), 'auto-advances since no second digit could complete a valid hour').to.equal(true);
   });
 
   it('holds a leading zero pending for a two-digit 12-hour entry', async () => {
@@ -811,11 +903,11 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
   it('recovers focus to a valid segment if the active one no longer exists after a format change', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="12" value="09:30"></lr-time-input>`);
     segment(el, 'dayPeriod').focus();
-    expect(el.shadowRoot!.activeElement).to.equal(segment(el, 'dayPeriod'));
+    expect((el.shadowRoot!.activeElement) === (segment(el, 'dayPeriod'))).to.equal(true);
 
     el.setAttribute('hour-format', '24');
     el.focus();
-    expect(el.shadowRoot!.activeElement, 'falls back to a segment that still exists').to.not.equal(null);
+    expect((el.shadowRoot!.activeElement) !== (null), 'falls back to a segment that still exists').to.equal(true);
     await el.updateComplete;
   });
 

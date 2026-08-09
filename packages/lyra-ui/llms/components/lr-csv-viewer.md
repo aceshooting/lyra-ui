@@ -24,6 +24,8 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
+Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
+explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
@@ -42,9 +44,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+**CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
 cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
-highlighted cell; emits `lr-highlight-activate`), `rows`, `spinner`, and `error`. `data-row`,
+highlighted cell; emits `lr-highlight-activate`; its complete accessible name uses the localized
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `rows`,
+`spinner`, and `error`. `data-row`,
 `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
 `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.

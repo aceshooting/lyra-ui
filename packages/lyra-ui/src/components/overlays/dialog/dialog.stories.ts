@@ -83,7 +83,7 @@ export const AccessibleNameWithVisibleHeading: Story = {
     docs: {
       description: {
         story:
-          'A host `aria-label` overrides the panel’s announced name without suppressing the visible `heading` property.',
+          'A host `aria-label` overrides the panel’s announced name by attribute presence, including an explicitly empty value, without suppressing the visible `heading` property.',
       },
     },
   },

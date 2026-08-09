@@ -271,10 +271,7 @@ it('does not re-show the loading skeleton for a result-only update once a lazy r
 
   expect(base(el).querySelector('lr-skeleton'), 'a cached load() must not re-show the loading skeleton').to.not
     .exist;
-  expect(
-    base(el).querySelector('.loaded'),
-    'the already-rendered DOM subtree must be reused in place, not torn down and rebuilt via a loading round-trip',
-  ).to.equal(spanBefore);
+  expect((base(el).querySelector('.loaded')) === (spanBefore), 'the already-rendered DOM subtree must be reused in place, not torn down and rebuilt via a loading round-trip').to.equal(true);
 });
 
 it('is accessible in the default, empty (no renderer registered) state', async () => {
@@ -299,7 +296,7 @@ it('fallback="text" renders a plain string result as preformatted text, not lr-j
     <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${'line one\nline two'}></lr-tool-result-view>
   `)) as LyraToolResultView;
   const pre = base(el).querySelector('[part="fallback-text"]');
-  expect(pre).to.exist;
+  expect((pre) != null).to.equal(true);
   expect(pre!.textContent).to.equal('line one\nline two');
   expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
 });
@@ -325,7 +322,7 @@ it('copyable renders a lr-copy-button alongside the text fallback, wired to the 
     <lr-tool-result-view tool-name="unregistered" fallback="text" copyable .result=${'copy me'}></lr-tool-result-view>
   `)) as LyraToolResultView;
   const btn = base(el).querySelector('lr-copy-button') as (HTMLElement & { value: string }) | null;
-  expect(btn).to.exist;
+  expect((btn) != null).to.equal(true);
   expect(btn!.value).to.equal('copy me');
 });
 

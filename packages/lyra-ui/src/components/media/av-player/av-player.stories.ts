@@ -48,6 +48,21 @@ export const NoSrc: Story = {
   render: () => html`<lr-av-player></lr-av-player>`,
 };
 
+export const UnsafeSourceError: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An unsafe source fails closed while preserving the player\'s named `role="region"`; the localized visible error remains ordinary text because post-mount failures announce through the shared light-DOM sink.',
+      },
+    },
+  },
+  render: () => html`<lr-av-player
+    src="javascript:alert(1)"
+    aria-label="Unavailable episode controls"
+  ></lr-av-player>`,
+};
+
 export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px">
     <lr-av-player src=${AUDIO_SRC} mime-type="audio/mp4" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>

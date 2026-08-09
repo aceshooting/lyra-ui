@@ -135,7 +135,7 @@ describe('lr-artifact-panel', () => {
     `)) as LyraArtifactPanel;
     await el.updateComplete;
     const restore = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
-    expect(restore).to.exist;
+    expect((restore) != null).to.equal(true);
     const listener = oneEvent(el, 'lr-restore');
     restore.click();
     const event = (await listener) as CustomEvent<{ versionId: string }>;

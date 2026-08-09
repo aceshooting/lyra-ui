@@ -87,4 +87,23 @@ describe('<lr-button-group>', () => {
     expect(el.getBoundingClientRect().width).to.be.greaterThan(100);
     expect(base.scrollWidth).to.be.at.most(el.clientWidth);
   });
+
+  it('contains long localized RTL actions at an exact 320px allocation', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-button-group label="إجراءات المستند" style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-button variant="brand">حفظ-المستند-بالتفاصيل-الكاملة</lr-button>
+          <lr-button>معاينة-الإصدار-قبل-النشر</lr-button>
+          <lr-button>مشاركة-النتيجة-مع-فريق-العمل</lr-button>
+        </lr-button-group>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-button-group') as LyraButtonGroup;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+    expect(getComputedStyle(base).direction).to.equal('rtl');
+  });
 });

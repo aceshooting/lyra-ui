@@ -35,6 +35,24 @@ export const WithReasonsAndComment: Story = {
   `,
 };
 
+export const AsyncPersistenceHold: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'This listener prevents `lr-submit`, placing the component in its reflected pending state without closing or announcing success. A real host calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it fails.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-message-feedback
+      .reasons=${reasonsForStory}
+      commentable
+      @lr-submit=${(event: Event) => event.preventDefault()}
+    ></lr-message-feedback>
+  `,
+};
+
 /** `detail-for="both"` opens the reason/comment panel for either thumb, not just the down one. */
 export const DetailOnBothThumbs: Story = {
   render: () => html`
@@ -69,3 +87,8 @@ export const Narrow320px: Story = {
     </div>
   `,
 };
+
+const reasonsForStory = [
+  { id: 'wrong', label: 'Factually wrong' },
+  { id: 'unhelpful', label: 'Not helpful' },
+];

@@ -63,6 +63,8 @@ export type RadioAppearance = 'default' | 'button';
  * Flattened forwarding-slot changes keep the visual label wrapper synchronized; element-only and
  * decorative `aria-hidden` visuals still count as visual content. A host `aria-label` retains
  * accessible-name precedence by presence, including an explicitly empty value.
+ * A standalone radio is bounded by its allocation: an unbroken default label wraps within the
+ * available inline size in both LTR and RTL while the circular indicator remains fixed.
  *
  * @customElement lr-radio
  * @slot - Label content, including forwarded or element-only visuals.
@@ -119,6 +121,12 @@ export type RadioAppearance = 'default' | 'button';
  * `--lr-color-brand` token every other component also reads.
  * @cssprop [--lr-radio-checked-dot-color=var(--lr-color-brand)] - Background of `[part='dot']`
  * while `checked`.
+ * @cssprop [--lr-radio-hover-border-color=var(--lr-color-brand)] - Indicator border while the
+ * interactive row is hovered.
+ * @cssprop [--lr-radio-active-border-color=var(--lr-radio-hover-border-color)] - Indicator border
+ * while the interactive row is pressed.
+ * @cssprop [--lr-radio-active-ring-color=var(--lr-color-brand-quiet)] - Indicator ring while the
+ * interactive row is pressed.
  * @cssprop [--checked-icon-color=var(--lr-radio-checked-dot-color)] - WA-compatible selected-glyph
  * color alias.
  * @cssprop [--checked-icon-scale=1] - WA-compatible selected-glyph scale alias.

@@ -184,6 +184,17 @@ export const WithActionsSlot: Story = {
   `,
 };
 
+export const WithStartSlot: Story = {
+  name: 'start slot (non-interactive adornment)',
+  render: () => html`
+    <nav aria-label="Conversations" style="max-width: 22rem;">
+      <lr-conversation-item title="Deployment status" excerpt="Production is healthy." .timestamp=${new Date()}>
+        <span slot="start" aria-hidden="true" style="color:var(--lr-color-success);">●</span>
+      </lr-conversation-item>
+    </nav>
+  `,
+};
+
 export const HistoryList: Story = {
   name: 'A realistic history sidebar list',
   render: () => {

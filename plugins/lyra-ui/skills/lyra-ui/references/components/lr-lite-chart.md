@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -94,7 +94,8 @@ passthrough). Not a subclass of `LyraChart`.
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
   chart, the category index selects the matching mark in every dataset. Empty is the default.
-  Style the built-in highlight through `--lr-lite-chart-selected-outline-color`. Note
+  Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
+  `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
   forbids an attribute selector after `::part()` — so they silently never match; the outline is
   painted inside the shadow root and exposed through that token instead.
@@ -150,7 +151,8 @@ blank instead of reporting a misleading zero.
 `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
 without moving the library-wide ramp; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
-selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`.
+selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`;
+`--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
 `refreshTheme()` method needed (there's nothing to go stale).

@@ -66,6 +66,18 @@ export interface LyraDetailsEventMap {
  *   disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding
  *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
  *   inside a fixed control height and would collapse the summary row.
+ * @cssprop [--lr-details-gap=var(--lr-space-s)] - Gap between summary content and its icon.
+ * @cssprop [--lr-details-radius=var(--lr-radius)] - Disclosure surface corner radius.
+ * @cssprop [--lr-details-outlined-bg=var(--lr-color-surface)] - Outlined surface background.
+ * @cssprop [--lr-details-outlined-border-color=var(--lr-color-border)] - Outlined border color.
+ * @cssprop [--lr-details-filled-bg=var(--lr-color-brand-quiet)] - Filled surface background.
+ * @cssprop [--lr-details-filled-border-color=transparent] - Filled border color.
+ * @cssprop [--lr-details-filled-outlined-bg=var(--lr-color-brand-quiet)] - Filled-outlined
+ *   surface background.
+ * @cssprop [--lr-details-filled-outlined-border-color=var(--lr-color-border)] - Filled-outlined
+ *   border color.
+ * @cssprop [--lr-details-summary-hover-bg=var(--lr-color-brand-quiet)] - Summary hover background.
+ * @cssprop [--lr-details-summary-active-bg=color-mix(...)] - Summary pressed background.
  * @cssprop --spacing - Upstream-compatible spacing override for the summary and content.
  * @cssprop [--show-duration=var(--lr-duration-base)] - Expand-icon transition duration.
  * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse-icon transition duration.

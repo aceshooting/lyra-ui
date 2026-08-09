@@ -246,11 +246,12 @@ function buildPeers(tagFacts) {
       if (!resolved || seen.has(resolved)) continue;
       seen.add(resolved);
       const text = readFileSync(resolved, 'utf8');
-      for (const peer of componentPeers) {
-        if (new RegExp(`from '${peer}(?:/|')|import\\('${peer}(?:/|')`).test(text)) found.add(peer);
-      }
-      for (const m of text.matchAll(/(?:from|import\()\s*'(\.[^']+)'/g)) {
-        queue.push(path.resolve(path.dirname(resolved), m[1]));
+      for (const match of text.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)(['"])([^'"]+)\1/g)) {
+        const specifier = match[2];
+        for (const peer of componentPeers) {
+          if (specifier === peer || specifier.startsWith(`${peer}/`)) found.add(peer);
+        }
+        if (specifier.startsWith('.')) queue.push(path.resolve(path.dirname(resolved), specifier));
       }
     }
     return [...found];
@@ -802,4 +803,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     `Built llms-full.txt + ${artifacts.size - 1} files under llms/ (${[...artifacts.values()].reduce((a, t) => a + t.length, 0)} bytes).`,
   );
 }
-

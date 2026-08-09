@@ -5,6 +5,7 @@ import type { LyraTextarea } from './textarea.js';
 import { styles } from './textarea.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = await fixture<LyraTextarea>(html`<lr-textarea required aria-label="Notes"></lr-textarea>`);
@@ -103,6 +104,26 @@ it('reflects the pinned Web Awesome resize property', async () => {
 it('gives the textarea field hover feedback matching the keyboard focus-visible cue', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);
+});
+
+it('themes the textarea hover border through a component hook', async () => {
+  const el = await fixture<LyraTextarea>(html`
+    <lr-textarea
+      aria-label="Notes"
+      style="--lr-transition-fast: 0s; --lr-textarea-hover-border-color: rgb(1, 2, 3)"
+    ></lr-textarea>
+  `);
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  const rect = textarea.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(textarea).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('forwards host click to the textarea and suppresses it while effectively disabled', async () => {
@@ -594,7 +615,7 @@ describe('native editing-attribute passthrough', () => {
 describe('input / setRangeText()', () => {
   it('exposes the native textarea via the public input getter', async () => {
     const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
-    expect(el.input).to.equal(el.shadowRoot!.querySelector('textarea'));
+    expect((el.input) === (el.shadowRoot!.querySelector('textarea'))).to.equal(true);
   });
 
   it('setRangeText splices text at the given range and updates value', async () => {
@@ -627,7 +648,7 @@ describe('input / setRangeText()', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement === el.input).to.be.true;
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
   it('keeps the form value synchronized after setRangeText()', async () => {
@@ -643,7 +664,7 @@ describe('input / setRangeText()', () => {
 describe('forwarding getters/setters/methods before first render', () => {
   it('returns null / no-ops instead of throwing when called before the native textarea has rendered', () => {
     const el = document.createElement('lr-textarea') as LyraTextarea;
-    expect(el.input).to.equal(null);
+    expect((el.input) === (null)).to.equal(true);
     expect(el.selectionStart).to.equal(null);
     expect(el.selectionEnd).to.equal(null);
     expect(() => {

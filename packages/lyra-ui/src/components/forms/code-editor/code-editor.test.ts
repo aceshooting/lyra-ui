@@ -2,6 +2,28 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 import { styles } from './code-editor.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+it('lets a consumer retint hover and invalid editor borders independently', async () => {
+  const el = (await fixture(html`
+    <lr-code-editor
+      style="--lr-code-editor-hover-border: rgb(1, 2, 3); --lr-code-editor-invalid-border: rgb(4, 5, 6)"
+    ></lr-code-editor>
+  `)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const rect = editor.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+  el.setAttribute('data-invalid', '');
+  expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(4, 5, 6)');
+});
 
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {
   const el = await fixture<LyraCodeEditor>(html`<lr-code-editor></lr-code-editor>`);
@@ -441,7 +463,7 @@ it('forwards the complete native focus, selection, and range-editing surface', a
   expect(el.selectionStart).to.equal(0);
   expect(el.selectionEnd).to.equal(el.value.length);
   el.blur();
-  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   expect(forwarded).to.deep.equal(['focus', 'blur']);
 });
 
@@ -496,7 +518,7 @@ it('paints the required marker as generated content the accessible name never se
     html`<lr-code-editor label="Config" required></lr-code-editor>`,
   )) as LyraCodeEditor;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
-  expect(label.querySelector('span')).to.equal(null);
+  expect((label.querySelector('span')) === (null)).to.equal(true);
   expect(getComputedStyle(label, '::after').content).to.contain('*');
   expect(label.textContent!.trim()).to.equal('Config');
 
@@ -556,4 +578,26 @@ it('emits a cancelable lr-invalid alias whose cancellation reaches the native in
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
   expect(natives[0].defaultPrevented).to.be.true;
+});
+
+it('keeps long code in its editor scrollport inside an exact 320px RTL allocation', async () => {
+  const long = 'LocalizedUnbrokenCodeEditorChrome'.repeat(32);
+  const code = `const payload = '${'unbrokenSourceToken'.repeat(96)}';`;
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size:320px;max-inline-size:320px;overflow:auto">
+      <lr-code-editor
+        label=${long}
+        hint=${long}
+        resize="none"
+        .value=${code}
+        style="max-inline-size:100%"
+      ></lr-code-editor>
+    </div>
+  `);
+  const editor = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
+  const frame = editor.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+  const textarea = editor.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(textarea.scrollWidth).to.be.greaterThan(textarea.clientWidth);
+  expect(getComputedStyle(frame).overflowX).to.equal('auto');
 });

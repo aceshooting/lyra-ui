@@ -54,8 +54,8 @@ it('accepts popup writes without replacing the shadow-owned positioning node', a
   const replacement = document.createElement('section');
 
   expect(() => (el.popup = replacement)).to.not.throw();
-  expect(el.popup).to.equal(renderedPopup);
-  expect(el.popup).to.equal(popupOf(el));
+  expect((el.popup) === (renderedPopup)).to.equal(true);
+  expect((el.popup) === (popupOf(el))).to.equal(true);
 
   el.reposition();
   await settle(el);
@@ -77,6 +77,30 @@ it('positions the popup against the slotted anchor once active', async () => {
   expect(getComputedStyle(popup).position).to.equal('absolute');
   // Rendered geometry, not stylesheet text: the popup must actually sit below its anchor.
   expect(popup.getBoundingClientRect().top).to.be.greaterThan(anchor.getBoundingClientRect().top);
+});
+
+it('preserves the physical coordinates written by the positioner under RTL', async () => {
+  const wrapper = await fixture(html`
+    <div dir="rtl" style="position: relative; inline-size: 640px; block-size: 240px;">
+      <lr-popup active strategy="absolute" placement="bottom">
+        <button
+          slot="anchor"
+          style="position: absolute; left: 80px; top: 30px; inline-size: 100px; block-size: 32px;"
+        >
+          Anchor
+        </button>
+        <div style="inline-size: 160px;">Fixed-width popup</div>
+      </lr-popup>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-popup') as LyraPopup;
+  await settle(el);
+  const anchorRect = el.querySelector('button')!.getBoundingClientRect();
+  const popupRect = popupOf(el).getBoundingClientRect();
+
+  expect(popupRect.width).to.be.closeTo(160, 1);
+  expect(popupRect.left + popupRect.width / 2).to.be.closeTo(anchorRect.left + anchorRect.width / 2, 2);
+  expect(popupRect.top).to.be.closeTo(anchorRect.bottom, 2);
 });
 
 it('anchors to an element resolved through for', async () => {
@@ -145,6 +169,26 @@ it('anchors to a virtual rect and re-places when the rect moves', async () => {
   expect(popupOf(el).getBoundingClientRect().top).to.be.greaterThan(first);
 });
 
+it('clamps negative virtual-anchor dimensions and ignores non-finite rects', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active strategy="fixed" placement="bottom"><div style="inline-size: 80px;">Content</div></lr-popup>
+  `);
+  el.virtualAnchor = { x: 300, y: 200, width: -40, height: -20 };
+  await settle(el);
+  const clamped = popupOf(el).getBoundingClientRect();
+
+  expect(clamped.left + clamped.width / 2).to.be.closeTo(300, 2);
+  expect(clamped.top).to.be.closeTo(200, 2);
+
+  const priorLeft = popupOf(el).style.left;
+  const priorTop = popupOf(el).style.top;
+  el.virtualAnchor = { x: 300, y: 200, width: Number.POSITIVE_INFINITY, height: 0 };
+  await settle(el);
+
+  expect(popupOf(el).style.left).to.equal(priorLeft);
+  expect(popupOf(el).style.top).to.equal(priorTop);
+});
+
 it('encodes the resolved side in the part name', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup active placement="bottom"><button slot="anchor">A</button><div>C</div></lr-popup>
@@ -183,6 +227,25 @@ it('reports the placement it flipped to', async () => {
   el.active = true;
   const event = await repositioned;
   expect(event.detail.placement).to.equal('bottom');
+});
+
+it('emits lr-reposition after same-side coordinates are recomputed', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active strategy="fixed" placement="bottom"><div>Content</div></lr-popup>
+  `);
+  const placements: string[] = [];
+  el.addEventListener('lr-reposition', (event) => placements.push(event.detail.placement));
+
+  el.virtualAnchor = { x: 120, y: 100 };
+  await settle(el);
+  const countBeforeMove = placements.length;
+  el.virtualAnchor = { x: 320, y: 180 };
+  await settle(el);
+
+  expect(countBeforeMove).to.be.greaterThan(0);
+  expect(placements.length).to.be.greaterThan(countBeforeMove);
+  expect(placements.every((placement) => placement === 'bottom')).to.equal(true);
+  expect(popupOf(el).getBoundingClientRect().top).to.be.closeTo(180, 2);
 });
 
 it('does not flip when flip is turned off', async () => {
@@ -628,12 +691,12 @@ it('leaves every new positioning knob at its documented default', async () => {
   expect(el.boundary).to.equal('viewport');
   expect(el.flipFallbackPlacements).to.equal('');
   expect(el.flipFallbackStrategy).to.equal('best-fit');
-  expect(el.flipBoundary).to.equal(null);
+  expect((el.flipBoundary) === (null)).to.equal(true);
   expect(el.flipPadding).to.equal(0);
-  expect(el.shiftBoundary).to.equal(null);
+  expect((el.shiftBoundary) === (null)).to.equal(true);
   expect(el.shiftPadding).to.equal(0);
   expect(el.autoSize).to.equal(null);
-  expect(el.autoSizeBoundary).to.equal(null);
+  expect((el.autoSizeBoundary) === (null)).to.equal(true);
   expect(el.autoSizePadding).to.equal(0);
   expect(el.sync).to.equal(null);
   expect(el.hoverBridge).to.equal(false);
@@ -722,4 +785,22 @@ it('stops tracking when removed from the document', async () => {
   window.dispatchEvent(new Event('resize'));
   await aTimeout(10);
   expect(el.isConnected).to.equal(false);
+});
+
+it('does not publish an in-flight placement after disconnection', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active strategy="fixed" placement="bottom"><div>Content</div></lr-popup>
+  `);
+  let repositionCount = 0;
+  el.addEventListener('lr-reposition', () => repositionCount++);
+  el.virtualAnchor = { x: 240, y: 180 };
+  el.reposition();
+  el.remove();
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+  expect(el.isConnected).to.equal(false);
+  expect(repositionCount).to.equal(0);
+  expect(popupOf(el).style.left).to.equal('');
+  expect(popupOf(el).style.top).to.equal('');
 });

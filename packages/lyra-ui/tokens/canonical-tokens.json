@@ -2237,7 +2237,6 @@
         "src/components/conversation/code-block/code-block.styles.ts",
         "src/components/forms/date-picker/date-input.styles.ts",
         "src/components/forms/locale-picker/locale-picker.styles.ts",
-        "src/components/forms/phone-input/phone-input.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/overlays/chip/chip.styles.ts",
         "src/components/overlays/kbd/kbd.styles.ts"
@@ -2290,7 +2289,6 @@
         "src/components/data/stat/stat.styles.ts",
         "src/components/forms/date-picker/date-input.styles.ts",
         "src/components/forms/locale-picker/locale-picker.styles.ts",
-        "src/components/forms/phone-input/phone-input.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/layout/segmented/segmented.class.ts",
         "src/components/layout/segmented/segmented.styles.ts",
@@ -2970,7 +2968,6 @@
         "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/model-select/model-select.class.ts",
         "src/components/conversation/model-select/model-select.styles.ts",
-        "src/components/conversation/voice-picker/voice-picker.styles.ts",
         "src/components/data/tree/tree-item.styles.ts",
         "src/components/forms/combobox/combobox.styles.ts",
         "src/components/forms/date-picker/date-picker.styles.ts",
@@ -3435,7 +3432,6 @@
         "src/components/agent-tools/tool-param-form/tool-param-form.styles.ts",
         "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/suggestion-chips/suggestion-chips.styles.ts",
-        "src/components/conversation/voice-picker/voice-picker.styles.ts",
         "src/components/data/pagination/pagination.styles.ts",
         "src/components/forms/color-picker/color-picker.class.ts",
         "src/components/forms/color-picker/color-picker.styles.ts",
@@ -4780,6 +4776,51 @@
         "light": "0.375rem"
       }
     },
+    "--lr-theme-border-radius-pill": {
+      "type": "dimension",
+      "group": "radius",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-radius-pill.",
+      "values": {
+        "light": "999px"
+      }
+    },
+    "--lr-theme-border-radius-xs": {
+      "type": "dimension",
+      "group": "radius",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-radius-xs.",
+      "values": {
+        "light": "2px"
+      }
+    },
+    "--lr-theme-border-width-medium": {
+      "type": "dimension",
+      "group": "border",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-border-width-medium.",
+      "values": {
+        "light": "2px"
+      }
+    },
+    "--lr-theme-border-width-thick": {
+      "type": "dimension",
+      "group": "border",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-border-width-thick.",
+      "values": {
+        "light": "3px"
+      }
+    },
+    "--lr-theme-border-width-thin": {
+      "type": "dimension",
+      "group": "border",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-border-width-thin.",
+      "values": {
+        "light": "1px"
+      }
+    },
     "--lr-theme-color-border-strong": {
       "type": "color",
       "group": "color",
@@ -5060,6 +5101,34 @@
         "dark": "#5b9eff"
       }
     },
+    "--lr-theme-color-mix-active": {
+      "type": "number",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-color-mix-active.",
+      "values": {
+        "light": "22%"
+      }
+    },
+    "--lr-theme-color-mix-hover": {
+      "type": "number",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-color-mix-hover.",
+      "values": {
+        "light": "12%"
+      }
+    },
+    "--lr-theme-color-mix-partner": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-color-mix-partner.",
+      "values": {
+        "light": "#1a1a1a",
+        "dark": "#f2f2f2"
+      }
+    },
     "--lr-theme-color-neutral-border-loud": {
       "type": "color",
       "group": "color",
@@ -5178,6 +5247,15 @@
       "values": {
         "light": "rgb(0 0 0 / 0.92)",
         "dark": "rgb(0 0 0 / 0.95)"
+      }
+    },
+    "--lr-theme-color-shadow": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-color-shadow.",
+      "values": {
+        "light": "#000"
       }
     },
     "--lr-theme-color-success-border-loud": {
@@ -5420,6 +5498,69 @@
         "dark": "#edeef1"
       }
     },
+    "--lr-theme-duration-fast": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-duration-fast.",
+      "values": {
+        "light": "120ms"
+      }
+    },
+    "--lr-theme-duration-icon": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-duration-icon.",
+      "values": {
+        "light": "1s"
+      }
+    },
+    "--lr-theme-duration-normal": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-duration-base.",
+      "values": {
+        "light": "180ms"
+      }
+    },
+    "--lr-theme-duration-slow": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-duration-ambient.",
+      "values": {
+        "light": "1.8s"
+      }
+    },
+    "--lr-theme-easing-emphasized": {
+      "type": "dimension",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-easing-emphasized.",
+      "values": {
+        "light": "ease-in-out"
+      }
+    },
+    "--lr-theme-easing-linear": {
+      "type": "string",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-easing-linear.",
+      "values": {
+        "light": "linear"
+      }
+    },
+    "--lr-theme-easing-standard": {
+      "type": "string",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-easing-standard.",
+      "values": {
+        "light": "ease-out"
+      }
+    },
     "--lr-theme-focus-ring-offset": {
       "type": "dimension",
       "group": "focus",
@@ -5546,6 +5687,42 @@
         "light": "0.75rem"
       }
     },
+    "--lr-theme-font-weight-bold": {
+      "type": "fontWeight",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-font-weight-bold.",
+      "values": {
+        "light": "700"
+      }
+    },
+    "--lr-theme-font-weight-medium": {
+      "type": "fontWeight",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-font-weight-medium.",
+      "values": {
+        "light": "500"
+      }
+    },
+    "--lr-theme-font-weight-normal": {
+      "type": "fontWeight",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-font-weight-normal.",
+      "values": {
+        "light": "400"
+      }
+    },
+    "--lr-theme-font-weight-semibold": {
+      "type": "fontWeight",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-font-weight-semibold.",
+      "values": {
+        "light": "600"
+      }
+    },
     "--lr-theme-graph-cat-1": {
       "type": "color",
       "group": "color",
@@ -5626,6 +5803,15 @@
         "dark": "#e4e7eb"
       }
     },
+    "--lr-theme-hover-brightness": {
+      "type": "number",
+      "group": "interaction",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-hover-brightness.",
+      "values": {
+        "light": "1.08"
+      }
+    },
     "--lr-theme-icon-button-size": {
       "type": "dimension",
       "group": "control",
@@ -5633,6 +5819,105 @@
       "description": "Canonical application theme input for icon button size.",
       "values": {
         "light": "2.5rem"
+      }
+    },
+    "--lr-theme-line-height-1-4": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-1-4.",
+      "values": {
+        "light": "1.4"
+      }
+    },
+    "--lr-theme-line-height-compact": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-compact.",
+      "values": {
+        "light": "1.25"
+      }
+    },
+    "--lr-theme-line-height-loose": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-loose.",
+      "values": {
+        "light": "1.6"
+      }
+    },
+    "--lr-theme-line-height-none": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-none.",
+      "values": {
+        "light": "1"
+      }
+    },
+    "--lr-theme-line-height-normal": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-normal.",
+      "values": {
+        "light": "1.5"
+      }
+    },
+    "--lr-theme-line-height-snug": {
+      "type": "number",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-line-height-snug.",
+      "values": {
+        "light": "1.3"
+      }
+    },
+    "--lr-theme-opacity-disabled": {
+      "type": "number",
+      "group": "opacity",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-opacity-disabled.",
+      "values": {
+        "light": "0.5"
+      }
+    },
+    "--lr-theme-opacity-muted": {
+      "type": "number",
+      "group": "opacity",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-opacity-muted.",
+      "values": {
+        "light": "0.85"
+      }
+    },
+    "--lr-theme-otp-input-segment-size": {
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-otp-input-segment-size.",
+      "values": {
+        "light": "2.5em"
+      }
+    },
+    "--lr-theme-popover-viewport-clamp": {
+      "type": "dimension",
+      "group": "layout",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-popover-viewport-clamp.",
+      "values": {
+        "light": "92vw"
+      }
+    },
+    "--lr-theme-scroll-fade-size": {
+      "type": "dimension",
+      "group": "layout",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-scroll-fade-size.",
+      "values": {
+        "light": "2rem"
       }
     },
     "--lr-theme-shadow-color": {
@@ -5692,6 +5977,807 @@
       "values": {
         "light": "0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.12)",
         "dark": "0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.34)"
+      }
+    },
+    "--lr-theme-size-0-02em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-02em.",
+      "values": {
+        "light": "0.02em"
+      }
+    },
+    "--lr-theme-size-0-03em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-03em.",
+      "values": {
+        "light": "0.03em"
+      }
+    },
+    "--lr-theme-size-0-04em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-04em.",
+      "values": {
+        "light": "0.04em"
+      }
+    },
+    "--lr-theme-size-0-05rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-05rem.",
+      "values": {
+        "light": "0.05rem"
+      }
+    },
+    "--lr-theme-size-0-0625rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-0625rem.",
+      "values": {
+        "light": "0.0625rem"
+      }
+    },
+    "--lr-theme-size-0-09375rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-09375rem.",
+      "values": {
+        "light": "0.09375rem"
+      }
+    },
+    "--lr-theme-size-0-125rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-125rem.",
+      "values": {
+        "light": "0.125rem"
+      }
+    },
+    "--lr-theme-size-0-15rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-15rem.",
+      "values": {
+        "light": "0.15rem"
+      }
+    },
+    "--lr-theme-size-0-1875rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-1875rem.",
+      "values": {
+        "light": "0.1875rem"
+      }
+    },
+    "--lr-theme-size-0-1rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-1rem.",
+      "values": {
+        "light": "0.1rem"
+      }
+    },
+    "--lr-theme-size-0-25rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-25rem.",
+      "values": {
+        "light": "0.25rem"
+      }
+    },
+    "--lr-theme-size-0-3125rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-3125rem.",
+      "values": {
+        "light": "0.3125rem"
+      }
+    },
+    "--lr-theme-size-0-35em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-35em.",
+      "values": {
+        "light": "0.35em"
+      }
+    },
+    "--lr-theme-size-0-375rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-375rem.",
+      "values": {
+        "light": "0.375rem"
+      }
+    },
+    "--lr-theme-size-0-3em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-3em.",
+      "values": {
+        "light": "0.3em"
+      }
+    },
+    "--lr-theme-size-0-4375rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-4375rem.",
+      "values": {
+        "light": "0.4375rem"
+      }
+    },
+    "--lr-theme-size-0-4em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-4em.",
+      "values": {
+        "light": "0.4em"
+      }
+    },
+    "--lr-theme-size-0-4rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-4rem.",
+      "values": {
+        "light": "0.4rem"
+      }
+    },
+    "--lr-theme-size-0-5em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-5em.",
+      "values": {
+        "light": "0.5em"
+      }
+    },
+    "--lr-theme-size-0-5rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-5rem.",
+      "values": {
+        "light": "0.5rem"
+      }
+    },
+    "--lr-theme-size-0-625rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-625rem.",
+      "values": {
+        "light": "0.625rem"
+      }
+    },
+    "--lr-theme-size-0-6875rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-6875rem.",
+      "values": {
+        "light": "0.6875rem"
+      }
+    },
+    "--lr-theme-size-0-6rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-6rem.",
+      "values": {
+        "light": "0.6rem"
+      }
+    },
+    "--lr-theme-size-0-75em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-75em.",
+      "values": {
+        "light": "0.75em"
+      }
+    },
+    "--lr-theme-size-0-75rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-75rem.",
+      "values": {
+        "light": "0.75rem"
+      }
+    },
+    "--lr-theme-size-0-7em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-7em.",
+      "values": {
+        "light": "0.7em"
+      }
+    },
+    "--lr-theme-size-0-875em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-875em.",
+      "values": {
+        "light": "0.875em"
+      }
+    },
+    "--lr-theme-size-0-8rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-8rem.",
+      "values": {
+        "light": "0.8rem"
+      }
+    },
+    "--lr-theme-size-0-9375rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-0-9375rem.",
+      "values": {
+        "light": "0.9375rem"
+      }
+    },
+    "--lr-theme-size-1-0625rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-0625rem.",
+      "values": {
+        "light": "1.0625rem"
+      }
+    },
+    "--lr-theme-size-1-1rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-1rem.",
+      "values": {
+        "light": "1.1rem"
+      }
+    },
+    "--lr-theme-size-1-25rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-25rem.",
+      "values": {
+        "light": "1.25rem"
+      }
+    },
+    "--lr-theme-size-1-5em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-5em.",
+      "values": {
+        "light": "1.5em"
+      }
+    },
+    "--lr-theme-size-1-5rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-5rem.",
+      "values": {
+        "light": "1.5rem"
+      }
+    },
+    "--lr-theme-size-1-75rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-75rem.",
+      "values": {
+        "light": "1.75rem"
+      }
+    },
+    "--lr-theme-size-1-875rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1-875rem.",
+      "values": {
+        "light": "1.875rem"
+      }
+    },
+    "--lr-theme-size-10px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-10px.",
+      "values": {
+        "light": "10px"
+      }
+    },
+    "--lr-theme-size-10rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-10rem.",
+      "values": {
+        "light": "10rem"
+      }
+    },
+    "--lr-theme-size-12em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-12em.",
+      "values": {
+        "light": "12em"
+      }
+    },
+    "--lr-theme-size-12rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-12rem.",
+      "values": {
+        "light": "12rem"
+      }
+    },
+    "--lr-theme-size-14px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-14px.",
+      "values": {
+        "light": "14px"
+      }
+    },
+    "--lr-theme-size-14rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-14rem.",
+      "values": {
+        "light": "14rem"
+      }
+    },
+    "--lr-theme-size-15rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-15rem.",
+      "values": {
+        "light": "15rem"
+      }
+    },
+    "--lr-theme-size-16px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-16px.",
+      "values": {
+        "light": "16px"
+      }
+    },
+    "--lr-theme-size-16rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-16rem.",
+      "values": {
+        "light": "16rem"
+      }
+    },
+    "--lr-theme-size-18rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-18rem.",
+      "values": {
+        "light": "18rem"
+      }
+    },
+    "--lr-theme-size-1em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1em.",
+      "values": {
+        "light": "1em"
+      }
+    },
+    "--lr-theme-size-1px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1px.",
+      "values": {
+        "light": "1px"
+      }
+    },
+    "--lr-theme-size-1rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-1rem.",
+      "values": {
+        "light": "1rem"
+      }
+    },
+    "--lr-theme-size-2-25rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-2-25rem.",
+      "values": {
+        "light": "2.25rem"
+      }
+    },
+    "--lr-theme-size-2-5ch": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-2-5ch.",
+      "values": {
+        "light": "2.5ch"
+      }
+    },
+    "--lr-theme-size-2-5rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-2-5rem.",
+      "values": {
+        "light": "2.5rem"
+      }
+    },
+    "--lr-theme-size-20rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-20rem.",
+      "values": {
+        "light": "20rem"
+      }
+    },
+    "--lr-theme-size-22rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-22rem.",
+      "values": {
+        "light": "22rem"
+      }
+    },
+    "--lr-theme-size-24px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-24px.",
+      "values": {
+        "light": "24px"
+      }
+    },
+    "--lr-theme-size-24rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-24rem.",
+      "values": {
+        "light": "24rem"
+      }
+    },
+    "--lr-theme-size-280px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-280px.",
+      "values": {
+        "light": "280px"
+      }
+    },
+    "--lr-theme-size-28px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-28px.",
+      "values": {
+        "light": "28px"
+      }
+    },
+    "--lr-theme-size-28rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-28rem.",
+      "values": {
+        "light": "28rem"
+      }
+    },
+    "--lr-theme-size-2px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-2px.",
+      "values": {
+        "light": "2px"
+      }
+    },
+    "--lr-theme-size-2rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-2rem.",
+      "values": {
+        "light": "2rem"
+      }
+    },
+    "--lr-theme-size-3-5em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-3-5em.",
+      "values": {
+        "light": "3.5em"
+      }
+    },
+    "--lr-theme-size-3-5rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-3-5rem.",
+      "values": {
+        "light": "3.5rem"
+      }
+    },
+    "--lr-theme-size-30rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-30rem.",
+      "values": {
+        "light": "30rem"
+      }
+    },
+    "--lr-theme-size-32rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-32rem.",
+      "values": {
+        "light": "32rem"
+      }
+    },
+    "--lr-theme-size-36rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-36rem.",
+      "values": {
+        "light": "36rem"
+      }
+    },
+    "--lr-theme-size-38rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-38rem.",
+      "values": {
+        "light": "38rem"
+      }
+    },
+    "--lr-theme-size-3ch": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-3ch.",
+      "values": {
+        "light": "3ch"
+      }
+    },
+    "--lr-theme-size-3px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-3px.",
+      "values": {
+        "light": "3px"
+      }
+    },
+    "--lr-theme-size-3rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-3rem.",
+      "values": {
+        "light": "3rem"
+      }
+    },
+    "--lr-theme-size-48rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-48rem.",
+      "values": {
+        "light": "48rem"
+      }
+    },
+    "--lr-theme-size-4ch": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-4ch.",
+      "values": {
+        "light": "4ch"
+      }
+    },
+    "--lr-theme-size-4px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-4px.",
+      "values": {
+        "light": "4px"
+      }
+    },
+    "--lr-theme-size-4rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-4rem.",
+      "values": {
+        "light": "4rem"
+      }
+    },
+    "--lr-theme-size-5em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-5em.",
+      "values": {
+        "light": "5em"
+      }
+    },
+    "--lr-theme-size-5rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-5rem.",
+      "values": {
+        "light": "5rem"
+      }
+    },
+    "--lr-theme-size-6ch": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-6ch.",
+      "values": {
+        "light": "6ch"
+      }
+    },
+    "--lr-theme-size-6em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-6em.",
+      "values": {
+        "light": "6em"
+      }
+    },
+    "--lr-theme-size-6px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-6px.",
+      "values": {
+        "light": "6px"
+      }
+    },
+    "--lr-theme-size-6rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-6rem.",
+      "values": {
+        "light": "6rem"
+      }
+    },
+    "--lr-theme-size-7rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-7rem.",
+      "values": {
+        "light": "7rem"
+      }
+    },
+    "--lr-theme-size-8em": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-8em.",
+      "values": {
+        "light": "8em"
+      }
+    },
+    "--lr-theme-size-8rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-8rem.",
+      "values": {
+        "light": "8rem"
+      }
+    },
+    "--lr-theme-size-neg-0-15rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-0-15rem.",
+      "values": {
+        "light": "-0.15rem"
+      }
+    },
+    "--lr-theme-size-neg-0-25rem": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-0-25rem.",
+      "values": {
+        "light": "-0.25rem"
+      }
+    },
+    "--lr-theme-size-neg-1px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-1px.",
+      "values": {
+        "light": "-1px"
+      }
+    },
+    "--lr-theme-size-neg-4px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-4px.",
+      "values": {
+        "light": "-4px"
+      }
+    },
+    "--lr-theme-size-neg-6px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-6px.",
+      "values": {
+        "light": "-6px"
+      }
+    },
+    "--lr-theme-size-neg-8px": {
+      "type": "dimension",
+      "group": "size",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-size-neg-8px.",
+      "values": {
+        "light": "-8px"
       }
     },
     "--lr-theme-space-2xl": {
@@ -6066,6 +7152,33 @@
       "values": {
         "light": "#5f4a03",
         "dark": "#c7a01e"
+      }
+    },
+    "--lr-theme-transition-fast": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-transition-fast.",
+      "values": {
+        "light": "120ms ease-out"
+      }
+    },
+    "--lr-theme-transition-normal": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-transition-base.",
+      "values": {
+        "light": "180ms ease-out"
+      }
+    },
+    "--lr-theme-transition-slow": {
+      "type": "duration",
+      "group": "motion",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-transition-ambient.",
+      "values": {
+        "light": "1.8s ease-in-out"
       }
     },
     "--lr-theme-z-index-base": {

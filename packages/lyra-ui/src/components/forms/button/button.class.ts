@@ -71,6 +71,9 @@ export interface LyraButtonEventMap {
  * are handled by this component itself via the host's associated form — a shadow-internal
  * native `<button type="submit">` does not participate in an ancestor light-DOM form's submission
  * on its own, since form-submitter semantics don't cross the shadow boundary.
+ * Submit and reset remain default actions of the composed native `click`: any listener on that
+ * click path can call `preventDefault()` to veto them, while stopping propagation alone does not.
+ * Form-level `submit`/`reset` cancellation remains a separate, later veto point.
  *
  * A submit button that carries `name`/`value` or any of the `form*` submission overrides
  * (`formaction`/`formenctype`/`formmethod`/`formnovalidate`/`formtarget`) submits through a
@@ -104,6 +107,11 @@ export interface LyraButtonEventMap {
  * intentionally clears the serialized `aria-controls` value; read `ariaControlsElements` in a
  * supporting browser. Browsers without that API retain the forwarded string attribute as a
  * best-effort fallback.
+ * Circle and automatically detected icon-only buttons keep the shared
+ * `--lr-icon-button-size` minimum target in every `size` tier; the tier still scales their glyph
+ * and chrome, but cannot collapse the clickable box below that floor.
+ * In a constrained row the default-slot label ellipsizes, while each `start`/`end` adornment is
+ * capped at 40% of the control so unbroken consumer content cannot force the button wider.
  *
  * @customElement lr-button
  * @event focus - Native focus relayed once from the internal button or anchor.
@@ -126,7 +134,7 @@ export interface LyraButtonEventMap {
  *   values never weaken the `noopener noreferrer` reverse-tabnabbing guard.
  * @csspart base - Compatibility name for the internal control; use `button`.
  * @csspart button - The internal native `<button>` (or an `<a>` for a safe link). It is the same
- *   node as `base`.
+ *   node as `base`. Circle and icon-only states retain the shared minimum icon-button target.
  * @csspart label - The default-slot label wrapper.
  * @csspart start - The `start` slot wrapper.
  * @csspart prefix - Shoelace alias for `start`; both names are on the same wrapper.
@@ -580,7 +588,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this.value = typeof state === 'string' ? state : '';
   }
 
-  private onClick = (): void => {
+  /** Runs the form action after every listener on the composed click path had its veto turn. */
+  private runClickDefaultAction(): void {
     if (this.type === 'submit') {
       const form = this.getForm();
       if (!form) return;
@@ -589,6 +598,30 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     } else if (this.type === 'reset') {
       this.getForm()?.reset();
     }
+  }
+
+  private onClick = (event: MouseEvent): void => {
+    if (this.type !== 'submit' && this.type !== 'reset') return;
+    const ownerWindow = this.ownerDocument.defaultView;
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      ownerWindow?.removeEventListener('click', finishAtWindow);
+      if (event.defaultPrevented || this.effectiveDisabled || this.loading) return;
+      this.runClickDefaultAction();
+    };
+    const finishAtWindow = (candidate: MouseEvent): void => {
+      if (candidate === event) finish();
+    };
+
+    // Window is the last ordinary target on a composed click path. Installing this listener from
+    // the internal target keeps the non-canceled default action synchronous (and therefore keeps
+    // click() native-like) while still observing every pre-existing host/document/window listener.
+    // stopPropagation()/stopImmediatePropagation() do not cancel native default actions, so a
+    // microtask fallback performs the same action when the event never reaches Window.
+    ownerWindow?.addEventListener('click', finishAtWindow);
+    queueMicrotask(finish);
   };
 
   private onFocus = (event: FocusEvent): void => {

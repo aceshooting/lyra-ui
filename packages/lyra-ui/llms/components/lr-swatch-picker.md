@@ -21,15 +21,16 @@ activation (click or arrow-key move both select immediately, like a native radio
 Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
 `lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
 of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
-accent-color buttons. Its `options` are the *only* choices; a `lr-color-picker`'s `swatches` are a
+accent-color buttons. Its `options` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
 shortcut list alongside a grid, a hue ramp and a text field that can still express any colour.
 
 **Properties:**
+
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-  label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
   never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
-  `icon` is an optional custom shape rendered *instead of* the plain filled circle; `gemstone`
+  `icon` is an optional custom shape rendered _instead of_ the plain filled circle; `gemstone`
   selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
   `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
@@ -112,9 +113,14 @@ picker.value = 'ruby';
 ```
 
 **Known gotchas:**
+
 - arrow-key navigation cycles (past the last swatch wraps to the first, and vice versa) rather than
   clamping, and self-selects on move — arrow-navigating to a swatch immediately updates `value` and
   fires `lr-change`, there's no separate commit step.
+- live `options` changes preserve a focused swatch by option-object identity across reorders.
+  Removing the focused option moves focus and the roving tab stop to the nearest surviving swatch
+  (the next item at that position, or the previous item when the final option was removed) without
+  changing the controlled `value` or emitting `lr-change`.
 - under RTL (nearest `dir="rtl"` ancestor) `ArrowLeft`/`ArrowRight` swap which direction they move.
 - each swatch's fill comes from its option's `color`, applied through a per-swatch custom property
   set inline on `[part='swatch']` and read by `[part='swatch-fill']`, so a consumer's

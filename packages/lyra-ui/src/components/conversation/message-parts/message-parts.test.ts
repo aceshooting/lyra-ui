@@ -7,7 +7,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 function assertiveSinkTexts(doc: Document = document): string[] {
   return Array.from(
     doc.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > div`),
-    (node) => node.textContent ?? '',
+    (node) => node.textContent ?? ''
   );
 }
 
@@ -46,7 +46,9 @@ it('renders ordered provider-neutral message parts through existing Lyra primiti
   const el = (await fixture(html`<lr-message-parts .parts=${parts}></lr-message-parts>`)) as LyraMessageParts;
   const rendered = el.shadowRoot!.querySelectorAll('[part~="part"]');
   expect(rendered).to.have.lengthOf(parts.length);
-  expect(Array.from(rendered).map((node) => node.getAttribute('data-type'))).to.deep.equal(parts.map((part) => part.type));
+  expect(Array.from(rendered).map((node) => node.getAttribute('data-type'))).to.deep.equal(
+    parts.map((part) => part.type)
+  );
   expect(el.shadowRoot!.querySelectorAll('lr-markdown')).to.have.lengthOf(2);
   expect(el.shadowRoot!.querySelectorAll('lr-thinking-panel')).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip')).to.have.lengthOf(1);
@@ -55,42 +57,95 @@ it('renders ordered provider-neutral message parts through existing Lyra primiti
   expect(el.shadowRoot!.querySelectorAll('lr-attachment-chip')).to.have.lengthOf(1);
 });
 
+it('forwards streaming state to text and reasoning Markdown until each same-id part completes', async () => {
+  const streamingParts: MessagePart[] = [
+    { id: 'answer', type: 'text', text: '**Partial', state: 'streaming' },
+    { id: 'thought', type: 'reasoning', text: 'Still checking', state: 'streaming' },
+  ];
+  const el = (await fixture(html`<lr-message-parts .parts=${streamingParts}></lr-message-parts>`)) as LyraMessageParts;
+  type MarkdownHost = HTMLElement & { streaming: boolean; content: string; updateComplete: Promise<boolean> };
+  let markdown = Array.from(el.shadowRoot!.querySelectorAll('lr-markdown')) as MarkdownHost[];
+  await Promise.all(markdown.map((item) => item.updateComplete));
+  expect(markdown.map((item) => item.streaming)).to.deep.equal([true, true]);
+
+  el.parts = [
+    { id: 'answer', type: 'text', text: '**Complete**', state: 'complete' },
+    { id: 'thought', type: 'reasoning', text: 'Checked', state: 'complete' },
+  ];
+  await el.updateComplete;
+  markdown = Array.from(el.shadowRoot!.querySelectorAll('lr-markdown')) as MarkdownHost[];
+  await Promise.all(markdown.map((item) => item.updateComplete));
+  expect(markdown.map((item) => item.streaming)).to.deep.equal([false, false]);
+  expect(markdown.map((item) => item.content)).to.deep.equal(['**Complete**', 'Checked']);
+});
+
 it('forwards citation activation as a typed citation selection', async () => {
-  const el = (await fixture(
-    html`<lr-message-parts .parts=${[parts[4]!]}></lr-message-parts>`,
-  )) as LyraMessageParts;
+  const el = (await fixture(html`<lr-message-parts .parts=${[parts[4]!]}></lr-message-parts>`)) as LyraMessageParts;
   let rawLeaked = false;
   el.addEventListener('lr-citation-activate', () => {
     rawLeaked = true;
   });
   const selected = oneEvent(el, 'lr-citation-select');
   el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
-    new CustomEvent('lr-citation-activate', { bubbles: true, composed: true, detail: { index: 1 } }),
+    new CustomEvent('lr-citation-activate', { bubbles: true, composed: true, detail: { index: 1 } })
   );
-  const event = await selected as CustomEvent<CitationSelectEventDetail>;
+  const event = (await selected) as CustomEvent<CitationSelectEventDetail>;
   expect(event.detail.citation.id).to.equal('cite-1');
   expect(rawLeaked).to.be.false;
 });
 
+it('computes citation ranks with at most one pass over a large mixed part list', async () => {
+  const source: MessagePart[] = Array.from(
+    { length: 400 },
+    (_, index): MessagePart =>
+      index % 2 === 0
+        ? { id: `text-${index}`, type: 'text', text: `Chunk ${index}` }
+        : {
+            id: `citation-${index}`,
+            type: 'citation',
+            citation: { id: `cite-${index}`, sourceId: `source-${index}`, label: `Source ${index}` },
+          }
+  );
+  let prefixSlices = 0;
+  const observed = new Proxy(source, {
+    get(target, property, receiver) {
+      if (property === 'slice') {
+        return (...args: Parameters<MessagePart[]['slice']>) => {
+          prefixSlices++;
+          return target.slice(...args);
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const el = (await fixture(html`<lr-message-parts .parts=${observed}></lr-message-parts>`)) as LyraMessageParts;
+  const badges = Array.from(el.shadowRoot!.querySelectorAll('lr-citation-badge')) as Array<
+    HTMLElement & { index: number }
+  >;
+
+  expect(prefixSlices).to.be.at.most(1);
+  expect(badges.length).to.equal(200);
+  expect([badges[0]?.index, badges[99]?.index, badges[199]?.index]).to.deep.equal([1, 100, 200]);
+});
+
 it('declares and preserves intentional composed child-event passthroughs', async () => {
-  const el = (await fixture(
-    html`<lr-message-parts .parts=${[parts[1]!]}></lr-message-parts>`,
-  )) as LyraMessageParts;
+  const el = (await fixture(html`<lr-message-parts .parts=${[parts[1]!]}></lr-message-parts>`)) as LyraMessageParts;
   const toggled = oneEvent(el, 'lr-toggle');
   el.shadowRoot!.querySelector('lr-thinking-panel')!.dispatchEvent(
     new CustomEvent('lr-toggle', {
       bubbles: true,
       composed: true,
       detail: { expanded: true },
-    }),
+    })
   );
-  expect((await toggled as CustomEvent<{ expanded: boolean }>).detail).to.deep.equal({ expanded: true });
+  expect(((await toggled) as CustomEvent<{ expanded: boolean }>).detail).to.deep.equal({ expanded: true });
 });
 
 it('supports host rendering overrides without changing the ordered data model', async () => {
   const el = (await fixture(html`<lr-message-parts
     .parts=${parts.slice(0, 2)}
-    .renderPart=${(part: MessagePart) => part.type === 'reasoning' ? html`<strong>Custom reasoning</strong>` : undefined}
+    .renderPart=${(part: MessagePart) =>
+      part.type === 'reasoning' ? html`<strong>Custom reasoning</strong>` : undefined}
   ></lr-message-parts>`)) as LyraMessageParts;
   expect(el.shadowRoot!.querySelectorAll('strong')).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelectorAll('lr-markdown')).to.have.lengthOf(1);
@@ -98,7 +153,11 @@ it('supports host rendering overrides without changing the ordered data model', 
 
 it('honors false literals for true-default rendering options', async () => {
   const el = (await fixture(
-    html`<lr-message-parts render-markdown="false" show-reasoning="false" .parts=${parts.slice(0, 2)}></lr-message-parts>`,
+    html`<lr-message-parts
+      render-markdown="false"
+      show-reasoning="false"
+      .parts=${parts.slice(0, 2)}
+    ></lr-message-parts>`
   )) as LyraMessageParts;
   expect(el.renderMarkdown).to.be.false;
   expect(el.showReasoning).to.be.false;
@@ -112,7 +171,7 @@ it('applies per-instance strings to retry controls', async () => {
     html`<lr-message-parts
       .parts=${[parts[8]!]}
       .strings=${{ messagePartRetry: 'Réessayer cette section', retry: 'Réessayer' }}
-    ></lr-message-parts>`,
+    ></lr-message-parts>`
   )) as LyraMessageParts;
   const retry = el.shadowRoot!.querySelector('lr-button') as HTMLElement;
   expect(retry.getAttribute('aria-label')).to.equal('Réessayer cette section');
@@ -122,9 +181,7 @@ it('applies per-instance strings to retry controls', async () => {
 it('announces only newly added error parts through the shared assertive light-DOM sink', async () => {
   const mountedError: MessagePart = { id: 'old-error', type: 'error', message: 'Earlier failure' };
   const freshError: MessagePart = { id: 'new-error', type: 'error', message: 'Fresh failure' };
-  const el = (await fixture(
-    html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`,
-  )) as LyraMessageParts;
+  const el = (await fixture(html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`)) as LyraMessageParts;
   expect(assertiveSinkTexts(), 'historical errors present at mount stay silent').to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('[data-type="error"]')!.hasAttribute('role')).to.be.false;
 
@@ -146,9 +203,7 @@ it('treats errors queued while detached as a silent reconnect baseline', async (
   const mountedError: MessagePart = { id: 'old-error', type: 'error', message: 'Earlier failure' };
   const detachedError: MessagePart = { id: 'detached-error', type: 'error', message: 'Detached failure' };
   const connectedError: MessagePart = { id: 'connected-error', type: 'error', message: 'Connected failure' };
-  const el = (await fixture(
-    html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`,
-  )) as LyraMessageParts;
+  const el = (await fixture(html`<lr-message-parts .parts=${[mountedError]}></lr-message-parts>`)) as LyraMessageParts;
   const parent = el.parentNode!;
 
   el.remove();
@@ -159,9 +214,7 @@ it('treats errors queued while detached as a silent reconnect baseline', async (
 
   el.parts = [mountedError, detachedError, connectedError];
   await el.updateComplete;
-  expect(assertiveSinkTexts(), 'the next connected error still announces').to.deep.equal([
-    'Connected failure',
-  ]);
+  expect(assertiveSinkTexts(), 'the next connected error still announces').to.deep.equal(['Connected failure']);
 });
 
 it('localizes an added error part that has no caller-supplied message', async () => {
@@ -183,5 +236,7 @@ it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-message-parts
     .strings=${{ messagePartsLabel: 'Localized message content' }}
   ></lr-message-parts>`)) as LyraMessageParts;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized message content');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Localized message content'
+  );
 });

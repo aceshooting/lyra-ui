@@ -10,9 +10,8 @@ import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './stat.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_select, LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
 export type StatVariant = LyraVariant;
@@ -30,17 +29,54 @@ export interface StatRow {
   exactValue?: string;
 }
 
+const NESTED_CONTROL_SELECTOR = [
+  'a[href]',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  'audio[controls]',
+  'video[controls]',
+  'label',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[tabindex]:not([tabindex="-1"])',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="checkbox"]',
+  '[role="switch"]',
+  '[role="radio"]',
+  '[role="menuitem"]',
+  '[role="option"]',
+  '[role="tab"]',
+  '[role="textbox"]',
+  '[role="slider"]',
+  '[role="spinbutton"]',
+].join(',');
+
+function isElementNode(value: EventTarget | undefined): value is Element {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { nodeType?: unknown }).nodeType === 1 &&
+    typeof (value as { matches?: unknown }).matches === 'function'
+  );
+}
+
 /**
  * `<lr-stat>` — a KPI/stat card. First-party invention consolidating the
  * "metric row" / "KPI card" pattern common to dashboard UIs.
  *
  * @customElement lr-stat
- * @slot - Leading icon.
+ * @slot start - Leading icon. Takes precedence over the legacy default slot when both are filled.
+ * @slot - Legacy leading-icon alias, retained as the fallback for `start`.
  * @slot caption - Rich caption content (overrides the `caption` attribute).
  * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
- * @csspart base - The component's root wrapper (`<div>`, or a real `<a>` when `href` is safe).
+ * When linked, every consumer slot remains a sibling of the stretched anchor so an interactive
+ * slotted descendant is never nested inside the whole-card link.
+ * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
  * @csspart icon - Container for the leading icon slot.
  * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
  *   label-less stat doesn't leave a blank line above the value.
@@ -77,6 +113,10 @@ export interface StatRow {
  *   `warning` variant.
  * @cssprop [--lr-stat-value-danger-color=var(--lr-color-danger)] - Headline value color for the
  *   `danger` variant.
+ * @cssprop [--lr-stat-emphasis-border-color=var(--lr-color-brand)] - Accent-edge color when
+ *   `emphasis` is set. Independent of the headline's emphasis tint and `brand` variant.
+ * @cssprop [--lr-stat-emphasis-value-color=var(--lr-color-brand)] - Headline value color when
+ *   `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant.
  * @status stable
  * @since 4.0.0
  */
@@ -88,6 +128,7 @@ export class LyraStat extends LyraElement {
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     open: LYRA_DEFAULT_open,
+    select: LYRA_DEFAULT_select,
     statTrendAnnouncement: LYRA_DEFAULT_statTrendAnnouncement,
     statTrendBad: LYRA_DEFAULT_statTrendBad,
     statTrendDecreased: LYRA_DEFAULT_statTrendDecreased,
@@ -100,6 +141,8 @@ export class LyraStat extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() label = '';
+  /** Host accessible-name override forwarded to the linked anchor when `href` is safe. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() value = '';
   @property() unit = '';
   @property({ reflect: true }) variant: StatVariant = 'neutral';
@@ -194,7 +237,10 @@ export class LyraStat extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
-      this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      this.hasIcon = Array.from(this.children).some((el) => {
+        const slotName = el.getAttribute('slot');
+        return slotName === null || slotName === 'start';
+      });
       this.hasCaptionSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'caption');
       this.hasSparkSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'spark');
       this.hasSubSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sub');
@@ -204,8 +250,13 @@ export class LyraStat extends LyraElement {
     }
   }
 
-  private onIconSlotChange = (e: Event): void => {
-    this.hasIcon = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onIconSlotChange = (): void => {
+    const startSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="start"]');
+    const defaultSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    this.hasIcon = Boolean(
+      startSlot?.assignedElements({ flatten: true }).length ||
+        defaultSlot?.assignedElements({ flatten: true }).length,
+    );
   };
 
   private onCaptionSlotChange = (e: Event): void => {
@@ -218,6 +269,14 @@ export class LyraStat extends LyraElement {
 
   private onSubSlotChange = (e: Event): void => {
     this.hasSubSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onLinkedContentClick = (event: Event): void => {
+    for (const node of event.composedPath()) {
+      if (node === event.currentTarget) break;
+      if (isElementNode(node) && node.matches(NESTED_CONTROL_SELECTOR)) return;
+    }
+    this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]')?.click();
   };
 
   override render(): TemplateResult {
@@ -248,75 +307,84 @@ export class LyraStat extends LyraElement {
       rawDirection === 'flat'
         ? this.localize('trendUnchanged')
         : this.localize('statTrendAnnouncement', undefined, {
-            trend: this.localize(
-              rawDirection === 'up' ? 'statTrendIncreased' : 'statTrendDecreased',
-              undefined,
-              { value: formattedTrend },
-            ),
+            trend: this.localize(rawDirection === 'up' ? 'statTrendIncreased' : 'statTrendDecreased', undefined, {
+              value: formattedTrend,
+            }),
             polarity: this.localize(isGood ? 'statTrendGood' : 'statTrendBad'),
           });
 
     const content = html`
-        <span part="icon" ?hidden=${!this.hasIcon}
-          ><slot @slotchange=${this.onIconSlotChange}></slot
-        ></span>
-        <span part="label" id=${this.labelId} ?hidden=${!this.label}>${this.label}</span>
-        <div part="value-row">
-          <span
-            part="value"
-            id=${this.valueId}
-            title=${this.exactValue || nothing}
-            tabindex=${this.exactValue && !linked ? '0' : nothing}
-            aria-labelledby=${this.label ? `${this.labelId} ${this.valueId}` : nothing}
-            >${this.value}</span
+      <span part="icon" ?hidden=${!this.hasIcon}
+        ><slot name="start" @slotchange=${this.onIconSlotChange}
+          ><slot @slotchange=${this.onIconSlotChange}></slot></slot
+        ></span
+      >
+      <span part="label" id=${this.labelId} ?hidden=${!this.label}>${this.label}</span>
+      <div part="value-row">
+        <span
+          part="value"
+          id=${this.valueId}
+          title=${this.exactValue || nothing}
+          tabindex=${this.exactValue && !linked ? '0' : nothing}
+          aria-labelledby=${this.label ? `${this.labelId} ${this.valueId}` : nothing}
+          >${this.value}</span
+        >
+        <span part="unit">${this.unit}</span>
+      </div>
+      ${hasTrend
+        ? html`<span
+            part="trend"
+            data-direction=${rawDirection}
+            data-polarity=${isGood == null ? nothing : isGood ? 'good' : 'bad'}
           >
-          <span part="unit">${this.unit}</span>
-        </div>
-        ${hasTrend
-          ? html`<span
-              part="trend"
-              data-direction=${rawDirection}
-              data-polarity=${isGood == null ? nothing : isGood ? 'good' : 'bad'}
-            >
-              <span aria-hidden="true">${arrow} ${formattedTrend}</span>
-              <span class="sr-only">${trendAnnouncement}</span>
-            </span>`
-          : nothing}
-        <div part="sub" ?hidden=${!hasSub}>
-          <slot name="sub" @slotchange=${this.onSubSlotChange}>${this.sub}</slot>
-        </div>
-        <div part="spark" ?hidden=${!this.hasSparkSlot}>
-          <slot name="spark" @slotchange=${this.onSparkSlotChange}></slot>
-        </div>
-        <div part="caption" ?hidden=${!hasCaption}>
-          <slot name="caption" @slotchange=${this.onCaptionSlotChange}>${this.caption}</slot>
-        </div>
-        <div part="rows" ?hidden=${this.rows.length === 0}>
-          ${this.rows.map((row, i) => {
-            const rowLabelId = this.rowLabelIds[i];
-            const rowValueId = `${rowLabelId}-value`;
-            return html`
-              <div part="row">
-                <span part="row-label" id=${rowLabelId}>${row.label}</span>
-                <span
-                  part="row-value"
-                  id=${rowValueId}
-                  title=${row.exactValue || nothing}
-                  tabindex=${row.exactValue && !linked ? '0' : nothing}
-                  aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
-                  >${row.value}</span
-                >
-              </div>
-            `;
-          })}
-        </div>
+            <span aria-hidden="true">${arrow} ${formattedTrend}</span>
+            <span class="sr-only">${trendAnnouncement}</span>
+          </span>`
+        : nothing}
+      <div part="sub" ?hidden=${!hasSub}>
+        <slot name="sub" @slotchange=${this.onSubSlotChange}>${this.sub}</slot>
+      </div>
+      <div part="spark" ?hidden=${!this.hasSparkSlot}>
+        <slot name="spark" @slotchange=${this.onSparkSlotChange}></slot>
+      </div>
+      <div part="caption" ?hidden=${!hasCaption}>
+        <slot name="caption" @slotchange=${this.onCaptionSlotChange}>${this.caption}</slot>
+      </div>
+      <div part="rows" ?hidden=${this.rows.length === 0}>
+        ${this.rows.map((row, i) => {
+          const rowLabelId = this.rowLabelIds[i];
+          const rowValueId = `${rowLabelId}-value`;
+          return html`
+            <div part="row">
+              <span part="row-label" id=${rowLabelId}>${row.label}</span>
+              <span
+                part="row-value"
+                id=${rowValueId}
+                title=${row.exactValue || nothing}
+                tabindex=${row.exactValue && !linked ? '0' : nothing}
+                aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
+                >${row.value}</span
+              >
+            </div>
+          `;
+        })}
+      </div>
     `;
     return href
-      ? html`<a part="base" href=${href} target=${this.target || nothing} rel=${this.target ? 'noopener noreferrer' : nothing}>${content}</a>`
+      ? html`<div class="linked-shell">
+          <a
+            part="base"
+            href=${href}
+            target=${this.target || nothing}
+            rel=${this.target ? 'noopener noreferrer' : nothing}
+            aria-label=${this.accessibleLabel || nothing}
+            ><span class="sr-only">${[this.label, this.value, this.unit].filter(Boolean).join(' ')}</span></a
+          >
+          <div class="linked-content" @click=${this.onLinkedContentClick}>${content}</div>
+        </div>`
       : html`<div part="base">${content}</div>`;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

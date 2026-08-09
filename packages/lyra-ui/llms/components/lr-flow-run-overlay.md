@@ -21,9 +21,10 @@ strip. Summary/count text and slotted host chrome wrap within narrow allocations
 poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 **Properties:**
+
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `decorations: FlowRunDecorations = {}` (attribute: false) — `Record<nodeOrEdgeId,
-  FlowRunDecoration>`, pushed verbatim onto the resolved canvas's own `decorations` property
+FlowRunDecoration>`, pushed verbatim onto the resolved canvas's own `decorations` property
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
@@ -64,14 +65,15 @@ brand, success, danger, and warning tokens. Their expanded names are
   <lr-flow-run-overlay slot="top-start" for="canvas"></lr-flow-run-overlay>
 </lr-flow-canvas>
 <script>
-  document.querySelector('lr-flow-run-overlay').decorations = {
-    a: { status: 'success', durationMs: 820 },
-    b: { status: 'running', progress: 40 },
+  document.querySelector("lr-flow-run-overlay").decorations = {
+    a: { status: "success", durationMs: 820 },
+    b: { status: "running", progress: 40 },
   };
 </script>
 ```
 
 **Known gotchas:**
+
 - Purely a pushed-state conduit: it never starts, stops, or times a run itself — the host recomputes
   `decorations` (including `durationMs`) on whatever cadence its own execution engine ticks at.
 - `for` resolution matches `lr-flow-minimap`/`lr-flow-controls`.

@@ -92,6 +92,7 @@ export const WithFlags: Story = {
   `,
 };
 
+/** Country-selector rows use the shared hit-floor-aware control ladder at every size. */
 export const Sizes: Story = {
   render: () => {
     const sizes: LyraPhoneInputSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
@@ -184,6 +185,32 @@ export const RightToLeft: Story = {
         label="رقم الهاتف"
         country-label="البلد"
         default-country="LU"
+        .adapter=${demoAdapter}
+      ></lr-phone-input>
+    </div>
+  `,
+};
+
+/** Ancestor theme values override size and pill fallbacks. */
+export const AncestorTheme: Story = {
+  render: () => html`
+    <div
+      style="
+        --lr-phone-input-padding-block: var(--lr-space-s);
+        --lr-phone-input-font-size: var(--lr-font-size-lg);
+        --lr-phone-input-flag-size: var(--lr-size-1-5rem);
+        --lr-phone-input-glyph-size: var(--lr-size-1-5rem);
+        --lr-phone-input-gap: var(--lr-space-m);
+        --lr-phone-input-radius: var(--lr-radius-xs);
+        --lr-phone-input-control-min-height: var(--lr-size-3rem);
+      "
+    >
+      <lr-phone-input
+        size="2xs"
+        pill
+        flags
+        default-country="LU"
+        label="Telephone"
         .adapter=${demoAdapter}
       ></lr-phone-input>
     </div>

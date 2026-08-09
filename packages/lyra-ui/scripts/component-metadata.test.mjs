@@ -56,7 +56,7 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['introduced-mapped-experimental'].length, 2);
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 13);
-  assert.equal(state.metadata.deprecations.length, 9);
+  assert.equal(state.metadata.deprecations.length, 13);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

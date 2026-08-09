@@ -170,7 +170,7 @@ it('roving tabindex: only the active plain-button stop is tabbable, and ArrowRig
   await el.updateComplete;
   expect(regenerate.tabIndex).to.equal(-1);
   expect(edit.tabIndex).to.equal(0);
-  expect(el.shadowRoot!.activeElement).to.equal(edit);
+  expect((el.shadowRoot!.activeElement) === (edit)).to.equal(true);
 });
 
 it('reconciles the roving stop when a non-active action receives direct focus without reveal-on-hover', async () => {
@@ -188,7 +188,7 @@ it('reconciles the roving stop when a non-active action receives direct focus wi
   el.shadowRoot!
     .querySelector('[part="base"]')!
     .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
-  expect(el.shadowRoot!.activeElement).to.equal(regenerate);
+  expect((el.shadowRoot!.activeElement) === (regenerate)).to.equal(true);
 });
 
 it('keeps one sequential Tab stop after composite children finish their own updates', async () => {
@@ -258,7 +258,7 @@ it('slotted controls participate in arrow-key navigation', async () => {
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   const branchPicker = el.querySelector('lr-branch-picker')!;
-  expect(branchPicker.shadowRoot!.activeElement).to.exist;
+  expect((branchPicker.shadowRoot!.activeElement) != null).to.equal(true);
 });
 
 it('excludes inert slotted controls and keeps exactly one usable roving fallback', async () => {

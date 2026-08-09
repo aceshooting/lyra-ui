@@ -229,7 +229,7 @@ describe('lr-pptx-viewer', () => {
     await el.scrollToAnchor('no-such-highlight');
     await el.updateComplete;
     const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
-    expect(region, 'the mixin live region is rendered').to.exist;
+    expect((region) != null, 'the mixin live region is rendered').to.equal(true);
     expect(
       (region.textContent ?? '').trim().length,
       'the live region actually carries announcement text',

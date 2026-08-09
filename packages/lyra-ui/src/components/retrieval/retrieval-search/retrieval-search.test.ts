@@ -90,7 +90,7 @@ it('renders a query lr-input, a 3-item vector/keyword/hybrid mode segmented, and
   const segmented = modeOf(el) as HTMLElement & { items: { value: string; label: string }[] };
   expect(segmented.tagName.toLowerCase()).to.equal('lr-segmented');
   expect(segmented.items.map((i) => i.value)).to.deep.equal(['vector', 'keyword', 'hybrid']);
-  expect(submitButtonOf(el)).to.exist;
+  expect((submitButtonOf(el)) != null).to.equal(true);
 });
 
 it('updates query as the composed lr-input reports user edits', async () => {
@@ -378,7 +378,7 @@ describe('loading / error / empty status region', () => {
   it('shows a compact lr-empty when empty is true and there is no error/loading', async () => {
     const el = (await fixture(html`<lr-retrieval-search empty></lr-retrieval-search>`)) as LyraRetrievalSearch;
     const empty = el.shadowRoot!.querySelector('[part="empty"]')!;
-    expect(empty).to.exist;
+    expect((empty) != null).to.equal(true);
     expect(empty.tagName.toLowerCase()).to.equal('lr-empty');
   });
 
