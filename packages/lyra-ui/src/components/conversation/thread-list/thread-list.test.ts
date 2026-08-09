@@ -1551,7 +1551,10 @@ it('resets the native search-cancel glyph on the search field', async () => {
       input.value = 'clear me';
       input.dispatchEvent(new InputEvent('input', { bubbles: true }));
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const candidate: [number, number] = [rect.right - offset, rect.top + rect.height / 2];
+      const candidate: [number, number] = [
+        Math.round(rect.right - offset),
+        Math.round(rect.top + rect.height / 2),
+      ];
       await sendMouse({ type: 'click', position: candidate });
       if (input.value === '') {
         cancelPosition = candidate;
