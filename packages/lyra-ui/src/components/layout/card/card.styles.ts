@@ -1,13 +1,16 @@
 import { css } from "lit";
 
+// Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
+// standalone card visible while definite allocations (grid tracks, percentages, explicit
+// inline-size) continue to win normally.
+// The visible linked content is a sibling of the stretched native link. Built-in, non-interactive
+// regions pass pointer input through to that link; public slots opt back into hit testing so their
+// controls stay independently operable. Plain slotted content delegates its click in the class.
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
     container-type: inline-size;
-    /* Inline-size containment deliberately removes content-based intrinsic sizing. Supply the
-       centered/shrink-to-fit fallback that lets a standalone card remain visible while definite
-       allocations (grid tracks, percentages, explicit inline-size) continue to win normally. */
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part="base"] {
@@ -41,10 +44,6 @@ export const styles = css`
     inset: 0;
     z-index: var(--lr-layer-base);
   }
-  /* The visible content is a sibling of the stretched native link. Built-in, non-interactive
-     regions pass pointer input through to that link; public slots opt back into hit testing so
-     their own controls stay independently operable. Plain slotted content delegates its click to
-     the link in the class rather than becoming a dead patch in the card. */
   .linked-content {
     position: relative;
     z-index: var(--lr-layer-content);
