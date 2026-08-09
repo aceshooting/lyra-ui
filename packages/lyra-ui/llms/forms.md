@@ -2199,8 +2199,10 @@ than adding outer padding around the buttons.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the active segment; `focus()` and
 `click()` are synchronous no-ops while directly or fieldset disabled, so they cannot create focus
-events from a removed tab stop. `show()` and `hide()` control the picker, while its form methods are
-described above.
+events from a removed tab stop. If a controlled locale, `hourFormat`, or `step` change removes the
+segment that currently owns focus, the first surviving segment receives focus after the new pattern
+renders. A format change never reclaims focus from another control. `show()` and `hide()` control the
+picker, while its form methods are described above.
 
 **Keyboard:** only one segment is in the tab order. Digits fill the active segment and advance when
 no further digit can be accepted; Left/Right moves in locale order and reverses under RTL;

@@ -906,9 +906,28 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     expect((el.shadowRoot!.activeElement) === (segment(el, 'dayPeriod'))).to.equal(true);
 
     el.setAttribute('hour-format', '24');
-    el.focus();
-    expect((el.shadowRoot!.activeElement) !== (null), 'falls back to a segment that still exists').to.equal(true);
     await el.updateComplete;
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['segment'],
+      'falls back to a segment that still exists',
+    ).to.equal('hour');
+  });
+
+  it('does not reclaim foreign focus when a controlled format change removes a segment', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-time-input hour-format="12" value="09:30"></lr-time-input>
+        <button id="time-input-foreign-focus" type="button">Outside action</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    const foreign = wrapper.querySelector('button')!;
+    foreign.focus();
+
+    el.hourFormat = '24';
+    await el.updateComplete;
+
+    expect(document.activeElement?.id).to.equal('time-input-foreign-focus');
   });
 
   it('closes the popup on Enter and otherwise triggers implicit form submission', async () => {

@@ -29,6 +29,24 @@ export const LocalesAndHourFormats: Story = {
   `,
 };
 
+/** Focus the day-period segment, then use the pointer to remove it. Preventing the button's
+ * pointer-down default keeps the segment's real focus ownership observable during the update. */
+export const ControlledSegmentShrink: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem);">
+      <button
+        type="button"
+        @pointerdown=${(event: PointerEvent) => event.preventDefault()}
+        @click=${(event: Event) => {
+          const input = (event.currentTarget as HTMLElement).parentElement?.querySelector<LyraTimeInput>('lr-time-input');
+          if (input) input.hourFormat = '24';
+        }}
+      >Switch to 24-hour format</button>
+      <lr-time-input label="Controlled time" hour-format="12" value="17:45"></lr-time-input>
+    </div>
+  `,
+};
+
 /** A step below 60 seconds adds the seconds segment and picker column. */
 export const Seconds: Story = {
   render: () => html`

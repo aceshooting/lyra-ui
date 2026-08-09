@@ -204,10 +204,8 @@ export default {
   // runs on the runner default; coverage trades a little throughput for a deterministic ceiling
   // while retaining one runner process and therefore one combined report.
   ...(collectCoverage ? { concurrency: 1 } : {}),
-  // Individual optional-peer and large-graph files can exceed the runner's two-minute default
-  // under instrumentation. Keep this per-file/browser-session completion (and page-stop)
-  // watchdog high enough for a slow worker to report the actual result without masking a stuck
-  // file behind an unbounded wait.
+  // Keep the complete browser-session watchdog high enough for a slow worker to report the actual
+  // result while still failing resource leaks and unresolved tests within a bounded five minutes.
   testsFinishTimeout: 300000,
   // Default is 30s (@web/test-runner-core's DEFAULT_CONFIG.browserStartTimeout). Unlike
   // chromium/firefox/webkit -- which restore from the ~/.cache/ms-playwright binary cache --

@@ -1,5 +1,5 @@
 {
-  "$comment": "Reviewed hard gzip budgets in KiB for bundled+minified ESM with optional peers externalized. These are release limits, not generated baselines; aggregate compatibility-entry ceilings include the full-review public contracts, slider error chrome, Markdown containment hardening, and transitive autoloader peer metadata, while family, component, and percentile ceilings remain unchanged.",
+  "$comment": "Reviewed hard gzip budgets in KiB for bundled+minified ESM with optional peers externalized. These are release limits, not generated baselines; aggregate compatibility-entry ceilings include the full-review public contracts, slider error chrome, Markdown containment hardening, focus-continuity repairs, and transitive autoloader peer metadata, while family, component, and percentile ceilings remain unchanged.",
   "$componentP95GzipKb": 100,
   "$componentMaxGzipKb": 200,
   "dist/autoloader-cdn.js": 995,
@@ -9,7 +9,7 @@
   "dist/ssr/all.js": 998,
   "dist/ssr-loader.js": 960,
   "dist/localization.js": 18,
-  "dist/lyra.js": 922,
+  "dist/lyra.js": 923,
   "dist/all.js": 953,
   "dist/components/agent-tools/index.js": 310,
   "dist/components/charts/index.js": 70,

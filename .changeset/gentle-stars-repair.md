@@ -18,6 +18,8 @@ Improve component reliability and public contracts across the library:
 - preserve `lr-emoji-picker` option focus by identity or nearest survivor when controlled groups
   reorder or shrink, without stealing search or external focus, and materialize off-window roving
   targets before transferring focus;
+- move `lr-time-input` focus to a surviving segment when a controlled pattern change removes the
+  focused segment, without reclaiming focus from another control;
 - normalize invalid `lr-knowledge-base-admin` tab state to its Sources fallback;
 - remove unintended nested card chrome from generated RAG sources and evaluation metrics;
 - restore `lr-export-button` to sequential keyboard navigation after loading or disablement ends;

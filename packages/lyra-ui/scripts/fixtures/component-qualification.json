@@ -8721,7 +8721,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 694,
+              "line": 696,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -8895,7 +8895,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 267,
+              "line": 269,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -8909,7 +8909,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 694,
+              "line": 696,
               "kind": "component keyboard assertion signal"
             }
           ]

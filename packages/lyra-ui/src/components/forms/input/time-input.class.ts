@@ -171,6 +171,9 @@ function containsElement(container: Element | null, value: unknown): value is El
  * The outer row follows the shared control-height ladder without adding padding around its action
  * hit targets: compact tiers grow only enough for the clear/expand buttons, while `l` and `xl`
  * retain their larger shared heights.
+ * When a controlled locale, hour format, or step change removes the segment that currently owns
+ * focus, focus moves to the first surviving segment after the new pattern renders. Changes never
+ * reclaim focus from another control.
  *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
@@ -340,6 +343,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private secondsVisible = false;
   private digitBuffer = '';
   private digitSegment?: SegmentName;
+  private pendingSegmentFocus?: SegmentName;
   private cleanupPositioner?: () => void;
   private overlayHandle?: OverlayHandle;
   private lightDismissDocument?: Document;
@@ -1031,8 +1035,19 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     if (this.open && this.effectiveDisabled) this.forceClose(false);
     const order = this.segmentOrder;
     const orderKey = order.join('|');
-    if (orderKey !== this.segmentOrderKey || !order.includes(this.activeSegment)) {
+    const orderChanged = orderKey !== this.segmentOrderKey;
+    const focusedSegment = orderChanged
+      ? (this.shadowRoot?.activeElement?.getAttribute('data-segment') as SegmentName | null)
+      : null;
+    if (focusedSegment && order.includes(focusedSegment)) {
+      this.activeSegment = focusedSegment;
+    } else if (orderChanged || !order.includes(this.activeSegment)) {
       this.activeSegment = order[0] ?? 'hour';
+    }
+    if (focusedSegment) {
+      this.pendingSegmentFocus = order.includes(focusedSegment)
+        ? focusedSegment
+        : this.activeSegment;
     }
     this.segmentOrderKey = orderKey;
   }
@@ -1057,6 +1072,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
     this.syncComponentStates();
     this.toggleAttribute('data-invalid', this.touched && !this.validity.valid);
+    const pendingSegmentFocus = this.pendingSegmentFocus;
+    this.pendingSegmentFocus = undefined;
+    if (pendingSegmentFocus && !this.effectiveDisabled) {
+      this.segmentElement(pendingSegmentFocus)?.focus();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -1064,6 +1084,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.teardownPopup();
     this._open = false;
     this.syncOpenAttribute();
+    this.pendingSegmentFocus = undefined;
     this.partial = false;
     this.resetDigitBuffer();
     super.disconnectedCallback();

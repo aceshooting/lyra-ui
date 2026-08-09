@@ -15,6 +15,8 @@ import {
 } from "./shiki-types.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 
+const sharedJsonLanguages = { json: jsonGrammar };
+
 async function el2Ready(el: LyraCodeBlockCore): Promise<void> {
   await el.updateComplete;
   await aTimeout(0);
@@ -128,7 +130,7 @@ describe("lr-code-block-core", () => {
     const el = (await fixture(
       html`<lr-code-block-core language="json"></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    el.languages = { json: jsonGrammar };
+    el.languages = sharedJsonLanguages;
     el.code = '{"a":1}';
     await el.updateComplete;
     // timeout: 8000 -- same as code-block.test.ts's identical wait on the fine-grained
@@ -150,7 +152,7 @@ describe("lr-code-block-core", () => {
       <lr-code-block-core
         style="inline-size: 22rem"
         language="json"
-        .languages=${{ json: jsonGrammar }}
+        .languages=${sharedJsonLanguages}
         .code=${longValue}
       ></lr-code-block-core>
     `)) as LyraCodeBlockCore;
@@ -256,7 +258,7 @@ describe("lr-code-block-core", () => {
     const el = (await fixture(
       html`<lr-code-block-core language="python"></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    el.languages = { json: jsonGrammar };
+    el.languages = sharedJsonLanguages;
     el.code = "print(1)";
     await el.updateComplete;
     const pre = el.shadowRoot!.querySelector("pre");
@@ -268,7 +270,7 @@ describe("lr-code-block-core", () => {
     const el = (await fixture(
       html`<lr-code-block-core language="json" copyable></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    el.languages = { json: jsonGrammar };
+    el.languages = sharedJsonLanguages;
     el.code = '{"a":1}';
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -310,7 +312,7 @@ describe("lr-code-block-core", () => {
     const el = (await fixture(
       html`<lr-code-block-core
         language="json"
-        .languages=${{ json: jsonGrammar }}
+        .languages=${sharedJsonLanguages}
         .code=${'{"a":1}'}
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
@@ -331,7 +333,7 @@ describe("lr-code-block-core", () => {
     const el = (await fixture(
       html`<lr-code-block-core
         language="json"
-        .languages=${{ json: jsonGrammar }}
+        .languages=${sharedJsonLanguages}
         .code=${'{"a":1}'}
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
@@ -1221,7 +1223,7 @@ describe("shiki dark-theme signal", () => {
         <div style=${wrapperStyle}>
           <lr-code-block-core
             language="json"
-            .languages=${{ json: jsonGrammar }}
+            .languages=${sharedJsonLanguages}
             .code=${'{"answer":42}'}
           ></lr-code-block-core>
         </div>
