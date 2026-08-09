@@ -95,7 +95,12 @@ it("keeps generated focusable shared separators decorative and strips cloned ide
           formtarget="_blank"
           type="button"
         >
-          Next
+          <span
+            id="breadcrumb-shared-separator-child"
+            name="separator-child"
+            form="breadcrumb-separator-form"
+            aria-describedby="source-description"
+          >Next</span>
         </button>
         <lr-breadcrumb-item href="/home">Home</lr-breadcrumb-item>
         <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
@@ -120,6 +125,8 @@ it("keeps generated focusable shared separators decorative and strips cloned ide
   expect(document.activeElement === clone, "a decorative clone must not accept focus").to.equal(false);
   expect(document.activeElement === priorFocus, "focus remains on the breadcrumb item").to.equal(true);
   expect(el.querySelectorAll("#breadcrumb-shared-separator").length).to.equal(1);
+  const nestedClone = clone.querySelector<HTMLElement>("span")!;
+  expect(el.querySelectorAll("#breadcrumb-shared-separator-child").length).to.equal(1);
   const unsafeCloneAttributes = [
     "id",
     "name",
@@ -134,6 +141,7 @@ it("keeps generated focusable shared separators decorative and strips cloned ide
     "formtarget",
   ];
   expect(unsafeCloneAttributes.some((attribute) => clone.hasAttribute(attribute))).to.equal(false);
+  expect(unsafeCloneAttributes.some((attribute) => nestedClone.hasAttribute(attribute))).to.equal(false);
   await expect(el).to.be.accessible();
 });
 

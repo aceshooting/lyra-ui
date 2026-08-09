@@ -1,5 +1,8 @@
 import { css } from "lit";
 
+// A pressed link uses a token-derived fill so it tints its inherited surface without assuming a
+// particular surface token. The current-page color uses an inline fallback so a consumer can set it
+// on the item or an ancestor without a host declaration shadowing that override.
 export const styles = css`
   :host {
     display: inline-flex;
@@ -51,9 +54,6 @@ export const styles = css`
   :where(a, button)[part="base"]:hover {
     text-decoration: underline;
   }
-  /* A link has no fill of its own to deepen, so the pressed state paints one. Mixing from
-     transparent yields --lr-color-mix-partner at --lr-color-mix-active alpha, which tints whatever
-     surface the trail happens to sit on rather than assuming --lr-color-surface is behind it. */
   :where(a, button)[part="base"]:active {
     text-decoration: underline;
     background: var(
@@ -69,11 +69,6 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
-     ancestor without a :host declaration shadowing that. ::part(base)[aria-current='page'] is
-     invalid CSS (an attribute selector cannot follow ::part), so recoloring the current-page label
-     used to require hijacking the shared --lr-color-text-quiet token, repainting everything else
-     that reads it. Unset, it falls back to that token, so the rendering is unchanged. */
   [part="base"][aria-current="page"] {
     color: var(--lr-breadcrumb-current-color, var(--lr-color-text-quiet));
     font-weight: var(--lr-font-weight-semibold);

@@ -8,44 +8,18 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_breadcrumb } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const DECORATIVE_SEPARATOR_CLONE_ID_REFERENCE_ATTRIBUTES = [
-  'aria-activedescendant',
-  'aria-controls',
-  'aria-describedby',
-  'aria-details',
-  'aria-errormessage',
-  'aria-flowto',
-  'aria-labelledby',
-  'aria-owns',
-  'for',
-  'form',
-  'headers',
-  'list',
-] as const;
-
-const DECORATIVE_SEPARATOR_CLONE_FORM_ATTRIBUTES = [
-  'formaction',
-  'formenctype',
-  'formmethod',
-  'formnovalidate',
-  'formtarget',
-  'name',
-  'required',
-] as const;
+const DECORATIVE_SEPARATOR_CLONE_ATTRIBUTE =
+  /^(?:aria-|form(?:action|enctype|method|novalidate|target)?$|(?:for|headers|id|list|name|required)$)/;
 
 function sanitizeDecorativeSeparatorClone(clone: Element): void {
-  const elements = [clone, ...Array.from(clone.querySelectorAll('*'))];
-  for (const element of elements) {
-    element.removeAttribute('id');
-    for (const attribute of DECORATIVE_SEPARATOR_CLONE_ID_REFERENCE_ATTRIBUTES) {
-      element.removeAttribute(attribute);
-    }
-    for (const attribute of DECORATIVE_SEPARATOR_CLONE_FORM_ATTRIBUTES) {
-      element.removeAttribute(attribute);
+  for (const element of [clone, ...clone.querySelectorAll('*')]) {
+    for (const attribute of element.getAttributeNames()) {
+      if (DECORATIVE_SEPARATOR_CLONE_ATTRIBUTE.test(attribute)) {
+        element.removeAttribute(attribute);
+      }
     }
   }
 }
-
 
 /**
  * `<lr-breadcrumb>` — a responsive navigation trail.
@@ -103,21 +77,16 @@ export class LyraBreadcrumb extends LyraElement {
   private syncSeparators = (): void => {
     this.clearGeneratedSeparators();
     const separatorSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="separator"]');
-    const sources = separatorSlot?.assignedElements({ flatten: true }) ?? [];
-    if (sources.length === 0) return;
+    const sources = separatorSlot?.assignedElements({ flatten: true });
+    if (!sources?.length) return;
 
-    for (const item of Array.from(this.children)) {
+    for (const item of this.children) {
       if (item.localName !== tag('breadcrumb-item')) continue;
-      const hasOwnSeparator = Array.from(item.children).some(
-        (child) => child.getAttribute('slot') === 'separator',
-      );
-      if (hasOwnSeparator) continue;
+      if (item.querySelector(':scope > [slot=separator]')) continue;
       const clones = sources.map((source) => {
         const clone = source.cloneNode(true) as Element;
         sanitizeDecorativeSeparatorClone(clone);
         clone.setAttribute('slot', 'separator');
-        clone.setAttribute('inert', '');
-        clone.setAttribute('aria-hidden', 'true');
         item.append(clone);
         return clone;
       });

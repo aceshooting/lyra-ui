@@ -4422,14 +4422,14 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 140,
+              "line": 148,
               "test": "keeps local native separator controls decorative",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 162,
+              "line": 170,
               "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
@@ -4454,7 +4454,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 208,
+              "line": 216,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4471,7 +4471,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 206,
+              "line": 214,
               "kind": "320px allocation test signal"
             }
           ]
@@ -4627,14 +4627,14 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 140,
+              "line": 148,
               "test": "keeps local native separator controls decorative",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 162,
+              "line": 170,
               "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
@@ -4659,7 +4659,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 208,
+              "line": 216,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4676,7 +4676,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 206,
+              "line": 214,
               "kind": "320px allocation test signal"
             }
           ]
