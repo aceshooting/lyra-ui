@@ -152,6 +152,26 @@ it('mirrors a live lr-input from the slider into temperature and the rendered re
   expect(changeFired).to.be.false;
 });
 
+it('contains the internal slider lr-input while mirroring its live value', async () => {
+  const el = (await fixture(
+    html`<lr-model-settings-panel temperature="0.5"></lr-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+  let leakedInputs = 0;
+  el.addEventListener('lr-input', () => leakedInputs++);
+
+  slider(el).dispatchEvent(
+    new CustomEvent('lr-input', {
+      detail: { value: 0.8 },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(el.temperature).to.equal(0.8);
+  expect(leakedInputs).to.equal(0);
+});
+
 it('re-clamps temperature (matching the slider’s own clamp math) when temperatureMax drops below the current temperature', async () => {
   const el = (await fixture(
     html`<lr-model-settings-panel temperature="1.5"></lr-model-settings-panel>`,

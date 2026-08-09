@@ -9,6 +9,7 @@ import {
   applyMarkdownTextQuoteAnchor,
   internalLinkHrefFrom,
   MarkdownOwnedAnimationFrameController,
+  tokenizeMarkdownHighlight,
 } from './markdown-shared.js';
 
 /** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
@@ -190,6 +191,19 @@ it('strips inline event-handler attributes from raw HTML passthrough when saniti
   const img = el.shadowRoot!.querySelector('img')!;
   expect(img.getAttribute('onerror')).to.equal(null);
   expect((window as unknown as { __lyraMarkdownXss?: boolean }).__lyraMarkdownXss).to.equal(undefined);
+});
+
+it('strips authored inline styles and paint-contains sanitized content', async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  el.content =
+    '<span data-hostile style="position:fixed;inset:0;z-index:2147483647;background:url(https://example.test/track)">Overlay</span>';
+  await waitUntil(() => el.shadowRoot!.querySelector('[data-hostile]') !== null);
+
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  const hostile = content.querySelector('[data-hostile]') as HTMLElement;
+  expect(hostile.hasAttribute('style')).to.equal(false);
+  expect(getComputedStyle(hostile).position).to.not.equal('fixed');
+  expect(getComputedStyle(content).contain).to.equal('paint');
 });
 
 it('renders unsanitized raw HTML when sanitize is explicitly false', async () => {
@@ -1030,6 +1044,23 @@ describe('highlightCode cache plumbing (no async loading yet)', () => {
     expect(pre.querySelector('span')!.textContent).to.equal('FAKE HIGHLIGHTED');
   });
 
+  it('retains only Shiki palette declarations in tokenized cache output', () => {
+    const highlighted = tokenizeMarkdownHighlight(
+      {
+        codeToHtml: () =>
+          '<pre style="background-color:#ffffff;position:fixed"><code><span style="color:#24292f;--shiki-dark:#e6edf3;background:url(https://example.test/track)">x</span></code></pre>',
+      } as never,
+      { key: 'ts\nx\n', lang: 'ts', code: 'x\n' },
+    );
+
+    expect(highlighted).to.include('data-lr-shiki-light-bg="#ffffff"');
+    expect(highlighted).to.include('data-lr-shiki-light="#24292f"');
+    expect(highlighted).to.include('data-lr-shiki-dark="#e6edf3"');
+    expect(highlighted).to.not.include('position:fixed');
+    expect(highlighted).to.not.include('background:url');
+    expect(highlighted).to.not.include(' style=');
+  });
+
   it('never consults or benefits from the cache when highlightCode is false, even if pre-populated', async () => {
     const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
     el.highlightCode = false;
@@ -1120,6 +1151,11 @@ describe('shiki highlighting (real peer)', () => {
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
     expect(pre.getAttribute('part')).to.equal('code-block');
     expect(pre.querySelector('code')!.className).to.include('language-ts');
+    expect(
+      [...pre.querySelectorAll<HTMLElement>('span')].some(
+        (span) => span.style.color !== '' || span.style.getPropertyValue('--shiki-dark') !== '',
+      ),
+    ).to.equal(true);
     // The highlighted code text (ignoring markup) still matches the source exactly.
     expect(pre.textContent).to.include('const x = 1;');
   });

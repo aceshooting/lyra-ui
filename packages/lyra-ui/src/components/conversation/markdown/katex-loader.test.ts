@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { loadKatex, clearKatexCache } from './katex-loader.js';
+import { loadKatex, getKatex, clearKatexCache } from './katex-loader.js';
+import { createMarkdownKatexState } from './markdown-shared.js';
 
 describe('loadKatex', () => {
   afterEach(() => clearKatexCache());
@@ -33,9 +34,22 @@ describe('loadKatex', () => {
       calls++;
       return Promise.resolve({ default: fakeKatex } as never);
     };
-    const { getKatex } = await import('./katex-loader.js');
     await getKatex(importer);
     await getKatex(importer);
     expect(calls).to.equal(1);
+  });
+
+  it('notifies every instance subscribed to the same in-flight load', async () => {
+    const state = createMarkdownKatexState();
+    const notified: string[] = [];
+    const notifyFirst = () => notified.push('first');
+
+    state.startLoad(notifyFirst);
+    state.startLoad(notifyFirst);
+    state.startLoad(() => notified.push('second'));
+
+    await getKatex();
+    await Promise.resolve();
+    expect(notified).to.deep.equal(['first', 'second']);
   });
 });

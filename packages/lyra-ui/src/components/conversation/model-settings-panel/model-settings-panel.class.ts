@@ -168,6 +168,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  readout tracks an in-progress drag/key-repeat instead of only updating
    *  once the interaction commits. */
   private onTemperatureInput = (e: CustomEvent<{ value: number }>): void => {
+    e.stopPropagation();
     this.temperature = e.detail.value;
   };
 

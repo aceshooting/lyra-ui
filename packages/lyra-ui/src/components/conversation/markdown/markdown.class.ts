@@ -381,6 +381,12 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   /** The browsing context and settlement hook for `streamingRenderRaf`; RAF handles are
    *  realm-local, and disconnect/adoption must settle a pending `updateComplete` wait. */
   private readonly streamingRenderFrames = new MarkdownOwnedAnimationFrameController();
+  /** Stable identity lets the shared KaTeX state de-duplicate this instance across any repeated
+   *  renders while the peer load is still in flight. */
+  private readonly handleKatexResolved = (): void => {
+    if (!this.isConnected) return;
+    this.renderMarkdown();
+  };
 
   /** Keys from `PendingHighlight` that failed to highlight -- peer missing, language unrecognized,
    *  or tokenization threw. Once a key lands here, `code()` stops re-discovering it as pending on
@@ -530,10 +536,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
    *  race a real, unmocked `import('katex')` settling underneath it. */
   private maybeLoadKatex(): void {
     if (!this.math) return;
-    katexState.startLoad(() => {
-      if (!this.isConnected) return;
-      this.renderMarkdown();
-    });
+    katexState.startLoad(this.handleKatexResolved);
   }
 
   /** Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called

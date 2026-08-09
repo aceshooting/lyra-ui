@@ -508,7 +508,9 @@ export interface MarkdownKatexState {
    *  `getIfLoaded()` returning falsy, which also covers a load that's merely still in flight. Used
    *  only to decide whether a literal fallback should also report `lr-render-error`. */
   isConfirmedMissing(): boolean;
-  /** Kicks off the shared page-wide `getKatex()` load the first time math needs it, at most once.
+  /** Subscribes one instance to the shared page-wide `getKatex()` load and kicks that load off the
+   *  first time math needs it. Reusing the same callback is idempotent, so repeated renders while
+   *  the peer is pending do not produce duplicate completion work.
    *  Skipped entirely while `setForTesting()` is active -- that seam controls math-rendering
    *  behavior directly and must never race a real, unmocked `import('katex')` settling underneath
    *  it. `onResolved` runs after the module lands; the caller still guards its own liveness. */
@@ -522,6 +524,7 @@ export function createMarkdownKatexState(): MarkdownKatexState {
   let resolved: KatexApi | null | undefined;
   let loadStarted = false;
   let override: KatexApi | null | undefined;
+  const subscribers = new Set<() => void>();
   return {
     setForTesting(katex) {
       override = katex;
@@ -533,11 +536,15 @@ export function createMarkdownKatexState(): MarkdownKatexState {
       return (override !== undefined ? override : resolved) === null;
     },
     startLoad(onResolved) {
-      if (loadStarted || override !== undefined) return;
+      if (override !== undefined || resolved !== undefined) return;
+      subscribers.add(onResolved);
+      if (loadStarted) return;
       loadStarted = true;
       void getKatex().then((katex) => {
         resolved = katex;
-        onResolved();
+        const pending = [...subscribers];
+        subscribers.clear();
+        for (const subscriber of pending) subscriber();
       });
     },
   };
@@ -568,6 +575,62 @@ export function markdownCodeTransformer(lang: string): ShikiTransformer {
   };
 }
 
+const SHIKI_COLOR = /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i;
+const SHIKI_STYLE_TO_DATA: Readonly<Record<string, string>> = {
+  color: 'data-lr-shiki-light',
+  'background-color': 'data-lr-shiki-light-bg',
+  '--shiki-light': 'data-lr-shiki-light',
+  '--shiki-light-bg': 'data-lr-shiki-light-bg',
+  '--shiki-dark': 'data-lr-shiki-dark',
+  '--shiki-dark-bg': 'data-lr-shiki-dark-bg',
+};
+const SHIKI_DATA_TO_STYLE: Readonly<Record<string, string>> = {
+  'data-lr-shiki-light': 'color',
+  'data-lr-shiki-light-bg': 'background-color',
+  'data-lr-shiki-dark': '--shiki-dark',
+  'data-lr-shiki-dark-bg': '--shiki-dark-bg',
+};
+
+/**
+ * Converts Shiki's generated inline palette into inert data before it shares a sanitizer pass
+ * with authored Markdown HTML. Only literal hex theme colors survive; layout, resource, and other
+ * declarations are discarded even if a future or compromised highlighter emits them.
+ */
+function encodeMarkdownHighlightStyles(markup: string): string {
+  return markup.replace(/\sstyle=(["'])(.*?)\1/gi, (_attribute, _quote: string, value: string) => {
+    const attributes: string[] = [];
+    for (const declaration of value.split(';')) {
+      const separator = declaration.indexOf(':');
+      if (separator < 0) continue;
+      const property = declaration.slice(0, separator).trim().toLowerCase();
+      const color = declaration.slice(separator + 1).trim();
+      const dataAttribute = SHIKI_STYLE_TO_DATA[property];
+      if (dataAttribute && SHIKI_COLOR.test(color)) attributes.push(`${dataAttribute}="${color}"`);
+    }
+    return attributes.length > 0 ? ` ${attributes.join(' ')}` : '';
+  });
+}
+
+/** Rehydrates only the inert, strict-color Shiki palette after DOMPurify has removed every style
+ * attribute. Authored markup can imitate these data attributes, but the strict value/property map
+ * can produce only color declarations -- never a resource fetch, overlay, or layout mutation. */
+function restoreMarkdownHighlightStyles(markup: string): string {
+  return markup.replace(/<[a-z][^<>]*>/gi, (openingTag) => {
+    const declarations: string[] = [];
+    const cleanTag = openingTag.replace(
+      /\s(data-lr-shiki-(?:light-bg|dark-bg|light|dark))=(["'])(#[\da-f]+)\2/gi,
+      (attribute, name: string, _quote: string, color: string) => {
+        const property = SHIKI_DATA_TO_STYLE[name.toLowerCase()];
+        if (!property || !SHIKI_COLOR.test(color)) return attribute;
+        declarations.push(`${property}:${color}`);
+        return '';
+      },
+    );
+    if (declarations.length === 0) return cleanTag;
+    return `${cleanTag.slice(0, -1)} style="${declarations.join(';')}">`;
+  });
+}
+
 /**
  * Tokenizes one pending fenced block with an already-resolved highlighter and returns the exact
  * string to cache (trailing newline included, matching the plain `code()` renderer's own output).
@@ -582,7 +645,7 @@ export function tokenizeMarkdownHighlight(hl: ShikiHighlighter, pending: Pending
       themes: SHIKI_THEMES,
       transformers: [markdownCodeTransformer(pending.lang)],
     }) as string;
-    return `${highlighted}\n`;
+    return `${encodeMarkdownHighlightStyles(highlighted)}\n`;
   } catch {
     // Tokenization failed for a reason other than an unrecognized grammar (each variant's loader
     // reports that itself) -- same effect either way: permanent plain fallback for this block.
@@ -756,19 +819,21 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
   // `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   // already are) -- without ADD_ATTR here, every rendered link's target="..." would be silently
-  // stripped even though the anchor itself survives sanitization. 'style' joins it because shiki's
-  // per-token output carries inline style="color:..." (theme colors), equally absent from the
-  // default allowlist. `semantics`/`annotation` join only when `math` is on -- the only KaTeX
-  // MathML output elements outside the default allowlist. `annotation-xml` is deliberately never
-  // added: KaTeX's own MathML output never emits it, and DOMPurify's default allowlist already
-  // treats it as a namespace-switching element worth keeping stripped.
+  // stripped even though the anchor itself survives sanitization. Every `style` is forbidden:
+  // Shiki's trusted palette was converted to strict, inert data attributes before this shared pass
+  // and is restored below; raw authored CSS must never gain the same privilege. `semantics`/
+  // `annotation` join only when `math` is on -- the only KaTeX MathML output elements outside the
+  // default allowlist. `annotation-xml` is deliberately never added: KaTeX's own MathML output
+  // never emits it, and DOMPurify already treats it as a namespace-switching element worth
+  // keeping stripped.
   const sanitized = deps.DOMPurify.sanitize(rawHtml, {
-    ADD_ATTR: ['target', 'style'],
+    ADD_ATTR: ['target'],
+    FORBID_ATTR: ['style'],
     ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
   }) as string;
   return {
     status: 'rendered',
-    html: sanitized,
+    html: restoreMarkdownHighlightStyles(sanitized),
     headingTree,
     mathFailed,
     pendingKeys,

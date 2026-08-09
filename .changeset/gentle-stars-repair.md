@@ -4,6 +4,11 @@
 
 Improve component reliability and public contracts across the library:
 
+- notify every same-variant Markdown instance when a shared in-flight KaTeX load settles, without
+  duplicating completion work across repeated renders;
+- strip authored inline CSS from sanitized Markdown while preserving only strict Shiki palette
+  colors and paint-containing the rendered document surface;
+
 - complete standalone theme inputs and semantic contrast coverage;
 - export public component property and configuration types from the registration-free package root;
 - preserve retrieval evidence locators through `lr-retrieval-trace`;
@@ -309,3 +314,5 @@ Improve component reliability and public contracts across the library:
   interactive glyph markup cannot nest actions or add keyboard stops.
 - localize `lr-callout`'s complete labeled live-announcement template so locales can reorder its
   context/content fields and choose their own punctuation.
+- contain `lr-model-settings-panel`'s internal live slider event while preserving its mirrored
+  temperature readout and consolidated committed-change contract.

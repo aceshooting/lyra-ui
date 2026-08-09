@@ -25,6 +25,10 @@ export const styles = css`
        lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
     overflow-block: hidden;
     overflow-wrap: anywhere;
+    /* Sanitization removes authored inline CSS. Paint containment is the defense-in-depth boundary
+       for explicitly unsanitized content and any future sanitizer regression: fixed descendants
+       remain clipped to this document surface instead of covering the surrounding application. */
+    contain: paint;
   }
   [part='content']:focus-visible,
   [part='code-block']:focus-visible {
