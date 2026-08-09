@@ -71,6 +71,7 @@ const falseDefaultBooleanConverter = {
  *  handle's `aria-describedby`. Ids are scoped per shadow root, so a fixed
  *  one cannot collide across instances. */
 const HINT_ID = 'slider-hint';
+const ERROR_ID = 'slider-error';
 const LABEL_ID = 'slider-label';
 
 /** The value axis. `'horizontal'` maps values to the inline axis (mirroring
@@ -150,10 +151,12 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * stopping, so the active thumb always follows the user's pointer/key. A named range submits two
  * same-name `FormData` entries in lower/upper order; a single slider submits one numeric string.
  *
- * `label`/`hint` plus their slots render visible form context. `with-label`/`with-hint` are SSR
- * presence hints only: hydrated instances also detect populated content automatically. The
- * `reference` slot supplies endpoint/unit context in the `references` part. All three text regions
- * wrap unbroken content within the slider's allocation in LTR and RTL instead of widening it.
+ * `label`/`hint`/`errorText` plus their slots render visible form context. `with-label`/`with-hint`
+ * are SSR presence hints only: hydrated instances also detect populated content automatically.
+ * Every handle references visible error content before hint content through `aria-describedby`.
+ * The `reference` slot supplies endpoint/unit context in the `references` part. All four text
+ * regions wrap unbroken content within the slider's allocation in LTR and RTL instead of widening
+ * it.
  *
  * @customElement lr-slider
  * @event input - Native event fired continuously while a user moves a handle.
@@ -177,6 +180,7 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @slot label - Rich visible label content, appended after the plain `label` property.
  * @slot hint - Rich hint content, replacing the plain-text `hint` attribute.
  * @slot help-text - Shoelace-compatible alias for the `hint` slot.
+ * @slot error - Rich error content, replacing the plain-text `errorText` property.
  * @slot reference - Endpoint or unit references rendered beside the track.
  * @csspart base - Compatibility name on the interactive track row; use `slider`.
  * @csspart slider - Interactive track row. It is the same node as `base`.
@@ -205,6 +209,7 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @csspart tooltip__arrow - Decorative tooltip arrow.
  * @csspart tooltip-visible - Added to `tooltip` while that handle is focused or being dragged.
  * @csspart value - The visible numeric readout, rendered when `show-value` is true.
+ * @csspart error - The error region, hidden while neither `errorText` nor the `error` slot has content.
  * @csspart hint - The hint region, hidden while neither `hint` nor the `hint` slot has content.
  * @method focus - Focuses the first thumb, or the lower thumb in range mode.
  * @method blur - Blurs whichever thumb currently owns focus.
@@ -607,6 +612,9 @@ export class LyraSlider extends LyraSliderBase {
   /** Shoelace-compatible spelling of `hint`; `hint` wins when both are supplied. */
   @property({ attribute: 'help-text' }) helpText = '';
 
+  /** Plain-text error associated with every handle; rich content can use the `error` slot. */
+  @property({ attribute: 'error-text' }) errorText = '';
+
   /** SSR presence hint for visible label chrome. Hydrated instances also inspect slot content. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
 
@@ -656,6 +664,7 @@ export class LyraSlider extends LyraSliderBase {
   @property({ type: Boolean, attribute: 'show-value', converter: falseDefaultBooleanConverter }) showValue = false;
 
   @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
   @state() private hasReferenceSlot = false;
 
@@ -693,6 +702,7 @@ export class LyraSlider extends LyraSliderBase {
     this.sanitizeHandles();
     const slots = Array.from(this.children, (child) => child.getAttribute('slot'));
     this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
+    this.hasErrorSlot = slots.includes('error');
     this.hasLabelSlot = slots.includes('label');
     this.hasReferenceSlot = slots.includes('reference');
     this.syncFormValue();
@@ -1326,6 +1336,7 @@ export class LyraSlider extends LyraSliderBase {
     if (slot.name === 'hint' || slot.name === 'help-text') {
       this.hasHintSlot = this.slotsHaveContent(['hint', 'help-text']);
     }
+    if (slot.name === 'error') this.hasErrorSlot = this.slotsHaveContent(['error']);
     if (slot.name === 'label') this.hasLabelSlot = this.slotsHaveContent(['label']);
     if (slot.name === 'reference') this.hasReferenceSlot = this.slotsHaveContent(['reference']);
   };
@@ -1450,9 +1461,10 @@ export class LyraSlider extends LyraSliderBase {
   override render(): TemplateResult {
     const vertical = this.orientation === 'vertical';
     const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0 || this.helpText.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
     const hasReference = this.hasReferenceSlot;
-    const describedBy = hasHint ? HINT_ID : undefined;
+    const describedBy = [hasError ? ERROR_ID : '', hasHint ? HINT_ID : ''].filter(Boolean).join(' ') || undefined;
     const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;
     const valuePercent = this.percentOf(this.value);
     const offsetPercent = this.percentOf(
@@ -1505,6 +1517,9 @@ export class LyraSlider extends LyraSliderBase {
       ${this.showValue
         ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
         : nothing}
+      <div id=${ERROR_ID} part="error" ?hidden=${!hasError}>
+        ${this.hasErrorSlot ? nothing : this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot>
+      </div>
       <div id=${HINT_ID} part="hint form-control-help-text" ?hidden=${!hasHint}>
         ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onSlotChange}></slot
         ><slot name="help-text" @slotchange=${this.onSlotChange}></slot>

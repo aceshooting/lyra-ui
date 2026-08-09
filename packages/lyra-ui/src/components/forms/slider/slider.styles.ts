@@ -248,8 +248,9 @@ export const styles = css`
     min-inline-size: var(--lr-size-2-5ch);
     text-align: end;
   }
+  [part='error'],
   [part~='hint'] {
-    /* Full basis so the hint always occupies its own wrapped line under the
+    /* Full basis so supporting text always occupies its own wrapped line under the
        track row, however wide the track and readout are. */
     flex: 1 0 100%;
     min-inline-size: 0;
@@ -258,6 +259,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
+  [part='error'] {
+    color: var(--lr-color-danger);
+  }
+  [part='error'][hidden],
   [part~='hint'][hidden] {
     display: none;
   }
@@ -305,6 +310,7 @@ export const styles = css`
     inset-block-start: auto;
     inset-inline-start: 50%;
   }
+  :host([orientation='vertical']) [part='error'],
   :host([orientation='vertical']) [part~='hint'] {
     flex: 0 0 auto;
   }

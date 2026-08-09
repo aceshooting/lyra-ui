@@ -193,7 +193,7 @@ it('strips inline event-handler attributes from raw HTML passthrough when saniti
   expect((window as unknown as { __lyraMarkdownXss?: boolean }).__lyraMarkdownXss).to.equal(undefined);
 });
 
-it('strips authored inline styles and paint-contains sanitized content', async () => {
+it('strips authored inline styles from sanitized content', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.content =
     '<span data-hostile style="position:fixed;inset:0;z-index:2147483647;background:url(https://example.test/track)">Overlay</span>';
@@ -203,7 +203,6 @@ it('strips authored inline styles and paint-contains sanitized content', async (
   const hostile = content.querySelector('[data-hostile]') as HTMLElement;
   expect(hostile.hasAttribute('style')).to.equal(false);
   expect(getComputedStyle(hostile).position).to.not.equal('fixed');
-  expect(getComputedStyle(content).contain).to.equal('paint');
 });
 
 it('renders unsanitized raw HTML when sanitize is explicitly false', async () => {
@@ -215,6 +214,8 @@ it('renders unsanitized raw HTML when sanitize is explicitly false', async () =>
 
   const img = el.shadowRoot!.querySelector('img')!;
   expect(img.getAttribute('onerror')).to.equal('window.__lyraMarkdownXssOptOut = true');
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(getComputedStyle(content).contain).to.equal('paint');
 });
 
 it('renders unsanitized raw HTML when sanitize="false" is written as a plain HTML attribute string, not just a JS property', async () => {

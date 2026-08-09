@@ -165,6 +165,31 @@ export const InAForm: Story = {
   `,
 };
 
+export const ErrorChrome: Story = {
+  name: 'Error and hint chrome',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Error content is announced before supporting hint text by every handle. Use `error-text` for plain copy or the `error` slot for rich markup.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-slider
+      range
+      label="Budget"
+      min="0"
+      max="1000"
+      min-value="300"
+      max-value="700"
+      error-text="Choose a valid budget window."
+      hint="Move either handle to update the submitted range."
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
 export const Interactive: Story = {
   render: () => html`
     <lr-slider

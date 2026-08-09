@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,10 +70,12 @@ single numeric string entry.
 - `withTooltip: boolean = false` (attribute `with-tooltip`) — shows a live value bubble
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
-- `label: string = ''`, `hint: string = ''` — visible form context above/below the track, with rich
-  `label`/`hint` slots. A host `aria-label` wins for the interactive accessible name by attribute
-  presence, including an explicitly empty value; range mode then suppresses `aria-labelledby` on
-  its group owner as well.
+- `label: string = ''`, `hint: string = ''`, and `errorText: string = ''` (attribute `error-text`) —
+  visible form context around the track, with matching rich `label`/`hint`/`error` slots. A host
+  `aria-label` wins for the interactive accessible name by attribute presence, including an
+  explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
+  When error and hint content are both present, every handle's `aria-describedby` references the
+  error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
 - `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
 - `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
   presence hints; hydrated instances also discover populated slots automatically.
@@ -120,16 +122,17 @@ focused handle (first/lower when none is focused). `getForm()`, `checkValidity()
 `reportValidity()`, `setCustomValidity(message)`, and `resetValidity()` mirror native form-control
 methods.
 
-**Slots:** `label`, `hint`, Shoelace alias `help-text`, and `reference`. Empty chrome stays hidden
-and contributes no accessible relationship.
+**Slots:** `label`, `hint`, Shoelace alias `help-text`, `error`, and `reference`. Empty chrome stays
+hidden and contributes no accessible relationship.
 
 The standalone slider has a zero intrinsic flex minimum and a 100% allocation ceiling. Its label,
-reference, and hint regions wrap even unbroken content in LTR and RTL; the fixed numeric readout and
-track remain contained. An exact-320px story covers this composition.
+reference, error, and hint regions wrap even unbroken content in LTR and RTL; the fixed numeric
+readout and track remain contained. An exact-320px story covers this composition.
 
 **CSS parts:** `base slider form-control form-control-input input control` are tokens on the
 interactive row (`role="group"` in range mode). `label form-control-label` share the visible label
-node; `references` wraps the endpoint/unit slot; `hint form-control-help-text` share the hint node.
+node; `references` wraps the endpoint/unit slot; `error` is the error node; and
+`hint form-control-help-text` share the hint node.
 `track` is the full-length line; `indicator` is the filled portion from `min` up to the current
 value, or between the two handles in `range` mode.
 `markers` (the tick container, present only with `with-markers`) and `marker` (one `step`-grid
@@ -163,7 +166,7 @@ them all without a per-tier rule, and the values in brackets are what they resol
 `m`:
 
 `--lr-slider-gap` (default `var(--lr-space-s)`) controls the row/column gap between the track,
-value readout, label, references, and hint as those flex items wrap.
+value readout, label, references, error, and hint as those flex items wrap.
 
 - `--lr-slider-thumb-size` (default `calc(var(--lr-form-control-height) * 0.4)`; `1rem`) — the
   diameter of each draggable handle. The transparent drag area around it never drops below

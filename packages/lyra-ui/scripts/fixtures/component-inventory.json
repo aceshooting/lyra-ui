@@ -95456,6 +95456,16 @@
             "default": false
           },
           {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "form",
             "property": "form",
             "type": "HTMLFormElement | null",
@@ -95764,6 +95774,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "form",
@@ -96111,6 +96131,10 @@
         ],
         "slots": [
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
             "name": "help-text",
             "deprecated": null
           },
@@ -96190,6 +96214,10 @@
           },
           {
             "name": "control",
+            "deprecated": null
+          },
+          {
+            "name": "error",
             "deprecated": null
           },
           {

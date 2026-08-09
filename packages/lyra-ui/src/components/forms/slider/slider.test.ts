@@ -1914,8 +1914,51 @@ it('transitions the tooltip with motion tokens and stops under prefers-reduced-m
 });
 
 // ---------------------------------------------------------------------------
-// hint
+// error / hint
 // ---------------------------------------------------------------------------
+
+it('renders error text and associates it before the hint on every handle', async () => {
+  const el = (await fixture(html`
+    <lr-slider range error-text="Choose a valid range" hint="Lower must not exceed upper"></lr-slider>
+  `)) as LyraSlider;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error.textContent).to.contain('Choose a valid range');
+  expect(error.hasAttribute('hidden')).to.equal(false);
+  for (const handle of handles(el)) {
+    expect(handle.getAttribute('aria-describedby')).to.equal('slider-error slider-hint');
+  }
+});
+
+it('tracks rich error-slot content and removes its description when unset', async () => {
+  const el = (await fixture(html`
+    <lr-slider><strong slot="error">Resolve this value</strong></lr-slider>
+  `)) as LyraSlider;
+  await elementUpdated(el);
+
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error.hasAttribute('hidden')).to.equal(false);
+  expect(el.querySelector('[slot="error"]')!.textContent).to.equal('Resolve this value');
+  expect(handles(el)[0]!.getAttribute('aria-describedby')).to.equal('slider-error');
+
+  el.querySelector('[slot="error"]')!.remove();
+  await elementUpdated(el);
+  expect(error.hasAttribute('hidden')).to.equal(true);
+  expect(handles(el)[0]!.hasAttribute('aria-describedby')).to.equal(false);
+});
+
+it('hides error chrome and removes its description when errorText is cleared', async () => {
+  const el = (await fixture(html`<lr-slider error-text="Resolve this value"></lr-slider>`)) as LyraSlider;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error.hasAttribute('hidden')).to.equal(false);
+  expect(handles(el)[0]!.getAttribute('aria-describedby')).to.equal('slider-error');
+
+  el.errorText = '';
+  await elementUpdated(el);
+  expect(error.hasAttribute('hidden')).to.equal(true);
+  expect(handles(el)[0]!.hasAttribute('aria-describedby')).to.equal(false);
+});
 
 it('renders hint text and describes every handle with it', async () => {
   const el = (await fixture(html`

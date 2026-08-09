@@ -721,6 +721,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   override render(): TemplateResult {
     return renderMarkdownContent({
       content: this.content,
+      sanitize: this.sanitize,
       renderedHtml: this.renderedHtml,
       hostAriaLabel: this.getAttribute('aria-label'),
       onClick: this.onContentClick,

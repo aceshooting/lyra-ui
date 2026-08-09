@@ -1015,6 +1015,9 @@ export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | nu
 export interface MarkdownContentOptions {
   /** The Markdown source -- also the plain-text fallback rendering when `renderedHtml` is `null`. */
   content: string;
+  /** Whether the rendered document passed through DOMPurify. Unsanitized content gets an explicit
+   *  paint-containment boundary in the shared stylesheet. */
+  sanitize: boolean;
   /** Sanitized (or deliberately unsanitized) HTML, or `null` for the plain-text fallback: peers
    *  still loading, or a render attempt just fell back after a failure. The two states look
    *  identical on purpose -- a consumer distinguishes them via `lr-render-error`. */
@@ -1044,6 +1047,7 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         tabindex=${options.content.trim() ? '0' : nothing}
         aria-label=${options.hostAriaLabel || nothing}
         ?data-fallback=${isFallback}
+        ?data-unsanitized=${!options.sanitize}
         @click=${options.onClick}
       >
         ${isFallback ? options.content : unsafeHTML(options.renderedHtml)}

@@ -7,7 +7,8 @@ Improve component reliability and public contracts across the library:
 - notify every same-variant Markdown instance when a shared in-flight KaTeX load settles, without
   duplicating completion work across repeated renders;
 - strip authored inline CSS from sanitized Markdown while preserving only strict Shiki palette
-  colors and paint-containing the rendered document surface;
+  colors, and paint-contain the explicit unsanitized escape hatch;
+- add standard error text, rich error-slot chrome, and handle descriptions to `lr-slider`;
 
 - complete standalone theme inputs and semantic contrast coverage;
 - export public component property and configuration types from the registration-free package root;

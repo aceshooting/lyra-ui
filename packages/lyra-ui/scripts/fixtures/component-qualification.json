@@ -24943,14 +24943,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 60,
+              "line": 61,
               "test": "is accessible once populated, richly-formatted content has rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 1197,
+              "line": 1234,
               "test": "is accessible once a fenced code block has been highlighted",
               "target": "el",
               "state": "populated"
@@ -24982,7 +24982,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 81,
+              "line": 82,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25050,7 +25050,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.test.ts",
-              "line": 13,
+              "line": 14,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -25132,21 +25132,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 130,
+              "line": 144,
               "test": "is accessible with plain content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 215,
+              "line": 229,
               "test": "is accessible once highlighted via languages",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 1186,
+              "line": 1200,
               "test": "is accessible with a custom tab size on a tab-indented fenced block",
               "target": "el",
               "state": "populated"
@@ -25178,7 +25178,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 81,
+              "line": 82,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25235,7 +25235,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.test.ts",
-              "line": 13,
+              "line": 14,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -27475,14 +27475,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 376,
+              "line": 396,
               "test": "is accessible with a populated catalog and non-default temperature",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 388,
+              "line": 408,
               "test": "is accessible in compact layout",
               "target": "el",
               "state": "populated"
@@ -38173,21 +38173,21 @@
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 2000,
+              "line": 2043,
               "test": "is accessible as a labeled two-handle range with markers, a tooltip and a hint",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 2020,
+              "line": 2063,
               "test": "is accessible as a vertical, readonly slider",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 2072,
+              "line": 2115,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"

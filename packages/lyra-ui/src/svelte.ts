@@ -7794,6 +7794,7 @@ export type LyraSliderSvelteProps = LyraSvelteElementProps<
   | 'customError'
   | 'defaultValue'
   | 'disabled'
+  | 'errorText'
   | 'form'
   | 'helpText'
   | 'hint'
@@ -7861,6 +7862,7 @@ export type LyraSliderSvelteProps = LyraSvelteElementProps<
   | '--track-size',
   {
     'custom-error'?: LyraSlider['customError'];
+    'error-text'?: LyraSlider['errorText'];
     'help-text'?: LyraSlider['helpText'];
     'indicator-offset'?: LyraSlider['indicatorOffset'];
     'max-value'?: LyraSlider['maxValue'];

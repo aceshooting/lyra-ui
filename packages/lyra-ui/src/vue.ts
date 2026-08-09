@@ -7787,6 +7787,7 @@ export type LyraSliderVueProps = LyraVueCustomElement<
   | 'customError'
   | 'defaultValue'
   | 'disabled'
+  | 'errorText'
   | 'form'
   | 'helpText'
   | 'hint'
@@ -7854,6 +7855,7 @@ export type LyraSliderVueProps = LyraVueCustomElement<
   | '--track-size',
   {
     'custom-error'?: LyraSlider['customError'];
+    'error-text'?: LyraSlider['errorText'];
     'help-text'?: LyraSlider['helpText'];
     'indicator-offset'?: LyraSlider['indicatorOffset'];
     'max-value'?: LyraSlider['maxValue'];

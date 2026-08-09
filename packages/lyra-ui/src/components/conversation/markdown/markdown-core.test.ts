@@ -117,9 +117,11 @@ Some **bold** text with a [link](https://example.com/docs).
     // Same async-load window as above -- wait for the real (unsanitized) output.
     await waitUntil(() => el.shadowRoot!.querySelector('#raw') !== null);
     expect(el.shadowRoot!.querySelector('#raw')).to.exist;
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(getComputedStyle(content).contain).to.equal('paint');
   });
 
-  it('strips authored inline styles and paint-contains sanitized content', async () => {
+  it('strips authored inline styles from sanitized content', async () => {
     const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
     el.content =
       '<span data-hostile style="position:fixed;inset:0;z-index:2147483647;background:url(https://example.test/track)">Overlay</span>';
@@ -129,7 +131,6 @@ Some **bold** text with a [link](https://example.com/docs).
     const hostile = content.querySelector('[data-hostile]') as HTMLElement;
     expect(hostile.hasAttribute('style')).to.equal(false);
     expect(getComputedStyle(hostile).position).to.not.equal('fixed');
-    expect(getComputedStyle(content).contain).to.equal('paint');
   });
 
   it('escapes raw HTML when escape-html is set', async () => {
