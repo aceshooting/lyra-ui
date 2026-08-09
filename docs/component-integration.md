@@ -1087,7 +1087,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `emoji-picker-element-data`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 30.7 KiB (31472 bytes; bundle SHA-256 `0818497145221e0724c9a85d0eca02b84685699dd896be3234e93e3200847f9e`)
+- Standalone gzip: 31 KiB (31715 bytes; bundle SHA-256 `79dcdebd0d36f897746aed824fa751cdfc6b3d3e12b9ed94747ba8c629db906b`)
 
 </details>
 

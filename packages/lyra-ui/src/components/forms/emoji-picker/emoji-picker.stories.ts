@@ -35,6 +35,24 @@ export const WithSuppliedGroups: Story = {
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
+/** Focus an emoji option, then use the pointer to replace the controlled collection. Preventing
+ *  the button's pointer-down default keeps the grid's real focus ownership observable. */
+export const ControlledGroupReplacement: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: 100%;">
+      <button
+        type="button"
+        @pointerdown=${(event: PointerEvent) => event.preventDefault()}
+        @click=${(event: Event) => {
+          const picker = (event.currentTarget as HTMLElement).parentElement?.querySelector('lr-emoji-picker');
+          if (picker) picker.groups = [{ key: 'smileys', label: 'Smileys & Emotion', emojis: [groups[0].emojis[0]] }];
+        }}
+      >Keep only the first emoji</button>
+      <lr-emoji-picker .groups=${groups}></lr-emoji-picker>
+    </div>
+  `,
+};
+
 /** The active (keyboard-highlighted) and hovered emoji share one background hook,
  *  `--lr-emoji-picker-active-bg`. It is not declared on `:host`, so setting it on an ancestor
  *  recolors only the emoji highlight — not everything else reading `--lr-color-brand-quiet`.

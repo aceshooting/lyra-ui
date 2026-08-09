@@ -1174,7 +1174,7 @@ it("clamps an oversized max-duration-ms to the browser timer ceiling instead of 
   }
 });
 
-it('never schedules a max-duration-ms auto-stop for a NaN or negative value (the existing `> 0` guard already excludes them)', async () => {
+it('never schedules a max-duration-ms auto-stop for a NaN value', async () => {
   const restore = stubSuccessfulCapture();
   try {
     const nan = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
@@ -1183,7 +1183,14 @@ it('never schedules a max-duration-ms auto-stop for a NaN or negative value (the
     await aTimeout(30);
     expect(nan.state).to.equal('recording'); // never auto-stopped
     nan.cancel();
+  } finally {
+    restore();
+  }
+});
 
+it('never schedules a max-duration-ms auto-stop for a negative value', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
     const negative = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     negative.maxDurationMs = -100;
     await negative.start();

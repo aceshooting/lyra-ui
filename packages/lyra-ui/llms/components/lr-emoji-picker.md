@@ -70,7 +70,11 @@ tabbable). ArrowLeft/ArrowRight step the active item backward/forward following 
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
 `role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
 the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
-pointer also moves the active item to it.
+pointer also moves the active item to it. When a controlled `groups` replacement removes the
+focused option, focus moves to the nearest surviving option; when the same item object remains,
+its identity wins even if it moved. A replacement never pulls focus away from the search field or
+an external control. In a windowed grid, roving navigation materializes an off-window target before
+transferring focus, so End and long row jumps never strand focus on a removed virtual row.
 
 **Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
 content, overrides the `errorText` attribute when provided).

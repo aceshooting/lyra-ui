@@ -83,6 +83,10 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * over the same listbox: the arrow keys and Enter also work there while focus stays in the input,
  * with `aria-activedescendant` tracking the active option. Large data sets automatically window
  * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
+ * Replacing `groups` while an emoji option owns focus preserves that item when its object remains
+ * present, otherwise focus moves to the nearest surviving option; search or external focus is
+ * never pulled into the grid by a controlled collection update. Roving navigation to an
+ * off-window option materializes its virtual row before transferring focus.
  *
  * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-select>`/
  * `<lr-color-picker>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
@@ -201,6 +205,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
   set groups(value: EmojiPickerGroup[]) {
     const old = this._groups;
+    const focused = this.shadowRoot?.activeElement as HTMLElement | null;
+    const focusedIndex = Number(focused?.dataset['index']);
+    this.pendingGridFocus =
+      focused?.getAttribute('part')?.split(/\s+/).includes('emoji') && Number.isInteger(focusedIndex)
+        ? { item: this.focusedGridItem ?? this.flatItems[focusedIndex], index: focusedIndex }
+        : undefined;
     this.groupsWereSet = true;
     this._groups = Array.isArray(value) ? value : [];
     this.requestUpdate('groups', old);
@@ -275,6 +285,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // the `live()` bindings in `render()` reconcile the template against that imperative state
   // whenever a real re-render (a query/groups change) happens.
   private activeIndex = 0;
+  private focusedGridItem?: EmojiPickerItem;
+  private pendingGridFocus?: { item?: EmojiPickerItem; index: number };
 
   /** The large-data path keeps only visible rows in the DOM. The regular path remains unchanged
    * for small sets so consumers keep the simple grouped light-DOM shape they already receive. */
@@ -496,6 +508,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const buttons = this.optionButtons();
     if (buttons.length === 0 && !this.isVirtualized) return;
     this.activeIndex = Math.max(0, Math.min(next, this.flatItems.length - 1));
+    if (focusTarget) {
+      this.pendingGridFocus = {
+        item: this.flatItems[this.activeIndex],
+        index: this.activeIndex,
+      };
+    }
     const target = this.isVirtualized
       ? this.renderRoot.querySelector<HTMLButtonElement>(
           `[part="emoji"][data-index="${this.activeIndex}"]`,
@@ -523,10 +541,14 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         this.requestUpdate();
       }
     }
-    if (focusTarget) target?.focus();
+    if (focusTarget && target) {
+      this.pendingGridFocus = undefined;
+      target.focus();
+    }
   }
 
   private onSearchInput = (event: Event): void => {
+    this.pendingGridFocus = undefined;
     this.queryText = (event.target as HTMLInputElement).value;
     this.activeIndex = 0;
   };
@@ -601,6 +623,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       return;
     }
     event.preventDefault();
+    if (inSearch) this.pendingGridFocus = undefined;
     this.setActiveIndex(target, !inSearch);
   };
 
@@ -618,7 +641,14 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const option = button as HTMLButtonElement;
     const indexed = Number(option.dataset['index']);
     const index = Number.isInteger(indexed) ? indexed : this.optionButtons().indexOf(option);
+    if (this.pendingGridFocus) return;
+    this.focusedGridItem = this.flatItems[index];
     if (index >= 0 && index !== this.activeIndex) this.setActiveIndex(index, false);
+  };
+
+  private onEmojiPointerEnter = (itemIndex: number): void => {
+    this.pendingGridFocus = undefined;
+    this.setActiveIndex(itemIndex, false);
   };
 
   private onGridScroll = (event: Event): void => {
@@ -728,17 +758,48 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   protected override updated(changed: PropertyValues): void {
     this.syncGridObserver();
-    if (!changed.has('queryText') && !changed.has('groups')) return;
+    if (!changed.has('queryText') && !changed.has('groups')) {
+      this.restorePendingGridFocus();
+      return;
+    }
     const buttons = this.optionButtons();
     if (buttons.length === 0) {
       // No options: the combobox must not reference a nonexistent descendant.
       this.searchEl?.removeAttribute('aria-activedescendant');
+      if (this.pendingGridFocus) {
+        this.pendingGridFocus = undefined;
+        this.searchEl?.focus();
+      }
       return;
     }
-    if (!this.isVirtualized && this.activeIndex >= buttons.length) this.activeIndex = 0;
+    if (this.pendingGridFocus) {
+      const retainedIndex = this.pendingGridFocus.item
+        ? this.flatItems.indexOf(this.pendingGridFocus.item)
+        : -1;
+      this.activeIndex = retainedIndex >= 0
+        ? retainedIndex
+        : Math.max(0, Math.min(this.pendingGridFocus.index, this.flatItems.length - 1));
+      this.pendingGridFocus = {
+        item: this.flatItems[this.activeIndex],
+        index: this.activeIndex,
+      };
+    } else if (!this.isVirtualized && this.activeIndex >= buttons.length) {
+      this.activeIndex = 0;
+    }
     // The grid just re-rendered: re-assert the active option's imperative state (tabindex,
     // aria-selected, aria-activedescendant) against the fresh DOM and keep it scrolled into view.
     this.setActiveIndex(this.activeIndex, false);
+    this.restorePendingGridFocus();
+  }
+
+  private restorePendingGridFocus(): void {
+    if (!this.pendingGridFocus) return;
+    const target = this.renderRoot.querySelector<HTMLButtonElement>(
+      `[part="emoji"][data-index="${this.activeIndex}"]`,
+    );
+    if (!target) return;
+    this.pendingGridFocus = undefined;
+    target.focus();
   }
 
   override disconnectedCallback(): void {
@@ -752,6 +813,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private resetOwnerRealmResources(): void {
     this.ownerRealmGeneration += 1;
+    this.pendingGridFocus = undefined;
     this.resetGridObserver();
     // The probe node itself stays in the shadow root (it is re-observed on reconnect); only the
     // observer is torn down, so nothing keeps measuring while detached.
@@ -774,7 +836,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       ?disabled=${this.effectiveDisabled}
       @click=${() => this.pick(item)}
       @focusin=${this.onGridFocusIn}
-      @mouseenter=${() => this.setActiveIndex(itemIndex, false)}
+      @mouseenter=${() => this.onEmojiPointerEnter(itemIndex)}
     >${item.emoji}</button>`;
   }
 

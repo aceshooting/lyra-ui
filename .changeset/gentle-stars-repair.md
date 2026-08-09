@@ -15,6 +15,9 @@ Improve component reliability and public contracts across the library:
 - preserve retrieval evidence locators through `lr-retrieval-trace`;
 - honor slot-only answer and source content in `lr-rag-answer`;
 - preserve keyboard focus when retrieval paths, chips, and source collections change;
+- preserve `lr-emoji-picker` option focus by identity or nearest survivor when controlled groups
+  reorder or shrink, without stealing search or external focus, and materialize off-window roving
+  targets before transferring focus;
 - normalize invalid `lr-knowledge-base-admin` tab state to its Sources fallback;
 - remove unintended nested card chrome from generated RAG sources and evaluation metrics;
 - restore `lr-export-button` to sequential keyboard navigation after loading or disablement ends;

@@ -905,6 +905,20 @@ describe('windowed geometry fallbacks', () => {
 });
 
 describe('setActiveIndex beyond the rendered window', () => {
+  it('materializes and focuses an off-window option reached from the roving grid', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+
+    const first = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"][data-index="0"]')!;
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.dataset['index']).to.equal('499');
+  });
+
   it('scrolls the windowed grid to the active row when End jumps past the currently rendered rows', async () => {
     const el = await connectEmojiPicker();
     el.style.inlineSize = '320px';
@@ -1142,6 +1156,44 @@ it('resets the active index back to 0 when a smaller groups array leaves the pre
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
   expect(buttons.length).to.equal(1);
   expect(buttons[0].tabIndex).to.equal(0);
+});
+
+it('moves owned grid focus to the clamped survivor when groups remove the focused emoji', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+
+  const originalButtons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  originalButtons[2].focus();
+  expect(el.shadowRoot!.activeElement?.id).to.equal(originalButtons[2].id);
+
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  await el.updateComplete;
+
+  const survivor = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!;
+  expect(survivor.tabIndex).to.equal(0);
+  expect(el.shadowRoot!.activeElement?.id).to.equal(survivor.id);
+});
+
+it('preserves focused emoji identity across group reordering without stealing foreign focus', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+
+  const dog = el.shadowRoot!.querySelector<HTMLButtonElement>('[aria-label="dog face"]')!;
+  dog.focus();
+  el.groups = [groups[1], groups[0]];
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('dog face');
+
+  const foreign = document.createElement('button');
+  foreign.id = 'emoji-picker-foreign-focus';
+  created.push(foreign);
+  document.body.append(foreign);
+  foreign.focus();
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  await el.updateComplete;
+  expect(document.activeElement?.id).to.equal(foreign.id);
 });
 
 it('reflects aria-required and aria-invalid as true on the grid once required is set and the field has been touched', async () => {
