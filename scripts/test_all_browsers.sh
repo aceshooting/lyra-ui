@@ -211,8 +211,12 @@ done
 if [[ "$overall" != "0" ]]; then
   for browser in "${REQUESTED_BROWSERS[@]}"; do
     if [[ "${LANE_STATUS[$browser]}" == "1" ]]; then
-      printf '\n\033[1;31m-- tail of %s log (%s/%s.log) --\033[0m\n' "$browser" "$LOG_DIR" "$browser"
-      tail -n 80 "$LOG_DIR/$browser.log"
+      printf '\n\033[1;31m-- failure details from %s log (%s/%s.log) --\033[0m\n' "$browser" "$LOG_DIR" "$browser"
+      if grep -q '❌' "$LOG_DIR/$browser.log"; then
+        grep -B 15 -A 40 '❌' "$LOG_DIR/$browser.log"
+      else
+        tail -n 200 "$LOG_DIR/$browser.log"
+      fi
     fi
   done
   exit 1

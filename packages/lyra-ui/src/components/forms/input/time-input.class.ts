@@ -344,6 +344,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private digitBuffer = '';
   private digitSegment?: SegmentName;
   private pendingSegmentFocus?: SegmentName;
+  private restoringSegmentFocus = false;
   private cleanupPositioner?: () => void;
   private overlayHandle?: OverlayHandle;
   private lightDismissDocument?: Document;
@@ -465,6 +466,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return this.pattern
       .filter((part): part is TimePatternPart & { type: SegmentName } => part.type !== 'literal')
       .map((part) => part.type);
+  }
+
+  private activeSegmentFor(order = this.segmentOrder): SegmentName {
+    return order.includes(this.activeSegment) ? this.activeSegment : (order[0] ?? 'hour');
   }
 
   private get usesTwelveHour(): boolean {
@@ -728,7 +733,17 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private onSegmentFocus = (event: FocusEvent): void => {
     event.stopPropagation();
     const target = event.target as HTMLElement;
-    this.activeSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
+    const focusedSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
+    if (this.restoringSegmentFocus) {
+      queueMicrotask(() => {
+        if (this.isConnected && this.segmentOrder.includes(focusedSegment)) {
+          this.activeSegment = focusedSegment;
+        }
+      });
+      return;
+    } else {
+      this.activeSegment = focusedSegment;
+    }
     const related = event.relatedTarget;
     if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
     relayNativeEvent(this, event);
@@ -737,6 +752,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private onSegmentBlur = (event: FocusEvent): void => {
     event.stopPropagation();
+    if (this.pendingSegmentFocus) {
+      this.resetDigitBuffer();
+      return;
+    }
     const related = event.relatedTarget;
     if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
     // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused segment (its tabindex drops to -1) makes the
@@ -756,8 +775,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   override focus(options?: FocusOptions): void {
     if (this.effectiveDisabled) return;
     const order = this.segmentOrder;
-    if (!order.includes(this.activeSegment)) this.activeSegment = order[0] ?? 'hour';
-    this.segmentElement(this.activeSegment)?.focus(options);
+    const activeSegment = this.activeSegmentFor(order);
+    if (activeSegment !== this.activeSegment) this.activeSegment = activeSegment;
+    this.segmentElement(activeSegment)?.focus(options);
   }
 
   override blur(): void {
@@ -1004,7 +1024,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
-    return this.segmentElement(this.activeSegment);
+    return this.segmentElement(this.activeSegmentFor());
   }
 
   override formResetCallback(): void {
@@ -1039,15 +1059,14 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const focusedSegment = orderChanged
       ? (this.shadowRoot?.activeElement?.getAttribute('data-segment') as SegmentName | null)
       : null;
-    if (focusedSegment && order.includes(focusedSegment)) {
-      this.activeSegment = focusedSegment;
-    } else if (orderChanged || !order.includes(this.activeSegment)) {
-      this.activeSegment = order[0] ?? 'hour';
-    }
+    const nextActiveSegment =
+      focusedSegment && order.includes(focusedSegment)
+        ? focusedSegment
+        : this.activeSegmentFor(order);
     if (focusedSegment) {
       this.pendingSegmentFocus = order.includes(focusedSegment)
         ? focusedSegment
-        : this.activeSegment;
+        : nextActiveSegment;
     }
     this.segmentOrderKey = orderKey;
   }
@@ -1075,7 +1094,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const pendingSegmentFocus = this.pendingSegmentFocus;
     this.pendingSegmentFocus = undefined;
     if (pendingSegmentFocus && !this.effectiveDisabled) {
-      this.segmentElement(pendingSegmentFocus)?.focus();
+      this.restoringSegmentFocus = true;
+      try {
+        this.segmentElement(pendingSegmentFocus)?.focus();
+      } finally {
+        this.restoringSegmentFocus = false;
+      }
     }
   }
 
@@ -1100,7 +1124,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         role="spinbutton"
         data-segment=${name}
         ?data-empty=${empty}
-        tabindex=${this.activeSegment === name && !this.effectiveDisabled ? '0' : '-1'}
+        tabindex=${this.activeSegmentFor() === name && !this.effectiveDisabled ? '0' : '-1'}
         aria-label=${this.segmentLabel(name)}
         aria-valuemin=${bounds.min}
         aria-valuemax=${bounds.max}

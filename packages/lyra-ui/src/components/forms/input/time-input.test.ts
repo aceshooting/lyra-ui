@@ -904,6 +904,10 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="12" value="09:30"></lr-time-input>`);
     segment(el, 'dayPeriod').focus();
     expect((el.shadowRoot!.activeElement) === (segment(el, 'dayPeriod'))).to.equal(true);
+    let focusRelays = 0;
+    let blurRelays = 0;
+    el.addEventListener('lr-focus', () => focusRelays++);
+    el.addEventListener('lr-blur', () => blurRelays++);
 
     el.setAttribute('hour-format', '24');
     await el.updateComplete;
@@ -911,6 +915,8 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
       (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['segment'],
       'falls back to a segment that still exists',
     ).to.equal('hour');
+    expect(focusRelays, 'logical focus continuity does not emit another focus event').to.equal(0);
+    expect(blurRelays, 'logical focus continuity does not emit a blur event').to.equal(0);
   });
 
   it('does not reclaim foreign focus when a controlled format change removes a segment', async () => {
