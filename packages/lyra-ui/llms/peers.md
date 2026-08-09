@@ -43,9 +43,9 @@ changes the component library version without installing a supported SheetJS rel
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `jszip` | `^3.10.1` | `lr-archive-viewer` |
-| `katex` | `^0.18.1` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
+| `katex` | `^0.18.3` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
-| `mammoth` | `^1.12.0` | `lr-docx-viewer` |
+| `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-map` |
 | `marked` | `^18.0.9` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |

@@ -143,10 +143,15 @@ const bundleEntries = {
   // otherwise tiny, highly-compressible bundle.
   //
   // This is the approved release target, backed by per-component English catalog slices and the
-  // lean base token sheet. It is intentionally not a measured-current-plus-headroom rebaseline.
+  // lean base token sheet. Raised from 30 KiB after the full-review remediation added two real
+  // button contracts: composed-click cancellation for submit/reset default actions and the
+  // minimum-target/long-content containment styles. The packed graph still reports zero eager or
+  // bundled optional peers, and this now agrees with the independently enforced granular hard
+  // budget in packages/lyra-ui/scripts/bundle-budgets.json instead of maintaining a contradictory
+  // second ceiling. It is intentionally not a measured-current-plus-headroom rebaseline.
   button: {
     fixture: 'core',
-    maxGzipBytes: 30 * 1024,
+    maxGzipBytes: 31 * 1024,
   },
   // Retention canaries rather than size budgets: these entries are imported only for side effects,
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and

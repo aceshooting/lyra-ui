@@ -6,6 +6,12 @@ const checkerSource = await readFile(
   new URL('check-packed-consumer.mjs', import.meta.url),
   'utf8',
 );
+const bundleBudgets = JSON.parse(
+  await readFile(
+    new URL('../packages/lyra-ui/scripts/bundle-budgets.json', import.meta.url),
+    'utf8',
+  ),
+);
 
 test('models the raw core ceiling as the reviewed baseline plus the stable-root allowance', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
@@ -28,5 +34,16 @@ test('models the raw core ceiling as the reviewed baseline plus the stable-root 
     checkerSource,
     /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*,/u,
     'the core bundle entry must use both reviewed terms instead of a second unexplained ceiling',
+  );
+});
+
+test('keeps the packed button canary aligned with the reviewed granular hard budget', () => {
+  const button = checkerSource.match(
+    /button:\s*\{[\s\S]*?maxGzipBytes:\s*(?<kilobytes>\d+)\s*\*\s*1024,[\s\S]*?\n\s*\},/u,
+  );
+  assert.ok(button?.groups?.kilobytes, 'the packed button entry must keep an explicit KiB ceiling');
+  assert.equal(
+    Number(button.groups.kilobytes),
+    bundleBudgets['dist/components/forms/button/button.js'],
   );
 });
