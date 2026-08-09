@@ -21,7 +21,9 @@ export type BreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
  * @slot prefix - Shoelace-compatible alias for `start`.
  * @slot end - Content after the label.
  * @slot suffix - Shoelace-compatible alias for `end`.
- * @slot separator - Separator shown before non-first items; defaults to `/`.
+ * @slot separator - Decorative visual separator shown before non-first items; defaults to `/`.
+ *   Content is always inert and aria-hidden, so it must not supply interactive behavior, a focus
+ *   target, or form state.
  * @csspart separator - Decorative separator shown before non-first items.
  * @csspart base - The link, button, or current-page label.
  * @csspart label - Wrapper around the default label slot.
@@ -83,7 +85,7 @@ export class LyraBreadcrumbItem extends LyraElement {
 
   override render(): TemplateResult {
     const href = safeLinkHref(this.href);
-    const separator = html`<span part="separator" aria-hidden="true"><slot name="separator">/</slot></span>`;
+    const separator = html`<span part="separator" aria-hidden="true" inert><slot name="separator">/</slot></span>`;
     const label = html`
       <span part="start prefix" ?hidden=${!this.slots.has('start') && !this.slots.has('prefix')}>
         <slot name="start"></slot><slot name="prefix"></slot>

@@ -7,9 +7,16 @@ export default meta;
 export const Default: StoryObj = { render: () => html`<lr-breadcrumb><lr-breadcrumb-item href="/">Home</lr-breadcrumb-item><lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item><lr-breadcrumb-item current>Current</lr-breadcrumb-item></lr-breadcrumb>` };
 
 export const SharedSeparator: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Shared separators are decorative-only: the rendered copies are inert and hidden from assistive technology.',
+      },
+    },
+  },
   render: () => html`
     <lr-breadcrumb label="Project trail">
-      <span slot="separator" aria-hidden="true">→</span>
+      <span slot="separator">→</span>
       <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
       <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
       <lr-breadcrumb-item current>Current</lr-breadcrumb-item>

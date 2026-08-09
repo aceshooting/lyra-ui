@@ -4408,8 +4408,29 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 5,
+              "line": 17,
               "test": "renders navigable breadcrumb items and marks the current page",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 75,
+              "test": "keeps generated focusable shared separators decorative and strips cloned identities",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 140,
+              "test": "keeps local native separator controls decorative",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 162,
+              "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
             }
@@ -4433,7 +4454,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 81,
+              "line": 208,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4450,7 +4471,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 79,
+              "line": 206,
               "kind": "320px allocation test signal"
             }
           ]
@@ -4592,8 +4613,29 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 5,
+              "line": 17,
               "test": "renders navigable breadcrumb items and marks the current page",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 75,
+              "test": "keeps generated focusable shared separators decorative and strips cloned identities",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 140,
+              "test": "keeps local native separator controls decorative",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
+              "line": 162,
+              "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
             }
@@ -4617,7 +4659,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 81,
+              "line": 208,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4634,7 +4676,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 79,
+              "line": 206,
               "kind": "320px allocation test signal"
             }
           ]

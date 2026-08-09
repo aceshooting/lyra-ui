@@ -12048,9 +12048,12 @@ sets `role="listitem"` on itself. A non-current item without `href` renders a na
 is a no-op for the current-page label.
 
 **Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
-copied to every item without an item-level override. An item's default slot is its label;
-`start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and `separator`
-overrides the `/` fallback.
+copied to every item without an item-level override. Both breadcrumb and item `separator` slots are
+decorative-only: their rendered content is inert and hidden from assistive technology, so it must not
+provide interactive behavior, a focus target, or form state. Generated shared copies omit identifiers,
+ID-reference relationships, form associations, and submission attributes. An item's default slot is
+its label; `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and
+`separator` overrides the `/` fallback.
 
 **CSS parts:** breadcrumb `base` and `breadcrumb` are aliases on the same `<nav>`; `list` is the
 `role="list"` flex row wrapping the slotted items; item `base` (the `<a>` or `<span>`), `label`,
