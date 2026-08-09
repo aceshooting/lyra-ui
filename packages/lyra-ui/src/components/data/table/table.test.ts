@@ -4071,7 +4071,7 @@ describe('loadingAppearance="skeleton"', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
   });
 
-  it('derives the placeholder row count from pageSize and lets skeletonRows override it', async () => {
+  it('derives the placeholder row count and bounds explicit property and attribute overrides', async () => {
     const el = (await fixture(html`<lr-table loading loading-appearance="skeleton"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [];
@@ -4089,7 +4089,15 @@ describe('loadingAppearance="skeleton"', () => {
 
     el.skeletonRows = 2;
     await el.updateComplete;
-    expect(skeletonRowsOf(el).length, 'an explicit count wins verbatim').to.equal(2);
+    expect(skeletonRowsOf(el).length, 'an explicit count wins within the bound').to.equal(2);
+
+    el.skeletonRows = 500;
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length, 'a huge explicit property count is capped').to.equal(20);
+
+    el.setAttribute('skeleton-rows', '1000000');
+    await el.updateComplete;
+    expect(skeletonRowsOf(el).length, 'a huge explicit attribute count is capped').to.equal(20);
 
     el.skeletonRows = -5;
     await el.updateComplete;

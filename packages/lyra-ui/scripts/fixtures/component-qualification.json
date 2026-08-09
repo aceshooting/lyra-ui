@@ -42172,28 +42172,28 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4246,
+              "line": 4254,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4695,
+              "line": 4703,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5126,
+              "line": 5134,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5239,
+              "line": 5247,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"

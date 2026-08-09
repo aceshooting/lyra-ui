@@ -552,8 +552,8 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
 - `skeletonRows: number = 0` (attribute `skeleton-rows`) — placeholder row count under
   `loadingAppearance="skeleton"`. `0` derives the count instead: the normalized `pageSize` when
   pagination is on (capped at 20, so a large page size can't emit thousands of placeholder cells),
-  otherwise 3. Any positive value is used verbatim and is _not_ capped. Ignored entirely under the
-  default spinner appearance
+  otherwise 3. Positive explicit values are also capped at 20, bounding the row-by-column
+  placeholder allocation. Ignored entirely under the default spinner appearance
 - `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
   zero disables the pagination footer
 - `page: number = 1` (attribute `page`, reflected) — controlled current page

@@ -58,6 +58,7 @@ Improve component reliability and public contracts across the library:
 - add owned error chrome and the standard form-control frame to `lr-checkbox`.
 - normalize `lr-combobox`'s active descendant after local or async option-set changes.
 - preserve `lr-table` row and header focus when controlled collections shrink or reorder.
+- cap explicit and page-derived `lr-table` skeleton row counts before allocating placeholder cells.
 - preserve author-supplied `lr-tree-item` names across data-model refreshes.
 - make authored CSS-part references exact and complete, and correct `lr-model-select` accessible-name precedence prose.
 - verify conversation placeholder theming, typing motion, and native search-decoration suppression

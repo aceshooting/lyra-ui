@@ -32,11 +32,10 @@ export type TableLoadingAppearance = 'spinner' | 'skeleton';
  *  know how many. */
 const DEFAULT_SKELETON_ROWS = 3;
 
-/** Ceiling on the `pageSize`-derived placeholder row count. A page size is a *data* bound (it can
- *  legitimately be 500), and one placeholder element per cell means a large one would emit
- *  thousands of nodes for a state that exists for a few hundred milliseconds. An explicit
- *  `skeletonRows` is honored verbatim and is not capped. */
-const MAX_DERIVED_SKELETON_ROWS = 20;
+/** Ceiling on every placeholder row count. `pageSize` and the public `skeletonRows` input are data
+ *  values that can legitimately be very large, while one placeholder element per cell means an
+ *  unbounded count would emit thousands of nodes for a transient loading state. */
+const MAX_SKELETON_ROWS = 20;
 
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
 const URL_FUNCTION = /url\s*\(/i;
@@ -727,8 +726,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ reflect: true, attribute: 'loading-appearance' }) loadingAppearance: TableLoadingAppearance = 'spinner';
   /** Number of placeholder rows rendered by `loadingAppearance="skeleton"`. `0` (the default)
    *  derives the count instead: the normalized `pageSize` when pagination is on (capped at 20, so
-   *  a large page size can't emit thousands of placeholder cells), otherwise 3. Any positive value
-   *  is used verbatim and is not capped. Ignored entirely under the default spinner appearance. */
+   *  a large page size can't emit thousands of placeholder cells), otherwise 3. Positive explicit
+   *  values are also capped at 20. Ignored entirely under the default spinner appearance. */
   @property({ type: Number, attribute: 'skeleton-rows' }) skeletonRows = 0;
   /** Inserts a non-focusable group header row wherever this key changes between consecutive
    *  rendered rows. Supply `rows` with each group already contiguous — the table does not
@@ -1344,15 +1343,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   /** Placeholder row count actually rendered by `loadingAppearance="skeleton"`. An explicit,
-   *  positive `skeletonRows` wins verbatim; otherwise the count is derived from the normalized
-   *  `pageSize` (bounded by MAX_DERIVED_SKELETON_ROWS), and falls back to DEFAULT_SKELETON_ROWS
+   *  positive `skeletonRows` wins after applying the shared bound; otherwise the count is derived
+   *  from the normalized `pageSize` under the same bound, and falls back to DEFAULT_SKELETON_ROWS
    *  when pagination is off -- `pageSize` defaults to 0, so "one placeholder per page row" has no
    *  count of its own for the (common) unpaginated table. */
   private get effectiveSkeletonRows(): number {
-    const explicit = finiteCount(this.skeletonRows);
+    const explicit = finiteCount(this.skeletonRows, 0, MAX_SKELETON_ROWS);
     if (explicit > 0) return explicit;
     const pageSize = this.normalizedPageSize;
-    return pageSize > 0 ? Math.min(pageSize, MAX_DERIVED_SKELETON_ROWS) : DEFAULT_SKELETON_ROWS;
+    return pageSize > 0 ? Math.min(pageSize, MAX_SKELETON_ROWS) : DEFAULT_SKELETON_ROWS;
   }
 
   /** `totalItems: -1` (the default) is a sentinel meaning "derive from filtered rows" -- normalize
