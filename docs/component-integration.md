@@ -139,7 +139,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-app-rail-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.4 KiB (40304 bytes; bundle SHA-256 `1db6fc0c472952d145272abc95a76f36d474bb88b2e61bb35d6fbf4a14e2f6c8`)
+- Standalone gzip: 39.4 KiB (40393 bytes; bundle SHA-256 `0bb34b4fe78bff6d9db5dbad0e41df8271210989a023b9778f7d69399ab4d4b9`)
 
 </details>
 

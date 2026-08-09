@@ -1,7 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { activateOverlay, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -329,6 +329,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
+  private recoverInlineFocusAfterResponsiveClose = false;
   private readonly navId = nextId('app-rail-nav');
 
   @query('[part="base"]') private baseEl?: HTMLElement;
@@ -516,7 +517,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
           this.justOpened = true;
           this.activateMobileOverlay();
         } else {
-          this.deactivateMobileOverlay();
+          this.deactivateMobileOverlay(this._mode === 'mobile');
         }
       }
     }
@@ -528,6 +529,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rationale.
   protected override updated(changed: PropertyValues): void {
     this.syncSlottedItems();
+    if (this.recoverInlineFocusAfterResponsiveClose) {
+      this.recoverInlineFocusAfterResponsiveClose = false;
+      const active = deepActiveElement(this.ownerDocument);
+      if (this.baseEl && !composedContains(this.baseEl, active)) this.baseEl.focus();
+    }
     if (this.justOpened) {
       this.justOpened = false;
       this.overlayHandle?.focusInitial();
@@ -605,8 +611,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.explicitTrigger = undefined;
   }
 
-  private deactivateMobileOverlay(): void {
-    this.overlayHandle?.deactivate();
+  private deactivateMobileOverlay(restoreFocus = true): void {
+    this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
   }
 
@@ -681,6 +687,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private setEffectiveMode(next: AppRailMode): void {
     if (this._mode === next) return;
     const old = this._mode;
+    if (old === 'mobile' && next !== 'mobile' && this.open) {
+      this.recoverInlineFocusAfterResponsiveClose = true;
+    }
     this._mode = next;
     this.requestUpdate('mode', old);
     this.emit('lr-mode-change', { mode: next });
@@ -820,7 +829,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         }
         role=${this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive ? 'true' : nothing}
-        tabindex=${this.overlayActive ? '-1' : nothing}
+        tabindex=${this.overlayActive || !mobile ? '-1' : nothing}
         ?inert=${mobile && !this.open}
       >
         <div part="header" ?hidden=${!this.hasHeaderSlot}>

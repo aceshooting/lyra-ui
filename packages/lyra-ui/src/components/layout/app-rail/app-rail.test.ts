@@ -448,6 +448,44 @@ it('force-closes an open overlay and emits lr-toggle when mode leaves mobile, ig
   expect(ev.cancelable, 'a forced mode-change close cannot be vetoed').to.be.false;
 });
 
+it('preserves a focused nav item when a responsive mode exit closes the mobile overlay', async () => {
+  const el = (await fixture(html`<lr-app-rail><button>Inbox</button></lr-app-rail>`)) as LyraAppRail;
+  const navItem = el.querySelector('button') as HTMLButtonElement;
+
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  toggle.click();
+  await el.updateComplete;
+  expect(document.activeElement === navItem, 'the open overlay focuses its surviving nav item').to.equal(true);
+
+  fireMobileChange(el, false);
+  await el.updateComplete;
+
+  expect(el.mode).to.equal('full');
+  expect(el.open).to.be.false;
+  expect(getComputedStyle(toggle).display).to.equal('none');
+  expect(document.activeElement === navItem, 'focus must not return to the now-hidden mobile toggle').to.equal(true);
+});
+
+it('keeps the promoted navigation root focused when no nav item can receive focus after a responsive close', async () => {
+  const el = (await fixture(html`<lr-app-rail><p>Navigation only</p></lr-app-rail>`)) as LyraAppRail;
+
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  toggle.click();
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(el.shadowRoot!.activeElement?.id).to.equal(panel.id);
+
+  fireMobileChange(el, false);
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(el.shadowRoot!.activeElement?.id).to.equal(base.id);
+});
+
 // -- mobile overlay: toggle button ----------------------------------------
 
 it('the toggle button opens and closes the overlay, updating aria-expanded/aria-label', async () => {

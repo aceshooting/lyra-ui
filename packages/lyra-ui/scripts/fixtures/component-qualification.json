@@ -1788,14 +1788,14 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 840,
+              "line": 878,
               "test": "is accessible with the mobile overlay open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 827,
+              "line": 865,
               "test": "is accessible in full mode with header/nav/footer content",
               "target": "el",
               "state": "populated"
@@ -1820,7 +1820,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 524,
+              "line": 562,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -1837,7 +1837,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1343,
+              "line": 1381,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2002,7 +2002,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 524,
+              "line": 562,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -2019,7 +2019,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1343,
+              "line": 1381,
               "kind": "320px allocation test signal"
             }
           ]
