@@ -12910,6 +12910,27 @@
       }
     },
     {
+      "name": "--lr-typing-cursor-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-size-1em)`) — Height of the `cursor` variant."
+      }
+    },
+    {
+      "name": "--lr-typing-cursor-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` variant. The `size` property supplies compact and roomy tier overrides."
+      }
+    },
+    {
+      "name": "--lr-typing-dot-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-space-s)`) — Diameter of each dot in the `dots` and `pulse` variants. The `size` property supplies compact and roomy tier overrides."
+      }
+    },
+    {
       "name": "--lr-typing-dot-stagger-1",
       "description": {
         "kind": "markdown",
@@ -12928,6 +12949,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-typing-indicator>`** (default: `var(--lr-transition-ambient)`) — Animation duration and timing function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming just this component doesn't affect other ambient-looping components in the library."
+      }
+    },
+    {
+      "name": "--lr-typing-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-space-xs)`) — Gap between dots in the `dots` variant. The `size` property supplies compact and roomy tier overrides."
       }
     },
     {

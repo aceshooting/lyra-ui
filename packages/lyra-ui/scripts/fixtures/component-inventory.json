@@ -116719,6 +116719,24 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-typing-cursor-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1em)"
+          },
+          {
+            "name": "--lr-typing-cursor-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-125rem)"
+          },
+          {
+            "name": "--lr-typing-dot-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
             "name": "--lr-typing-dot-stagger-1",
             "deprecated": null,
             "hasDefault": true,
@@ -116735,6 +116753,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-transition-ambient)"
+          },
+          {
+            "name": "--lr-typing-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           }
         ],
         "cssStates": [],

@@ -43343,7 +43343,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -43355,42 +43354,42 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 281,
+              "line": 282,
               "test": "keeps group collapse controlled and removes collapsed rows from virtual-list measurement",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 967,
+              "line": 968,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 967,
+              "line": 968,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1389,
+              "line": 1390,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1518,
+              "line": 1519,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1950,
+              "line": 1991,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
@@ -43404,7 +43403,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 95,
+              "line": 96,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43423,9 +43422,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/thread-list/thread-list.test.ts",
+              "line": 1532,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -43515,7 +43519,6 @@
       "knownLimitations": [
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -47050,14 +47053,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 197,
+              "line": 222,
               "test": "is accessible in the pulse and cursor states",
               "target": "pulse",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 197,
+              "line": 222,
               "test": "is accessible in the pulse and cursor states",
               "target": "cursor",
               "state": "populated"

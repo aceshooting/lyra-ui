@@ -44,7 +44,9 @@ export const styles = css`
   }
   [part='search-input']::-webkit-search-cancel-button,
   [part='search-input']::-webkit-search-decoration {
+    -webkit-appearance: none;
     appearance: none;
+    display: none;
   }
   [part='list'] {
     flex: 1 1 auto;

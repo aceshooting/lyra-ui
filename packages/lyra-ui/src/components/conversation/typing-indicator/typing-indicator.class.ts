@@ -66,6 +66,13 @@ export type TypingIndicatorSize = LyraSize;
  * @csspart dot - Each of the three dots in the `dots` variant.
  * @csspart pulse - The single pulsing dot in the `pulse` variant.
  * @csspart cursor - The blinking bar in the `cursor` variant.
+ * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots` and
+ * `pulse` variants. The `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant. The
+ * `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-cursor-width=var(--lr-size-0-125rem)] - Width of the `cursor` variant. The
+ * `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-cursor-height=var(--lr-size-1em)] - Height of the `cursor` variant.
  * @cssprop [--lr-typing-duration=var(--lr-transition-ambient)] - Animation duration and timing
  * function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the
  * shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming

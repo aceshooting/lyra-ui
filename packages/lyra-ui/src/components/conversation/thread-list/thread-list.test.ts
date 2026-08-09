@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './thread-list.js';
 import '../../overlays/chip/chip.js';
 import '../../layout/menu/menu.js';
@@ -1525,9 +1526,49 @@ describe('data-mode row part forwarding', () => {
   });
 });
 
-it('resets the native search-cancel glyph on the search field', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
+it('resets the native search-cancel glyph on the search field', async () => {
+  if (!CSS.supports('selector(input::-webkit-search-cancel-button)')) return;
+  const el = (await fixture(
+    html`<lr-thread-list style="inline-size: 320px" searchable .threads=${threads}></lr-thread-list>`,
+  )) as LyraThreadList;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  const nativeDecoration = document.createElement('style');
+  nativeDecoration.textContent = `
+    [part='search-input']::-webkit-search-cancel-button {
+      appearance: auto !important;
+      -webkit-appearance: searchfield-cancel-button !important;
+      display: block !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+  `;
+  el.shadowRoot!.append(nativeDecoration);
+  input.focus();
+  const rect = input.getBoundingClientRect();
+  try {
+    let cancelPosition: [number, number] | undefined;
+    for (let offset = 2; offset <= 48; offset += 2) {
+      input.value = 'clear me';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const candidate: [number, number] = [rect.right - offset, rect.top + rect.height / 2];
+      await sendMouse({ type: 'click', position: candidate });
+      if (input.value === '') {
+        cancelPosition = candidate;
+        break;
+      }
+    }
+    expect(cancelPosition !== undefined, 'positive control exposes the native clear action').to.equal(true);
+
+    nativeDecoration.remove();
+    input.value = 'keep me';
+    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await sendMouse({ type: 'click', position: cancelPosition! });
+    expect(input.value, 'component styling removes the native clear action').to.equal('keep me');
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('keyboard navigation past the rendered window', () => {

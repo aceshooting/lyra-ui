@@ -20,6 +20,8 @@ Improve component reliability and public contracts across the library:
   targets before transferring focus;
 - move `lr-time-input` focus to a surviving segment when a controlled pattern change removes the
   focused segment, without reclaiming focus from another control;
+- publish every `lr-typing-indicator` geometry hook through CEM/editor metadata and gate its
+  legacy public token namespace against future omissions;
 - normalize invalid `lr-knowledge-base-admin` tab state to its Sources fallback;
 - remove unintended nested card chrome from generated RAG sources and evaluation metrics;
 - restore `lr-export-button` to sequential keyboard navigation after loading or disablement ends;
@@ -58,7 +60,8 @@ Improve component reliability and public contracts across the library:
 - preserve `lr-table` row and header focus when controlled collections shrink or reorder.
 - preserve author-supplied `lr-tree-item` names across data-model refreshes.
 - make authored CSS-part references exact and complete, and correct `lr-model-select` accessible-name precedence prose.
-- verify conversation placeholder theming through rendered pseudo-element styles.
+- verify conversation placeholder theming, typing motion, and native search-decoration suppression
+  through rendered browser behavior, including WebKit's still-clickable search cancel control.
 - keep Web Test Runner failure payloads primitive-only and gate component tests against live DOM-node Chai assertions.
 - verify `lr-agent-run` spinner motion through live full-motion and reduced-motion computed styles.
 - preserve nested `lr-evaluation-run` approval dialogs when a host vetoes the correlated decision event.

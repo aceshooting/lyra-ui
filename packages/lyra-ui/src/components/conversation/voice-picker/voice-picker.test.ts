@@ -1046,9 +1046,18 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
 });
 
-it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
+it("colors the combobox-input's placeholder text instead of leaving the UA default", async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker allow-custom placeholder="Choose a voice"></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lr-color-text-quiet)';
+  el.shadowRoot!.append(probe);
+  const expectedColor = getComputedStyle(probe).color;
+  probe.remove();
+
+  expect(getComputedStyle(input, '::placeholder').color).to.equal(expectedColor);
 });
 
 // -- Hover feedback (mouse users get the same 'this is clickable' cue keyboard focus gives) ------

@@ -3019,7 +3019,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-conversation-item`, `lr-live-region`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.1 KiB (42121 bytes; bundle SHA-256 `2916fe05263ae78d832146098f456be04ab2e8c1858ab9a8be5df4db0f887b3d`)
+- Standalone gzip: 41.1 KiB (42128 bytes; bundle SHA-256 `607f9823c2919c8977a8dc6da40ba713d5bd8ab1aca59552e276ad9ec24b644b`)
 
 </details>
 

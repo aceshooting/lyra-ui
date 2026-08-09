@@ -27,6 +27,12 @@ const genericPublicProps = new Map([
   ['lr-date-picker', ['--lr-cell-size']],
 ]);
 
+/** Reviewed public namespaces that predate the exact `--<tag>-*` convention. Every property read
+ * through one of these prefixes is component-owned and must therefore reach CEM/editor metadata. */
+const legacyPublicPrefixes = new Map([
+  ['lr-typing-indicator', ['--lr-typing-']],
+]);
+
 /** Tokens/parts a component legitimately reads but does not own. */
 const isSharedToken = (token) =>
   /^--lr-(color|space|radius|shadow|font|transition|opacity|focus-ring|size|layer|line-height|border-width|safe-area|no-data)/.test(
@@ -105,7 +111,7 @@ for (const mod of manifest.modules ?? []) {
     // override (a matching rule on the child's own `:host` beats inheritance from the parent).
     // Components with no stylesheet of their own (a subclass reusing its base's) fall back to the
     // directory, where the prefix filter alone is unambiguous.
-    const ownPrefix = `--${decl.tagName}-`;
+    const ownPrefixes = [`--${decl.tagName}-`, ...(legacyPublicPrefixes.get(decl.tagName) ?? [])];
     const ownStylesheet = path.basename(mod.path).replace(/\.class\.ts$|\.ts$/, '.styles.ts');
     const stylesheets = existsSync(path.join(dir, ownStylesheet))
       ? [ownStylesheet]
@@ -115,7 +121,9 @@ for (const mod of manifest.modules ?? []) {
     for (const file of entrySheets) {
       const text = readFileSync(file, 'utf8');
       for (const m of text.matchAll(/var\(\s*(--lr-[a-z0-9-]+)/g)) {
-        if (m[1].startsWith(ownPrefix) && !isSharedToken(m[1])) usedProps.add(m[1]);
+        if (ownPrefixes.some((prefix) => m[1].startsWith(prefix)) && !isSharedToken(m[1])) {
+          usedProps.add(m[1]);
+        }
       }
     }
     for (const token of genericPublicProps.get(decl.tagName) ?? []) usedProps.add(token);

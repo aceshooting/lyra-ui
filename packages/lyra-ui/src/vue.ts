@@ -9467,9 +9467,13 @@ export type LyraTypingIndicatorVueProps = LyraVueCustomElement<
   | 'variant',
   {},
 never,
+  | '--lr-typing-cursor-height'
+  | '--lr-typing-cursor-width'
+  | '--lr-typing-dot-size'
   | '--lr-typing-dot-stagger-1'
   | '--lr-typing-dot-stagger-2'
-  | '--lr-typing-duration',
+  | '--lr-typing-duration'
+  | '--lr-typing-gap',
   {}
 >;
 

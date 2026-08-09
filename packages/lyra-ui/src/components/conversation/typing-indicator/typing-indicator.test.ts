@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import './typing-indicator.js';
 import type { LyraTypingIndicator } from './typing-indicator.js';
-import { styles } from './typing-indicator.styles.js';
 
 it('defaults to the dots variant, m size, and a "Thinking…" label', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
@@ -170,12 +170,37 @@ it('swaps the rendered shape when variant changes on an already-mounted instance
   expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.exist;
 });
 
-it('gives every variant a looping animation that is disabled under reduced motion', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("animation: lr-typing-dot-bounce var(--lr-typing-duration) infinite;");
-  expect(css).to.include("animation: lr-typing-pulse var(--lr-typing-duration) infinite;");
-  expect(css).to.include("animation: lr-typing-cursor-blink var(--lr-typing-duration) infinite;");
-  expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
+it('gives every variant a looping animation that is disabled under reduced motion', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const variants = [
+      ['dots', 'dot', 'lr-typing-dot-bounce'],
+      ['pulse', 'pulse', 'lr-typing-pulse'],
+      ['cursor', 'cursor', 'lr-typing-cursor-blink'],
+    ] as const;
+    const shapes: HTMLElement[] = [];
+    for (const [variant, part, animationName] of variants) {
+      const el = (await fixture(
+        html`<lr-typing-indicator variant=${variant}></lr-typing-indicator>`,
+      )) as LyraTypingIndicator;
+      const shape = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      shapes.push(shape);
+      const fullMotion = getComputedStyle(shape);
+      expect(fullMotion.animationName, variant).to.equal(animationName);
+      expect(fullMotion.animationIterationCount, variant).to.equal('infinite');
+    }
+
+    await setReducedMotion('reduce');
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+    for (const shape of shapes) {
+      const reducedMotion = getComputedStyle(shape);
+      expect(reducedMotion.animationName).to.equal('none');
+      expect(reducedMotion.opacity).to.equal('1');
+      expect(reducedMotion.transform).to.equal('none');
+    }
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('does not dispatch any lr-* events (purely presentational)', async () => {
@@ -260,18 +285,25 @@ describe('dedicated duration token', () => {
     expect(getComputedStyle(dot).animationDuration).to.equal('3s');
   });
 
-  it('keeps the reduced-motion override intact (branch unaffected by the new token)', () => {
-    // The centralized `@media (prefers-reduced-motion: reduce)` override in
-    // tokens.styles.ts collapses --lr-transition-ambient itself, and this
-    // component's own reduced-motion rule below unconditionally forces
-    // `animation: none`, regardless of --lr-typing-duration. There is no way
-    // to force the browser's actual prefers-reduced-motion media feature from
-    // inside a wtr test (no launcher/browser-context option is configured for
-    // it in this repo -- see spinner.test.ts/progress.test.ts for the same
-    // stylesheet-level assertion pattern used for a pure-CSS reduced-motion
-    // branch), so this asserts the override rule is still present verbatim.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
+  it('keeps a direct duration override from bypassing reduced motion', async () => {
+    await setReducedMotion('no-preference');
+    try {
+      const el = (await fixture(
+        html`<lr-typing-indicator
+          variant="dots"
+          style="--lr-typing-duration: 0.9s ease-in-out;"
+        ></lr-typing-indicator>`,
+      )) as LyraTypingIndicator;
+      const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
+      expect(getComputedStyle(dot).animationName).to.equal('lr-typing-dot-bounce');
+
+      await setReducedMotion('reduce');
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(getComputedStyle(dot).animationName).to.equal('none');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
   });
 });
 
