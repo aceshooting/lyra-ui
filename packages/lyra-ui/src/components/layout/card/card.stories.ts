@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls, and `with-*` hints make those wrappers available during SSR. `appearance`, `interactive`, and `href` retain Lyra\'s stronger surface and activation APIs.',
+          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls even on linked cards, and `with-*` hints make those wrappers available during SSR. `appearance`, `interactive`, and `href` retain Lyra\'s stronger surface and activation APIs.',
       },
     },
   },
@@ -81,7 +81,7 @@ export const ProgrammaticActivation: Story = {
     docs: {
       description: {
         story:
-          'Calling `click()` on the host activates the native whole-card button (or linked root). A passive card remains inert.',
+          'Calling `click()` on the host activates the native whole-card button (or linked anchor). A passive card remains inert.',
       },
     },
   },
@@ -171,11 +171,25 @@ export const ActivateWithoutHref: Story = {
 };
 
 export const AsLink: Story = {
-  name: 'href (renders as <a>)',
+  name: 'href (stretched link with independent actions)',
   render: () => html`
-    <lr-card href="https://example.com" interactive style="max-inline-size:20rem;">
-      The whole card is a real link — inspect the shadow root to see the <code>&lt;a part="base"&gt;</code> root.
-    </lr-card>
+    <div>
+      <lr-card href="#linked-card-details" interactive style="max-inline-size:20rem;">
+        <span slot="header" style="font-weight:600;">Q3 report</span>
+        The visible card content follows the real stretched link.
+        <button
+          slot="footer-actions"
+          type="button"
+          @click=${() => {
+            const output = document.getElementById('linked-card-action-status');
+            if (output) output.textContent = 'Download started without following the card link.';
+          }}
+        >
+          Download
+        </button>
+      </lr-card>
+      <p id="linked-card-action-status" aria-live="polite">No action yet.</p>
+    </div>
   `,
 };
 

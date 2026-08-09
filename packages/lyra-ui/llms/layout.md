@@ -2520,14 +2520,17 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   activation semantics. Those come from a real native `<button part="activation-button">` stretched
   across the card, not from making `[part='base']` itself focusable: it is the keyboard tab stop,
   it answers Enter and Space natively, and activating it emits `lr-card-activate`. With `href` set,
-  the root is already a real `<a>`, so native navigation *is* the activation, no activation button
-  renders, and `lr-card-activate` never fires. `false` (the default) reproduces a plain static card:
-  no button, no listeners, no events.
+  a stretched sibling native `<a>` owns navigation, no activation button renders, and
+  `lr-card-activate` never fires. Consumer slots stay outside that link, so their controls remain
+  independent. `false` (the default) reproduces a plain static card: no button, no listeners, no
+  events.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of that
   activation button. Left unset it falls back to the card's own text content, so a text card is
   named without extra markup; set it explicitly for a card whose content is an image or a chart.
-- `href?: string` — when set, the card's root renders as a real `<a href=...>` instead of a `<div>`,
-  for a whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.
+- `href?: string` — when set, a real stretched `<a href=...>` renders behind the consumer slots for
+  a whole-card link (e.g. a wide CTA tile). A click on noninteractive card content follows that
+  link, while slotted controls keep their own native or Lyra behavior. Unset (the default) renders
+  a plain `<div>`.
 - `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
   to `'_blank'` (or any other target) automatically derives `rel="noopener noreferrer"` on the
   rendered anchor; there is deliberately **no** separately-settable `rel` property, so a consumer
@@ -2539,7 +2542,7 @@ or by Enter/Space on `[part='activation-button']`. Only fired while `interactive
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
-**Methods:** `click(): void` activates the native whole-card owner: the linked root when `href` is
+**Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
 safe, or the activation button while `interactive` is set without a link. Passive cards remain
 inert.
 
@@ -2548,7 +2551,8 @@ for media above the header vertically or at logical start horizontally), `footer
 content), `header-actions` and `footer-actions` (controls aligned with those vertical sections), and
 `actions` (horizontal-card actions; retained as the legacy header-actions spelling vertically).
 
-**CSS parts:** `base` (the outer container — a `<div>`, or an `<a>` when `href` is set),
+**CSS parts:** `base` (the outer container — a `<div>`, or a stretched `<a>` behind consumer slots
+when `href` is set),
 `activation-button` (the native whole-card action, rendered only while `interactive` without `href`;
 it is absolutely positioned across the card, `pointer-events: none` so it never intercepts a click
 meant for slotted content, and it owns the card's `:focus-visible` ring), `media` and `image`
@@ -2615,6 +2619,10 @@ former brand and active-mix values when unset.
   `<button>`.
 - a click whose composed path starts on `[part='activation-button']` skips that walk entirely and
   always activates — it *is* the whole-card action, so there is nothing to disambiguate.
+- with `href`, `[part='base']` is a stretched real anchor sibling behind the visible content rather
+  than an ancestor of it. Clicks from noninteractive slotted content are delegated to that anchor;
+  composed-path arbitration leaves native and Lyra buttons, links, and fields independent. The
+  linked example's `Download` button therefore does not navigate the card.
 
 ---
 

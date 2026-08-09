@@ -30,6 +30,40 @@ export const styles = css`
     text-decoration: none;
     overflow: hidden;
   }
+  .linked-shell {
+    position: relative;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: 100%;
+  }
+  .linked-shell > [part="base"] {
+    position: absolute;
+    inset: 0;
+    z-index: var(--lr-layer-base);
+  }
+  /* The visible content is a sibling of the stretched native link. Built-in, non-interactive
+     regions pass pointer input through to that link; public slots opt back into hit testing so
+     their own controls stay independently operable. Plain slotted content delegates its click to
+     the link in the class rather than becoming a dead patch in the card. */
+  .linked-content {
+    position: relative;
+    z-index: var(--lr-layer-content);
+    display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    flex-direction: column;
+    block-size: 100%;
+    box-sizing: border-box;
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    border-radius: var(--border-radius, var(--lr-radius));
+    pointer-events: none;
+  }
+  .linked-content slot,
+  .linked-content [title] {
+    pointer-events: auto;
+  }
   :host([appearance="filled"]) [part="base"] {
     border-color: transparent;
     background: var(--lr-card-filled-bg, var(--lr-color-brand-quiet));
@@ -49,7 +83,8 @@ export const styles = css`
     cursor: pointer;
     transition: border-color var(--lr-transition-fast);
   }
-  :host([interactive]) [part="base"]:hover {
+  :host([interactive]) [part="base"]:hover,
+  :host([interactive]) .linked-shell:hover > [part="base"] {
     border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed keeps the hover border and adds a tint of the whole tile, so it reads as a step past
@@ -57,7 +92,8 @@ export const styles = css`
      not a background colour: the appearance variants own background-color (filled and
      filled-outlined set brand-quiet), and a colour here would replace theirs instead of deepening
      it, so a filled card would flash back to plain surface on mousedown. */
-  :host([interactive]) [part="base"]:active {
+  :host([interactive]) [part="base"]:active,
+  :host([interactive]) .linked-shell:active > [part="base"] {
     border-color: var(--lr-card-interactive-active-border-color, var(--lr-color-brand));
     background-image: linear-gradient(
       var(
@@ -93,6 +129,10 @@ export const styles = css`
   [part="activation-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  [part="base"][href]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part~="media"][hidden],
   [part="header"][hidden],
@@ -151,7 +191,8 @@ export const styles = css`
   }
   .footer-actions[hidden] { display: none; }
 
-  :host([orientation="horizontal"]) [part="base"] {
+  :host([orientation="horizontal"]) [part="base"],
+  :host([orientation="horizontal"]) .linked-content {
     flex-direction: row;
     align-items: stretch;
   }
@@ -175,7 +216,8 @@ export const styles = css`
   }
 
   @container (max-inline-size: 30rem) {
-    :host([orientation="horizontal"]) [part="base"] {
+    :host([orientation="horizontal"]) [part="base"],
+    :host([orientation="horizontal"]) .linked-content {
       flex-direction: column;
     }
     :host([orientation="horizontal"]) [part~="media"] {

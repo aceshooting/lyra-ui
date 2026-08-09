@@ -214,6 +214,100 @@ describe("lr-card", () => {
     await expect(el).to.be.accessible();
   });
 
+  it("keeps a linked card's slotted controls independently operable", async () => {
+    const el = (await fixture(html`
+      <lr-card href="#card-details">
+        <button id="linked-card-action" slot="footer-actions" type="button">Download</button>
+        <lr-button id="linked-card-lyra-action" slot="actions">Open</lr-button>
+      </lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    const action = el.querySelector<HTMLButtonElement>("#linked-card-action")!;
+    const lyraAction = el.querySelector<HTMLElement>("#linked-card-lyra-action")!;
+    let anchorClicks = 0;
+    let actionClicks = 0;
+    let lyraActionClicks = 0;
+    anchor.addEventListener("click", (event) => {
+      anchorClicks += 1;
+      event.preventDefault();
+    });
+    action.addEventListener("click", () => (actionClicks += 1));
+    lyraAction.addEventListener("click", () => (lyraActionClicks += 1));
+
+    expect(
+      action.assignedSlot?.closest('a[part~="base"]')?.localName ?? null
+    ).to.equal(null);
+    expect(
+      lyraAction.assignedSlot?.closest('a[part~="base"]')?.localName ?? null
+    ).to.equal(null);
+    action.scrollIntoView();
+    const actionRect = action.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(actionRect.left + actionRect.width / 2),
+          Math.round(actionRect.top + actionRect.height / 2),
+        ],
+      });
+      await sendMouse({ type: "down" });
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+    lyraAction.click();
+
+    expect(actionClicks).to.equal(1);
+    expect(lyraActionClicks).to.equal(1);
+    expect(anchorClicks).to.equal(0);
+    await expect(el).to.be.accessible();
+  });
+
+  it("keeps rich slotted content as a linked card's accessible name", async () => {
+    const el = (await fixture(html`
+      <lr-card href="#monthly-report">
+        <img alt="Monthly report" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" />
+      </lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>(".linked-content")!;
+
+    expect(anchor.getAttribute("aria-labelledby")).to.equal(content.id);
+    expect(content.id).to.equal("linked-content");
+    await expect(el).to.be.accessible();
+  });
+
+  it("follows a linked card for noninteractive slotted content", async () => {
+    const el = (await fixture(html`
+      <lr-card href="#card-details"><span id="linked-card-content">Open details</span></lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    let anchorClicks = 0;
+    anchor.addEventListener("click", (event) => {
+      anchorClicks += 1;
+      event.preventDefault();
+    });
+
+    const content = el.querySelector<HTMLElement>("#linked-card-content")!;
+    content.scrollIntoView();
+    const contentRect = content.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(contentRect.left + contentRect.width / 2),
+          Math.round(contentRect.top + contentRect.height / 2),
+        ],
+      });
+      await sendMouse({ type: "down" });
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+
+    expect(anchorClicks).to.equal(1);
+  });
+
   describe("activation without href", () => {
     // The constraint that rules out `role="button"` on `[part='base']`: a card routinely contains
     // slotted buttons/links, and axe-core's `nested-interactive` rule forbids a focusable
@@ -274,7 +368,7 @@ describe("lr-card", () => {
       expect(activations).to.equal(1);
     });
 
-    it("forwards host click() to the linked root without emitting lr-card-activate", async () => {
+    it("forwards host click() to the linked anchor without emitting lr-card-activate", async () => {
       const el = (await fixture(
         html`<lr-card href="/reports">body</lr-card>`
       )) as LyraCard;
@@ -520,6 +614,24 @@ describe("lr-card", () => {
         <span slot="media">media</span>body<span slot="actions">actions</span>
       </lr-card>`)) as LyraCard;
       expect(getComputedStyle(base(narrow)).flexDirection).to.equal("column");
+
+      const wideLinked = (await fixture(html`<lr-card href="#details" orientation="horizontal" style="inline-size: 40rem">
+        <span slot="media">media</span>body<span slot="actions">actions</span>
+      </lr-card>`)) as LyraCard;
+      expect(
+        getComputedStyle(
+          wideLinked.shadowRoot!.querySelector<HTMLElement>(".linked-content")!
+        ).flexDirection
+      ).to.equal("row");
+
+      const narrowLinked = (await fixture(html`<lr-card href="#details" orientation="horizontal" style="inline-size: 20rem">
+        <span slot="media">media</span>body<span slot="actions">actions</span>
+      </lr-card>`)) as LyraCard;
+      expect(
+        getComputedStyle(
+          narrowLinked.shadowRoot!.querySelector<HTMLElement>(".linked-content")!
+        ).flexDirection
+      ).to.equal("column");
     });
 
     it("consumes --spacing for section rhythm", async () => {

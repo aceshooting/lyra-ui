@@ -76,7 +76,8 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @slot actions - Horizontal-card actions; retained as the legacy header-actions alias vertically.
  * @slot header-actions - Controls rendered alongside the vertical header.
  * @slot footer-actions - Controls rendered alongside the vertical footer.
- * @csspart base - The outer container (a `<div>`, or an `<a>` when `href` is set).
+ * @csspart base - The outer container (a `<div>`, or a stretched `<a>` behind the consumer slots
+ *   when `href` is set).
  * @csspart activation-button - The native whole-card action, rendered while `interactive`
  *   without `href`. It is a sibling of slotted controls, so actionable descendants are never
  *   nested inside another actionable role.
@@ -90,9 +91,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  *   both are empty.
  * @event lr-card-activate - The whole card was activated (click, or Enter/Space on the native
  * `activation-button`). No detail. Only fired while `interactive` is set **without** `href`
- * -- with `href` the root is a real `<a>` and native navigation is the activation. Never fired for
- * an interaction that originated in a slotted control (a button, link, input, or anything else
- * focusable), so a card can keep its own action buttons.
+ * -- with `href` the stretched native `<a>` is the activation. Never fired for an interaction that
+ * originated in a slotted control (a button, link, input, or anything else focusable), so a card
+ * can keep its own action buttons.
  * @cssprop [--spacing=var(--lr-space-m)] - Space around and between card sections.
  * @cssprop [--padding=var(--spacing,var(--lr-space-m))] - Shoelace-compatible section padding.
  * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
@@ -140,17 +141,19 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   /** Opt-in clickable-tile behavior: the hover/focus-visible treatment (border-color shift,
    *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
-   *  `[part='base']` becomes focusable (`tabindex="0"`), responds to Enter/Space, and emits
-   *  `lr-card-activate`. With `href` set the root is already a real `<a>`, so native navigation
-   *  stays the activation and `lr-card-activate` is never fired. `false` (the default) reproduces
-   *  today's exact static output: no `tabindex`, no listeners, no events. */
+   *  `[part='activation-button']` becomes the focusable native button, responds to Enter/Space,
+   *  and emits `lr-card-activate`. With `href` set the stretched native `<a>` owns navigation and
+   *  `lr-card-activate` is never fired. `false` (the default) reproduces today's exact static
+   *  output: no button, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) interactive = false;
 
   /** Host `aria-label` forwarded to the native no-href activation button. */
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
-  /** When set, the card's root renders as a real `<a href=...>` instead of a `<div>` -- for a
-   *  whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`. */
+  /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a
+   *  whole-card link (e.g. a wide CTA tile). Slotted controls remain independent actions; clicks
+   *  in noninteractive card content still follow the link. Unset (the default) renders a plain
+   *  `<div>`. */
   @property() href?: string;
 
   /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
@@ -242,10 +245,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    * `role="button"` (axe-core's `nested-interactive` rule, which this library's own a11y gate
    * enforces, forbids a focusable descendant of a `role="button"` ancestor). The trade-off is that
    * "did the user aim at the card, or at a control inside it?" has to be answered at event time
-   * instead: walk `composedPath()` from the original target up to `[part='base']` and bail out if
-   * anything along the way is itself a control. `composedPath()` (rather than `e.target`) is what
-   * makes this work through a slotted component's own shadow root -- a click on `<lr-button>`
-   * retargets to the host, but its composed path still contains the internal native `<button>`.
+   * instead: walk `composedPath()` from the original target up to the current card interaction
+   * region and bail out if anything along the way is itself a control. `composedPath()` (rather
+   * than `e.target`) is what makes this work through a slotted component's own shadow root -- a
+   * click on `<lr-button>` retargets to the host, but its composed path still contains the
+   * internal native `<button>`.
    */
   private originatesInNestedControl(
     e: Event,
@@ -270,6 +274,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     }
     if (this.originatesInNestedControl(e, e.currentTarget)) return;
     this.emit("lr-card-activate");
+  };
+
+  private onLinkedContentClick = (e: Event): void => {
+    if (this.originatesInNestedControl(e, e.currentTarget)) return;
+    this.renderRoot
+      .querySelector<HTMLAnchorElement>('a[part~="base"][href]')
+      ?.click();
   };
 
   override connectedCallback(): void {
@@ -323,7 +334,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.contentObserverDocument = undefined;
   }
 
-  /** Activates the native whole-card owner: the linked root when `href` is safe, or the
+  /** Activates the native whole-card owner: the linked anchor when `href` is safe, or the
    *  activation button while `interactive` is set without a link. Passive cards remain inert. */
   override click(): void {
     this.renderRoot
@@ -383,13 +394,18 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // card has not opted in, so the passive default renders byte-identically to before (mirrors
     // `<lr-chip>`'s `toggleable` gating).
     return href
-      ? html`<a
-          part="base"
-          href=${href}
-          target=${this.target || nothing}
-          rel=${this.target ? "noopener noreferrer" : nothing}
-          >${body}</a
-        >`
+      ? html`<div class="linked-shell">
+          <a
+            part="base"
+            href=${href}
+            target=${this.target || nothing}
+            rel=${this.target ? "noopener noreferrer" : nothing}
+            aria-labelledby="linked-content"
+          ></a>
+          <div id="linked-content" class="linked-content" @click=${this.onLinkedContentClick}>
+            ${body}
+          </div>
+        </div>`
       : html`<div
           part="base"
           @click=${activatable ? this.onBaseClick : nothing}

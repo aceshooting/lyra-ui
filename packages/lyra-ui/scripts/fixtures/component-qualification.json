@@ -6053,14 +6053,28 @@
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 221,
+              "line": 217,
+              "test": "keeps a linked card's slotted controls independently operable",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/card/card.test.ts",
+              "line": 266,
+              "test": "keeps rich slotted content as a linked card's accessible name",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/card/card.test.ts",
+              "line": 315,
               "test": "an interactive card containing a slotted lr-button is still accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 532,
+              "line": 644,
               "test": "is accessible with every vertical action slot populated",
               "target": "el",
               "state": "populated"
