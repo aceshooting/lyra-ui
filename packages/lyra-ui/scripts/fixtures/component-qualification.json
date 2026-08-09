@@ -43389,7 +43389,7 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1991,
+              "line": 1994,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
