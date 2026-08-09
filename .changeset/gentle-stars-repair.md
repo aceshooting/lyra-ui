@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+'@aceshooting/lyra-ui': major
 ---
 
 Improve component reliability and public contracts across the library:
