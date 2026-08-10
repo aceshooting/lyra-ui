@@ -52,6 +52,11 @@ export interface DateRange {
   to: Date | null;
 }
 
+interface ViewPeriod {
+  start: Date;
+  end: Date;
+}
+
 export type LyraDatePickerPageBy = 'months' | 'single';
 export type LyraDatePickerView = 'days' | 'months' | 'years' | 'decades';
 export type LyraDatePickerFirstDayOfWeek =
@@ -109,6 +114,10 @@ export interface LyraDatePickerEventMap {
  * the calendar grid — the grid's own commit key, the same carve-out `<lr-textarea>` has for a
  * newline. This element is also not form-associated; the wrapping `<lr-date-input>` is what
  * participates in a `<form>`.
+ *
+ * Month, year, and decade selection views retain one enabled roving Tab stop. Arrow keys follow
+ * their visual four-column grid (mirroring horizontally under RTL), Home and End move to the
+ * first and last enabled periods, and Enter or Space drills into the focused period.
  *
  * @customElement lr-date-picker
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
@@ -252,7 +261,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   @state() private viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   @state() private rangePreview: Date | null = null;
+  private focusedViewStart = '';
   private focusPending = false;
+  private viewFocusPending = false;
+  private restoringViewFocus = false;
   private readonly internals = attachInternalsSafely(this);
   private disabledDatesCacheSource?: LyraDatePickerDisabledDates;
   private disabledDatesCache = new Set<string>();
@@ -338,6 +350,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
+    const activeElement =
+      (this.renderRoot as { activeElement?: Element | null } | undefined)?.activeElement ?? null;
+    const activeViewStart = activeElement?.matches('[part~="view-item"]')
+      ? parseISO(activeElement.getAttribute('data-view-start') ?? '')
+      : null;
     if (changed.has('value')) {
       const external = !this.suppressViewSync;
       this.suppressViewSync = false;
@@ -358,7 +375,16 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const max = parseISO(this.max);
     const today = this.resolvedToday();
     this.normalizeFocusedDate(min, max, today);
+    this.clampViewDateToEnabledPeriod();
     this.syncCustomStates();
+
+    if (activeViewStart && this.effectiveView !== 'days') {
+      const next = this.resolveViewFocus(this.viewPeriods());
+      if (next && !isSameDay(activeViewStart, next)) {
+        this.setFocusedViewStart(next);
+        this.viewFocusPending = true;
+      }
+    }
   }
 
   private get fdow(): number {
@@ -577,10 +603,152 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   /** Focus the current roving day (or the first item in a non-day view). */
   override focus(options?: FocusOptions): void {
     const target = this.renderRoot?.querySelector<HTMLElement>(
-      '[part~="day"][tabindex="0"], [part~="view-item"]:not(:disabled)',
+      '[part~="day"][tabindex="0"], [part~="view-item"][tabindex="0"]:not(:disabled)',
     );
     target?.focus(options);
   }
+
+  private viewPeriodMonths(view = this.effectiveView): number {
+    if (view === 'years') return 12;
+    if (view === 'decades') return 120;
+    return 1;
+  }
+
+  private viewPeriodStart(date: Date, view = this.effectiveView): Date {
+    if (view === 'years') return new Date(date.getFullYear(), 0, 1);
+    if (view === 'decades') return new Date(Math.floor(date.getFullYear() / 10) * 10, 0, 1);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  private viewPageStart(view = this.effectiveView): Date {
+    const year = this.viewDate.getFullYear();
+    if (view === 'months') return new Date(year, 0, 1);
+    if (view === 'years') return new Date(Math.floor(year / 12) * 12, 0, 1);
+    return new Date(Math.floor(year / 120) * 120, 0, 1);
+  }
+
+  private viewPeriods(view = this.effectiveView): ViewPeriod[] {
+    const pageStart = this.viewPageStart(view);
+    const span = this.viewPeriodMonths(view);
+    return Array.from({ length: 12 }, (_, index) => {
+      const start = addMonths(pageStart, index * span);
+      return { start, end: new Date(start.getFullYear(), start.getMonth() + span, 0) };
+    });
+  }
+
+  /** Keeps the selection page on a min/max-reachable period without applying day-level constraints. */
+  private clampViewDateToEnabledPeriod(view = this.effectiveView): Date | null {
+    if (view === 'days') return null;
+    const periods = this.viewPeriods(view);
+    if (
+      this.disabled ||
+      this.readonly ||
+      periods.some((period) => !this.viewPeriodDisabled(period.start, period.end))
+    ) {
+      return null;
+    }
+
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const first = periods[0]!;
+    const last = periods[periods.length - 1]!;
+    const anchor = min && last.end < min ? min : max && first.start > max ? max : null;
+    if (!anchor) return null;
+
+    const next = this.viewPeriodStart(anchor, view);
+    this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
+    return next;
+  }
+
+  private resolveViewFocus(periods: readonly ViewPeriod[]): Date | null {
+    const inView = (candidate: Date | null): Date | null => {
+      if (!candidate) return null;
+      const start = this.viewPeriodStart(candidate);
+      const period = periods.find((item) => isSameDay(item.start, start));
+      return period && !this.viewPeriodDisabled(period.start, period.end) ? period.start : null;
+    };
+
+    const fallback = periods.find((period) => !this.viewPeriodDisabled(period.start, period.end));
+    return inView(parseISO(this.focusedViewStart)) ?? inView(this.selection.from) ?? inView(this.viewDate) ?? fallback?.start ?? null;
+  }
+
+  private setFocusedViewStart(date: Date, view = this.effectiveView, requestUpdate = false): void {
+    const next = formatISO(this.viewPeriodStart(date, view));
+    if (this.focusedViewStart === next) return;
+    this.focusedViewStart = next;
+    if (requestUpdate) this.requestUpdate();
+  }
+
+  private onViewItemFocus(start: Date): void {
+    if (!this.restoringViewFocus) this.setFocusedViewStart(start, this.effectiveView, true);
+  }
+
+  private firstEnabledViewPeriod(start: Date, direction: -1 | 1): Date | null {
+    const span = this.viewPeriodMonths();
+    let candidate = this.viewPeriodStart(start);
+    for (let index = 0; index < 366; index++) {
+      const end = new Date(candidate.getFullYear(), candidate.getMonth() + span, 0);
+      if (!this.viewPeriodDisabled(candidate, end)) return candidate;
+      candidate = addMonths(candidate, direction * span);
+    }
+    return null;
+  }
+
+  private focusViewPeriod(date: Date, view = this.effectiveView): void {
+    this.setFocusedViewStart(date, view);
+    this.viewFocusPending = true;
+  }
+
+  private onViewGridKey = (event: KeyboardEvent): void => {
+    const view = this.effectiveView;
+    if (view === 'days') return;
+
+    const periods = this.viewPeriods(view);
+    const source = event.composedPath().find((node): node is HTMLElement =>
+      node instanceof HTMLElement && node.hasAttribute('data-view-start'),
+    );
+    const currentSource = parseISO(source?.getAttribute('data-view-start') ?? '') ?? this.resolveViewFocus(periods);
+    if (!currentSource) return;
+    const current = this.viewPeriodStart(currentSource, view);
+    const span = this.viewPeriodMonths(view);
+    const rtl = isRtl(this);
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    let next: Date | null = null;
+
+    switch (event.key) {
+      case backwardKey:
+        next = this.firstEnabledViewPeriod(addMonths(current, -span), -1);
+        break;
+      case forwardKey:
+        next = this.firstEnabledViewPeriod(addMonths(current, span), 1);
+        break;
+      case 'ArrowUp':
+        next = this.firstEnabledViewPeriod(addMonths(current, -4 * span), -1);
+        break;
+      case 'ArrowDown':
+        next = this.firstEnabledViewPeriod(addMonths(current, 4 * span), 1);
+        break;
+      case 'Home':
+        next = periods.find((period) => !this.viewPeriodDisabled(period.start, period.end))?.start ?? null;
+        break;
+      case 'End':
+        next = [...periods].reverse().find((period) => !this.viewPeriodDisabled(period.start, period.end))?.start ?? null;
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.pickViewItem(current);
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    if (!next) return;
+    this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
+    this.focusViewPeriod(next, view);
+  };
 
   private setView(next: LyraDatePickerView, date = this.viewDate): void {
     if (next === this.view) return;
@@ -592,7 +760,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const next: Record<LyraDatePickerView, LyraDatePickerView> = {
       days: 'months', months: 'years', years: 'decades', decades: 'decades',
     };
-    this.setView(next[this.effectiveView]);
+    const current = this.effectiveView;
+    const nextView = next[current];
+    if (nextView === current) return;
+
+    const focused = current === 'days'
+      ? this.focusedDateValue ?? this.selection.from ?? this.viewDate
+      : this.resolveViewFocus(this.viewPeriods(current)) ?? this.viewDate;
+    this.focusViewPeriod(focused, nextView);
+    this.setView(nextView);
   }
 
   private onDayFocus(date: Date): void {
@@ -707,6 +883,20 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
         `[data-date="${iso}"][tabindex="0"]`,
       ) as HTMLElement | null;
       cell?.focus();
+    }
+    if (this.viewFocusPending) {
+      this.viewFocusPending = false;
+      const item = this.renderRoot.querySelector<HTMLElement>(
+        '[part~="view-item"][tabindex="0"]:not(:disabled)',
+      );
+      if (item) {
+        this.restoringViewFocus = true;
+        try {
+          item.focus();
+        } finally {
+          this.restoringViewFocus = false;
+        }
+      }
     }
   }
 
@@ -913,6 +1103,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     label: string,
     today: Date,
     selected: Date | null,
+    focused: boolean,
   ): TemplateResult {
     const disabled = this.viewPeriodDisabled(start, end);
     const isToday = today >= start && today <= end;
@@ -921,13 +1112,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (disabled) parts.push('view-item-disabled');
     if (isToday) parts.push('view-item-today');
     if (isSelected) parts.push('view-item-selected');
-    return html`<div part="view-cell" role="gridcell">
+    return html`<div part="view-cell" role="gridcell" aria-selected=${isSelected ? 'true' : 'false'}>
       <button
         part=${parts.join(' ')}
         type="button"
+        data-view-start=${formatISO(start)}
+        tabindex=${focused && !disabled ? '0' : '-1'}
         ?disabled=${disabled}
-        aria-selected=${isSelected ? 'true' : 'false'}
         @click=${() => this.pickViewItem(start)}
+        @focus=${() => this.onViewItemFocus(start)}
       >${label}</button>
     </div>`;
   }
@@ -935,9 +1128,22 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   private pickViewItem(date: Date): void {
     if (this.disabled || this.readonly) return;
     this.viewDate = new Date(date.getFullYear(), date.getMonth(), 1);
-    if (this.effectiveView === 'months') this.setView('days', date);
-    else if (this.effectiveView === 'years') this.setView('months', date);
-    else if (this.effectiveView === 'decades') this.setView('years', date);
+    if (this.effectiveView === 'months') {
+      this.setView('days', date);
+      const firstEnabled = this.firstEnabledDate(
+        parseISO(this.min),
+        parseISO(this.max),
+        this.resolvedToday(),
+      );
+      this.setFocusedDate(firstEnabled);
+      this.focusPending = firstEnabled != null;
+    } else if (this.effectiveView === 'years') {
+      this.setView('months', date);
+      this.focusViewPeriod(date, 'months');
+    } else if (this.effectiveView === 'decades') {
+      this.setView('years', date);
+      this.focusViewPeriod(date, 'years');
+    }
   }
 
   private navView(delta: number): void {
@@ -947,43 +1153,32 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   private renderView(today: Date): TemplateResult {
     const selected = this.selection.from;
-    const year = this.viewDate.getFullYear();
+    const view = this.effectiveView;
+    const periods = this.viewPeriods(view);
+    const pageStart = periods[0]!.start;
     const yearFormatter = dateTimeFormat(this.effectiveLocale, { year: 'numeric' });
     const monthFormatter = dateTimeFormat(this.effectiveLocale, { month: 'short' });
-    let items: Array<{ start: Date; end: Date; label: string }> = [];
     let title = '';
+    let items: Array<ViewPeriod & { label: string }>;
 
-    if (this.effectiveView === 'months') {
-      title = yearFormatter.format(new Date(year, 0, 1));
-      items = Array.from({ length: 12 }, (_, month) => ({
-        start: new Date(year, month, 1),
-        end: new Date(year, month + 1, 0),
-        label: monthFormatter.format(new Date(year, month, 1)),
+    if (view === 'months') {
+      title = yearFormatter.format(pageStart);
+      items = periods.map((period) => ({
+        ...period,
+        label: monthFormatter.format(period.start),
       }));
-    } else if (this.effectiveView === 'years') {
-      const startYear = Math.floor(year / 12) * 12;
-      title = `${yearFormatter.format(new Date(startYear, 0, 1))}–${yearFormatter.format(new Date(startYear + 11, 0, 1))}`;
-      items = Array.from({ length: 12 }, (_, offset) => {
-        const itemYear = startYear + offset;
-        return {
-          start: new Date(itemYear, 0, 1),
-          end: new Date(itemYear, 11, 31),
-          label: yearFormatter.format(new Date(itemYear, 0, 1)),
-        };
-      });
+    } else if (view === 'years') {
+      title = `${yearFormatter.format(pageStart)}–${yearFormatter.format(periods[11]!.start)}`;
+      items = periods.map((period) => ({ ...period, label: yearFormatter.format(period.start) }));
     } else {
-      const startYear = Math.floor(year / 120) * 120;
-      title = `${yearFormatter.format(new Date(startYear, 0, 1))}–${yearFormatter.format(new Date(startYear + 119, 0, 1))}`;
-      items = Array.from({ length: 12 }, (_, offset) => {
-        const decadeStart = startYear + offset * 10;
-        return {
-          start: new Date(decadeStart, 0, 1),
-          end: new Date(decadeStart + 9, 11, 31),
-          label: `${yearFormatter.format(new Date(decadeStart, 0, 1))}–${yearFormatter.format(new Date(decadeStart + 9, 0, 1))}`,
-        };
-      });
+      title = `${yearFormatter.format(pageStart)}–${yearFormatter.format(periods[11]!.end)}`;
+      items = periods.map((period) => ({
+        ...period,
+        label: `${yearFormatter.format(period.start)}–${yearFormatter.format(period.end)}`,
+      }));
     }
 
+    const focused = this.resolveViewFocus(periods);
     const rows: typeof items[] = [];
     for (let index = 0; index < items.length; index += 4) rows.push(items.slice(index, index + 4));
     return html`
@@ -1013,9 +1208,21 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
           </div>
         </slot>
       </div>
-      <div part="view-grid" role="grid">
+      <div
+        part="view-grid"
+        role="grid"
+        aria-label=${title}
+        @keydown=${this.onViewGridKey}
+      >
         ${rows.map((row) => html`<div part="view-row" role="row">
-          ${row.map((item) => this.renderViewItem(item.start, item.end, item.label, today, selected))}
+          ${row.map((item) => this.renderViewItem(
+            item.start,
+            item.end,
+            item.label,
+            today,
+            selected,
+            focused != null && isSameDay(item.start, focused),
+          ))}
         </div>`)}
       </div>
     `;

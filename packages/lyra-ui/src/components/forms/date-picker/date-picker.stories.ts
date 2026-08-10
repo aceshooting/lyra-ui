@@ -168,6 +168,14 @@ export const ConstraintsAndSlots: Story = {
 };
 
 export const CalendarViews: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each month, year, and decade grid keeps one enabled Tab stop. Arrow keys follow its four-column layout (with horizontal movement mirrored in RTL), Home and End stay within the current page, and Enter or Space drills into the focused period.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem;">
       <lr-date-picker view="months" value="2026-07-15"></lr-date-picker>

@@ -1407,14 +1407,250 @@ describe('date-picker coverage gaps', () => {
     expect(el.shadowRoot!.activeElement === day).to.be.true;
   });
 
-  it('focus() moves DOM focus to the first enabled selection-view item when not showing days', async () => {
+  it('focus() moves DOM focus to the roving selection-view item when not showing days', async () => {
     const el = (await fixture(
       html`<lr-date-picker value="2026-07-15" view="months"></lr-date-picker>`,
     )) as LyraDatePicker;
     await el.updateComplete;
     el.focus();
-    const item = el.shadowRoot!.querySelector('[part~="view-item"]:not(:disabled)') as HTMLButtonElement;
+    const item = el.shadowRoot!.querySelector('[part~="view-item"][tabindex="0"]') as HTMLButtonElement;
     expect(el.shadowRoot!.activeElement === item).to.be.true;
+  });
+
+  const viewItems = (el: LyraDatePicker): HTMLButtonElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part~="view-item"]')) as HTMLButtonElement[];
+
+  const activeViewItemIndex = (el: LyraDatePicker): number =>
+    viewItems(el).findIndex((item) => item.tabIndex === 0);
+
+  const focusedViewItemIndex = (el: LyraDatePicker): number =>
+    viewItems(el).indexOf(el.shadowRoot!.activeElement as HTMLButtonElement);
+
+  const dispatchViewGridKey = (el: LyraDatePicker, key: string): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    viewItems(el)[activeViewItemIndex(el)]!.dispatchEvent(event);
+    return event;
+  };
+
+  it('gives every selection view one roving tab stop on its selected period', async () => {
+    for (const view of ['months', 'years', 'decades'] as const) {
+      const el = (await fixture(html`
+        <lr-date-picker view=${view} value="2026-06-15"></lr-date-picker>
+      `)) as LyraDatePicker;
+      await el.updateComplete;
+
+      const items = viewItems(el);
+      const selectedIndex = items.findIndex((item) => item.getAttribute('part')!.includes('view-item-selected'));
+      expect(selectedIndex, view).to.be.greaterThan(-1);
+      expect(items.filter((item) => item.tabIndex === 0).length, view).to.equal(1);
+      expect(items[selectedIndex]!.tabIndex, view).to.equal(0);
+      expect(items.every((item, index) => index === selectedIndex || item.tabIndex === -1), view).to.equal(true);
+      await expect(el).shadowDom.to.be.accessible();
+    }
+  });
+
+  it('names each selection grid from its localized title', async () => {
+    for (const view of ['months', 'years', 'decades'] as const) {
+      const el = (await fixture(html`
+        <lr-date-picker view=${view} value="2026-06-15"></lr-date-picker>
+      `)) as LyraDatePicker;
+      await el.updateComplete;
+
+      const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLButtonElement;
+      const grid = el.shadowRoot!.querySelector('[part="view-grid"]') as HTMLElement;
+      expect(grid.getAttribute('aria-label'), view).to.equal(title.textContent!.trim());
+    }
+  });
+
+  it('keeps a selection grid named when a header slot replaces its navigation title', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker view="months" value="2026-06-15">
+        <span slot="header">Custom calendar header</span>
+      </lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+
+    const grid = el.shadowRoot!.querySelector('[part="view-grid"]') as HTMLElement;
+    expect(grid.getAttribute('aria-label')).to.equal('2026');
+    expect(grid.hasAttribute('aria-labelledby')).to.equal(false);
+  });
+
+  it('restores focus into each selection grid when the title advances the view', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+
+    for (const [view, expectedStart] of [
+      ['months', '2026-06-01'],
+      ['years', '2026-01-01'],
+      ['decades', '2020-01-01'],
+    ] as const) {
+      await el.updateComplete;
+      const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLButtonElement;
+      title.focus();
+      title.click();
+      await el.updateComplete;
+
+      const active = viewItems(el)[activeViewItemIndex(el)]!;
+      expect(el.view).to.equal(view);
+      expect(active.getAttribute('data-view-start')).to.equal(expectedStart);
+      expect(focusedViewItemIndex(el)).to.equal(activeViewItemIndex(el));
+    }
+  });
+
+  it('moves selection-view focus by its visual 4-column grid and mirrors horizontal keys in RTL', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker view="months" value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    viewItems(el)[activeViewItemIndex(el)]!.focus();
+
+    const right = dispatchViewGridKey(el, 'ArrowRight');
+    await el.updateComplete;
+    expect(right.defaultPrevented).to.equal(true);
+    expect(activeViewItemIndex(el)).to.equal(6);
+    expect(focusedViewItemIndex(el)).to.equal(6);
+
+    dispatchViewGridKey(el, 'ArrowDown');
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(10);
+    expect(focusedViewItemIndex(el)).to.equal(10);
+
+    dispatchViewGridKey(el, 'Home');
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(0);
+
+    dispatchViewGridKey(el, 'End');
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(11);
+
+    const rtl = (await fixture(html`
+      <lr-date-picker dir="rtl" view="months" value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await rtl.updateComplete;
+    viewItems(rtl)[activeViewItemIndex(rtl)]!.focus();
+    dispatchViewGridKey(rtl, 'ArrowLeft');
+    await rtl.updateComplete;
+    expect(activeViewItemIndex(rtl)).to.equal(6);
+    expect(focusedViewItemIndex(rtl)).to.equal(6);
+  });
+
+  it('uses period-sized horizontal movement in year and decade selection views', async () => {
+    for (const [view, expectedStart] of [
+      ['years', '2027-01-01'],
+      ['decades', '2030-01-01'],
+    ] as const) {
+      const el = (await fixture(html`
+        <lr-date-picker view=${view} value="2026-06-15"></lr-date-picker>
+      `)) as LyraDatePicker;
+      await el.updateComplete;
+      viewItems(el)[activeViewItemIndex(el)]!.focus();
+
+      const right = dispatchViewGridKey(el, 'ArrowRight');
+      await el.updateComplete;
+      const active = viewItems(el)[activeViewItemIndex(el)]!;
+      expect(right.defaultPrevented, view).to.equal(true);
+      expect(active.getAttribute('data-view-start'), view).to.equal(expectedStart);
+      expect(focusedViewItemIndex(el), view).to.equal(activeViewItemIndex(el));
+    }
+  });
+
+  it('keeps view-grid roving focus out of disabled periods and moves it across a page boundary', async () => {
+    const constrained = (await fixture(html`
+      <lr-date-picker view="months" value="2026-03-15" min="2026-03-01"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await constrained.updateComplete;
+    expect(activeViewItemIndex(constrained)).to.equal(2);
+    viewItems(constrained)[2]!.focus();
+    const home = dispatchViewGridKey(constrained, 'Home');
+    await constrained.updateComplete;
+    expect(home.defaultPrevented).to.equal(true);
+    expect(activeViewItemIndex(constrained)).to.equal(2);
+    expect(focusedViewItemIndex(constrained)).to.equal(2);
+
+    const boundary = (await fixture(html`
+      <lr-date-picker view="months" value="2026-12-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await boundary.updateComplete;
+    viewItems(boundary)[activeViewItemIndex(boundary)]!.focus();
+    dispatchViewGridKey(boundary, 'ArrowRight');
+    await boundary.updateComplete;
+    const active = viewItems(boundary)[activeViewItemIndex(boundary)]!;
+    expect(active.getAttribute('data-view-start')).to.equal('2027-01-01');
+    expect(focusedViewItemIndex(boundary)).to.equal(activeViewItemIndex(boundary));
+  });
+
+  it('clamps an entirely out-of-range initial selection page to an enabled period', async () => {
+    const year = new Date().getFullYear() + 5;
+    const el = (await fixture(html`
+      <lr-date-picker view="months" min=${`${year}-01-01`}></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+
+    const active = viewItems(el)[activeViewItemIndex(el)]!;
+    expect(active.getAttribute('data-view-start')).to.equal(`${year}-01-01`);
+    expect(active.disabled).to.equal(false);
+  });
+
+  it('re-homes focus onto an enabled page when a live bound disables every current period', async () => {
+    const year = new Date().getFullYear() - 5;
+    const el = (await fixture(html`<lr-date-picker view="months"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    viewItems(el)[activeViewItemIndex(el)]!.focus();
+    await el.updateComplete;
+
+    el.max = `${year}-12-31`;
+    await el.updateComplete;
+    const active = viewItems(el)[activeViewItemIndex(el)]!;
+    expect(active.getAttribute('data-view-start')).to.equal(`${year}-12-01`);
+    expect(active.disabled).to.equal(false);
+    expect(focusedViewItemIndex(el)).to.equal(activeViewItemIndex(el));
+  });
+
+  it('re-homes focused selection-view DOM focus when a live bound disables its period', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker view="months" value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    viewItems(el)[activeViewItemIndex(el)]!.focus();
+    await el.updateComplete;
+
+    el.max = '2026-05-31';
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(4);
+    expect(focusedViewItemIndex(el)).to.equal(4);
+  });
+
+  it('activates selection-view roving targets with Enter and Space, restoring focus in the destination view', async () => {
+    const months = (await fixture(html`
+      <lr-date-picker view="months" value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await months.updateComplete;
+    viewItems(months)[activeViewItemIndex(months)]!.focus();
+    const enter = dispatchViewGridKey(months, 'Enter');
+    await months.updateComplete;
+    expect(enter.defaultPrevented).to.equal(true);
+    expect(months.view).to.equal('days');
+    const day = months.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement | null;
+    expect(day !== null).to.equal(true);
+    expect(months.shadowRoot!.activeElement === day).to.equal(true);
+
+    const years = (await fixture(html`
+      <lr-date-picker view="years" value="2026-06-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    await years.updateComplete;
+    viewItems(years)[activeViewItemIndex(years)]!.focus();
+    const space = dispatchViewGridKey(years, ' ');
+    await years.updateComplete;
+    expect(space.defaultPrevented).to.equal(true);
+    expect(years.view).to.equal('months');
+    expect(focusedViewItemIndex(years)).to.equal(activeViewItemIndex(years));
+    await expect(years).shadowDom.to.be.accessible();
   });
 
   it('falls back to the current view month instead of throwing when every day is disabled and there is no focus or selection yet', async () => {
