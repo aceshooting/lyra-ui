@@ -25,6 +25,22 @@ export const InlineDocument: Story = {
   ></lr-zoomable-frame>`,
 };
 
+export const DecorativeIconSlots: Story = {
+  name: 'Decorative zoom icon slots',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The icon slots are decorative visual overrides. Their flattened content is inert and hidden from assistive technology, so use an SVG or glyph rather than a second interactive control; the native zoom buttons remain the only focus and click targets.',
+      },
+    },
+  },
+  render: () => html`<lr-zoomable-frame aria-label="Icon slot preview" .srcdoc=${previewDocument}>
+    <span slot="zoom-in-icon">＋</span>
+    <span slot="zoom-out-icon">−</span>
+  </lr-zoomable-frame>`,
+};
+
 export const NonInteractive: Story = {
   render: () => html`<lr-zoomable-frame
     aria-label="Non-interactive preview"

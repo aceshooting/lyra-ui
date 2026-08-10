@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
 
@@ -186,6 +187,74 @@ describe('zoom controls and interaction', () => {
     expect(el.zoom).to.equal(1.5);
     controls.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
     expect(el.zoom).to.equal(1);
+  });
+
+  it('keeps hostile icon overrides projected but inert under the native zoom controls', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <button id="outside" type="button">Outside</button>
+        <lr-zoomable-frame
+          aria-label="Icon slot probe"
+          style="inline-size: 320px"
+          zoom="1"
+          zoom-levels="50% 100% 150%"
+        >
+          <button id="zoom-in-glyph" slot="zoom-in-icon" type="button">Larger</button>
+          <a id="zoom-out-glyph" slot="zoom-out-icon" href="#zoom-out-glyph">Smaller</a>
+        </lr-zoomable-frame>
+      </div>
+    `);
+    const el = root.querySelector<LyraZoomableFrame>('lr-zoomable-frame')!;
+    const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+    const zoomInGlyph = root.querySelector<HTMLButtonElement>('#zoom-in-glyph')!;
+    const zoomOutGlyph = root.querySelector<HTMLAnchorElement>('#zoom-out-glyph')!;
+
+    for (const name of ['zoom-in-icon', 'zoom-out-icon']) {
+      const slot = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${name}"]`)!;
+      expect(slot.assignedElements().length, `${name} stays projected`).to.equal(1);
+      expect(
+        slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
+        `${name} is decorative inert chrome`,
+      ).to.equal('true');
+    }
+    expect(zoomInGlyph.getBoundingClientRect().width).to.be.greaterThan(0);
+    expect(zoomOutGlyph.getBoundingClientRect().width).to.be.greaterThan(0);
+
+    outside.focus();
+    zoomInGlyph.focus();
+    expect(document.activeElement?.id).to.equal('outside');
+    zoomOutGlyph.focus();
+    expect(document.activeElement?.id).to.equal('outside');
+
+    let zoomInGlyphClicks = 0;
+    let zoomOutGlyphClicks = 0;
+    zoomInGlyph.addEventListener('click', () => zoomInGlyphClicks++);
+    zoomOutGlyph.addEventListener('click', () => zoomOutGlyphClicks++);
+    const clickCenter = async (target: HTMLElement): Promise<void> => {
+      const rect = target.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+    };
+
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    await aTimeout(0);
+    try {
+      await resetMouse();
+      await clickCenter(zoomInGlyph);
+      await el.updateComplete;
+      expect(zoomInGlyphClicks, 'the decorative zoom-in glyph receives no pointer click').to.equal(0);
+      expect(el.zoom).to.equal(1.5);
+
+      await clickCenter(zoomOutGlyph);
+      await el.updateComplete;
+      expect(zoomOutGlyphClicks, 'the decorative zoom-out glyph receives no pointer click').to.equal(0);
+      expect(el.zoom).to.equal(1);
+      await expect(el).to.be.accessible();
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('removes controls and disables pointer/keyboard entry without interaction', async () => {
