@@ -71,7 +71,7 @@ it('contains composed draft events while preserving its single public event sequ
   expect(blurs).to.equal(1);
 });
 
-it('contains composed inline-editor events while retaining the edit commit sequence', async () => {
+it('contains composed inline-editor events while relaying its public focus lifecycle once', async () => {
   const parent = (await fixture(html`
     <div><lr-token-input editable .value=${['alpha']}></lr-token-input></div>
   `)) as HTMLDivElement;
@@ -81,16 +81,20 @@ it('contains composed inline-editor events while retaining the edit commit seque
   const field = editor(el)!;
   let inputs = 0;
   let changes = 0;
+  let focuses = 0;
   let blurs = 0;
   const inputDetails: unknown[] = [];
+  const lifecycleEvents: Event[] = [];
   parent.addEventListener('input', (event) => {
     inputs += 1;
     inputDetails.push((event as CustomEvent<{ value: string[] }>).detail);
   });
   parent.addEventListener('change', () => changes += 1);
-  parent.addEventListener('blur', () => blurs += 1);
+  parent.addEventListener('focus', (event) => { focuses += 1; lifecycleEvents.push(event); });
+  parent.addEventListener('blur', (event) => { blurs += 1; lifecycleEvents.push(event); });
 
   field.value = 'beta';
+  field.dispatchEvent(new FocusEvent('focus', { bubbles: true, composed: true }));
   field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
   field.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   field.dispatchEvent(new FocusEvent('blur', { bubbles: true, composed: true }));
@@ -101,7 +105,36 @@ it('contains composed inline-editor events while retaining the edit commit seque
   expect(inputs).to.equal(1);
   expect(inputDetails).to.deep.equal([{ value: ['beta'] }]);
   expect(changes).to.equal(1);
-  expect(blurs).to.equal(0);
+  expect(focuses).to.equal(1);
+  expect(blurs).to.equal(1);
+  expect(lifecycleEvents.every((event) => event instanceof CustomEvent)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event.target === el)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
+});
+
+it('relays an inline-editor focus and blur once through the host', async () => {
+  const parent = (await fixture(html`
+    <div>
+      <lr-token-input editable .value=${['alpha']}></lr-token-input>
+      <button type="button">Outside</button>
+    </div>
+  `)) as HTMLDivElement;
+  const el = parent.querySelector('lr-token-input') as LyraTokenInput;
+  const outside = parent.querySelector('button') as HTMLButtonElement;
+  const lifecycleEvents: Event[] = [];
+  parent.addEventListener('focus', (event) => lifecycleEvents.push(event));
+  parent.addEventListener('blur', (event) => lifecycleEvents.push(event));
+
+  tokenLabels(el)[0]!.click();
+  await el.updateComplete;
+  outside.focus();
+  await Promise.resolve();
+  await el.updateComplete;
+
+  expect(lifecycleEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(lifecycleEvents.every((event) => event instanceof CustomEvent)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event.target === el)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
 });
 
 it('skips a draft token that duplicates an existing one unless allowDuplicates is set', async () => {
@@ -433,6 +466,19 @@ it('lets an explicit aria-label win over the computed aria-labelledby', async ()
     wrapper.hasAttribute('aria-labelledby'),
     'an explicit aria-label must suppress the computed labelledby id',
   ).to.be.false;
+});
+
+it('preserves an explicitly empty host aria-label over a visible label', async () => {
+  const el = (await fixture(
+    html`<lr-token-input label="Recipients" aria-label=""></lr-token-input>`,
+  )) as LyraTokenInput;
+  const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  for (const owner of [wrapper, input]) {
+    expect(owner.hasAttribute('aria-label')).to.equal(true);
+    expect(owner.getAttribute('aria-label')).to.equal('');
+    expect(owner.hasAttribute('aria-labelledby')).to.equal(false);
+  }
 });
 
 it('applies the host name and field descriptions to the actual draft textbox', async () => {

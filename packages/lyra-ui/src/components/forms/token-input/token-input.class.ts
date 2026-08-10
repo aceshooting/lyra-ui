@@ -87,8 +87,10 @@ const stringArrayConverter = {
  * @slot error - Validation message.
  * @event input - Native-style composed event emitted after a user changes the token list.
  * @event change - Native-style composed commit event emitted with `input`.
- * @event focus - Re-dispatched from the draft input as a bubbling, composed event.
- * @event blur - Re-dispatched from the draft input as a bubbling, composed event.
+ * @event focus - Re-dispatched from the draft input and inline token editor as a bubbling,
+ *   composed event.
+ * @event blur - Re-dispatched from the draft input and inline token editor as a bubbling,
+ *   composed event.
  * @event lr-add - A token was added; detail is `{ value }`.
  * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
@@ -208,6 +210,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   /** Forwarded to both native text inputs through the lowercase `autocorrect` attribute.
    *  The camel-cased property avoids the boolean `HTMLElement.autocorrect` DOM typing. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Accessible-name override forwarded to the input wrapper and draft input. Attribute presence
+   *  wins, including an explicitly empty `aria-label`, which suppresses visible-label linkage. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
@@ -246,6 +250,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @state() private rovingIndex = 0;
   private focusEditorPending = false;
   private focusTokenPending = -1;
+  /** One native blur can be followed by a teardown blur when its commit removes the focused editor. */
+  private editorBlurRelayed = false;
   // `[part]:empty` never matches -- the part always contains a literal
   // `<slot>` child element regardless of assigned content -- so real
   // emptiness is tracked in JS instead (mirrors lr-select's identical
@@ -588,6 +594,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.editingIndex = index;
     this.editDraft = this.value[index]!; // safe: index bounds-checked above
     this.rovingIndex = index;
+    this.editorBlurRelayed = false;
     this.focusEditorPending = true;
   }
 
@@ -653,6 +660,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     event.stopPropagation();
     this.editDraft = (event.target as HTMLInputElement).value;
   };
+  private onEditFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.editorBlurRelayed = false;
+    this.emit('focus');
+  };
   private onEditKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter') { event.preventDefault(); this.commitEdit(true); }
     // Escape is consumed rather than left to bubble: an enclosing dialog/popover would otherwise
@@ -661,6 +673,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   };
   private onEditBlur = (event: FocusEvent): void => {
     event.stopPropagation();
+    if (!this.editorBlurRelayed) {
+      this.editorBlurRelayed = true;
+      this.emit('blur');
+    }
     // Native fieldset disablement can move focus just before the FACE callback reaches the host.
     // Deferring one microtask lets every lifecycle signal settle before deciding whether this was
     // a real user blur or teardown.
@@ -766,20 +782,21 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   private renderEditableToken(token: string, index: number): TemplateResult {
     if (this.editingIndex === index) {
-      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
+      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @focus=${this.onEditFocus} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
     }
     return html`<span part="token"><span part="token-label" role="button" tabindex=${this.effectiveDisabled ? nothing : index === this.activeTokenIndex ? 0 : -1} aria-disabled=${String(this.effectiveDisabled)} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
   }
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasAccessibleLabel = this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<div part="form-control">
       <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
-      <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing}>
+      <div part="input-wrapper" role="group" aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing} aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

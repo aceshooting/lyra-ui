@@ -58,6 +58,29 @@ export const Editable: Story = {
   ></lr-token-input>`,
 };
 
+/** The inline editor relays focus and blur through the host just like the draft text input. */
+export const EditableLifecycleEvents: Story = {
+  render: () => {
+    const report = (event: Event): void => {
+      const output = (event.currentTarget as HTMLElement).nextElementSibling as HTMLOutputElement | null;
+      if (output) output.textContent = `${event.type} received on lr-token-input`;
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s); max-inline-size: 24rem">
+        <lr-token-input
+          editable
+          label="Editable recipients"
+          hint="Click a recipient, then move focus away to observe the host lifecycle events."
+          .value=${['Ada', 'Grace']}
+          @focus=${report}
+          @blur=${report}
+        ></lr-token-input>
+        <output aria-live="polite">No lifecycle event received yet.</output>
+      </div>
+    `;
+  },
+};
+
 export const DisabledEditableTokens: Story = {
   parameters: {
     docs: {
