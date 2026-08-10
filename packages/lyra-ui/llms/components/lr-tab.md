@@ -20,7 +20,9 @@ One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
 A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
 button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
 stays in one place. The host is `display: contents`, contributing no box of its own inside that
-button.
+button. Direct default-slot element roots in the visual label are inert while projected, while their flattened
+accessibility-exposed text explicitly names the real tab button; author-hidden, inert, and CSS-hidden
+branches do not contribute. Use text/glyph markup rather than a second action.
 
 **Properties:** `panel: string = ''` (reflected) — the `name` of the `<lr-tab-panel>` this tab
 reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboard navigation and
@@ -32,7 +34,9 @@ affordance.
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
 panel; the consumer handles the request. The owning group separately emits
-`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visible content). **CSS parts:** `base`
+`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visual label content; direct default-slot element roots
+are inert while projected, and its accessibility-exposed flattened text names the real tab button).
+**CSS parts:** `base`
 and `tab` are aliases on the same projected-content slot; `close-button` and
 `close-button__base` are aliases on the same non-focusable visual close affordance. Style the
 group's `tab` part for the real interactive tab button.

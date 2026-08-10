@@ -7047,7 +7047,7 @@
       "name": "--lr-radio-button-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio-button>`** (default: `var(--lr-space-xs)`) — Gap between prefix, label, and suffix in both `<lr-radio-button>` and `<lr-radio appearance=\"button\">`."
+        "value": "**`<lr-radio-button>`** (default: `var(--lr-space-xs)`) — Gap between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance=\"button\">`."
       }
     },
     {

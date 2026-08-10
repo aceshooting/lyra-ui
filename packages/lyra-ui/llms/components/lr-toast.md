@@ -85,10 +85,11 @@ respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly w
 
 **Optional peer deps:** none.
 
-`role` is chosen automatically per `variant`: `"alert"` for `danger`/`warning`, `"status"`
-otherwise — re-evaluated on every `variant` change, not just at first render, so reassigning
-`variant` to `danger`/`warning` after creation is announced as an interruption instead of keeping
-its original, now-stale role. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
+Once a non-vetoed toast starts showing, its normalized message is appended to Lyra's pre-mounted,
+shared light-DOM announcement sink: assertive for `danger`/`warning`, polite otherwise. Changing a
+visible toast between those urgency levels announces that message at the new urgency. The visible
+item and stack themselves remain ordinary content, so an icon, action, and close button never become
+part of an atomic live announcement. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
 on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 timing-adjustable) —
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
 leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
@@ -124,17 +125,22 @@ at another, since `placement` is a per-call option rather than a single global r
 ```
 
 **Known gotchas:**
-- the stack itself has no live-region role; each `lr-toast-item` owns the single `status`/`alert`
-  role appropriate to its current variant, avoiding nested live-region announcements.
-- the close button's accessible name is derived from the toast's own message text (`"Close: <first
-  40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
-  a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first. Rich
-  non-interactive message markup contributes its text, named-slot/icon and actionable content do
-  not, and live message text mutations or reassignment update the name through nested forwarding
-  slots. Hidden, inert, CSS-hidden and `aria-hidden` message branches are excluded. Observation,
-  animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the item's owner
-  window after iframe adoption and cancel through the same window that scheduled them.
+- the stack and each visible item have no live-region role. Their normalized message is appended as
+  one child of a shared non-atomic light-DOM sink at the variant's urgency; icon, action, and close
+  controls remain outside that sink. Later meaningful message changes add only the changed normalized
+  message, and appending an action does not re-announce it.
+- the close button's accessible name is derived from the toast's own message text (the first 40
+  grapheme clusters when it must be shortened, falling back to bare `"Close"` only when the toast
+  has no text content) rather than a bare `"Close"` on every instance — useful when several toasts
+  are stacked and a screen-reader or switch-access user needs to tell their close buttons apart
+  without activating one first. On a legacy engine without `Intl.Segmenter`, it retains the whole
+  label rather than splitting a grapheme. The localized `closeWithTruncatedContext` template owns
+  truncation punctuation and word order. Rich non-interactive message markup contributes its text,
+  named-slot/icon and actionable content do not, and live message text mutations or reassignment
+  update the name through nested forwarding slots. Hidden, inert, CSS-hidden and `aria-hidden`
+  message branches are excluded. Observation, animation frames, elapsed-time clocks and
+  completion/auto-dismiss timers follow the item's owner window after iframe adoption and cancel
+  through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`

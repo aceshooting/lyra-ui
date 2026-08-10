@@ -186,12 +186,13 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   direct `panel.open = false`. Transient, like every other open-state in this library — it resets
   to `false` when the item is disconnected
 
-**Methods:** `select(): void` — fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called
-internally by this element's own click handler and by `<lr-menu>`'s Enter/Space keydown handling
-of the roving-focused item; also the cleanest way for a consumer/test to trigger selection
-programmatically instead of clicking the shadow-DOM `[part="base"]` element (see the gotcha below).
-For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first. On a submenu
-parent it opens the submenu instead and fires neither event — see below.
+**Methods:** `click(): void` forwards a programmatic host click to the visual row, preserving the
+same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
+or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
+`loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
+item. For `type="checkbox"`, either activation path toggles `checked` and fires
+`lr-menu-item-change` first. On a submenu parent it opens the submenu instead and fires neither
+event — see below.
 
 `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
 `closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
@@ -211,9 +212,11 @@ labels are observed live: in-place text edits, forwarding-slot reassignments, an
 visibility changes update type-ahead, the computed submenu-parent name, and the computed
 submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
 assignment stays authoritative even while hidden and therefore does not expose slot fallback;
-fallback contributes after the assignment is removed. A consumer-authored `aria-label` on the
-item, or `label`/`aria-label` on the submenu, wins by attribute presence — including an explicitly
-empty value and a value supplied after Lyra initially computed the name.
+fallback contributes after the assignment is removed. A consumer-authored `aria-label` or
+`aria-labelledby` on the item remains authoritative for its host name; the latter does not change
+type-ahead or the computed submenu-panel name. `label`/`aria-label` on the submenu itself also wins.
+An explicitly empty item `aria-label` and a value supplied after Lyra initially computed the name
+both remain authoritative.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
@@ -226,9 +229,14 @@ whose activation opens the panel instead of toggling `checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 
-**Slots:** default (label), `icon` and Shoelace-compatible `prefix` (leading content), `details`
-(WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
-`<lr-menu>` or direct mapped menu items).
+**Slots:** default (the visual label), `icon` and Shoelace-compatible `prefix` (leading content),
+`details` (WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
+`<lr-menu>` or direct mapped menu items). The five display slots — default, `icon`, `prefix`,
+`details`, and `suffix` — are visual-only: their flattened content is inert and hidden from
+assistive technology, so it cannot create a second action inside the focusable menu item. The
+default slot's accessibility-visible text is mirrored to the host's accessible name and type-ahead
+label. Use ordinary text/glyph markup in display slots; use the dedicated `submenu` slot for nested
+interactive menu content.
 
 **CSS parts:** `base`; `icon` and `prefix`; `label`; `details`; `suffix`; `checkmark` and its
 Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
@@ -248,7 +256,7 @@ also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `-
 
 Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
 the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
-`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `select()`,
+`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `click()`, `select()`,
 `getTextLabel()`, `hasSubmenu`/`submenuOpen`, async `openSubmenu()`/`closeSubmenu()`, checkbox events,
 and menu roving focus behave identically.
 
@@ -268,7 +276,10 @@ are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The
 under `<lr-menu-item>` above.
 
 **Slots:** default, `icon`, `prefix`, `details`, `suffix`, and `submenu` — including WA's direct-item
-submenu shape and Shoelace's nested-menu shape.
+submenu shape and Shoelace's nested-menu shape. Default, `icon`, `prefix`, `details`, and `suffix`
+are visual-only inert, assistive-technology-hidden display slots; default-slot text still names the
+focusable host and drives type-ahead. Use `submenu`, rather than a display slot, for nested
+interactive menu content.
 
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
@@ -405,11 +416,10 @@ row never opens its submenu, by keyboard or by pointer.
   contract, not a missing menu id; setting the string again would discard the cross-shadow
   relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
   optional for the menu-button pattern.
-- `<lr-menu-item>`'s click handler lives on an inner shadow-DOM element (`[part="base"]`), not the
-  host — calling `.click()` directly on the `<lr-menu-item>` host element in a test does **not**
-  trigger selection; either click (or dispatch on) the element returned by
-  `menuItemEl.shadowRoot.querySelector('[part="base"]')`, or just call the item's own `select()`
-  method directly.
+- `.click()` on an `<lr-menu-item>` or `<lr-dropdown-item>` host forwards to its inner visual
+  `[part="base"]`, preserving the same selection, checkbox, and submenu behavior as a pointer
+  activation. Prefer the host `click()` or `select()` in tests and automation rather than reaching
+  into shadow DOM.
 - `lr-show`/`lr-hide` are suppressed on the very first render even if `open` is already `true`
   in markup — only later `open` transitions fire them.
 - `lr-menu-item-select` carries no detail payload (`event.detail === null`); read

@@ -27,9 +27,9 @@ decides whether/how `steps` changes in response.
   `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
   is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
   leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
-  rendered in the `step-icon` part additionally to, never instead of, the state-driven
-  `step-index`/`step-check` glyph. Never mutated by this component. Empty (the default) renders
-  nothing.
+  rendered as inert, `aria-hidden` decoration in the `step-icon` part, additionally to — never
+  instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
+  or accessible name. Never mutated by this component. Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -83,10 +83,11 @@ action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button; the current step carries `aria-current="step"` and every
 other step carries `aria-current="false"`),
-`step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
-has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
-index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
-glyph, shown for `completed` steps instead of `step-index`), `step-label` (the step's label text).
+`step-icon` (optional inert, `aria-hidden` leading topic glyph from the step's `icon` field; only
+rendered when the step has one, additionally to — never instead of — `step-index`/`step-check`),
+`step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
+(the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
+(the step's label text).
 
 **Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
 text color of the `current` step. `--lr-stepper-current-font-weight` (default

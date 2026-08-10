@@ -48,7 +48,9 @@ text glyph). When it has any real (non-whitespace) content, it replaces the `key
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
 content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
 to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
-leaves the slotted content's own semantics exposed.
+leaves the slotted content's own semantics exposed. A host `aria-label` wins by attribute presence,
+including an explicitly empty value; the computed shortcut name applies only when that attribute is
+absent.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 

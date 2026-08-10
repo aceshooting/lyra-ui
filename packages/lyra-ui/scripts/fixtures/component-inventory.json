@@ -30983,7 +30983,7 @@
                 "parameters": [
                   {
                     "name": "options",
-                    "type": "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }",
+                    "type": "DataGridCopyOptions",
                     "optional": false,
                     "hasDefault": true,
                     "default": "{}"
@@ -31025,7 +31025,7 @@
                 "parameters": [
                   {
                     "name": "options",
-                    "type": "{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }",
+                    "type": "DataGridExportOptions",
                     "optional": false,
                     "hasDefault": true,
                     "default": "{}"
@@ -31091,7 +31091,7 @@
                 "parameters": [
                   {
                     "name": "options",
-                    "type": "{ columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }",
+                    "type": "DataGridCsvOptions",
                     "optional": false,
                     "hasDefault": true,
                     "default": "{}"
@@ -31217,7 +31217,7 @@
                   },
                   {
                     "name": "options",
-                    "type": "{ align?: 'start' | 'center' | 'end' }",
+                    "type": "DataGridScrollOptions",
                     "optional": false,
                     "hasDefault": true,
                     "default": "{}"
@@ -40272,6 +40272,15 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "closeSubmenu",
             "overloads": [
               {
@@ -40323,6 +40332,7 @@
             "focus"
           ],
           "delegatedMethods": [
+            "click",
             "select"
           ]
         }
@@ -44420,6 +44430,16 @@
             "default": false
           },
           {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "hint",
             "property": "hint",
             "type": "string",
@@ -44518,6 +44538,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "with-error",
+            "property": "withError",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "with-hint",
@@ -44638,6 +44668,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "fileCount",
@@ -44824,6 +44864,16 @@
             "hasDefault": false
           },
           {
+            "name": "withError",
+            "attribute": "with-error",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "withHint",
             "attribute": "with-hint",
             "type": "boolean",
@@ -44851,6 +44901,10 @@
           },
           {
             "name": "dropzone",
+            "deprecated": null
+          },
+          {
+            "name": "error",
             "deprecated": null
           },
           {
@@ -44926,6 +44980,10 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
             "name": "file",
             "deprecated": null
           },
@@ -44959,6 +45017,10 @@
           },
           {
             "name": "file-thumbnail",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
             "deprecated": null
           },
           {
@@ -59556,6 +59618,15 @@
             "default": null
           },
           {
+            "name": "goTo",
+            "attribute": null,
+            "type": "unknown",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "images",
             "attribute": null,
             "type": "LyraLightboxImage[]",
@@ -65145,6 +65216,15 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "closeSubmenu",
             "overloads": [
               {
@@ -65202,6 +65282,7 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
+            "click",
             "select"
           ]
         }
@@ -85498,7 +85579,15 @@
             "deprecated": null
           },
           {
+            "name": "end",
+            "deprecated": null
+          },
+          {
             "name": "prefix",
+            "deprecated": null
+          },
+          {
+            "name": "start",
             "deprecated": null
           },
           {
@@ -85596,11 +85685,19 @@
             "deprecated": null
           },
           {
+            "name": "end",
+            "deprecated": null
+          },
+          {
             "name": "label",
             "deprecated": null
           },
           {
             "name": "prefix",
+            "deprecated": null
+          },
+          {
+            "name": "start",
             "deprecated": null
           },
           {
@@ -169658,6 +169755,7 @@
             "target": "AlertVariant"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -169720,6 +169818,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -169786,6 +169885,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -169857,6 +169957,7 @@
             "target": "AvatarShape"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -169924,6 +170025,7 @@
             "target": "BadgeVariant | 'primary'"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -169977,6 +170079,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170039,6 +170142,7 @@
             "target": "BreadcrumbItemTarget | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170155,6 +170259,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -170242,6 +170347,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170295,6 +170401,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170362,6 +170469,7 @@
             "target": "LyraCarouselOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170423,6 +170531,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170512,6 +170621,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -170618,6 +170728,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -170719,6 +170830,7 @@
             "target": "LyraCopyButtonTooltipPlacement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170789,6 +170901,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -170874,6 +170987,7 @@
             "target": "CustomEvent<LyraDialogRequestCloseDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "property",
@@ -170934,6 +171048,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171025,6 +171140,7 @@
             "target": "CustomEvent<LyraDialogRequestCloseDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "property",
@@ -171115,6 +171231,7 @@
             "target": "Placement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171181,6 +171298,7 @@
             "target": "FormatBytesUnit"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171301,6 +171419,7 @@
             "target": "Intl.DateTimeFormatOptions['timeZone'] | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171367,6 +171486,7 @@
             "target": "FormatNumberType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171431,6 +171551,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171493,6 +171614,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171551,6 +171673,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171630,6 +171753,7 @@
             "target": "CustomEvent<LyraIncludeErrorDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171745,6 +171869,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -171823,6 +171948,7 @@
             "target": "CustomEvent<MenuItemSelectDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171883,6 +172009,7 @@
             "target": "MenuItemType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -171936,6 +172063,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172001,6 +172129,7 @@
             "target": "CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172054,6 +172183,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172155,6 +172285,7 @@
             "target": "Placement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [
@@ -172224,6 +172355,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172277,6 +172409,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172352,6 +172485,7 @@
             "target": "LyraQrCodeErrorCorrection"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172421,6 +172555,7 @@
             "target": "LyraSize"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -172497,6 +172632,7 @@
             "target": "LyraSize"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -172590,6 +172726,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -172691,6 +172828,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -172773,6 +172911,7 @@
             "target": "CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [
@@ -172845,6 +172984,7 @@
             "target": "RelativeTimeNumeric"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -172903,6 +173043,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173016,6 +173157,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -173100,6 +173242,7 @@
             "target": "SkeletonEffect"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173158,6 +173301,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173223,6 +173367,7 @@
             "target": "SplitPanelPrimary | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173310,6 +173455,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -173381,6 +173527,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173468,6 +173615,7 @@
             "target": "CustomEvent<{ tabId: string; name: string }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173521,6 +173669,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173586,6 +173735,7 @@
             "target": "BadgeVariant | 'primary' | 'text'"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -173686,6 +173836,7 @@
             "target": "HTMLFormElement | null"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -173776,6 +173927,7 @@
             "target": "Placement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173841,6 +173993,7 @@
             "target": "TreeSelection"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173919,6 +174072,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -173972,6 +174126,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174070,6 +174225,7 @@
             "target": "LyraAccordionAppearance"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174152,6 +174308,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174214,6 +174371,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174280,6 +174438,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174351,6 +174510,7 @@
             "target": "AvatarShape"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174436,6 +174596,7 @@
             "target": "BadgeVariant | 'primary'"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174524,6 +174685,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174577,6 +174739,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174639,6 +174802,7 @@
             "target": "BreadcrumbItemTarget | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174738,6 +174902,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174841,6 +175006,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -174916,6 +175082,7 @@
             "target": "ButtonGroupOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -174994,6 +175161,7 @@
             "target": "CalloutVariant"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175060,6 +175228,7 @@
             "target": "CardOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175127,6 +175296,7 @@
             "target": "LyraCarouselOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175188,6 +175358,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175276,6 +175447,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175353,6 +175525,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -175426,6 +175599,7 @@
             "target": "LyraSize"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175555,6 +175729,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -175723,6 +175898,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175792,6 +175968,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -175867,6 +176044,7 @@
             "target": "LyraCopyButtonTooltip"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176122,6 +176300,32 @@
             "target": "CustomEvent<{ sort: DataGridSortingState }>"
           }
         ],
+        "methodParameterTypeEquivalences": [
+          {
+            "method": "copySelectedRows",
+            "parameter": "options",
+            "upstream": "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }",
+            "target": "DataGridCopyOptions"
+          },
+          {
+            "method": "exportDataAsCsv",
+            "parameter": "options",
+            "upstream": "{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }",
+            "target": "DataGridExportOptions"
+          },
+          {
+            "method": "getDataAsCsv",
+            "parameter": "options",
+            "upstream": "{ columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }",
+            "target": "DataGridCsvOptions"
+          },
+          {
+            "method": "scrollToIndex",
+            "parameter": "options",
+            "upstream": "{ align?: 'start' | 'center' | 'end' }",
+            "target": "DataGridScrollOptions"
+          }
+        ],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176285,6 +176489,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176384,6 +176589,7 @@
             "target": "DateRange"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176467,6 +176673,7 @@
             "target": "LyraDetailsAppearance"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176544,6 +176751,7 @@
             "target": "CustomEvent<LyraDialogHideDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176611,6 +176819,7 @@
             "target": "DividerOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176699,6 +176908,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176782,6 +176992,7 @@
             "target": "CustomEvent<LyraDialogHideDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176869,6 +177080,7 @@
             "target": "Placement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -176940,6 +177152,7 @@
             "target": "MenuItemVariant"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177023,6 +177236,7 @@
             "target": "CustomEvent<undefined>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177095,6 +177309,7 @@
             "target": "FormatBytesUnit"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177215,6 +177430,7 @@
             "target": "Intl.DateTimeFormatOptions['timeZone'] | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177281,6 +177497,7 @@
             "target": "FormatNumberType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177364,6 +177581,7 @@
             "target": "LyraIconFlip | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177443,6 +177661,7 @@
             "target": "CustomEvent<LyraIncludeErrorDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177554,6 +177773,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -177619,6 +177839,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177708,6 +177929,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177796,6 +178018,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177864,6 +178087,7 @@
             "target": "LyraMarkedParser | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -177929,6 +178153,7 @@
             "target": "CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178012,6 +178237,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -178072,6 +178298,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178175,6 +178402,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -178248,6 +178476,7 @@
             "target": "PageView"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178323,6 +178552,7 @@
             "target": "LyraPaginationFormat"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178411,6 +178641,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178499,6 +178730,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178582,6 +178814,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -178690,6 +178923,7 @@
             "target": "Placement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [
@@ -178759,6 +178993,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178812,6 +179047,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178874,6 +179110,7 @@
             "target": "LyraQrCodeErrorCorrection"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -178962,6 +179199,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179034,6 +179272,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -179124,6 +179363,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -179223,6 +179463,7 @@
             "target": "CustomEvent<{ items: HTMLElement[] }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179304,6 +179545,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -179383,6 +179625,7 @@
             "target": "RelativeTimeNumeric"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179441,6 +179684,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179529,6 +179773,7 @@
             "target": "LyraChartType"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179589,6 +179834,7 @@
             "target": "ScrollerOrientation"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179698,6 +179944,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179763,6 +180010,7 @@
             "target": "SkeletonEffect"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179846,6 +180094,7 @@
             "target": "SliderValueFormatter | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179918,6 +180167,7 @@
             "target": "LyraSparklineTrend | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -179976,6 +180226,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180047,6 +180298,7 @@
             "target": "SplitPanelPrimary | undefined"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180124,6 +180376,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -180184,6 +180437,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180271,6 +180525,7 @@
             "target": "CustomEvent<{ tabId: string; name: string }>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180324,6 +180579,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180401,6 +180657,7 @@
             "target": "BadgeVariant | 'primary' | 'text'"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180484,6 +180741,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -180606,6 +180864,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180666,6 +180925,7 @@
             "target": "ToastPlacement"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180749,6 +181009,7 @@
             "target": "ToastVariant"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180832,6 +181093,7 @@
             "target": "string"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -180904,6 +181166,7 @@
             "target": "TreeSelection"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -180982,6 +181245,7 @@
       },
       "normalizations": {
         "typeEquivalences": [],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -181049,6 +181313,7 @@
             "target": "LyraVideoPreload"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -181121,6 +181386,7 @@
             "target": "CustomEvent<LyraVideoPlaylistChangeDetail>"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
@@ -181181,6 +181447,7 @@
             "target": "ZoomableFrameLoading"
           }
         ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],

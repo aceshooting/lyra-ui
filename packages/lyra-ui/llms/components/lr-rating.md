@@ -39,9 +39,10 @@ rather than the shared control ladder, since a rating has no control frame to si
 reproduces the treatment this component had before `size` existed; setters also accept
 `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
-`label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
-*not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
-wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+`label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
+value; otherwise `accessibleLabel`, `label`, then the localized name provide the fallback. Neither
+is visible label text, since a rating is a bare row of symbols with no field frame of its own; wrap
+the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
@@ -51,7 +52,9 @@ clears to the canonical `''` read value rather than creating a nullable state.
 *twice per position*: once for the empty backdrop (`selected` false) and once for the overlay
 clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
 `precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
-text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
+text, never as markup. Renderer output is decorative, inert, and pointer-transparent, so it cannot
+become a second focus or action target; pointer and keyboard selection stay on the rating control.
+Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted

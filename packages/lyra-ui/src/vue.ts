@@ -3728,6 +3728,7 @@ export type LyraFileInputVueProps = LyraVueCustomElement<
   | 'directory'
   | 'disabled'
   | 'dragging'
+  | 'errorText'
   | 'fileCount'
   | 'files'
   | 'forbiddenMimeTypes'
@@ -3745,6 +3746,7 @@ export type LyraFileInputVueProps = LyraVueCustomElement<
   | 'strings'
   | 'validationTarget'
   | 'validators'
+  | 'withError'
   | 'withHint'
   | 'withLabel',
   LyraFileInputEventMap,
@@ -3769,8 +3771,10 @@ export type LyraFileInputVueProps = LyraVueCustomElement<
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
     'custom-error'?: LyraFileInput['customError'];
+    'error-text'?: LyraFileInput['errorText'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
+    'with-error'?: LyraFileInput['withError'];
     'with-hint'?: LyraFileInput['withHint'];
     'with-label'?: LyraFileInput['withLabel'];
   }

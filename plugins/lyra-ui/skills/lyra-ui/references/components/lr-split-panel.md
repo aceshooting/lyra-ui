@@ -49,9 +49,10 @@ multi-divider events are intentionally a different API.
 **Events:** `lr-reposition` (no detail) — bubbling and composed, emitted whenever pointer or
 keyboard interaction changes the divider position.
 
-**Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional custom handle
-content inside the separator). Under RTL, logical start/end and horizontal pointer/arrow behavior
-mirror together; vertical behavior does not invert.
+**Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
+custom-handle content inside the separator; its assigned subtree is inert, so the separator remains
+the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
+behavior mirror together; vertical behavior does not invert.
 
 **CSS parts:** `base split-panel` (both tokens are on the same outer wrapper), `start panel` and
 `end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`

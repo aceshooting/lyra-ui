@@ -98,13 +98,15 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `autoSizeColumn(columnId)`, `autoSizeColumns()`, and `sizeColumnsToFit()` manage measured widths.
 - `collapseAllRows()`, `collapseRow(key)`, `expandAllRows()`, and `expandRow(key)` update expansion
   without emitting the user-only row events.
-- `copySelectedRows(options?)` copies selected rows (or all processed rows when selection is empty)
-  as TSV by default and returns the copied row count. Its options include `columnIds`,
-  `includeHeaders`, `format: 'tsv' | 'csv'`, and `escapeFormulas`.
-- `exportDataAsCsv(options?)` downloads CSV; `getDataAsCsv(options?)` returns it. Options include
-  `delimiter`, `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
-  `DataGridCsvOptions.columns` and `DataGridExportOptions.filename` spellings remain deprecated
-  runtime aliases. Formula escaping is on by default for string cells beginning with `=`, `+`,
+- `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
+  when selection is empty) as TSV by default and returns the copied row count. Its options include
+  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
+  explicit delimiter overrides the one normally selected by `format`.
+- `exportDataAsCsv(options?: DataGridExportOptions)` downloads formula-safe delimited data (CSV by
+  default); `getDataAsCsv(options?: DataGridCsvOptions)` returns it without downloading. Options include `delimiter`,
+  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
+  `columns` and `filename` spellings remain deprecated runtime aliases on their corresponding
+  option interfaces. Formula escaping is on by default for string cells beginning with `=`, `+`,
   `-`, or `@`; numeric values remain numeric.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
@@ -120,7 +122,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `handleColumnsChange()`, `handlePageChange()`, and `handleSearchTermChange()` are public handler
   seams used by the built-in controls.
 - `reload()` forces the current server request.
-- `scrollToIndex(index, options?)` scrolls a virtual row with `align: 'start' | 'center' | 'end'`.
+- `scrollToIndex(index, options?: DataGridScrollOptions)` scrolls a virtual row with
+  `align: 'start' | 'center' | 'end'`.
 
 **Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
 request aborts and supersedes the previous one; rejected requests keep prior rows and emit

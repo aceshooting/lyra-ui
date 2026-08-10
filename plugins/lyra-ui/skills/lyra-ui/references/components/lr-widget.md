@@ -47,7 +47,8 @@ position) survives the transition.
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
-  fullscreen dialog name.
+  fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
+  localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
   under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
@@ -62,11 +63,13 @@ when it changes via a header view-toggle click, not when a consumer sets `active
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
 (rich sublabel content, overrides the `sublabel` attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
-collapse toggle via native slot fallback; only meaningful while `collapsible`), `fullscreen-icon`
-(replaces the built-in glyph in the fullscreen toggle — the override replaces *both* the "expand"
-and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by reading the
-`fullscreen` attribute; only meaningful while `expandable`), and one `view-{id}` slot per `views`
-entry, used instead of the default slot
+collapse toggle via native slot fallback; its assigned content is decorative, inert, and aria-hidden
+so the outer toggle remains the only action; only meaningful while `collapsible`),
+`fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
+*both* the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
+reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
+the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
+slot per `views` entry, used instead of the default slot
 
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
@@ -108,7 +111,8 @@ rendering is unchanged.
 ```
 
 While `fullscreen`, `[part="base"]` (not the host itself) takes `role="dialog"` + `aria-modal="true"`
-(with `aria-label` from `label`, falling back to `"Fullscreen panel"`), document scroll is locked
+(with `aria-label`, including an explicitly empty value, taking precedence; otherwise the `label`
+property, slotted label, then `"Fullscreen panel"` supply the name), document scroll is locked
 (ref-counted, safe with multiple simultaneously-fullscreen widgets), and Tab/Shift+Tab are bounded
 to the panel's own focusable content (`actions` slot → collapse/fullscreen buttons → body slot,
 matching visual tab order — resolved shadow-piercingly, so a slotted custom element's real

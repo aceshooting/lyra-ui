@@ -45,8 +45,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
-- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup; falls back to the
-  localized "Popover" (or "Menu" when `popupRole` is `menu`)
+- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
+  attribute wins by presence, including `aria-label=""`; only when it is absent does the property
+  or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
 
 To preserve the previous Lyra-shaped defaults explicitly, use

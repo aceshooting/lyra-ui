@@ -31,10 +31,15 @@ what makes migrating from either upstream a pure tag rename.
 *Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
 markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
 Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
-or a badge while the button's accessible name stays exactly that content's text. A group containing
-any `<lr-tab>` child is read purely as this model. `active` on a tab/panel pair is an SSR hint: the
-group reads an initially active tab and then keeps both child attributes synchronized with its own
-`active` selection after hydration.
+or a badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
+Direct default-slot element roots in that visual label become inert while projected, and regain their author-owned
+inert state when the tab is removed, reassigned, or the group disconnects; use text/glyph markup,
+not an independent action. Only accessibility-exposed default-slot text contributes: author
+`aria-hidden`, hidden, inert, and CSS-hidden branches are excluded, and direct-label text or
+visibility changes refresh the real button's name. A group containing any `<lr-tab>` child is read
+purely as this model. `active` on a tab/panel pair is an SSR hint: the group reads an initially
+active tab and then keeps both child attributes synchronized with its own `active` selection after
+hydration.
 
 *Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
 children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
@@ -53,9 +58,10 @@ A tab button's *visible* content can carry a leading icon without ever changing 
 name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
 carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
 element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
-button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]` so it's excluded from accessible-name
-computation regardless of content. A tab with no matching `<id>-icon` sibling renders no icon
-wrapper at all, so existing text-only tabs are unaffected.
+button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]`; the assigned source is inert
+while projected and restores its author-owned inert state when reassigned or disconnected. A tab
+with no matching `<id>-icon` sibling renders no icon wrapper at all, so existing text-only tabs are
+unaffected.
 
 **Properties:**
 - `active: string = ''` (reflected) — the active tab's `slot`/id; falls back to the first enabled
@@ -120,9 +126,9 @@ focus off the tab the user was on.
 
 **Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
 `slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
-— optional sibling direct child supplying a tab's leading icon content, in the attribute model only;
-excluded from the tab button's accessible name. `nav` is the upstream-compatible projection slot
-used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
+— optional inert sibling direct child supplying a tab's leading icon content, in the attribute model
+only; excluded from the tab button's accessible name. `nav` is the upstream-compatible projection
+slot used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
 
 ```html
 <!-- element model: renames straight across from wa-/sl- -->
@@ -144,9 +150,10 @@ both overflow controls), `scroll-button-start`/`scroll-button--start` and
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the
 right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
 mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
-leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon`
-sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel` (a single
-`role="tabpanel"` wrapper, one per tab, hidden unless active).
+`aria-hidden` leading-icon wrapper around its inert assigned source inside a tab button; only
+rendered when that tab has a matching
+`<id>-icon` sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel`
+(a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
 The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
 no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
 hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
@@ -195,11 +202,12 @@ first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
   never an ancestor's: a tab group inside a subtree an open modal has inerted is inert as a whole,
   and treating every tab as unreachable there would reset `active` to `''` and blank every panel for
   as long as the dialog is open.
-- Tabs are rebuilt from direct children via a `MutationObserver` watching `childList` plus
-  `attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable']` — not `slotchange` — because a brand-new tab's
-  `slot` name has no matching `<slot>` to fire `slotchange` on until this component has already
-  rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a plain
-  attribute edit on a light-DOM child at all.
+- Tabs are rebuilt from direct children via a `MutationObserver` — not `slotchange` — because a
+  brand-new tab's `slot` name has no matching `<slot>` to fire `slotchange` on until this component
+  has already rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a
+  plain attribute edit on a light-DOM child at all. Text/content and relevant accessibility/visibility
+  mutations below a direct `<lr-tab>` refresh that button's flattened name; arbitrary nested
+  mutations inside attribute-model panels remain ignored.
 - If two children share the same `slot` name, the *first* one wins for the tab button's label
   (matches native slot assignment: both would render into the one panel, but only one label can back
   the button).

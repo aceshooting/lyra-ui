@@ -3735,6 +3735,7 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | 'directory'
   | 'disabled'
   | 'dragging'
+  | 'errorText'
   | 'fileCount'
   | 'files'
   | 'forbiddenMimeTypes'
@@ -3752,6 +3753,7 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | 'strings'
   | 'validationTarget'
   | 'validators'
+  | 'withError'
   | 'withHint'
   | 'withLabel',
   LyraFileInputEventMap,
@@ -3776,8 +3778,10 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
     'accepted-message'?: LyraFileInput['acceptedMessage'];
     'aria-label'?: LyraFileInput['accessibleLabel'];
     'custom-error'?: LyraFileInput['customError'];
+    'error-text'?: LyraFileInput['errorText'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
+    'with-error'?: LyraFileInput['withError'];
     'with-hint'?: LyraFileInput['withHint'];
     'with-label'?: LyraFileInput['withLabel'];
   }

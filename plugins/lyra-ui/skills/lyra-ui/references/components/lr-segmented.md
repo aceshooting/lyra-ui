@@ -23,11 +23,12 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 
 **Properties:**
 - `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
-  icon?: unknown; disabled?: boolean }`; `icon` renders as a decorative leading visual inside
-  `segment-icon` and does not replace the required text label.
+  icon?: unknown; disabled?: boolean }`; `icon` renders as an inert, `aria-hidden` decorative leading
+  visual inside `segment-icon`. It does not replace the required text label or provide an independent
+  action or accessible name.
 - `value: string = ''` — the currently selected item's `value`.
-- `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
-  host-level `aria-label` is used as a fallback.
+- `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
+  host-level `aria-label` wins by attribute presence, including an explicitly empty value.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) —
   visual size on the library's **shared** ladder, the same `--lr-form-control-*` scale
   `lr-input`/`lr-select`/`lr-combobox`/`lr-button` resolve, so a row of mixed controls set to one
@@ -50,7 +51,8 @@ keyboard.
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),
-`segment-icon` (an optional decorative leading icon), `segment-label` (the segment's label text).
+`segment-icon` (an optional inert, `aria-hidden` decorative leading icon), `segment-label` (the
+segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
@@ -116,7 +118,8 @@ resolves.
   updates `value` and fires `lr-change` — there's no separate "commit" step the way, e.g.,
   `lr-select`'s popup has.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
-  host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+  host `aria-label`; a present host attribute wins, including an explicit empty value, and the
+  component deliberately forwards the resulting name to that internal role.
 
 **Additional API surface:**
 

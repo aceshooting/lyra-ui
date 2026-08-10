@@ -63,6 +63,12 @@ the `selection` range getter.
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
 are ignored.
 
+**Keyboard:** The day grid uses one roving Tab stop. Month, year, and decade selection views do the
+same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
+RTL), Home/End move to the first/last enabled period in the current page, and Enter/Space drills
+into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
+disabled periods never receive the roving focus.
+
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
 values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.

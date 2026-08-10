@@ -61,6 +61,13 @@ replaced, removed, or its Page disconnects, component-owned attributes are resto
 author values (or removed when they were absent). A consumer write made after assignment wins and
 is not restored over.
 
+`navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
+from assistive technology, while the native toggle retains the sole action and localized name.
+Likewise, `skip-to-content` replaces only visible skip-link text; its assigned subtree is inert and
+hidden from assistive technology, but its text names the Page's sole skip link. Supply text or a
+glyph as appropriate to the slot, not a separate interactive control: `skip-to-content` needs
+descriptive text, while `navigation-toggle-icon` needs a glyph.
+
 The focus-visible skip link has a localized `Skip to content` fallback and focuses the unique
 internal `<main>`. Native URL fragments cannot address an id inside a shadow root, so the Page host
 is the unique, programmatically focusable fragment target; activation then focuses and scrolls its

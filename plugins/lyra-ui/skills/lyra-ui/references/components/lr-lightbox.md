@@ -41,8 +41,10 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   overriding the localized `lightboxLabel`.
 
 **Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
-index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
-forwarded as the close event's detail.
+index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
+toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
+actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
+detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks

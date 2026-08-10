@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,9 +28,9 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 `lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
-Standalone button chrome is allocation-safe too: unbroken labels wrap, and prefix/suffix adornments
-are each capped and truncate rather than widening the containing panel. The exact-320px story shows
-that behavior in LTR and RTL.
+Standalone button chrome is allocation-safe too: unbroken labels wrap, and start/end (or retained
+prefix/suffix) adornments are each capped and truncate rather than widening the containing panel.
+The exact-320px story shows that behavior in LTR and RTL.
 
 **Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
 `customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
@@ -48,13 +48,16 @@ not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / 
 (no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
-**Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
+**Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
+content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
+respectively; either spelling can be used, and both spellings share one wrapper at each edge.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
 `aria-label=""`; it is not replaced by the visible default-slot text.
 
-**CSS parts:** `base` / `button` / `control`, `prefix`, `label`, `suffix`. The interactive node
-carries `checked` and `button--checked` when selected, plus `disabled` when disabled, because an
-attribute selector after `::part()` never matches.
+**CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
+`label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`
+and `button--checked` when selected, plus `disabled` when disabled, because an attribute selector
+after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
@@ -62,8 +65,8 @@ it at `--lr-form-control-radius` — the active `size` tier's shared corner radi
 it back to `--lr-radius-pill`. Only the _outer_ corners of a run take it: consecutive siblings
 collapse their shared borders, so the radius lands on the first button's leading corners and the
 last button's trailing ones. `--lr-radio-button-gap` (default `var(--lr-space-xs)`) controls the
-spacing between prefix, label, and suffix in both `<lr-radio-button>` and
-`<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
+spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
+and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:
 `--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
 `--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked

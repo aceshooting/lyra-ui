@@ -21,8 +21,9 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
-`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
+`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
+and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
+override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
 and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
@@ -35,7 +36,7 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 `delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
-`focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
+`focus` and `blur` re-dispatched from the draft and inline-editor text inputs, `lr-add` (`detail: { value }`),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
@@ -71,7 +72,9 @@ editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RT
 previous/next _visually_), Home/End jump to the first/last. Inside the editor, Enter commits and
 returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
 enclosing dialog or popover does not also close), and blurring commits _without_ pulling focus
-back — a blur means the user already aimed focus elsewhere. `lr-token-edit` fires only for an edit
+back — a blur means the user already aimed focus elsewhere. Both the draft and inline editor relay
+one bubbling/composed host `focus` or `blur` event while their native source event stays internal.
+`lr-token-edit` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
 duplicate draft is skipped rather than rejecting the whole entry. Own or fieldset-cascaded

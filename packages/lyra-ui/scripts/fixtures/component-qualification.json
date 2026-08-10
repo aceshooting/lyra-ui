@@ -2837,21 +2837,21 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 471,
+              "line": 468,
               "test": "is accessible with a populated multi-capability menu",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 593,
+              "line": 590,
               "test": "is accessible with a single audio capability and with audio in a multi-capability menu",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 593,
+              "line": 590,
               "test": "is accessible with a single audio capability and with audio in a multi-capability menu",
               "target": "el",
               "state": "populated"
@@ -11932,21 +11932,21 @@
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2466,
+              "line": 2496,
               "test": "uses host naming precedence, locale-aware labels/digits, and responsive rendered styles",
               "target": "narrow",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2542,
+              "line": 2572,
               "test": "aborts pending work and resets transient menus across disconnect and reconnect",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2828,
+              "line": 2858,
               "test": "renders grouped rows with aggregates and group-level selection",
               "target": "element",
               "state": "populated"
@@ -11982,7 +11982,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2536,
+              "line": 2566,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12051,7 +12051,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 1352,
+              "line": 1333,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12498,6 +12498,20 @@
               "line": 1365,
               "test": "publishes disabled/range/readonly states and is accessible when populated",
               "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-picker.test.ts",
+              "line": 1440,
+              "test": "gives every selection view one roving tab stop on its selected period",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-picker.test.ts",
+              "line": 1629,
+              "test": "activates selection-view roving targets with Enter and Space, restoring focus in the destination view",
+              "target": "years",
               "state": "populated"
             }
           ],
@@ -14999,7 +15013,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 549,
+              "line": 586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -15135,9 +15149,16 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 46,
+              "line": 65,
               "test": "is accessible",
               "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "line": 70,
+              "test": "inherits decorative display-slot isolation without losing its host label or action",
+              "target": "wrapper",
               "state": "populated"
             }
           ],
@@ -15149,7 +15170,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 250,
+              "line": 352,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15160,7 +15181,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 512,
+              "line": 614,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -17573,22 +17594,36 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 848,
+              "line": 594,
+              "test": "renders standard error chrome in the form-control frame and describes the semantic dropzone",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/file-input/file-input.test.ts",
+              "line": 974,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 907,
+              "line": 1033,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 912,
+              "line": 1038,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/file-input/file-input.test.ts",
+              "line": 1249,
+              "test": "uses with-error to render and associate rich slotted error content on the first SSR-hinted render",
               "target": "el",
               "state": "populated"
             }
@@ -17894,14 +17929,14 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 1381,
+              "line": 1650,
               "test": "is accessible with a text filter populated, its chip shown, and a revealed required error",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 1411,
+              "line": 1680,
               "test": "is accessible in a populated state: active filters, loading spinner, and a revealed required error",
               "target": "el",
               "state": "populated"
@@ -17926,7 +17961,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 956,
+              "line": 1225,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -17943,7 +17978,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 970,
+              "line": 1239,
               "kind": "320px allocation test signal"
             }
           ]
@@ -18001,10 +18036,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/filter-bar/filter-bar.class.ts",
+              "line": 573,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -18028,7 +18069,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -23183,7 +23224,7 @@
             },
             {
               "file": "src/components/overlays/kbd/kbd.test.ts",
-              "line": 370,
+              "line": 410,
               "test": "is accessible in a populated multi-modifier state",
               "target": "el",
               "state": "populated"
@@ -26090,9 +26131,16 @@
             },
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 46,
+              "line": 65,
               "test": "is accessible",
               "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "line": 70,
+              "test": "inherits decorative display-slot isolation without losing its host label or action",
+              "target": "wrapper",
               "state": "populated"
             },
             {
@@ -26146,7 +26194,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 250,
+              "line": 352,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26157,7 +26205,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 512,
+              "line": 614,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26323,35 +26371,42 @@
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 306,
+              "line": 84,
+              "test": "keeps every display slot decorative while the host retains the sole menuitem action",
+              "target": "wrapper",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menu/menu-item.test.ts",
+              "line": 408,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 316,
+              "line": 418,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 321,
+              "line": 423,
               "test": "is accessible with an icon, disabled and destructive states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 398,
+              "line": 500,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 398,
+              "line": 500,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -26407,7 +26462,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 250,
+              "line": 352,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26418,7 +26473,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 512,
+              "line": 614,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26579,7 +26634,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 250,
+              "line": 352,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26590,7 +26645,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 512,
+              "line": 614,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29123,21 +29178,28 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 625,
+              "line": 205,
+              "test": "keeps slotted skip content and toggle glyph controls decorative while preserving the outer actions",
+              "target": "page",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/page/page.test.ts",
+              "line": 715,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 625,
+              "line": 715,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 625,
+              "line": 715,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
@@ -29151,7 +29213,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 399,
+              "line": 489,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29162,7 +29224,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 494,
+              "line": 584,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29173,7 +29235,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 537,
+              "line": 627,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -29184,7 +29246,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 127,
+              "line": 128,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31298,7 +31360,7 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1681,
+              "line": 1718,
               "test": "is accessible with an arrow rendered",
               "target": "popover",
               "state": "open"
@@ -31312,7 +31374,7 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 631,
+              "line": 668,
               "test": "opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -31354,7 +31416,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 549,
+              "line": 586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -33496,21 +33558,21 @@
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 1372,
+              "line": 1389,
               "test": "is accessible as a label-less radio named only by aria-label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 1566,
+              "line": 1583,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 1676,
+              "line": 1693,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -33524,7 +33586,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 98,
+              "line": 24,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33552,7 +33614,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 18,
+              "line": 50,
               "kind": "320px allocation test signal"
             }
           ]
@@ -33673,14 +33735,14 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 34,
+              "line": 66,
               "test": "renders button chrome with the radio role and encodes checked state in the part name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 170,
+              "line": 202,
               "test": "is accessible as a pill at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -33694,7 +33756,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 98,
+              "line": 24,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33722,7 +33784,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 18,
+              "line": 50,
               "kind": "320px allocation test signal"
             }
           ]
@@ -33861,7 +33923,7 @@
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 1676,
+              "line": 1693,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -33875,7 +33937,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 98,
+              "line": 24,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33903,7 +33965,7 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
-              "line": 18,
+              "line": 50,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34512,21 +34574,28 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 97,
+              "line": 98,
               "test": "exposes a keyboard-accessible rating slider",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 826,
+              "line": 695,
+              "test": "renders dynamically supplied getSymbol output as inert presentation while retaining star pointer selection",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/rating/rating.test.ts",
+              "line": 891,
               "test": "is accessible while required, labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 826,
+              "line": 891,
               "test": "is accessible while required, labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
@@ -34540,7 +34609,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 102,
+              "line": 103,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34551,7 +34620,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 198,
+              "line": 199,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -35023,7 +35092,7 @@
             },
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 499,
+              "line": 582,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -35037,7 +35106,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 237,
+              "line": 297,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -35118,10 +35187,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/reorder-list/reorder-list.class.ts",
+              "line": 174,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -35146,7 +35221,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -35184,7 +35259,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 499,
+              "line": 582,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -35198,7 +35273,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 237,
+              "line": 297,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -35279,10 +35354,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/reorder-list/reorder-list.class.ts",
+              "line": 174,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -35307,7 +35388,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -37370,21 +37451,28 @@
           "evidence": [
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 186,
+              "line": 208,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 193,
+              "line": 215,
               "test": "is accessible when labeled via the label prop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 605,
+              "line": 338,
+              "test": "keeps interactive item icons decorative and unfocusable inside their radio",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented.test.ts",
+              "line": 659,
               "test": "is accessible with the selected-state props themed",
               "target": "el",
               "state": "populated"
@@ -37415,7 +37503,7 @@
           "evidence": [
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 831,
+              "line": 885,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -37426,7 +37514,7 @@
           "evidence": [
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 378,
+              "line": 432,
               "kind": "320px allocation test signal"
             }
           ]
@@ -39679,6 +39767,13 @@
               "test": "is accessible with populated start, end, and custom divider slots",
               "target": "element",
               "state": "populated"
+            },
+            {
+              "file": "src/components/layout/split-panel/split-panel.test.ts",
+              "line": 551,
+              "test": "keeps custom divider content inert while preserving the separator as the sole resize control",
+              "target": "element",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -40355,21 +40450,28 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 451,
+              "line": 393,
+              "test": "keeps rich step icons inert so the step button remains the only action",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/stepper/stepper.test.ts",
+              "line": 483,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 968,
+              "line": 1000,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 1184,
+              "line": 1216,
               "test": "is accessible with the state-styling props themed",
               "target": "el",
               "state": "populated"
@@ -40383,7 +40485,7 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 410,
+              "line": 442,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41525,7 +41627,7 @@
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1336,
+              "line": 1353,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -41695,28 +41797,56 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 863,
+              "line": 1088,
+              "test": "omits closed <details> text from a rich tab name and restores it when opened",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 914,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 874,
+              "line": 925,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1558,
+              "line": 958,
+              "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1013,
+              "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1061,
+              "test": "omits a rich label branch skipped by content-visibility:auto",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1758,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1711,
+              "line": 1911,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -41752,7 +41882,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1328,
+              "line": 1528,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -41878,6 +42008,13 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1088,
+              "test": "omits closed <details> text from a rich tab name and restores it when opened",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
               "line": 136,
               "test": "is accessible with populated tabs",
               "target": "el",
@@ -41892,28 +42029,56 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 863,
+              "line": 405,
+              "test": "keeps attribute-model icon sources inert while they are projected into a tab button",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 914,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1441,
+              "line": 958,
+              "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1013,
+              "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1061,
+              "test": "omits a rich label branch skipped by content-visibility:auto",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1641,
               "test": "is accessible while the scroll controls are showing",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1558,
+              "line": 1758,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1711,
+              "line": 1911,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -41949,7 +42114,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1328,
+              "line": 1528,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -42088,6 +42253,13 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1088,
+              "test": "omits closed <details> text from a rich tab name and restores it when opened",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
               "line": 376,
               "test": "a direct-child sibling with slot=\"<id>-icon\" renders as that tab\\'s leading icon, hidden from its accessible name",
               "target": "el",
@@ -42095,42 +42267,63 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 863,
+              "line": 914,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 874,
+              "line": 925,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 883,
+              "line": 934,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "active",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 883,
+              "line": 934,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "hidden",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1558,
+              "line": 958,
+              "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1013,
+              "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1061,
+              "test": "omits a rich label branch skipped by content-visibility:auto",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group.test.ts",
+              "line": 1758,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1711,
+              "line": 1911,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -42166,7 +42359,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1328,
+              "line": 1528,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -44398,7 +44591,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast.test.ts",
-              "line": 301,
+              "line": 365,
               "test": "is accessible once a toast item is showing inside it",
               "target": "region",
               "state": "populated"
@@ -44418,7 +44611,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast.test.ts",
-              "line": 75,
+              "line": 139,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44429,7 +44622,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 818,
+              "line": 945,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -44509,7 +44702,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 537,
+              "line": 602,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44576,8 +44769,15 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 496,
+              "line": 527,
               "test": "is accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/toast/toast.test.ts",
+              "line": 14,
+              "test": "announces only the normalized message when toast() supplies icon and action controls",
               "target": "el",
               "state": "populated"
             }
@@ -44596,7 +44796,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast.test.ts",
-              "line": 75,
+              "line": 139,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44607,7 +44807,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 818,
+              "line": 945,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -44676,7 +44876,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 537,
+              "line": 602,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44741,7 +44941,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 1392,
+              "line": 1438,
               "test": "is accessible with an open token editor",
               "target": "el",
               "state": "populated"
@@ -44766,7 +44966,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 1123,
+              "line": 1169,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44783,7 +44983,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 489,
+              "line": 535,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46077,7 +46277,7 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 735,
+              "line": 772,
               "test": "opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -46119,7 +46319,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 549,
+              "line": 586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -48404,28 +48604,49 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 444,
+              "line": 150,
+              "test": "keeps interactive icon overrides inert and pointer-transparent",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/widget/widget.test.ts",
+              "line": 150,
+              "test": "keeps interactive icon overrides inert and pointer-transparent",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/widget/widget.test.ts",
+              "line": 150,
+              "test": "keeps interactive icon overrides inert and pointer-transparent",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/widget/widget.test.ts",
+              "line": 525,
               "test": "is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 899,
+              "line": 980,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 899,
+              "line": 980,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1573,
+              "line": 1701,
               "test": "is accessible with the active-state props themed",
               "target": "el",
               "state": "populated"
@@ -48439,7 +48660,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 806,
+              "line": 887,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -48450,7 +48671,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1002,
+              "line": 1130,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -48461,7 +48682,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1296,
+              "line": 1424,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -48472,7 +48693,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 513,
+              "line": 594,
               "kind": "320px allocation test signal"
             }
           ]

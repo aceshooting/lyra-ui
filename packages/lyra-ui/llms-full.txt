@@ -2567,6 +2567,12 @@ the `selection` range getter.
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
 are ignored.
 
+**Keyboard:** The day grid uses one roving Tab stop. Month, year, and decade selection views do the
+same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
+RTL), Home/End move to the first/last enabled period in the current page, and Enter/Space drills
+into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
+disabled periods never receive the roving focus.
+
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
 values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.
@@ -5252,9 +5258,9 @@ automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-typ
 `lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
 and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
 
-Standalone button chrome is allocation-safe too: unbroken labels wrap, and prefix/suffix adornments
-are each capped and truncate rather than widening the containing panel. The exact-320px story shows
-that behavior in LTR and RTL.
+Standalone button chrome is allocation-safe too: unbroken labels wrap, and start/end (or retained
+prefix/suffix) adornments are each capped and truncate rather than widening the containing panel.
+The exact-320px story shows that behavior in LTR and RTL.
 
 **Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
 `customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
@@ -5272,13 +5278,16 @@ not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / 
 (no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
-**Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
+**Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
+content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
+respectively; either spelling can be used, and both spellings share one wrapper at each edge.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
 `aria-label=""`; it is not replaced by the visible default-slot text.
 
-**CSS parts:** `base` / `button` / `control`, `prefix`, `label`, `suffix`. The interactive node
-carries `checked` and `button--checked` when selected, plus `disabled` when disabled, because an
-attribute selector after `::part()` never matches.
+**CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
+`label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`
+and `button--checked` when selected, plus `disabled` when disabled, because an attribute selector
+after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
@@ -5286,8 +5295,8 @@ it at `--lr-form-control-radius` — the active `size` tier's shared corner radi
 it back to `--lr-radius-pill`. Only the _outer_ corners of a run take it: consecutive siblings
 collapse their shared borders, so the radius lands on the first button's leading corners and the
 last button's trailing ones. `--lr-radio-button-gap` (default `var(--lr-space-xs)`) controls the
-spacing between prefix, label, and suffix in both `<lr-radio-button>` and
-`<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
+spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
+and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:
 `--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
 `--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked
@@ -5621,8 +5630,9 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
-`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
+`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
+and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
+override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
 (attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
 and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
@@ -5635,7 +5645,7 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 `delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
-`focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
+`focus` and `blur` re-dispatched from the draft and inline-editor text inputs, `lr-add` (`detail: { value }`),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
@@ -5671,7 +5681,9 @@ editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RT
 previous/next _visually_), Home/End jump to the first/last. Inside the editor, Enter commits and
 returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
 enclosing dialog or popover does not also close), and blurring commits _without_ pulling focus
-back — a blur means the user already aimed focus elsewhere. `lr-token-edit` fires only for an edit
+back — a blur means the user already aimed focus elsewhere. Both the draft and inline editor relay
+one bubbling/composed host `focus` or `blur` event while their native source event stays internal.
+`lr-token-edit` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
 duplicate draft is skipped rather than rejecting the whole entry. Own or fieldset-cascaded
@@ -6719,13 +6731,15 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `autoSizeColumn(columnId)`, `autoSizeColumns()`, and `sizeColumnsToFit()` manage measured widths.
 - `collapseAllRows()`, `collapseRow(key)`, `expandAllRows()`, and `expandRow(key)` update expansion
   without emitting the user-only row events.
-- `copySelectedRows(options?)` copies selected rows (or all processed rows when selection is empty)
-  as TSV by default and returns the copied row count. Its options include `columnIds`,
-  `includeHeaders`, `format: 'tsv' | 'csv'`, and `escapeFormulas`.
-- `exportDataAsCsv(options?)` downloads CSV; `getDataAsCsv(options?)` returns it. Options include
-  `delimiter`, `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
-  `DataGridCsvOptions.columns` and `DataGridExportOptions.filename` spellings remain deprecated
-  runtime aliases. Formula escaping is on by default for string cells beginning with `=`, `+`,
+- `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
+  when selection is empty) as TSV by default and returns the copied row count. Its options include
+  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
+  explicit delimiter overrides the one normally selected by `format`.
+- `exportDataAsCsv(options?: DataGridExportOptions)` downloads formula-safe delimited data (CSV by
+  default); `getDataAsCsv(options?: DataGridCsvOptions)` returns it without downloading. Options include `delimiter`,
+  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
+  `columns` and `filename` spellings remain deprecated runtime aliases on their corresponding
+  option interfaces. Formula escaping is on by default for string cells beginning with `=`, `+`,
   `-`, or `@`; numeric values remain numeric.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
@@ -6741,7 +6755,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `handleColumnsChange()`, `handlePageChange()`, and `handleSearchTermChange()` are public handler
   seams used by the built-in controls.
 - `reload()` forces the current server request.
-- `scrollToIndex(index, options?)` scrolls a virtual row with `align: 'start' | 'center' | 'end'`.
+- `scrollToIndex(index, options?: DataGridScrollOptions)` scrolls a virtual row with
+  `align: 'start' | 'center' | 'end'`.
 
 **Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
 request aborts and supersedes the previous one; rejected requests keep prior rows and emit
@@ -9444,9 +9459,10 @@ multi-divider events are intentionally a different API.
 **Events:** `lr-reposition` (no detail) — bubbling and composed, emitted whenever pointer or
 keyboard interaction changes the divider position.
 
-**Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional custom handle
-content inside the separator). Under RTL, logical start/end and horizontal pointer/arrow behavior
-mirror together; vertical behavior does not invert.
+**Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
+custom-handle content inside the separator; its assigned subtree is inert, so the separator remains
+the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
+behavior mirror together; vertical behavior does not invert.
 
 **CSS parts:** `base split-panel` (both tokens are on the same outer wrapper), `start panel` and
 `end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`
@@ -9527,7 +9543,8 @@ position) survives the transition.
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
-  fullscreen dialog name.
+  fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
+  localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
   under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
@@ -9542,11 +9559,13 @@ when it changes via a header view-toggle click, not when a consumer sets `active
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
 (rich sublabel content, overrides the `sublabel` attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
-collapse toggle via native slot fallback; only meaningful while `collapsible`), `fullscreen-icon`
-(replaces the built-in glyph in the fullscreen toggle — the override replaces *both* the "expand"
-and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by reading the
-`fullscreen` attribute; only meaningful while `expandable`), and one `view-{id}` slot per `views`
-entry, used instead of the default slot
+collapse toggle via native slot fallback; its assigned content is decorative, inert, and aria-hidden
+so the outer toggle remains the only action; only meaningful while `collapsible`),
+`fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
+*both* the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
+reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
+the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
+slot per `views` entry, used instead of the default slot
 
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
@@ -9588,7 +9607,8 @@ rendering is unchanged.
 ```
 
 While `fullscreen`, `[part="base"]` (not the host itself) takes `role="dialog"` + `aria-modal="true"`
-(with `aria-label` from `label`, falling back to `"Fullscreen panel"`), document scroll is locked
+(with `aria-label`, including an explicitly empty value, taking precedence; otherwise the `label`
+property, slotted label, then `"Fullscreen panel"` supply the name), document scroll is locked
 (ref-counted, safe with multiple simultaneously-fullscreen widgets), and Tab/Shift+Tab are bounded
 to the panel's own focusable content (`actions` slot → collapse/fullscreen buttons → body slot,
 matching visual tab order — resolved shadow-piercingly, so a slotted custom element's real
@@ -9893,10 +9913,15 @@ what makes migrating from either upstream a pure tag rename.
 *Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
 markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
 Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
-or a badge while the button's accessible name stays exactly that content's text. A group containing
-any `<lr-tab>` child is read purely as this model. `active` on a tab/panel pair is an SSR hint: the
-group reads an initially active tab and then keeps both child attributes synchronized with its own
-`active` selection after hydration.
+or a badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
+Direct default-slot element roots in that visual label become inert while projected, and regain their author-owned
+inert state when the tab is removed, reassigned, or the group disconnects; use text/glyph markup,
+not an independent action. Only accessibility-exposed default-slot text contributes: author
+`aria-hidden`, hidden, inert, and CSS-hidden branches are excluded, and direct-label text or
+visibility changes refresh the real button's name. A group containing any `<lr-tab>` child is read
+purely as this model. `active` on a tab/panel pair is an SSR hint: the group reads an initially
+active tab and then keeps both child attributes synchronized with its own `active` selection after
+hydration.
 
 *Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
 children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
@@ -9915,9 +9940,10 @@ A tab button's *visible* content can carry a leading icon without ever changing 
 name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
 carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
 element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
-button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]` so it's excluded from accessible-name
-computation regardless of content. A tab with no matching `<id>-icon` sibling renders no icon
-wrapper at all, so existing text-only tabs are unaffected.
+button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]`; the assigned source is inert
+while projected and restores its author-owned inert state when reassigned or disconnected. A tab
+with no matching `<id>-icon` sibling renders no icon wrapper at all, so existing text-only tabs are
+unaffected.
 
 **Properties:**
 - `active: string = ''` (reflected) — the active tab's `slot`/id; falls back to the first enabled
@@ -9982,9 +10008,9 @@ focus off the tab the user was on.
 
 **Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
 `slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
-— optional sibling direct child supplying a tab's leading icon content, in the attribute model only;
-excluded from the tab button's accessible name. `nav` is the upstream-compatible projection slot
-used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
+— optional inert sibling direct child supplying a tab's leading icon content, in the attribute model
+only; excluded from the tab button's accessible name. `nav` is the upstream-compatible projection
+slot used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
 
 ```html
 <!-- element model: renames straight across from wa-/sl- -->
@@ -10006,9 +10032,10 @@ both overflow controls), `scroll-button-start`/`scroll-button--start` and
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the
 right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
 mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
-leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon`
-sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel` (a single
-`role="tabpanel"` wrapper, one per tab, hidden unless active).
+`aria-hidden` leading-icon wrapper around its inert assigned source inside a tab button; only
+rendered when that tab has a matching
+`<id>-icon` sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel`
+(a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
 The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
 no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
 hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
@@ -10057,11 +10084,12 @@ first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
   never an ancestor's: a tab group inside a subtree an open modal has inerted is inert as a whole,
   and treating every tab as unreachable there would reset `active` to `''` and blank every panel for
   as long as the dialog is open.
-- Tabs are rebuilt from direct children via a `MutationObserver` watching `childList` plus
-  `attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable']` — not `slotchange` — because a brand-new tab's
-  `slot` name has no matching `<slot>` to fire `slotchange` on until this component has already
-  rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a plain
-  attribute edit on a light-DOM child at all.
+- Tabs are rebuilt from direct children via a `MutationObserver` — not `slotchange` — because a
+  brand-new tab's `slot` name has no matching `<slot>` to fire `slotchange` on until this component
+  has already rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a
+  plain attribute edit on a light-DOM child at all. Text/content and relevant accessibility/visibility
+  mutations below a direct `<lr-tab>` refresh that button's flattened name; arbitrary nested
+  mutations inside attribute-model panels remain ignored.
 - If two children share the same `slot` name, the *first* one wins for the tab button's label
   (matches native slot assignment: both would render into the one panel, but only one label can back
   the button).
@@ -10089,9 +10117,9 @@ decides whether/how `steps` changes in response.
   `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
   is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
   leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
-  rendered in the `step-icon` part additionally to, never instead of, the state-driven
-  `step-index`/`step-check` glyph. Never mutated by this component. Empty (the default) renders
-  nothing.
+  rendered as inert, `aria-hidden` decoration in the `step-icon` part, additionally to — never
+  instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
+  or accessible name. Never mutated by this component. Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -10145,10 +10173,11 @@ action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button; the current step carries `aria-current="step"` and every
 other step carries `aria-current="false"`),
-`step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
-has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
-index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
-glyph, shown for `completed` steps instead of `step-index`), `step-label` (the step's label text).
+`step-icon` (optional inert, `aria-hidden` leading topic glyph from the step's `icon` field; only
+rendered when the step has one, additionally to — never instead of — `step-index`/`step-check`),
+`step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
+(the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
+(the step's label text).
 
 **Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
 text color of the `current` step. `--lr-stepper-current-font-weight` (default
@@ -10212,7 +10241,9 @@ One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
 A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
 button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
 stays in one place. The host is `display: contents`, contributing no box of its own inside that
-button.
+button. Direct default-slot element roots in the visual label are inert while projected, while their flattened
+accessibility-exposed text explicitly names the real tab button; author-hidden, inert, and CSS-hidden
+branches do not contribute. Use text/glyph markup rather than a second action.
 
 **Properties:** `panel: string = ''` (reflected) — the `name` of the `<lr-tab-panel>` this tab
 reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboard navigation and
@@ -10224,7 +10255,9 @@ affordance.
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
 panel; the consumer handles the request. The owning group separately emits
-`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visible content). **CSS parts:** `base`
+`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visual label content; direct default-slot element roots
+are inert while projected, and its accessibility-exposed flattened text names the real tab button).
+**CSS parts:** `base`
 and `tab` are aliases on the same projected-content slot; `close-button` and
 `close-button__base` are aliases on the same non-focusable visual close affordance. Style the
 group's `tab` part for the real interactive tab button.
@@ -10420,11 +10453,12 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 
 **Properties:**
 - `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
-  icon?: unknown; disabled?: boolean }`; `icon` renders as a decorative leading visual inside
-  `segment-icon` and does not replace the required text label.
+  icon?: unknown; disabled?: boolean }`; `icon` renders as an inert, `aria-hidden` decorative leading
+  visual inside `segment-icon`. It does not replace the required text label or provide an independent
+  action or accessible name.
 - `value: string = ''` — the currently selected item's `value`.
-- `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
-  host-level `aria-label` is used as a fallback.
+- `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
+  host-level `aria-label` wins by attribute presence, including an explicitly empty value.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) —
   visual size on the library's **shared** ladder, the same `--lr-form-control-*` scale
   `lr-input`/`lr-select`/`lr-combobox`/`lr-button` resolve, so a row of mixed controls set to one
@@ -10447,7 +10481,8 @@ keyboard.
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),
-`segment-icon` (an optional decorative leading icon), `segment-label` (the segment's label text).
+`segment-icon` (an optional inert, `aria-hidden` decorative leading icon), `segment-label` (the
+segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
@@ -10513,7 +10548,8 @@ resolves.
   updates `value` and fires `lr-change` — there's no separate "commit" step the way, e.g.,
   `lr-select`'s popup has.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
-  host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+  host `aria-label`; a present host attribute wins, including an explicit empty value, and the
+  component deliberately forwards the resulting name to that internal role.
 
 **Additional API surface:**
 
@@ -11302,12 +11338,13 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
   direct `panel.open = false`. Transient, like every other open-state in this library — it resets
   to `false` when the item is disconnected
 
-**Methods:** `select(): void` — fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called
-internally by this element's own click handler and by `<lr-menu>`'s Enter/Space keydown handling
-of the roving-focused item; also the cleanest way for a consumer/test to trigger selection
-programmatically instead of clicking the shadow-DOM `[part="base"]` element (see the gotcha below).
-For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first. On a submenu
-parent it opens the submenu instead and fires neither event — see below.
+**Methods:** `click(): void` forwards a programmatic host click to the visual row, preserving the
+same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
+or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
+`loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
+item. For `type="checkbox"`, either activation path toggles `checked` and fires
+`lr-menu-item-change` first. On a submenu parent it opens the submenu instead and fires neither
+event — see below.
 
 `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
 `closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
@@ -11327,9 +11364,11 @@ labels are observed live: in-place text edits, forwarding-slot reassignments, an
 visibility changes update type-ahead, the computed submenu-parent name, and the computed
 submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
 assignment stays authoritative even while hidden and therefore does not expose slot fallback;
-fallback contributes after the assignment is removed. A consumer-authored `aria-label` on the
-item, or `label`/`aria-label` on the submenu, wins by attribute presence — including an explicitly
-empty value and a value supplied after Lyra initially computed the name.
+fallback contributes after the assignment is removed. A consumer-authored `aria-label` or
+`aria-labelledby` on the item remains authoritative for its host name; the latter does not change
+type-ahead or the computed submenu-panel name. `label`/`aria-label` on the submenu itself also wins.
+An explicitly empty item `aria-label` and a value supplied after Lyra initially computed the name
+both remain authoritative.
 
 **Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
@@ -11342,9 +11381,14 @@ whose activation opens the panel instead of toggling `checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 
-**Slots:** default (label), `icon` and Shoelace-compatible `prefix` (leading content), `details`
-(WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
-`<lr-menu>` or direct mapped menu items).
+**Slots:** default (the visual label), `icon` and Shoelace-compatible `prefix` (leading content),
+`details` (WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
+`<lr-menu>` or direct mapped menu items). The five display slots — default, `icon`, `prefix`,
+`details`, and `suffix` — are visual-only: their flattened content is inert and hidden from
+assistive technology, so it cannot create a second action inside the focusable menu item. The
+default slot's accessibility-visible text is mirrored to the host's accessible name and type-ahead
+label. Use ordinary text/glyph markup in display slots; use the dedicated `submenu` slot for nested
+interactive menu content.
 
 **CSS parts:** `base`; `icon` and `prefix`; `label`; `details`; `suffix`; `checkmark` and its
 Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
@@ -11364,7 +11408,7 @@ also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `-
 
 Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
 the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
-`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `select()`,
+`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `click()`, `select()`,
 `getTextLabel()`, `hasSubmenu`/`submenuOpen`, async `openSubmenu()`/`closeSubmenu()`, checkbox events,
 and menu roving focus behave identically.
 
@@ -11384,7 +11428,10 @@ are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The
 under `<lr-menu-item>` above.
 
 **Slots:** default, `icon`, `prefix`, `details`, `suffix`, and `submenu` — including WA's direct-item
-submenu shape and Shoelace's nested-menu shape.
+submenu shape and Shoelace's nested-menu shape. Default, `icon`, `prefix`, `details`, and `suffix`
+are visual-only inert, assistive-technology-hidden display slots; default-slot text still names the
+focusable host and drives type-ahead. Use `submenu`, rather than a display slot, for nested
+interactive menu content.
 
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
@@ -11521,11 +11568,10 @@ row never opens its submenu, by keyboard or by pointer.
   contract, not a missing menu id; setting the string again would discard the cross-shadow
   relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
   optional for the menu-button pattern.
-- `<lr-menu-item>`'s click handler lives on an inner shadow-DOM element (`[part="base"]`), not the
-  host — calling `.click()` directly on the `<lr-menu-item>` host element in a test does **not**
-  trigger selection; either click (or dispatch on) the element returned by
-  `menuItemEl.shadowRoot.querySelector('[part="base"]')`, or just call the item's own `select()`
-  method directly.
+- `.click()` on an `<lr-menu-item>` or `<lr-dropdown-item>` host forwards to its inner visual
+  `[part="base"]`, preserving the same selection, checkbox, and submenu behavior as a pointer
+  activation. Prefer the host `click()` or `select()` in tests and automation rather than reaching
+  into shadow DOM.
 - `lr-show`/`lr-hide` are suppressed on the very first render even if `open` is already `true`
   in markup — only later `open` transitions fire them.
 - `lr-menu-item-select` carries no detail payload (`event.detail === null`); read
@@ -12327,6 +12373,13 @@ replaced, removed, or its Page disconnects, component-owned attributes are resto
 author values (or removed when they were absent). A consumer write made after assignment wins and
 is not restored over.
 
+`navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
+from assistive technology, while the native toggle retains the sole action and localized name.
+Likewise, `skip-to-content` replaces only visible skip-link text; its assigned subtree is inert and
+hidden from assistive technology, but its text names the Page's sole skip link. Supply text or a
+glyph as appropriate to the slot, not a separate interactive control: `skip-to-content` needs
+descriptive text, while `navigation-toggle-icon` needs a glyph.
+
 The focus-visible skip link has a localized `Skip to content` fallback and focuses the unique
 internal `<main>`. Native URL fragments cannot address an id inside a shadow root, so the Page host
 is the unique, programmatically focusable fragment target; activation then focuses and scrolls its
@@ -12543,10 +12596,11 @@ respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly w
 
 **Optional peer deps:** none.
 
-`role` is chosen automatically per `variant`: `"alert"` for `danger`/`warning`, `"status"`
-otherwise — re-evaluated on every `variant` change, not just at first render, so reassigning
-`variant` to `danger`/`warning` after creation is announced as an interruption instead of keeping
-its original, now-stale role. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
+Once a non-vetoed toast starts showing, its normalized message is appended to Lyra's pre-mounted,
+shared light-DOM announcement sink: assertive for `danger`/`warning`, polite otherwise. Changing a
+visible toast between those urgency levels announces that message at the new urgency. The visible
+item and stack themselves remain ordinary content, so an icon, action, and close button never become
+part of an atomic live announcement. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
 on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 timing-adjustable) —
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
 leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
@@ -12582,17 +12636,22 @@ at another, since `placement` is a per-call option rather than a single global r
 ```
 
 **Known gotchas:**
-- the stack itself has no live-region role; each `lr-toast-item` owns the single `status`/`alert`
-  role appropriate to its current variant, avoiding nested live-region announcements.
-- the close button's accessible name is derived from the toast's own message text (`"Close: <first
-  40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
-  a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first. Rich
-  non-interactive message markup contributes its text, named-slot/icon and actionable content do
-  not, and live message text mutations or reassignment update the name through nested forwarding
-  slots. Hidden, inert, CSS-hidden and `aria-hidden` message branches are excluded. Observation,
-  animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the item's owner
-  window after iframe adoption and cancel through the same window that scheduled them.
+- the stack and each visible item have no live-region role. Their normalized message is appended as
+  one child of a shared non-atomic light-DOM sink at the variant's urgency; icon, action, and close
+  controls remain outside that sink. Later meaningful message changes add only the changed normalized
+  message, and appending an action does not re-announce it.
+- the close button's accessible name is derived from the toast's own message text (the first 40
+  grapheme clusters when it must be shortened, falling back to bare `"Close"` only when the toast
+  has no text content) rather than a bare `"Close"` on every instance — useful when several toasts
+  are stacked and a screen-reader or switch-access user needs to tell their close buttons apart
+  without activating one first. On a legacy engine without `Intl.Segmenter`, it retains the whole
+  label rather than splitting a grapheme. The localized `closeWithTruncatedContext` template owns
+  truncation punctuation and word order. Rich non-interactive message markup contributes its text,
+  named-slot/icon and actionable content do not, and live message text mutations or reassignment
+  update the name through nested forwarding slots. Hidden, inert, CSS-hidden and `aria-hidden`
+  message branches are excluded. Observation, animation frames, elapsed-time clocks and
+  completion/auto-dismiss timers follow the item's owner window after iframe adoption and cancel
+  through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
@@ -13312,7 +13371,9 @@ text glyph). When it has any real (non-whitespace) content, it replaces the `key
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
 content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
 to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
-leaves the slotted content's own semantics exposed.
+leaves the slotted content's own semantics exposed. A host `aria-label` wins by attribute presence,
+including an explicitly empty value; the computed shortcut name applies only when that attribute is
+absent.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
@@ -13480,8 +13541,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
-- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup; falls back to the
-  localized "Popover" (or "Menu" when `popupRole` is `menu`)
+- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
+  attribute wins by presence, including `aria-label=""`; only when it is absent does the property
+  or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
 
 To preserve the previous Lyra-shaped defaults explicitly, use
@@ -14207,9 +14269,10 @@ rather than the shared control ladder, since a rating has no control frame to si
 reproduces the treatment this component had before `size` existed; setters also accept
 `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
-`label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
-*not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
-wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+`label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
+value; otherwise `accessibleLabel`, `label`, then the localized name provide the fallback. Neither
+is visible label text, since a rating is a bare row of symbols with no field frame of its own; wrap
+the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
@@ -14219,7 +14282,9 @@ clears to the canonical `''` read value rather than creating a nullable state.
 *twice per position*: once for the empty backdrop (`selected` false) and once for the overlay
 clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
 `precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
-text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
+text, never as markup. Renderer output is decorative, inert, and pointer-transparent, so it cannot
+become a second focus or action target; pointer and keyboard selection stay on the rating control.
+Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
@@ -16348,8 +16413,14 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   `--lr-space-l` dropzone.
 - `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
   instruction (`fileInputDefaultLabel`) as the visible fallback
-- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
-  `with-hint`) — SSR slot-presence hints
+- `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
+  it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
+  message appears after the control has been interacted with. Rich `error` slot content replaces
+  that text.
+- `withLabel: boolean = false`, `withHint: boolean = false`, and `withError: boolean = false`
+  (attributes `with-label`, `with-hint`, and `with-error`) — SSR slot-presence hints. Use
+  `with-error` when the rich `error` slot is populated in initial declarative-shadow-DOM output,
+  before hydration can observe the assigned light-DOM content.
 - `size: LyraSize = 'm'` (reflected) and `validators: unknown[] = []` (attribute: false)
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
@@ -16387,15 +16458,21 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
-content; `label` and `hint` supply form chrome. The semantic button's accessible name comes from
+content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
 `accessibleLabel`/host `aria-label`,
 then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
 
-**CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
-`dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
+The semantic button describes its rendered owned error and hint in that order. A supplied
+`errorText` or `error` slot marks it `aria-invalid="true"`; a required intrinsic message appears
+after interaction, while a custom validity message is immediately visible and survives native form
+reset until `resetValidity()` or `setCustomValidity('')` clears it.
+
+**CSS parts:** `file-input` (compatibility alias) and `form-control` (the complete form-control
+frame), `form-control-label`, `label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
+`base` (the native dropzone button, visually behind but semantically beside the
 slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
@@ -17406,8 +17483,10 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   overriding the localized `lightboxLabel`.
 
 **Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
-index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
-forwarded as the close event's detail.
+index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
+toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
+actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
+detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
