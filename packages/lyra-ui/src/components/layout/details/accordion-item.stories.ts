@@ -22,10 +22,18 @@ export const AccessibleNamePrecedence: StoryObj = {
 };
 
 export const CustomLabelAndIcon: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Rich label markup remains visible and names the sole trigger. Label and compatibility summary slots are decorative layers, so interactive descendants are inert.',
+      },
+    },
+  },
   render: () => html`<lr-accordion-item heading-level="2" icon-placement="start">
     <span slot="label"><strong>Rich label</strong> with supporting text</span>
     <span slot="icon" aria-hidden="true">+</span>
-    The label and decorative icon both accept slotted markup.
+    The rich label names the trigger; the decorative icon accepts slotted markup.
   </lr-accordion-item>`,
 };
 

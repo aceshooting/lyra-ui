@@ -34,8 +34,11 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  *
  * @customElement lr-accordion-item
  * @slot - Panel content.
- * @slot label - Header label; takes priority over `label`, `summary`, and the `summary` slot.
- * @slot summary - Compatibility alias for the `label` slot.
+ * @slot label - Visible header label; takes priority over `label`, `summary`, and the `summary`
+ *   slot. Its flattened subtree is inert and hidden from assistive technology, while its
+ *   accessibility-visible text names the sole trigger button.
+ * @slot summary - Compatibility alias for the `label` slot, with the same inert visual-content
+ *   contract.
  * @slot icon - Optional decorative expand/collapse icon.
  * @csspart base - Compatibility name for the outer wrapper; use `accordion-item`.
  * @csspart accordion-item - The outer wrapper. It is the same node as `base`.
@@ -88,8 +91,8 @@ export class LyraAccordionItem extends LyraDetails {
 
   static override styles = [LyraElement.styles, sizes, styles];
 
-  @state() private hasLabelSlot = false;
-  @state() private hasLegacySummarySlot = false;
+  @state() private hasLabel = false;
+  @state() private hasLegacy = false;
 
   /** Text shown in the trigger. Rich content belongs in the `label` slot. */
   @property() label = '';
@@ -126,7 +129,7 @@ export class LyraAccordionItem extends LyraDetails {
   @property({ attribute: false }) isTabbable = true;
 
   override disconnectedCallback(): void {
-    this.setAnimating(false);
+    this.setAnim(false);
     super.disconnectedCallback();
   }
 
@@ -137,7 +140,7 @@ export class LyraAccordionItem extends LyraDetails {
     // The inherited Details lifecycle owns the real rendered-motion wait. Drop the custom state
     // immediately before publishing its completion boundary so every lr-after-* listener observes
     // a settled item rather than the one-microtask race produced by a second parallel waiter.
-    if (name === 'lr-after-show' || name === 'lr-after-hide') this.setAnimating(false);
+    if (name === 'lr-after-show' || name === 'lr-after-hide') this.setAnim(false);
     return super.emit(name, ...args);
   }
 
@@ -151,7 +154,7 @@ export class LyraAccordionItem extends LyraDetails {
    * The dispatch itself is identical to `emit()`'s -- bubbling and composed, so it still reaches
    * the owning accordion across the item's shadow boundary.
    */
-  private emitAccordionProtocol(
+  private emitProtocol(
     name: 'lr-accordion-item-state-change' | 'lr-accordion-item-trigger',
     options?: LyraEmitOptions,
   ): CustomEvent<{ item: LyraAccordionItem }> {
@@ -168,8 +171,8 @@ export class LyraAccordionItem extends LyraDetails {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'label');
-      this.hasLegacySummarySlot = Array.from(this.children).some(
+      this.hasLabel = Array.from(this.children).some((child) => child.getAttribute('slot') === 'label');
+      this.hasLegacy = Array.from(this.children).some(
         (child) => child.getAttribute('slot') === 'summary',
       );
     }
@@ -181,7 +184,7 @@ export class LyraAccordionItem extends LyraDetails {
       this.toggleAttribute('expanded', this.open);
     }
     if (changed.has('disabled')) {
-      this.emitAccordionProtocol('lr-accordion-item-state-change');
+      this.emitProtocol('lr-accordion-item-state-change');
     }
   }
 
@@ -200,7 +203,7 @@ export class LyraAccordionItem extends LyraDetails {
       return;
     }
     this.requestUpdate('expanded', old);
-    this.setAnimating(true);
+    this.setAnim(true);
     await settled;
   }
 
@@ -213,7 +216,7 @@ export class LyraAccordionItem extends LyraDetails {
       return;
     }
     this.requestUpdate('expanded', old);
-    this.setAnimating(true);
+    this.setAnim(true);
     await settled;
   }
 
@@ -237,46 +240,46 @@ export class LyraAccordionItem extends LyraDetails {
 
   /** Focus the internal trigger. */
   override focus(options?: FocusOptions): void {
-    this.triggerButton?.focus(options);
+    this.button?.focus(options);
   }
 
   /** Remove focus from the internal trigger. */
   override blur(): void {
-    this.triggerButton?.blur();
+    this.button?.blur();
   }
 
   /** Activate the internal trigger. */
   override click(): void {
-    const trigger = this.triggerButton;
+    const trigger = this.button;
     if (trigger) trigger.click();
     else super.click();
   }
 
-  private get triggerButton(): HTMLButtonElement | null {
+  private get button(): HTMLButtonElement | null {
     return this.renderRoot.querySelector<HTMLButtonElement>('[part~="button"]');
   }
 
-  private setAnimating(animating: boolean): void {
+  private setAnim(animating: boolean): void {
     if (animating) this.detailsInternals.states.add('animating');
     else this.detailsInternals.states.delete('animating');
   }
 
-  private handleTriggerClick = (): void => {
+  private onTrigger = (): void => {
     if (this.disabled) return;
-    const handled = this.emitAccordionProtocol('lr-accordion-item-trigger', { cancelable: true });
+    const handled = this.emitProtocol('lr-accordion-item-trigger', { cancelable: true });
     if (!handled.defaultPrevented) this.toggle();
   };
 
-  private handleLabelSlotChange = (event: Event): void => {
-    this.hasLabelSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onLabel = (event: Event): void => {
+    this.hasLabel = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private handleSummarySlotChange = (event: Event): void => {
-    this.hasLegacySummarySlot =
+  private onSummary = (event: Event): void => {
+    this.hasLegacy =
       (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private renderHeading(button: TemplateResult): TemplateResult {
+  private heading(button: TemplateResult): TemplateResult {
     switch (this.headingLevel) {
       case '1':
         return html`<h1 part="heading">${button}</h1>`;
@@ -295,32 +298,38 @@ export class LyraAccordionItem extends LyraDetails {
 
   override render(): TemplateResult {
     const fallbackLabel = this.label || this.summary || this.localize('details');
+    const hasSlottedLabel = this.hasLabel || this.hasLegacy;
+    const hostLabel = hostAriaLabel(this);
+    const labelId = hostLabel === null
+      ? this.hasLabel ? 'label' : this.hasLegacy ? 'summary' : nothing
+      : nothing;
     const button = html`<button
       id="trigger"
       part="button summary"
       type="button"
-      aria-label=${hostAriaLabel(this) ?? nothing}
+      aria-label=${hostLabel ?? nothing}
+      aria-labelledby=${labelId}
       aria-expanded=${this.expanded ? 'true' : 'false'}
       aria-controls="panel"
       aria-disabled=${this.disabled ? 'true' : 'false'}
       tabindex=${this.disabled || !this.isTabbable ? '-1' : '0'}
       ?disabled=${this.disabled}
-      @click=${this.handleTriggerClick}
+      @click=${this.onTrigger}
     >
       <span part="label">
-        <slot name="label" ?hidden=${!this.hasLabelSlot} @slotchange=${this.handleLabelSlotChange}></slot>
-        <slot
-          name="summary"
-          ?hidden=${this.hasLabelSlot || !this.hasLegacySummarySlot}
-          @slotchange=${this.handleSummarySlotChange}
-        ></slot>
-        ${this.hasLabelSlot || this.hasLegacySummarySlot ? '' : fallbackLabel}
+        <span id="label" aria-hidden="true" inert ?hidden=${!this.hasLabel}>
+          <slot name="label" @slotchange=${this.onLabel}></slot>
+        </span>
+        <span id="summary" aria-hidden="true" inert ?hidden=${this.hasLabel || !this.hasLegacy}>
+          <slot name="summary" @slotchange=${this.onSummary}></slot>
+        </span>
+        ${hasSlottedLabel ? '' : fallbackLabel}
       </span>
       <span part="icon" aria-hidden="true"><slot name="icon"><span class="default-icon"></span></slot></span>
     </button>`;
 
     return html`<div part="base accordion-item">
-      ${this.headingLevel === 'none' ? button : this.renderHeading(button)}
+      ${this.headingLevel === 'none' ? button : this.heading(button)}
       <div
         id="panel"
         part="panel"

@@ -47,7 +47,7 @@ export const Presentation: StoryObj = {
     <lr-accordion-item disabled label="Disabled">Disabled items are skipped by roving focus.</lr-accordion-item>
     <lr-accordion-item>
       <span slot="label">Rich <em>slotted</em> label</span>
-      Labels can contain markup.
+      Labels can contain noninteractive markup while the trigger remains the sole action.
     </lr-accordion-item>
   </lr-accordion>`,
 };

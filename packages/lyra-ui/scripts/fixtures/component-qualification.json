@@ -121,7 +121,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 742,
+              "line": 839,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -132,7 +132,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 708,
+              "line": 805,
               "kind": "320px allocation test signal"
             }
           ]
@@ -270,7 +270,21 @@
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 775,
+              "line": 550,
+              "test": "keeps a slotted label decorative while its text names the sole trigger",
+              "target": "item",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/details/accordion.test.ts",
+              "line": 587,
+              "test": "keeps a legacy summary control decorative while its text names and activates the trigger",
+              "target": "item",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/details/accordion.test.ts",
+              "line": 872,
               "test": "localizes the fallback label and is accessible in its own populated expanded state",
               "target": "item",
               "state": "populated"
@@ -306,7 +320,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 742,
+              "line": 839,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -317,7 +331,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 708,
+              "line": 805,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12671,7 +12685,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 742,
+              "line": 839,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12682,7 +12696,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 708,
+              "line": 805,
               "kind": "320px allocation test signal"
             }
           ]

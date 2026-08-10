@@ -547,6 +547,101 @@ describe('<lr-accordion-item>', () => {
     expect(buttonFor(slotItem).textContent).to.not.contain('Details');
   });
 
+  it('keeps a slotted label decorative while its text names the sole trigger', async () => {
+    const item = (await fixture(html`<lr-accordion-item>
+      <a id="slotted-label-link" slot="label" href="#account">Account settings</a>
+      <input id="slotted-label-input" slot="label" aria-label="Email alerts">
+      Content
+    </lr-accordion-item>`)) as LyraAccordionItem;
+    const link = item.querySelector<HTMLElement>('#slotted-label-link')!;
+    const input = item.querySelector<HTMLElement>('#slotted-label-input')!;
+    const button = buttonFor(item);
+    const visualLabel = button.querySelector<HTMLElement>('[part="label"] > [inert][aria-hidden="true"]')!;
+
+    link.focus();
+    expect(item.ownerDocument.activeElement?.id).to.not.equal('slotted-label-link');
+    input.focus();
+    expect(item.ownerDocument.activeElement?.id).to.not.equal('slotted-label-input');
+    expect(visualLabel.hasAttribute('inert')).to.equal(true);
+    expect(visualLabel.getAttribute('aria-hidden')).to.equal('true');
+    expect(button.hasAttribute('aria-label')).to.equal(false);
+    expect(button.getAttribute('aria-labelledby')).to.equal('label');
+
+    let linkActivations = 0;
+    link.addEventListener('click', () => linkActivations++);
+    const rect = link.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await item.updateComplete;
+      expect(linkActivations).to.equal(0);
+      expect(item.expanded).to.equal(true);
+    } finally {
+      await resetMouse();
+    }
+    await expect(item).to.be.accessible();
+  });
+
+  it('keeps a legacy summary control decorative while its text names and activates the trigger', async () => {
+    const item = (await fixture(html`<lr-accordion-item>
+      <button id="slotted-summary-button" slot="summary">Legacy preferences</button>
+      Content
+    </lr-accordion-item>`)) as LyraAccordionItem;
+    const summaryButton = item.querySelector<HTMLElement>('#slotted-summary-button')!;
+    const button = buttonFor(item);
+    const visualSummary = button.querySelector<HTMLElement>('[part="label"] > [inert][aria-hidden="true"]')!;
+
+    summaryButton.focus();
+    expect(item.ownerDocument.activeElement?.id).to.not.equal('slotted-summary-button');
+    expect(visualSummary.hasAttribute('inert')).to.equal(true);
+    expect(button.hasAttribute('aria-label')).to.equal(false);
+    expect(button.getAttribute('aria-labelledby')).to.equal('summary');
+
+    let summaryActivations = 0;
+    summaryButton.addEventListener('click', () => summaryActivations++);
+    const rect = summaryButton.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await item.updateComplete;
+      expect(summaryActivations).to.equal(0);
+      expect(item.expanded).to.equal(true);
+    } finally {
+      await resetMouse();
+    }
+    await expect(item).to.be.accessible();
+  });
+
+  it('keeps a slotted trigger name live and lets a present host label win', async () => {
+    const item = (await fixture(html`<lr-accordion-item aria-label="Author label">
+      <span id="live-slotted-label" slot="label">Initial label</span>
+      Content
+    </lr-accordion-item>`)) as LyraAccordionItem;
+    const label = item.querySelector<HTMLElement>('#live-slotted-label')!;
+    const button = buttonFor(item);
+
+    expect(button.getAttribute('aria-label')).to.equal('Author label');
+    expect(button.hasAttribute('aria-labelledby')).to.equal(false);
+    item.setAttribute('aria-label', '');
+    await item.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('');
+    expect(button.hasAttribute('aria-labelledby')).to.equal(false);
+
+    item.removeAttribute('aria-label');
+    await item.updateComplete;
+    expect(button.hasAttribute('aria-label')).to.equal(false);
+    expect(button.getAttribute('aria-labelledby')).to.equal('label');
+
+    label.textContent = 'Updated label';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(label.textContent).to.equal('Updated label');
+    expect(button.getAttribute('aria-labelledby')).to.equal('label');
+  });
+
   it('gives the canonical label slot precedence and restores the summary alias when it is removed', async () => {
     const item = (await fixture(html`<lr-accordion-item label="Property label" summary="Summary property">
       <span id="canonical-label" slot="label">Canonical slot</span>
@@ -555,15 +650,17 @@ describe('<lr-accordion-item>', () => {
     </lr-accordion-item>`)) as LyraAccordionItem;
     const labelSlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="label"]')!;
     const summarySlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="summary"]')!;
-    expect(labelSlot.hidden).to.be.false;
-    expect(summarySlot.hidden).to.be.true;
+    expect(labelSlot.parentElement?.hidden).to.be.false;
+    expect(summarySlot.parentElement?.hidden).to.be.true;
+    expect(buttonFor(item).getAttribute('aria-labelledby')).to.equal('label');
 
     item.querySelector('#canonical-label')!.remove();
     await item.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    expect(labelSlot.hidden).to.be.true;
-    expect(summarySlot.hidden).to.be.false;
+    expect(labelSlot.parentElement?.hidden).to.be.true;
+    expect(summarySlot.parentElement?.hidden).to.be.false;
     expect(summarySlot.assignedElements()[0]?.id).to.equal('legacy-label');
+    expect(buttonFor(item).getAttribute('aria-labelledby')).to.equal('summary');
   });
 
   it('supports expand(), collapse(), toggle(), show(), hide(), focus(), blur(), and click()', async () => {

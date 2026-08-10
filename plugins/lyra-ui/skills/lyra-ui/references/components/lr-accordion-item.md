@@ -55,7 +55,10 @@ non-empty name in one document or shadow root are mutually exclusive),
 
 A host `aria-label`, when present, names the actual Details summary or accordion-item trigger;
 it wins over summary/label content even when explicitly empty. When the host attribute is absent,
-the trigger keeps its native name-from-content behavior.
+Details and accordion-item property/localized fallbacks keep their native name-from-content
+behavior. An active accordion-item `label` or compatibility `summary` slot instead contributes its
+normalized accessibility-visible text as the trigger's explicit name; its rendered subtree is inert
+and hidden from assistive technology so the trigger remains the sole action.
 
 `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
@@ -113,8 +116,10 @@ inside the nearest nested accordion.
 
 **Slots:** accordion has a default slot for direct items. Accordion item has default panel content,
 `label`, `icon`, and the compatibility `summary` slot; `label` slot → `summary` slot → `label`
-property → `summary` property → localized `"Details"` is the precedence order. Details has
-`summary`, `expand-icon`, `collapse-icon`, plus default content.
+property → `summary` property → localized `"Details"` is the precedence order. The two label-slot
+aliases accept rich visible markup, but their flattened subtrees are inert and hidden from
+assistive technology: do not place independent links, buttons, inputs, form state, or focus targets
+there. Details has `summary`, `expand-icon`, `collapse-icon`, plus default content.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper; `button` and the Details-compatible `summary` name are on the same trigger; and
