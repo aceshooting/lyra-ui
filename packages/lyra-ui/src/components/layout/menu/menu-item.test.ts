@@ -4,6 +4,7 @@ import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import type { MenuFocusTarget } from './menu.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -78,6 +79,59 @@ it('renders WA details and Shoelace prefix/suffix compatibility slots through na
   expect(el.shadowRoot!.querySelector('[part~="icon"] slot[name="prefix"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part~="details"] slot[name="details"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part~="suffix"] slot[name="suffix"]')).to.exist;
+});
+
+it('keeps every display slot decorative while the host retains the sole menuitem action', async () => {
+  const wrapper = (await fixture(html`
+    <div role="menu" aria-label="Actions">
+      <lr-menu-item id="rename" value="rename" tabindex="0">
+        <button id="icon" slot="icon" type="button">Icon action</button>
+        <button id="prefix" slot="prefix" type="button">Prefix action</button>
+        <button id="label" type="button">Rename</button>
+        <button id="details" slot="details" type="button">Shortcut action</button>
+        <button id="suffix" slot="suffix" type="button">Suffix action</button>
+      </lr-menu-item>
+    </div>
+  `)) as HTMLElement;
+  const item = wrapper.querySelector<LyraMenuItem>('#rename')!;
+  const label = wrapper.querySelector<HTMLButtonElement>('#label')!;
+  const displayControls = ['icon', 'prefix', 'label', 'details', 'suffix']
+    .map((id) => wrapper.querySelector<HTMLButtonElement>(`#${id}`)!);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await item.updateComplete;
+
+  for (const control of displayControls) {
+    control.focus();
+    expect(
+      item.ownerDocument.activeElement?.id,
+      `${control.id} cannot become a second focus stop inside the menuitem`,
+    ).to.not.equal(control.id);
+    expect(
+      control.assignedSlot?.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
+      `${control.id} is visual-only item chrome`,
+    ).to.equal('true');
+  }
+
+  expect(item.getTextLabel()).to.equal('Rename');
+  expect(item.getAttribute('aria-label')).to.equal('Rename');
+
+  let slottedClicks = 0;
+  let selections = 0;
+  label.addEventListener('click', () => slottedClicks += 1);
+  item.addEventListener('lr-menu-item-select', () => selections += 1);
+  const rect = label.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+  } finally {
+    await resetMouse();
+  }
+
+  expect(slottedClicks).to.equal(0);
+  expect(selections).to.equal(1);
+  await expect(wrapper).to.be.accessible();
 });
 
 it('treats loading as interaction-disabled and renders the spinner parts', async () => {
@@ -637,6 +691,50 @@ describe('submenu parent', () => {
     expect(item.getTextLabel()).to.equal('Distribute');
     expect(item.getAttribute('aria-label')).to.equal('Distribute');
     expect(panel.getAttribute('aria-label')).to.equal('Distribute');
+  });
+
+  it('keeps a consumer name on a plain item while its visual label stays live', async () => {
+    const item = (await fixture(html`
+      <lr-menu-item value="rename" aria-label="Rename document">
+        <span id="label">Rename</span>
+      </lr-menu-item>
+    `)) as LyraMenuItem;
+    const label = item.querySelector<HTMLElement>('#label')!;
+    await item.updateComplete;
+
+    expect(item.getAttribute('aria-label')).to.equal('Rename document');
+    label.textContent = 'Rename copy';
+    await settleLabel(item);
+
+    expect(item.getTextLabel()).to.equal('Rename copy');
+    expect(item.getAttribute('aria-label')).to.equal('Rename document');
+  });
+
+  it('keeps an authored aria-labelledby authoritative on a plain item', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <span id="rename-document-name">Rename document</span>
+        <lr-menu-item id="rename" value="rename"><span id="label">Rename</span></lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector<LyraMenuItem>('#rename')!;
+    const label = wrapper.querySelector<HTMLElement>('#label')!;
+    await item.updateComplete;
+    expect(item.getAttribute('aria-label')).to.equal('Rename');
+
+    item.setAttribute('aria-labelledby', 'rename-document-name');
+    await settleLabel(item);
+    expect(item.hasAttribute('aria-label')).to.equal(false);
+    expect(item.getTextLabel()).to.equal('Rename');
+
+    label.textContent = 'Rename copy';
+    await settleLabel(item);
+    expect(item.getTextLabel()).to.equal('Rename copy');
+    expect(item.hasAttribute('aria-label')).to.equal(false);
+
+    item.removeAttribute('aria-labelledby');
+    await settleLabel(item);
+    expect(item.getAttribute('aria-label')).to.equal('Rename copy');
   });
 
   it('excludes accessibility-hidden label branches while retaining restored-visibility descendants', async () => {

@@ -7,6 +7,28 @@ const meta: Meta = { title: 'Navigation/Menu item', component: 'lr-menu-item', t
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-menu-item value="save">Save</lr-menu-item>` };
 
+export const VisualSlots: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The focusable menu-item host is the row’s sole action. Default, icon, prefix, details, and suffix content remains visual-only; default-slot text supplies the host’s accessible name and type-ahead label. Put an independent action outside the item, or use the dedicated submenu slot for nested menu content.',
+      },
+    },
+  },
+  render: () => html`
+    <div role="menu" aria-label="Document actions" style="inline-size: 18rem;">
+      <lr-menu-item value="rename">
+        <span slot="icon">✏️</span>
+        <span slot="prefix">File</span>
+        Rename
+        <span slot="details">⌘R</span>
+        <span slot="suffix">…</span>
+      </lr-menu-item>
+    </div>
+  `,
+};
+
 export const Sizes: StoryObj = {
   parameters: {
     docs: {

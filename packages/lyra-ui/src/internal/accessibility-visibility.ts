@@ -103,17 +103,24 @@ function isClosedDetailsContentBranch(details: Element, branch: Element | null):
  * Whether an element is connected and exposed by its own state and every composed ancestor.
  *
  * Document-level live regions do not inherit visibility from the component that publishes into
- * them. Announcement producers use this before writing to a shared sink.
+ * them. Announcement producers use this before writing to a shared sink. `ignorePresentation`
+ * only skips a known component-owned, non-semantic presentation fence; it must not select
+ * author-provided content.
  */
-export function isAccessibilityVisible(element: Element): boolean {
+export function isAccessibilityVisible(
+  element: Element,
+  options: { ignorePresentation?: (candidate: Element) => boolean } = {},
+): boolean {
   if (!element.isConnected) return false;
 
   let current: Element | null = element;
   let composedChild: Element | null = null;
   while (current) {
-    if (isAccessibilitySubtreeExcluded(current)) return false;
-    if (isClosedDetailsContentBranch(current, composedChild)) return false;
-    if (current === element && isAccessibilityVisibilityHidden(current)) return false;
+    if (!options.ignorePresentation?.(current)) {
+      if (isAccessibilitySubtreeExcluded(current)) return false;
+      if (isClosedDetailsContentBranch(current, composedChild)) return false;
+      if (current === element && isAccessibilityVisibilityHidden(current)) return false;
+    }
     composedChild = current;
     current = composedParentElement(current);
   }

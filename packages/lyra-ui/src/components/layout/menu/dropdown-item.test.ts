@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './dropdown-item.js';
 import './menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 async function submenuParent(): Promise<LyraDropdownItem> {
   const wrapper = (await fixture(html`
@@ -46,6 +47,55 @@ describe('<lr-dropdown-item>', () => {
   it('is accessible', async () => {
     const menu = await fixture(html`<lr-menu label="Actions"><button slot="trigger">Actions</button><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu>`);
     await expect(menu).to.be.accessible();
+  });
+
+  it('inherits decorative display-slot isolation without losing its host label or action', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-dropdown-item id="archive" value="archive" tabindex="0">
+          <button id="label" type="button">Archive</button>
+          <button id="details" slot="details" type="button">Shortcut action</button>
+        </lr-dropdown-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector<LyraDropdownItem>('#archive')!;
+    const label = wrapper.querySelector<HTMLButtonElement>('#label')!;
+    const details = wrapper.querySelector<HTMLButtonElement>('#details')!;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await item.updateComplete;
+
+    for (const control of [label, details]) {
+      control.focus();
+      expect(
+        item.ownerDocument.activeElement?.id,
+        `${control.id} cannot become a second focus stop inside the menuitem`,
+      ).to.not.equal(control.id);
+      expect(
+        control.assignedSlot?.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
+        `${control.id} is visual-only item chrome`,
+      ).to.equal('true');
+    }
+
+    expect(item.getTextLabel()).to.equal('Archive');
+    expect(item.getAttribute('aria-label')).to.equal('Archive');
+
+    let slottedClicks = 0;
+    let selections = 0;
+    label.addEventListener('click', () => slottedClicks += 1);
+    item.addEventListener('lr-menu-item-select', () => selections += 1);
+    const rect = label.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+    } finally {
+      await resetMouse();
+    }
+
+    expect(slottedClicks).to.equal(0);
+    expect(selections).to.equal(1);
+    await expect(wrapper).to.be.accessible();
   });
 
   it('exposes submenu-open as a reflected, controllable state with a false default', async () => {

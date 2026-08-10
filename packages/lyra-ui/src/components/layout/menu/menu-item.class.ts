@@ -112,17 +112,18 @@ export interface LyraMenuItemEventMap {
  * the ancestor menu, where a consumer would read them as that menu closing;
  * listen on the submenu element itself for those.
  *
- * The submenu's `role="menu"` is named from this item's own label text, and
- * so is the item, which otherwise computes its accessible name from its
- * contents — those contents include the whole open submenu. Direct and
- * flattened, forwarded default-slot labels are observed live so in-place
- * text edits, reassignments, and relevant visibility changes update
- * type-ahead and both computed names. Accessibility-hidden branches are
- * omitted; a real forwarding-slot assignment remains authoritative even
- * when hidden, while fallback contributes once no assignment remains. A
- * host-level `aria-label` (or a `label`/`aria-label` on the submenu itself)
- * wins by attribute presence, including an explicitly empty value and a
- * value supplied after the initial computed name.
+ * The default label slot's flattened subtree is visual-only: it is inert and
+ * hidden from assistive technology so the focusable host remains the row's
+ * sole action. Its accessible text names both this item and its submenu's
+ * `role="menu"`, without allowing an open submenu to leak into the item's
+ * name. Direct and flattened, forwarded default-slot labels are observed live
+ * so in-place text edits, reassignments, and relevant visibility changes
+ * update type-ahead and both computed names. Accessibility-hidden branches are
+ * omitted; a real forwarding-slot assignment remains authoritative even when
+ * hidden, while fallback contributes once no assignment remains. A host-level
+ * `aria-label` or `aria-labelledby` remains authoritative; a `label`/
+ * `aria-label` on the submenu itself does too. An explicitly empty
+ * `aria-label` and a value supplied after the initial computed name both win.
  *
  * `type="checkbox"` (mirroring `wa-dropdown-item`'s identical `type` option)
  * renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with
@@ -137,11 +138,16 @@ export interface LyraMenuItemEventMap {
  * differences.
  *
  * @customElement lr-menu-item
- * @slot - The item's label content.
- * @slot icon - Optional leading icon.
- * @slot prefix - Shoelace-compatible alias for leading content.
- * @slot details - Secondary WA-compatible detail text rendered after the label.
- * @slot suffix - Shoelace-compatible trailing content.
+ * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive
+ *   technology; its accessible text names the host menu item.
+ * @slot icon - Optional decorative leading icon. Its flattened subtree is inert and hidden from
+ *   assistive technology.
+ * @slot prefix - Shoelace-compatible decorative alias for leading content. Its flattened subtree is
+ *   inert and hidden from assistive technology.
+ * @slot details - Decorative secondary WA-compatible detail text rendered after the label. Its
+ *   flattened subtree is inert and hidden from assistive technology.
+ * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
+ *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped menu items that open beside this row.
  * @event lr-menu-item-select - This item was activated (click, or the
  * parent `<lr-menu>`'s own Enter/Space handling of the roving-focused
@@ -287,6 +293,11 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Seed the host's accessible name before the first visual slotchange. The rendered wrapper is
+    // intentionally inert, so later reads skip that presentation fence while still respecting the
+    // author-owned label branch and its composed ancestors.
+    const initialLabel = this.readSlottedLabel(null);
+    if (initialLabel !== this.slottedLabel) this.slottedLabel = initialLabel;
     // A safe, focusable-but-out-of-tab-order baseline before <lr-menu> ever
     // gets a chance to assign roving-tabindex state (e.g. a standalone
     // fixture in a test, or the brief window before the parent's own
@@ -379,16 +390,11 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       // Both states render: an omitted aria-expanded is a different, weaker statement than
       // aria-expanded="false", and this role is stateful.
       this.setAttribute('aria-expanded', this.submenuExpanded ? 'true' : 'false');
-      this.applyComputedName();
     } else {
       this.removeAttribute('aria-haspopup');
       this.removeAttribute('aria-expanded');
-      if (this.ownsAriaLabel) {
-        this.removeAttribute('aria-label');
-        this.ownsAriaLabel = false;
-        this.ownedAriaLabelValue = null;
-      }
     }
+    this.applyComputedName();
     this.toggleAttribute('submenu-open', this.submenuExpanded);
     this.setAttribute('aria-disabled', String(this.interactionDisabled));
     if (this.interactionDisabled) {
@@ -504,6 +510,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     return 'host' in root && root.host.nodeType === 1 ? root.host : null;
   }
 
+  /** The visual slot wrappers are intentionally inert, but their author-owned label content still
+   * supplies this host's name and type-ahead text. Skip only the known label presentation fence;
+   * visibility and accessibility state in every author-owned branch still applies. */
+  private isVisibleLabelContent(element: Element): boolean {
+    return isAccessibilityVisible(element, {
+      ignorePresentation: (candidate) =>
+        candidate.getRootNode() === this.renderRoot &&
+        candidate.matches('[part~="label"][aria-hidden="true"][inert]:not([hidden])'),
+    });
+  }
+
   /** Plain text that can contribute to the row's accessible name. Flattened forwarding slots are
    * traversed without allowing their fallback to leak through a real (even hidden) assignment. */
   private accessibleLabelText(node: Node, inheritedTextVisible?: boolean): string {
@@ -513,7 +530,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         inheritedTextVisible = parent !== null &&
           !isAccessibilitySubtreeExcluded(parent) &&
           !isAccessibilityVisibilityHidden(parent) &&
-          isAccessibilityVisible(parent);
+          this.isVisibleLabelContent(parent);
       }
       return inheritedTextVisible ? node.textContent ?? '' : '';
     }
@@ -525,7 +542,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // `visibility:hidden` does not prune a subtree: a descendant can restore visibility. For an
     // otherwise visible node, however, this also catches hidden composed ancestors, closed
     // `<details>` branches, and skipped `content-visibility:auto` content.
-    if (ownTextVisible && !isAccessibilityVisible(element)) return '';
+    if (ownTextVisible && !this.isVisibleLabelContent(element)) return '';
     const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
     if (ariaLabel) return ariaLabel;
     const children =
@@ -569,6 +586,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       attributeFilter: [
         'aria-hidden',
         'aria-label',
+        'aria-labelledby',
         'class',
         'hidden',
         'inert',
@@ -595,7 +613,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private syncSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): void {
     const next = this.readSlottedLabel(slot);
     if (next !== this.slottedLabel) this.slottedLabel = next;
-    if (this.submenuAssigned) this.applyComputedName();
+    this.applyComputedName();
     this.applyPanelName();
   }
 
@@ -720,9 +738,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.submenuExpanded = false;
   };
 
-  /** Names the item explicitly once it has a submenu. Name-from-content would otherwise walk into
-   *  the submenu the moment it opens (a visible subtree, so nothing excludes it) and announce
-   *  "Share Email Copy link". */
+  /** Names the focusable host from its visual-only label text. This also prevents a submenu from
+   *  leaking its open content into the parent item's name. */
   private applyComputedName(): void {
     if (
       this.ownsAriaLabel &&
@@ -730,6 +747,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     ) {
       this.ownsAriaLabel = false;
       this.ownedAriaLabelValue = null;
+    }
+    if (this.hasAttribute('aria-labelledby')) {
+      if (this.ownsAriaLabel) this.removeAttribute('aria-label');
+      this.ownsAriaLabel = false;
+      this.ownedAriaLabelValue = null;
+      return;
     }
     if (this.hasAttribute('aria-label') && !this.ownsAriaLabel) return;
     this.ownsAriaLabel = true;
@@ -773,15 +796,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   override render(): TemplateResult {
     return html`
       <span part="base" @click=${() => this.select()}>
-        <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
+        <span part="icon" aria-hidden="true" inert ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
           <span part="prefix"><slot name="prefix" @slotchange=${this.onIconSlotChange}></slot></span>
         </span>
-        <span part="label"><slot @slotchange=${this.onLabelSlotChange}></slot></span>
-        <span part="details" ?hidden=${!this.hasDetailsSlot}>
+        <span part="label" aria-hidden="true" inert><slot @slotchange=${this.onLabelSlotChange}></slot></span>
+        <span part="details" aria-hidden="true" inert ?hidden=${!this.hasDetailsSlot}>
           <slot name="details" @slotchange=${this.onDetailsSlotChange}></slot>
         </span>
-        <span part="suffix" ?hidden=${!this.hasSuffixSlot}>
+        <span part="suffix" aria-hidden="true" inert ?hidden=${!this.hasSuffixSlot}>
           <slot name="suffix" @slotchange=${this.onSuffixSlotChange}></slot>
         </span>
         ${this.loading

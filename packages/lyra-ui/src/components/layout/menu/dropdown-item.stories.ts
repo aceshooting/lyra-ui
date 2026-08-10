@@ -15,6 +15,14 @@ export const Default: Story = {
 };
 
 export const CompatibilitySurface: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The focusable dropdown-item host remains the row’s sole action. Default, icon, prefix, details, and suffix content is visual-only; default-slot text supplies the host’s accessible name and type-ahead label. Use the dedicated submenu slot for nested menu content.',
+      },
+    },
+  },
   render: () => html`
     <div role="menu" aria-label="Compatibility states" style="inline-size: 18rem;">
       <lr-dropdown-item value="rename">

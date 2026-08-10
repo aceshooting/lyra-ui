@@ -20,11 +20,16 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * in the same `size` ladder, including the `small`/`medium`/`large` spellings.
  *
  * @customElement lr-dropdown-item
- * @slot - The item's label content.
- * @slot icon - Optional leading icon.
- * @slot prefix - Shoelace-compatible leading content.
- * @slot details - WA-compatible secondary detail text.
- * @slot suffix - Shoelace-compatible trailing content.
+ * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive
+ *   technology; its accessible text names the host menu item.
+ * @slot icon - Optional decorative leading icon. Its flattened subtree is inert and hidden from
+ *   assistive technology.
+ * @slot prefix - Shoelace-compatible decorative alias for leading content. Its flattened subtree is
+ *   inert and hidden from assistive technology.
+ * @slot details - Decorative WA-compatible secondary detail text. Its flattened subtree is inert and
+ *   hidden from assistive technology.
+ * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
+ *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped dropdown items that open beside this row.
  * @event focus - Native, non-bubbling, composed, non-cancelable `FocusEvent` emitted by the
  * focusable host when it gains focus.
