@@ -2225,11 +2225,9 @@ request and keeps the decision dialog pending.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
-carries both `data-selected` (the styling hook) and `aria-current="true"` (the semantic one), so the
-selection is announced, not merely painted. Following this library's convention for `aria-current` —
-and unlike `aria-pressed`/`aria-expanded`/`aria-selected`, which must render both states — an
-unselected row omits the attribute rather than writing `"false"`, because ARIA already defines
-`aria-current`'s own default as false.
+carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
+state), so the selection is announced, not merely painted. Other request rows explicitly render
+`data-selected="false"` and `aria-current="false"`.
 
 **Additional API surface:**
 
