@@ -1265,8 +1265,8 @@ it('floors the circle with min-* sizing instead of hard-sizing it, so the indica
 
   // Default tokens at the default "m" tier:
   // min(--lr-icon-button-size 2.5rem, --lr-form-control-height 2.5rem * 0.7) === 1.75rem === 28px,
-  // comfortably above the WCAG 2.2 SC 2.5.8 24x24 minimum. For a label-less radio the circle *is*
-  // the whole tap target -- [part='base'] contributes no box of its own.
+  // comfortably above the WCAG 2.2 SC 2.5.8 24x24 minimum. A label-less radio keeps the compact
+  // circle inside its role owner's shared target floor.
   const floored = circle.getBoundingClientRect();
   expect(floored.width).to.be.closeTo(28, 0.5);
   expect(floored.height).to.be.closeTo(28, 0.5);
@@ -1278,6 +1278,23 @@ it('floors the circle with min-* sizing instead of hard-sizing it, so the indica
   const grown = circle.getBoundingClientRect();
   expect(grown.width).to.be.at.least(48);
   expect(grown.height).to.be.at.least(48);
+});
+
+it('keeps the 2xs label-less radio role owner at the shared target floor while centering the compact circle', async () => {
+  const el = (await fixture(html`<lr-radio size="2xs" aria-label="Select option"></lr-radio>`)) as LyraRadio;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const circle = el.shadowRoot!.querySelector('[part~="circle"]') as HTMLElement;
+  const baseBounds = base.getBoundingClientRect();
+  const circleBounds = circle.getBoundingClientRect();
+
+  expect(base.getAttribute('role')).to.equal('radio');
+  expect(baseBounds.width).to.be.at.least(40);
+  expect(baseBounds.height).to.be.at.least(40);
+  expect(circleBounds.width).to.be.closeTo(14, 0.5);
+  expect(circleBounds.height).to.be.closeTo(14, 0.5);
+  expect(circleBounds.left + circleBounds.width / 2).to.be.closeTo(baseBounds.left + baseBounds.width / 2, 0.5);
+  expect(circleBounds.top + circleBounds.height / 2).to.be.closeTo(baseBounds.top + baseBounds.height / 2, 0.5);
 });
 
 it('publishes --lr-radio-label-indent and drives the real label offset from it', async () => {

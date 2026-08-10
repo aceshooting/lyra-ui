@@ -39,7 +39,9 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    min-inline-size: 0;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
        value and the rendered label offset cannot drift: the label always starts exactly
@@ -71,12 +73,11 @@ export const styles = css`
     justify-content: center;
     flex: 0 0 auto;
     box-sizing: border-box;
-    /* A floor, never a hard size -- matching <lr-checkbox>'s [part='box'] exactly. For a
-       label-less radio this circle *is* the whole tap target ([part='base'] contributes no box
-       of its own), so a hard inline-size/block-size would let the indicator overflow it and
-       would size the target below its own content. Same inline icon-affordance convention as
-       lr-combobox's clear-button / lr-select's toggle: --lr-icon-button-size capped at the
-       tier's own share of the control height. */
+    /* A floor, never a hard size -- matching <lr-checkbox>'s [part='box'] exactly. A label-less
+       radio keeps this compact indicator centered in its base's shared target floor, while a hard
+       inline-size/block-size would let an enlarged indicator overflow its content box. Same inline
+       icon-affordance convention as lr-combobox's clear-button / lr-select's toggle:
+       --lr-icon-button-size capped at the tier's own share of the control height. */
     min-inline-size: var(--lr-radio-circle-size);
     min-block-size: var(--lr-radio-circle-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

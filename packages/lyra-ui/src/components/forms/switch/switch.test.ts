@@ -1303,6 +1303,23 @@ describe('size', () => {
     expect(el.getAttribute('size')).to.equal('m');
   });
 
+  it('keeps the 2xs label-less switch role owner at the shared target floor while centering the compact track', async () => {
+    const el = (await fixture(html`<lr-switch size="2xs" aria-label="Notifications"></lr-switch>`)) as LyraSwitch;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
+    const baseBounds = base.getBoundingClientRect();
+    const trackBounds = track.getBoundingClientRect();
+
+    expect(base.getAttribute('role')).to.equal('switch');
+    expect(baseBounds.width).to.be.at.least(40);
+    expect(baseBounds.height).to.be.at.least(40);
+    expect(trackBounds.width).to.be.closeTo(18, 0.5);
+    expect(trackBounds.height).to.be.closeTo(10, 0.5);
+    expect(trackBounds.left + trackBounds.width / 2).to.be.closeTo(baseBounds.left + baseBounds.width / 2, 0.5);
+    expect(trackBounds.top + trackBounds.height / 2).to.be.closeTo(baseBounds.top + baseBounds.height / 2, 0.5);
+  });
+
   it('grows the rendered track from size="s" to size="l"', async () => {
     const small = await trackOf(html`<lr-switch size="s">Label</lr-switch>`);
     const large = await trackOf(html`<lr-switch size="l">Label</lr-switch>`);

@@ -22,6 +22,9 @@ export const styles = css`
   [part~='base'] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     gap: var(--lr-switch-gap, var(--lr-space-s));
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
