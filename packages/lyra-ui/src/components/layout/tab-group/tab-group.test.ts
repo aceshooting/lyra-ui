@@ -871,6 +871,29 @@ it("builds one tab per <lr-tab> and activates the first enabled one", async () =
   await expect(el).to.be.accessible();
 });
 
+it('keeps a populated disabled active closable <lr-tab> accessible on its own tag', async () => {
+  const tab = (await fixture(
+    html`<lr-tab panel="general" active disabled closable>General</lr-tab>`,
+  )) as LyraTab;
+  await tab.updateComplete;
+  expect(tab.shadowRoot!.querySelector('[part~="close-button"]')?.getAttribute('aria-hidden')).to.equal('true');
+  await expect(tab).to.be.accessible();
+});
+
+it('keeps active and hidden <lr-tab-panel> instances accessible on their own tags', async () => {
+  const active = (await fixture(
+    html`<lr-tab-panel name="general" active><button type="button">Save</button></lr-tab-panel>`,
+  )) as LyraTabPanel;
+  const hidden = (await fixture(
+    html`<lr-tab-panel name="advanced" hidden>Advanced settings</lr-tab-panel>`,
+  )) as LyraTabPanel;
+  await Promise.all([active.updateComplete, hidden.updateComplete]);
+  await expect(active).to.be.accessible();
+  expect(hidden.hidden).to.equal(true);
+  expect(hidden.shadowRoot!.querySelector('[part~="base"]')?.localName).to.equal('div');
+  await expect(hidden).to.be.accessible();
+});
+
 it("projects each <lr-tab>'s content into its own button, so the accessible name is that content", async () => {
   const el = (await fixture(elementModel())) as LyraTabGroup;
   await el.updateComplete;
