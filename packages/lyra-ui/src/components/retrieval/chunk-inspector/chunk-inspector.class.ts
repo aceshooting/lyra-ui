@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -36,7 +36,7 @@ export interface LyraChunk {
   sourceId: string;
   /** e.g. filename; falls back to localized `untitledSource`. */
   title?: string;
-  /** Rendered as-is via the existing `sourcePageSuffix` key. */
+  /** Finite numeric values are locale-formatted for display; string locators stay verbatim. */
   page?: string | number;
   /** Carried through `lr-chunk-open` verbatim. */
   anchor?: LyraChunkAnchor;
@@ -189,8 +189,14 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const percent = Math.round(this.safeScore(chunk.score) * 100);
     const formattedPercent = getNumberFormat(this.effectiveLocale).format(percent);
     const titleText = chunk.title || this.localize('untitledSource');
+    const formattedPage =
+      typeof chunk.page === 'number' && Number.isFinite(chunk.page)
+        ? getNumberFormat(this.effectiveLocale).format(finiteNumber(chunk.page, 0))
+        : chunk.page;
     const titleWithPage =
-      chunk.page == null || chunk.page === '' ? titleText : this.localize('sourcePageSuffix', undefined, { base: titleText, page: chunk.page });
+      formattedPage == null || formattedPage === ''
+        ? titleText
+        : this.localize('sourcePageSuffix', undefined, { base: titleText, page: formattedPage });
     const expanded = this.expandedIds.has(chunk.id);
     const current = this.activeId === chunk.id;
     return html`

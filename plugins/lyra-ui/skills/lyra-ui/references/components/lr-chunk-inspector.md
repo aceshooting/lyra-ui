@@ -24,7 +24,9 @@ opens documents itself.
   number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
   `score` is 0–1, `title` falls back to a localized "untitled source", `anchor` (the same
   discriminated union `lr-document-viewer.anchor` accepts — page/text-quote/fragment/line-range/
-  cell-range/cfi/time-range/region/node-path) is carried through `lr-chunk-open` verbatim
+  cell-range/cfi/time-range/region/node-path) is carried through `lr-chunk-open` verbatim; finite
+  numeric `page` values are formatted with the effective locale in the visible title and open-button
+  name, while string locators remain verbatim
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   score-bar tier cutoffs
 - `sort: 'score' | 'none' = 'score'`

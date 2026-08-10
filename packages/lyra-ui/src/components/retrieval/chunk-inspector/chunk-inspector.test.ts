@@ -446,3 +446,22 @@ it('formats visible score percentages with the effective locale', async () => {
   expect(el.shadowRoot!.querySelector('[part~="score"]')!.textContent)
     .to.include(new Intl.NumberFormat('ar-EG').format(92));
 });
+
+it('formats finite numeric page locators with the effective locale while retaining string locators verbatim', async () => {
+  const locale = 'ar-u-nu-arab';
+  const numericPage = new Intl.NumberFormat(locale).format(3);
+  const el = (await fixture(
+    html`<lr-chunk-inspector lang=${locale} sort="none"></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  el.chunks = [
+    { id: 'numeric-page', text: 'numeric', score: 0.9, sourceId: 's1', title: 'Report', page: 3 },
+    { id: 'string-page', text: 'string', score: 0.8, sourceId: 's2', title: 'Appendix', page: '3' },
+  ];
+  await el.updateComplete;
+
+  const titles = [...el.shadowRoot!.querySelectorAll('[part="title"]')].map((title) => title.textContent?.trim());
+  const names = [...el.shadowRoot!.querySelectorAll('[part="open-button"]')].map((button) => button.getAttribute('aria-label'));
+  expect(titles).to.deep.equal([`Report — p. ${numericPage}`, 'Appendix — p. 3']);
+  expect(names[0]).to.include(`Report — p. ${numericPage}`);
+  expect(names[1]).to.include('Appendix — p. 3');
+});
