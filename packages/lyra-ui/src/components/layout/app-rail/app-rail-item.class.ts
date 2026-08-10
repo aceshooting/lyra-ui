@@ -6,6 +6,11 @@ import { safeLinkHref } from "../../../internal/safe-url.js";
 import { place } from "../../../internal/positioner.js";
 import { rtlAwarePlacement } from "../../../internal/rtl.js";
 import { styles } from "./app-rail-item.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * `<lr-app-rail-item>` — an explicit icon/label navigation item for
@@ -38,6 +43,16 @@ import { styles } from "./app-rail-item.styles.js";
  * @since 4.0.0
  */
 export class LyraAppRailItem extends LyraElement {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   static override get observedAttributes(): string[] {
     return [...super.observedAttributes, "icon-only"];

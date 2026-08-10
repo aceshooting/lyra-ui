@@ -27,7 +27,9 @@ non-link form; assigning `undefined` clears it and reads back as the canonical `
 `target?: string`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
 `rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
-sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
+sets `role="listitem"` on itself. A non-current item without `href` renders a native button. A host
+`aria-label` is forwarded to either non-current native owner by attribute presence, including an
+explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
 is a no-op for the current-page label.

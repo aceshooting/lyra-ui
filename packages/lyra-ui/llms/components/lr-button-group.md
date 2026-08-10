@@ -20,7 +20,8 @@ controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
-- `label: string = ''` — accessible group name; a host `aria-label` is used when `label` is empty
+- `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
+  including an explicitly empty value
 
 **Slots:** default action controls.
 

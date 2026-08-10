@@ -6269,8 +6269,9 @@ extra host controls rendered in the footer beside Submit/Skip.
 
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
-(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed
-alias emitted when the complete rubric fails a native validity check.
+(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
+cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
+suppresses the native event's default validation UI.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can
@@ -7704,6 +7705,9 @@ with arrow-key roving focus (a stroked ring is redrawn over the focused cell on 
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
+calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
+previous/next movement instead of swapping for RTL.
 Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing.
@@ -9828,7 +9832,8 @@ controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
-- `label: string = ''` — accessible group name; a host `aria-label` is used when `label` is empty
+- `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
+  including an explicitly empty value
 
 **Slots:** default action controls.
 
@@ -11004,6 +11009,10 @@ removing the label from the accessibility tree.
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
 
+A host `aria-label` is copied to the rendered native link or button by attribute presence,
+including an explicitly empty value; without it, the default slot supplies the native name. The
+same precedence supplies the tooltip text when that opt-in flyout is visible.
+
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
@@ -11745,9 +11754,10 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   `lr-card-activate` never fires. Consumer slots stay outside that link, so their controls remain
   independent. `false` (the default) reproduces a plain static card: no button, no listeners, no
   events.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of that
-  activation button. Left unset it falls back to the card's own text content, so a text card is
-  named without extra markup; set it explicitly for a card whose content is an image or a chart.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
+  native whole-card owner: the activation button without `href`, or the stretched link with it.
+  An explicitly empty value is retained; only an absent value falls back to card or linked content,
+  so set it explicitly for a card whose content is an image or a chart.
 - `href?: string` — when set, a real stretched `<a href=...>` renders behind the consumer slots for
   a whole-card link (e.g. a wide CTA tile). A click on noninteractive card content follows that
   link, while slotted controls keep their own native or Lyra behavior. Unset (the default) renders
@@ -12111,7 +12121,9 @@ non-link form; assigning `undefined` clears it and reads back as the canonical `
 `target?: string`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
 `rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
-sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
+sets `role="listitem"` on itself. A non-current item without `href` renders a native button. A host
+`aria-label` is forwarded to either non-current native owner by attribute presence, including an
+explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
 is a no-op for the current-page label.
@@ -12210,7 +12222,7 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
 - `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
-  writes are shallow-copied.
+  writes clone the object and each string-array field independently.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
@@ -16650,7 +16662,10 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus.
 
-**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs.
+**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
+flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
+rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
+actions.
 
 **Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
 non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
@@ -17640,6 +17655,10 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false).
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
+
+Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
+runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
+renders video) and never appears in `lr-load`'s `detail.kind`.
 
 `poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
 before reaching the native video element; an unsafe poster URL is omitted.
@@ -22827,9 +22846,11 @@ adapters.
 
 - `messages: ChatMessage[] = []` (attribute: false) — **`ChatMessage` from
   `@aceshooting/lyra-ui/ai`**: `{ id: string; role: ChatMessageRole; status?: ChatMessageStatus;
-timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
-  `lr-chat-message` whose `role`/`status`/`timestamp` come straight across, with `text` rendered as
-  sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
+timestamp?: Date | string; text?: string; attachments?: DocumentRef[]; parts?: MessagePart[];
+metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message` whose
+  `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
+  `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
+  as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
   richer bodies. Host owns ordering, updates, and persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
@@ -25205,7 +25226,8 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
-  already known
+  already known. An explicit total below the current observed count is raised to `examples.length`,
+  so progress never reports an impossible total
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 
@@ -25363,11 +25385,9 @@ request and keeps the decision dialog pending.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
-carries both `data-selected` (the styling hook) and `aria-current="true"` (the semantic one), so the
-selection is announced, not merely painted. Following this library's convention for `aria-current` —
-and unlike `aria-pressed`/`aria-expanded`/`aria-selected`, which must render both states — an
-unselected row omits the attribute rather than writing `"false"`, because ARIA already defines
-`aria-current`'s own default as false.
+carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
+state), so the selection is announced, not merely painted. Other request rows explicitly render
+`data-selected="false"` and `aria-current="false"`.
 
 **Additional API surface:**
 
@@ -26491,7 +26511,7 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 <script type="module">
   document.addEventListener('lr-citation-activate', (e) => {
     document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```
@@ -26632,7 +26652,7 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
   // for that, only source-id to be targeted by:
   document.addEventListener('lr-citation-activate', (e) => {
     const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```

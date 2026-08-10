@@ -67,9 +67,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 37 | 43 | 7 | 0 | 0 | 80 | 7 |
+| Web Awesome | 36 | 43 | 8 | 0 | 0 | 79 | 8 |
 | Shoelace | 18 | 35 | 5 | 0 | 0 | 53 | 5 |
-| **Total** | **55** | **78** | **12** | **0** | **0** | **133** | **12** |
+| **Total** | **54** | **78** | **13** | **0** | **0** | **132** | **13** |
 
 ## Web Awesome (87)
 
@@ -163,7 +163,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-tree-item>` | `<lr-tree-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand; events: wa-lazy-change → lr-lazy-change; events: wa-lazy-load → lr-lazy-load. |
 | `<wa-video>` | `<lr-video>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-video-playlist>` | `<lr-video-playlist>` | `rewritten` | Automatic: tag/import plus events: wa-video-change → lr-video-change. |
-| `<wa-zoomable-frame>` | `<lr-zoomable-frame>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-zoomable-frame>` | `<lr-zoomable-frame>` | `warning-required` | Manual: Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference. |
 
 ## Shoelace (58)
 

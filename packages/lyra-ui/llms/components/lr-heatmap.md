@@ -25,6 +25,9 @@ with arrow-key roving focus (a stroked ring is redrawn over the focused cell on 
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
+calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
+previous/next movement instead of swapping for RTL.
 Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing.

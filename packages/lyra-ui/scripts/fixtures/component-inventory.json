@@ -91452,7 +91452,7 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<undefined>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {

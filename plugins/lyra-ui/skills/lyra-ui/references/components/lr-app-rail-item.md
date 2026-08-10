@@ -231,6 +231,10 @@ removing the label from the accessibility tree.
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
 
+A host `aria-label` is copied to the rendered native link or button by attribute presence,
+including an explicitly empty value; without it, the default slot supplies the native name. The
+same precedence supplies the tooltip text when that opt-in flyout is visible.
+
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
