@@ -1,5 +1,6 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
@@ -284,8 +285,13 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     const maxIndex = this.maxIndex;
     const index = finiteCount(this.index, 0, maxIndex);
     const disabled = finiteCount(this.length) <= 1;
+    const accessibleLabel = hostAriaLabel(this);
     return html`
-      <div part="base">
+      <div
+        part="base"
+        role=${accessibleLabel === null ? nothing : 'group'}
+        aria-label=${accessibleLabel ?? nothing}
+      >
         <button
           part="play-button"
           type="button"
