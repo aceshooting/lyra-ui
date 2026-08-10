@@ -46,6 +46,23 @@ export const OpenInitially: Story = {
   render: (_args, context) => html`<lr-lightbox .images=${images} .open=${context.viewMode !== 'docs'}></lr-lightbox>`,
 };
 
+/** A finite fractional `goTo()` request is truncated toward zero before it selects the destination
+ * image. The constrained in-flow layout keeps the trigger usable in Canvas. */
+export const FractionalProgrammaticNavigation: Story = {
+  render: (_args, context) => html`
+    <button @click=${(event: Event) => {
+      const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
+      lightbox.goTo(1.9);
+      lightbox.open = true;
+    }}>Go to index 1.9</button>
+    <lr-lightbox
+      .images=${images}
+      .open=${context.viewMode !== 'docs'}
+      style="position: static; inset: auto; display: flex; inline-size: 32rem; block-size: 24rem;"
+    ></lr-lightbox>
+  `,
+};
+
 /** Hides only the visible numeric counter. The polite live region remains active so assistive
  * technology still receives the current image position as navigation occurs. */
 export const CounterHidden: Story = {

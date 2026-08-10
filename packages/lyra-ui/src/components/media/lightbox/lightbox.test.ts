@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
@@ -610,6 +610,33 @@ it('treats non-finite goTo() indexes as no-ops and emits no terminal index event
 
   expect(el.index).to.equal(0);
   expect(changes).to.equal(0);
+});
+
+it('normalizes fractional goTo() indexes before emitting, storing, and rendering their destination', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const el = (await fixture(html`<lr-lightbox .images=${images}></lr-lightbox>`)) as LyraLightbox;
+
+  let changes = 0;
+  el.addEventListener('lr-index-change', () => changes++);
+  el.goTo(0.4);
+  expect(el.index).to.equal(0);
+  expect(changes).to.equal(0);
+
+  const clamped = oneEvent(el, 'lr-index-change');
+  el.goTo(1.9);
+  expect((await clamped as CustomEvent<{ index: number }>).detail.index).to.equal(1);
+  expect(el.index).to.equal(1);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('Second');
+
+  el.loop = true;
+  await el.updateComplete;
+  const wrapped = oneEvent(el, 'lr-index-change');
+  el.goTo(-1.5);
+  expect((await wrapped as CustomEvent<{ index: number }>).detail.index).to.equal(2);
+  expect(el.index).to.equal(2);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('Third');
 });
 
 // Regression coverage for the shadow-part-selector-specificity defect class -- a consumer's

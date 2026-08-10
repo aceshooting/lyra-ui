@@ -6,7 +6,7 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
@@ -141,9 +141,9 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   whenever the lightbox is dismissed via Escape, a backdrop click, the built-in close button,
  *   a `close()` call, or (with reason `'unmount'`, not cancelable in practice since the element
  *   is already being removed) removal from the DOM by anything else while still open.
- * @event lr-index-change - Fired only for internally-driven navigation (`next()`/
- *   `previous()`/`goTo()` invoked via a button click or a keyboard shortcut). Not fired when a
- *   consumer sets `index`/`images` directly. `detail: { index }`.
+ * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
+ *   built-in button and keyboard paths. Not fired when a consumer sets `index`/`images` directly.
+ *   `detail: { index }` is always the rendered integer index.
  * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
  * @csspart backdrop - The full-viewport scrim, positioned behind `panel`.
@@ -277,7 +277,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private changeTo(index: number): void {
     const count = this.images.length;
     if (count === 0 || !Number.isFinite(index)) return;
-    const next = this.loop ? ((index % count) + count) % count : Math.min(count - 1, Math.max(0, index));
+    const requested = finiteInteger(index, 0);
+    const next = this.loop
+      ? ((requested % count) + count) % count
+      : Math.min(count - 1, Math.max(0, requested));
     if (next === this.currentIndex()) return;
     this.index = next;
     this.emit('lr-index-change', { index: next });
@@ -285,6 +288,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   next = (): void => this.changeTo(this.currentIndex() + 1);
   previous = (): void => this.changeTo(this.currentIndex() - 1);
+
+  /** Jumps to a finite image index. Fractional values are truncated toward zero before
+   *  clamping or loop wrapping, so `lr-index-change.detail.index` is always the rendered
+   *  integer index. Non-finite values are no-ops. */
   goTo = (index: number): void => this.changeTo(index);
 
   /**
