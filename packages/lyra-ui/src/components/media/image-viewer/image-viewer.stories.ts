@@ -13,6 +13,20 @@ export default meta;
 type Story = StoryObj;
 
 const SRC = '/fixtures/story-image.svg';
+const longLtrFitLabel = 'FitImageWithinTheAvailableViewingArea'.repeat(8);
+const longRtlFitLabel = 'احتواءالصورةضمنمساحةالعرض'.repeat(12);
+const longLtrFitStrings = {
+  imageViewerFitLabel: 'Image fit mode',
+  imageViewerFitContain: `${longLtrFitLabel}Contain`,
+  imageViewerFitWidth: `${longLtrFitLabel}Width`,
+  imageViewerFitActual: `${longLtrFitLabel}Actual`,
+};
+const longRtlFitStrings = {
+  imageViewerFitLabel: 'وضع ملاءمة الصورة',
+  imageViewerFitContain: `${longRtlFitLabel}احتواء`,
+  imageViewerFitWidth: `${longRtlFitLabel}عرض`,
+  imageViewerFitActual: `${longRtlFitLabel}فعلي`,
+};
 
 export const Default: Story = {
   render: () => html`<lr-image-viewer src=${SRC} name="Mountain river"></lr-image-viewer>`,
@@ -43,7 +57,25 @@ export const FitWidth: Story = {
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="max-inline-size:320px"><lr-image-viewer src=${SRC} name="Mountain river"></lr-image-viewer></div>`,
+  name: 'Narrow 320px localized fit labels (LTR and RTL)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l)">
+      <div dir="ltr" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-image-viewer
+          src=${SRC}
+          name="Mountain river"
+          .strings=${longLtrFitStrings}
+        ></lr-image-viewer>
+      </div>
+      <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-image-viewer
+          src=${SRC}
+          name="نهر جبلي"
+          .strings=${longRtlFitStrings}
+        ></lr-image-viewer>
+      </div>
+    </div>
+  `,
 };
 
 export const ThemedActiveStates: Story = {

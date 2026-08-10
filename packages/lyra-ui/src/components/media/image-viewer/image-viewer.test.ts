@@ -853,6 +853,39 @@ it('contains an unbroken highlight label inside a 320px allocation', async () =>
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
 
+it('contains unbroken localized fit labels inside 320px LTR and RTL allocations', async () => {
+  const longFitLabel = 'Fit'.repeat(120);
+  for (const direction of ['ltr', 'rtl']) {
+    const wrapper = (await fixture(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+        <lr-image-viewer
+          .strings=${{
+            imageViewerFitContain: longFitLabel,
+            imageViewerFitWidth: longFitLabel,
+            imageViewerFitActual: longFitLabel,
+          }}
+        ></lr-image-viewer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
+    await el.updateComplete;
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+    const fitControl = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
+    const allocation = wrapper.getBoundingClientRect();
+    const control = fitControl.getBoundingClientRect();
+    const controlStyle = getComputedStyle(fitControl);
+
+    expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(toolbar.scrollWidth, `${direction} toolbar scroll width`).to.be.at.most(toolbar.clientWidth);
+    expect(control.width, `${direction} fit control width`).to.be.at.most(allocation.width);
+    expect(control.left, `${direction} fit control start`).to.be.at.least(allocation.left);
+    expect(control.right, `${direction} fit control end`).to.be.at.most(allocation.right);
+    expect(controlStyle.textOverflow, `${direction} fit label truncation`).to.equal('ellipsis');
+    expect(fitControl.value).to.equal('contain');
+    wrapper.remove();
+  }
+});
+
 // -- Document-renderer registry entry ---------------------------------------
 
 it('registers one shared image renderer across every raster MIME type', async () => {

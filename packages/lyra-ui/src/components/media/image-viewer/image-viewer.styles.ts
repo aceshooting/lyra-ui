@@ -22,6 +22,8 @@ export const styles = css`
     position: relative;
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='fit-control'],
   [part='rotate-button'],
@@ -37,7 +39,11 @@ export const styles = css`
   }
   [part='fit-control'] {
     appearance: none;
+    max-inline-size: 100%;
     padding-inline: var(--lr-space-s) var(--lr-space-l);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='fit-control'] option {
     background: var(--lr-color-surface);
