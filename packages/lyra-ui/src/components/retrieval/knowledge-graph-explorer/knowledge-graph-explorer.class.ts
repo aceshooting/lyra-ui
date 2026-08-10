@@ -731,7 +731,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   override render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('graphExplorerLabel');
+    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('graphExplorerLabel'));
     const matches = this.matchingNodes();
     const selectedEntity = this.selectedNodeId ? (this.entityFor(this.selectedNodeId) ?? null) : null;
     const isPinned = this.selectedNodeId != null && this.pinnedNodeIds.includes(this.selectedNodeId);

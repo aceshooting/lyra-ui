@@ -152,7 +152,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   };
 
   override render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('groundingSummaryLabel');
+    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('groundingSummaryLabel'));
     const a = this.assessment;
 
     if (!a) {

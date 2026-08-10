@@ -235,7 +235,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private relayout(): void {
-    const hubLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
+    const hubLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
     this.cachedLayout = layoutMindMap(this.topics, hubLabel, {
       ringGap: this.ringGapPx(),
       rtl: isRtl(this),
@@ -245,7 +245,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const hubLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
+    const hubLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
     const context = `${hubLabel}\u0000${isRtl(this) ? 'rtl' : 'ltr'}\u0000${this.ringGapPx()}`;
     const structuralChange =
       changed.has('topics') ||
@@ -404,7 +404,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     if (layout.placed.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
     }
-    const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
+    const ariaLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
     const byId = new Map(layout.placed.map((p) => [p.id, p]));
     const childrenByParent = new Map<string | null, PlacedTopic[]>();
     for (const topic of layout.placed) {
