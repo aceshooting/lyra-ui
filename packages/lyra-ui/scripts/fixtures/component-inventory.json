@@ -120736,7 +120736,7 @@
           "upstream": "webawesome",
           "tag": "wa-zoomable-frame",
           "tier": "free",
-          "classification": "exact"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -181401,8 +181401,8 @@
       "upstreamTag": "wa-zoomable-frame",
       "upstreamTier": "free",
       "targetTag": "lr-zoomable-frame",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "warning-required",
+      "rationale": "Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -181426,7 +181426,9 @@
           },
           "rationale": "wa-zoomable-frame and lr-zoomable-frame share the reviewed behavior profile: An embedded frame requires a title and can deliberately gate keyboard entry."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "sandbox-and-url-safety"
+        ]
       },
       "rewrites": {
         "attributes": [],
