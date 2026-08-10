@@ -562,6 +562,39 @@ it("emits lr-visible-range-changed once the container is measured after mount", 
   el.remove();
 });
 
+it("re-emits a populated range after an empty transition restores the same window", async () => {
+  const items = Array.from({ length: 30 }, (_, i) => i);
+  const el = document.createElement("lr-virtual-list") as LyraVirtualList;
+  el.setAttribute("style", "--lr-virtual-list-height:200px");
+  el.setAttribute("row-height", "40");
+  el.items = items;
+  el.renderItem = renderText;
+  el.keyFunction = numberKey;
+
+  const initialRange = oneEvent(el, "lr-visible-range-changed");
+  document.body.appendChild(el);
+  try {
+    const initial = await initialRange;
+    const ranges: Array<{ start: number; end: number }> = [];
+    el.addEventListener("lr-visible-range-changed", (event) => {
+      const { start, end } = (event as CustomEvent<{ start: number; end: number }>).detail;
+      ranges.push({ start, end });
+    });
+
+    el.items = [];
+    await el.updateComplete;
+    expect(ranges.length).to.equal(0);
+
+    el.items = items;
+    await el.updateComplete;
+    expect(ranges.length).to.equal(1);
+    expect(ranges[0]?.start).to.equal(initial.detail.start);
+    expect(ranges[0]?.end).to.equal(initial.detail.end);
+  } finally {
+    el.remove();
+  }
+});
+
 it("coalesces rapid scroll events into a single visible-range recompute per animation frame", async () => {
   const items = Array.from({ length: 100 }, (_, i) => i);
   const el = (await fixture(

@@ -1110,7 +1110,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private emitRangeChangeIfNeeded(): void {
-    if (this.visibleEnd < this.visibleStart) return;
+    if (this.visibleEnd < this.visibleStart) {
+      // Empty ranges are not published, but the next populated range must not
+      // compare equal to the range from before this empty transition.
+      this.lastEmittedStart = -1;
+      this.lastEmittedEnd = -1;
+      return;
+    }
     if (
       this.visibleStart === this.lastEmittedStart &&
       this.visibleEnd === this.lastEmittedEnd
