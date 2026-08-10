@@ -177,7 +177,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
         role=${hasAccessibleFallback ? 'img' : nothing}
         aria-label=${hasAccessibleFallback ? accessibleName : nothing}
       >
-        <span part="icon" aria-hidden="true" ?hidden=${!showGlyph}
+        <span part="icon" aria-hidden="true" inert ?hidden=${!showGlyph}
           ><slot @slotchange=${this.onIconSlotChange} ?hidden=${!this.hasIcon}></slot
           ><slot name="icon" @slotchange=${this.onNamedIconSlotChange} ?hidden=${!showIconSlot}></slot
         ></span>

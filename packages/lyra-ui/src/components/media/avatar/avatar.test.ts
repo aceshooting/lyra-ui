@@ -51,6 +51,37 @@ describe('lr-avatar', () => {
     expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
   });
 
+  it('keeps interactive default and icon-slot glyphs out of focus and the accessibility tree', async () => {
+    const root = await fixture(html`
+      <div>
+        <button id="outside" type="button">Outside</button>
+        <lr-avatar id="default-avatar" alt="Default glyph">
+          <button id="default-glyph" type="button">Default glyph</button>
+        </lr-avatar>
+        <lr-avatar id="named-avatar" alt="Named glyph">
+          <button id="named-glyph" slot="icon" type="button">Named glyph</button>
+        </lr-avatar>
+      </div>
+    `);
+    const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+    const defaultAvatar = root.querySelector<LyraAvatar>('#default-avatar')!;
+    const namedAvatar = root.querySelector<LyraAvatar>('#named-avatar')!;
+    const defaultGlyph = root.querySelector<HTMLButtonElement>('#default-glyph')!;
+    const namedGlyph = root.querySelector<HTMLButtonElement>('#named-glyph')!;
+
+    await Promise.all([defaultAvatar.updateComplete, namedAvatar.updateComplete]);
+    outside.focus();
+    defaultGlyph.focus();
+    expect(document.activeElement?.id).to.equal('outside');
+    namedGlyph.focus();
+    expect(document.activeElement?.id).to.equal('outside');
+
+    expect(defaultAvatar.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!.inert).to.be.true;
+    expect(namedAvatar.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!.inert).to.be.true;
+    await expect(defaultAvatar).to.be.accessible();
+    await expect(namedAvatar).to.be.accessible();
+  });
+
   it('retries a previously failed source after a successful semantic source transition', async () => {
     const sourceA = 'https://example.test/avatar-a.png';
     const sourceB = 'https://example.test/avatar-b.png';
