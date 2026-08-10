@@ -211,6 +211,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Accessible name for the card's own actionable element (`base` or, for
    *  video, `open-button`) — always phrased as the action it performs. */
   private get actionLabel(): string {
+    const hostLabel = this.getAttribute('aria-label');
+    if (hostLabel !== null && hostLabel === this.accessibleLabel) return hostLabel;
     if (this.accessibleLabel) return this.accessibleLabel;
     const name = this.filename || this.alt;
     if (name) return this.localize('mediaCardOpenName', undefined, { name });
