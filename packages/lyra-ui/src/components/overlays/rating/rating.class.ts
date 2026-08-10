@@ -14,6 +14,7 @@ import {
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { normalizeSize, type LyraSize, type LyraSizeStep } from '../../../internal/variants.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './rating.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
@@ -42,8 +43,9 @@ export type LyraRatingHoverPhase = 'start' | 'move' | 'end';
 /**
  * Renders one symbol. Called twice per position — once for the empty backdrop (`selected` false)
  * and once for the overlay clipped to that position's filled fraction (`selected` true) — so a
- * fractional `precision` still renders a partial fill. Return any Lit-renderable value; a plain
- * string renders as text, never as markup.
+ * fractional `precision` still renders a partial fill. Output is decorative presentation: it is
+ * inert and pointer-transparent, so pointer and keyboard selection stay on the rating control.
+ * Return any Lit-renderable value; a plain string renders as text, never as markup.
  */
 export type LyraRatingSymbolRenderer = (value: number, selected: boolean) => unknown;
 
@@ -179,7 +181,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   @property({ type: Number }) precision = 1;
   @property({ type: Boolean, reflect: true }) readonly = false;
-  /** Accessible-name override taken straight from a host `aria-label` attribute. */
+  /** Accessible-name override taken straight from a host `aria-label` attribute. An explicitly
+   * empty host attribute is preserved instead of restoring a fallback name. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Accessible name for the whole control, used when the host carries no `aria-label`. Not
    *  rendered as visible text — a rating has no field frame of its own. */
@@ -196,7 +199,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this._size = normalizeSize(value ?? 'm');
     this.requestUpdate('size', old);
   }
-  /** Renders a consumer-supplied symbol per position instead of the built-in star. */
+  /** Renders a consumer-supplied decorative symbol per position instead of the built-in star.
+   * Its output cannot become a second focus or pointer target; interact with the rating control
+   * itself to select a value. */
   @property({ attribute: false }) getSymbol?: LyraRatingSymbolRenderer;
   /** Internal reactive adapter for the public `default-value` compatibility attribute. The
    * supported JS property remains `defaultValue`; this accessor is not public API.
@@ -652,6 +657,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     return selected ? starSolid() : starOutline();
   }
 
+  /** Wraps renderer output so a consumer-supplied control cannot compete with the one slider
+   * interaction surface. The star remains the event target carrying `data-value`. */
+  private renderSymbol(star: number, selected: boolean): TemplateResult {
+    return html`<span aria-hidden="true" inert style="pointer-events: none">${this.symbol(star, selected)}</span>`;
+  }
+
   override render(): TemplateResult {
     const safeMax = this.safeMax;
     const safeValue = this.safeValue;
@@ -659,8 +670,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `max` shrank below the hovered position while the pointer was still down.
     const displayValue = this.hovering && this.interactive ? Math.min(this.hoverValue, safeMax) : safeValue;
     const count = Math.round(safeMax);
+    const controlLabel = hostAriaLabel(this) ?? (this.accessibleLabel || this.label || this.localize('rating'));
     return html`<div part="base rating" role="slider" tabindex=${this.effectiveDisabled ? '-1' : '0'}
-      aria-label=${this.getAttribute('aria-label') || this.accessibleLabel || this.label || this.localize('rating')}
+      aria-label=${controlLabel}
       aria-valuemin="0" aria-valuemax=${safeMax} aria-valuenow=${safeValue}
       aria-valuetext=${getNumberFormat(this.effectiveLocale).format(safeValue)}
       aria-disabled=${this.effectiveDisabled ? 'true' : 'false'} aria-readonly=${this.readonly ? 'true' : 'false'}
@@ -672,8 +684,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
         const star = index + 1;
         const fraction = Math.max(0, Math.min(1, displayValue - index));
         return html`<span part="star" data-value=${star} ?data-filled=${fraction >= 1} aria-hidden="true">
-          ${this.symbol(star, false)}
-          <span part="star-fill" style=${`inline-size:${fraction * 100}%`}>${this.symbol(star, true)}</span>
+          ${this.renderSymbol(star, false)}
+          <span part="star-fill" style=${`inline-size:${fraction * 100}%`}>${this.renderSymbol(star, true)}</span>
         </span>`;
       })}
     </div>`;

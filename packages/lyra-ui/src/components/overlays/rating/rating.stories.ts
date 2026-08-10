@@ -67,7 +67,7 @@ export const CustomSymbol: StoryObj = {
     docs: {
       description: {
         story:
-          'getSymbol renders any Lit-renderable value per position; it is called once for the empty backdrop and once for the clipped filled overlay, so fractional precision still works.',
+          'getSymbol renders any Lit-renderable value per position; it is called once for the empty backdrop and once for the clipped filled overlay, so fractional precision still works. Renderer output is decorative: pointer and keyboard selection remain on the rating control.',
       },
     },
   },

@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './rating.js';
 import type { LyraRating } from './rating.js';
 import { styles } from './rating.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('emits one cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
   const el = await fixture<LyraRating>(html`<lr-rating required aria-label="Score"></lr-rating>`);
@@ -651,6 +652,24 @@ it('names the slider from `label`, letting a host aria-label win over it', async
   expect(baseOf(bare).getAttribute('aria-label'), 'localized default survives').to.equal('Rating');
 });
 
+it('preserves an explicitly empty host aria-label and restores live fallbacks when it is removed', async () => {
+  const el = (await fixture(
+    html`<lr-rating aria-label="" label="Satisfaction"></lr-rating>`,
+  )) as LyraRating;
+  const base = baseOf(el);
+
+  expect(base.hasAttribute('aria-label')).to.be.true;
+  expect(base.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Satisfaction');
+
+  el.label = '';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Rating');
+});
+
 // -- getSymbol ------------------------------------------------------------
 
 it('renders a consumer glyph per index through getSymbol, for both the empty and filled layer', async () => {
@@ -671,6 +690,52 @@ it('leaves the default star rendering untouched while getSymbol is unset (unset 
   expect(el.getSymbol).to.equal(undefined);
   expect(starsOf(el).length).to.equal(3);
   expect(el.shadowRoot!.querySelectorAll('svg polygon').length, 'outline + fill per star').to.equal(6);
+});
+
+it('renders dynamically supplied getSymbol output as inert presentation while retaining star pointer selection', async () => {
+  let hostileActivations = 0;
+  const el = (await fixture(html`<lr-rating max="1" value="0" label="Satisfaction"></lr-rating>`)) as LyraRating;
+  el.getSymbol = (_value, selected) => html`
+    <button type="button" data-hostile-symbol @click=${() => { hostileActivations += 1; }}>
+      ${selected ? 'Selected symbol' : 'Empty symbol'}
+    </button>
+  `;
+  await el.updateComplete;
+
+  const hostileSymbols = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-hostile-symbol]'),
+  );
+  expect(hostileSymbols.length, 'one backdrop and one clipped fill renderer are present').to.equal(2);
+  const hostileSymbol = hostileSymbols[0]!;
+  const presentation = hostileSymbol.parentElement as HTMLElement;
+  expect(presentation.inert, 'renderer output is not independently focusable').to.be.true;
+  expect(presentation.getAttribute('aria-hidden')).to.equal('true');
+  expect(getComputedStyle(presentation).pointerEvents).to.equal('none');
+
+  const base = baseOf(el);
+  base.focus();
+  hostileSymbol.focus();
+  expect(
+    el.shadowRoot!.activeElement === base,
+    'a focusable renderer cannot take focus from the rating slider',
+  ).to.be.true;
+
+  const bounds = hostileSymbol.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(bounds.left + bounds.width / 2), Math.round(bounds.top + bounds.height / 2)],
+    });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'up' });
+    await el.updateComplete;
+  } finally {
+    await resetMouse();
+  }
+
+  expect(hostileActivations, 'the renderer button cannot activate').to.equal(0);
+  expect(el.value, 'the containing star remains the pointer target').to.equal(1);
+  await expect(el).to.be.accessible();
 });
 
 // -- size -----------------------------------------------------------------
