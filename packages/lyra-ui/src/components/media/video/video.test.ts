@@ -1575,41 +1575,52 @@ describe('lr-video coverage gap-filling', () => {
   });
 
   it('drives exitFullscreen once fullscreen is active, updates its aria-label, and clears transient state on disconnect', async () => {
-    const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
-    const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
-    const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+    const originalFsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    const preservedFullscreenElement = document.createElement('div');
     try {
-      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
-      let exits = 0;
-      Object.defineProperty(Document.prototype, 'exitFullscreen', {
+      Object.defineProperty(document, 'fullscreenElement', {
         configurable: true,
-        value: () => { exits += 1; return Promise.resolve(); },
+        value: preservedFullscreenElement,
       });
+      const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+      const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+      const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+      try {
+        Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+        let exits = 0;
+        Object.defineProperty(Document.prototype, 'exitFullscreen', {
+          configurable: true,
+          value: () => { exits += 1; return Promise.resolve(); },
+        });
 
-      const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
-      const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
-      expect((wrapper) !== (null)).to.equal(true);
-      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
+        const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+        const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
+        expect((wrapper) !== (null)).to.equal(true);
+        expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
 
-      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
-      document.dispatchEvent(new Event('fullscreenchange'));
-      await el.updateComplete;
-      expect(el.fullscreen).to.be.true;
-      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
+        Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
+        document.dispatchEvent(new Event('fullscreenchange'));
+        await el.updateComplete;
+        expect(el.fullscreen).to.be.true;
+        expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
 
-      button(el, 'fullscreen')!.click();
-      await el.updateComplete;
-      expect(exits).to.equal(1);
+        button(el, 'fullscreen')!.click();
+        await el.updateComplete;
+        expect(exits).to.equal(1);
 
-      (el as unknown as { pictureInPicture: boolean }).pictureInPicture = true;
-      el.remove();
-      await aTimeout(0);
-      expect((el as unknown as { fullscreen: boolean }).fullscreen).to.be.false;
-      expect((el as unknown as { pictureInPicture: boolean }).pictureInPicture).to.be.false;
+        (el as unknown as { pictureInPicture: boolean }).pictureInPicture = true;
+        el.remove();
+        await aTimeout(0);
+        expect((el as unknown as { fullscreen: boolean }).fullscreen).to.be.false;
+        expect((el as unknown as { pictureInPicture: boolean }).pictureInPicture).to.be.false;
+      } finally {
+        restoreOwnProperty(document, 'fullscreenElement', fsElement);
+        restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
+        restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+      }
+      expect(document.fullscreenElement === preservedFullscreenElement).to.equal(true);
     } finally {
-      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
-      restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
-      restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+      restoreOwnProperty(document, 'fullscreenElement', originalFsElement);
     }
   });
 
