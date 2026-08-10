@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './gauge.js';
 import type { LyraGauge } from './gauge.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './gauge.styles.js';
 
 it('reflects value/min/max as ARIA meter attributes', async () => {
@@ -200,25 +201,39 @@ it('drives the linear fill via a fixed-length dasharray with dashoffset derived 
   expect(fill.getAttribute('x2')).to.equal(x2AtQuarter);
 });
 
-it('transitions the fill stroke-dashoffset using the shared transition token, disabled under reduced motion', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('transition: stroke-dashoffset var(--lr-transition-base);');
-  expect(css).to.include(
-    "@media (prefers-reduced-motion: reduce) { [part='fill'] { transition: none !important; } }",
-  );
-});
+it('renders fill transitions for every gauge mode and disables them under reduced motion', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const fills = await Promise.all(
+      (['radial', 'ring', 'linear'] as const).map(async (type) => {
+        const el = (await fixture(
+          html`<lr-gauge type=${type} value="10" min="0" max="100"></lr-gauge>`,
+        )) as LyraGauge;
+        return {
+          type,
+          fill: el.shadowRoot!.querySelector('[part="fill"]') as SVGElement,
+        };
+      }),
+    );
 
-it('actually applies the stroke-dashoffset transition to the rendered fill element', async () => {
-  // Unlike the reduced-motion branch above (a pure `@media` query this test runner has no way to
-  // force -- window.matchMedia stubbing does not drive real CSS media-feature evaluation, only
-  // JS-level `prefersReducedMotion()` gates, and gauge has none), the default (non-reduced-motion)
-  // transition IS synthesizable: it's just the resting computed style of a normally-rendered
-  // fixture, so it gets a real getComputedStyle assertion instead of only a cssText match.
-  const el = (await fixture(html`<lr-gauge value="10" min="0" max="100"></lr-gauge>`)) as LyraGauge;
-  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGCircleElement;
-  const computed = getComputedStyle(fill);
-  expect(computed.transitionProperty).to.equal('stroke-dashoffset');
-  expect(computed.transitionDuration).to.not.equal('0s');
+    for (const { type, fill } of fills) {
+      const fullMotion = getComputedStyle(fill);
+      expect(fullMotion.transitionProperty, type).to.equal('stroke-dashoffset');
+      expect(fullMotion.transitionDuration, type).to.not.equal('0s');
+    }
+
+    await setReducedMotion('reduce');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+
+    for (const { type, fill } of fills) {
+      const reducedMotion = getComputedStyle(fill);
+      expect(reducedMotion.transitionProperty, type).to.equal('none');
+      expect(reducedMotion.transitionDuration, type).to.equal('0s');
+    }
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('renders a linear track when type is linear', async () => {
