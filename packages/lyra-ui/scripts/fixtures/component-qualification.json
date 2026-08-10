@@ -6250,21 +6250,21 @@
             },
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 1491,
+              "line": 1615,
               "test": "is accessible and supports a consumer supplied accessible label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 1636,
+              "line": 1760,
               "test": "is accessible with the current-state props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 1947,
+              "line": 2071,
               "test": "is accessible with focusable content inside an off-screen slide",
               "target": "el",
               "state": "populated"
@@ -6300,7 +6300,7 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 680,
+              "line": 804,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -6474,7 +6474,7 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 680,
+              "line": 804,
               "kind": "reduced-motion test signal"
             }
           ]

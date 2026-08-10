@@ -53,12 +53,14 @@ export const styles = css`
     }
   }
 
-  [part~="scroll-container"]:focus-visible {
+  [part~="scroll-container"]:focus-visible,
+  [part~="navigation-button"]:focus-visible,
+  [part~="pagination-item"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* no-pressed-state: no press action. */
+  /* no-pressed-state: no action. */
   [part~="scroll-container"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
     outline-offset: var(--lr-focus-ring-offset);
@@ -145,18 +147,22 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
 
-  [part~="navigation-button"] {
+  [part~="navigation-button"],
+  [part~="pagination-item"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
+    cursor: pointer;
+  }
+
+  [part~="navigation-button"] {
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
-    cursor: pointer;
   }
 
   [part~="navigation-button"]:hover {
@@ -179,12 +185,6 @@ export const styles = css`
   [part~="navigation-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
-  }
-
-  [part~="navigation-button"]:focus-visible,
-  [part~="pagination-item"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
   }
 
   [part~="pagination"] {
@@ -211,16 +211,9 @@ export const styles = css`
   }
 
   [part~="pagination-item"] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
-    border-radius: var(--lr-radius-pill);
     background: transparent;
-    cursor: pointer;
   }
 
   [part="indicator-dot"] {

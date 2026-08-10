@@ -297,6 +297,130 @@ describe("Web Awesome carousel surface", () => {
     expect(el.currentSlide).to.equal(2);
   });
 
+  it("moves focused removed pagination to the nearest surviving page indicator", async () => {
+    const el = await carousel(html`
+      <lr-carousel navigation pagination>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+        <lr-carousel-item>Three</lr-carousel-item>
+        <lr-carousel-item>Four</lr-carousel-item>
+      </lr-carousel>
+    `);
+    el.goToSlide(3, "instant");
+    await el.updateComplete;
+    const indicators = [
+      ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+        '[part~="pagination-item"]'
+      ),
+    ];
+    indicators[3]!.focus();
+    expect(
+      el.shadowRoot!.activeElement?.getAttribute("aria-label")
+    ).to.equal("Go to slide 4");
+
+    el.lastElementChild?.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(el.currentSlide).to.equal(2);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part~="pagination-item"]').length
+    ).to.equal(3);
+    expect(active?.getAttribute("part")?.includes("pagination-item")).to.equal(
+      true
+    );
+    expect(active?.getAttribute("aria-label")).to.equal("Go to slide 3");
+    expect(active?.getAttribute("aria-current")).to.equal("true");
+  });
+
+  it("parks focused navigation on the viewport when the final control set disappears", async () => {
+    const el = await carousel(html`
+      <lr-carousel navigation pagination>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="next-button"]'
+    )!;
+    next.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")?.includes("next-button")).to.equal(
+      true
+    );
+
+    el.lastElementChild?.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(Boolean(el.shadowRoot!.querySelector('[part="controls"]'))).to.equal(
+      false
+    );
+    expect(
+      el.shadowRoot!.activeElement
+        ?.getAttribute("part")
+        ?.includes("scroll-container")
+    ).to.equal(true);
+  });
+
+  it("parks focused pagination on the viewport when shrinking to one slide", async () => {
+    const el = await carousel(html`
+      <lr-carousel navigation pagination>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    el.shadowRoot!
+      .querySelector<HTMLButtonElement>('[part~="pagination-item"]')!
+      .focus();
+
+    el.lastElementChild?.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(Boolean(el.shadowRoot!.querySelector('[part="controls"]'))).to.equal(
+      false
+    );
+    expect(
+      el.shadowRoot!.activeElement
+        ?.getAttribute("part")
+        ?.includes("scroll-container")
+    ).to.equal(true);
+  });
+
+  it("does not reclaim foreign focus while slides shrink", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-carousel navigation pagination>
+          <lr-carousel-item>One</lr-carousel-item>
+          <lr-carousel-item>Two</lr-carousel-item>
+          <lr-carousel-item>Three</lr-carousel-item>
+          <lr-carousel-item>Four</lr-carousel-item>
+        </lr-carousel>
+        <button id="carousel-foreign-focus" type="button">Outside</button>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-carousel") as LyraCarousel;
+    const outside = wrapper.querySelector<HTMLButtonElement>(
+      "#carousel-foreign-focus"
+    )!;
+    await el.updateComplete;
+    const indicator = el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part~="pagination-item"]'
+    )[3]!;
+    indicator.focus();
+    el.lastElementChild?.remove();
+    outside.focus();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(document.activeElement?.id).to.equal("carousel-foreign-focus");
+  });
+
   it("renders inert loop endcaps and wraps by slidesPerMove", async () => {
     const el = await carousel(html`
       <lr-carousel loop navigation slides-per-page="2" slides-per-move="2">
@@ -2787,7 +2911,7 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
     ) as HTMLElement;
     viewport.dispatchEvent(new Event("scroll"));
     expect(
-      (el as unknown as { scrollSettleTimer?: number }).scrollSettleTimer,
+      (el as unknown as { settleTimer?: number }).settleTimer,
       "no window means no timer host to schedule a settle on"
     ).to.be.undefined;
 
