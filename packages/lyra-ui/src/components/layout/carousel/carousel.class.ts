@@ -440,7 +440,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         const slide = record.target as HTMLElement;
         const snapshot = this.slideSnapshots.get(slide);
         return snapshot
-          ? this.adoptAuthorSlideChanges(slide, snapshot)
+          ? this.adoptChanges(slide, snapshot)
           : false;
       });
       if (!snapshotChanged) return;
@@ -663,7 +663,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     };
   }
 
-  private adoptAuthorSlideChanges(
+  private adoptChanges(
     slide: HTMLElement,
     snapshot: SlideSnapshot
   ): boolean {
@@ -695,7 +695,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private restoreSlides(): void {
     for (const [slide, snapshot] of this.slideSnapshots) {
-      this.adoptAuthorSlideChanges(slide, snapshot);
+      this.adoptChanges(slide, snapshot);
       this.restoreSlide(slide, snapshot);
     }
     this.slideSnapshots.clear();
@@ -705,7 +705,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const slides = this.slideElements();
     const assigned = new Set(slides);
     for (const [slide, snapshot] of this.slideSnapshots) {
-      if (this.adoptAuthorSlideChanges(slide, snapshot)) {
+      if (this.adoptChanges(slide, snapshot)) {
         this.loopClonesDirty = true;
       }
       if (!assigned.has(slide)) {
