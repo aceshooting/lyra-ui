@@ -14,6 +14,85 @@ interface Row {
 
 declare const grid: LyraDataGrid<Row>;
 
+type UpstreamCopySelectedRowsOptions = {
+  columnIds?: string[];
+  includeHeaders?: boolean;
+  format?: 'tsv' | 'csv';
+  escapeFormulas?: boolean;
+};
+type UpstreamExportDataAsCsvOptions = {
+  fileName?: string;
+  columnIds?: string[];
+  includeHeaders?: boolean;
+  delimiter?: string;
+  escapeFormulas?: boolean;
+};
+type UpstreamGetDataAsCsvOptions = {
+  columnIds?: string[];
+  includeHeaders?: boolean;
+  delimiter?: string;
+  escapeFormulas?: boolean;
+};
+type UpstreamScrollToIndexOptions = {
+  align?: 'start' | 'center' | 'end';
+};
+
+type Assert<T extends true> = T;
+type AllUpstreamOptionFieldsAreAccepted<Upstream extends object, Target extends object> = Exclude<{
+  [Key in keyof Upstream]-?: Key extends keyof Target
+    ? Upstream[Key] extends Target[Key]
+      ? true
+      : false
+    : false;
+}[keyof Upstream], true> extends never
+  ? true
+  : false;
+
+type DataGridCopyOptionsAcceptAllUpstreamFields = Assert<
+  AllUpstreamOptionFieldsAreAccepted<UpstreamCopySelectedRowsOptions, DataGridCopyOptions>
+>;
+type DataGridExportOptionsAcceptAllUpstreamFields = Assert<
+  AllUpstreamOptionFieldsAreAccepted<UpstreamExportDataAsCsvOptions, DataGridExportOptions>
+>;
+type DataGridCsvOptionsAcceptAllUpstreamFields = Assert<
+  AllUpstreamOptionFieldsAreAccepted<UpstreamGetDataAsCsvOptions, DataGridCsvOptions>
+>;
+type DataGridScrollOptionsAcceptAllUpstreamFields = Assert<
+  AllUpstreamOptionFieldsAreAccepted<UpstreamScrollToIndexOptions, DataGridScrollOptions>
+>;
+
+export type DataGridUpstreamOptionContractAssertions =
+  | DataGridCopyOptionsAcceptAllUpstreamFields
+  | DataGridExportOptionsAcceptAllUpstreamFields
+  | DataGridCsvOptionsAcceptAllUpstreamFields
+  | DataGridScrollOptionsAcceptAllUpstreamFields;
+
+const upstreamCopyOptions: UpstreamCopySelectedRowsOptions = {
+  columnIds: ['name', 'score'],
+  includeHeaders: false,
+  format: 'csv',
+  escapeFormulas: true,
+};
+const upstreamExportOptions: UpstreamExportDataAsCsvOptions = {
+  fileName: 'people.csv',
+  columnIds: ['name'],
+  includeHeaders: true,
+  delimiter: ';',
+  escapeFormulas: true,
+};
+const upstreamCsvOptions: UpstreamGetDataAsCsvOptions = {
+  columnIds: ['name'],
+  includeHeaders: true,
+  delimiter: ';',
+  escapeFormulas: true,
+};
+const upstreamScrollOptions: UpstreamScrollToIndexOptions = { align: 'center' };
+
+const dataGridCopyOptions: DataGridCopyOptions = upstreamCopyOptions;
+const dataGridExportOptions: DataGridExportOptions = upstreamExportOptions;
+const dataGridCsvOptions: DataGridCsvOptions = upstreamCsvOptions;
+const dataGridScrollOptions: DataGridScrollOptions = upstreamScrollOptions;
+
 const copyOptions = {
   columnIds: ['name', 'score'],
   includeHeaders: false,
@@ -32,6 +111,15 @@ void copyOptions;
 void csvOptions;
 void exportOptions;
 void scrollOptions;
+void dataGridCopyOptions;
+void dataGridExportOptions;
+void dataGridCsvOptions;
+void dataGridScrollOptions;
+
+void grid.copySelectedRows(upstreamCopyOptions);
+grid.exportDataAsCsv(upstreamExportOptions);
+void grid.getDataAsCsv(upstreamCsvOptions);
+grid.scrollToIndex(0, upstreamScrollOptions);
 
 void grid.copySelectedRows({
   columnIds: ['name', 'score'],

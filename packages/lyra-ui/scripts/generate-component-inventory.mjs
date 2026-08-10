@@ -767,6 +767,8 @@ export function reviewedWebAwesomeDatePicker() {
 
 const DATA_GRID_OPTION_TYPE = "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }";
 const DATA_GRID_CSV_OPTION_TYPE = '{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }';
+const DATA_GRID_GET_CSV_OPTION_TYPE = '{ columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }';
+const DATA_GRID_SCROLL_OPTION_TYPE = "{ align?: 'start' | 'center' | 'end' }";
 export function reviewedWebAwesomeDataGrid() {
   const properties = [
     reviewedProperty('appearance', 'appearance', "'outlined' | 'plain'", 'outlined', true),
@@ -911,7 +913,7 @@ export function reviewedWebAwesomeDataGrid() {
       method('focus', [reviewedOptionalParameter('options', 'FocusOptions')]),
       method('getColumnFacets', [reviewedParameter('columnId', 'string')]),
       method('getColumnPin', [reviewedParameter('columnId', 'string')]),
-      method('getDataAsCsv', [reviewedParameter('options', DATA_GRID_CSV_OPTION_TYPE.replace('fileName?: string; ', ''))]),
+      method('getDataAsCsv', [reviewedParameter('options', DATA_GRID_GET_CSV_OPTION_TYPE)]),
       method('getProcessedRows'),
       method('getState'),
       method('getVisibleRows'),
@@ -927,7 +929,7 @@ export function reviewedWebAwesomeDataGrid() {
       method('resetState'),
       method('scrollToIndex', [
         reviewedParameter('index', 'number'),
-        reviewedParameter('options', "{ align?: 'start' | 'center' | 'end' }"),
+        reviewedParameter('options', DATA_GRID_SCROLL_OPTION_TYPE),
       ]),
       method('setState', [reviewedParameter('state', 'DataGridState')]),
       method('sizeColumnsToFit'),
@@ -2214,6 +2216,13 @@ const reviewedTypeEquivalence = (memberKind, member, upstream, target) => ({
   target,
 });
 
+const reviewedMethodParameterTypeEquivalence = (method, parameter, upstream, target) => ({
+  method,
+  parameter,
+  upstream,
+  target,
+});
+
 // Widening an event's cancelability is a superset of the contract it replaces: `preventDefault()`
 // on an event that was never cancelable is a silent no-op, and no shipped consumer writes code that
 // depends on that no-op happening. A migrated listener that vetoes therefore cannot start behaving
@@ -3469,6 +3478,37 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     'wa-date-input',
     {
       cancelabilityEquivalences: [reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always')],
+    },
+  ],
+  [
+    'wa-data-grid',
+    {
+      methodParameterTypeEquivalences: [
+        reviewedMethodParameterTypeEquivalence(
+          'copySelectedRows',
+          'options',
+          DATA_GRID_OPTION_TYPE,
+          'DataGridCopyOptions',
+        ),
+        reviewedMethodParameterTypeEquivalence(
+          'exportDataAsCsv',
+          'options',
+          DATA_GRID_CSV_OPTION_TYPE,
+          'DataGridExportOptions',
+        ),
+        reviewedMethodParameterTypeEquivalence(
+          'getDataAsCsv',
+          'options',
+          DATA_GRID_GET_CSV_OPTION_TYPE,
+          'DataGridCsvOptions',
+        ),
+        reviewedMethodParameterTypeEquivalence(
+          'scrollToIndex',
+          'options',
+          DATA_GRID_SCROLL_OPTION_TYPE,
+          'DataGridScrollOptions',
+        ),
+      ],
     },
   ],
   [

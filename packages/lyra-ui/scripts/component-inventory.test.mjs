@@ -2216,6 +2216,343 @@ test('reviewed unknown upstream method returns are comparison wildcards only for
   );
 });
 
+test('reviewed method-parameter aliases are exact and preserve every other signature check', () => {
+  const surface = {
+    attributes: [],
+    properties: [],
+    slots: [],
+    events: [],
+    parts: [],
+    cssProperties: [],
+    cssStates: [],
+    native: { forwardedEvents: [], delegatedMethods: [] },
+    form: { associated: false, properties: [], methods: [] },
+  };
+  const copyOptions = "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }";
+  const exportOptions = '{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }';
+  const csvOptions = '{ columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }';
+  const scrollOptions = "{ align?: 'start' | 'center' | 'end' }";
+  const upstream = {
+    ...surface,
+    methods: [
+      {
+        name: 'copySelectedRows',
+        overloads: [{ parameters: [{ name: 'options', type: copyOptions, optional: true, hasDefault: false }], returnType: 'unspecified-public-documentation' }],
+      },
+      {
+        name: 'exportDataAsCsv',
+        overloads: [{ parameters: [{ name: 'options', type: exportOptions, optional: false, hasDefault: false }], returnType: 'unspecified-public-documentation' }],
+      },
+      {
+        name: 'getDataAsCsv',
+        overloads: [{ parameters: [{ name: 'options', type: csvOptions, optional: false, hasDefault: false }], returnType: 'unspecified-public-documentation' }],
+      },
+      {
+        name: 'scrollToIndex',
+        overloads: [{
+          parameters: [
+            { name: 'index', type: 'number', optional: false, hasDefault: false },
+            { name: 'options', type: scrollOptions, optional: false, hasDefault: false },
+          ],
+          returnType: 'unspecified-public-documentation',
+        }],
+      },
+    ],
+  };
+  const target = {
+    ...surface,
+    methods: [
+      {
+        name: 'copySelectedRows',
+        overloads: [{
+          parameters: [{ name: 'options', type: 'DataGridCopyOptions', optional: false, hasDefault: true, default: '{}' }],
+          returnType: 'number',
+        }],
+      },
+      {
+        name: 'exportDataAsCsv',
+        overloads: [{
+          parameters: [{ name: 'options', type: 'DataGridExportOptions', optional: false, hasDefault: true, default: '{}' }],
+          returnType: 'void',
+        }],
+      },
+      {
+        name: 'getDataAsCsv',
+        overloads: [{
+          parameters: [{ name: 'options', type: 'DataGridCsvOptions', optional: false, hasDefault: true, default: '{}' }],
+          returnType: 'string',
+        }],
+      },
+      {
+        name: 'scrollToIndex',
+        overloads: [{
+          parameters: [
+            { name: 'index', type: 'number', optional: false, hasDefault: false },
+            { name: 'options', type: 'DataGridScrollOptions', optional: false, hasDefault: true, default: '{}' },
+          ],
+          returnType: 'void',
+        }],
+      },
+    ],
+  };
+  const normalizations = {
+    ...emptyNormalizations(),
+    methodParameterTypeEquivalences: [
+      { method: 'copySelectedRows', parameter: 'options', upstream: copyOptions, target: 'DataGridCopyOptions' },
+      { method: 'exportDataAsCsv', parameter: 'options', upstream: exportOptions, target: 'DataGridExportOptions' },
+      { method: 'getDataAsCsv', parameter: 'options', upstream: csvOptions, target: 'DataGridCsvOptions' },
+      { method: 'scrollToIndex', parameter: 'options', upstream: scrollOptions, target: 'DataGridScrollOptions' },
+    ],
+  };
+  const mapping = { upstreamTag: 'wa-data-grid', rewrites: emptyRewrites(), normalizations };
+
+  assert.deepEqual(compareMappedSurfaces(upstream, target, { upstreamPrefix: 'wa-', normalizations }), []);
+  assert.deepEqual(validateMappingNormalizations(mapping, { upstream, target }), []);
+
+  const rewrittenTarget = structuredClone(target);
+  rewrittenTarget.methods[0].name = 'copyRows';
+  const rewrittenMapping = {
+    ...mapping,
+    rewrites: {
+      ...emptyRewrites(),
+      methods: [{ from: 'copySelectedRows', to: 'copyRows' }],
+    },
+  };
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, rewrittenTarget, {
+      upstreamPrefix: 'wa-',
+      rewrites: rewrittenMapping.rewrites,
+      normalizations,
+    }),
+    [],
+    'an exact rule remains keyed to the upstream name when the method itself has a deterministic rewrite',
+  );
+  assert.deepEqual(validateMappingNormalizations(rewrittenMapping, { upstream, target: rewrittenTarget }), []);
+
+  const wrongType = structuredClone(target);
+  wrongType.methods[0].overloads[0].parameters[0].type = 'OtherCopyOptions';
+  assert.ok(
+    compareMappedSurfaces(upstream, wrongType, { upstreamPrefix: 'wa-', normalizations })
+      .some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+    'the exact target alias is required',
+  );
+  assert.ok(
+    validateMappingNormalizations(mapping, { upstream, target: wrongType })
+      .some((finding) => finding.includes('stale target method-parameter type normalization copySelectedRows:options')),
+  );
+
+  const wrongName = structuredClone(target);
+  wrongName.methods[0].overloads[0].parameters[0].name = 'config';
+  assert.ok(
+    compareMappedSurfaces(upstream, wrongName, { upstreamPrefix: 'wa-', normalizations })
+      .some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+    'an alias rule cannot hide a parameter rename',
+  );
+  assert.ok(
+    validateMappingNormalizations(mapping, { upstream, target: wrongName })
+      .some((finding) => finding.includes('dangling target method parameter normalization copySelectedRows:options')),
+  );
+
+  const staleUpstream = structuredClone(upstream);
+  staleUpstream.methods[0].overloads[0].parameters[0].type = '{ columns?: string[] }';
+  assert.ok(
+    validateMappingNormalizations(mapping, { upstream: staleUpstream, target })
+      .some((finding) => finding.includes('stale upstream method-parameter type normalization copySelectedRows:options')),
+  );
+
+  const dangling = structuredClone(normalizations);
+  dangling.methodParameterTypeEquivalences[0].method = 'missingMethod';
+  assert.ok(
+    validateMappingNormalizations(
+      { ...mapping, normalizations: dangling },
+      { upstream, target },
+    ).some((finding) => finding.includes('dangling upstream method-parameter type normalization missingMethod:options')),
+  );
+
+  const duplicate = structuredClone(normalizations);
+  duplicate.methodParameterTypeEquivalences.push(
+    structuredClone(duplicate.methodParameterTypeEquivalences[0]),
+  );
+  assert.ok(
+    validateMappingNormalizations(
+      { ...mapping, normalizations: duplicate },
+      { upstream, target },
+    ).some((finding) =>
+      finding.includes('duplicate normalizations.methodParameterTypeEquivalences rule copySelectedRows:options'),
+    ),
+  );
+
+  const missingDefault = structuredClone(target);
+  delete missingDefault.methods[0].overloads[0].parameters[0].default;
+  missingDefault.methods[0].overloads[0].parameters[0].hasDefault = false;
+  assert.ok(
+    compareMappedSurfaces(upstream, missingDefault, { upstreamPrefix: 'wa-', normalizations })
+      .some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+    'an alias rule cannot hide the optional/default call contract',
+  );
+
+  const concreteReturnUpstream = structuredClone(upstream);
+  concreteReturnUpstream.methods[3].overloads[0].returnType = 'void';
+  const wrongReturn = structuredClone(target);
+  wrongReturn.methods[3].overloads[0].returnType = 'Promise<void>';
+  assert.ok(
+    compareMappedSurfaces(concreteReturnUpstream, wrongReturn, { upstreamPrefix: 'wa-', normalizations })
+      .some(({ code, member }) => code === 'method-signature-mismatch' && member === 'scrollToIndex'),
+    'an alias rule cannot hide a concrete return mismatch',
+  );
+
+  const unsafe = structuredClone(normalizations);
+  unsafe.methodParameterTypeEquivalences[0].target = 'any';
+  const unsafeTarget = structuredClone(target);
+  unsafeTarget.methods[0].overloads[0].parameters[0].type = 'any';
+  assert.ok(
+    validateMappingNormalizations(
+      { ...mapping, normalizations: unsafe },
+      { upstream, target: unsafeTarget },
+    ).some((finding) => finding.includes('unsafe any method-parameter type normalization copySelectedRows:options')),
+    'a reviewed alias cannot erase the method parameter contract with any',
+  );
+
+  for (const unsafeUnknownType of ['unknown | string', 'Array<unknown>', '{ value: unknown }']) {
+    const unknown = structuredClone(normalizations);
+    unknown.methodParameterTypeEquivalences[0].upstream = unsafeUnknownType;
+    unknown.methodParameterTypeEquivalences[0].target = 'NarrowValue';
+    const unknownUpstream = structuredClone(upstream);
+    unknownUpstream.methods[0].overloads[0].parameters[0].type = unsafeUnknownType;
+    const unknownTarget = structuredClone(target);
+    unknownTarget.methods[0].overloads[0].parameters[0].type = 'NarrowValue';
+    assert.ok(
+      compareMappedSurfaces(unknownUpstream, unknownTarget, { upstreamPrefix: 'wa-', normalizations: unknown })
+        .some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+      'an unknown-containing source parameter never authorizes a narrowing alias',
+    );
+    assert.ok(
+      validateMappingNormalizations(
+        { ...mapping, normalizations: unknown },
+        { upstream: unknownUpstream, target: unknownTarget },
+      ).some((finding) => finding.includes('unsafe unknown method-parameter type normalization copySelectedRows:options')),
+    );
+  }
+
+  const unknownTargetRule = structuredClone(normalizations);
+  unknownTargetRule.methodParameterTypeEquivalences[0].target = 'Array<unknown>';
+  const unknownTarget = structuredClone(target);
+  unknownTarget.methods[0].overloads[0].parameters[0].type = 'Array<unknown>';
+  assert.ok(
+    compareMappedSurfaces(upstream, unknownTarget, {
+      upstreamPrefix: 'wa-',
+      normalizations: unknownTargetRule,
+    }).some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+    'an unknown-containing target parameter never authorizes an opaque alias',
+  );
+  assert.ok(
+    validateMappingNormalizations(
+      { ...mapping, normalizations: unknownTargetRule },
+      { upstream, target: unknownTarget },
+    ).some((finding) => finding.includes('unsafe unknown method-parameter type normalization copySelectedRows:options')),
+  );
+
+  for (const [side, unsafeTemplateType] of [
+    ['upstream', '`${any}`'],
+    ['target', '`prefix-${unknown}`'],
+  ]) {
+    const templateRule = structuredClone(normalizations);
+    const templateUpstream = structuredClone(upstream);
+    const templateTarget = structuredClone(target);
+    if (side === 'upstream') {
+      templateRule.methodParameterTypeEquivalences[0].upstream = unsafeTemplateType;
+      templateRule.methodParameterTypeEquivalences[0].target = 'NarrowValue';
+      templateUpstream.methods[0].overloads[0].parameters[0].type = unsafeTemplateType;
+      templateTarget.methods[0].overloads[0].parameters[0].type = 'NarrowValue';
+    } else {
+      templateRule.methodParameterTypeEquivalences[0].target = unsafeTemplateType;
+      templateTarget.methods[0].overloads[0].parameters[0].type = unsafeTemplateType;
+    }
+    assert.ok(
+      compareMappedSurfaces(templateUpstream, templateTarget, {
+        upstreamPrefix: 'wa-',
+        normalizations: templateRule,
+      }).some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+      'a template interpolation never authorizes an opaque method parameter alias',
+    );
+    assert.ok(
+      validateMappingNormalizations(
+        { ...mapping, normalizations: templateRule },
+        { upstream: templateUpstream, target: templateTarget },
+      ).some((finding) =>
+        finding.includes('unsafe template interpolation method-parameter type normalization copySelectedRows:options'),
+      ),
+    );
+  }
+
+  const nonString = structuredClone(normalizations);
+  nonString.methodParameterTypeEquivalences[0].upstream = 1;
+  nonString.methodParameterTypeEquivalences[0].target = 2;
+  const nonStringUpstream = structuredClone(upstream);
+  nonStringUpstream.methods[0].overloads[0].parameters[0].type = 1;
+  const nonStringTarget = structuredClone(target);
+  nonStringTarget.methods[0].overloads[0].parameters[0].type = 2;
+  assert.ok(
+    compareMappedSurfaces(nonStringUpstream, nonStringTarget, {
+      upstreamPrefix: 'wa-',
+      normalizations: nonString,
+    }).some(({ code, member }) => code === 'method-signature-mismatch' && member === 'copySelectedRows'),
+    'a non-string rule cannot authorize a synthetic parameter type mismatch',
+  );
+  assert.ok(
+    validateMappingNormalizations(
+      { ...mapping, normalizations: nonString },
+      { upstream: nonStringUpstream, target: nonStringTarget },
+    ).some((finding) => finding.includes('invalid normalizations.methodParameterTypeEquivalences rule')),
+  );
+
+  for (const nameField of ['method', 'parameter']) {
+    const whitespaceName = structuredClone(normalizations);
+    whitespaceName.methodParameterTypeEquivalences[0][nameField] = '   ';
+    assert.ok(
+      validateMappingNormalizations(
+        { ...mapping, normalizations: whitespaceName },
+        { upstream, target },
+      ).some((finding) => finding.includes('invalid normalizations.methodParameterTypeEquivalences rule')),
+      `a whitespace-only ${nameField} cannot identify a reviewed method parameter alias`,
+    );
+  }
+});
+
+test('wa-data-grid pins only its four reviewed public method-parameter aliases', () => {
+  assert.deepEqual(reviewedMappingNormalizations('wa-data-grid').methodParameterTypeEquivalences, [
+    {
+      method: 'copySelectedRows',
+      parameter: 'options',
+      upstream: "{ columnIds?: string[]; includeHeaders?: boolean; format?: 'tsv' | 'csv'; escapeFormulas?: boolean; }",
+      target: 'DataGridCopyOptions',
+    },
+    {
+      method: 'exportDataAsCsv',
+      parameter: 'options',
+      upstream: '{ fileName?: string; columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }',
+      target: 'DataGridExportOptions',
+    },
+    {
+      method: 'getDataAsCsv',
+      parameter: 'options',
+      upstream: '{ columnIds?: string[]; includeHeaders?: boolean; delimiter?: string; escapeFormulas?: boolean; }',
+      target: 'DataGridCsvOptions',
+    },
+    {
+      method: 'scrollToIndex',
+      parameter: 'options',
+      upstream: "{ align?: 'start' | 'center' | 'end' }",
+      target: 'DataGridScrollOptions',
+    },
+  ]);
+  assert.deepEqual(
+    reviewedMappingNormalizations('wa-option').methodParameterTypeEquivalences,
+    [],
+    'an unrelated mapping cannot inherit the data-grid alias review',
+  );
+});
+
 test('reviewed derived defaults preserve a dynamic target value without inventing a static default', () => {
   const surface = {
     properties: [],

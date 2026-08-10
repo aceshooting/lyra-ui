@@ -1153,6 +1153,21 @@ test('the checked-in inventory reports a warning-required tag and no peer requir
   );
 });
 
+test('the checked-in inventory rewrites data-grid tags with named method option types', () => {
+  const dataGrid = checkedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
+  assert.equal(dataGrid?.classification, 'rewritten');
+  assert.deepEqual(dataGrid?.drift, []);
+
+  const input = '<wa-data-grid></wa-data-grid>\n';
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'data-grid.html',
+  });
+
+  assert.equal(result.content, '<lr-data-grid></lr-data-grid>\n');
+  assert.deepEqual(result.warnings, []);
+  assert.ok(result.changes.some((entry) => entry.action === 'rewrite-tag'));
+});
+
 test('the checked-in inventory leaves reflection-sensitive Shoelace checkbox usage unchanged with a warning', () => {
   const input = [
     '<style>sl-checkbox[checked] { color: rebeccapurple; }</style>',

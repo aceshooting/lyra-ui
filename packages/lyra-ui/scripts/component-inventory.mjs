@@ -164,6 +164,7 @@ export const REWRITE_RULE_SECTIONS = ['attributes', 'properties', 'events', 'slo
 // rules never authorize a source transformation in migrate-wa.
 export const NORMALIZATION_SECTIONS = [
   'typeEquivalences',
+  'methodParameterTypeEquivalences',
   'defaultEquivalences',
   'derivedDefaultEquivalences',
   'inferredAttributeSuppressions',
@@ -1030,7 +1031,7 @@ function reviewedDerivedDefault(normalizations, memberKind, member, upstreamDefa
   );
 }
 
-function containsAnyTypeKeyword(type) {
+function containsTypePositionKeyword(type, keyword) {
   if (typeof type !== 'string') return false;
   let quote = null;
   for (let index = 0; index < type.length;) {
@@ -1052,15 +1053,16 @@ function containsAnyTypeKeyword(type) {
     if (/[A-Za-z_$]/u.test(character)) {
       let end = index + 1;
       while (end < type.length && /[A-Za-z0-9_$]/u.test(type[end])) end++;
-      if (type.slice(index, end) === 'any') {
+      if (type.slice(index, end) === keyword) {
         let next = end;
         while (next < type.length && /\s/u.test(type[next])) next++;
         if (type[next] === '?') {
           next++;
           while (next < type.length && /\s/u.test(type[next])) next++;
         }
-        // `any` is an ordinary identifier when it names a property/method in a type literal. It is
-        // unsafe only in a type position (`value: any`, `Array<any>`, `any[]`, unions, and so on).
+        // A keyword is an ordinary identifier when it names a property/method in a type literal.
+        // It is unsafe only in a type position (`value: unknown`, `Array<unknown>`, `unknown[]`,
+        // unions, and so on).
         if (type[next] !== ':' && type[next] !== '(') return true;
       }
       index = end;
@@ -1069,6 +1071,18 @@ function containsAnyTypeKeyword(type) {
     index++;
   }
   return false;
+}
+
+function containsAnyTypeKeyword(type) {
+  return containsTypePositionKeyword(type, 'any');
+}
+
+function containsUnknownTypeKeyword(type) {
+  return containsTypePositionKeyword(type, 'unknown');
+}
+
+function containsTemplateInterpolation(type) {
+  return typeof type === 'string' && type.includes('$' + '{');
 }
 
 function reviewedTypeEquivalent(normalizations, memberKind, member, upstreamType, targetType) {
@@ -1091,6 +1105,37 @@ function reviewedTypeEquivalent(normalizations, memberKind, member, upstreamType
     (entry) =>
       entry.memberKind === memberKind &&
       entry.member === member &&
+      entry.upstream === upstreamType &&
+      entry.target === targetType,
+  );
+}
+
+function reviewedMethodParameterTypeEquivalent(
+  normalizations,
+  method,
+  parameter,
+  upstreamType,
+  targetType,
+) {
+  // A method parameter can use a public named structural interface without changing which
+  // upstream object literals callers may pass. This still needs an exact per-method review: a
+  // generic alias rule would make a changed parameter contract invisible to migration checks.
+  if (
+    typeof upstreamType !== 'string' ||
+    typeof targetType !== 'string' ||
+    containsAnyTypeKeyword(upstreamType) ||
+    containsAnyTypeKeyword(targetType) ||
+    containsUnknownTypeKeyword(upstreamType) ||
+    containsUnknownTypeKeyword(targetType) ||
+    containsTemplateInterpolation(upstreamType) ||
+    containsTemplateInterpolation(targetType)
+  ) {
+    return false;
+  }
+  return (normalizations.methodParameterTypeEquivalences ?? []).some(
+    (entry) =>
+      entry.method === method &&
+      entry.parameter === parameter &&
       entry.upstream === upstreamType &&
       entry.target === targetType,
   );
@@ -1348,7 +1393,7 @@ function eventTypeCompatible(expected, actual) {
   return canonicalEventType(expected) === canonicalEventType(actual);
 }
 
-function parametersMatch(expected, actual, upstreamPrefix) {
+function parametersMatch(expected, actual, upstreamPrefix, method, normalizations) {
   const expectedParameters = expected ?? [];
   const actualParameters = actual ?? [];
   if (actualParameters.length < expectedParameters.length) return false;
@@ -1359,7 +1404,14 @@ function parametersMatch(expected, actual, upstreamPrefix) {
       parameter.name !== candidate.name ||
       (
         parameter.type !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
-        mappedPublicType(parameter.type, upstreamPrefix) !== candidate.type
+        mappedPublicType(parameter.type, upstreamPrefix) !== candidate.type &&
+        !reviewedMethodParameterTypeEquivalent(
+          normalizations,
+          method,
+          parameter.name,
+          parameter.type,
+          candidate.type,
+        )
       )
     ) {
       return false;
@@ -1381,9 +1433,16 @@ function parametersMatch(expected, actual, upstreamPrefix) {
     .every((parameter) => parameter.optional || parameter.hasDefault);
 }
 
-function overloadMatches(expected, actual, upstreamPrefix, unknownReturnTypeIsUnspecified = false) {
+function overloadMatches(
+  method,
+  expected,
+  actual,
+  upstreamPrefix,
+  normalizations,
+  unknownReturnTypeIsUnspecified = false,
+) {
   return (
-    parametersMatch(expected.parameters, actual.parameters, upstreamPrefix) &&
+    parametersMatch(expected.parameters, actual.parameters, upstreamPrefix, method, normalizations) &&
     (
       expected.returnType === UNSPECIFIED_PUBLIC_DOCUMENTATION ||
       (unknownReturnTypeIsUnspecified && expected.returnType === 'unknown') ||
@@ -1392,10 +1451,24 @@ function overloadMatches(expected, actual, upstreamPrefix, unknownReturnTypeIsUn
   );
 }
 
-function methodOverloadsMatch(expected, actual, upstreamPrefix, unknownReturnTypeIsUnspecified = false) {
+function methodOverloadsMatch(
+  method,
+  expected,
+  actual,
+  upstreamPrefix,
+  normalizations,
+  unknownReturnTypeIsUnspecified = false,
+) {
   return (expected ?? []).every((overload) =>
     (actual ?? []).some((candidate) =>
-      overloadMatches(overload, candidate, upstreamPrefix, unknownReturnTypeIsUnspecified),
+      overloadMatches(
+        method,
+        overload,
+        candidate,
+        upstreamPrefix,
+        normalizations,
+        unknownReturnTypeIsUnspecified,
+      ),
     ),
   );
 }
@@ -1583,9 +1656,11 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
       pushMissing(drift, 'missing-method', 'methods', method.name);
     } else if (
       !methodOverloadsMatch(
+        method.name,
         method.overloads,
         candidate.overloads,
         upstreamPrefix,
+        normalizations,
         unknownMethodReturnTypes.has(method.name),
       )
     ) {
@@ -1899,6 +1974,70 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
           ))
     ) {
       findings.push(`${mapping.upstreamTag}: stale compatible type normalization ${key}`);
+    }
+  }
+
+  const methodRewrites = new Map((mapping.rewrites?.methods ?? []).map((entry) => [entry.from, entry.to]));
+  const seenMethodParameters = new Set();
+  for (const rule of normalizations.methodParameterTypeEquivalences ?? []) {
+    const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
+    const valid =
+      typeof rule?.method === 'string' &&
+      Boolean(rule.method.trim()) &&
+      typeof rule.parameter === 'string' &&
+      Boolean(rule.parameter.trim()) &&
+      typeof rule.upstream === 'string' &&
+      Boolean(rule.upstream.trim()) &&
+      rule.upstream !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
+      typeof rule.target === 'string' &&
+      Boolean(rule.target.trim()) &&
+      rule.target !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
+      rule.upstream !== rule.target &&
+      keys.length === 4 &&
+      keys.every((key) => ['method', 'parameter', 'upstream', 'target'].includes(key));
+    if (!valid) {
+      findings.push(`${mapping.upstreamTag}: invalid normalizations.methodParameterTypeEquivalences rule`);
+      continue;
+    }
+    const key = `${rule.method}:${rule.parameter}`;
+    if (seenMethodParameters.has(key)) {
+      findings.push(`${mapping.upstreamTag}: duplicate normalizations.methodParameterTypeEquivalences rule ${key}`);
+    }
+    seenMethodParameters.add(key);
+    if (containsAnyTypeKeyword(rule.upstream) || containsAnyTypeKeyword(rule.target)) {
+      findings.push(`${mapping.upstreamTag}: unsafe any method-parameter type normalization ${key}`);
+    }
+    if (containsUnknownTypeKeyword(rule.upstream) || containsUnknownTypeKeyword(rule.target)) {
+      findings.push(`${mapping.upstreamTag}: unsafe unknown method-parameter type normalization ${key}`);
+    }
+    if (containsTemplateInterpolation(rule.upstream) || containsTemplateInterpolation(rule.target)) {
+      findings.push(`${mapping.upstreamTag}: unsafe template interpolation method-parameter type normalization ${key}`);
+    }
+
+    const upstreamMethod = (upstream?.methods ?? []).find((entry) => entry.name === rule.method);
+    const targetMethodName = methodRewrites.get(rule.method) || rule.method;
+    const targetMethod = (target?.methods ?? []).find((entry) => entry.name === targetMethodName);
+    const upstreamParameters = (upstreamMethod?.overloads ?? []).flatMap((overload) => overload.parameters ?? []);
+    const targetParameters = (targetMethod?.overloads ?? []).flatMap((overload) => overload.parameters ?? []);
+    const upstreamParameter = upstreamParameters.find((entry) => entry.name === rule.parameter);
+    const targetParameter = targetParameters.find((entry) => entry.name === rule.parameter);
+
+    if (!upstreamMethod) {
+      findings.push(`${mapping.upstreamTag}: dangling upstream method-parameter type normalization ${key}`);
+    } else if (!upstreamParameter) {
+      findings.push(`${mapping.upstreamTag}: dangling upstream method parameter normalization ${key}`);
+    } else if (upstreamParameter.type !== rule.upstream) {
+      findings.push(`${mapping.upstreamTag}: stale upstream method-parameter type normalization ${key}`);
+    }
+
+    if (!targetMethod) {
+      findings.push(`${mapping.upstreamTag}: dangling target method-parameter type normalization ${key}`);
+    } else if (!targetParameter) {
+      findings.push(`${mapping.upstreamTag}: dangling target method parameter normalization ${key}`);
+    } else if (targetParameter.type !== rule.target) {
+      findings.push(`${mapping.upstreamTag}: stale target method-parameter type normalization ${key}`);
+    } else if (mappedPublicType(rule.upstream, mapping.upstreamTag?.startsWith('wa-') ? 'wa-' : 'sl-') === targetParameter.type) {
+      findings.push(`${mapping.upstreamTag}: stale compatible method-parameter type normalization ${key}`);
     }
   }
 
