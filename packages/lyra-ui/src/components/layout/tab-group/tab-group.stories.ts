@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An APG tab strip supporting both Lyra\'s direct-child `slot`/`label` model and the upstream `<lr-tab panel>` + `<lr-tab-panel name>` model. The group synchronizes each child\'s reflected `active` SSR hint, emits `{ name, tabId }`, exposes `show(name)`, and retains logical placement and scroll-control aliases.',
+          'An APG tab strip supporting both Lyra\'s direct-child `slot`/`label` model and the upstream `<lr-tab panel>` + `<lr-tab-panel name>` model. The group synchronizes each child\'s reflected `active` SSR hint, emits `{ name, tabId }`, exposes `show(name)`, and retains logical placement and scroll-control aliases. Attribute-model icons and rich tab-label element roots are decorative, inert content while projected, so each real tab button remains the sole action and uses only accessibility-exposed flattened label text for its accessible name.',
       },
     },
   },
@@ -196,7 +196,7 @@ export const ElementModel: StoryObj = {
     docs: {
       description: {
         story:
-          'The `<lr-tab>` + `<lr-tab-panel>` shape mirrors `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically. The group assigns the `slot` attributes itself, exposes its real unnamed slot as `defaultSlot`, and projects each tab\'s content into the real `role="tab"` button — so a tab can carry an icon or badge while its accessible name stays exactly that content\'s text.',
+          'The `<lr-tab>` + `<lr-tab-panel>` shape mirrors `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically. The group assigns the `slot` attributes itself, exposes its real unnamed slot as `defaultSlot`, and projects each tab\'s content into the real `role="tab"` button. Direct default-slot element roots are inert while projected, while only accessibility-exposed flattened text gives the real button its accessible name; use text or glyph markup rather than a second action.',
       },
     },
   },
@@ -208,6 +208,30 @@ export const ElementModel: StoryObj = {
       <lr-tab-panel name="general" active style="padding: 0.75rem 0;">General settings go here.</lr-tab-panel>
       <lr-tab-panel name="advanced" style="padding: 0.75rem 0;">Advanced settings go here.</lr-tab-panel>
       <lr-tab-panel name="danger" style="padding: 0.75rem 0;">Danger zone.</lr-tab-panel>
+    </lr-tab-group>
+  `,
+};
+
+export const RichElementLabel: StoryObj = {
+  name: 'Rich element label (inert projection)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A rich tab label can combine decorative glyphs and a badge without creating another action. Its direct default-slot element roots are inert while projected; the real tab button is named from the accessibility-exposed text, so the aria-hidden mail glyph does not enter its name.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tab-group aria-label="Mailbox panels">
+      <lr-tab panel="inbox" active>
+        <span aria-hidden="true">✉</span>
+        <span>Inbox</span>
+        <span>3 unread</span>
+      </lr-tab>
+      <lr-tab panel="archive">Archive</lr-tab>
+      <lr-tab-panel name="inbox" active>Unread messages.</lr-tab-panel>
+      <lr-tab-panel name="archive">Archived messages.</lr-tab-panel>
     </lr-tab-group>
   `,
 };

@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { nextId } from '../../../internal/a11y.js';
+import { composedParentElement, isAccessibilityVisibilityHidden, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { tag } from '../../../internal/prefix.js';
@@ -35,6 +35,13 @@ interface TabDef {
   element?: LyraTab;
 }
 
+interface ProjectedSourceSnapshot {
+  inert: string | null;
+  appliedInert: string | null;
+  /** True only while the current `inert` attribute was added by this group. */
+  libraryOwnsInert: boolean;
+}
+
 /**
  * `inert` sits alongside `disabled` in every navigability predicate here, matching `<lr-menu>`'s
  * own item predicate: an inert element *refuses* focus, so a roving `tabindex` that steps onto one
@@ -52,6 +59,30 @@ function isHtmlElement(child: Element): child is HTMLElement {
 
 function isInertChild(child: Element): boolean {
   return isHtmlElement(child) && child.inert;
+}
+
+/** Whether a closed native `<details>` hides `branch` rather than its visible `<summary>`. */
+function isClosedDetailsContentBranch(details: Element, branch: Node | null): boolean {
+  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
+  let directBranch = branch;
+  while (directBranch.parentNode && directBranch.parentNode !== details) {
+    directBranch = directBranch.parentNode;
+  }
+  if (directBranch.parentNode !== details) return false;
+  return Array.from(details.children).find((child) => child.localName === 'summary') !== directBranch;
+}
+
+/** The subtree-pruning portion of accessible visibility, excluding `inert` so a group-owned
+ * source fence can be handled without overlooking author-owned hidden/ARIA/CSS state. */
+function isTabLabelSubtreeExcludedWithoutInert(element: Element): boolean {
+  if (
+    element.hasAttribute('hidden') ||
+    element.getAttribute('aria-hidden')?.trim().toLowerCase() === 'true'
+  ) {
+    return true;
+  }
+  const rendered = element.ownerDocument.defaultView?.getComputedStyle(element);
+  return rendered?.display === 'none' || rendered?.contentVisibility === 'hidden';
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
@@ -90,11 +121,11 @@ export interface LyraTabGroupEventMap {
  * text, nothing else): give a tab an extra direct-child sibling of
  * `<lr-tab-group>` carrying `slot="<id>-icon"` (that sibling's own content --
  * an inline SVG, an emoji span, a custom icon element, anything -- is
- * entirely up to the consumer). It's rendered ahead of the label inside
- * that tab's button, wrapped in an `aria-hidden="true"` part so it's
- * excluded from accessible-name computation no matter what it contains. A
- * tab with no matching `<id>-icon` sibling renders no icon wrapper at all,
- * so existing text-only tabs are completely unaffected. (A named slot,
+ * entirely up to the consumer). Its assigned source is inert while projected,
+ * and it renders ahead of the label inside an `aria-hidden="true"` part so it
+ * cannot create a nested action. A tab with no matching
+ * `<id>-icon` sibling renders no icon wrapper at all, so existing text-only
+ * tabs are completely unaffected. (A named slot,
  * rather than a second attribute holding an icon-name lookup, was chosen
  * because this library's `internal/icons.ts` is a small closed set of
  * chrome glyphs for this library's *own* components, not a public
@@ -108,7 +139,11 @@ export interface LyraTabGroupEventMap {
  * and a roving `tabindex` follows the focused tab. An enabled closable `<lr-tab>` adds
  * `aria-keyshortcuts="Delete"` to that same real tab button; Delete routes the close request through
  * the descriptor so `lr-close` still targets `<lr-tab>`. The visual close affordance stays
- * non-focusable and accessibility-hidden, avoiding a nested interactive control.
+ * non-focusable and accessibility-hidden, avoiding a nested interactive control. Rich `<lr-tab>`
+ * content is likewise inert while projected; only its accessibility-exposed, default-slot text
+ * names the real tab button rather than leaving an interactive descendant inside it. Author
+ * `aria-hidden`, hidden, inert, and CSS-hidden branches never leak into that name, and visibility
+ * or text changes refresh it.
  *
  * **`inert` on a source child excludes its tab exactly as `disabled` does** — it never takes
  * selection, never holds the roving `tabindex`, and arrow keys step past it — and the rendered tab
@@ -143,7 +178,7 @@ export interface LyraTabGroupEventMap {
  * @customElement lr-tab-group
  * @slot - Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
  * @slot nav - Upstream-compatible slot used by `<lr-tab>` descriptors.
- * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
+ * @slot <id>-icon - Optional inert sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
  * @event lr-tab-show - `detail: { name, tabId }`, fired when a tab becomes active via click or keyboard.
  * @event lr-tab-hide - `detail: { name, tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
  * @csspart base - Compatibility name for the root wrapper; use `tab-group`.
@@ -161,7 +196,7 @@ export interface LyraTabGroupEventMap {
  * @csspart scroll-button--end - Upstream modifier alias on `scroll-button-end`.
  * @csspart scroll-button-glyph - The chevron wrapper inside a scroll control. This is the element that mirrors under RTL; the icon itself never rotates.
  * @csspart tab - A single tab button.
- * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
+ * @csspart tab-icon - The optional aria-hidden leading-icon wrapper inside a tab button. Its assigned source is inert while projected; the wrapper renders only when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  * @csspart active-tab-indicator - Indicator inside the active tab.
  * @cssprop --indicator-color - Upstream alias for the active indicator color.
@@ -241,6 +276,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private mutationObserver?: MutationObserver;
   private mutationObserverDocument?: Document;
   private mutationObserverGeneration = 0;
+  private readonly projectedSourceSnapshots = new Map<Element, ProjectedSourceSnapshot>();
+  private projectedSourceObserver?: MutationObserver;
+  private projectedSourceObserverDocument?: Document;
+  private projectedSourceObserverGeneration = 0;
   private rehomeTabFocus = false;
 
   constructor() {
@@ -265,9 +304,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // `childList`/`attributeFilter` to the *entire* descendant tree, including
     // each panel's own projected content. A panel can legitimately churn its
     // own children/attributes fast (a streaming log, a live JSON preview), so
-    // every record is filtered down to direct-child mutations only before
-    // triggering a resync, keeping panel-internal churn from forcing a tabs
-    // recompute and re-render on every unrelated mutation.
+    // every record is filtered down to direct-child mutations, except label-affecting text, content,
+    // or visibility changes inside a direct <lr-tab>. Panel-internal churn still never forces a tabs
+    // recompute or re-render.
     this.resetMutationObserver();
     const ownerDocument = this.ownerDocument;
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
@@ -284,7 +323,27 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         return;
       }
       const isDirectChild = (node: Node) => node.parentNode === this;
-      const relevant = records.some((r) => (r.type === 'childList' ? r.target === this : isDirectChild(r.target)));
+      const isElementTabContent = (node: Node): boolean => {
+        let current: Element | null = node.nodeType === 1 ? node as Element : node.parentElement;
+        while (current && current !== this) {
+          if (current.localName === tag('tab') && current.parentNode === this) return true;
+          current = current.parentElement;
+        }
+        return false;
+      };
+      const relevant = records.some((record) => {
+        if (record.type === 'childList') {
+          return record.target === this || isElementTabContent(record.target);
+        }
+        if (record.type === 'characterData') return isElementTabContent(record.target);
+        if (
+          record.attributeName === 'inert' &&
+          this.projectedSourceSnapshots.has(record.target as Element)
+        ) {
+          return false;
+        }
+        return isDirectChild(record.target) || isElementTabContent(record.target);
+      });
       if (relevant) this.syncTabs();
     });
     this.mutationObserver = observer;
@@ -293,17 +352,35 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable', 'panel', 'name'],
+      characterData: true,
+      attributeFilter: [
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'closable',
+        'disabled',
+        'hidden',
+        'inert',
+        'label',
+        'name',
+        'open',
+        'panel',
+        'slot',
+        'style',
+      ],
     });
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this.resetMutationObserver();
+    this.resetProjectedSourceObserver();
+    this.restoreProjectedSources();
+    super.disconnectedCallback();
   }
 
   adoptedCallback(): void {
     this.resetMutationObserver();
+    this.resetProjectedSourceObserver();
   }
 
   private resetMutationObserver(): void {
@@ -326,9 +403,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    */
   private syncTabs = (): void => {
     const children = Array.from(this.children);
+    this.adoptProjectedSourceInertStates();
     const next = children.some((child) => child.localName === tag('tab'))
       ? this.readElementModel(children)
       : this.readAttributeModel(children);
+    this.syncProjectedSources(children, next);
     const liveSlots = new Set(next.map((tab) => tab.slotName));
     for (const slotName of this.idsBySlot.keys()) {
       if (!liveSlots.has(slotName)) this.idsBySlot.delete(slotName);
@@ -384,7 +463,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       if (panel && panel.getAttribute('slot') !== slotName) panel.setAttribute('slot', slotName);
       next.push({
         slotName,
-        label: (child.textContent ?? '').trim(),
+        label: this.readElementLabel(child as LyraTab),
         disabled: child.hasAttribute('disabled'),
         inert: isInertChild(child),
         hasIcon: false,
@@ -394,6 +473,210 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       if (!this.active && child.hasAttribute('active')) this.active = slotName;
     }
     return next;
+  }
+
+  /** Rich tab descriptors are visual-only projections. Their direct default-slot elements are
+   * made inert by this group, but the outer real tab still needs the author-visible, accessible
+   * label text. Read that text through the same flattened slot shape while preserving every
+   * author-owned accessibility exclusion. */
+  private readElementLabel(tab: LyraTab): string {
+    return Array.from(tab.childNodes)
+      .filter((node) =>
+        node.nodeType !== Node.ELEMENT_NODE || (node as Element).getAttribute('slot') === null ||
+        (node as Element).getAttribute('slot') === '',
+      )
+      .map((node) => this.accessibleTabLabelText(node))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private tabLabelComposedParent(node: Node): Element | null {
+    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
+    if (assignedSlot) return assignedSlot;
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode() as Document | ShadowRoot;
+    return 'host' in root && root.host.nodeType === Node.ELEMENT_NODE ? root.host : null;
+  }
+
+  private libraryOwnsSourceInert(element: Element): boolean {
+    return this.projectedSourceSnapshots.get(element)?.libraryOwnsInert === true;
+  }
+
+  private isTabLabelSubtreeExcluded(element: Element): boolean {
+    return (
+      isTabLabelSubtreeExcludedWithoutInert(element) ||
+      (element.hasAttribute('inert') && !this.libraryOwnsSourceInert(element))
+    );
+  }
+
+  /** Mirrors the accessibility visibility walk, except that it treats only this group's own
+   * source-level inert fence as presentation. Author-provided inertness remains an exclusion. */
+  private isTabLabelVisible(element: Element, initialComposedChild: Node | null = null): boolean {
+    if (!element.isConnected) return false;
+    let current: Element | null = element;
+    let composedChild: Node | null = initialComposedChild;
+    while (current) {
+      if (this.isTabLabelSubtreeExcluded(current)) return false;
+      if (isClosedDetailsContentBranch(current, composedChild)) return false;
+      if (current === element && isAccessibilityVisibilityHidden(current)) return false;
+      if (current.localName === tag('tab') && current.parentNode === this) break;
+      composedChild = current;
+      current = composedParentElement(current);
+    }
+
+    const targetDisplay = element.ownerDocument.defaultView?.getComputedStyle(element).display;
+    // `display: contents` has no own box, so `checkVisibility()` answers false even while its
+    // semantic children are exposed. Every other target must opt into the skipped
+    // `content-visibility:auto` check the shared accessibility helper uses.
+    if (targetDisplay === 'contents') return true;
+    const visibilityTarget = element as Element & {
+      checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
+    };
+    return typeof visibilityTarget.checkVisibility === 'function'
+      ? visibilityTarget.checkVisibility({ contentVisibilityAuto: true })
+      : true;
+  }
+
+  private accessibleTabLabelText(node: Node, inheritedTextVisible?: boolean): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const parent = this.tabLabelComposedParent(node);
+      const textVisible =
+        inheritedTextVisible !== false && parent !== null && this.isTabLabelVisible(parent, node);
+      return textVisible ? node.textContent ?? '' : '';
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+    const element = node as Element;
+    if (this.isTabLabelSubtreeExcluded(element)) return '';
+    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+    if (ownTextVisible && !this.isTabLabelVisible(element)) return '';
+    const accessibleLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
+    if (accessibleLabel) return accessibleLabel;
+    const children =
+      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+        : Array.from(element.childNodes);
+    return Array.from(children)
+      .map((child) => this.accessibleTabLabelText(child, ownTextVisible))
+      .join(' ');
+  }
+
+  private snapshotProjectedSource(source: Element): ProjectedSourceSnapshot {
+    const inert = source.getAttribute('inert');
+    return { inert, appliedInert: inert, libraryOwnsInert: false };
+  }
+
+  private adoptProjectedSourceInert(
+    source: Element,
+    snapshot: ProjectedSourceSnapshot,
+  ): void {
+    const current = source.getAttribute('inert');
+    if (current !== snapshot.appliedInert) {
+      snapshot.inert = current;
+      snapshot.libraryOwnsInert = false;
+    }
+  }
+
+  private makeProjectedSourceInert(source: Element, snapshot: ProjectedSourceSnapshot): void {
+    if (!source.hasAttribute('inert')) {
+      source.setAttribute('inert', '');
+      snapshot.libraryOwnsInert = true;
+    }
+    snapshot.appliedInert = source.getAttribute('inert');
+  }
+
+  private restoreProjectedSource(source: Element, snapshot: ProjectedSourceSnapshot): void {
+    this.adoptProjectedSourceInert(source, snapshot);
+    if (snapshot.inert === null) source.removeAttribute('inert');
+    else source.setAttribute('inert', snapshot.inert);
+  }
+
+  private restoreProjectedSources(): void {
+    for (const [source, snapshot] of this.projectedSourceSnapshots) {
+      this.restoreProjectedSource(source, snapshot);
+    }
+    this.projectedSourceSnapshots.clear();
+  }
+
+  private resetProjectedSourceObserver(): void {
+    this.projectedSourceObserverGeneration += 1;
+    this.projectedSourceObserver?.disconnect();
+    this.projectedSourceObserver = undefined;
+    this.projectedSourceObserverDocument = undefined;
+  }
+
+  private observeProjectedSources(): void {
+    this.resetProjectedSourceObserver();
+    const ownerDocument = this.ownerDocument;
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor || !this.isConnected || this.projectedSourceSnapshots.size === 0) {
+      return;
+    }
+    const generation = this.projectedSourceObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.projectedSourceObserver !== observer ||
+        this.projectedSourceObserverDocument !== ownerDocument ||
+        this.projectedSourceObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      if (records.some((record) => this.projectedSourceSnapshots.has(record.target as Element))) {
+        this.syncTabs();
+      }
+    });
+    this.projectedSourceObserver = observer;
+    this.projectedSourceObserverDocument = ownerDocument;
+    for (const source of this.projectedSourceSnapshots.keys()) {
+      observer.observe(source, { attributes: true, attributeFilter: ['inert'] });
+    }
+  }
+
+  private projectedSources(children: Element[], tabs: readonly TabDef[]): Set<Element> {
+    const sources = new Set<Element>();
+    const iconSlots = new Set(
+      tabs
+        .filter((tab) => tab.source === 'attribute')
+        .map((tab) => this.iconSlotName(tab.slotName)),
+    );
+    for (const child of children) {
+      if (iconSlots.has(child.getAttribute('slot') ?? '')) sources.add(child);
+    }
+    for (const tab of tabs) {
+      if (tab.source !== 'element' || !tab.element) continue;
+      for (const child of Array.from(tab.element.children)) {
+        if ((child.getAttribute('slot') ?? '') === '') sources.add(child);
+      }
+    }
+    return sources;
+  }
+
+  private syncProjectedSources(children: Element[], tabs: readonly TabDef[]): void {
+    const sources = this.projectedSources(children, tabs);
+    for (const [source, snapshot] of this.projectedSourceSnapshots) {
+      this.adoptProjectedSourceInert(source, snapshot);
+      if (!sources.has(source)) {
+        this.restoreProjectedSource(source, snapshot);
+        this.projectedSourceSnapshots.delete(source);
+      }
+    }
+    for (const source of sources) {
+      const snapshot =
+        this.projectedSourceSnapshots.get(source) ?? this.snapshotProjectedSource(source);
+      this.projectedSourceSnapshots.set(source, snapshot);
+      this.adoptProjectedSourceInert(source, snapshot);
+      this.makeProjectedSourceInert(source, snapshot);
+    }
+    this.observeProjectedSources();
+  }
+
+  private adoptProjectedSourceInertStates(): void {
+    for (const [source, snapshot] of this.projectedSourceSnapshots) {
+      this.adoptProjectedSourceInert(source, snapshot);
+    }
   }
 
   /** Whether a tab can hold selection, the roving `tabindex`, and arrow-key focus. `inert` counts
@@ -637,6 +920,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       ?inert=${tab.inert}
       aria-selected=${selected ? 'true' : 'false'}
       aria-disabled=${tab.disabled ? 'true' : 'false'}
+      aria-label=${tab.source === 'element' && tab.label ? tab.label : nothing}
       aria-controls=${this.panelId(tab.slotName)}
       aria-keyshortcuts=${closable ? 'Delete' : nothing}
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}

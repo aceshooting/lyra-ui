@@ -402,6 +402,51 @@ it('a direct-child sibling with slot="<id>-icon" renders as that tab\'s leading 
   await expect(el).to.be.accessible();
 });
 
+it("keeps attribute-model icon sources inert while they are projected into a tab button", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-tab-group aria-label="Editor tabs">
+        <button id="icon-source" slot="input-icon" type="button">Input action</button>
+        <button id="authored-icon" slot="input-icon" type="button" inert>Author inert icon</button>
+        <div slot="input" label="Input">Raw input</div>
+        <div slot="preview" label="Preview">Rendered preview</div>
+      </lr-tab-group>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTabGroup>("lr-tab-group")!;
+  const outside = wrapper.querySelector<HTMLButtonElement>("#outside")!;
+  const icon = wrapper.querySelector<HTMLButtonElement>("#icon-source")!;
+  const authoredIcon = wrapper.querySelector<HTMLButtonElement>("#authored-icon")!;
+  await el.updateComplete;
+
+  expect(icon.inert).to.equal(true);
+  expect(authoredIcon.inert).to.equal(true);
+  outside.focus();
+  icon.focus();
+  expect(wrapper.ownerDocument.activeElement?.id).to.equal("outside");
+  await expect(el).to.be.accessible();
+
+  icon.inert = false;
+  await aTimeout(0);
+  expect(icon.inert).to.equal(true);
+
+  icon.slot = "released";
+  authoredIcon.slot = "released";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(icon.hasAttribute("inert")).to.equal(false);
+  expect(authoredIcon.inert).to.equal(true);
+
+  icon.slot = "input-icon";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(icon.inert).to.equal(true);
+  el.remove();
+  expect(icon.hasAttribute("inert")).to.equal(false);
+  expect(authoredIcon.inert).to.equal(true);
+});
+
 it("picks up a tab added dynamically after connect", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const extra = document.createElement("div");
@@ -453,11 +498,17 @@ it("a mutation on a nested descendant (not a direct child) never forces a tabs r
     originalUpdated(changed);
   };
 
-  // Matches attributeFilter (`disabled`) but the button is a grandchild, not
-  // a direct child -- a panel is free to churn its own content without the
-  // tabs strip resyncing/re-rendering on every unrelated mutation.
-  el.querySelector("button")!.removeAttribute("disabled");
+  // Both mutations are in the observer's broad native coverage, but the
+  // button is a panel grandchild, not a direct <lr-tab> child. A panel is
+  // free to churn its own content without the tabs strip resyncing/re-
+  // rendering on every unrelated mutation.
+  const nested = el.querySelector("button")!;
+  nested.removeAttribute("disabled");
 
+  await aTimeout(50);
+  expect(updateCount).to.equal(0);
+
+  nested.firstChild!.textContent = "changed";
   await aTimeout(50);
   expect(updateCount).to.equal(0);
 });
@@ -902,6 +953,155 @@ it("projects each <lr-tab>'s content into its own button, so the accessible name
   expect(assigned).to.have.lengthOf(1);
   expect(assigned[0]!.localName).to.equal("lr-tab");
   expect(assigned[0]!.textContent!.trim()).to.equal("General");
+});
+
+it("keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general">
+          <span id="tab-content"><a id="tab-link" href="#details">Rich <strong>tab</strong></a></span>
+          <span>Workspace</span>
+        </lr-tab>
+        <lr-tab panel="advanced">Advanced</lr-tab>
+        <lr-tab-panel name="general">General body</lr-tab-panel>
+        <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
+      </lr-tab-group>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTabGroup>("lr-tab-group")!;
+  const outside = wrapper.querySelector<HTMLButtonElement>("#outside")!;
+  const content = wrapper.querySelector<HTMLElement>("#tab-content")!;
+  const link = wrapper.querySelector<HTMLAnchorElement>("#tab-link")!;
+  await el.updateComplete;
+
+  expect(content.inert).to.equal(true);
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Rich tab Workspace");
+  outside.focus();
+  link.focus();
+  expect(wrapper.ownerDocument.activeElement?.id).to.equal("outside");
+  await expect(el).to.be.accessible();
+
+  link.firstChild!.textContent = "Updated ";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Updated tab Workspace");
+
+  content.inert = false;
+  await aTimeout(0);
+  expect(content.inert).to.equal(true);
+
+  content.slot = "released";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(content.hasAttribute("inert")).to.equal(false);
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Workspace");
+
+  content.removeAttribute("slot");
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(content.inert).to.equal(true);
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Updated tab Workspace");
+
+  el.querySelector("lr-tab")!.remove();
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(content.hasAttribute("inert")).to.equal(false);
+});
+
+it("derives a rich tab name from accessible default-slot content and observes visibility changes", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Workspace tabs">
+      <lr-tab panel="general">
+        <span id="visible-label">Visible <strong id="visible-suffix" aria-hidden="true">tab</strong></span>
+        <span aria-hidden="true">Ignored aria-hidden</span>
+        <span id="hidden-label" hidden>Ignored hidden</span>
+        <span id="styled-hidden-label" style="display: none">Ignored CSS hidden</span>
+        <span inert>Ignored author inert</span>
+        <span id="alternate-label" aria-hidden="true">Alternate label</span>
+      </lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  const alternate = el.querySelector<HTMLElement>("#alternate-label")!;
+  const visible = el.querySelector<HTMLElement>("#visible-label")!;
+  const visibleSuffix = el.querySelector<HTMLElement>("#visible-suffix")!;
+  const hidden = el.querySelector<HTMLElement>("#hidden-label")!;
+  const styledHidden = el.querySelector<HTMLElement>("#styled-hidden-label")!;
+  await el.updateComplete;
+
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Visible");
+  await expect(el).to.be.accessible();
+
+  alternate.removeAttribute("aria-hidden");
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Visible Alternate label");
+
+  visibleSuffix.removeAttribute("aria-hidden");
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Visible tab Alternate label");
+
+  visible.hidden = true;
+  hidden.hidden = false;
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Ignored hidden Alternate label");
+
+  styledHidden.style.display = "";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
+    "Ignored hidden Ignored CSS hidden Alternate label",
+  );
+});
+
+it("omits a rich label branch skipped by content-visibility:auto", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Workspace tabs">
+      <lr-tab panel="general">
+        <span>Visible label</span>
+        <div
+          style="content-visibility: auto; contain-intrinsic-size: 100px; position: absolute; inset-block-start: 10000px"
+        ><span>Deferred label</span></div>
+      </lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  const tab = el.querySelector<HTMLElement>("lr-tab")!;
+  const ownerWindow = el.ownerDocument.defaultView!;
+  await el.updateComplete;
+  await new Promise<void>((resolve) =>
+    ownerWindow.requestAnimationFrame(() => ownerWindow.requestAnimationFrame(() => resolve())),
+  );
+
+  tab.classList.add("refresh-accessible-label");
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Visible label");
+  await expect(el).to.be.accessible();
+});
+
+it("omits closed <details> text from a rich tab name and restores it when opened", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Workspace tabs">
+      <lr-tab panel="general"><details id="tab-details"><summary>Summary</summary>Hidden details</details></lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  const details = el.querySelector<HTMLDetailsElement>("#tab-details")!;
+  await el.updateComplete;
+
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Summary");
+  await expect(el).to.be.accessible();
+
+  details.open = true;
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Summary Hidden details");
 });
 
 it("assigns each <lr-tab-panel> the slot that lands it in the matching tabpanel", async () => {

@@ -19,7 +19,9 @@ export interface LyraTabEventMap {
  * A declarative descriptor, not the interactive control: `<lr-tab-group>` renders the real
  * `role="tab"` button and projects this element's content into it, so the whole ARIA and
  * roving-tabindex contract stays in one place. That means the content may be rich (an icon plus a
- * label, a badge) while the button's accessible name is still exactly that content's text.
+ * label, a badge), but its direct element roots are inert while projected so the button remains the
+ * sole action. The group's real button gets only the default slot's accessibility-exposed flattened
+ * text as its accessible name; author-hidden, inert, or CSS-hidden branches do not contribute.
  *
  * Pair it with a `<lr-tab-panel>` whose `name` matches this element's `panel`.
  * `closable` adds a localized visual close affordance. It shares the owning tab's single APG focus
@@ -29,7 +31,8 @@ export interface LyraTabEventMap {
  * application decides whether and when to remove the matching tab and panel.
  *
  * @customElement lr-tab
- * @slot - The tab's visible content.
+ * @slot - The tab's visual label content. Its direct default-slot element roots are inert while the
+ *   owning group projects them; their accessibility-exposed flattened text names the real tab button.
  * @event lr-close - Emitted when the close affordance is clicked or Delete is pressed on its
  *   focused owning tab. Bubbles, is composed, and is not cancelable; the component does not remove
  *   itself.
