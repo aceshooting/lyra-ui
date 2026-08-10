@@ -498,7 +498,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
               data-id=${step.id}
               data-index=${index}
               data-state=${step.state}
-              aria-current=${step.state === "current" ? "step" : "false"}
+              aria-current=${index === currentIndex ? "step" : "false"}
               aria-disabled=${step.state === "disabled" ? "true" : "false"}
               tabindex=${index === rovingIndex ? "0" : "-1"}
               title=${step.title ?? nothing}

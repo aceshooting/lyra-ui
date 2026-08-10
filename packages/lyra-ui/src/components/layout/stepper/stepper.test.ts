@@ -158,6 +158,48 @@ describe("lr-stepper", () => {
     ]);
   });
 
+  it("uses the first duplicate current step as the single ARIA current and promotes the next when it is removed", async () => {
+    const firstCurrent = {
+      id: "account",
+      label: "Account",
+      state: "current" as const,
+    };
+    const secondCurrent = {
+      id: "details",
+      label: "Details",
+      state: "current" as const,
+    };
+    const pending = {
+      id: "review",
+      label: "Review",
+      state: "pending" as const,
+    };
+    const el = (await fixture(
+      html`<lr-stepper
+        .steps=${[firstCurrent, secondCurrent, pending]}
+      ></lr-stepper>`
+    )) as LyraStepper;
+
+    let buttons = stepButtons(el);
+    expect(
+      buttons.map((button) => button.getAttribute("aria-current"))
+    ).to.deep.equal(["step", "false", "false"]);
+    expect(
+      buttons.map((button) => button.getAttribute("tabindex"))
+    ).to.deep.equal(["0", "-1", "-1"]);
+
+    el.steps = [secondCurrent, pending];
+    await el.updateComplete;
+
+    buttons = stepButtons(el);
+    expect(
+      buttons.map((button) => button.getAttribute("aria-current"))
+    ).to.deep.equal(["step", "false"]);
+    expect(
+      buttons.map((button) => button.getAttribute("tabindex"))
+    ).to.deep.equal(["0", "-1"]);
+  });
+
   it("falls back roving tabindex to the first non-disabled step when no step is current (all-completed)", async () => {
     const el = (await fixture(
       html`<lr-stepper
