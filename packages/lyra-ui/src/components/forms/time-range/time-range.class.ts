@@ -6,6 +6,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
   decimalPlaces,
+  finiteAdd,
   finiteInterpolate,
   finiteNumber,
   finiteRange,
@@ -698,6 +699,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       handle === 'start'
         ? finiteRange(this.start, this.domain().lo)
         : finiteRange(this.end, this.domain().hi);
+    const step = finiteRange(this.step, 0, 0);
+    const move = (direction: -1 | 1, multiplier = 1): void => {
+      const delta = finiteRange(step * multiplier, Number.MAX_VALUE, 0, Number.MAX_VALUE);
+      if (delta === 0) return;
+      this.keyboardChanged =
+        this.setValue(handle, finiteAdd(current, direction * delta, current), false) ||
+        this.keyboardChanged;
+    };
     // Mirror the same left/right swap as onPointerMove: under RTL, physical
     // ArrowRight moves toward inset-inline-start, i.e. a lower value.
     const rtl = isRtl(this);
@@ -705,20 +714,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     if (e.key === forwardKey || e.key === 'ArrowUp') {
       e.preventDefault();
-      this.keyboardChanged = this.setValue(handle, current + this.step, false) || this.keyboardChanged;
+      move(1);
     } else if (e.key === backwardKey || e.key === 'ArrowDown') {
       e.preventDefault();
-      this.keyboardChanged = this.setValue(handle, current - this.step, false) || this.keyboardChanged;
+      move(-1);
     } else if (e.key === 'PageUp') {
       e.preventDefault();
-      this.keyboardChanged =
-        this.setValue(handle, current + this.step * PAGE_STEP_MULTIPLIER, false) ||
-        this.keyboardChanged;
+      move(1, PAGE_STEP_MULTIPLIER);
     } else if (e.key === 'PageDown') {
       e.preventDefault();
-      this.keyboardChanged =
-        this.setValue(handle, current - this.step * PAGE_STEP_MULTIPLIER, false) ||
-        this.keyboardChanged;
+      move(-1, PAGE_STEP_MULTIPLIER);
     } else if (e.key === 'Home') {
       e.preventDefault();
       this.keyboardChanged =

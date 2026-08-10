@@ -1064,6 +1064,57 @@ it('does not poison start/end with NaN when step is 0', async () => {
   expect(el.start).to.equal(20);
 });
 
+it('ignores nonpositive and nonfinite keyboard steps without moving or emitting events', async () => {
+  for (const step of [0, -5, Number.NaN, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY]) {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    el.step = step;
+    await el.updateComplete;
+    const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    const events: string[] = [];
+    for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+      el.addEventListener(type, () => events.push(type));
+    }
+
+    startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    startHandle.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.start, `step=${String(step)}`).to.equal(20);
+    expect(events, `step=${String(step)}`).to.deep.equal([]);
+  }
+});
+
+it('saturates finite Arrow and Page keyboard increments at either domain bound', async () => {
+  for (const { key, min, start, expected } of [
+    { key: 'ArrowRight', min: 0, start: Number.MAX_VALUE / 2, expected: Number.MAX_VALUE },
+    { key: 'PageUp', min: 0, start: Number.MAX_VALUE / 2, expected: Number.MAX_VALUE },
+    { key: 'ArrowLeft', min: -Number.MAX_VALUE, start: -Number.MAX_VALUE / 2, expected: -Number.MAX_VALUE },
+    { key: 'PageDown', min: -Number.MAX_VALUE, start: -Number.MAX_VALUE / 2, expected: -Number.MAX_VALUE },
+  ] as const) {
+    const el = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
+    el.min = min;
+    el.max = Number.MAX_VALUE;
+    el.start = start;
+    el.end = Number.MAX_VALUE;
+    el.step = Number.MAX_VALUE;
+    await el.updateComplete;
+    const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    const events: string[] = [];
+    for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+      el.addEventListener(type, () => events.push(type));
+    }
+
+    startHandle.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    await el.updateComplete;
+    expect(el.start, key).to.equal(expected);
+    startHandle.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
+
+    expect(events, key).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  }
+});
+
 it('rounds a non-integer step to its own decimal precision instead of accumulating float drift', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80" step="0.1"></lr-time-range>`,
