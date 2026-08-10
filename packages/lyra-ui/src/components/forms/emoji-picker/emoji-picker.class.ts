@@ -548,6 +548,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
 
   private onSearchInput = (event: Event): void => {
+    event.stopPropagation();
     this.pendingGridFocus = undefined;
     this.queryText = (event.target as HTMLInputElement).value;
     this.activeIndex = 0;

@@ -414,6 +414,35 @@ describe('keyboard navigation', () => {
     expect(lyraEvent.detail).to.deep.equal({ emoji: '😀' });
   });
 
+  it('contains composed search input while emitting one value-event pair for a pick', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('input', () => inputs++);
+    el.addEventListener('change', () => changes++);
+    const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+
+    search.value = 'dog';
+    search.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+    }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="emoji"]').length).to.equal(1);
+    expect(el.value).to.equal('');
+    expect(inputs).to.equal(0);
+    expect(changes).to.equal(0);
+
+    (el.shadowRoot!.querySelector('[part="emoji"]') as HTMLButtonElement).click();
+
+    expect(el.value).to.equal('🐶');
+    expect(inputs).to.equal(1);
+    expect(changes).to.equal(1);
+  });
+
   it('navigates the grid from the search input via the combobox contract', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
