@@ -21,6 +21,7 @@ import {
 } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -44,41 +45,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
- *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
- *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
- *  otherwise throw before any test assertion runs, merely from constructing or importing this
- *  component. Every member here is either an inert value or a no-op: native `<form>`
- *  participation is unavailable in that environment, but that's an acceptable degradation rather
- *  than a hard failure -- same fix as `<lr-model-select>`'s/`<lr-tool-param-form>`'s identical
- *  `createInternalsSafely`/`createNoopInternals` pair. */
-function createInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createNoopInternals();
-  try {
-    return host.attachInternals();
-  } catch {
-    return createNoopInternals();
-  }
-}
-
-function createNoopInternals(): ElementInternals {
-  return {
-    form: null,
-    labels: [] as unknown as NodeList,
-    validity: {} as ValidityState,
-    validationMessage: '',
-    willValidate: false,
-    setFormValue(): void {},
-    setValidity(): void {},
-    checkValidity(): boolean {
-      return true;
-    },
-    reportValidity(): boolean {
-      return true;
-    },
-  } as unknown as ElementInternals;
-}
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
@@ -533,7 +499,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   constructor() {
     super();
-    this.internals = createInternalsSafely(this);
+    this.internals = attachLegacyNoopInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>

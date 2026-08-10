@@ -10,6 +10,7 @@ import {
   stringFormValueAdapter,
   type FormValueAdapter,
 } from './form-associated.js';
+import { attachLegacyNoopInternalsSafely } from './legacy-noop-internals.js';
 import { SET_ANCHORED_VALIDITY } from './anchored-validity.js';
 import { tag } from './prefix.js';
 import { LyraTextarea } from '../components/forms/textarea/textarea.js';
@@ -1076,6 +1077,33 @@ describe('fallback ElementInternals when attachInternals() is unavailable', () =
       expect(el.internals.states.has('invalid')).to.be.false;
     } finally {
       proto.attachInternals = original;
+    }
+  });
+});
+
+describe('legacy no-op ElementInternals fallback', () => {
+  it('preserves the old no-op internals shape when attachInternals is missing or throws', () => {
+    const hosts = [
+      {} as HTMLElement,
+      {
+        attachInternals(): ElementInternals {
+          throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+        },
+      } as HTMLElement,
+    ];
+
+    for (const host of hosts) {
+      const internals = attachLegacyNoopInternalsSafely(host);
+      expect(internals.form).to.equal(null);
+      expect(internals.labels.length).to.equal(0);
+      expect(internals.validationMessage).to.equal('');
+      expect(internals.willValidate).to.be.false;
+      expect(internals.validity.valid).to.equal(undefined);
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+      expect((internals as unknown as { states?: CustomStateSet }).states).to.equal(undefined);
+      expect(() => internals.setFormValue('value')).to.not.throw();
+      expect(() => internals.setValidity({ valueMissing: true }, 'Required')).to.not.throw();
     }
   });
 });

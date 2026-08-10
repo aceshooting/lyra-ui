@@ -14,6 +14,7 @@ import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
+import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -82,41 +83,6 @@ function cloneFormValue(
     // separately). Preserve its own-property shape without invoking accessors during connection.
   }
   return Object.defineProperties({}, Object.getOwnPropertyDescriptors(value));
-}
-
-/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
- *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
- *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
- *  otherwise throw before any test assertion runs, merely from constructing or importing this
- *  component. Every member here is either an inert value or a no-op: native `<form>`
- *  participation is unavailable in that environment, but that's a documented nice-to-have layered
- *  on top of the primary `value`/`lr-input` integration contract (see the class doc), so losing it
- *  is an acceptable degradation rather than a hard failure. */
-function createInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createNoopInternals();
-  try {
-    return host.attachInternals();
-  } catch {
-    return createNoopInternals();
-  }
-}
-
-function createNoopInternals(): ElementInternals {
-  return {
-    form: null,
-    labels: [] as unknown as NodeList,
-    validity: {} as ValidityState,
-    validationMessage: '',
-    willValidate: false,
-    setFormValue(): void {},
-    setValidity(): void {},
-    checkValidity(): boolean {
-      return true;
-    },
-    reportValidity(): boolean {
-      return true;
-    },
-  } as unknown as ElementInternals;
 }
 
 export interface LyraToolParamFormEventMap {
@@ -320,7 +286,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   constructor() {
     super();
-    this.internals = createInternalsSafely(this);
+    this.internals = attachLegacyNoopInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, () => this.emit('lr-invalid'));

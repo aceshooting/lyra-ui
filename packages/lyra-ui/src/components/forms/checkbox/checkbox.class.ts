@@ -11,6 +11,7 @@ import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
+import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -23,41 +24,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_checkboxRequired, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
- *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
- *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
- *  otherwise throw before any test assertion runs, merely from constructing or importing this
- *  component. Every member here is either an inert value or a no-op: native `<form>`
- *  participation is unavailable in that environment, but that's an acceptable degradation rather
- *  than a hard failure -- same fix as `<lr-tool-param-form>`'s/`<lr-model-select>`'s identical
- *  `createInternalsSafely`/`createNoopInternals` pair. */
-function createInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createNoopInternals();
-  try {
-    return host.attachInternals();
-  } catch {
-    return createNoopInternals();
-  }
-}
-
-function createNoopInternals(): ElementInternals {
-  return {
-    form: null,
-    labels: [] as unknown as NodeList,
-    validity: {} as ValidityState,
-    validationMessage: '',
-    willValidate: false,
-    setFormValue(): void {},
-    setValidity(): void {},
-    checkValidity(): boolean {
-      return true;
-    },
-    reportValidity(): boolean {
-      return true;
-    },
-  } as unknown as ElementInternals;
-}
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without importing
@@ -433,7 +399,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', undefined, init));
-    this.internals = createInternalsSafely(this);
+    this.internals = attachLegacyNoopInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.syncFormState();

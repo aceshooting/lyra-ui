@@ -18,6 +18,7 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -39,39 +40,6 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired
  *  matching this exact converter's repeated per-component convention elsewhere in this library.
  *  `showFlags` (the only property using this converter) doesn't set `reflect: true`, so there's
  *  no `toAttribute` half -- Lit only calls it when reflecting. */
-
-/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
- *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
- *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
- *  otherwise throw before any test assertion runs, merely from constructing or importing this
- *  component. Same fix as `<lr-select>`'s/`<lr-model-select>`'s identical
- *  `createInternalsSafely`/`createNoopInternals` pair. */
-function createInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createNoopInternals();
-  try {
-    return host.attachInternals();
-  } catch {
-    return createNoopInternals();
-  }
-}
-
-function createNoopInternals(): ElementInternals {
-  return {
-    form: null,
-    labels: [] as unknown as NodeList,
-    validity: {} as ValidityState,
-    validationMessage: '',
-    willValidate: false,
-    setFormValue(): void {},
-    setValidity(): void {},
-    checkValidity(): boolean {
-      return true;
-    },
-    reportValidity(): boolean {
-      return true;
-    },
-  } as unknown as ElementInternals;
-}
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
  *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
@@ -315,7 +283,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   constructor() {
     super();
-    this.internals = createInternalsSafely(this);
+    this.internals = attachLegacyNoopInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
