@@ -659,6 +659,26 @@ describe('accessibility', () => {
     expect(base.getAttribute('aria-label')).to.equal('Annotated chart');
   });
 
+  it('preserves a present empty host aria-label on the region and restores the name fallback on removal', async () => {
+    const el = (await fixture(html`<lr-image-viewer aria-label="" name="Fallback image"></lr-image-viewer>`)) as LyraImageViewer;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.setAttribute('aria-label', 'Updated image');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Updated image');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Fallback image');
+  });
+
   it('gives tiny percentage highlights a hit-area floor independent of their data geometry', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${[
       { id: 'tiny', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 0.1, height: 0.1 } } },
