@@ -683,14 +683,18 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     else if (event.key === 'End') { event.preventDefault(); this.moveRovingFocus(this.value.length - 1); }
   }
 
-  private onEditInput = (event: Event): void => { this.editDraft = (event.target as HTMLInputElement).value; };
+  private onEditInput = (event: Event): void => {
+    event.stopPropagation();
+    this.editDraft = (event.target as HTMLInputElement).value;
+  };
   private onEditKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter') { event.preventDefault(); this.commitEdit(true); }
     // Escape is consumed rather than left to bubble: an enclosing dialog/popover would otherwise
     // close on the same keystroke that only meant "abandon this token edit".
     else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.cancelEdit(); }
   };
-  private onEditBlur = (): void => {
+  private onEditBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
     // Native fieldset disablement can move focus just before the FACE callback reaches the host.
     // Deferring one microtask lets every lifecycle signal settle before deciding whether this was
     // a real user blur or teardown.
@@ -708,7 +712,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     });
   };
 
-  private onInput = (event: Event): void => { this.draft = (event.target as HTMLInputElement).value; };
+  private onInput = (event: Event): void => {
+    event.stopPropagation();
+    this.draft = (event.target as HTMLInputElement).value;
+  };
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
     if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) {
@@ -727,12 +734,17 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // behavior (nothing to do with custom elements) -- that is not a real user interaction, so it
   // must not commit a pending draft or flip `touched`, which could otherwise reenter an in-flight
   // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
     if (!this.effectiveDisabled) { if (this.draft.trim()) this.addDraft(); this.touched = true; }
     this.syncValidity();
     this.emit('blur');
   };
-  private onFocus = (): void => { this.emit('focus'); };
+  private onFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+  private stopInternalChange(event: Event): void { event.stopPropagation(); }
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
@@ -788,7 +800,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   private renderEditableToken(token: string, index: number): TemplateResult {
     if (this.editingIndex === index) {
-      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @keydown=${this.onEditKeyDown} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
+      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
     }
     return html`<span part="token"><span part="token-label" role="button" tabindex=${this.effectiveDisabled ? nothing : index === this.activeTokenIndex ? 0 : -1} aria-disabled=${String(this.effectiveDisabled)} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
   }
@@ -801,7 +813,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
       <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing}>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

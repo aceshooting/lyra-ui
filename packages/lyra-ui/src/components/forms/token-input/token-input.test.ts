@@ -38,6 +38,72 @@ it('adds and removes tokens with the keyboard', async () => {
   expect(el.value).to.deep.equal([]);
 });
 
+it('contains composed draft events while preserving its single public event sequence', async () => {
+  const parent = (await fixture(html`<div><lr-token-input></lr-token-input></div>`)) as HTMLDivElement;
+  const el = parent.querySelector('lr-token-input') as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  let inputs = 0;
+  let changes = 0;
+  let focuses = 0;
+  let blurs = 0;
+  const inputDetails: unknown[] = [];
+  parent.addEventListener('input', (event) => {
+    inputs += 1;
+    inputDetails.push((event as CustomEvent<{ value: string[] }>).detail);
+  });
+  parent.addEventListener('change', () => changes += 1);
+  parent.addEventListener('focus', () => focuses += 1);
+  parent.addEventListener('blur', () => blurs += 1);
+
+  input.value = 'alpha';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  input.dispatchEvent(new FocusEvent('focus', { bubbles: true, composed: true }));
+  press(input, 'Enter');
+  await el.updateComplete;
+  input.dispatchEvent(new FocusEvent('blur', { bubbles: true, composed: true }));
+
+  expect(el.value).to.deep.equal(['alpha']);
+  expect(inputs).to.equal(1);
+  expect(inputDetails).to.deep.equal([{ value: ['alpha'] }]);
+  expect(changes).to.equal(1);
+  expect(focuses).to.equal(1);
+  expect(blurs).to.equal(1);
+});
+
+it('contains composed inline-editor events while retaining the edit commit sequence', async () => {
+  const parent = (await fixture(html`
+    <div><lr-token-input editable .value=${['alpha']}></lr-token-input></div>
+  `)) as HTMLDivElement;
+  const el = parent.querySelector('lr-token-input') as LyraTokenInput;
+  tokenLabels(el)[0]!.click();
+  await el.updateComplete;
+  const field = editor(el)!;
+  let inputs = 0;
+  let changes = 0;
+  let blurs = 0;
+  const inputDetails: unknown[] = [];
+  parent.addEventListener('input', (event) => {
+    inputs += 1;
+    inputDetails.push((event as CustomEvent<{ value: string[] }>).detail);
+  });
+  parent.addEventListener('change', () => changes += 1);
+  parent.addEventListener('blur', () => blurs += 1);
+
+  field.value = 'beta';
+  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  field.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  field.dispatchEvent(new FocusEvent('blur', { bubbles: true, composed: true }));
+  await Promise.resolve();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['beta']);
+  expect(inputs).to.equal(1);
+  expect(inputDetails).to.deep.equal([{ value: ['beta'] }]);
+  expect(changes).to.equal(1);
+  expect(blurs).to.equal(0);
+});
+
 it('skips a draft token that duplicates an existing one unless allowDuplicates is set', async () => {
   const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
