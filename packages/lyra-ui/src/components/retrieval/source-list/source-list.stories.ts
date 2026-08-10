@@ -82,6 +82,18 @@ export const Interactive: Story = {
   `,
 };
 
+export const SlottedControlsAndSemantics: Story = {
+  render: () => html`
+    <lr-source-list label-plural="1 source" expanded style="max-width: 32rem;">
+      <lr-source-card source-id="doc-1" title="annual_report.pdf">
+        <span slot="excerpt">A source card alongside author-owned controls and status.</span>
+      </lr-source-card>
+      <a href="https://example.com/">Open the source index</a>
+      <div role="status">Citation processing complete.</div>
+    </lr-source-list>
+  `,
+};
+
 export const NarrowAllStates: Story = {
   name: 'Narrow long content + states (320px)',
   render: () => html`

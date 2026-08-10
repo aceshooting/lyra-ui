@@ -1,6 +1,7 @@
 import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './source-list.js';
 import '../source-card/source-card.js';
+import '../../utility/copy-button/copy-button.js';
 import { LyraSourceList } from './source-list.js';
 
 it('defaults to collapsed with empty label/label-plural', async () => {
@@ -207,9 +208,97 @@ it('exposes slotted cards as list items while preserving author roles on removal
   expect(card.hasAttribute('role')).to.be.false;
 });
 
+it('preserves native and author-defined interactive roles in the default slot', async () => {
+  const el = (await fixture(html`
+    <lr-source-list expanded>
+      <button type="button">Open all sources</button>
+      <div role="button" tabindex="0">Load more sources</div>
+    </lr-source-list>
+  `)) as LyraSourceList;
+  const nativeButton = el.querySelector('button')!;
+  const authorButton = el.querySelector('[role="button"]')!;
+
+  await aTimeout(0);
+  expect(nativeButton.getAttribute('role'), 'the native button keeps its implicit button role').to.equal(null);
+  expect(authorButton.getAttribute('role'), 'the author-defined button role is retained').to.equal('button');
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.hasAttribute('role')).to.be.false;
+  await expect(el).to.be.accessible();
+});
+
+it('preserves native semantic and ElementInternals-owned slotted children', async () => {
+  const el = (await fixture(html`
+    <lr-source-list expanded>
+      <article>Source overview</article>
+      <dialog open aria-label="Source details">Details</dialog>
+      <lr-copy-button value="Citation"></lr-copy-button>
+    </lr-source-list>
+  `)) as LyraSourceList;
+  const article = el.querySelector('article')!;
+  const dialog = el.querySelector('dialog')!;
+  const copyButton = el.querySelector('lr-copy-button')!;
+
+  await aTimeout(0);
+  expect(article.getAttribute('role'), 'the native article role is not overwritten').to.equal(null);
+  expect(dialog.getAttribute('role'), 'the native dialog role is not overwritten').to.equal(null);
+  expect(copyButton.getAttribute('role'), 'the ElementInternals role is not overwritten').to.equal('group');
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.hasAttribute('role')).to.be.false;
+  await expect(el).to.be.accessible();
+});
+
+it('releases a neutral slotted item when its author makes it interactive', async () => {
+  const el = (await fixture(html`
+    <lr-source-list expanded><div>Load more sources</div></lr-source-list>
+  `)) as LyraSourceList;
+  const item = el.querySelector('div')!;
+  const list = el.shadowRoot!.querySelector('[part="list"]')!;
+
+  await aTimeout(0);
+  expect(item.getAttribute('role')).to.equal('listitem');
+  expect(list.getAttribute('role')).to.equal('list');
+
+  item.setAttribute('tabindex', '0');
+  await aTimeout(0);
+  expect(item.getAttribute('tabindex')).to.equal('0');
+  expect(item.hasAttribute('role')).to.be.false;
+  expect(list.hasAttribute('role')).to.be.false;
+
+  item.removeAttribute('tabindex');
+  await aTimeout(0);
+  expect(item.getAttribute('role')).to.equal('listitem');
+  expect(list.getAttribute('role')).to.equal('list');
+
+  item.setAttribute('role', 'button');
+  await aTimeout(0);
+  expect(item.getAttribute('role')).to.equal('button');
+  expect(list.hasAttribute('role')).to.be.false;
+
+  item.removeAttribute('role');
+  await aTimeout(0);
+  expect(item.getAttribute('role')).to.equal('listitem');
+  expect(list.getAttribute('role')).to.equal('list');
+});
+
+it('does not transiently restore list semantics when reconnecting direct controls', async () => {
+  const wrapper = (await fixture(
+    html`<div><lr-source-list expanded><button type="button">Open all sources</button></lr-source-list></div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
+  const list = el.shadowRoot!.querySelector('[part="list"]')!;
+
+  await aTimeout(0);
+  expect(list.hasAttribute('role')).to.be.false;
+  el.remove();
+  expect(list.hasAttribute('role')).to.be.false;
+  wrapper.append(el);
+  expect(list.hasAttribute('role')).to.be.false;
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(list.hasAttribute('role')).to.be.false;
+});
+
 it('reapplies owned listitem roles after disconnect and reconnect', async () => {
   const wrapper = (await fixture(
-    html`<div><lr-source-list expanded><lr-source-card role="article"></lr-source-card></lr-source-list></div>`,
+    html`<div><lr-source-list expanded><lr-source-card></lr-source-card></lr-source-list></div>`,
   )) as HTMLElement;
   const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
   const card = el.querySelector('lr-source-card')!;
@@ -217,7 +306,7 @@ it('reapplies owned listitem roles after disconnect and reconnect', async () => 
   expect(card.getAttribute('role')).to.equal('listitem');
 
   el.remove();
-  expect(card.getAttribute('role')).to.equal('article');
+  expect(card.hasAttribute('role')).to.be.false;
   wrapper.append(el);
   await el.updateComplete;
   await new Promise<void>((resolve) => setTimeout(resolve));
@@ -226,14 +315,14 @@ it('reapplies owned listitem roles after disconnect and reconnect', async () => 
 
 it('does not let a stale reconnect continuation reapply owned roles after disconnect', async () => {
   const wrapper = (await fixture(
-    html`<div><lr-source-list expanded><lr-source-card role="article"></lr-source-card></lr-source-list></div>`,
+    html`<div><lr-source-list expanded><lr-source-card></lr-source-card></lr-source-list></div>`,
   )) as HTMLElement;
   const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
   const card = el.querySelector('lr-source-card')!;
   expect(card.getAttribute('role')).to.equal('listitem');
 
   el.remove();
-  expect(card.getAttribute('role')).to.equal('article');
+  expect(card.hasAttribute('role')).to.be.false;
   let resolveUpdate!: (value: boolean) => void;
   const deferredUpdate = new Promise<boolean>((resolve) => {
     resolveUpdate = resolve;
@@ -245,11 +334,11 @@ it('does not let a stale reconnect continuation reapply owned roles after discon
 
   wrapper.append(el);
   el.remove();
-  expect(card.getAttribute('role')).to.equal('article');
+  expect(card.hasAttribute('role')).to.be.false;
   resolveUpdate(true);
   await deferredUpdate;
   await Promise.resolve();
-  expect(card.getAttribute('role')).to.equal('article');
+  expect(card.hasAttribute('role')).to.be.false;
 });
 
 it('recreates its role observer in the adopted owner realm and disconnects it on adoption', async () => {
@@ -297,7 +386,7 @@ it('recreates its role observer in the adopted owner realm and disconnects it on
   }
 });
 
-it('tracks live author role changes while connected and restores the latest role on release', async () => {
+it('preserves live author roles while connected and after release', async () => {
   const card = document.createElement('lr-source-card');
   const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
   el.append(card);
@@ -306,7 +395,8 @@ it('tracks live author role changes while connected and restores the latest role
 
   card.setAttribute('role', 'article');
   await new Promise<void>((resolve) => setTimeout(resolve));
-  expect(card.getAttribute('role')).to.equal('listitem');
+  expect(card.getAttribute('role')).to.equal('article');
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.hasAttribute('role')).to.be.false;
 
   card.remove();
   await new Promise<void>((resolve) => setTimeout(resolve));

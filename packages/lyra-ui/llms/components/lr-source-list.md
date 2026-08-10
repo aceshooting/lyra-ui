@@ -38,9 +38,13 @@ handy for building a `label-plural` string reactively, e.g. `` list.labelPlural 
 **Events:** `lr-toggle` (`detail: { expanded: boolean }`) — the header was activated, expanding or
 collapsing the list.
 
-**Slots:** default — `<lr-source-card>` elements (or any content, though the card pairing is the
-intended usage). While connected, each assigned element receives `role="listitem"`; its author
-role is retained across live changes and restored when it leaves the list or the list disconnects.
+**Slots:** default — `<lr-source-card>` elements, neutral `<div>`/`<span>` wrappers, or
+author-owned `role="listitem"` entries. When every assigned child is one of those list-compatible
+forms, `[part="list"]` supplies `role="list"` and neutral, unroled children temporarily receive
+`role="listitem"`. Native controls and children with another explicit or native semantic role retain
+their own semantics; their presence omits list/listitem roles rather than creating an invalid ARIA
+list context. When every assigned child returns to this list-compatible allowlist, the
+list/listitem semantics return.
 
 **CSS parts:** `base` (outer container), `header` (the clickable `<button>` toggling `expanded`),
 `toggle` (the chevron indicator inside the header), `list` (wrapper around the default slot, `hidden`

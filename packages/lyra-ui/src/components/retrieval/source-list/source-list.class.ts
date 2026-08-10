@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { tag } from '../../../internal/prefix.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -37,13 +38,16 @@ export interface LyraSourceListEventMap {
  * hidden) while collapsed, via the native `hidden` attribute on
  * `[part="list"]` — a screen reader user tabbing past the header never lands
  * on off-screen source cards they can't currently see.
- * While connected, assigned children temporarily receive `role="listitem"`.
- * Live author role changes are retained and restored when a child is removed or the list detaches;
- * reconnecting reapplies list ownership.
+ * When every assigned child is a source card, a neutral `<div>`/`<span>`
+ * wrapper, or already `role="listitem"`, `[part="list"]` supplies list/listitem
+ * semantics. Native controls and other semantic children retain their
+ * semantics; their presence leaves the wrapper unroled rather than imposing
+ * an invalid list context.
  *
  * @customElement lr-source-list
- * @slot - `<lr-source-card>` elements (or any content, though the card
- * pairing is the intended usage).
+ * @slot - `<lr-source-card>` elements, neutral `<div>`/`<span>` wrappers, or
+ * author-owned list items. Other semantic children remain as authored and
+ * disable the list semantics.
  * @event lr-toggle - The header was activated, expanding or collapsing the
  * list. `detail: { expanded }`.
  * @csspart base - The outer container.
@@ -91,18 +95,29 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   private roleObserverDocument?: Document;
   private roleObserverGeneration = 0;
 
+  private isCompatibleListItem(element: Element): boolean {
+    const existingRole = element.getAttribute('role')?.trim();
+    const ownsListItem =
+      existingRole === 'listitem' &&
+      this.previousRoles.has(element) &&
+      this.previousRoles.get(element) !== 'listitem';
+    const role = ownsListItem ? undefined : existingRole;
+    if (role === 'listitem') return true;
+    if (role || element.hasAttribute('tabindex') || (element as HTMLElement).isContentEditable) return false;
+    const localName = element.localName;
+    return localName === tag('source-card') || localName === 'div' || localName === 'span';
+  }
+
   private onRoleMutations(records: MutationRecord[]): void {
-    const changed = new Set<Element>();
     for (const record of records) {
       const element = record.target as Element;
-      if (!this.previousRoles.has(element)) continue;
-      this.previousRoles.set(element, element.getAttribute('role'));
-      changed.add(element);
+      if (element.parentElement !== this || element.getAttribute('slot')) continue;
+      if (record.attributeName === 'role' && this.previousRoles.has(element)) {
+        this.previousRoles.set(element, element.getAttribute('role'));
+      }
+      this.reconcileAssignedItems();
+      return;
     }
-    if (changed.size === 0) return;
-    this.roleObserver?.disconnect();
-    for (const element of changed) element.setAttribute('role', 'listitem');
-    this.observeRoleChanges();
   }
 
   private observeRoleChanges(): void {
@@ -129,7 +144,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     }
     this.roleObserver.observe(this, {
       attributes: true,
-      attributeFilter: ['role'],
+      attributeFilter: ['role', 'tabindex', 'contenteditable'],
       subtree: true,
     });
   }
@@ -137,15 +152,27 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   private syncItemRoles(elements: Element[]): void {
     this.roleObserver?.disconnect();
     const assigned = new Set(elements);
+    const hasListSemantics = elements.every((element) => this.isCompatibleListItem(element));
+    const list = this.shadowRoot?.querySelector('[part="list"]');
+    if (this.isConnected && hasListSemantics) list?.setAttribute('role', 'list');
+    else list?.removeAttribute('role');
     for (const [element, role] of this.previousRoles) {
-      if (assigned.has(element)) continue;
+      if (
+        hasListSemantics &&
+        assigned.has(element) &&
+        element.getAttribute('role') === 'listitem' &&
+        role !== 'listitem'
+      ) continue;
       if (role === null) element.removeAttribute('role');
       else element.setAttribute('role', role);
       this.previousRoles.delete(element);
     }
-    for (const element of elements) {
-      if (!this.previousRoles.has(element)) this.previousRoles.set(element, element.getAttribute('role'));
-      element.setAttribute('role', 'listitem');
+    if (hasListSemantics) {
+      for (const element of elements) {
+        if (element.getAttribute('role')?.trim()) continue;
+        if (!this.previousRoles.has(element)) this.previousRoles.set(element, element.getAttribute('role'));
+        element.setAttribute('role', 'listitem');
+      }
     }
     this.observeRoleChanges();
   }
@@ -206,7 +233,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
       // An explicit `slot=""` still assigns to the default slot per the HTML
       // slot algorithm, so check the attribute's value rather than its mere
       // presence.
-      this.slottedCount = Array.from(this.children).filter((el) => !el.getAttribute('slot')).length;
+      const elements = Array.from(this.children).filter((el) => !el.getAttribute('slot'));
+      this.slottedCount = elements.length;
     }
   }
 
@@ -253,7 +281,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
           <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
           <span>${headerText}</span>
         </button>
-        <div part="list" id=${this.listId} role="list" ?hidden=${!this.expanded}>
+        <div part="list" id=${this.listId} ?hidden=${!this.expanded}>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
       </div>
