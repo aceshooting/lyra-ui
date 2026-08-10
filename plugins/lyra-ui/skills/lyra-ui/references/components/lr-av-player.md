@@ -32,6 +32,9 @@ number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: 
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
+`poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
+before reaching the native video element; an unsafe poster URL is omitted.
+
 Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
 and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
 cannot leak into state or events. `rates` keeps only unique finite values in the supported

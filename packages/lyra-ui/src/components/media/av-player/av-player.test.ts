@@ -1126,6 +1126,33 @@ describe('render branches', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('drops unsafe video poster URLs while retaining safe media schemes', async () => {
+    const blobPoster = URL.createObjectURL(
+      new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' }),
+    );
+    try {
+      const el = (await fixture(html`<lr-av-player src=${MP4_SRC}></lr-av-player>`)) as LyraAvPlayer;
+      for (const poster of [
+        '#poster',
+        'http://example.test/cover.jpg',
+        blobPoster,
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+      ]) {
+        el.poster = poster;
+        await el.updateComplete;
+        expect(mediaEl(el).getAttribute('poster'), poster).to.equal(poster);
+      }
+
+      for (const poster of ['javascript:alert(1)', 'java\tscript:alert(1)']) {
+        el.poster = poster;
+        await el.updateComplete;
+        expect(mediaEl(el).hasAttribute('poster'), poster).to.be.false;
+      }
+    } finally {
+      URL.revokeObjectURL(blobPoster);
+    }
+  });
+
   it('announces a post-mount transition to an unsafe source without losing the named region', async () => {
     const el = (await fixture(html`<lr-av-player aria-label="Episode controls"></lr-av-player>`)) as LyraAvPlayer;
     el.src = 'javascript:alert(1)';

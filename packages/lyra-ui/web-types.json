@@ -1543,7 +1543,7 @@
             },
             {
               "name": "poster",
-              "description": "Poster image for `<video>`; ignored for `<audio>`.\n\nType: `string`  \nDefault: `''`",
+              "description": "Poster image for `<video>`; validated with `safeMediaSrc` and omitted when unsafe. Ignored for\n`<audio>`.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"

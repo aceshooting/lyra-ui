@@ -228,7 +228,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Drives auto-detection: an `audio/*` mime type renders `<audio>`; anything else renders
    *  `<video>`. Ignored once `kind` is set explicitly. */
   @property({ attribute: 'mime-type' }) mimeType = '';
-  /** Poster image for `<video>`; ignored for `<audio>`. */
+  /** Poster image for `<video>`; validated with `safeMediaSrc` and omitted when unsafe. Ignored for
+   *  `<audio>`. */
   @property() poster = '';
   @property({ type: Boolean }) loop = false;
   @property({ type: Boolean }) muted = false;
@@ -778,6 +779,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('avPlayerLabel');
     const safeSrc = this.src ? safeMediaSrc(this.src) : null;
+    const safePoster = this.poster ? safeMediaSrc(this.poster) : null;
     const kind = this.detectedKind();
     if (!safeSrc && this.src) {
       return html`<div part="base" role="region" aria-label=${label}>
@@ -803,7 +805,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             controls
             aria-label=${label}
             src=${safeSrc ?? nothing}
-            poster=${this.poster || nothing}
+            poster=${safePoster ?? nothing}
             ?loop=${this.loop}
             ?muted=${this.muted}
             preload=${this.preload}
