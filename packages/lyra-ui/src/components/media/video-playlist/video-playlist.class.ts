@@ -57,6 +57,7 @@ interface VideoListeners {
   ended: EventListener;
   error: EventListener;
   loadedmetadata: EventListener;
+  pause: EventListener;
   play: EventListener;
 }
 
@@ -195,6 +196,8 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   private activeVideo?: LyraVideo;
   private mutationObserver?: MutationObserver;
   private readonly listeners = new Map<LyraVideo, VideoListeners>();
+  private readonly lastKnownPlaying = new WeakMap<LyraVideo, boolean>();
+  private readonly nativeVideos = new WeakMap<LyraVideo, HTMLVideoElement>();
   private readonly needsReload = new WeakSet<LyraVideo>();
   private preferences: NativeMediaPreferences = {};
   private activationGeneration = 0;
@@ -310,14 +313,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       this.shadowRoot?.activeElement?.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
 
-    for (const video of previousVideos) {
-      if (!videos.includes(video)) {
-        this.unbindVideo(video);
-        this.pauseAndUnload(video);
-      }
-    }
-    for (const video of videos) this.bindVideo(video);
-
     let active = previousActive && videos.includes(previousActive) && this.isEnabled(previousActive)
       ? previousActive
       : undefined;
@@ -326,11 +321,29 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     if (!active) nextIndex = -1;
 
     const activeChanged = active !== previousActive;
-    let resumePlayback = false;
+    const outgoingWasRemoved = Boolean(previousActive && !videos.includes(previousActive));
+    const resumePlayback = activeChanged && previousActive
+      ? outgoingWasRemoved
+        ? this.lastKnownPlaying.get(previousActive) ?? previousActive.getState().playing
+        : previousActive.getState().playing
+      : false;
+    const outgoingPreferences = activeChanged && previousActive
+      ? outgoingWasRemoved
+        ? this.capturePreferences(previousActive, this.nativeVideos.get(previousActive))
+        : this.capturePreferences(previousActive)
+      : undefined;
+
+    for (const video of previousVideos) {
+      if (!videos.includes(video)) {
+        this.unbindVideo(video);
+        this.pauseAndUnload(video);
+      }
+    }
+    for (const video of videos) this.bindVideo(video);
+
     if (activeChanged && previousActive) {
-      resumePlayback = previousActive.getState().playing;
-      this.preferences = this.capturePreferences(previousActive);
-      this.pauseAndUnload(previousActive);
+      this.preferences = outgoingPreferences ?? {};
+      if (!outgoingWasRemoved) this.pauseAndUnload(previousActive);
       this.activationGeneration += 1;
     } else if (activeChanged) {
       this.activationGeneration += 1;
@@ -377,6 +390,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     const reconcileGeneration = ++this.reconcileGeneration;
     void Promise.all(videos.map((video) => video.updateComplete)).then(() => {
       if (!this.isConnected || reconcileGeneration !== this.reconcileGeneration) return;
+      for (const video of this.playlistVideos) this.rememberNativeVideo(video);
       for (const video of this.playlistVideos) {
         if (video !== this.activeVideo) this.pauseAndUnload(video);
       }
@@ -391,18 +405,38 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   private bindVideo(video: LyraVideo): void {
     if (this.listeners.has(video)) return;
     const listeners: VideoListeners = {
-      ended: () => this.handleCompletion(video, 'ended'),
-      error: () => this.handleCompletion(video, 'error'),
-      loadedmetadata: () => this.handleLoadedMetadata(video),
+      ended: () => {
+        this.rememberNativeVideo(video);
+        this.lastKnownPlaying.set(video, false);
+        this.handleCompletion(video, 'ended');
+      },
+      error: () => {
+        this.rememberNativeVideo(video);
+        this.lastKnownPlaying.set(video, false);
+        this.handleCompletion(video, 'error');
+      },
+      loadedmetadata: () => {
+        this.rememberNativeVideo(video);
+        this.handleLoadedMetadata(video);
+      },
+      pause: () => {
+        this.rememberNativeVideo(video);
+        this.lastKnownPlaying.set(video, false);
+      },
       play: () => {
+        this.rememberNativeVideo(video);
+        this.lastKnownPlaying.set(video, true);
         if (video !== this.activeVideo) this.pauseAndUnload(video);
       },
     };
+    this.lastKnownPlaying.set(video, video.getState().playing);
+    this.rememberNativeVideo(video);
+    this.listeners.set(video, listeners);
     video.addEventListener('ended', listeners.ended);
     video.addEventListener('error', listeners.error);
     video.addEventListener('loadedmetadata', listeners.loadedmetadata);
+    video.addEventListener('pause', listeners.pause);
     video.addEventListener('play', listeners.play);
-    this.listeners.set(video, listeners);
   }
 
   private unbindVideo(video: LyraVideo): void {
@@ -411,8 +445,14 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     video.removeEventListener('ended', listeners.ended);
     video.removeEventListener('error', listeners.error);
     video.removeEventListener('loadedmetadata', listeners.loadedmetadata);
+    video.removeEventListener('pause', listeners.pause);
     video.removeEventListener('play', listeners.play);
     this.listeners.delete(video);
+  }
+
+  private rememberNativeVideo(video: LyraVideo): void {
+    const native = video.getVideoElement();
+    if (native) this.nativeVideos.set(video, native);
   }
 
   private pauseAndUnload(video: LyraVideo): void {
@@ -437,6 +477,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       if (shouldPlay) this.pendingPlay = { video, generation };
       return;
     }
+    this.rememberNativeVideo(video);
     video.load();
     this.needsReload.delete(video);
     this.applyPreferences(video, this.preferences);
@@ -452,8 +493,10 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     });
   }
 
-  private capturePreferences(video: LyraVideo): NativeMediaPreferences {
-    const native = video.getVideoElement();
+  private capturePreferences(
+    video: LyraVideo,
+    native: HTMLVideoElement | undefined = video.getVideoElement(),
+  ): NativeMediaPreferences {
     const state = video.getState();
     const preferences: NativeMediaPreferences = {};
     if (validVolume(state.volume)) preferences.volume = state.volume;
