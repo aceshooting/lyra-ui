@@ -15,6 +15,38 @@ it('themes the button-content gap for both button authoring paths', async () => 
   }
 });
 
+it('projects canonical and Shoelace adornment aliases through shared parts', async () => {
+  const el = await fixture(html`
+    <lr-radio-button value="a">
+      <span id="start" slot="start">Start</span>
+      <span id="prefix" slot="prefix">Prefix</span>
+      Alpha
+      <span id="end" slot="end">End</span>
+      <span id="suffix" slot="suffix">Suffix</span>
+    </lr-radio-button>
+  `);
+  const root = el.shadowRoot!;
+  const startWrappers = root.querySelectorAll<HTMLElement>('[part~="start"][part~="prefix"]');
+  const endWrappers = root.querySelectorAll<HTMLElement>('[part~="end"][part~="suffix"]');
+
+  expect(startWrappers.length).to.equal(1);
+  expect(endWrappers.length).to.equal(1);
+
+  const start = startWrappers[0]!;
+  const end = endWrappers[0]!;
+  const startSlot = start.querySelector<HTMLSlotElement>('slot[name="start"]')!;
+  const prefixSlot = start.querySelector<HTMLSlotElement>('slot[name="prefix"]')!;
+  const endSlot = end.querySelector<HTMLSlotElement>('slot[name="end"]')!;
+  const suffixSlot = end.querySelector<HTMLSlotElement>('slot[name="suffix"]')!;
+
+  expect(startSlot.assignedElements().map((element) => element.id)).to.deep.equal(['start']);
+  expect(prefixSlot.assignedElements().map((element) => element.id)).to.deep.equal(['prefix']);
+  expect(endSlot.assignedElements().map((element) => element.id)).to.deep.equal(['end']);
+  expect(suffixSlot.assignedElements().map((element) => element.id)).to.deep.equal(['suffix']);
+  expect(getComputedStyle(start).maxInlineSize).to.equal('40%');
+  expect(getComputedStyle(end).maxInlineSize).to.equal('40%');
+});
+
 it('contains a standalone unbroken button label at 320px in LTR and RTL', async () => {
   const label = 'InternationalizedStandaloneRadioButtonLabelWithoutAnyNaturalBreakOpportunity';
   for (const direction of ['ltr', 'rtl'] as const) {

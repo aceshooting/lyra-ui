@@ -69,6 +69,8 @@ Improve component reliability and public contracts across the library:
 - verify `lr-prompt-studio` native option palettes through live light- and dark-theme computed styles.
 - harden agent-tool motion, native-control, placeholder, and footer layout contracts with rendered checks.
 - accept canonical `start`/`end` adornment slots on `lr-chat-composer` while retaining legacy aliases.
+- accept canonical `start`/`end` adornment slots on `lr-radio-button` while retaining Shoelace
+  `prefix`/`suffix` aliases.
 - accept canonical `start` adornment content on `lr-conversation-item` while retaining `leading`.
 - complete `lr-model-select`'s standard slotted-label and `form-control` frame contract.
 - keep `lr-markdown-core` leading-tab parsing and `tab-size` behavior aligned with `lr-markdown`.

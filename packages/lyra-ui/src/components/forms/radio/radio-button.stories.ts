@@ -28,6 +28,24 @@ export const Default: StoryObj = {
   `,
 };
 
+export const AdornmentAliases: StoryObj = {
+  name: 'Start/end and prefix/suffix adornments',
+  render: () => html`
+    <lr-radio-group name="adornment-aliases" label="Adornment aliases" orientation="horizontal">
+      <lr-radio-button value="canonical" checked>
+        <span slot="start">Start</span>
+        Canonical
+        <span slot="end">End</span>
+      </lr-radio-button>
+      <lr-radio-button value="shoelace">
+        <span slot="prefix">Prefix</span>
+        Shoelace
+        <span slot="suffix">Suffix</span>
+      </lr-radio-button>
+    </lr-radio-group>
+  `,
+};
+
 export const IndependentStateTheme: StoryObj = {
   name: 'Independent checked and pointer theme',
   render: () => html`

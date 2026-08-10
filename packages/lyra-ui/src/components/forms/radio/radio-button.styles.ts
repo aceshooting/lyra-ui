@@ -33,8 +33,8 @@ export const buttonChromeStyles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='prefix'],
-  [part='suffix'] {
+  [part~='start'],
+  [part~='end'] {
     min-inline-size: 0;
     max-inline-size: 40%;
     overflow: hidden;

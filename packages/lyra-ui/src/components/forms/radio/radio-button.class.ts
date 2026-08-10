@@ -21,13 +21,16 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired
  * control automatically — nothing needs to be set on the group.
  * A host `aria-label` is forwarded to the internal `role="radio"` by attribute presence, so an
  * explicitly empty value remains authoritative rather than restoring a label-text fallback.
- * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long prefix
- * and suffix adornments truncate inside their capped portions instead of widening the page.
+ * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long
+ * start/prefix and end/suffix adornments truncate inside their capped portions instead of widening
+ * the page.
  *
  * @customElement lr-radio-button
  * @slot - Label text.
- * @slot prefix - Content placed before the label, typically an icon.
- * @slot suffix - Content placed after the label.
+ * @slot start - Content placed before the label, typically an icon.
+ * @slot prefix - Shoelace-compatible alias for `start`, rendered through the same wrapper.
+ * @slot end - Content placed after the label.
+ * @slot suffix - Shoelace-compatible alias for `end`, rendered through the same wrapper.
  * @event input - The user selected this radio.
  * @event change - The user selected this radio.
  * @event lr-change - A standalone radio button was selected. `detail: { checked, value }`. An
@@ -56,14 +59,16 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired
  * @csspart button - Shoelace name for the interactive button.
  * @csspart button--checked - Shoelace state alias on the selected button.
  * @csspart control - Compatibility alias for the interactive control.
- * @csspart prefix - The leading-content wrapper.
+ * @csspart start - The leading-content wrapper.
+ * @csspart prefix - Shoelace-compatible alias for `start`; both names are on the same wrapper.
  * @csspart label - The default slot wrapper.
- * @csspart suffix - The trailing-content wrapper.
+ * @csspart end - The trailing-content wrapper.
+ * @csspart suffix - Shoelace-compatible alias for `end`; both names are on the same wrapper.
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius;
  * `pill` swaps it for `--lr-radius-pill`.
- * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between prefix, label, and suffix in
- * both `<lr-radio-button>` and `<lr-radio appearance="button">`.
+ * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between the start/prefix wrapper,
+ * label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance="button">`.
  * @cssprop [--lr-radio-button-hover-bg=var(--lr-color-brand-quiet)] - Unchecked button background
  * while hovered.
  * @cssprop [--lr-radio-button-hover-border-color=var(--lr-color-brand)] - Unchecked button border
@@ -124,9 +129,9 @@ export class LyraRadioButton extends LyraRadio {
         @focus=${this.onFocus}
         @blur=${this.onBlur}
       >
-        <span part="prefix"><slot name="prefix"></slot></span>
+        <span part="start prefix"><slot name="start"></slot><slot name="prefix"></slot></span>
         <span part="label"><slot></slot></span>
-        <span part="suffix"><slot name="suffix"></slot></span>
+        <span part="end suffix"><slot name="end"></slot><slot name="suffix"></slot></span>
       </span>
     `;
   }
