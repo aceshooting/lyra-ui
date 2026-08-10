@@ -1,6 +1,7 @@
 import { aTimeout, elementUpdated, expect, fixture, html } from '@open-wc/testing';
 import './page.js';
 import type { LyraPage } from './page.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 interface PageTestAccess {
   applyMeasuredInlineSize(width: number): void;
@@ -199,6 +200,95 @@ it('gives the default toggle an exact controls/expanded contract and supports it
   await page.updateComplete;
   expect(page.navOpen).to.be.true;
   expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+});
+
+it('keeps slotted skip content and toggle glyph controls decorative while preserving the outer actions', async () => {
+  const root = await fixture(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-page style="inline-size:320px">
+        <button id="skip-control" slot="skip-to-content" type="button">Jump to report</button>
+        <button id="toggle-icon-control" slot="navigation-toggle-icon" type="button">Open sections</button>
+        <a slot="navigation" href="#report">Report</a>
+        <p id="report">Report content</p>
+      </lr-page>
+    </div>
+  `);
+  const page = root.querySelector<LyraPage>('lr-page')!;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+
+  const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+  const skipControl = page.querySelector<HTMLButtonElement>('#skip-control')!;
+  const toggleIconControl = page.querySelector<HTMLButtonElement>('#toggle-icon-control')!;
+  const skip = byPart(page, 'skip-to-content');
+  const main = byPart(page, 'main');
+  const toggle = byPart(page, 'navigation-toggle');
+  const skipSlot = page.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="skip-to-content"]')!;
+  const iconSlot = page.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="navigation-toggle-icon"]')!;
+  const skipVisual = skipSlot.closest<HTMLElement>('[inert][aria-hidden="true"]');
+  const iconVisual = iconSlot.closest<HTMLElement>('[inert][aria-hidden="true"]');
+
+  expect(skipVisual?.id ?? '', 'the skip visual layer has a stable accessible-name target').to.not.equal('');
+  expect(skip.getAttribute('aria-labelledby')).to.equal(skipVisual?.id ?? '');
+  expect(iconVisual?.hasAttribute('inert')).to.equal(true);
+  expect(iconVisual?.getAttribute('aria-hidden')).to.equal('true');
+
+  outside.focus();
+  skipControl.focus();
+  expect(document.activeElement?.id).to.equal('outside');
+  toggleIconControl.focus();
+  expect(document.activeElement?.id).to.equal('outside');
+
+  let skipControlActivations = 0;
+  skipControl.addEventListener('click', () => skipControlActivations++);
+  skip.style.opacity = '1';
+  skip.style.pointerEvents = 'auto';
+  skip.style.transition = 'none';
+  skip.style.transform = 'none';
+  const skipRect = skipControl.getBoundingClientRect();
+  expect(skipRect.width).to.be.greaterThan(0);
+  expect(skipRect.height).to.be.greaterThan(0);
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [
+        Math.round(skipRect.left + skipRect.width / 2),
+        Math.round(skipRect.top + skipRect.height / 2),
+      ],
+    });
+    await page.updateComplete;
+    expect(skipControlActivations).to.equal(0);
+    expect(page.shadowRoot!.activeElement?.id).to.equal(main.id);
+  } finally {
+    await resetMouse();
+    skip.style.removeProperty('opacity');
+    skip.style.removeProperty('pointer-events');
+    skip.style.removeProperty('transition');
+    skip.style.removeProperty('transform');
+  }
+
+  let toggleIconActivations = 0;
+  toggleIconControl.addEventListener('click', () => toggleIconActivations++);
+  const toggleIconRect = toggleIconControl.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [
+        Math.round(toggleIconRect.left + toggleIconRect.width / 2),
+        Math.round(toggleIconRect.top + toggleIconRect.height / 2),
+      ],
+    });
+    await page.updateComplete;
+    await aTimeout(20);
+    expect(toggleIconActivations).to.equal(0);
+    expect(page.navOpen).to.equal(true);
+    await expect(page).to.be.accessible();
+  } finally {
+    await resetMouse();
+    page.hideNavigation();
+    await page.updateComplete;
+  }
 });
 
 it('keeps a custom navigation-toggle operable when the default is disabled and avoids double data-toggle activation', async () => {

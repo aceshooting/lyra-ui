@@ -70,12 +70,13 @@ export const MobileDrawer: Story = {
     docs: {
       description: {
         story:
-          'This Page is allocated 320px, so its same navigation subtree becomes a modal drawer. The default localized button exposes `aria-expanded` and `aria-controls`; Escape and backdrop clicks close the drawer and return focus.',
+          'This Page is allocated 320px, so its same navigation subtree becomes a modal drawer. The default localized button exposes `aria-expanded` and `aria-controls`; Escape and backdrop clicks close the drawer and return focus. A `navigation-toggle-icon` replacement remains decorative visual content while the native button keeps the action and accessible name.',
       },
     },
   },
   render: () => html`
     <lr-page style="inline-size:320px; min-block-size:34rem; --lr-page-header-height:3rem;">
+      <span slot="navigation-toggle-icon">☰</span>
       ${shell()}
     </lr-page>
   `,
@@ -98,7 +99,7 @@ export const CustomToggleAndSkipLink: Story = {
     docs: {
       description: {
         story:
-          'The assigned custom toggle receives synchronized `aria-expanded`; its `aria-controls` points to the Page host as a resolvable bridge to the private drawer. Removing or replacing the toggle restores attributes still owned by the component.',
+          'The assigned custom toggle receives synchronized `aria-expanded`; its `aria-controls` points to the Page host as a resolvable bridge to the private drawer. Removing or replacing the toggle restores attributes still owned by the component. Replacement skip text stays inert visual content while still naming the sole Page skip link.',
       },
     },
   },

@@ -65,6 +65,9 @@ function navigationIcon(): SVGTemplateResult {
  * Each instance owns unique main/drawer/navigation IDs. Its skip link therefore targets its own
  * main landmark even when several Pages coexist. The default skip and navigation controls are
  * localized, and a host `aria-label` overrides the navigation landmark's localized name.
+ * Replacement skip text and navigation-toggle glyph content remain visual only: their assigned
+ * subtrees are inert and hidden from assistive technology, while skip text still names the outer
+ * link.
  *
  * `disable-sticky` is a whitespace-token attribute accepting `banner`, `header`, `subheader`,
  * `menu`, and `aside`. A token only disables that region; unrelated sticky regions keep working.
@@ -90,8 +93,10 @@ function navigationIcon(): SVGTemplateResult {
  * @slot navigation-header - Content before the navigation links.
  * @slot navigation-toggle - A custom control that toggles mobile navigation and receives the
  * managed ARIA relationship described above.
- * @slot navigation-toggle-icon - Replaces the default toggle's menu glyph.
- * @slot skip-to-content - Replaces the localized skip-link text.
+ * @slot navigation-toggle-icon - Replaces the default toggle's menu glyph as inert, decorative
+ *   visual content.
+ * @slot skip-to-content - Replaces the localized skip-link text as inert visual content; its
+ *   descriptive text names the outer skip link.
  * @slot subheader - A secondary header row.
  * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
  * @csspart banner - Wrapper for the `banner` slot.
@@ -173,6 +178,7 @@ export class LyraPage extends LyraElement {
   private readonly navigationId = nextId('page-navigation');
   private readonly drawerId = nextId('page-drawer');
   private readonly skipTargetId = nextId('page-skip-target');
+  private readonly skipLabelId = nextId('page-skip-label');
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
@@ -485,8 +491,15 @@ export class LyraPage extends LyraElement {
     const navigationLabel = this.accessibleLabel ?? this.localize('navigation');
     return html`
       <div part="base page" @click=${this.onPageClick}>
-        <a part="skip-to-content" href=${`#${this.id || this.skipTargetId}`} @click=${this.onSkipClick}>
-          <slot name="skip-to-content">${this.localize('skipToContent')}</slot>
+        <a
+          part="skip-to-content"
+          href=${`#${this.id || this.skipTargetId}`}
+          aria-labelledby=${this.skipLabelId}
+          @click=${this.onSkipClick}
+        >
+          <span id=${this.skipLabelId} aria-hidden="true" inert>
+            <slot name="skip-to-content">${this.localize('skipToContent')}</slot>
+          </span>
         </a>
 
         <div part="banner"><slot name="banner"></slot></div>
@@ -506,7 +519,7 @@ export class LyraPage extends LyraElement {
                 aria-label=${this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation')}
                 @click=${this.onDefaultToggleClick}
               >
-                <span part="navigation-toggle-icon">
+                <span part="navigation-toggle-icon" aria-hidden="true" inert>
                   <slot name="navigation-toggle-icon">${navigationIcon()}</slot>
                 </span>
               </button>
