@@ -13,7 +13,7 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
-test('models the raw core ceiling as the reviewed baseline plus the stable-root allowance', () => {
+test('models the raw core ceiling as the reviewed baseline plus the named allowances', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an auditable named budget model');
 
@@ -25,15 +25,18 @@ test('models the raw core ceiling as the reviewed baseline plus the stable-root 
   assert.deepEqual(terms, {
     reviewedBaselineBytes: 3_700_000,
     stableRootRegistrationAllowanceBytes: 200_000,
+    reviewedRemediationAllowanceBytes: 20_000,
   });
   assert.equal(
-    terms.reviewedBaselineBytes + terms.stableRootRegistrationAllowanceBytes,
-    3_900_000,
+    terms.reviewedBaselineBytes +
+      terms.stableRootRegistrationAllowanceBytes +
+      terms.reviewedRemediationAllowanceBytes,
+    3_920_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*,/u,
-    'the core bundle entry must use both reviewed terms instead of a second unexplained ceiling',
+    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.reviewedRemediationAllowanceBytes\s*,/u,
+    'the core bundle entry must use every reviewed term instead of a second unexplained ceiling',
   );
 });
 
