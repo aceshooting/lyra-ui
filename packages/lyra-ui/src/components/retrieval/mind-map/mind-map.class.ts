@@ -434,6 +434,16 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
           ${layout.placed.map(
             (node) => svg`
               <g part="node" style=${`transform: translate(${node.x}px, ${node.y}px)`} @click=${() => this.onNodeClick(node)}>
+                <line
+                  class="node-hit"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="0"
+                  aria-hidden="true"
+                  focusable="false"
+                  vector-effect="non-scaling-stroke"
+                ></line>
                 <circle r="4" aria-hidden="true"></circle>
                 <text part="node-label" aria-hidden="true" text-anchor="middle" dy="-8">${node.label}</text>
               </g>

@@ -24,6 +24,14 @@ export const styles = css`
     cursor: pointer;
     transition: transform var(--lr-transition-base);
   }
+  .node-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: var(--lr-icon-button-size);
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: stroke;
+  }
   [part='node'] circle {
     fill: var(--lr-color-brand);
     stroke: transparent;
@@ -46,6 +54,7 @@ export const styles = css`
     fill: none;
     stroke: var(--lr-focus-ring-color);
     stroke-width: var(--lr-focus-ring-width);
+    pointer-events: none;
   }
   [part='empty'] {
     padding: var(--lr-space-m);

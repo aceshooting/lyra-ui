@@ -1,8 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
 import { styles } from './mind-map.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -46,6 +47,61 @@ it('emits lr-topic-select when a leaf node is clicked', async () => {
   kgNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const event = await listener;
   expect(event.detail).to.deep.equal({ id: 'kg' });
+});
+
+it('keeps compact node pointer targets at the 40px floor and activates through the focus-ring annulus', async () => {
+  const dense = (await fixture(
+    html`<lr-mind-map style="inline-size: 320px; block-size: 320px"></lr-mind-map>`,
+  )) as LyraMindMap;
+  dense.topics = Array.from({ length: 20 }, (_, index) => ({ id: `topic-${index}`, label: `T${index}` }));
+  await dense.updateComplete;
+
+  const denseHits = [...dense.shadowRoot!.querySelectorAll<SVGLineElement>('.node-hit')];
+  expect(denseHits.length, 'the hub and every short-label topic have a private hit target').to.equal(21);
+  for (const hit of denseHits) {
+    expect(hit.hasAttribute('part'), 'the hit target remains an implementation detail').to.equal(false);
+    expect(hit.getAttribute('aria-hidden'), 'the hit target is not duplicated for assistive technology').to.equal(
+      'true',
+    );
+    expect(hit.getAttribute('vector-effect'), 'the target is measured in rendered pixels').to.equal(
+      'non-scaling-stroke',
+    );
+    expect(Number.parseFloat(getComputedStyle(hit).strokeWidth), 'the target diameter').to.be.at.least(40);
+  }
+
+  const el = (await fixture(
+    html`<lr-mind-map style="inline-size: 120px; block-size: 120px"></lr-mind-map>`,
+  )) as LyraMindMap;
+  el.topics = [{ id: 'tiny', label: 'T' }];
+  await el.updateComplete;
+  const hit = el.shadowRoot!.querySelector<SVGLineElement>('.node-hit')!;
+  const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  const focusRing = el.shadowRoot!.querySelector<SVGCircleElement>('[part="focus-ring"]')!;
+  const selected: string[] = [];
+  el.addEventListener('lr-topic-select', (event) => selected.push((event as CustomEvent<{ id: string }>).detail.id));
+
+  el.scrollIntoView({ block: 'center', inline: 'center' });
+  await aTimeout(0);
+  const matrix = hit.getScreenCTM()!;
+  const center = new DOMPoint(0, 0).matrixTransform(matrix);
+  const ringMatrix = focusRing.getScreenCTM()!;
+  const ringCenter = new DOMPoint(focusRing.cx.baseVal.value, focusRing.cy.baseVal.value).matrixTransform(ringMatrix);
+  const ringRadius = focusRing.r.baseVal.value * Math.hypot(ringMatrix.a, ringMatrix.b);
+  try {
+    await resetMouse();
+    await sendMouse({ type: 'click', position: [Math.round(center.x + 18), Math.round(center.y)] });
+    await sendMouse({ type: 'click', position: [Math.round(center.x), Math.round(center.y + 18)] });
+    await sendMouse({ type: 'click', position: [Math.round(ringCenter.x + ringRadius), Math.round(ringCenter.y)] });
+    expect(selected, 'target edges and the focus-ring annulus activate the compact node').to.deep.equal([
+      'tiny',
+      'tiny',
+      'tiny',
+    ]);
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('emits lr-topic-toggle when a parent node is clicked, and reveals its children', async () => {
