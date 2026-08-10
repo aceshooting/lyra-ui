@@ -110,9 +110,8 @@ export const DualAxis: Story = {
 
 /**
  * `beginAtZero` lets the y axis start near the data's own minimum instead of
- * 0 — set via the `.beginAtZero` property, since the `begin-at-zero`
- * *attribute*'s presence (not its string value) is what Lit's boolean
- * converter reads, so `begin-at-zero="false"` would not turn it off.
+ * 0. The component's true-default boolean converter accepts the explicit
+ * `begin-at-zero="false"` attribute form used below.
  */
 export const WithoutBeginAtZero: Story = {
   render: () => {
@@ -121,7 +120,7 @@ export const WithoutBeginAtZero: Story = {
       <lr-line-chart
         height="16rem"
         style="width: 22rem"
-        .beginAtZero=${false}
+        begin-at-zero="false"
         .labels=${['Jan', 'Feb', 'Mar', 'Apr', 'May']}
         .datasets=${series}
       ></lr-line-chart>

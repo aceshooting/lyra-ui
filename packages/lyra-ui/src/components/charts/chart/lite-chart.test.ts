@@ -572,11 +572,8 @@ it('re-renders when the bar position callback is replaced by reference', async (
 
 it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false', async () => {
   const el = (await fixture(
-    // NOTE: intentionally NOT `begin-at-zero="false"` as an HTML attribute --
-    // Lit's Boolean attribute converter treats *any* attribute presence
-    // (including the literal string "false") as `true`; only *omitting* the
-    // attribute or setting the JS property directly yields `false`. Using
-    // `.beginAtZero=${false}` below is what actually disables begin-at-zero.
+    // This property binding exercises the same false branch as the explicit
+    // `begin-at-zero="false"` attribute covered above.
     html`<lr-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   el.style.setProperty('--lr-chart-height', '200px');
