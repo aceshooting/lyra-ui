@@ -64,6 +64,27 @@ it('forwards the host accessible label in the empty state', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Empty pipeline');
 });
 
+it('keeps its viewport and all companion slots available in the empty state', async () => {
+  const el = (await fixture(html`
+    <lr-flow-canvas>
+      <span slot="top-start" data-companion="top-start"></span>
+      <span slot="top-end" data-companion="top-end"></span>
+      <span slot="bottom-start" data-companion="bottom-start"></span>
+      <span slot="bottom-end" data-companion="bottom-end"></span>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]');
+  expect(viewport?.getAttribute('part')).to.equal('viewport');
+  const companionSlots = Array.from(el.shadowRoot!.querySelectorAll<HTMLSlotElement>('slot[name]'));
+  expect(companionSlots.map((slot) => slot.name)).to.deep.equal(['top-start', 'top-end', 'bottom-start', 'bottom-end']);
+  expect(companionSlots.map((slot) => slot.assignedElements()[0]?.getAttribute('data-companion'))).to.deep.equal([
+    'top-start',
+    'top-end',
+    'bottom-start',
+    'bottom-end',
+  ]);
+});
+
 it('does not render the empty state once nodes has at least one entry', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
   el.nodes = [{ id: 'a' }] as FlowNode[];
@@ -797,6 +818,27 @@ describe('pan & zoom', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 130, clientY: 90 }));
     expect(el.viewport.x).to.equal(30);
     expect(el.viewport.y).to.equal(-10);
+  });
+
+  it('keeps the rendered empty state pointer-transparent so its viewport remains hit-testable and pannable', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    const empty = el.shadowRoot!.querySelector<HTMLElement>('[part="empty"]');
+    const background = el.shadowRoot!.querySelector<HTMLElement>('[part="background"]');
+    expect(empty?.getAttribute('part')).to.equal('empty');
+    expect(background?.getAttribute('part')).to.equal('background');
+    expect(getComputedStyle(empty!).pointerEvents).to.equal('none');
+
+    const rect = empty!.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    const hit = el.shadowRoot!.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    expect(hit?.getAttribute('part'), 'the empty-state overlay must not shield the canvas viewport').to.equal('viewport');
+
+    hit!.setPointerCapture = () => {};
+    hit!.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 91, clientX, clientY, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 91, clientX: clientX + 30, clientY: clientY - 10 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 91, clientX: clientX + 30, clientY: clientY - 10 }));
+    expect(el.viewport).to.deep.equal({ x: 30, y: -10, zoom: 1 });
   });
 
   it('keyboard +/-/0 and arrows zoom/pan the focused viewport', async () => {
@@ -1748,23 +1790,19 @@ function makeDropEvent(type: string, clientX: number, clientY: number): DragEven
   return new DragEvent('drop', { bubbles: true, cancelable: true, clientX, clientY, dataTransfer });
 }
 
-// Deviation from the plan brief: Slice A's `render()` (unchanged by any later slice) shows *only*
-// the `lr-empty` state -- no `[part='viewport']` at all -- while `nodes` is empty, so a droppable
-// test against a genuinely empty canvas has no viewport element to dispatch drag/drop events at.
-// Each test below seeds one already-positioned node (irrelevant to what's under test: the drop
-// handshake itself) purely so `[part='viewport']` exists to dispatch against.
 describe('droppable', () => {
-  it('accepts a FLOW_PALETTE_MIME_TYPE drop and emits lr-node-add with a grid-snapped position', async () => {
+  it('accepts the first FLOW_PALETTE_MIME_TYPE drop on an empty canvas and emits lr-node-add with a grid-snapped position', async () => {
     const el = (await fixture(
       html`<lr-flow-canvas droppable style="width:400px;height:300px"></lr-flow-canvas>`,
     )) as LyraFlowCanvas;
-    el.nodes = [{ id: 'seed', position: { x: 0, y: 0 } }];
-    await el.updateComplete;
-    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-    const rect = viewportEl.getBoundingClientRect();
+    const viewportEl = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]');
+    expect(viewportEl?.getAttribute('part')).to.equal('viewport');
+    const empty = el.shadowRoot!.querySelector<HTMLElement>('[part="empty"]');
+    expect(empty?.getAttribute('part')).to.equal('empty');
+    const rect = viewportEl!.getBoundingClientRect();
     let detail: { type: string; position: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-add', (e) => (detail = (e as CustomEvent).detail));
-    viewportEl.dispatchEvent(makeDropEvent('http-request', rect.left + 21, rect.top + 5));
+    empty!.dispatchEvent(makeDropEvent('http-request', rect.left + 21, rect.top + 5));
     expect(detail?.type).to.equal('http-request');
     expect(detail!.position.x % el.grid).to.equal(0);
     expect(detail!.position.y % el.grid).to.equal(0);

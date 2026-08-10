@@ -42,6 +42,7 @@ export const styles = css`
   [part='empty'] {
     inline-size: 100%;
     block-size: 100%;
+    pointer-events: none;
   }
   [part='overlay-rail'] {
     position: absolute;

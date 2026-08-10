@@ -1972,11 +1972,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   override render(): TemplateResult {
-    if (this.nodes.length === 0) {
-      return html`<div part="base" role="region" aria-label=${this.accessibleLabel || this.localize('flowCanvasLabel')}>
-        <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
-      </div>`;
-    }
+    const isEmpty = this.nodes.length === 0;
     const { nodeIndex, edgeIndex } = this.itemIndexMaps();
     return html`<div part="base" role="region" aria-label=${this.accessibleLabel || this.localize('flowCanvasLabel')}>
       <div
@@ -1988,6 +1984,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
           nodeCount: this.formatNumber(this.nodes.length),
           edgeCount: this.formatNumber(this.edges.length),
         })}
+        @pointerdown=${isEmpty ? this.onBackgroundPointerDown : undefined}
       >
         <div class="world" @pointerdown=${this.onWorldPointerDown}>
           <div
@@ -2015,16 +2012,23 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
             ${this.renderEdges(nodeIndex, edgeIndex)}
             ${this.connecting ? svg`<path part="connection-line" d=""></path>` : ''}
           </svg>
-          ${this.renderNodes(nodeIndex)}
+          ${isEmpty ? nothing : this.renderNodes(nodeIndex)}
         </div>
+        ${isEmpty
+          ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
+          : nothing}
       </div>
-      <div part="live-region" class="sr-only" aria-hidden="true" id=${this.liveRegionId}>
-        ${this.liveText}
-      </div>
-      <ul part="edge-list" class="sr-only" aria-label=${this.localize('flowEdgeList')}>
-        ${this.edges.map((edge) => html`<li>${this.edgeAccessibleText(edge)}</li>`)}
-      </ul>
-      <slot></slot>
+      ${isEmpty
+        ? nothing
+        : html`
+            <div part="live-region" class="sr-only" aria-hidden="true" id=${this.liveRegionId}>
+              ${this.liveText}
+            </div>
+            <ul part="edge-list" class="sr-only" aria-label=${this.localize('flowEdgeList')}>
+              ${this.edges.map((edge) => html`<li>${this.edgeAccessibleText(edge)}</li>`)}
+            </ul>
+            <slot></slot>
+          `}
       <div part="overlay-rail" data-edge="top">
         <div class="overlay-group" data-align="start"><slot name="top-start"></slot></div>
         <div class="overlay-group" data-align="end"><slot name="top-end"></slot></div>
