@@ -206,6 +206,17 @@ it('deletes the id from expandedIds (and reports expanded: false) when an exampl
   expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: false });
 });
 
+it('forgets an expanded example id once that example is removed', async () => {
+  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  await expandExample(el);
+  el.examples = examples.slice(1);
+  await el.updateComplete;
+  el.examples = [examples[0]!];
+  await el.updateComplete;
+  const restored = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
+  expect(restored.open).to.be.false;
+});
+
 it('renders no tool-trace section when the example has no toolTrace', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el);

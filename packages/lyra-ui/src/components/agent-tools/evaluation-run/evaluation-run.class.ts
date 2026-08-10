@@ -227,6 +227,20 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
    *  update to decide what to announce. */
   private previousStatusById = new Map<string, AgentStatusKind>();
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('examples')) return;
+    const ids = new Set(this.examples.map((example) => example.id));
+    let pruned: Set<string> | undefined;
+    for (const id of this.expandedIds) {
+      if (!ids.has(id)) {
+        pruned ??= new Set(this.expandedIds);
+        pruned.delete(id);
+      }
+    }
+    if (pruned) this.expandedIds = pruned;
+  }
+
   protected override updated(changed: PropertyValues): void {
     const wasMounting = this.isMounting;
     this.isMounting = false;
