@@ -950,6 +950,80 @@ it("adopts a tab added after first render", async () => {
   expect(tabButtons(el)).to.have.lengthOf(4);
 });
 
+it("resyncs post-mount element-model identity mutations through properties and attributes", async () => {
+  const el = (await fixture(elementModel())) as LyraTabGroup;
+  const tabs = [...el.querySelectorAll<LyraTab>("lr-tab")];
+  const tabPanels = [...el.querySelectorAll<LyraTabPanel>("lr-tab-panel")];
+  const events: string[] = [];
+  el.addEventListener("lr-tab-hide", (event) =>
+    events.push(`hide:${(event as CustomEvent<{ name: string }>).detail.name}`)
+  );
+  el.addEventListener("lr-tab-show", (event) =>
+    events.push(`show:${(event as CustomEvent<{ name: string }>).detail.name}`)
+  );
+
+  // The active pair uses the public property path; the inactive pair takes the
+  // plain-markup attribute path. Both must update the group's identity model.
+  tabs[0]!.panel = "overview";
+  tabPanels[0]!.name = "overview";
+  tabs[1]!.setAttribute("panel", "workspace");
+  tabPanels[1]!.setAttribute("name", "workspace");
+  await Promise.all([
+    tabs[0]!.updateComplete,
+    tabs[1]!.updateComplete,
+    tabPanels[0]!.updateComplete,
+    tabPanels[1]!.updateComplete,
+  ]);
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const buttons = tabButtons(el);
+  const wrappers = panels(el);
+  expect(el.active).to.equal("overview");
+  expect(buttons.map((button) => button.dataset.slot)).to.deep.equal([
+    "overview",
+    "workspace",
+    "danger",
+  ]);
+  expect(tabs.map((tab) => tab.getAttribute("slot"))).to.deep.equal([
+    "overview-tab",
+    "workspace-tab",
+    "danger-tab",
+  ]);
+  expect(tabPanels.map((panel) => panel.getAttribute("slot"))).to.deep.equal([
+    "overview",
+    "workspace",
+    "danger",
+  ]);
+  expect(buttons.map((button) => button.getAttribute("aria-controls"))).to.deep.equal(
+    wrappers.map((wrapper) => wrapper.id)
+  );
+  expect(wrappers.map((wrapper) => wrapper.getAttribute("aria-labelledby"))).to.deep.equal(
+    buttons.map((button) => button.id)
+  );
+  expect(
+    wrappers.map((wrapper) =>
+      (wrapper.querySelector("slot") as HTMLSlotElement)
+        .assignedElements({ flatten: true })
+        .map((element) => element.getAttribute("name"))
+    )
+  ).to.deep.equal([["overview"], ["workspace"], ["danger"]]);
+  expect(events).to.deep.equal([]);
+
+  el.show("workspace");
+  await el.updateComplete;
+  expect(el.active).to.equal("workspace");
+  expect(events).to.deep.equal(["hide:overview", "show:workspace"]);
+  expect(buttons.map((button) => button.getAttribute("aria-selected"))).to.deep.equal([
+    "false",
+    "true",
+    "false",
+  ]);
+  expect(wrappers.map((wrapper) => wrapper.hidden)).to.deep.equal([true, false, true]);
+  expect(tabs.map((tab) => tab.active)).to.deep.equal([false, true, false]);
+  expect(tabPanels.map((panel) => panel.active)).to.deep.equal([false, true, false]);
+});
+
 // --- placement --------------------------------------------------------------------------------
 
 it("defaults to a horizontal strip and reports it through aria-orientation", async () => {

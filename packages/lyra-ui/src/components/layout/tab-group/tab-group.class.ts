@@ -258,8 +258,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // brand-new tab's name has no matching `<slot>` to fire `slotchange` on
     // until *this* component has already rendered one for it, and neither
     // `slotchange` nor any Lit lifecycle hook observes a plain attribute
-    // edit (label/disabled) on a light-DOM child at all. A mutation observer
-    // on the host is the only thing that sees either case. `attributes: true`
+    // edit (panel/name/slot/label/disabled) on a light-DOM child at all. A
+    // mutation observer on the host is the only thing that sees either case. `attributes: true`
     // alone only reports mutations on the observed node itself (`this`), never
     // on its children, so `subtree: true` is required too -- but that widens
     // `childList`/`attributeFilter` to the *entire* descendant tree, including
@@ -293,7 +293,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable'],
+      attributeFilter: ['slot', 'label', 'disabled', 'inert', 'closable', 'panel', 'name'],
     });
   }
 
