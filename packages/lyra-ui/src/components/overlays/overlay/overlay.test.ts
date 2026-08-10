@@ -272,6 +272,43 @@ it('honors a .strings override for the popover key, provably reaching the render
   expect(popup.getAttribute('aria-label')).to.equal('Détails supplémentaires');
 });
 
+it('preserves an explicitly empty host aria-label on the semantic popup before live property and localized fallbacks', async () => {
+  const el = (await fixture(html`
+    <lr-popover aria-label=""><button slot="trigger">Open</button><p>Details</p></lr-popover>
+  `)) as LyraPopover;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+
+  expect(popup.getAttribute('role')).to.equal('dialog');
+  expect(popup.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(popup.getAttribute('aria-label')).to.equal('Popover');
+
+  el.accessibleLabel = 'Property name';
+  await el.updateComplete;
+  expect(popup.getAttribute('aria-label')).to.equal('Property name');
+
+  el.accessibleLabel = '';
+  el.strings = { popover: 'Localized fallback' };
+  await el.updateComplete;
+  expect(popup.getAttribute('aria-label')).to.equal('Localized fallback');
+});
+
+it('preserves an explicitly empty host aria-label on a menu-role popup', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown aria-label=""><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>
+  `)) as LyraDropdown;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+
+  expect(popup.getAttribute('role')).to.equal('menu');
+  expect(popup.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(popup.getAttribute('aria-label')).to.equal('Menu');
+});
+
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {
   const el = (await fixture(
     html`<lr-tooltip show-delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,

@@ -42,6 +42,17 @@ export const WithoutArrow: Story = {
   `,
 };
 
+/** `aria-label` names the semantic popup inside the shadow tree. An explicitly empty attribute
+ * intentionally suppresses the localized fallback when a consuming application needs it unnamed. */
+export const AccessibleName: Story = {
+  render: (_args, context) => html`
+    <lr-popover aria-label="Additional account information" .open=${context.viewMode !== 'docs'}>
+      <button slot="trigger">Open account details</button>
+      <p>Account details available to assistive technology under the supplied popup name.</p>
+    </lr-popover>
+  `,
+};
+
 /** Lyra buttons preserve the trigger relationship across their own shadow boundary: the
  *  popover points `aria-controls` at its public host and the focused native button receives that
  *  target through `ariaControlsElements` in supporting browsers. */
