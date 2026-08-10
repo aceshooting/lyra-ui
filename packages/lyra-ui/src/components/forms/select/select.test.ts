@@ -114,6 +114,32 @@ it('honours preventDefault() on lr-hide, including a direct `open` assignment', 
   expect(el.hasAttribute('open')).to.be.true;
 });
 
+it('preserves the active option when lr-hide is vetoed so Enter still selects it', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const button = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]')?.textContent?.trim()).to.equal('Banana');
+
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  await el.hide();
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  expect(el.open, 'a vetoed close stays open').to.be.true;
+  expect(active?.textContent?.trim()).to.equal('Banana');
+  expect(button.getAttribute('aria-activedescendant')).to.equal(active?.id);
+
+  const changed = oneEvent(el, 'change');
+  button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await changed;
+  expect(el.value).to.equal('b');
+});
+
 it('resolves show()/hide() promises even when the transition is vetoed', async () => {
   const el = (await fixture(html`
     <lr-select><lr-option value="a">Apple</lr-option></lr-select>
