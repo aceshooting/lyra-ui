@@ -242,7 +242,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
   }
