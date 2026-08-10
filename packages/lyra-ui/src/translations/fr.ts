@@ -593,6 +593,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: 'Fin de la plage',
   calloutAnnouncementWithContext: '{context} : {content}',
   closeWithContext: 'Fermer : {snippet}',
+  closeWithTruncatedContext: 'Fermer : {snippet}…',
   toolApprovalHeading: 'Approuver l’appel à {tool} ?',
   toolApprovalGenericTool: 'cet outil',
   toolApprovalArgsLabel: 'Arguments de l’appel d’outil (JSON)',

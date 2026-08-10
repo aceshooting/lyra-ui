@@ -94,6 +94,30 @@ export const WithIcon: Story = {
   `,
 };
 
+export const WithIconAndAction: Story = {
+  render: () => html`
+    <button
+      @click=${async () => {
+        const { item } = toast({
+          message: 'File deleted',
+          variant: 'danger',
+          duration: 0,
+          withIcon: true,
+          action: { label: 'Undo', onClick: (toastItem) => toastItem.hide() },
+        });
+        const toastItem = await item;
+        const icon = document.createElement('span');
+        icon.slot = 'icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '!';
+        toastItem.append(icon);
+      }}
+    >
+      Danger + icon + action
+    </button>
+  `,
+};
+
 const placements: ToastPlacement[] = [
   'top-start',
   'top-center',

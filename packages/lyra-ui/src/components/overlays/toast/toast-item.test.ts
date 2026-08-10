@@ -1,7 +1,13 @@
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './toast-item.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
+
+function announcementTexts(politeness: 'polite' | 'assertive', ownerDocument = document): string[] {
+  const sink = ownerDocument.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
 
 class ToastMessageForwardWrapper extends HTMLElement {
   constructor() {
@@ -15,25 +21,29 @@ class ToastMessageForwardWrapper extends HTMLElement {
 }
 customElements.define('toast-message-forward-wrapper', ToastMessageForwardWrapper);
 
-it('emits lifecycle events and uses an assertive role for danger', async () => {
+it('emits lifecycle events and uses the assertive sink for danger', async () => {
+  const before = announcementTexts('assertive');
   const el = (await fixture(
     html`<lr-toast-item variant="danger" duration="0">boom</lr-toast-item>`,
   )) as LyraToastItem;
 
   await oneEvent(el, 'lr-show');
-  expect(el.getAttribute('role')).to.equal('alert');
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(announcementTexts('assertive').slice(before.length)).to.deep.equal(['boom']);
 
   setTimeout(() => void el.hide());
   await oneEvent(el, 'lr-after-hide');
   expect(el.isConnected).to.be.false;
 });
 
-it('uses a polite role for neutral/brand/success', async () => {
+it('uses the polite sink for neutral/brand/success', async () => {
+  const before = announcementTexts('polite');
   const el = (await fixture(
     html`<lr-toast-item variant="success" duration="0">ok</lr-toast-item>`,
   )) as LyraToastItem;
   await oneEvent(el, 'lr-show');
-  expect(el.getAttribute('role')).to.equal('status');
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(announcementTexts('polite').slice(before.length)).to.deep.equal(['ok']);
 });
 
 it('auto-dismisses after its duration', async () => {
@@ -281,16 +291,37 @@ it('drives the accent bar from the shared semantic grid for every non-neutral va
   expect(seen.size, 'all four variants must resolve to distinct accents').to.equal(4);
 });
 
-it('updates the ARIA role live when `variant` changes after creation', async () => {
+it('uses the current sink urgency when `variant` changes after creation', async () => {
+  const politeBefore = announcementTexts('polite');
+  const assertiveBefore = announcementTexts('assertive');
   const el = (await fixture(
     html`<lr-toast-item variant="neutral" duration="0">progress</lr-toast-item>`,
   )) as LyraToastItem;
   await oneEvent(el, 'lr-show');
-  expect(el.getAttribute('role')).to.equal('status');
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(announcementTexts('polite').slice(politeBefore.length)).to.deep.equal(['progress']);
 
   el.variant = 'danger';
   await el.updateComplete;
-  expect(el.getAttribute('role'), 'role should switch to alert once variant becomes danger').to.equal('alert');
+  expect(announcementTexts('assertive').slice(assertiveBefore.length)).to.deep.equal(['progress']);
+});
+
+it('announces a meaningful message update when a visible toast changes within the same urgency', async () => {
+  const assertiveBefore = announcementTexts('assertive');
+  const el = (await fixture(
+    html`<lr-toast-item variant="warning" duration="0">Initial</lr-toast-item>`,
+  )) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
+
+  el.firstChild!.textContent = 'Updated';
+  el.variant = 'danger';
+  await Promise.resolve();
+  await el.updateComplete;
+
+  expect(announcementTexts('assertive').slice(assertiveBefore.length)).to.deep.equal([
+    'Initial',
+    'Updated',
+  ]);
 });
 
 it('renders the icon part/slot only when withIcon is true', async () => {
@@ -557,6 +588,55 @@ it('renders a per-instance .strings override in the close button accessible name
   expect(button?.getAttribute('aria-label')).to.equal('Dismiss Upload complete');
 });
 
+it('truncates contextual close labels at grapheme boundaries through a localized whole-label template', async () => {
+  const prefix = 'x'.repeat(39);
+  const cases = [
+    [`${prefix}👩‍💻y`, `${prefix}👩‍💻`],
+    [`${prefix}e\u0301y`, `${prefix}e\u0301`],
+  ] as const;
+
+  for (const [message, snippet] of cases) {
+    const el = (await fixture(html`
+      <lr-toast-item
+        locale="ja"
+        duration="0"
+        .strings=${{
+          closeWithContext: 'Wrong template {snippet}',
+          closeWithTruncatedContext: 'Dismiss [{snippet}] (more)',
+        }}
+      >${message}</lr-toast-item>
+    `)) as LyraToastItem;
+    try {
+      const button = el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]');
+      expect(button?.getAttribute('aria-label')).to.equal(`Dismiss [${snippet}] (more)`);
+    } finally {
+      el.remove();
+    }
+  }
+});
+
+it('keeps the whole contextual label when grapheme segmentation is unavailable', async () => {
+  const originalSegmenter = Intl.Segmenter;
+  Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
+  const message = `${'x'.repeat(39)}e\u0301y`;
+  try {
+    const el = (await fixture(html`
+      <lr-toast-item
+        duration="0"
+        .strings=${{
+          closeWithContext: 'Dismiss [{snippet}]',
+          closeWithTruncatedContext: 'Wrong truncated template [{snippet}]',
+        }}
+      >${message}</lr-toast-item>
+    `)) as LyraToastItem;
+    const button = el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]');
+    expect(button?.getAttribute('aria-label')).to.equal(`Dismiss [${message}]`);
+    el.remove();
+  } finally {
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: originalSegmenter });
+  }
+});
+
 it('derives and live-updates the close label from rich message markup', async () => {
   const el = (await fixture(
     html`<lr-toast-item duration="0"><strong>Upload complete</strong></lr-toast-item>`,
@@ -604,6 +684,53 @@ it('tracks contextual close text through a forwarding slot', async () => {
   await reassigned;
   await el.updateComplete;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload restored');
+});
+
+it('releases and reacquires announcement sinks across adoption without replaying a visible toast', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  el.textContent = 'Already visible';
+  const shown = oneEvent(el, 'lr-show');
+  document.body.append(el);
+
+  try {
+    await shown;
+    const originalPolite = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    );
+    const originalAssertive = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+    );
+    expect(originalPolite !== null, 'connected toast owns its polite sink').to.equal(true);
+    expect(originalAssertive !== null, 'connected toast owns its assertive sink').to.equal(true);
+
+    frameDocument.adoptNode(el);
+    expect(originalPolite?.isConnected ?? true, 'adoption releases the old polite sink').to.equal(false);
+    expect(originalAssertive?.isConnected ?? true, 'adoption releases the old assertive sink').to.equal(false);
+
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    const adoptedPolite = frameDocument.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    );
+    const adoptedAssertive = frameDocument.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+    );
+    expect(adoptedPolite !== null, 'reconnect acquires a polite sink in the adopted document').to.equal(true);
+    expect(adoptedAssertive !== null, 'reconnect acquires an assertive sink in the adopted document').to.equal(true);
+    expect(announcementTexts('polite', frameDocument)).to.deep.equal([]);
+    expect(announcementTexts('assertive', frameDocument)).to.deep.equal([]);
+
+    el.remove();
+    expect(adoptedPolite?.isConnected ?? true, 'disconnect releases the adopted polite sink').to.equal(false);
+    expect(adoptedAssertive?.isConnected ?? true, 'disconnect releases the adopted assertive sink').to.equal(false);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
 });
 
 it('rebinds its observer, animation frame, and timers to the adopted owner realm', async () => {

@@ -583,6 +583,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: '范围终点',
   calloutAnnouncementWithContext: '{context}：{content}',
   closeWithContext: '关闭：{snippet}',
+  closeWithTruncatedContext: '关闭：{snippet}…',
   toolApprovalHeading: '要批准调用{tool}吗？',
   toolApprovalGenericTool: '工具',
   toolApprovalArgsLabel: '工具调用参数（JSON）',

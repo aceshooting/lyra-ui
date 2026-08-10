@@ -593,6 +593,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: 'Fin del intervalo',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Cerrar: {snippet}',
+  closeWithTruncatedContext: 'Cerrar: {snippet}…',
   toolApprovalHeading: '¿Aprobar la llamada a {tool}?',
   toolApprovalGenericTool: 'herramienta',
   toolApprovalArgsLabel: 'Argumentos de la llamada a la herramienta (JSON)',

@@ -583,6 +583,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: '範囲の終了',
   calloutAnnouncementWithContext: '{context}：{content}',
   closeWithContext: '{snippet} を閉じる',
+  closeWithTruncatedContext: '{snippet}… を閉じる',
   toolApprovalHeading: '{tool} の呼び出しを承認しますか？',
   toolApprovalGenericTool: 'ツール',
   toolApprovalArgsLabel: 'ツール呼び出しの引数（JSON）',

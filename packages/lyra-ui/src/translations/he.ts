@@ -593,6 +593,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: 'סוף טווח',
   calloutAnnouncementWithContext: '{context} — {content}',
   closeWithContext: 'סגור: {snippet}',
+  closeWithTruncatedContext: 'סגור: {snippet}…',
   toolApprovalHeading: 'לאשר קריאה לכלי {tool}?',
   toolApprovalGenericTool: 'כלי',
   toolApprovalArgsLabel: 'ארגומנטים של קריאת כלי (JSON)',

@@ -1,9 +1,73 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
 import './toast.js';
 import type { LyraToast } from './toast.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast.styles.js';
+
+function announcementTexts(politeness: 'polite' | 'assertive'): string[] {
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
+it('announces only the normalized message when toast() supplies icon and action controls', async () => {
+  const assertiveBefore = announcementTexts('assertive');
+  const politeBefore = announcementTexts('polite');
+  const { item } = toast({
+    message: 'File deleted',
+    variant: 'danger',
+    duration: 0,
+    withIcon: true,
+    action: { label: 'Undo', onClick: () => {} },
+  });
+  const el = await item;
+
+  try {
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    expect(Boolean(sink), 'the assertive sink should be pre-mounted').to.equal(true);
+
+    const icon = document.createElement('span');
+    icon.slot = 'icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '!';
+    el.append(icon);
+
+    await waitUntil(() => el.hasAttribute('data-visible'), 'toast should show before it announces', {
+      timeout: 1000,
+    });
+
+    expect(el.hasAttribute('role'), 'visible toast chrome must not own a live role').to.equal(false);
+    expect(el.hasAttribute('aria-live'), 'visible toast chrome must not own live state').to.equal(false);
+    expect(sink?.getAttribute('aria-atomic')).to.equal('false');
+    expect(announcementTexts('assertive').slice(assertiveBefore.length)).to.deep.equal(['File deleted']);
+    expect(announcementTexts('polite').slice(politeBefore.length)).to.deep.equal([]);
+
+    const helperAction = el.querySelector<HTMLButtonElement>('button');
+    const closeButton = el.shadowRoot?.querySelector<HTMLButtonElement>('[part="close-button"]');
+    expect(Boolean(helperAction), 'toast() should retain its visible action').to.equal(true);
+    expect(helperAction?.textContent).to.equal('Undo');
+    expect(closeButton?.getAttribute('aria-label')).to.equal('Close: File deleted');
+
+    const lateAction = document.createElement('button');
+    lateAction.type = 'button';
+    lateAction.textContent = 'Retry';
+    el.append(lateAction);
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(
+      announcementTexts('assertive').slice(assertiveBefore.length),
+      'adding a control after show must not re-announce the message subtree',
+    ).to.deep.equal(['File deleted']);
+
+    el.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]')?.getAnimations().forEach((animation) => {
+      animation.finish();
+    });
+    await expect(el).to.be.accessible();
+  } finally {
+    el.remove();
+  }
+});
 
 it('mounts a singleton region and shows an item', async () => {
   const handle = toast({ message: 'hi', variant: 'success', duration: 0 });

@@ -586,6 +586,7 @@ export type LyraMessageKey =
   | 'rangeEnd'
   | 'calloutAnnouncementWithContext'
   | 'closeWithContext'
+  | 'closeWithTruncatedContext'
   | 'toolApprovalHeading'
   | 'toolApprovalGenericTool'
   | 'toolApprovalArgsLabel'

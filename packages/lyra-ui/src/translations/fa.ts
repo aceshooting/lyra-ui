@@ -588,6 +588,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: 'پایان محدوده',
   calloutAnnouncementWithContext: '{context} — {content}',
   closeWithContext: 'بستن: {snippet}',
+  closeWithTruncatedContext: 'بستن: {snippet}…',
   toolApprovalHeading: 'فراخوانی {tool} تأیید شود؟',
   toolApprovalGenericTool: 'ابزار',
   toolApprovalArgsLabel: 'آرگومان‌های فراخوانی ابزار (JSON)',

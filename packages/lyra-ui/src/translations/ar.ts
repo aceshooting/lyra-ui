@@ -608,6 +608,7 @@ const strings: LyraLocaleStrings = {
   rangeEnd: 'نهاية النطاق',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'إغلاق: {snippet}',
+  closeWithTruncatedContext: 'إغلاق: {snippet}…',
   toolApprovalHeading: 'هل توافق على استدعاء {tool}؟',
   toolApprovalGenericTool: 'أداة',
   toolApprovalArgsLabel: 'وسائط استدعاء الأداة (JSON)',

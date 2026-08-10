@@ -187,6 +187,7 @@ export const LYRA_DEFAULT_clear: LyraMessage = 'Clear';
 export const LYRA_DEFAULT_close: LyraMessage = 'Close';
 export const LYRA_DEFAULT_closeNavigation: LyraMessage = 'Close navigation';
 export const LYRA_DEFAULT_closeWithContext: LyraMessage = 'Close: {snippet}';
+export const LYRA_DEFAULT_closeWithTruncatedContext: LyraMessage = 'Close: {snippet}…';
 export const LYRA_DEFAULT_codeBlockLineLabel: LyraMessage = 'Line {line}';
 export const LYRA_DEFAULT_codeEditorLabel: LyraMessage = 'Code editor';
 export const LYRA_DEFAULT_codeRegion: LyraMessage = 'Code';

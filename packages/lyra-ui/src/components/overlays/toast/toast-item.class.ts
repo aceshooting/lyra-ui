@@ -5,8 +5,10 @@ import {
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
 } from '../../../internal/a11y.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { getSegmenter } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -20,7 +22,7 @@ import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './toast-item.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -40,6 +42,36 @@ function maxCssTime(value: string): number {
   return Math.max(0, ...value.split(',').map(parseTime).filter(Number.isFinite));
 }
 
+const CLOSE_LABEL_GRAPHEME_LIMIT = 40;
+
+function isAssertiveVariant(variant: ToastVariant): boolean {
+  return variant === 'danger' || variant === 'warning';
+}
+
+function truncateGraphemes(
+  value: string,
+  limit: number,
+  locale: string,
+): { snippet: string; truncated: boolean } {
+  // A code-point fallback would split combining and ZWJ graphemes. Keep the complete label on
+  // legacy engines instead of manufacturing a broken close-name context.
+  if (typeof Intl.Segmenter !== 'function') return { snippet: value, truncated: false };
+  let graphemes: string[];
+  try {
+    graphemes = [...getSegmenter(locale, { granularity: 'grapheme' }).segment(value)].map(
+      ({ segment }) => segment,
+    );
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    graphemes = [...getSegmenter(undefined, { granularity: 'grapheme' }).segment(value)].map(
+      ({ segment }) => segment,
+    );
+  }
+  return graphemes.length > limit
+    ? { snippet: graphemes.slice(0, limit).join(''), truncated: true }
+    : { snippet: value, truncated: false };
+}
+
 export interface LyraToastItemEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-after-show': CustomEvent<undefined>;
@@ -47,10 +79,12 @@ export interface LyraToastItemEventMap {
   'lr-after-hide': CustomEvent<undefined>;
 }
 /**
- * `<lr-toast-item>` — a single toast notification. Contextual close names include rich
- * non-interactive message markup and update with its text. When a focused toast finishes hiding,
- * focus moves to an adjacent toast or back to the pre-toast control. A hide interrupted by
- * disconnect resumes to one terminal completion if the same item reconnects.
+ * `<lr-toast-item>` — a single toast notification. Its normalized message is announced through a
+ * shared light-DOM sink, leaving the visible close and action controls outside the live subtree.
+ * Contextual close names include rich non-interactive message markup and update with its text.
+ * When a focused toast finishes hiding, focus moves to an adjacent toast or back to the pre-toast
+ * control. A hide interrupted by disconnect resumes to one terminal completion if the same item
+ * reconnects.
  * Mirrors the Web Awesome `<wa-toast-item>` API under the `lr-` prefix.
  *
  * @customElement lr-toast-item
@@ -103,6 +137,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
     closeWithContext: LYRA_DEFAULT_closeWithContext,
+    closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     duration: LYRA_DEFAULT_duration,
@@ -147,6 +182,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private focused = false;
   private focusReturnTarget?: HTMLElement;
   private messageObserver?: MutationObserver;
+  private politeSink?: AnnouncementSink;
+  private assertiveSink?: AnnouncementSink;
+  private lastAnnouncedMessage = '';
   private readonly onMessageSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -194,12 +232,18 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('variant')) {
-      // Assertive for actionable severities, polite otherwise. Re-evaluated
-      // on every `variant` change (not just the first render) so a toast
-      // reassigned to `danger`/`warning` after creation is announced as an
-      // interruption instead of keeping its original, now-stale role.
-      this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
+    if (this.hasAttribute('data-visible')) {
+      const previousVariant = changed.get('variant') as ToastVariant | undefined;
+      const urgencyChanged = changed.has('variant') &&
+        isAssertiveVariant(this.variant) !== isAssertiveVariant(previousVariant ?? 'neutral');
+      if (urgencyChanged) {
+        // Preserve the prior urgency contract when a displayed toast changes
+        // severity, but announce only the normalized message rather than the
+        // visible controls that share this host.
+        this.announceMessage(true);
+      } else if (changed.has('messageText')) {
+        this.announceMessage();
+      }
     }
     this.shadowRoot
       ?.querySelector<SVGElement>('[part~="close-icon"] svg')
@@ -212,6 +256,14 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.politeSink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.messageObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
@@ -253,6 +305,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       // removing it, exactly as a listener that blocks `lr-hide` owns dismissing it later.
       if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) return;
       this.setAttribute('data-visible', '');
+      this.announceMessage(true);
       void this.waitForVisualCompletion('show').then(() => {
         if (this.isConnected && !this.hiding) this.emit('lr-after-show');
       });
@@ -265,6 +318,10 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.removeEventListener('slotchange', this.onMessageSlotChange);
     this.messageObserver?.disconnect();
     this.messageObserver = undefined;
+    this.politeSink?.release();
+    this.politeSink = undefined;
+    this.assertiveSink?.release();
+    this.assertiveSink = undefined;
     if (this.hiding && !this.afterHideEmitted) this.hideGeneration++;
     if (this.showRafId !== undefined) {
       this.showRafOwner?.cancelAnimationFrame(this.showRafId);
@@ -504,10 +561,18 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       .replace(/\s+/g, ' ');
   }
 
+  private announceMessage(force = false): void {
+    const message = this.messageText;
+    if (!force && message === this.lastAnnouncedMessage) return;
+    this.lastAnnouncedMessage = message;
+    (isAssertiveVariant(this.variant) ? this.assertiveSink : this.politeSink)?.announce(message);
+  }
+
   private get closeLabel(): string {
     const text = this.messageText;
     if (!text) return this.localize('close');
-    const snippet = text.length > 40 ? `${text.slice(0, 40)}…` : text;
+    const { snippet, truncated } = truncateGraphemes(text, CLOSE_LABEL_GRAPHEME_LIMIT, this.effectiveLocale);
+    if (truncated) return this.localize('closeWithTruncatedContext', undefined, { snippet });
     return this.localize('closeWithContext', undefined, { snippet });
   }
 

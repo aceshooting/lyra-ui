@@ -579,6 +579,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   rangeEnd: 'Range end',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Close: {snippet}',
+  closeWithTruncatedContext: 'Close: {snippet}…',
   toolApprovalHeading: 'Approve {tool} call?',
   toolApprovalGenericTool: 'tool',
   toolApprovalArgsLabel: 'Tool call arguments (JSON)',

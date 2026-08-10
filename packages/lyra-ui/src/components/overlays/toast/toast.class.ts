@@ -137,9 +137,9 @@ export class LyraToast extends LyraElement {
   }
 
   override render(): TemplateResult {
-    // Each toast item owns its own status/alert role. Keeping a live region on
-    // the stack as well would nest assertive alerts inside a polite region and
-    // can cause duplicate or out-of-order announcements.
+    // Toast items announce their normalized messages through the shared
+    // light-DOM sinks. Keeping a live role on this visible stack would pull
+    // its controls back into an atomic announcement subtree.
     return html`<div part="stack"><slot @slotchange=${this.syncVisibleState}></slot></div>`;
   }
 }
