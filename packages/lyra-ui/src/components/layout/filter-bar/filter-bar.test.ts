@@ -638,6 +638,171 @@ describe("active-filter chips", () => {
     await el.updateComplete;
     expect(el.value.tags).to.deep.equal([]);
   });
+
+  it("keeps focus on the nearest remaining chip, or its originating filter control, after focused removal", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "first",
+        label: "First",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+      {
+        id: "middle",
+        label: "Middle",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+      {
+        id: "last",
+        label: "Last",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+
+    const removeFocusedChip = async (id: string): Promise<void> => {
+      const chip = el.shadowRoot!.querySelector(
+        `[part="chip"][value="${id}"]`
+      ) as HTMLElement & { updateComplete: Promise<unknown> };
+      await chip.updateComplete;
+      chip.focus();
+      const remove = chip.shadowRoot!.querySelector(
+        '[part="remove-button"]'
+      ) as HTMLButtonElement;
+      expect(chip.shadowRoot!.activeElement === remove).to.be.true;
+      remove.click();
+      await el.updateComplete;
+    };
+
+    el.value = { first: "yes", middle: "yes", last: "yes" };
+    await el.updateComplete;
+
+    await removeFocusedChip("first");
+    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-chip");
+    expect(el.shadowRoot!.activeElement?.getAttribute("value")).to.equal(
+      "middle"
+    );
+
+    // Rebuild the original list so the middle/last cases independently exercise the focus repair.
+    el.value = { first: "yes", middle: "yes", last: "yes" };
+    await el.updateComplete;
+    await removeFocusedChip("middle");
+    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-chip");
+    expect(el.shadowRoot!.activeElement?.getAttribute("value")).to.equal(
+      "last"
+    );
+
+    el.value = { first: "yes", middle: "yes", last: "yes" };
+    await el.updateComplete;
+    await removeFocusedChip("last");
+    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-chip");
+    expect(el.shadowRoot!.activeElement?.getAttribute("value")).to.equal(
+      "middle"
+    );
+
+    el.value = { first: "yes" };
+    await el.updateComplete;
+    await removeFocusedChip("first");
+    const controlAfterSoleRemoval = control(el, "first") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await controlAfterSoleRemoval.updateComplete;
+    expect(el.shadowRoot!.activeElement === controlAfterSoleRemoval).to.be.true;
+    expect(
+      controlAfterSoleRemoval.shadowRoot!.activeElement?.localName
+    ).to.equal("button");
+  });
+
+  it("moves a sole custom-filter chip's focus to its rendered control after removal", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "custom",
+        label: "Custom",
+        type: "custom",
+        custom: {
+          adapter: { valueFromEvent: () => "", emptyValue: "" },
+          render: (context) => html`
+            <input
+              data-custom-filter-input
+              ?disabled=${context.disabled}
+              @focusout=${context.onFocusout}
+            >
+          `,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { custom: "selected" };
+    await el.updateComplete;
+
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await chip.updateComplete;
+    chip.focus();
+    const remove = chip.shadowRoot!.querySelector(
+      '[part="remove-button"]'
+    ) as HTMLButtonElement;
+    remove.click();
+    await el.updateComplete;
+
+    const customInput = control(el, "custom").querySelector(
+      "[data-custom-filter-input]"
+    ) as HTMLInputElement;
+    expect(el.shadowRoot!.activeElement === customInput).to.be.true;
+  });
+
+  it("preserves a consumer focus move made by an lr-input listener after focused removal", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "status",
+        label: "Status",
+        type: "select",
+        options: [{ value: "open", label: "Open" }],
+      },
+    ];
+    const wrapper = await fixture(html`
+      <div>
+        <input id="consumer-focus-target">
+        <lr-filter-bar .filters=${filters}></lr-filter-bar>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-filter-bar") as LyraFilterBar;
+    const consumerTarget = wrapper.querySelector(
+      "#consumer-focus-target"
+    ) as HTMLInputElement;
+    el.value = { status: "open" };
+    await el.updateComplete;
+    el.addEventListener("lr-input", (event) => {
+      if (
+        (event as CustomEvent<FilterBarInputDetail>).detail.filterId ===
+        "status"
+      ) {
+        consumerTarget.focus();
+      }
+    });
+
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await chip.updateComplete;
+    chip.focus();
+    const remove = chip.shadowRoot!.querySelector(
+      '[part="remove-button"]'
+    ) as HTMLButtonElement;
+    remove.click();
+    await el.updateComplete;
+
+    expect(el.ownerDocument.activeElement?.id).to.equal(
+      "consumer-focus-target"
+    );
+  });
 });
 
 describe("reset()", () => {
@@ -782,6 +947,110 @@ describe("disabled", () => {
     await chip.updateComplete;
     expect(chip.shadowRoot!.querySelector('[part="remove-button"]')).to.equal(
       null
+    );
+  });
+
+  it("does not treat a disabled focusout as a required filter interaction, but preserves enabled focusout", async () => {
+    const builtInTypes: FilterBarFilterDefinition["type"][] = [
+      "select",
+      "combobox",
+      "date",
+      "date-range",
+      "text",
+    ];
+
+    for (const type of builtInTypes) {
+      const filters: FilterBarFilterDefinition[] = [
+        {
+          id: "required",
+          label: "Required",
+          type,
+          required: true,
+          options: [{ value: "yes", label: "Yes" }],
+        },
+      ];
+      const el = (await fixture(
+        html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+      )) as LyraFilterBar;
+      const composed = control(el, "required") as HTMLElement & {
+        errorText: string;
+        updateComplete: Promise<unknown>;
+      };
+      await composed.updateComplete;
+      const focusTarget = composed.shadowRoot!.querySelector(
+        "input, button"
+      ) as HTMLElement;
+      focusTarget.focus();
+      expect(composed.shadowRoot!.activeElement === focusTarget).to.be.true;
+
+      el.disabled = true;
+      await el.updateComplete;
+      // WebKit does not force-blur every native control shape. Dispatching the same bubbling,
+      // composed event makes the bar's disabled-state contract deterministic in all engines.
+      composed.dispatchEvent(
+        new FocusEvent("focusout", { bubbles: true, composed: true })
+      );
+      await el.updateComplete;
+      expect(composed.errorText, `${type} disabled focusout`).to.equal("");
+
+      el.disabled = false;
+      await el.updateComplete;
+      expect(composed.errorText, `${type} remains pristine after re-enable`).to.equal("");
+
+      composed.dispatchEvent(
+        new FocusEvent("focusout", { bubbles: true, composed: true })
+      );
+      await el.updateComplete;
+      expect(composed.errorText, `${type} enabled focusout`).to.equal(
+        "This field is required."
+      );
+    }
+  });
+
+  it("applies the disabled focusout guard to custom controls too", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "required",
+        label: "Required",
+        type: "custom",
+        required: true,
+        custom: {
+          adapter: { valueFromEvent: () => "" },
+          render: (context) => html`
+            <input
+              ?disabled=${context.disabled}
+              data-error-text=${context.errorText}
+              @focusout=${context.onFocusout}
+            >
+          `,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const input = control(el, "required").querySelector("input") as HTMLInputElement;
+    input.focus();
+    expect(el.shadowRoot!.activeElement === input).to.be.true;
+
+    el.disabled = true;
+    await el.updateComplete;
+    input.dispatchEvent(
+      new FocusEvent("focusout", { bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+    expect(input.getAttribute("data-error-text")).to.equal("");
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(input.getAttribute("data-error-text")).to.equal("");
+
+    input.dispatchEvent(
+      new FocusEvent("focusout", { bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+    expect(input.getAttribute("data-error-text")).to.equal(
+      "This field is required."
     );
   });
 });

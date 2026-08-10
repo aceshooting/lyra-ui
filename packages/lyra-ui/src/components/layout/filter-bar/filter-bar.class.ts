@@ -2,6 +2,10 @@ import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
+  collectFocusableElements,
+  deepActiveElement,
+} from "../../../internal/overlay-manager.js";
+import {
   getDateTimeFormat,
   getListFormat,
 } from "../../../internal/intl-cache.js";
@@ -364,6 +368,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   // suppresses the external-value sync in `syncTextControls()`.
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private pendingText = new Map<string, string>();
+  private chipFocusGeneration = 0;
   // Guards lr-validity-change so it only fires on an actual change, not on every render --
   // `undefined` guarantees the first computed state always "changes" from it, mirroring
   // lr-tool-param-form's identical lastValidityKey.
@@ -474,7 +479,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   private markTouched(id: string): void {
-    if (this.touchedFilters.has(id)) return;
+    if (this.disabled || this.touchedFilters.has(id)) return;
     this.touchedFilters = new Set(this.touchedFilters).add(id);
   }
 
@@ -554,10 +559,44 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.markTouched(id);
   }
 
-  private clearFilter(id: string): void {
+  private repairFocusAfterChipRemoval(
+    index: number,
+    filterId: string,
+    shouldRepairFocus: boolean
+  ): void {
+    const generation = ++this.chipFocusGeneration;
+    if (!shouldRepairFocus) return;
+    void this.updateComplete.then(() => {
+      if (
+        !this.isConnected ||
+        this.disabled ||
+        generation !== this.chipFocusGeneration ||
+        deepActiveElement(this.ownerDocument) !== this.ownerDocument.body
+      )
+        return;
+      const chips = this.renderRoot.querySelectorAll<HTMLElement>('[part="chip"]');
+      const chip = chips[Math.min(index, chips.length - 1)];
+      const target = chip ? collectFocusableElements(chip)[0] : undefined;
+      if (target) {
+        target.focus();
+        return;
+      }
+      for (const control of this.renderRoot.querySelectorAll<HTMLElement>(
+        '[data-filter-id]'
+      )) {
+        if (control.dataset["filterId"] === filterId) {
+          collectFocusableElements(control)[0]?.focus();
+          return;
+        }
+      }
+    });
+  }
+
+  private clearFilter(id: string, shouldRepairFocus = false): void {
     if (this.disabled) return;
     // Same race as reset(): a pending keystroke would land after the chip removal and undo it.
     this.cancelDebounce(id);
+    const index = this.activeEntries.findIndex((entry) => entry.def.id === id);
     const def = this._filters.find((f) => f.id === id);
     const empty: FilterBarFieldValue =
       def?.type === "custom"
@@ -566,6 +605,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         ? []
         : "";
     this.setFilterValue(id, empty);
+    this.repairFocusAfterChipRemoval(
+      Math.max(0, index),
+      id,
+      shouldRepairFocus
+    );
   }
 
   private displayValueFor(
@@ -889,7 +933,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
                     value=${def.id}
                     @lr-remove=${(e: Event) => {
                       e.stopPropagation();
-                      this.clearFilter(def.id);
+                      const chip = e.currentTarget as HTMLElement;
+                      this.clearFilter(
+                        def.id,
+                        chip.shadowRoot?.activeElement !== null
+                      );
                     }}
                     >${def.label}: ${display}</lr-chip
                   >`
