@@ -77,6 +77,8 @@ Improve component reliability and public contracts across the library:
 - expose the shared configurable Markdown parser and public refresh method on `lr-markdown-core`.
 - verify `lr-code-block-core` Shiki token palettes through rendered light and dark computed colors.
 - relay `lr-data-grid` search and filter focus transitions through its host as native events.
+- honor documented `lr-data-grid` copy/export/scroll option interfaces, including an explicit copy
+  delimiter overriding the format default.
 - clarify that `lr-prompt-input` submits its composite state through typed events, not native form data.
 - theme `lr-data-grid`'s search placeholder through the shared quiet-text token.
 - localize generated matrix and category counts in `lr-heatmap` and `lr-sequence-strip`.

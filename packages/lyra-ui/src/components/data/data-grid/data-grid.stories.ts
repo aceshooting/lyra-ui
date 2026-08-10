@@ -113,6 +113,61 @@ export const FullClientFeatures: Story = {
   `,
 };
 
+/** An explicit delimiter overrides the comma normally selected by `format: "csv"`. */
+export const ExplicitCopyDelimiter: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Calls `copySelectedRows({ format: 'csv', delimiter: ';' })`. The explicit semicolon takes precedence over CSV's usual comma, and the preview uses the same selected columns and delimiter.",
+      },
+    },
+  },
+  render: () => {
+    const copyWithSemicolons = (event: Event): void => {
+      const wrapper = (event.currentTarget as HTMLElement).closest<HTMLElement>(
+        "[data-copy-delimiter]"
+      );
+      const grid =
+        wrapper?.querySelector<LyraDataGrid<DemoRow>>("lr-data-grid");
+      const output = wrapper?.querySelector<HTMLOutputElement>("output");
+      if (!grid || !output) return;
+
+      const copied = grid.copySelectedRows({
+        columnIds: ["name", "score"],
+        includeHeaders: false,
+        format: "csv",
+        delimiter: ";",
+      });
+      const preview = grid.getDataAsCsv({
+        columnIds: ["name", "score"],
+        includeHeaders: false,
+        delimiter: ";",
+      });
+      output.textContent = `Copied ${copied} selected rows with semicolons:\n${preview}`;
+    };
+    return html`
+      <div data-copy-delimiter style="display:grid;gap:var(--lr-space-s)">
+        <lr-data-grid
+          label="Semicolon copy example"
+          row-key="id"
+          selectable="multiple"
+          .selectedKeys=${[1, 2]}
+          .columns=${columns}
+          .data=${rows.slice(0, 2)}
+        ></lr-data-grid>
+        <button type="button" @click=${copyWithSemicolons}>
+          Copy selected rows with semicolons
+        </button>
+        <output aria-live="polite" style="white-space:pre-wrap">
+          Copy the preselected rows with
+          <code>format: 'csv', delimiter: ';'</code>.
+        </output>
+      </div>
+    `;
+  },
+};
+
 /** A canceled pointer drag rolls the column back and never reports `finished: true`. */
 export const CanceledColumnResize: Story = {
   render: () => {

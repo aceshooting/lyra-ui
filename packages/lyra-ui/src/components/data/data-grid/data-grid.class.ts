@@ -38,13 +38,16 @@ import type {
   DataGridAppearance,
   DataGridCellContextMenuDetail,
   DataGridColumn,
+  DataGridCopyOptions,
   DataGridCsvOptions,
+  DataGridExportOptions,
   DataGridFacets,
   DataGridFilter,
   DataGridKey,
   DataGridPinSide,
   DataGridRequest,
   DataGridResponse,
+  DataGridScrollOptions,
   DataGridSelectable,
   DataGridSize,
   DataGridSortingState,
@@ -835,15 +838,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
   }
 
-  /** Copies selected rows, or all processed rows when nothing is selected, and returns the row count. */
-  copySelectedRows(
-    options: {
-      columnIds?: string[];
-      includeHeaders?: boolean;
-      format?: 'tsv' | 'csv';
-      escapeFormulas?: boolean;
-    } = {}
-  ): number {
+  /** Copies selected rows, or all processed rows when nothing is selected, and returns the row count.
+   *  An explicit `delimiter` takes precedence over the default selected by `format`. */
+  copySelectedRows(options: DataGridCopyOptions = {}): number {
     const rowsToCopy =
       this.selectedRows.length > 0
         ? this.selectedRows
@@ -851,7 +848,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const format = options.format ?? "tsv";
     const text = this.delimitedRows(rowsToCopy, {
       ...options,
-      delimiter: format === "csv" ? "," : "\t",
+      delimiter: options.delimiter ?? (format === "csv" ? "," : "\t"),
     });
     this.writeClipboard(text);
     if (!this.isMounting) this.announce(this.localize("copied"));
@@ -876,16 +873,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.expandedKeys = [...this.expandedKeys, key];
   }
 
-  /** Downloads processed rows as CSV. */
-  exportDataAsCsv(
-    options: {
-      fileName?: string;
-      columnIds?: string[];
-      includeHeaders?: boolean;
-      delimiter?: string;
-      escapeFormulas?: boolean;
-    } = {}
-  ): void {
+  /** Downloads processed rows as formula-safe delimited text (CSV by default). */
+  exportDataAsCsv(options: DataGridExportOptions = {}): void {
     const text = this.getDataAsCsv(options);
     const ownerDocument = this.ownerDocument;
     const owner = ownerDocument.defaultView;
@@ -896,8 +885,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     try {
       const anchor = ownerDocument.createElement("a");
       anchor.href = url;
-      const legacyFileName = (options as typeof options & { filename?: string })
-        .filename;
+      const legacyFileName = options.filename;
       anchor.download = options.fileName || legacyFileName || "data.csv";
       anchor.hidden = true;
       ownerDocument.body?.append(anchor);
@@ -961,15 +949,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
   }
 
-  /** Returns processed rows as formula-safe CSV without downloading. */
-  getDataAsCsv(
-    options: {
-      columnIds?: string[];
-      includeHeaders?: boolean;
-      delimiter?: string;
-      escapeFormulas?: boolean;
-    } = {}
-  ): string {
+  /** Returns processed rows as formula-safe delimited text without downloading. */
+  getDataAsCsv(options: DataGridCsvOptions = {}): string {
     return this.delimitedRows(this.getProcessedRows(), options);
   }
 
@@ -1105,7 +1086,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Scrolls the requested processed-row index into the virtual viewport. */
   scrollToIndex(
     index: number,
-    options: { align?: 'start' | 'center' | 'end' } = {}
+    options: DataGridScrollOptions = {}
   ): void {
     const rows = this.getVisibleRows();
     if (rows.length === 0) return;

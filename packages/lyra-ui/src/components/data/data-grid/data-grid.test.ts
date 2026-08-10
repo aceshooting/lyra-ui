@@ -1906,15 +1906,9 @@ it("honors exact CSV/copy/export options, compatibility aliases, and formula esc
       escapeFormulas: false,
     })
   ).to.equal("=1+1");
-  expect(
-    (
-      element.getDataAsCsv as unknown as (options: {
-        columns: string[];
-      }) => string
-    )({
-      columns: ["team"],
-    })
-  ).to.equal("Team\r\n'@COMPILER");
+  expect(element.getDataAsCsv({ columns: ["team"] })).to.equal(
+    "Team\r\n'@COMPILER"
+  );
 
   let copied = "";
   const clipboardDescriptor = Object.getOwnPropertyDescriptor(
@@ -1955,17 +1949,53 @@ it("honors exact CSV/copy/export options, compatibility aliases, and formula esc
     downloaded = this.download;
   };
   try {
-    (
-      element.exportDataAsCsv as unknown as (options: {
-        filename: string;
-        columns: string[];
-      }) => void
-    )({ filename: "legacy.csv", columns: ["name"] });
+    element.exportDataAsCsv({ filename: "legacy.csv", columns: ["name"] });
     expect(downloaded).to.equal("legacy.csv");
   } finally {
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
     HTMLAnchorElement.prototype.click = originalAnchorClick;
+  }
+});
+
+it("honors an explicit copy delimiter over the format default", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Copy people"
+      row-key="id"
+      .columns=${columns}
+      .data=${rows}
+      .selectedKeys=${[1]}
+    ></lr-data-grid>
+  `);
+  let copied = "";
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: async (value: string) => {
+        copied = value;
+      },
+    },
+  });
+  try {
+    expect(
+      element.copySelectedRows({
+        columnIds: ["name", "score"],
+        includeHeaders: false,
+        format: "csv",
+        delimiter: ";",
+      })
+    ).to.equal(1);
+    await Promise.resolve();
+    expect(copied).to.equal("Ada;7");
+  } finally {
+    if (clipboardDescriptor)
+      Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
   }
 });
 

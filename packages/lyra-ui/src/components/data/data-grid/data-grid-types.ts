@@ -144,7 +144,7 @@ export interface DataGridCopyOptions {
   includeHeaders?: boolean;
   format?: 'tsv' | 'csv';
   escapeFormulas?: boolean;
-  /** Additive Lyra alias; `format` chooses this automatically when omitted. */
+  /** Overrides the delimiter that `format` would otherwise select. */
   delimiter?: string;
   /** @deprecated Use `columnIds`. */
   columns?: string[];
