@@ -131,13 +131,22 @@ export const ThemedViewToggle: Story = {
 };
 
 export const CustomCollapseAndFullscreenIcons: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The collapse-icon and fullscreen-icon slots are decorative visual overrides. Their content is inert and aria-hidden, so the native toggle button remains the only action.',
+      },
+    },
+  },
   render: () => html`
     <lr-widget label="Load profile" sublabel="Last 7 days" collapsible expandable style="max-width: 28rem;">
       <span slot="collapse-icon">▾</span>
       <span slot="fullscreen-icon">⤢</span>
       <div style="padding: 1rem;">
         The <code>collapse-icon</code> and <code>fullscreen-icon</code> slots override the built-in
-        chevron/expand glyphs entirely -- omit either to keep the library default.
+        chevron/expand glyphs entirely. They are decorative, so omit either to keep the library
+        default and keep interactive controls outside the slots.
       </div>
     </lr-widget>
   `,

@@ -146,6 +146,87 @@ describe("fullscreen-icon slot override", () => {
   });
 });
 
+describe("decorative icon slot isolation", () => {
+  it("keeps interactive icon overrides inert and pointer-transparent", async () => {
+    const root = await fixture(html`
+      <div>
+        <button id="outside-widget-icon" type="button">Outside</button>
+        <lr-widget label="Panel" collapsible expandable>
+          <button
+            id="collapse-widget-glyph"
+            slot="collapse-icon"
+            type="button"
+            aria-label="Custom collapse glyph"
+          >
+            C
+          </button>
+          <a id="fullscreen-widget-glyph" slot="fullscreen-icon" href="#widget-icon">F</a>
+          content
+        </lr-widget>
+      </div>
+    `);
+    const el = root.querySelector("lr-widget") as LyraWidget;
+    const outside = root.querySelector(
+      "#outside-widget-icon"
+    ) as HTMLButtonElement;
+    const collapseGlyph = root.querySelector(
+      "#collapse-widget-glyph"
+    ) as HTMLButtonElement;
+    const fullscreenGlyph = root.querySelector(
+      "#fullscreen-widget-glyph"
+    ) as HTMLAnchorElement;
+
+    for (const name of ["collapse-icon", "fullscreen-icon"]) {
+      const slot = el.shadowRoot!.querySelector(
+        `slot[name="${name}"]`
+      ) as HTMLSlotElement;
+      expect(
+        slot.closest<HTMLElement>("[inert]")?.getAttribute("aria-hidden"),
+        `${name} is decorative visual chrome`
+      ).to.equal("true");
+    }
+
+    for (const glyph of [collapseGlyph, fullscreenGlyph]) {
+      outside.focus();
+      glyph.focus();
+      expect(document.activeElement?.id).to.equal("outside-widget-icon");
+    }
+
+    let collapseGlyphClicks = 0;
+    let fullscreenGlyphClicks = 0;
+    collapseGlyph.addEventListener("click", () => collapseGlyphClicks++);
+    fullscreenGlyph.addEventListener("click", () => fullscreenGlyphClicks++);
+    const clickCenter = async (target: HTMLElement): Promise<void> => {
+      const rect = target.getBoundingClientRect();
+      await sendMouse({
+        type: "click",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+    };
+
+    await expect(el).to.be.accessible();
+    try {
+      await resetMouse();
+      await clickCenter(collapseGlyph);
+      await el.updateComplete;
+      expect(collapseGlyphClicks).to.equal(0);
+      expect(el.collapsed).to.be.true;
+      await expect(el).to.be.accessible();
+
+      await clickCenter(fullscreenGlyph);
+      await el.updateComplete;
+      expect(fullscreenGlyphClicks).to.equal(0);
+      expect(el.fullscreen).to.be.true;
+      await expect(el).to.be.accessible();
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
 describe("rich label/sublabel", () => {
   it("lets the label slot override the label attribute instead of concatenating both", async () => {
     const el = (await fixture(
@@ -995,6 +1076,53 @@ it("lets a host aria-label override both label and a slotted label for the fulls
   await el.updateComplete;
 
   expect(base.getAttribute("aria-label")).to.equal("Override");
+});
+
+it("preserves explicit empty fullscreen labels before label, slotted, and localized fallbacks", async () => {
+  const el = (await fixture(html`
+    <lr-widget
+      expandable
+      aria-label=""
+      label="Attribute title"
+      .strings=${{ widgetFullscreenPanel: "Localized fallback" }}
+    >
+      <span slot="label">Slotted title</span>content
+    </lr-widget>
+  `)) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const fullscreenButton = el.shadowRoot!.querySelector(
+    '[part="fullscreen-button"]'
+  ) as HTMLButtonElement;
+
+  fullscreenButton.click();
+  await el.updateComplete;
+  expect(base.hasAttribute("aria-label")).to.equal(true);
+  expect(base.getAttribute("aria-label")).to.equal("");
+
+  el.removeAttribute("aria-label");
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("Attribute title");
+
+  el.label = "";
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("Slotted title");
+
+  const labelSlot = el.shadowRoot!.querySelector(
+    'slot[name="label"]'
+  ) as HTMLSlotElement;
+  const labelSlotChanged = oneEvent(labelSlot, "slotchange");
+  el.querySelector('[slot="label"]')!.remove();
+  await labelSlotChanged;
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("Localized fallback");
+
+  el.accessibleLabel = "";
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("");
+
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("Localized fallback");
 });
 
 it("mirrors the collapsed collapse-button chevron under RTL", async () => {

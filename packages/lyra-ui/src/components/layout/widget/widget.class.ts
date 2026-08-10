@@ -56,12 +56,14 @@ export interface LyraWidgetEventMap {
  * @slot collapse-icon - Overrides the built-in chevron glyph inside the collapse/expand toggle
  *   button entirely, via the platform's own slot-fallback-content mechanism (same convention as
  *   `<lr-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron
- *   renders. Only meaningful while `collapsible`.
+ *   renders. Assigned content is decorative, inert, and aria-hidden so the outer toggle remains the
+ *   sole action. Only meaningful while `collapsible`.
  * @slot fullscreen-icon - Overrides the built-in expand/close glyph inside the fullscreen toggle
  *   button entirely, using the same mechanism -- the override replaces *both* the "expand" and
  *   "exit fullscreen" default icons, so a consumer supplying one is responsible for its own
- *   expand/exit distinction (e.g. by reading the `fullscreen` attribute). Only meaningful while
- *   `expandable`.
+ *   expand/exit distinction (e.g. by reading the `fullscreen` attribute). Assigned content is
+ *   decorative, inert, and aria-hidden so the outer toggle remains the sole action. Only meaningful
+ *   while `expandable`.
  * @slot view-{id} - Content for the view whose `WidgetView.id` matches `{id}`, rendered when
  *   `views` is non-empty.
  * @event lr-collapse-change - `detail: { collapsed }` (the new `collapsed` state).
@@ -128,7 +130,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   @property() label = "";
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
-   *  slotted `label`. Fed only by a host `aria-label`, matching `lr-scroller`'s/`lr-carousel`'s
+   *  slotted `label`. An explicitly empty value remains an explicit name; fallbacks apply only when
+   *  the value is absent. Fed only by a host `aria-label`, matching `lr-scroller`'s/`lr-carousel`'s
    *  own host-override pattern. */
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
   @property() sublabel = "";
@@ -488,10 +491,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         role=${this.fullscreen ? "dialog" : nothing}
         aria-modal=${this.fullscreen ? "true" : nothing}
         aria-label=${this.fullscreen
-          ? this.accessibleLabel ||
-            this.label ||
-            this.labelSlotText ||
-            this.localize("widgetFullscreenPanel")
+          ? this.accessibleLabel ??
+            (this.label ||
+              this.labelSlotText ||
+              this.localize("widgetFullscreenPanel"))
           : nothing}
         tabindex=${this.fullscreen ? "-1" : nothing}
         style=${fullscreenInset
@@ -562,7 +565,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >
-                <slot name="collapse-icon">${chevronIcon()}</slot>
+                <span aria-hidden="true" inert>
+                  <slot name="collapse-icon">${chevronIcon()}</slot>
+                </span>
               </button>`
             : nothing}
           ${this.expandable
@@ -575,9 +580,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                   : this.localize("widgetExpandToFullscreen")}
                 @click=${this.toggleFullscreen}
               >
-                <slot name="fullscreen-icon"
-                  >${this.fullscreen ? closeIcon() : expandIcon()}</slot
-                >
+                <span aria-hidden="true" inert>
+                  <slot name="fullscreen-icon"
+                    >${this.fullscreen ? closeIcon() : expandIcon()}</slot
+                  >
+                </span>
               </button>`
             : nothing}
         </div>
