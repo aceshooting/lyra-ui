@@ -172,6 +172,22 @@ describe('lr-tour', () => {
     expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
   });
 
+  it('uses step content when the default slot contains only indentation whitespace', async () => {
+    const el = (await fixture(html`<div>${targetButtons(1)}</div>`)) as HTMLDivElement;
+    const tour = document.createElement('lr-tour') as LyraTour;
+    // This is the text node a line break plus indentation contributes in normal consumer markup.
+    tour.append('\n          ');
+    tour.steps = makeSteps(1, () => ({ content: 'Fallback step body' }));
+    tour.open = true;
+    el.prepend(tour);
+    await tour.updateComplete;
+
+    const body = tour.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(body.innerText.trim()).to.equal('Fallback step body');
+    expect(popover.getAttribute('aria-describedby')).to.include(body.id);
+  });
+
   it('closes an open overlay when steps clear and reactivates a same-index replacement', async () => {
     const el = (await fixture(
       html`<div>

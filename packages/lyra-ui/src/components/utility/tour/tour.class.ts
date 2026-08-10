@@ -751,7 +751,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
           >
             <span id=${this.headingId} part="heading">${step.heading}</span>
             <div id=${this.bodyId} part="body">
-              <slot @slotchange=${this.onDefaultSlotChange}>${step.content ?? ''}</slot>
+              <slot @slotchange=${this.onDefaultSlotChange}></slot>${this.hasSlotContent ? nothing : step.content ?? ''}
             </div>
             ${this.showProgress
               ? html`
