@@ -221,11 +221,36 @@ describe('<lr-kbd> rendering', () => {
     expect(base.getAttribute('aria-label')).to.equal('Open palette');
   });
 
+  it('preserves an empty host aria-label by attribute presence and falls back only when it is removed', async () => {
+    const el = (await fixture(html`<lr-kbd keys="mod+k" aria-label=""></lr-kbd>`)) as LyraKbd;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('');
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
+
+    el.setAttribute('aria-label', 'Open palette');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Open palette');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('');
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('Control+K');
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
+  });
+
   it('sets role="img" alongside an explicit aria-label even with empty keys and no slot content', async () => {
-    // role and aria-hidden must both be derived from the same computed
-    // ariaLabel value as aria-label itself -- an explicit label asserted on
-    // a role-less element (role gated only on tokens.length) is an
-    // aria-prohibited-attr violation.
+    // role and aria-hidden must both follow the same label-presence decision
+    // as aria-label itself -- an explicit label asserted on a role-less
+    // element (role gated only on tokens.length) is an aria-prohibited-attr
+    // violation.
     const el = (await fixture(html`<lr-kbd aria-label="Something"></lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('img');
@@ -271,6 +296,21 @@ describe('default slot override', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('img');
     expect(base.getAttribute('aria-label')).to.equal('Custom shortcut');
+  });
+
+  it('keeps an explicit empty host label on custom slot content', async () => {
+    const el = (await fixture(html`<lr-kbd aria-label=""><span>fn</span>+F5</lr-kbd>`)) as LyraKbd;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('');
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
   });
 
   it('reacts to the slot being populated after first render', async () => {

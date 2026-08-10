@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hasRealContent } from '../../../internal/a11y.js';
+import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -259,7 +259,7 @@ export class LyraKbd extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const explicitLabel = this.getAttribute('aria-label');
+    const explicitLabel = hostAriaLabel(this);
 
     // Deliberately drop the second (fallback) argument here: shortcutTokenLabel's
     // `resolve()` always sets `fallback` to the literal built-in English text for
@@ -279,12 +279,12 @@ export class LyraKbd extends LyraElement {
     // explicit override) renders nothing visible, so it's marked
     // aria-hidden instead of exposed as a nameless image.
     //
-    // role/aria-hidden are both derived from this same `ariaLabel` value
-    // (rather than each independently re-deriving "is there a label" from
-    // tokens.length/explicitLabel) so role="img" can never be absent while
-    // aria-label is present — that combination is an aria-prohibited-attr
-    // violation (a nameless-but-labeled, role-less element).
-    const ariaLabel = explicitLabel || tokens.map((t) => t.word).join('+');
+    // The host's authored label wins by attribute presence, including an
+    // explicit empty string. Keep that presence signal alongside the string:
+    // an absent label and no tokens also produce an empty string, but must
+    // remain the hidden, non-image state.
+    const ariaLabel = explicitLabel ?? tokens.map((t) => t.word).join('+');
+    const hasAriaLabel = explicitLabel !== null || tokens.length > 0;
 
     // One outer template for both renderings, with the branch inside it. Slotted content is only
     // discoverable in a browser, so a hydrating chip switches branches on its second update -- and
@@ -292,9 +292,9 @@ export class LyraKbd extends LyraElement {
     return html`
       <span
         part="base"
-        role=${ariaLabel ? 'img' : nothing}
-        aria-hidden=${!this.hasCustomContent && !ariaLabel ? 'true' : nothing}
-        aria-label=${ariaLabel || nothing}
+        role=${hasAriaLabel ? 'img' : nothing}
+        aria-hidden=${!this.hasCustomContent && !hasAriaLabel ? 'true' : nothing}
+        aria-label=${hasAriaLabel ? ariaLabel : nothing}
       >
         ${this.hasCustomContent
           ? html`<slot @slotchange=${this.onSlotChange}></slot>`
