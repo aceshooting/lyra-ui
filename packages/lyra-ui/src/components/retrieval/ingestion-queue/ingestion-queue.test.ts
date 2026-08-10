@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './ingestion-queue.js';
 import type { LyraIngestionQueue, IngestionQueueItem } from './ingestion-queue.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
@@ -434,6 +435,29 @@ describe('accessible name', () => {
     )) as LyraIngestionQueue;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom name');
   });
+
+  it('preserves an explicitly empty host aria-label at both nonvirtual semantic owners and restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        aria-label="Author queue"
+        label="Uploads"
+        .items=${[item({ id: '1', stage: 'queued' })]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    const owners = () => [
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label'),
+      el.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!.getAttribute('aria-label'),
+    ];
+    expect(owners()).to.deep.equal(['Author queue', 'Author queue']);
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(owners()).to.deep.equal(['', '']);
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(owners()).to.deep.equal(['Uploads', 'Uploads']);
+  });
 });
 
 describe('.strings overrides', () => {
@@ -483,6 +507,36 @@ describe('virtualization', () => {
     expect(el.shadowRoot!.querySelector('[part="list"]')).to.not.exist;
     expect(virtualList!.items).to.equal(items);
     expect(virtualList!.keyFunction(items[1], 1)).to.equal('2');
+    await nextFrame();
+  });
+
+  it('preserves an explicitly empty host aria-label through the nested virtual-list owner and restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        aria-label="Author queue"
+        label="Uploads"
+        virtualize-threshold="1"
+        .items=${[item({ id: '1', stage: 'queued' })]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    const virtualList = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    await virtualList.updateComplete;
+    const owners = () => [
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label'),
+      virtualList.getAttribute('aria-label'),
+      virtualList.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label'),
+    ];
+    expect(owners()).to.deep.equal(['Author queue', 'Author queue', 'Author queue']);
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    await virtualList.updateComplete;
+    expect(owners()).to.deep.equal(['', '', '']);
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    await virtualList.updateComplete;
+    expect(owners()).to.deep.equal(['Uploads', 'Uploads', 'Uploads']);
     await nextFrame();
   });
 

@@ -148,7 +148,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
 
   override render(): TemplateResult {
     const visibleLabel = this.label || this.localize('knowledgeBaseAdminLabel');
-    const accessibleLabel = this.getAttribute('aria-label') || visibleLabel;
+    const accessibleLabel = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : visibleLabel;
     const tab: KnowledgeBaseAdminTab =
       this.activeTab === 'ingestion' && !this.hideIngestion ? 'ingestion' : 'sources';
     return html`<section part="base" aria-label=${accessibleLabel}>
