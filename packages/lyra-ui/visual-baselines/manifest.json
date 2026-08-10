@@ -71,14 +71,24 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "input-radio-group--default", "profile": "standard" },
+    {
+      "id": "input-radio-group--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The radio target-floor fix changes the current capture, which awaits human visual review."
+    },
     {
       "id": "forms-radio-button--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The radio-button target-floor and constrained-label fixes change the current capture, which awaits human visual review."
     },
-    { "id": "switch--default", "profile": "standard" },
+    {
+      "id": "switch--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The switch target-floor fix changes the current capture, which awaits human visual review."
+    },
     {
       "id": "textarea--default",
       "profile": "standard",
@@ -238,7 +248,12 @@
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
     { "id": "layout-page--desktop", "profile": "standard" },
-    { "id": "layout-page--mobile-drawer", "profile": "standard" },
+    {
+      "id": "layout-page--mobile-drawer",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The decorative navigation-toggle-icon replacement changes the current mobile-drawer capture, which awaits human visual review."
+    },
     { "id": "layout-split-panel--default", "profile": "standard" },
     { "id": "responsivepanel--forced-overlay-bottom-sheet", "profile": "standard" },
     {
