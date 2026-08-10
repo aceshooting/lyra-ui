@@ -277,6 +277,26 @@ describe("lr-card", () => {
     await expect(el).to.be.accessible();
   });
 
+  it("gives a linked card's explicit host label precedence over linked content", async () => {
+    const el = (await fixture(html`
+      <lr-card href="#monthly-report" aria-label="Open monthly report">Monthly report</lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+
+    expect(anchor.getAttribute("aria-label")).to.equal("Open monthly report");
+    expect(anchor.hasAttribute("aria-labelledby")).to.be.false;
+
+    el.setAttribute("aria-label", "");
+    await el.updateComplete;
+    expect(anchor.getAttribute("aria-label")).to.equal("");
+    expect(anchor.hasAttribute("aria-labelledby")).to.be.false;
+
+    el.removeAttribute("aria-label");
+    await el.updateComplete;
+    expect(anchor.hasAttribute("aria-label")).to.be.false;
+    expect(anchor.getAttribute("aria-labelledby")).to.equal("linked-content");
+  });
+
   it("follows a linked card for noninteractive slotted content", async () => {
     const el = (await fixture(html`
       <lr-card href="#card-details"><span id="linked-card-content">Open details</span></lr-card>
@@ -412,6 +432,25 @@ describe("lr-card", () => {
       expect(activation.getAttribute("aria-label")).to.equal(
         "Open archived project"
       );
+    });
+
+    it("retains an explicit empty accessible label before falling back to card content", async () => {
+      const el = (await fixture(
+        html`<lr-card interactive aria-label="">Monthly report</lr-card>`
+      )) as LyraCard;
+      const activation = el.shadowRoot!.querySelector(
+        '[part="activation-button"]'
+      ) as HTMLButtonElement;
+
+      expect(activation.getAttribute("aria-label")).to.equal("");
+
+      el.removeAttribute("aria-label");
+      await el.updateComplete;
+      expect(activation.getAttribute("aria-label")).to.equal("Monthly report");
+
+      el.accessibleLabel = "";
+      await el.updateComplete;
+      expect(activation.getAttribute("aria-label")).to.equal("");
     });
 
     it("refreshes its content-derived activation name after detached text changes", async () => {

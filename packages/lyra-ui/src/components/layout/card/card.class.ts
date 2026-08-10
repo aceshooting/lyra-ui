@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
@@ -147,7 +148,9 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  output: no button, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) interactive = false;
 
-  /** Host `aria-label` forwarded to the native no-href activation button. */
+  /** Accessible name forwarded to the native activation owner. The `aria-label` attribute/property
+   *  applies by presence to the interactive button or linked anchor, including an explicitly empty
+   *  value. */
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
   /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a
@@ -353,15 +356,14 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const hasFooter = this.withFooter || this.hasFooterSlot || hasFooterActions;
     const href = safeLinkHref(this.href);
     const activatable = this.interactive && !href;
+    const accessibleLabel = hostAriaLabel(this) ?? this.accessibleLabel;
     const body = html`
       ${activatable
         ? html`<button
             part="activation-button"
             type="button"
             tabindex="0"
-            aria-label=${this.accessibleLabel ||
-            this.accessibleContentText ||
-            nothing}
+            aria-label=${accessibleLabel ?? (this.accessibleContentText || nothing)}
           ></button>`
         : nothing}
       <div part="media image" ?hidden=${!hasMedia}>
@@ -400,7 +402,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
             href=${href}
             target=${this.target || nothing}
             rel=${this.target ? "noopener noreferrer" : nothing}
-            aria-labelledby="linked-content"
+            aria-label=${accessibleLabel ?? nothing}
+            aria-labelledby=${accessibleLabel === null ? "linked-content" : nothing}
           ></a>
           <div id="linked-content" class="linked-content" @click=${this.onLinkedContentClick}>
             ${body}

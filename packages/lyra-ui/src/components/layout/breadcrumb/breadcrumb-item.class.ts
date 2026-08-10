@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import { SlotPresenceController } from "../../../internal/slot-presence-controller.js";
@@ -14,6 +15,8 @@ export type BreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
 
 /**
  * `<lr-breadcrumb-item>` — one link, button, or current-page label in a breadcrumb.
+ * A host `aria-label` is forwarded by attribute presence to the non-current
+ * native link or button, including an explicitly empty value.
  *
  * @customElement lr-breadcrumb-item
  * @slot - Item label.
@@ -85,6 +88,7 @@ export class LyraBreadcrumbItem extends LyraElement {
 
   override render(): TemplateResult {
     const href = safeLinkHref(this.href);
+    const ariaLabel = hostAriaLabel(this);
     const separator = html`<span part="separator" aria-hidden="true" inert><slot name="separator">/</slot></span>`;
     const label = html`
       <span part="start prefix" ?hidden=${!this.slots.has('start') && !this.slots.has('prefix')}>
@@ -102,11 +106,12 @@ export class LyraBreadcrumbItem extends LyraElement {
             href=${href}
             target=${this.target || nothing}
             rel=${this.target ? 'noopener noreferrer' : nothing}
+            aria-label=${ariaLabel ?? nothing}
             aria-current="false"
           >${label}</a>`
         : this.current
           ? html`<span part="base" aria-current="page">${label}</span>`
-          : html`<button part="base" type="button" aria-current="false">${label}</button>`;
+          : html`<button part="base" type="button" aria-label=${ariaLabel ?? nothing} aria-current="false">${label}</button>`;
     return html`${separator}${base}`;
   }
 }

@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import { place } from "../../../internal/positioner.js";
@@ -11,6 +12,8 @@ import { styles } from "./app-rail-item.styles.js";
  * `<lr-app-rail>`. The rail sets its `icon-only` attribute as the viewport
  * changes, keeping the label available to assistive technology while removing
  * it from the visual layout.
+ * A host `aria-label` is forwarded by attribute presence to the internal
+ * focusable link or button, including an explicitly empty value.
  *
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
@@ -81,7 +84,7 @@ export class LyraAppRailItem extends LyraElement {
   }
 
   private get tooltipText(): string {
-    return this.getAttribute("aria-label") || this.labelText || "";
+    return hostAriaLabel(this) ?? (this.labelText || "");
   }
 
   private onFocusShow = (): void => {
@@ -149,7 +152,7 @@ export class LyraAppRailItem extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute("aria-label");
+    const label = hostAriaLabel(this);
     const href = safeLinkHref(this.href);
     const content = html`
       <span part="icon" aria-hidden="true"><slot name="icon"></slot></span>
@@ -164,7 +167,7 @@ export class LyraAppRailItem extends LyraElement {
         href=${href}
         target=${this.target || nothing}
         rel=${this.target ? "noopener noreferrer" : nothing}
-        aria-label=${label || nothing}
+        aria-label=${label ?? nothing}
         aria-disabled="false"
         aria-current=${this.active ? "page" : nothing}
         @mouseenter=${this.onFocusShow}
@@ -179,7 +182,7 @@ export class LyraAppRailItem extends LyraElement {
       type="button"
       ?disabled=${this.disabled}
       aria-disabled=${this.disabled ? "true" : "false"}
-      aria-label=${label || nothing}
+      aria-label=${label ?? nothing}
       aria-current=${this.active ? "page" : nothing}
       @mouseenter=${this.onFocusShow}
       @mouseleave=${this.onBlurHide}
