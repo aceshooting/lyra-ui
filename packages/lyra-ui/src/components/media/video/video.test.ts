@@ -1060,6 +1060,77 @@ describe('lr-video public contract', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('keeps a two-line caption clear of every full control at a 320px allocation', async () => {
+    const fullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
+    const requestFullscreen = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'requestFullscreen');
+    const requestPictureInPicture = Object.getOwnPropertyDescriptor(
+      HTMLVideoElement.prototype,
+      'requestPictureInPicture',
+    );
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: true });
+      Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="inline-size: 320px"><lr-video controls="full"></lr-video></div>
+      `);
+      const el = wrapper.querySelector('lr-video') as LyraVideo;
+      const media = nativeVideo(el);
+      const track = new EventTarget() as EventTarget & {
+        kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
+      };
+      Object.assign(track, {
+        kind: 'captions',
+        label: 'English',
+        language: 'en',
+        mode: 'showing',
+        activeCues: [{ text: 'A deliberately long first caption line\nand a second caption line' }],
+      });
+      Object.defineProperty(media, 'textTracks', {
+        configurable: true,
+        value: { 0: track, length: 1 },
+      });
+      media.dispatchEvent(new Event('loadedmetadata'));
+      track.dispatchEvent(new Event('cuechange'));
+      await el.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
+      const video = el.shadowRoot!.querySelector<HTMLElement>('[part="video"]')!;
+      const captionRect = caption.getBoundingClientRect();
+      const videoRect = video.getBoundingClientRect();
+      const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
+        '[part="controls"] button, [part="controls"] select, [part="controls"] input',
+      )];
+      expect(controls.length).to.equal(8);
+      expect(captionRect.top >= videoRect.top).to.equal(true);
+      expect(captionRect.bottom <= videoRect.bottom).to.equal(true);
+      for (const control of controls) {
+        const controlRect = control.getBoundingClientRect();
+        expect(controlRect.width > 0 && controlRect.height > 0, `${control.localName} is visible`).to.equal(true);
+        const overlaps =
+          captionRect.left < controlRect.right &&
+          captionRect.right > controlRect.left &&
+          captionRect.top < controlRect.bottom &&
+          captionRect.bottom > controlRect.top;
+        expect(overlaps, `caption must clear ${control.localName}`).to.equal(false);
+      }
+    } finally {
+      restoreOwnProperty(document, 'fullscreenEnabled', fullscreenEnabled);
+      restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
+      restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', requestFullscreen);
+      restoreOwnProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', requestPictureInPicture);
+    }
+  });
+
   it('inherits RTL while keeping elapsed-time progression physical and uses no nonessential motion', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video dir="rtl"></lr-video>`);
     const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
