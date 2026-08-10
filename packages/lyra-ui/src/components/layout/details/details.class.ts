@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -37,6 +38,9 @@ export interface LyraDetailsEventMap {
  * the keyboard) the summary — the native `<details>` toggle is intercepted so a vetoed `lr-show`
  * cannot leave the panel visually expanded. Markup that renders open from the start emits
  * nothing.
+ *
+ * A present host `aria-label`, including an explicitly empty value, names the native summary
+ * trigger. When absent, the summary retains its native name-from-content behavior.
  *
  * @customElement lr-details
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
@@ -325,6 +329,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     >
       <summary
         part="summary"
+        aria-label=${hostAriaLabel(this) ?? nothing}
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-disabled=${this.disabled ? 'true' : 'false'}
         @click=${this.onClick}

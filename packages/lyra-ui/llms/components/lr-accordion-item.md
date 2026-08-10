@@ -53,6 +53,10 @@ non-empty name in one document or shadow root are mutually exclusive),
 `iconPlacement: 'start' | 'end' = 'end'` (attribute `icon-placement`, reflected and logical), and
 `size`.
 
+A host `aria-label`, when present, names the actual Details summary or accordion-item trigger;
+it wins over summary/label content even when explicitly empty. When the host attribute is absent,
+the trigger keeps its native name-from-content behavior.
+
 `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
 instead of being the one fixed-density element in a compact panel. Both spellings of every tier are

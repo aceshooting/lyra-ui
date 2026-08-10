@@ -121,7 +121,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 723,
+              "line": 742,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -132,7 +132,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 689,
+              "line": 708,
               "kind": "320px allocation test signal"
             }
           ]
@@ -270,7 +270,7 @@
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 756,
+              "line": 775,
               "test": "localizes the fallback label and is accessible in its own populated expanded state",
               "target": "item",
               "state": "populated"
@@ -306,7 +306,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 723,
+              "line": 742,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -317,7 +317,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 689,
+              "line": 708,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12628,14 +12628,14 @@
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 741,
+              "line": 760,
               "test": "is accessible with custom icons, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 613,
+              "line": 632,
               "test": "stays accessible and keyboard-operable at the smallest tier",
               "target": "el",
               "state": "populated"
@@ -12671,7 +12671,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 723,
+              "line": 742,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12682,7 +12682,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 689,
+              "line": 708,
               "kind": "320px allocation test signal"
             }
           ]

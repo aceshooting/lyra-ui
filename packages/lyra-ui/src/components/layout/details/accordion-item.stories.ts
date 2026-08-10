@@ -13,6 +13,14 @@ export const Default: StoryObj = {
   render: () => html`<lr-accordion-item label="Details" expanded>Expandable content.</lr-accordion-item>`,
 };
 
+/** A present host `aria-label` names the trigger ahead of its visible label, including an
+ *  explicitly empty attribute; without it, the trigger keeps its content-derived name. */
+export const AccessibleNamePrecedence: StoryObj = {
+  render: () => html`<lr-accordion-item label="Visible fallback" aria-label="Account settings">
+    Update profile and sign-in preferences.
+  </lr-accordion-item>`,
+};
+
 export const CustomLabelAndIcon: StoryObj = {
   render: () => html`<lr-accordion-item heading-level="2" icon-placement="start">
     <span slot="label"><strong>Rich label</strong> with supporting text</span>

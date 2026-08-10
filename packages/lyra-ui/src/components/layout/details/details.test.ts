@@ -26,6 +26,25 @@ it("renders a disclosure panel and reports its state", async () => {
   await expect(el).to.be.accessible();
 });
 
+it("forwards a host aria-label to the native summary by presence and restores content naming when removed", async () => {
+  const el = (await fixture(
+    html`<lr-details summary="Fallback details" aria-label="">Content</lr-details>`,
+  )) as LyraDetails;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+
+  expect(summary.hasAttribute("aria-label")).to.equal(true);
+  expect(summary.getAttribute("aria-label")).to.equal("");
+
+  el.setAttribute("aria-label", "Author details");
+  await el.updateComplete;
+  expect(summary.getAttribute("aria-label")).to.equal("Author details");
+
+  el.removeAttribute("aria-label");
+  await el.updateComplete;
+  expect(summary.hasAttribute("aria-label")).to.equal(false);
+  expect(summary.textContent).to.contain("Fallback details");
+});
+
 it("does not toggle for an interactive summary child created in another realm", async () => {
   const el = (await fixture(html`<lr-details>Content</lr-details>`)) as LyraDetails;
   const iframe = document.createElement("iframe");

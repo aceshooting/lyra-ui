@@ -514,6 +514,25 @@ describe('<lr-accordion-item>', () => {
     expect(item.shadowRoot!.querySelector('[part~="heading"]')).to.equal(null);
   });
 
+  it('forwards a host aria-label to the trigger by presence and restores content naming when removed', async () => {
+    const item = (await fixture(html`
+      <lr-accordion-item label="Fallback item" aria-label="">Content</lr-accordion-item>
+    `)) as LyraAccordionItem;
+    const button = buttonFor(item);
+
+    expect(button.hasAttribute('aria-label')).to.equal(true);
+    expect(button.getAttribute('aria-label')).to.equal('');
+
+    item.setAttribute('aria-label', 'Author item');
+    await item.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Author item');
+
+    item.removeAttribute('aria-label');
+    await item.updateComplete;
+    expect(button.hasAttribute('aria-label')).to.equal(false);
+    expect(button.textContent).to.contain('Fallback item');
+  });
+
   it('accepts the legacy summary property and summary slot as label aliases', async () => {
     const propertyItem = (await fixture(
       html`<lr-accordion-item summary="Legacy summary">Content</lr-accordion-item>`,

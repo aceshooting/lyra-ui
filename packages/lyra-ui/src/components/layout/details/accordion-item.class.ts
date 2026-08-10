@@ -1,5 +1,6 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   LyraElement,
   type LyraEmitArgs,
@@ -27,6 +28,9 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  * `expanded`/`label` are the canonical accordion vocabulary. The inherited Details vocabulary is
  * also supported: `open` aliases `expanded`, `summary` aliases `label`, the `summary` slot aliases
  * the `label` slot, and `show()`/`hide()` alias `expand()`/`collapse()`.
+ *
+ * A present host `aria-label`, including an explicitly empty value, names the trigger button.
+ * When absent, the trigger retains its native name-from-content behavior.
  *
  * @customElement lr-accordion-item
  * @slot - Panel content.
@@ -294,6 +298,7 @@ export class LyraAccordionItem extends LyraDetails {
       id="trigger"
       part="button summary"
       type="button"
+      aria-label=${hostAriaLabel(this) ?? nothing}
       aria-expanded=${this.expanded ? 'true' : 'false'}
       aria-controls="panel"
       aria-disabled=${this.disabled ? 'true' : 'false'}

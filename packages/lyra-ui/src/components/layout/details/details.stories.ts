@@ -7,6 +7,14 @@ const meta: Meta = { title: 'Disclosure/Details', component: 'lr-details', tags:
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-details summary="More information">Additional details.</lr-details>` };
 
+/** A present host `aria-label` names the native summary trigger, including an explicitly empty
+ *  attribute; without it, the trigger keeps its content-derived name. */
+export const AccessibleNamePrecedence: StoryObj = {
+  render: () => html`<lr-details summary="Visible fallback" aria-label="Security settings">
+    Configure access and verification options.
+  </lr-details>`,
+};
+
 export const GroupedWithCustomIcons: StoryObj = {
   name: 'Named group, appearance, and custom icons',
   parameters: {
