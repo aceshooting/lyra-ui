@@ -248,9 +248,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   override render(): TemplateResult {
     const label =
-      this.label ||
-      this.getAttribute("aria-label") ||
-      this.localize("scrollerLabel");
+      this.getAttribute("aria-label") ??
+      (this.label || this.localize("scrollerLabel"));
     const vertical = this.orientation === "vertical";
     return html`<div part="base">
       ${this.controls

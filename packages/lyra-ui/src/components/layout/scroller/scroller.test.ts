@@ -137,6 +137,31 @@ describe("<lr-scroller>", () => {
     expect(base.hasAttribute("role")).to.be.false;
   });
 
+  it("gives a host aria-label precedence over label and preserves it across late changes", async () => {
+    const el = await fixture<LyraScroller>(
+      html`<lr-scroller label="Property label"><span>Content</span></lr-scroller>`
+    );
+    const viewport = () => el.shadowRoot!.querySelector('[part="viewport"]')!;
+
+    expect(viewport().getAttribute("aria-label")).to.equal("Property label");
+
+    el.setAttribute("aria-label", "Host label");
+    await el.updateComplete;
+    expect(viewport().getAttribute("aria-label")).to.equal("Host label");
+
+    el.setAttribute("aria-label", "");
+    await el.updateComplete;
+    expect(viewport().getAttribute("aria-label")).to.equal("");
+
+    el.removeAttribute("aria-label");
+    await el.updateComplete;
+    expect(viewport().getAttribute("aria-label")).to.equal("Property label");
+
+    el.label = "";
+    await el.updateComplete;
+    expect(viewport().getAttribute("aria-label")).to.equal("Scrollable content");
+  });
+
   it("supports optional navigation controls", async () => {
     const el = await fixture<LyraScroller>(
       html`<lr-scroller controls><span>Content</span></lr-scroller>`
