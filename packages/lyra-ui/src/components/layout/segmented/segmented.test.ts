@@ -183,6 +183,28 @@ describe("lr-segmented", () => {
     expect(base3.getAttribute("aria-label")).to.equal("Author label");
   });
 
+  it("preserves an explicitly empty host aria-label and restores the label fallback when removed", async () => {
+    const el = (await fixture(
+      html`<lr-segmented
+        label="View choices"
+        aria-label=""
+        .items=${items()}
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(base.hasAttribute("aria-label")).to.equal(true);
+    expect(base.getAttribute("aria-label")).to.equal("");
+
+    el.setAttribute("aria-label", "Author choices");
+    await el.updateComplete;
+    expect(base.getAttribute("aria-label")).to.equal("Author choices");
+
+    el.removeAttribute("aria-label");
+    await el.updateComplete;
+    expect(base.getAttribute("aria-label")).to.equal("View choices");
+  });
+
   it("is accessible", async () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
@@ -311,6 +333,38 @@ describe("item icon", () => {
       (c) => c.getAttribute("part") === "segment-label"
     );
     expect(children.indexOf(icon as Element)).to.be.lessThan(labelIndex);
+  });
+
+  it("keeps interactive item icons decorative and unfocusable inside their radio", async () => {
+    const root = await fixture(html`
+      <div>
+        <button id="outside" type="button">Outside</button>
+        <lr-segmented></lr-segmented>
+      </div>
+    `);
+    const outside = root.querySelector<HTMLButtonElement>("#outside")!;
+    const el = root.querySelector<LyraSegmented>("lr-segmented")!;
+    el.items = [
+      {
+        value: "day",
+        label: "Day",
+        icon: litHtml`<button id="nested-segment-icon" type="button">Nested action</button>`,
+      },
+      { value: "week", label: "Week" },
+    ];
+    el.value = "day";
+    el.label = "View choices";
+    await el.updateComplete;
+
+    const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="segment-icon"]');
+    const nested = el.shadowRoot!.querySelector<HTMLElement>("#nested-segment-icon")!;
+    outside.focus();
+    nested.focus();
+
+    expect(icon?.inert ?? false).to.equal(true);
+    expect(root.ownerDocument.activeElement?.id).to.equal("outside");
+    expect(el.shadowRoot!.activeElement?.id ?? null).to.not.equal("nested-segment-icon");
+    await expect(el).to.be.accessible();
   });
 
   it("gives a non-disabled, non-checked segment a :hover treatment", () => {

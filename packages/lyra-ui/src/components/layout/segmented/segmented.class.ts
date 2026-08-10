@@ -7,6 +7,7 @@ import type { LyraSize, LyraSizeStep } from "../../../internal/variants.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
 import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
 import { styles } from "./segmented.styles.js";
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -18,9 +19,10 @@ import { LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.
 export interface SegmentedItem {
   value: string;
   label: string;
-  /** Optional leading visual rendered before the label. This is intentionally general content,
-   *  not a square-icon-only field: SVG icons, flag glyphs, badges, and other natural-aspect-ratio
-   *  Lit content are supported. */
+  /** Optional decorative leading visual rendered before the label. This is intentionally general
+   *  content, not a square-icon-only field: SVG icons, flag glyphs, badges, and other
+   *  natural-aspect-ratio Lit content are supported. It is rendered in inert, aria-hidden chrome,
+   *  so it cannot provide an independent action or accessible name. */
   icon?: unknown;
   disabled?: boolean;
 }
@@ -54,8 +56,9 @@ export interface LyraSegmentedEventMap {
  *   `prefers-reduced-motion`.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart segment - A single `role="radio"` button.
- * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
- *   may have a natural aspect ratio and is not restricted to a square icon.
+ * @csspart segment-icon - Optional decorative leading visual supplied by the item's `icon` field.
+ *   Content may have a natural aspect ratio and is not restricted to a square icon; it is inert and
+ *   hidden from assistive technology, so it cannot provide an independent action or accessible name.
  * @csspart segment-label - The segment's label text.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the track actually overflows, so a row that fits is never dimmed.
@@ -107,8 +110,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   @property() value = "";
 
   /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
-   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
-   *  The resolved name is set on the `role="radiogroup"` element. */
+   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading). A
+   *  host `aria-label` wins by attribute presence, including an explicitly empty value. The resolved
+   *  name is set on the `role="radiogroup"` element. */
   @property() label = "";
 
   /** Visual size, on the library's shared ladder — the same `--lr-form-control-*` scale
@@ -257,7 +261,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   };
 
   override render(): TemplateResult {
-    const ariaLabel = this.getAttribute("aria-label") || this.label || nothing;
+    const ariaLabel = hostAriaLabel(this) ?? (this.label || nothing);
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
     // checked item at all -- falling back to `item.value === this.value` alone
@@ -297,7 +301,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             @click=${() => this.select(item)}
           >
             ${item.icon
-              ? html`<span part="segment-icon" aria-hidden="true"
+              ? html`<span part="segment-icon" aria-hidden="true" inert
                   >${item.icon}</span
                 >`
               : nothing}<span part="segment-label">${item.label}</span>

@@ -77,18 +77,42 @@ export const WithIcons: Story = {
 };
 
 export const AccessibleName: Story = {
-  name: 'Accessible name (label prop)',
+  name: 'Accessible name (label fallback)',
   parameters: {
     docs: {
       description: {
         story:
-          'The `label` property sets `aria-label` on the `role="radiogroup"` root. It renders no visible text of its own -- use it when the control has no adjacent heading or wrapping `<label>` to derive an accessible name from.',
+          'The `label` property sets `aria-label` on the `role="radiogroup"` root when the host has no `aria-label`. It renders no visible text of its own -- use it when the control has no adjacent heading or wrapping `<label>` to derive an accessible name from.',
       },
     },
   },
   render: () => html`
     <lr-segmented
       label="View"
+      .items=${[
+        { value: 'day', label: 'Day' },
+        { value: 'week', label: 'Week' },
+        { value: 'month', label: 'Month' },
+      ]}
+      value="week"
+    ></lr-segmented>
+  `,
+};
+
+export const AccessibleNameOverride: Story = {
+  name: 'Accessible name (host override)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-label` takes precedence over `label` on the internal `role="radiogroup"`, including when the authored value is an empty string.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-segmented
+      label="View fallback"
+      aria-label="Choose a conversation view"
       .items=${[
         { value: 'day', label: 'Day' },
         { value: 'week', label: 'Week' },
