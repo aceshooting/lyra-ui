@@ -22,6 +22,11 @@ export interface LyraReorderListEventMap {
   "lr-reorder": CustomEvent<ReorderDetail>;
 }
 
+type ReorderFocusTarget = {
+  item: LyraReorderItem;
+  buttonPart: "move-up-button" | "move-down-button";
+};
+
 /**
  * `<lr-reorder-list>` — a generic vertical list of `<lr-reorder-item>` rows, reorderable via
  * per-row move-up/move-down buttons (always available) or Ctrl/Cmd+ArrowUp/ArrowDown from focus
@@ -82,20 +87,10 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   @query("lr-live-region") private liveRegion?: LyraLiveRegion;
 
-  /** Set by `moveItem()` to the button that should receive focus once the moved item's own
-   *  deferred re-render has actually cleared its `disabled` attribute; consumed by
-   *  `getUpdateComplete()` below. A plain, synchronously-overwritten bookkeeping VALUE, not a
-   *  started async chain -- the same shape as `<lr-tree>`'s `pendingFocusId`. This matters:
-   *  overwriting a value is free, but overwriting a field that held an *already-started* promise
-   *  (an earlier draft of this fix did exactly that) leaves the earlier promise chain still
-   *  running, uncancelled, racing to `.focus()` a now-stale target after the real one already won.
-   *  Deferring ALL of the actual async work to `getUpdateComplete()` -- started exactly once, only
-   *  when it actually runs -- means a second `moveItem()` call before that point has nothing
-   *  in-flight to race against; it just overwrites this field. */
-  private pendingFocusTarget: {
-    item: LyraReorderItem;
-    buttonPart: "move-up-button" | "move-down-button";
-  } | null = null;
+  /** Latest post-move focus target. A generation guard keeps a superseded async restore inert. */
+  private pendingFocusTarget: ReorderFocusTarget | null = null;
+
+  private focusRestoreGeneration = 0;
 
   /** Set while an `lr-reorder` listener has called `preventDefault()`, holding a move until the
    *  host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
@@ -146,6 +141,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.pendingFocusTarget = null;
+    this.focusRestoreGeneration += 1;
     if (this.pendingMove) {
       this.pendingMove.item.pending = false;
       this.pendingMove = null;
@@ -156,40 +153,33 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     return items.map((item, i) => item.value ?? String(i));
   }
 
-  // `syncBoundaryState()` sets `atStart`/`atEnd`/`listDisabled` as plain Lit `@property`
-  // assignments -- the JS field updates synchronously, but the shadow-DOM re-render (and with
-  // it, the button's `disabled` HTML attribute) is deferred to a microtask. Focusing a button
-  // that Lit hasn't re-rendered yet risks focusing one still marked `disabled` in the live DOM
-  // (a silent no-op), immediately followed by Lit disabling the *actually* newly-boundary button
-  // out from under the real focus -- which the HTML spec force-blurs to `document.body`.
-  //
-  // The actual async work (awaiting the moved item's own `updateComplete`, then `.focus()`) lives
-  // ONLY in `getUpdateComplete()` below, run lazily and exactly once per update cycle -- it is
-  // never started eagerly from `applyMove()`. That's deliberate: an eagerly-started promise chain
-  // per move would keep running independently even after a later move overwrites
-  // `pendingFocusTarget`, uncancelled and orphaned, free to `.focus()` a stale target the moment
-  // its own `await item.updateComplete` resolves -- which can lose the race against a *second*
-  // move's own restoration and steal focus back onto the wrong item (a fast double-click or
-  // Ctrl/Cmd+Arrow key-repeat outrunning a render tick reliably triggers exactly this). Storing
-  // only the plain target VALUE here and deferring all the work to `getUpdateComplete()` is what
-  // `<lr-tree>`'s `pendingFocusId` actually does -- no work starts until `getUpdateComplete()`
-  // itself runs, so a later `applyMove()` call before that point has no competing chain to race
-  // against, just a field to overwrite. Lit's own scheduler calls `getUpdateComplete()` as part of
-  // resolving `updateComplete` on every update cycle regardless of whether any external caller
-  // ever reads that promise, which is what makes this correct in real (non-test) usage too.
-  protected override async getUpdateComplete(): Promise<boolean> {
-    const result = await super.getUpdateComplete();
-    if (this.pendingFocusTarget) {
-      const { item, buttonPart } = this.pendingFocusTarget;
-      this.pendingFocusTarget = null;
-      await item.updateComplete;
-      (
-        item.shadowRoot?.querySelector(
-          `[part='${buttonPart}']`
-        ) as HTMLElement | null
-      )?.focus();
-    }
-    return result;
+  private scheduleFocusRestore(): void {
+    this.scheduleAfterUpdate(() => {
+      const focusTarget = this.pendingFocusTarget;
+      if (!focusTarget) return;
+      void this.restoreFocusAfterItemUpdate(
+        focusTarget,
+        this.focusRestoreGeneration
+      );
+    }, "reorder-focus");
+  }
+
+  private async restoreFocusAfterItemUpdate(
+    focusTarget: ReorderFocusTarget,
+    generation: number
+  ): Promise<void> {
+    await focusTarget.item.updateComplete;
+    if (
+      !this.isConnected ||
+      generation !== this.focusRestoreGeneration ||
+      this.pendingFocusTarget !== focusTarget
+    )
+      return;
+    this.pendingFocusTarget = null;
+    const button = focusTarget.item.shadowRoot?.querySelector(
+      `[part='${focusTarget.buttonPart}']`
+    ) as HTMLButtonElement | null;
+    if (!button?.disabled) button?.focus();
   }
 
   /** Physically moves `item` (already known to belong at `toIndex`) and runs the same
@@ -221,6 +211,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       ? "move-up-button"
       : "move-down-button";
     this.pendingFocusTarget = { item, buttonPart };
+    this.focusRestoreGeneration += 1;
+    this.scheduleFocusRestore();
 
     const newItems = this.itemElements;
     const number = getNumberFormat(this.effectiveLocale);
@@ -297,9 +289,10 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const item = (e.target as Element | null)?.closest?.(
       tag("reorder-item")
     ) as LyraReorderItem | null;
-    if (!item) return;
+    if (!item || item.parentElement !== this) return;
     const { direction } = (e as CustomEvent<{ direction: "up" | "down" }>)
       .detail;
+    e.stopPropagation();
     this.moveItem(item, direction);
   };
 

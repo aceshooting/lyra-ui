@@ -14,6 +14,10 @@ describe("<lr-reorder-list>", () => {
   `;
   const itemsOf = (el: LyraReorderList) =>
     [...el.querySelectorAll("lr-reorder-item")] as LyraReorderItem[];
+  const waitForCommittedFocusRestore = () =>
+    new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
 
   it('renders role="list" on its internal base and forwards label to aria-label', async () => {
     const el = await fixture<LyraReorderList>(html`
@@ -70,6 +74,62 @@ describe("<lr-reorder-list>", () => {
     expect(itemsOf(el).map((i) => i.value)).to.deep.equal(["b", "a", "c"]);
     expect(itemsOf(el)[0].atStart).to.be.true;
     expect(itemsOf(el)[1].atStart).to.be.false;
+  });
+
+  it(
+    "contains a child move request at its owning list while exposing one public reorder event",
+    async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div>${threeItems}</div>`);
+      const el = wrapper.querySelector("lr-reorder-list") as LyraReorderList;
+      const item = itemsOf(el)[1];
+      const upButton = item.shadowRoot!.querySelector(
+        '[part="move-up-button"]'
+      ) as HTMLButtonElement;
+      let itemRequests = 0;
+      let listRequests = 0;
+      let ancestorRequests = 0;
+      let publicReorders = 0;
+      item.addEventListener("lr-move-request", () => itemRequests++);
+      el.addEventListener("lr-move-request", () => listRequests++);
+      wrapper.addEventListener("lr-move-request", () => ancestorRequests++);
+      wrapper.addEventListener("lr-reorder", () => publicReorders++);
+
+      const reordered = oneEvent(el, "lr-reorder");
+      upButton.click();
+      await reordered;
+
+      expect(itemRequests).to.equal(1);
+      expect(listRequests).to.equal(0);
+      expect(ancestorRequests).to.equal(0);
+      expect(publicReorders).to.equal(1);
+    }
+  );
+
+  it("does not contain a request from a nested item the list does not own", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-reorder-list>
+          <lr-reorder-item value="outer">
+            Outer row
+            <lr-reorder-item value="nested">Nested row</lr-reorder-item>
+          </lr-reorder-item>
+          <lr-reorder-item value="other">Other row</lr-reorder-item>
+        </lr-reorder-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-reorder-list") as LyraReorderList;
+    const nestedItem = itemsOf(el)[0].querySelector(
+      "lr-reorder-item"
+    ) as LyraReorderItem;
+    const nestedDownButton = nestedItem.shadowRoot!.querySelector(
+      '[part="move-down-button"]'
+    ) as HTMLButtonElement;
+    let ancestorRequests = 0;
+    wrapper.addEventListener("lr-move-request", () => ancestorRequests++);
+
+    nestedDownButton.click();
+
+    expect(ancestorRequests).to.equal(1);
   });
 
   it("lr-reorder is cancelable: preventDefault() holds the move, marks the item pending, and applies nothing yet", async () => {
@@ -270,7 +330,7 @@ describe("<lr-reorder-list>", () => {
       '[part="move-up-button"]'
     ) as HTMLButtonElement;
     lastUpButton.click();
-    await el.updateComplete;
+    await waitForCommittedFocusRestore();
     // "c" moved from index 2 to index 1 -- still has a move-up available, focus should land there.
     // Re-query rather than reuse the stale `items` array: `items[1]` is a frozen reference to the
     // original "b" element and never moves, so checking it would test the wrong node's shadow root.
@@ -294,10 +354,9 @@ describe("<lr-reorder-list>", () => {
       '[part="move-down-button"]'
     ) as HTMLButtonElement;
 
-    const listener = oneEvent(el, "lr-reorder");
+    firstDownButton.focus();
     firstDownButton.click();
-    await listener;
-    await el.updateComplete;
+    await waitForCommittedFocusRestore();
 
     const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
     expect(movedItem.value).to.equal("a");
@@ -337,7 +396,7 @@ describe("<lr-reorder-list>", () => {
       })
     );
     await listener;
-    await el.updateComplete;
+    await waitForCommittedFocusRestore();
 
     const movedItem = itemsOf(el)[1]; // "a" moved from index 0 to index 1
     expect(movedItem.value).to.equal("a");
@@ -486,7 +545,7 @@ describe("<lr-reorder-list>", () => {
     ) as HTMLButtonElement;
     bDownButton.click();
 
-    await el.updateComplete;
+    await waitForCommittedFocusRestore();
 
     const activeInB = itemB.shadowRoot!.activeElement;
     expect(
@@ -494,6 +553,30 @@ describe("<lr-reorder-list>", () => {
       'focus lands on a button inside "b", the second (most recent) move\'s target'
     ).to.equal("move-down-button");
     expect((itemA.shadowRoot!.activeElement) === null, 'the stale first move\'s target, "a", must not hold or steal focus').to.equal(true);
+  });
+
+  it("abandons a scheduled focus restore across disconnect and reconnect", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-reorder-list>
+          <lr-reorder-item value="a">Row A</lr-reorder-item>
+          <lr-reorder-item value="b">Row B</lr-reorder-item>
+        </lr-reorder-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-reorder-list") as LyraReorderList;
+    const firstDownButton = itemsOf(el)[0].shadowRoot!.querySelector(
+      '[part="move-down-button"]'
+    ) as HTMLButtonElement;
+
+    firstDownButton.focus();
+    firstDownButton.click();
+    el.remove();
+    wrapper.append(el);
+    await waitForCommittedFocusRestore();
+
+    const movedItem = itemsOf(el)[1];
+    expect((movedItem.shadowRoot!.activeElement) === null).to.equal(true);
   });
 
   it("is accessible in a populated state", async () => {
