@@ -141,9 +141,9 @@ export interface LyraAttachmentChipEventMap {
  * `status` to that status's `-quiet` tint.
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
  * non-`pending` `status` sets it to `transparent`.
- * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail
- * and retry/preview/remove-button minimum size while `compact`, rethemeable independently of
- * `--lr-icon-button-size`.
+ * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
+ * while `compact`, rethemeable independently of `--lr-icon-button-size`. Retry, preview, and
+ * remove actions retain that shared token's minimum hit-area floor.
  * @cssprop [--lr-attachment-chip-compact-font-size=var(--lr-font-size-xs)] - Font size of
  * `[part="base"]` while `compact`.
  * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
