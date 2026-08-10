@@ -11020,7 +11020,7 @@
           "evidence": [
             {
               "file": "src/components/layout/control-group/control-group.test.ts",
-              "line": 30,
+              "line": 45,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -11052,7 +11052,7 @@
           "evidence": [
             {
               "file": "src/components/layout/control-group/control-group.test.ts",
-              "line": 59,
+              "line": 74,
               "kind": "320px allocation test signal"
             }
           ]

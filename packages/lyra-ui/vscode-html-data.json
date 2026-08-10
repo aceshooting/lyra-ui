@@ -6181,7 +6181,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible-name fallback for the internal `role=\"group\"` element when the host has no\n`aria-label`, matching `<lr-button-group>`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible-name fallback for the internal `role=\"group\"` element when the host has no\n`aria-label`; a present host attribute wins, including an explicitly empty value.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {

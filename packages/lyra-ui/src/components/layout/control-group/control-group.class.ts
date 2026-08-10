@@ -28,7 +28,7 @@ export class LyraControlGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** Accessible-name fallback for the internal `role="group"` element when the host has no
-   *  `aria-label`, matching `<lr-button-group>`. */
+   *  `aria-label`; a present host attribute wins, including an explicitly empty value. */
   @property() label = '';
 
   /** Opts into the group's own `@container` narrow-allocation breakpoint (see the class doc) by
@@ -43,7 +43,7 @@ export class LyraControlGroup extends LyraElement {
   @property({ type: Boolean, reflect: true }) responsive = false;
 
   override render(): TemplateResult {
-    const accessibleLabel = this.getAttribute('aria-label') || this.label || nothing;
+    const accessibleLabel = this.getAttribute('aria-label') ?? (this.label || nothing);
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }
 }

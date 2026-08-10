@@ -27,6 +27,21 @@ describe('<lr-control-group>', () => {
     expect(base.getAttribute('aria-label')).to.equal('Author toolbar');
   });
 
+  it('preserves an explicitly empty host aria-label over the label prop', async () => {
+    const el = await fixture<LyraControlGroup>(html`
+      <lr-control-group label="Toolbar" aria-label="">
+        <lr-button>Open</lr-button>
+      </lr-control-group>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Toolbar');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraControlGroup>(html`
       <lr-control-group label="Actions"><lr-button>Open</lr-button></lr-control-group>

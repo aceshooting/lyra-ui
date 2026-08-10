@@ -1125,8 +1125,8 @@ inline-flex row and centers children with different intrinsic heights. Use it fo
 toolbars that combine segmented controls, selects, buttons, and other interactive elements.
 
 **Properties:**
-- `label: string = ''` — accessible name for the internal `role="group"`; when empty, a host
-  `aria-label` is forwarded as a fallback.
+- `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
+  `aria-label`, when present, wins including an explicitly empty value.
 - `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
   (switches to a full-width allocation below `20rem`) by making the host a CSS size-query
   container. Left unset, the host is `container-type: normal`, since `container-type: inline-size`

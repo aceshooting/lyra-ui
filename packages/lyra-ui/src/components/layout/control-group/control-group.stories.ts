@@ -34,6 +34,15 @@ export const Default: Story = {
   </lr-control-group>`,
 };
 
+/** A host `aria-label` names the internal group ahead of `label`. Presence is authoritative, so
+ *  an explicitly empty attribute also suppresses the label fallback. */
+export const AccessibleNamePrecedence: Story = {
+  render: () => html`<lr-control-group label="Chart controls" aria-label="Dashboard actions">
+    <lr-button size="s">Export</lr-button>
+    <lr-button size="s">Refresh</lr-button>
+  </lr-control-group>`,
+};
+
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 220px; border: 1px dashed var(--lr-color-border); padding: var(--lr-space-s);">
     <lr-control-group label="Chart controls" responsive>
