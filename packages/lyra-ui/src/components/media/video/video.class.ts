@@ -393,6 +393,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     }
 
     if (changed.has('src')) {
+      this.visibilityPaused = false;
       this.posterVisible = true;
       if (this.hasUpdated) {
         this.playing = false;
@@ -439,6 +440,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const signature = this.sourceSignature();
     if (!force && signature === this.lastSourceSignature) return;
     this.lastSourceSignature = signature;
+    this.visibilityPaused = false;
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
@@ -475,11 +477,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   /** Pauses the private native video. */
   pause(): void {
+    this.visibilityPaused = false;
     this.mediaController.pause();
   }
 
   /** Restarts native resource selection and invalidates old native event listeners. */
   load(): void {
+    this.visibilityPaused = false;
     this.currentTime = 0;
     this.syncSources(true);
   }
@@ -615,6 +619,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     void promise?.catch(() => undefined);
   };
 
+  private pauseForVisibility(): void {
+    this.visibilityPaused = true;
+    this.mediaController.pause();
+  }
+
   private configureVisibilityObserver(): void {
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
@@ -637,14 +646,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       if (!video) return;
       if (!visible) {
         if (!video.paused) {
-          this.visibilityPaused = true;
-          this.pause();
+          this.pauseForVisibility();
         }
         return;
       }
       if (this.visibilityPaused) {
         this.visibilityPaused = false;
-        void this.play().catch(() => undefined);
+        void this.mediaController.play().catch(() => undefined);
       }
     });
     this.intersectionObserver = observer;

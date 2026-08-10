@@ -54,6 +54,34 @@ function stubPlayback(media: HTMLVideoElement, initialPaused = true) {
   };
 }
 
+function installVisibilityObserver() {
+  const originalObserver = window.IntersectionObserver;
+  let callback!: IntersectionObserverCallback;
+  class FakeIntersectionObserver {
+    constructor(next: IntersectionObserverCallback) {
+      callback = next;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds = [0];
+  }
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+  return {
+    emit(isIntersecting: boolean): void {
+      callback([{ isIntersecting } as IntersectionObserverEntry], {} as IntersectionObserver);
+    },
+    restore(): void {
+      (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+        originalObserver;
+    },
+  };
+}
+
 describe('lr-video public contract', () => {
   it('exposes the documented defaults and always opts into inline playback', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
@@ -853,6 +881,64 @@ describe('lr-video public contract', () => {
       expect(relays).to.equal(1);
     } finally {
       (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = originalObserver;
+    }
+  });
+
+  it('does not resume after public pause() takes ownership from the visibility observer', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.pause();
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
+    }
+  });
+
+  it('does not resume after src replacement starts a new source generation', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.src = 'https://example.test/replacement.mp4';
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(stub.loadCalls).to.equal(1);
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
+    }
+  });
+
+  it('does not resume after load() starts a new source generation', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.load();
+      expect(stub.loadCalls).to.equal(1);
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
     }
   });
 
