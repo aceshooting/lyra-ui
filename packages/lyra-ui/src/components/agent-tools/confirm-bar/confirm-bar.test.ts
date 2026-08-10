@@ -133,6 +133,14 @@ it('announces the decision via an internal polite live region', async () => {
   expect(regionText()).to.equal('Action denied.');
 });
 
+it('does not announce an initially supplied decision on mount', async () => {
+  const el = (await fixture(html`<lr-confirm-bar decision="approved"></lr-confirm-bar>`)) as LyraConfirmBar;
+  const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;
+  const regionText = () => liveRegion.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(regionText()).to.equal('');
+});
+
 it('a host-set decision renders identically but emits nothing itself', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   let approveFired = false;
