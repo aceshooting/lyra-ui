@@ -8315,7 +8315,7 @@
           "attributes": [
             {
               "name": "aria-label",
-              "description": "Accessible name forwarded to the internal `lr-tab-group` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tab-group`' own unset-default behavior.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible name forwarded to the current category owner: the internal `lr-tab-group` strip\nwhen the node has multiple populated categories, or the sole `role=\"region\"` otherwise.\n`null` leaves a tab strip unnamed and uses the category label for a sole region; an explicit\nempty string is forwarded without falling back.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "community-label",
@@ -21942,7 +21942,7 @@
             },
             {
               "name": "aria-label",
-              "description": "Accessible name for the `role=\"tablist\"` strip. Attribute-reflects from a host-level\n`aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS\nproperty. Unset, the tablist renders without an `aria-label` (the role carries no localized\ndefault name).\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible name for the `role=\"tablist\"` strip. Attribute-reflects from a host-level\n`aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS\nproperty. `null` omits the attribute; an explicit empty string is forwarded (the role has no\nlocalized default name).\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "fixed-scroll-controls",

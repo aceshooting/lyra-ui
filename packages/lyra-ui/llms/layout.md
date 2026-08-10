@@ -753,8 +753,8 @@ wrapper at all, so existing text-only tabs are unaffected.
   tab whenever the current value doesn't resolve to one (including on every children/attribute
   change, tracked via a `MutationObserver`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
-  `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. Unset, the tablist
-  renders without an `aria-label` (there is no localized default name).
+  `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. `null` omits the
+  attribute; an explicitly empty value is preserved (there is no localized default name).
 - `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
   edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
@@ -2972,8 +2972,10 @@ Controlled navigation shell from a chart or table datum to related evidence, doc
 or agent runs. It renders a breadcrumb path and delegates category content to existing primitives.
 
 **Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
-false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the nested
-`lr-tab-group`; unset renders no `aria-label` at all, matching `lr-tab-group`' own default),
+false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the current
+category owner: the nested `lr-tab-group` with multiple categories or the sole `role="region"`
+otherwise. `null` leaves the tab strip unnamed and falls back to the category label for a sole
+region; an explicit empty string is preserved),
 `communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
 (attribute `show-focus-button`). **Events:**
 `lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,

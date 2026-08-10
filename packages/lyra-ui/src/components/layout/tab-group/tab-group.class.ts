@@ -199,8 +199,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   /** Accessible name for the `role="tablist"` strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
-   *  property. Unset, the tablist renders without an `aria-label` (the role carries no localized
-   *  default name). */
+   *  property. `null` omits the attribute; an explicit empty string is forwarded (the role has no
+   *  localized default name). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make
@@ -681,7 +681,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           <div
             part="tablist tabs"
             role="tablist"
-            aria-label=${this.accessibleLabel || nothing}
+            aria-label=${this.accessibleLabel ?? nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
             @keydown=${this.onTabListKeyDown}
           >

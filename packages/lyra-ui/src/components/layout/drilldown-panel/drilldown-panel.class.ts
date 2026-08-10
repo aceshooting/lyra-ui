@@ -165,9 +165,10 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   @property({ type: Boolean, attribute: 'show-focus-button', converter: trueDefaultBooleanConverter })
   showFocusButton = true;
 
-  /** Accessible name forwarded to the internal `lr-tab-group` strip (only rendered while the current
-   *  node has more than one populated category). Unset, the tab strip renders without an
-   *  `aria-label`, matching `lr-tab-group`' own unset-default behavior. */
+  /** Accessible name forwarded to the current category owner: the internal `lr-tab-group` strip
+   *  when the node has multiple populated categories, or the sole `role="region"` otherwise.
+   *  `null` leaves a tab strip unnamed and uses the category label for a sole region; an explicit
+   *  empty string is forwarded without falling back. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   // Tracked in JS, not via CSS `:empty` (a `[part]` always contains a literal `<slot>` child
@@ -351,15 +352,16 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       return html`<lr-empty part="empty" heading=${this.localize('drilldownEmpty')}></lr-empty>`;
     }
     const categories = this.categoriesFor(node);
+    const accessibleLabel = this.accessibleLabel;
     if (categories.length === 0) {
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }
     if (categories.length === 1) {
       const only = categories[0]!; // safe: categories.length === 1 checked above
-      return html`<div part="category" role="region" aria-label=${only.label}>${only.content}</div>`;
+      return html`<div part="category" role="region" aria-label=${accessibleLabel ?? only.label}>${only.content}</div>`;
     }
     return html`
-      <lr-tab-group part="tabs" aria-label=${this.accessibleLabel || nothing}>
+      <lr-tab-group part="tabs" aria-label=${accessibleLabel ?? nothing}>
         ${repeat(
           categories,
           (category) => category.key,

@@ -19,8 +19,10 @@ Controlled navigation shell from a chart or table datum to related evidence, doc
 or agent runs. It renders a breadcrumb path and delegates category content to existing primitives.
 
 **Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
-false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the nested
-`lr-tab-group`; unset renders no `aria-label` at all, matching `lr-tab-group`' own default),
+false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the current
+category owner: the nested `lr-tab-group` with multiple categories or the sole `role="region"`
+otherwise. `null` leaves the tab strip unnamed and falls back to the category label for a sole
+region; an explicit empty string is preserved),
 `communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
 (attribute `show-focus-button`). **Events:**
 `lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,

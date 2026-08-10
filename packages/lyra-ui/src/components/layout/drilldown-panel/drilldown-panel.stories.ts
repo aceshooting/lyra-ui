@@ -58,6 +58,17 @@ export const SingleCategoryNoTabs: Story = {
   render: () => html`<lr-drilldown-panel .path=${[path[0]]}></lr-drilldown-panel>`,
 };
 
+/** A present host `aria-label` names the actual category owner: the sole region without tabs or
+ * the nested tab strip with multiple categories. An explicitly empty value is preserved too. */
+export const AccessibleNamePrecedence: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-l)">
+      <lr-drilldown-panel aria-label="Related evidence" .path=${[path[0]]}></lr-drilldown-panel>
+      <lr-drilldown-panel aria-label="Related content" .path=${path} .types=${types}></lr-drilldown-panel>
+    </div>
+  `,
+};
+
 export const WithAgentRuns: Story = {
   render: () => html`
     <lr-drilldown-panel .path=${path} .types=${types}>

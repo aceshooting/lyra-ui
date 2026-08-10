@@ -98,6 +98,49 @@ it('renders a single category directly with no lr-tab-group chrome when only one
   expect(category!.querySelector('lr-source-card')).to.exist;
 });
 
+it('keeps a present host aria-label when categories shrink to a single region', async () => {
+  const el = (await fixture(html`<lr-drilldown-panel aria-label="Related content"></lr-drilldown-panel>`)) as LyraDrilldownPanel;
+  el.path = [nodeWithAllCategories];
+  await el.updateComplete;
+
+  el.path = [nodeWithEvidenceOnly];
+  await el.updateComplete;
+  const category = el.shadowRoot!.querySelector<HTMLElement>('[part="category"]')!;
+  expect(category.getAttribute('aria-label')).to.equal('Related content');
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(category.hasAttribute('aria-label')).to.equal(true);
+  expect(category.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(category.getAttribute('aria-label')).to.equal('Sources');
+
+  el.accessibleLabel = 'Programmatic content';
+  await el.updateComplete;
+  expect(category.getAttribute('aria-label')).to.equal('Programmatic content');
+
+  el.path = [nodeWithAllCategories];
+  await el.updateComplete;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
+  expect(tabs.getAttribute('aria-label')).to.equal('Programmatic content');
+  await tabs.updateComplete;
+  const tablist = tabs.shadowRoot!.querySelector('[role="tablist"]')!;
+  expect(tablist.getAttribute('aria-label')).to.equal('Programmatic content');
+
+  el.accessibleLabel = '';
+  await el.updateComplete;
+  await tabs.updateComplete;
+  expect(tablist.hasAttribute('aria-label')).to.equal(true);
+  expect(tablist.getAttribute('aria-label')).to.equal('');
+
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  await tabs.updateComplete;
+  expect(tablist.hasAttribute('aria-label')).to.equal(false);
+});
+
 it('wraps content in lr-tab-group, labelled Sources/Documents/Entities, when the current node spans multiple categories', async () => {
   const el = await populated();
   const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
@@ -197,12 +240,29 @@ it('detects a slot="runs" attribute toggled on an already-connected child, not j
   expect(labels).to.include('Agent runs');
 });
 
-it('forwards a host aria-label to the internal lr-tab-group strip', async () => {
+it('forwards a host aria-label to the internal lr-tab-group strip by presence', async () => {
   const el = (await fixture(html`<lr-drilldown-panel aria-label="Related content"></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithAllCategories];
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   expect(tabs.getAttribute('aria-label')).to.equal('Related content');
+  await tabs.updateComplete;
+  const tablist = tabs.shadowRoot!.querySelector('[role="tablist"]')!;
+  expect(tablist.getAttribute('aria-label')).to.equal('Related content');
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  await tabs.updateComplete;
+  expect(tabs.hasAttribute('aria-label')).to.equal(true);
+  expect(tabs.getAttribute('aria-label')).to.equal('');
+  expect(tablist.hasAttribute('aria-label')).to.equal(true);
+  expect(tablist.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  await tabs.updateComplete;
+  expect(tabs.hasAttribute('aria-label')).to.equal(false);
+  expect(tablist.hasAttribute('aria-label')).to.equal(false);
 });
 
 it('honors a .strings override of a component-local key (drilldownDocuments) on the documents tab label', async () => {

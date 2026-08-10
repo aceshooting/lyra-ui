@@ -14730,7 +14730,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 296,
+              "line": 356,
               "test": "renders correctly under dir=\"rtl\"",
               "target": "el",
               "state": "populated"
@@ -14750,7 +14750,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 296,
+              "line": 356,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14767,7 +14767,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 281,
+              "line": 341,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41630,21 +41630,21 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 845,
+              "line": 863,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1443,
+              "line": 1461,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1596,
+              "line": 1614,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -41680,7 +41680,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1213,
+              "line": 1231,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -41820,28 +41820,28 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 845,
+              "line": 863,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1326,
+              "line": 1344,
               "test": "is accessible while the scroll controls are showing",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1443,
+              "line": 1461,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1596,
+              "line": 1614,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -41877,7 +41877,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1213,
+              "line": 1231,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -42016,21 +42016,21 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 845,
+              "line": 863,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1443,
+              "line": 1461,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1596,
+              "line": 1614,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -42066,7 +42066,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1213,
+              "line": 1231,
               "kind": "reduced-motion test signal"
             }
           ]

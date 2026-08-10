@@ -31,6 +31,17 @@ export const Default: Story = {
   `,
 };
 
+/** A host `aria-label` names the internal tablist by presence, including an explicitly empty
+ * attribute; without it, the tablist has no localized fallback name. */
+export const AccessibleNamePrecedence: Story = {
+  render: () => html`
+    <lr-tab-group aria-label="Workspace sections">
+      <div slot="input" label="Input" style="padding: 0.75rem 0;">Raw input goes here.</div>
+      <div slot="preview" label="Preview" style="padding: 0.75rem 0;">Rendered preview goes here.</div>
+    </lr-tab-group>
+  `,
+};
+
 export const WithDisabledTab: Story = {
   render: () => html`
     <lr-tab-group>

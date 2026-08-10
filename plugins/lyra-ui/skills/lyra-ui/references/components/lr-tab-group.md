@@ -62,8 +62,8 @@ wrapper at all, so existing text-only tabs are unaffected.
   tab whenever the current value doesn't resolve to one (including on every children/attribute
   change, tracked via a `MutationObserver`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
-  `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. Unset, the tablist
-  renders without an `aria-label` (there is no localized default name).
+  `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. `null` omits the
+  attribute; an explicitly empty value is preserved (there is no localized default name).
 - `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
   edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and

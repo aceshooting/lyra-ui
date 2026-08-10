@@ -684,7 +684,7 @@ it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed"
   expect(focused?.getAttribute("aria-selected")).to.equal("true");
 });
 
-it('forwards a host aria-label to the role="tablist" element, and omits the attribute when unset', async () => {
+it('forwards a host aria-label to the role="tablist" element by presence', async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const tablist = el.shadowRoot!.querySelector('[role="tablist"]')!;
   expect(tablist.hasAttribute("aria-label")).to.be.false;
@@ -693,6 +693,24 @@ it('forwards a host aria-label to the role="tablist" element, and omits the attr
   await el.updateComplete;
   expect(el.accessibleLabel).to.equal("Editor views");
   expect(tablist.getAttribute("aria-label")).to.equal("Editor views");
+
+  el.setAttribute("aria-label", "");
+  await el.updateComplete;
+  expect(tablist.hasAttribute("aria-label")).to.equal(true);
+  expect(tablist.getAttribute("aria-label")).to.equal("");
+
+  el.removeAttribute("aria-label");
+  await el.updateComplete;
+  expect(tablist.hasAttribute("aria-label")).to.equal(false);
+
+  el.accessibleLabel = "";
+  await el.updateComplete;
+  expect(tablist.hasAttribute("aria-label")).to.equal(true);
+  expect(tablist.getAttribute("aria-label")).to.equal("");
+
+  el.accessibleLabel = null;
+  await el.updateComplete;
+  expect(tablist.hasAttribute("aria-label")).to.equal(false);
 });
 
 it("does not steal focus by reassigning it when the invalid-active correction happens with focus elsewhere", async () => {

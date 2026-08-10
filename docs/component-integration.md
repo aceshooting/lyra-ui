@@ -1015,7 +1015,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-document-preview`, `lr-empty`, `lr-entity-card`, `lr-source-card`, `lr-tab-group`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-chip`, `lr-pan-zoom`, `lr-result-field`
-- Standalone gzip: 61.5 KiB (63010 bytes; bundle SHA-256 `2b146553c953c546cc3a0bd36dd5a494ff731f1f7df68bda243a46b199609e63`)
+- Standalone gzip: 61.5 KiB (63024 bytes; bundle SHA-256 `3f63dc8607cd316d9c25df15eec854a0d12edb7ccb8759f7d0dbff4168a70085`)
 
 </details>
 
@@ -1135,7 +1135,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chunk-inspector`, `lr-empty`, `lr-entity-card`, `lr-neighbor-list`, `lr-provenance-panel`, `lr-stat`, `lr-tab-group`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-chip`, `lr-community-card`, `lr-entity-chip`, `lr-path-strip`, `lr-result-field`, `lr-scroller`, `lr-virtual-list`
-- Standalone gzip: 82.4 KiB (84358 bytes; bundle SHA-256 `b4800cdd43e7bf495996ce6de8c3b3dec18c5f3cfb8082ebacd73ba45b55169e`)
+- Standalone gzip: 82.4 KiB (84361 bytes; bundle SHA-256 `b28681afeb634604520f09cb4a1931e692de57604b2c504785dd4533ee9823c6`)
 
 </details>
 
@@ -2767,7 +2767,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `xlsx`
 - Direct Lyra dependencies: `lr-tab-group`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.4 KiB (46446 bytes; bundle SHA-256 `233b45aec20d61227272d9244f5e900452f85dc02050614552a09db00b01a6dd`)
+- Standalone gzip: 45.4 KiB (46446 bytes; bundle SHA-256 `75f19011ba27b671eed01fda88a025d8e42f7a78c8446b1c7219d1e45b2fe5c0`)
 
 </details>
 
@@ -2911,7 +2911,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28 KiB (28718 bytes; bundle SHA-256 `66b909940611e5a62ab8efb48f68c3bb1fede7b34e91446486031358a711ae60`)
+- Standalone gzip: 28 KiB (28718 bytes; bundle SHA-256 `c598a745f45dfcaf6ac0934caf9a1f2aeb07a67b3a2b68606defb5fe66edb087`)
 
 </details>
 
