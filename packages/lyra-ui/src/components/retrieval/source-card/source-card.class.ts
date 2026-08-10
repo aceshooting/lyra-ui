@@ -45,7 +45,9 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * `<lr-citation-badge>` (a sibling component) elsewhere on the page. This
  * component doesn't implement any scroll-to/highlight behavior itself — that
  * lives at the app level, wiring a citation badge's activation event to this
- * card's `id`/`source-id`. See the `@example` below.
+ * card's `id`/`source-id`. Let the browser's default scroll behavior apply,
+ * or add application motion that respects reduced-motion preferences. See the
+ * `@example` below.
  *
  * @customElement lr-source-card
  * @slot excerpt - A short preview. When left empty, the `excerpt` part
@@ -87,7 +89,7 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * // surface for that, only its existing source-id to be targeted by:
  * document.addEventListener('lr-citation-activate', (e) => {
  *   const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
- *   card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+ *   card?.scrollIntoView({ block: 'center' });
  *   card?.classList.add('is-highlighted'); // consumer-defined CSS, e.g. a brief background flash
  *   setTimeout(() => card?.classList.remove('is-highlighted'), 2000);
  * });
