@@ -1064,7 +1064,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   claimEvidenceConfidence: '{percent} confidence',
   retrievalCompareLabel: 'Retrieval comparison',
   retrievalCompareEmpty: 'No retrieval result sets to compare',
-  retrievalCompareOverlap: 'Top-k overlap: {percent}',
+  retrievalCompareOverlap: 'Top-k overlap between {left} and {right}: {percent}',
   retrievalCompareRank: 'Rank {rank}',
   retrievalCompareDenseScore: 'Dense',
   retrievalCompareSparseScore: 'Sparse',

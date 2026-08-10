@@ -1078,7 +1078,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: '信頼度 {percent}',
   retrievalCompareLabel: '検索結果の比較',
   retrievalCompareEmpty: '比較する検索結果がありません',
-  retrievalCompareOverlap: '上位 k 件の重なり：{percent}',
+  retrievalCompareOverlap: '{left} と {right} の上位 k 件の重なり：{percent}',
   retrievalCompareRank: '{rank} 位',
   retrievalCompareDenseScore: '密ベクトル',
   retrievalCompareSparseScore: '疎ベクトル',

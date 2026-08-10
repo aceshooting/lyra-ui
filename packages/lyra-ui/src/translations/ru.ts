@@ -1114,7 +1114,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: 'достоверность {percent}',
   retrievalCompareLabel: 'Сравнение результатов поиска',
   retrievalCompareEmpty: 'Нет наборов результатов для сравнения',
-  retrievalCompareOverlap: 'Пересечение top-k: {percent}',
+  retrievalCompareOverlap: 'Пересечение top-k между {left} и {right}: {percent}',
   retrievalCompareRank: 'Ранг {rank}',
   retrievalCompareDenseScore: 'Плотный',
   retrievalCompareSparseScore: 'Разреженный',

@@ -1078,7 +1078,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: '置信度{percent}',
   retrievalCompareLabel: '检索结果对比',
   retrievalCompareEmpty: '没有可对比的检索结果集',
-  retrievalCompareOverlap: 'Top-k 重合度：{percent}',
+  retrievalCompareOverlap: '{left} 与 {right} 的 Top-k 重合度：{percent}',
   retrievalCompareRank: '第{rank}名',
   retrievalCompareDenseScore: '稠密',
   retrievalCompareSparseScore: '稀疏',
