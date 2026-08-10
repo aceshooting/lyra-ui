@@ -18,8 +18,11 @@ export const styles = css`
   [part='iframe'] {
     position: absolute;
     top: 0;
+    /* policy-allow(physical-css): the scaled iframe is a physical pixel canvas, so its origin
+       must stay at physical top-left under both text directions. */
     right: auto;
     bottom: auto;
+    /* policy-allow(physical-css): paired physical edge of the fixed transform canvas origin. */
     left: 0;
     display: block;
     inline-size: calc(100% / var(--lr-zoomable-frame-zoom, 1));
