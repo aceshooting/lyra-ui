@@ -157,6 +157,31 @@ it('forwards a host aria-label to the root list owner', async () => {
   expect(tree.getAttribute('aria-label')).to.equal('Response payload');
 });
 
+it('forwards an explicitly empty host aria-label to the root list owner', async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer aria-label="" .data=${sample}></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  expect(tree.hasAttribute('aria-label')).to.equal(true);
+  expect(tree.getAttribute('aria-label')).to.equal('');
+});
+
+it('keeps a dynamically emptied host aria-label on the root list owner and removes it when the host attribute is absent', async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer aria-label="Response payload" .data=${sample}></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(tree.hasAttribute('aria-label')).to.equal(true);
+  expect(tree.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(tree.getAttribute('role')).to.equal('list');
+  expect(tree.hasAttribute('aria-label')).to.equal(false);
+});
+
 it('does not render a copy button by default', async () => {
   const el = await withData(sample);
   expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;

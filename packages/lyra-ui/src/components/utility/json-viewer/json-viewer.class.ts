@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -747,7 +747,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         <div
           part="tree"
           role="list"
-          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-label=${hostAriaLabel(this) ?? nothing}
         >
           ${tree}
         </div>

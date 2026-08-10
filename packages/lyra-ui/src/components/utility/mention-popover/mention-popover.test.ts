@@ -550,6 +550,46 @@ it('a host aria-label attribute overrides the label property and the localized d
   expect(listbox(el).getAttribute('aria-label')).to.equal('Custom name');
 });
 
+it('forwards an explicitly empty host aria-label to the listbox owner', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <div id="anchor"></div>
+      <lr-mention-popover label="Mention someone" aria-label=""></lr-mention-popover>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-mention-popover') as LyraMentionPopover;
+  el.anchor = wrapper.querySelector('#anchor') as HTMLElement;
+  el.items = ITEMS;
+  el.open = true;
+  await el.updateComplete;
+  const owner = listbox(el);
+  expect(owner.hasAttribute('aria-label')).to.equal(true);
+  expect(owner.getAttribute('aria-label')).to.equal('');
+});
+
+it('keeps a dynamically emptied host aria-label on the listbox owner and restores the label fallback when absent', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <div id="anchor"></div>
+      <lr-mention-popover label="Mention someone" aria-label="Custom name"></lr-mention-popover>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-mention-popover') as LyraMentionPopover;
+  el.anchor = wrapper.querySelector('#anchor') as HTMLElement;
+  el.items = ITEMS;
+  el.open = true;
+  await el.updateComplete;
+  const owner = listbox(el);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(owner.hasAttribute('aria-label')).to.equal(true);
+  expect(owner.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(owner.getAttribute('aria-label')).to.equal('Mention someone');
+});
+
 it('honors a strings override for mentionSuggestions/noMatches while label/emptyText are left at their defaults', async () => {
   const el = await openWithItems([]);
   el.strings = { mentionSuggestions: 'Suggestions de mention', noMatches: 'Aucun résultat' };
