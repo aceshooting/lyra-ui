@@ -223,7 +223,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
    *  element (the actual keyboard tab stop, which would otherwise be nameless); a host
    *  `aria-label` wins, then the localized `avPlayerLabel` fallback. */
   @property() name = '';
-  /** Forces `audio`/`video` rendering, overriding the `mime-type`-based auto-detection. */
+  /** Forces exact `audio`/`video` rendering, overriding the `mime-type`-based auto-detection.
+   *  Unrecognized runtime or attribute values continue MIME auto-detection. */
   @property() kind?: AvKind;
   /** Drives auto-detection: an `audio/*` mime type renders `<audio>`; anything else renders
    *  `<video>`. Ignored once `kind` is set explicitly. */
@@ -302,7 +303,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private detectedKind(): AvKind {
-    if (this.kind) return this.kind;
+    if (this.kind === 'audio' || this.kind === 'video') return this.kind;
     return this.mimeType.startsWith('audio/') ? 'audio' : 'video';
   }
 

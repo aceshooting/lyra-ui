@@ -1639,6 +1639,10 @@ number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: 
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
+Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
+runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
+renders video) and never appears in `lr-load`'s `detail.kind`.
+
 `poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
 before reaching the native video element; an unsafe poster URL is omitted.
 
