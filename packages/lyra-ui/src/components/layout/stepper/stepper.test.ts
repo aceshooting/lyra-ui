@@ -390,6 +390,38 @@ describe("lr-stepper", () => {
     expect(buttons[2]!.querySelector('[part="step-icon"]')).to.equal(null);
   });
 
+  it("keeps rich step icons inert so the step button remains the only action", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        .steps=${[
+          {
+            id: "payment",
+            label: "Payment",
+            state: "current" as const,
+            icon: html`<button id="step-icon-control" type="button">Payment graphic</button>`,
+          },
+        ]}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const step = stepButtons(el)[0]!;
+    const icon = step.querySelector<HTMLElement>('[part="step-icon"]');
+    const iconControl = step.querySelector<HTMLButtonElement>("#step-icon-control");
+
+    expect(icon !== null, "expected the rich icon wrapper").to.equal(true);
+    expect(iconControl !== null, "expected the rich icon control").to.equal(true);
+    expect(icon!.inert).to.equal(true);
+    expect(icon!.getAttribute("aria-hidden")).to.equal("true");
+
+    step.focus();
+    iconControl!.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-id")).to.equal("payment");
+
+    const selection = oneEvent(el, "lr-step-select");
+    step.click();
+    expect((await selection).detail).to.deep.equal({ index: 0, id: "payment" });
+    await expect(el).to.be.accessible();
+  });
+
   it("does not fire lr-step-select for a disabled step", async () => {
     const el = (await fixture(
       html`<lr-stepper

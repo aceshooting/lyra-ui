@@ -54,6 +54,11 @@ interface DragState {
   startPrimaryPixels: number;
 }
 
+interface DividerSourceSnapshot {
+  inert: string | null;
+  appliedInert: string | null;
+}
+
 function nearlyEqual(left: number | undefined, right: number | undefined): boolean {
   if (left === right) return true;
   if (left == null || right == null) return false;
@@ -71,7 +76,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @customElement lr-split-panel
  * @slot start - Content in the logical start pane.
  * @slot end - Content in the logical end pane.
- * @slot divider - Optional content rendered inside the draggable divider.
+ * @slot divider - Optional decorative content rendered inside the draggable divider. Assigned
+ *   content is inert, so the separator remains the sole resize control.
  * @event lr-reposition - Emitted after a pointer or keyboard interaction moves the divider.
  * @csspart base - The component's layout wrapper.
  * @csspart split-panel - Compatibility alias on the layout wrapper.
@@ -112,9 +118,14 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private resizeView?: Window;
   private drag?: DragState;
   private dragView?: Window;
+  private readonly dividerSourceSnapshots = new Map<Element, DividerSourceSnapshot>();
+  private dividerSourceObserver?: MutationObserver;
+  private dividerSourceObserverDocument?: Document;
+  private dividerSourceObserverGeneration = 0;
 
   @query('[part~="base"]') private baseElement?: HTMLElement;
   @query('[part~="divider"]') private dividerElement?: HTMLElement;
+  @query('slot[name="divider"]') private dividerSlot?: HTMLSlotElement;
   @query('.constraint-min') private minProbe?: HTMLElement;
   @query('.constraint-max') private maxProbe?: HTMLElement;
 
@@ -279,6 +290,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     if (this.hasUpdated) {
       queueMicrotask(() => {
         if (!this.isConnected) return;
+        this.syncDividerSources();
         this.observeSize();
         this.measureAndSynchronize(false);
       });
@@ -287,6 +299,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   override disconnectedCallback(): void {
     this.stopDragging();
+    this.resetDividerSourceObserver();
+    this.restoreDividerSources();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
@@ -295,6 +309,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   override firstUpdated(): void {
+    this.syncDividerSources();
     this.measureAndSynchronize(true);
     this.observeSize();
   }
@@ -432,6 +447,90 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   private readonly onWindowResize = (): void => {
     this.measureAndSynchronize(false);
+  };
+
+  private snapshotDividerSource(source: Element): DividerSourceSnapshot {
+    const inert = source.getAttribute('inert');
+    return { inert, appliedInert: inert };
+  }
+
+  private adoptDividerSourceInert(source: Element, snapshot: DividerSourceSnapshot): void {
+    const current = source.getAttribute('inert');
+    if (current !== snapshot.appliedInert) snapshot.inert = current;
+  }
+
+  private makeDividerSourceInert(source: Element, snapshot: DividerSourceSnapshot): void {
+    if (!source.hasAttribute('inert')) source.setAttribute('inert', '');
+    snapshot.appliedInert = source.getAttribute('inert');
+  }
+
+  private restoreDividerSource(source: Element, snapshot: DividerSourceSnapshot): void {
+    this.adoptDividerSourceInert(source, snapshot);
+    if (snapshot.inert === null) source.removeAttribute('inert');
+    else source.setAttribute('inert', snapshot.inert);
+  }
+
+  private restoreDividerSources(): void {
+    for (const [source, snapshot] of this.dividerSourceSnapshots) {
+      this.restoreDividerSource(source, snapshot);
+    }
+    this.dividerSourceSnapshots.clear();
+  }
+
+  private resetDividerSourceObserver(): void {
+    this.dividerSourceObserverGeneration += 1;
+    this.dividerSourceObserver?.disconnect();
+    this.dividerSourceObserver = undefined;
+    this.dividerSourceObserverDocument = undefined;
+  }
+
+  private observeDividerSources(): void {
+    this.resetDividerSourceObserver();
+    const MutationObserverConstructor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverConstructor || !this.isConnected || this.dividerSourceSnapshots.size === 0) {
+      return;
+    }
+    const generation = this.dividerSourceObserverGeneration;
+    const observer = new MutationObserverConstructor((records) => {
+      if (
+        this.dividerSourceObserver !== observer ||
+        this.dividerSourceObserverDocument !== this.ownerDocument ||
+        this.dividerSourceObserverGeneration !== generation ||
+        !this.isConnected
+      ) {
+        return;
+      }
+      if (records.some((record) => this.dividerSourceSnapshots.has(record.target as Element))) {
+        this.syncDividerSources();
+      }
+    });
+    this.dividerSourceObserver = observer;
+    this.dividerSourceObserverDocument = this.ownerDocument;
+    for (const source of this.dividerSourceSnapshots.keys()) {
+      observer.observe(source, { attributes: true, attributeFilter: ['inert'] });
+    }
+  }
+
+  private syncDividerSources(): void {
+    const assigned = new Set(this.dividerSlot?.assignedElements({ flatten: true }) ?? []);
+    for (const [source, snapshot] of this.dividerSourceSnapshots) {
+      this.adoptDividerSourceInert(source, snapshot);
+      if (!assigned.has(source)) {
+        this.restoreDividerSource(source, snapshot);
+        this.dividerSourceSnapshots.delete(source);
+      }
+    }
+    for (const source of assigned) {
+      const snapshot = this.dividerSourceSnapshots.get(source) ?? this.snapshotDividerSource(source);
+      this.dividerSourceSnapshots.set(source, snapshot);
+      this.adoptDividerSourceInert(source, snapshot);
+      this.makeDividerSourceInert(source, snapshot);
+    }
+    this.observeDividerSources();
+  }
+
+  private readonly onDividerSlotChange = (): void => {
+    this.syncDividerSources();
   };
 
   private resolveSnapLength(value: string, size: number): number | undefined {
@@ -632,7 +731,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
           @lostpointercapture=${this.onLostPointerCapture}
           @keydown=${this.onKeyDown}
         >
-          <slot name="divider"></slot>
+          <slot name="divider" @slotchange=${this.onDividerSlotChange}></slot>
         </div>
         <div part="end panel"><slot name="end"></slot></div>
         <div class="constraint-box" aria-hidden="true">

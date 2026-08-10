@@ -548,6 +548,67 @@ it('is accessible with populated start, end, and custom divider slots', async ()
   await expect(element).to.be.accessible();
 });
 
+it('keeps custom divider content inert while preserving the separator as the sole resize control', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-split-panel aria-label="Resize editor panes" style="inline-size: 400px; block-size: 200px">
+        <section slot="start" aria-label="Source">Source</section>
+        <button id="divider-source" slot="divider" type="button">Separate divider action</button>
+        <section slot="end" aria-label="Preview">Preview</section>
+      </lr-split-panel>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraSplitPanel>('lr-split-panel')!;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+  const source = wrapper.querySelector<HTMLButtonElement>('#divider-source')!;
+  await element.updateComplete;
+
+  expect(source.inert).to.equal(true);
+  outside.focus();
+  source.focus();
+  expect(wrapper.ownerDocument.activeElement?.id).to.equal('outside');
+
+  divider(element).focus();
+  expect(element.shadowRoot!.activeElement?.getAttribute('role')).to.equal('separator');
+  await expect(element).to.be.accessible();
+});
+
+it('restores only library-owned divider-source inert state after reassignment and disconnect', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-split-panel style="inline-size: 400px; block-size: 200px">
+        <button id="released" slot="divider" type="button">Released source</button>
+        <button id="authored" slot="divider" type="button" inert>Author inert source</button>
+      </lr-split-panel>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraSplitPanel>('lr-split-panel')!;
+  const released = wrapper.querySelector<HTMLButtonElement>('#released')!;
+  const authored = wrapper.querySelector<HTMLButtonElement>('#authored')!;
+  await element.updateComplete;
+
+  expect(released.inert).to.equal(true);
+  expect(authored.inert).to.equal(true);
+
+  released.inert = false;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  expect(released.inert).to.equal(true);
+
+  released.slot = 'start';
+  authored.slot = 'start';
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  expect(released.hasAttribute('inert')).to.equal(false);
+  expect(authored.inert).to.equal(true);
+
+  released.slot = 'divider';
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  expect(released.inert).to.equal(true);
+  element.remove();
+  expect(released.hasAttribute('inert')).to.equal(false);
+  expect(authored.inert).to.equal(true);
+});
+
 it('re-synchronizes its split when the window resizes', async () => {
   const el = (await fixture(html`
     <lr-split-panel style="inline-size: 400px">

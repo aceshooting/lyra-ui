@@ -36,7 +36,8 @@ export interface StepItem {
    *  same `PaletteItem`/`MentionItem`/`SegmentedItem` precedent: intentionally general content
    *  (a `TemplateResult`, an emoji string, etc.), not a square-icon-only field. Rendered
    *  additionally to, never instead of, the state-driven index chip/checkmark -- the icon
-   *  identifies the step's topic, the chip/checkmark identifies its state. */
+   *  identifies the step's topic, the chip/checkmark identifies its state. It is inert and hidden
+   *  from assistive technology, so it never supplies a second action or accessible name. */
   icon?: unknown;
 }
 
@@ -96,9 +97,9 @@ function checkmarkGlyph() {
  * @csspart base - The root wrapper.
  * @csspart step-item - The `role="listitem"` wrapper for one step.
  * @csspart step - A single step button.
- * @csspart step-icon - Optional leading topic glyph supplied by the item's `icon` field; content
- *   may have a natural aspect ratio and is not restricted to a square icon. Rendered additionally
- *   to, never instead of, `step-index`/`step-check`.
+ * @csspart step-icon - Optional inert, aria-hidden leading topic glyph supplied by the item's
+ *   `icon` field; content may have a natural aspect ratio and is not restricted to a square icon.
+ *   Rendered additionally to, never instead of, `step-index`/`step-check`.
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
  * @csspart step-check - The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.
  * @csspart step-label - The step's label text.
@@ -505,7 +506,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
               @click=${() => this.selectStep(step, index)}
             >
               ${step.icon
-                ? html`<span part="step-icon" aria-hidden="true"
+                ? html`<span part="step-icon" aria-hidden="true" inert
                     >${step.icon}</span
                   >`
                 : nothing}
