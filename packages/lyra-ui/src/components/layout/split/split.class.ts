@@ -1248,7 +1248,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // `pointer-events: none` in split.styles.ts (belt-and-suspenders: this
     // guard also covers a synthetic/programmatic pointerdown that CSS
     // wouldn't stop).
-    if (this.isDividerDisabled(index)) return;
+    if (e.button !== 0 || this.isDividerDisabled(index)) return;
     const divider = e.currentTarget as HTMLElement;
     const ownerWindow = divider.ownerDocument.defaultView;
     if (!ownerWindow) return;

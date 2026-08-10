@@ -334,6 +334,80 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
+it("ignores secondary mouse and pen button drags while keeping concurrent touch drags active", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div>
+      <div>C</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 300);
+  const dividers = [
+    ...el.shadowRoot!.querySelectorAll('[part="divider"]'),
+  ] as HTMLElement[];
+  const captured: number[] = [];
+  dividers.forEach(
+    (divider) =>
+      (divider.setPointerCapture = (pointerId: number) => captured.push(pointerId))
+  );
+  const before = [...el.sizes];
+  let resizeEvents = 0;
+  el.addEventListener("lr-resize", () => resizeEvents++);
+
+  for (const { pointerId, pointerType, button } of [
+    { pointerId: 93, pointerType: "mouse", button: 1 },
+    { pointerId: 94, pointerType: "mouse", button: 2 },
+    { pointerId: 95, pointerType: "pen", button: 2 },
+  ]) {
+    dividers[0].dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId,
+        pointerType,
+        button,
+        clientX: 100,
+      })
+    );
+    pointerMove(pointerId, 130);
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
+  }
+
+  expect(captured).to.deep.equal([]);
+  expect(el.sizes).to.deep.equal(before);
+  expect(resizeEvents).to.equal(0);
+
+  dividers[0].dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 96,
+      pointerType: "touch",
+      button: 0,
+      clientX: 100,
+    })
+  );
+  dividers[1].dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 97,
+      pointerType: "touch",
+      button: 0,
+      clientX: 200,
+    })
+  );
+  pointerMove(96, 130);
+  pointerMove(97, 230);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 96 }));
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 97 }));
+
+  expect(captured).to.deep.equal([96, 97]);
+  expect(el.sizes[0]).to.be.greaterThan(before[0]!);
+  expect(el.sizes[2]).to.be.lessThan(before[2]!);
+  expect(resizeEvents).to.equal(2);
+});
+
 it("ends a horizontal drag when its live allocation collapses to zero without emitting NaN sizes", async () => {
   const el = (await fixture(
     html`<lr-split
