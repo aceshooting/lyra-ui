@@ -492,6 +492,111 @@ it("ends a vertical drag when its live allocation collapses to zero without emit
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 92 }));
 });
 
+it("ends an in-flight drag when the effective orientation changes instead of reinterpreting its coordinates", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  mockWidth(base, 200);
+  Object.defineProperty(base, "clientHeight", {
+    value: 200,
+    configurable: true,
+  });
+  divider.setPointerCapture = () => {};
+  const before = [...el.sizes];
+  let resizeEvents = 0;
+  el.addEventListener("lr-resize", () => resizeEvents++);
+
+  pointerDown(divider, 93, 100);
+  el.orientation = "vertical";
+  await elementUpdated(el);
+  expect(el.effectiveOrientation).to.equal("vertical");
+
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 93, clientY: 180 })
+  );
+  expect(el.sizes).to.deep.equal(before);
+  expect(resizeEvents).to.equal(0);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 93 }));
+});
+
+it("ends an in-flight drag when collapse revokes that divider's capability", async () => {
+  const storageKey = `test-split-capability-revocation-${Math.random()}`;
+  const fullKey = `lr-split:${storageKey}:2`;
+  localStorage.removeItem(fullKey);
+  const el = (await fixture(
+    html`<lr-split collapse="start" storage-key=${storageKey}
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.collapseState = "wide";
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  mockWidth(base, 200);
+  divider.setPointerCapture = () => {};
+  const before = [...el.sizes];
+  let resizeEvents = 0;
+  el.addEventListener("lr-resize", () => resizeEvents++);
+
+  pointerDown(divider, 94, 100);
+  el.collapseState = "rail";
+  await elementUpdated(el);
+  expect(divider.getAttribute("aria-disabled")).to.equal("true");
+
+  pointerMove(94, 160);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 94 }));
+  expect(el.sizes).to.deep.equal(before);
+  expect(resizeEvents).to.equal(0);
+  expect(localStorage.getItem(fullKey)).to.equal(null);
+});
+
+it("ends an in-flight drag when collapse moves rail capability to its divider", async () => {
+  const storageKey = `test-split-capability-move-${Math.random()}`;
+  const fullKey = `lr-split:${storageKey}:3`;
+  localStorage.removeItem(fullKey);
+  const el = (await fixture(
+    html`<lr-split collapse="start" storage-key=${storageKey}
+      ><div>A</div>
+      <div>B</div>
+      <div>C</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.collapseState = "rail";
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 300);
+  const dividers = [
+    ...el.shadowRoot!.querySelectorAll('[part="divider"]'),
+  ] as HTMLElement[];
+  expect(dividers[0]!.getAttribute("aria-disabled")).to.equal("true");
+  expect(dividers[1]!.getAttribute("aria-disabled")).to.equal("false");
+  dividers[1]!.setPointerCapture = () => {};
+
+  pointerDown(dividers[1]!, 95, 200);
+  el.collapse = "end";
+  await elementUpdated(el);
+  const currentDividers = [
+    ...el.shadowRoot!.querySelectorAll('[part="divider"]'),
+  ] as HTMLElement[];
+  expect(currentDividers[1]!.getAttribute("aria-disabled")).to.equal("true");
+
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 95 }));
+  expect(localStorage.getItem(fullKey)).to.equal(null);
+});
+
 it("clamps panel sizes to the configured minimum", async () => {
   const el = (await fixture(
     html`<lr-split min="20"

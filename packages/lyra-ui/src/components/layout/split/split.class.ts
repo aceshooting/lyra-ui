@@ -523,8 +523,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         this.hasUpdated && this.orientationBreakpointBasis === "viewport"
       );
     }
-    if (changed.has("collapse") && this.collapse === "none") {
-      this.resetCollapseState();
+    if (changed.has("collapse")) {
+      // Switching the logical collapsing pane while rail/floating is active
+      // can move the disabled divider without changing collapseState itself.
+      if (this._collapseState !== "wide") this.endDragGestures();
+      if (this.collapse === "none") this.resetCollapseState();
     }
     if (
       changed.has("collapse") ||
@@ -632,6 +635,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       ? this.narrowOrientation
       : this.orientation;
     if (next === this._effectiveOrientation) return;
+    // A live gesture's start position is measured along the old axis. Keeping
+    // it through this switch would reinterpret the same coordinates on the
+    // new axis and resize the wrong panel extent.
+    this.endDragGestures();
     this._effectiveOrientation = next;
     this.requestUpdate();
     if (shouldEmit) {
@@ -678,6 +685,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     shouldEmit = true
   ): void {
     if (next === this._collapseState) return;
+    // A rail/floating transition can revoke a divider's resize capability.
+    // Cancel every live gesture before the new layout reaches the pointer
+    // path, rather than letting a captured divider mutate the collapsed pane.
+    this.endDragGestures();
     const old = this._collapseState;
     this._collapseState = next;
     this.requestUpdate("collapseState", old);
@@ -1279,6 +1290,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drags.get(e.pointerId);
     if (!drag) return;
+    // Collapse state can change after pointerdown (including a forced public
+    // assignment), so the initial eligibility check alone is not sufficient.
+    if (this.isDividerDisabled(drag.index)) {
+      this.endDragGestures();
+      return;
+    }
     const total =
       this.effectiveOrientation === "vertical"
         ? drag.base.clientHeight
