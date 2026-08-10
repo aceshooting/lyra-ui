@@ -30,6 +30,25 @@ export const ProgrammaticActivation: StoryObj = {
   `,
 };
 
+export const IconOnlyTooltip: StoryObj = {
+  name: 'Icon-only tooltip',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With both `icon-only` and `tooltip`, hover or focus the named item to reveal its label flyout. The visible icon remains decorative while the native link keeps the supplied accessible name.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size:var(--lr-icon-button-size);">
+      <lr-app-rail-item href="#inbox" aria-label="Inbox" icon-only tooltip>
+        <span slot="icon" aria-hidden="true">📥</span>Inbox
+      </lr-app-rail-item>
+    </div>
+  `,
+};
+
 /** The `active`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`
  *  and `--lr-app-rail-item-current-color`. Neither is declared on `:host`, so setting them on an
  *  ancestor is never shadowed, and they recolor only the current item — not everything else that

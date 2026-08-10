@@ -1,7 +1,27 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './command-palette.js'; import type { LyraCommandPalette } from './command-palette.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import './command-palette.js'; import type { LyraCommandPalette } from './command-palette.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 const meta: Meta = { title: 'Command Palette', component: 'lr-command-palette', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
+const documentIcon = svg`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h8l4 4v16H6zM13 3v4h4"></path></svg>`;
 export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette .commands=${[{ id: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { id: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
+
+export const MixedCommandIcons: Story = {
+  name: 'Mixed command icons',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A command can supply a decorative leading icon while adjacent commands omit one. The `icon` part renders only for the first row; every row retains its own `label` part.',
+      },
+    },
+  },
+  render: (_args, context) => html`<lr-command-palette
+    .open=${context.viewMode !== 'docs'}
+    .commands=${[
+      { id: 'new', label: 'New document', description: 'Create a blank workspace document', group: 'File', icon: documentIcon },
+      { id: 'search', label: 'Search workspace', description: 'Find documents and conversations', group: 'Navigation' },
+    ]}
+  ></lr-command-palette>`,
+};
 
 /** The active (keyboard-highlighted) command row's background is themeable through
  *  `--lr-command-palette-active-bg`. It is not declared on `:host`, so setting it on an ancestor

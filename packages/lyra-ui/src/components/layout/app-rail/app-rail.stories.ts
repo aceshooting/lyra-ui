@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './app-rail.js';
+import type { LyraAppRail } from './app-rail.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
@@ -34,6 +35,12 @@ const page = (rail: ReturnType<typeof html>) => html`
     </div>
   </div>
 `;
+
+function openExternalRail(event: Event): void {
+  const trigger = event.currentTarget as HTMLElement;
+  const rail = trigger.parentElement!.querySelector('lr-app-rail') as LyraAppRail;
+  rail.open = true;
+}
 
 export const Default: Story = {
   render: () =>
@@ -82,6 +89,30 @@ export const ForcedMobile: Story = {
         <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
       </lr-app-rail>
     `),
+};
+
+export const ExternalMobileControl: Story = {
+  name: 'External mobile control (hide-toggle)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger. This native control opens the rail through its public `open` property while the built-in `[part="toggle"]` stays hidden.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button type="button" @click=${openExternalRail}>Open navigation</button>
+      ${page(html`
+        <lr-app-rail hide-toggle label="Primary" mode="mobile" style="block-size:100%;">
+          <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+          ${navItems}
+          <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
+        </lr-app-rail>
+      `)}
+    </div>
+  `,
 };
 
 export const NarrowRtlLongContent: Story = {
