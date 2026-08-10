@@ -711,10 +711,21 @@ describe('state color hooks', () => {
   });
 });
 
-it('resets the native number spin-button on the page-input', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='page-input'\]\s*\{[^}]*appearance:\s*textfield/);
-  expect(css).to.match(/\[part='page-input'\]::-webkit-inner-spin-button/);
+it('renders the compact page input with textfield appearance to suppress native number spin buttons', async () => {
+  const el = await compactPagination();
+  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+
+  expect(getComputedStyle(input).appearance).to.equal('textfield');
+  const bounds = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [Math.floor(bounds.right - 4), Math.floor(bounds.top + bounds.height / 4)],
+    });
+    expect(input.value).to.equal('1');
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('nav button hover specificity', () => {
