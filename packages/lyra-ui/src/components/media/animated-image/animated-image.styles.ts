@@ -82,6 +82,8 @@ export const styles = css`
   [part='play-button'] {
     inline-size: 100%;
     block-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     border-radius: 50%;
     background: transparent;

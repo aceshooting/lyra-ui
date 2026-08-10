@@ -1467,28 +1467,28 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 566,
+              "line": 579,
               "test": "keeps interactive glyph overrides inert and pointer-transparent in both states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 566,
+              "line": 579,
               "test": "keeps interactive glyph overrides inert and pointer-transparent in both states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 630,
+              "line": 643,
               "test": "is accessible (default frozen state)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 636,
+              "line": 649,
               "test": "is accessible (actively playing state)",
               "target": "el",
               "state": "populated"
@@ -1508,7 +1508,7 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 457,
+              "line": 470,
               "kind": "rendered RTL test signal"
             }
           ]

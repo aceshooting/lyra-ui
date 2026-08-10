@@ -163,6 +163,19 @@ it('reflects play and accepts the upstream control sizing hooks', async () => {
   expect(getComputedStyle(icon).fontSize).to.equal('19px');
 });
 
+it('keeps the rendered play control at the icon-button hit-area floor when control-box-size is smaller', async () => {
+  const el = (await fixture(html`
+    <lr-animated-image alt="Pixel" style="--control-box-size: 1px"></lr-animated-image>
+  `)) as LyraAnimatedImage;
+
+  await loaded(el);
+
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
+  const { width, height } = button.getBoundingClientRect();
+  expect(width).to.be.at.least(40);
+  expect(height).to.be.at.least(40);
+});
+
 it('reconciles playing against a reduced-motion preference that changed while detached', async () => {
   const motion = stubReducedMotion(false);
   try {
