@@ -9,6 +9,19 @@ const messages: ChatMessage[] = [
   { id: 'm-2', role: 'assistant', text: 'I found the relevant release notes and summarized the changes.' },
 ];
 
+const structuredMessages: ChatMessage[] = [
+  {
+    id: 'm-structured',
+    role: 'assistant',
+    text: 'This legacy text is superseded by the ordered parts below.',
+    parts: [
+      { id: 'reasoning', type: 'reasoning', text: 'Checking the release notes', state: 'complete' },
+      { id: 'answer', type: 'text', text: 'The structured answer appears after the reasoning step.', state: 'complete' },
+    ],
+    metadata: { model: 'lyra-reasoner', source: 'release-notes' },
+  },
+];
+
 const run: AgentRun = {
   id: 'run-1',
   status: { kind: 'collecting', message: 'Collecting context' },
@@ -45,6 +58,15 @@ export const Default: Story = {
         ]}
         .groundingAssessment=${{ supportedClaims: 3, unsupportedClaims: 0, coverage: 1, confidence: 0.96 }}
       ></lr-agent-workspace>
+    </div>
+  `,
+};
+
+/** A nonempty `parts` array takes precedence over the legacy `text` shortcut. */
+export const StructuredParts: Story = {
+  render: () => html`
+    <div style="height: 480px; padding: var(--lr-space-m);">
+      <lr-agent-workspace label="Structured response" .messages=${structuredMessages}></lr-agent-workspace>
     </div>
   `,
 };
