@@ -366,6 +366,11 @@ export interface LyraHeatmapEventMap {
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
  *
+ * Both grid modes deliberately retain physical LTR geometry under `dir="rtl"`:
+ * matrix column 0 and calendar week 0 remain at the physical left. ArrowLeft
+ * and ArrowRight therefore retain their physical previous/next movement rather
+ * than swapping under RTL, matching the grid the user sees.
+ *
  * In calendar mode every cell position handed to `cellText`, `cellColor` and
  * `cellInteractive` is a `CalendarCellPos` carrying the resolved ISO
  * `yyyy-mm-dd` `date` alongside `week`/`weekday` — including for a grid
