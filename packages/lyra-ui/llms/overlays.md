@@ -157,10 +157,11 @@ respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly w
 
 **Optional peer deps:** none.
 
-`role` is chosen automatically per `variant`: `"alert"` for `danger`/`warning`, `"status"`
-otherwise — re-evaluated on every `variant` change, not just at first render, so reassigning
-`variant` to `danger`/`warning` after creation is announced as an interruption instead of keeping
-its original, now-stale role. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
+Once a non-vetoed toast starts showing, its normalized message is appended to Lyra's pre-mounted,
+shared light-DOM announcement sink: assertive for `danger`/`warning`, polite otherwise. Changing a
+visible toast between those urgency levels announces that message at the new urgency. The visible
+item and stack themselves remain ordinary content, so an icon, action, and close button never become
+part of an atomic live announcement. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
 on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 timing-adjustable) —
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
 leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
@@ -196,17 +197,22 @@ at another, since `placement` is a per-call option rather than a single global r
 ```
 
 **Known gotchas:**
-- the stack itself has no live-region role; each `lr-toast-item` owns the single `status`/`alert`
-  role appropriate to its current variant, avoiding nested live-region announcements.
-- the close button's accessible name is derived from the toast's own message text (`"Close: <first
-  40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
-  a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first. Rich
-  non-interactive message markup contributes its text, named-slot/icon and actionable content do
-  not, and live message text mutations or reassignment update the name through nested forwarding
-  slots. Hidden, inert, CSS-hidden and `aria-hidden` message branches are excluded. Observation,
-  animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the item's owner
-  window after iframe adoption and cancel through the same window that scheduled them.
+- the stack and each visible item have no live-region role. Their normalized message is appended as
+  one child of a shared non-atomic light-DOM sink at the variant's urgency; icon, action, and close
+  controls remain outside that sink. Later meaningful message changes add only the changed normalized
+  message, and appending an action does not re-announce it.
+- the close button's accessible name is derived from the toast's own message text (the first 40
+  grapheme clusters when it must be shortened, falling back to bare `"Close"` only when the toast
+  has no text content) rather than a bare `"Close"` on every instance — useful when several toasts
+  are stacked and a screen-reader or switch-access user needs to tell their close buttons apart
+  without activating one first. On a legacy engine without `Intl.Segmenter`, it retains the whole
+  label rather than splitting a grapheme. The localized `closeWithTruncatedContext` template owns
+  truncation punctuation and word order. Rich non-interactive message markup contributes its text,
+  named-slot/icon and actionable content do not, and live message text mutations or reassignment
+  update the name through nested forwarding slots. Hidden, inert, CSS-hidden and `aria-hidden`
+  message branches are excluded. Observation, animation frames, elapsed-time clocks and
+  completion/auto-dismiss timers follow the item's owner window after iframe adoption and cancel
+  through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
@@ -926,7 +932,9 @@ text glyph). When it has any real (non-whitespace) content, it replaces the `key
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
 content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
 to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
-leaves the slotted content's own semantics exposed.
+leaves the slotted content's own semantics exposed. A host `aria-label` wins by attribute presence,
+including an explicitly empty value; the computed shortcut name applies only when that attribute is
+absent.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
@@ -1094,8 +1102,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
-- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup; falls back to the
-  localized "Popover" (or "Menu" when `popupRole` is `menu`)
+- `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
+  attribute wins by presence, including `aria-label=""`; only when it is absent does the property
+  or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
 
 To preserve the previous Lyra-shaped defaults explicitly, use
@@ -1821,9 +1830,10 @@ rather than the shared control ladder, since a rating has no control frame to si
 reproduces the treatment this component had before `size` existed; setters also accept
 `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
 `accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
-`label`). `label` is an accessible-name fallback used when the host carries no `aria-label` — it is
-*not* visible label text, since a rating is a bare row of symbols with no field frame of its own;
-wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+`label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
+value; otherwise `accessibleLabel`, `label`, then the localized name provide the fallback. Neither
+is visible label text, since a rating is a bare row of symbols with no field frame of its own; wrap
+the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
@@ -1833,7 +1843,9 @@ clears to the canonical `''` read value rather than creating a nullable state.
 *twice per position*: once for the empty backdrop (`selected` false) and once for the overlay
 clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
 `precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
-text, never as markup. Left unset, the built-in star outline/solid pair is unchanged.
+text, never as markup. Renderer output is decorative, inert, and pointer-transparent, so it cannot
+become a second focus or action target; pointer and keyboard selection stay on the rating control.
+Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted

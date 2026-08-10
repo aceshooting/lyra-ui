@@ -408,8 +408,14 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   `--lr-space-l` dropzone.
 - `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
   instruction (`fileInputDefaultLabel`) as the visible fallback
-- `withLabel: boolean = false` and `withHint: boolean = false` (attributes `with-label` and
-  `with-hint`) — SSR slot-presence hints
+- `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
+  it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
+  message appears after the control has been interacted with. Rich `error` slot content replaces
+  that text.
+- `withLabel: boolean = false`, `withHint: boolean = false`, and `withError: boolean = false`
+  (attributes `with-label`, `with-hint`, and `with-error`) — SSR slot-presence hints. Use
+  `with-error` when the rich `error` slot is populated in initial declarative-shadow-DOM output,
+  before hydration can observe the assigned light-DOM content.
 - `size: LyraSize = 'm'` (reflected) and `validators: unknown[] = []` (attribute: false)
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
@@ -447,15 +453,21 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
-content; `label` and `hint` supply form chrome. The semantic button's accessible name comes from
+content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
 `accessibleLabel`/host `aria-label`,
 then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
 
-**CSS parts:** `file-input`, `form-control-label`, `label`, `hint`, `dropzone`, `dropzone-icon`,
-`dropzone-text`, `base` (the native dropzone button, visually behind but semantically beside the
+The semantic button describes its rendered owned error and hint in that order. A supplied
+`errorText` or `error` slot marks it `aria-invalid="true"`; a required intrinsic message appears
+after interaction, while a custom validity message is immediately visible and survives native form
+reset until `resetValidity()` or `setCustomValidity('')` clears it.
+
+**CSS parts:** `file-input` (compatibility alias) and `form-control` (the complete form-control
+frame), `form-control-label`, `label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
+`base` (the native dropzone button, visually behind but semantically beside the
 slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
@@ -1466,8 +1478,10 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   overriding the localized `lightboxLabel`.
 
 **Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
-index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
-forwarded as the close event's detail.
+index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
+toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
+actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
+detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
