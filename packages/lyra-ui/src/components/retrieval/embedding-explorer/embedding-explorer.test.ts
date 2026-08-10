@@ -25,6 +25,27 @@ describe('lr-embedding-explorer', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
   });
 
+  it('applies strings overrides to populated and empty accessible labels', async () => {
+    const strings = {
+      embeddingExplorerLabel: 'Vectors',
+      embeddingExplorerEmpty: 'No vectors',
+    };
+    const empty = (await fixture(
+      html`<lr-embedding-explorer .strings=${strings}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    const emptyBase = empty.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(emptyBase.getAttribute('aria-label')).to.equal('Vectors');
+    expect(emptyBase.querySelector('[part="empty"]')?.textContent).to.equal('No vectors');
+
+    const populated = (await fixture(
+      html`<lr-embedding-explorer .strings=${strings} .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    const populatedBase = populated.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const plot = populated.shadowRoot!.querySelector<SVGElement>('[part="plot"]')!;
+    expect(populatedBase.getAttribute('aria-label')).to.equal('Vectors');
+    expect(plot.getAttribute('aria-label')).to.equal('Vectors');
+  });
+
   it('emits the selected point', async () => {
     const el = (await fixture(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
     await el.updateComplete;
