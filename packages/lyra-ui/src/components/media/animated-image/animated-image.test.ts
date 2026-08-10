@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './animated-image.js';
 import type { LyraAnimatedImage } from './animated-image.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // A real, valid 1x1 pixel PNG -- loaded through a genuine <img> decode in the
 // Chromium `wtr` launches (not mocked), so `load`/`naturalWidth`/etc. are all
@@ -156,8 +157,10 @@ it('reflects play and accepts the upstream control sizing hooks', async () => {
   await loaded(el);
   const control = el.shadowRoot!.querySelector<HTMLElement>('[part="control-box"]')!;
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('.icon:not([hidden])')!;
   expect(getComputedStyle(control).inlineSize).to.equal('52px');
   expect(getComputedStyle(button).fontSize).to.equal('19px');
+  expect(getComputedStyle(icon).fontSize).to.equal('19px');
 });
 
 it('reconciles playing against a reduced-motion preference that changed while detached', async () => {
@@ -393,8 +396,10 @@ describe('accessible name on the play button', () => {
       const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+      const icon = el.shadowRoot!.querySelector<HTMLElement>('.icon:not([hidden])')!;
       expect(button.disabled).to.be.true;
       expect(button.getAttribute('aria-label')).to.equal('Play Pixel');
+      expect(getComputedStyle(icon).opacity).to.equal(getComputedStyle(button).opacity);
     } finally {
       stub.restore();
     }
@@ -553,6 +558,70 @@ describe('play-button hover specificity', () => {
       expect(internalSheet).to.contain(':where(');
     } finally {
       style.remove();
+    }
+  });
+});
+
+describe('decorative icon slots', () => {
+  it('keeps interactive glyph overrides inert and pointer-transparent in both states', async () => {
+    const root = await fixture(html`
+      <div>
+        <button id="outside" type="button">Outside</button>
+        <lr-animated-image alt="Pixel" style="inline-size: 160px; block-size: 100px">
+          <button id="play-glyph" slot="play-icon" type="button" aria-label="Custom play glyph"></button>
+          <button id="pause-glyph" slot="pause-icon" type="button" aria-label="Custom pause glyph"></button>
+        </lr-animated-image>
+      </div>
+    `);
+    const el = root.querySelector<LyraAnimatedImage>('lr-animated-image')!;
+    const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+    const playGlyph = root.querySelector<HTMLButtonElement>('#play-glyph')!;
+    const pauseGlyph = root.querySelector<HTMLButtonElement>('#pause-glyph')!;
+    await loaded(el);
+
+    for (const name of ['play-icon', 'pause-icon']) {
+      const slot = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${name}"]`)!;
+      expect(slot.closest('button') === null, `${name} remains outside the native control`).to.equal(true);
+      expect(
+        slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
+        `${name} is decorative visual chrome`,
+      ).to.equal('true');
+    }
+
+    outside.focus();
+    playGlyph.focus();
+    expect(document.activeElement?.id).to.equal('outside');
+    let playGlyphClicks = 0;
+    let pauseGlyphClicks = 0;
+    playGlyph.addEventListener('click', () => playGlyphClicks++);
+    pauseGlyph.addEventListener('click', () => pauseGlyphClicks++);
+
+    const clickCenter = async (target: HTMLElement): Promise<void> => {
+      const rect = target.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+    };
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    await aTimeout(0);
+    try {
+      await resetMouse();
+      await clickCenter(playGlyph);
+      await el.updateComplete;
+      expect(playGlyphClicks, 'the visual glyph receives no pointer click').to.equal(0);
+      expect(el.play).to.equal(true);
+      pauseGlyph.focus();
+      expect(document.activeElement?.id).to.not.equal('pause-glyph');
+      await expect(el).to.be.accessible();
+
+      await clickCenter(pauseGlyph);
+      await el.updateComplete;
+      expect(pauseGlyphClicks, 'the playing-state glyph receives no pointer click').to.equal(0);
+      expect(el.play).to.equal(false);
+      await expect(el).to.be.accessible();
+    } finally {
+      await resetMouse();
     }
   });
 });

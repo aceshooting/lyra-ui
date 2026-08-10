@@ -66,8 +66,10 @@ export interface LyraAnimatedImageEventMap {
  * control (nothing resembling a value the user submits).
  *
  * @customElement lr-animated-image
- * @slot play-icon - Custom icon shown on `[part="play-button"]` while frozen/paused. Defaults to a play glyph.
- * @slot pause-icon - Custom icon shown on `[part="play-button"]` while playing. Defaults to a pause glyph.
+ * @slot play-icon - Decorative custom play glyph shown while frozen/paused. Rendered in an inert,
+ *   aria-hidden, pointer-transparent sibling layer over the play/pause button.
+ * @slot pause-icon - Decorative custom pause glyph shown while playing. Rendered through the same
+ *   inert sibling layer.
  * @event lr-load - The live `<img>` finished loading. Fires again on every successful subsequent `src` change.
  * @event lr-error - The live `<img>` failed to load, or `src` was non-empty but failed the safe-URL check. Never fires for an empty `src`.
  * @event lr-play - The effective `playing` state transitioned `false` -> `true`.
@@ -335,14 +337,13 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
                   @click=${this.onToggleClick}
                   @focus=${this.onControlFocus}
                   @blur=${this.onControlBlur}
-                >
-                  <span class="icon" ?hidden=${this.playing}>
-                    <slot name="play-icon">${playIcon()}</slot>
-                  </span>
-                  <span class="icon" ?hidden=${!this.playing}>
-                    <slot name="pause-icon">${pauseIcon()}</slot>
-                  </span>
-                </button>
+                ></button>
+                <span class="icon" aria-hidden="true" inert ?hidden=${this.playing}>
+                  <slot name="play-icon">${playIcon()}</slot>
+                </span>
+                <span class="icon" aria-hidden="true" inert ?hidden=${!this.playing}>
+                  <slot name="pause-icon">${pauseIcon()}</slot>
+                </span>
               </div>
             `
           : nothing}

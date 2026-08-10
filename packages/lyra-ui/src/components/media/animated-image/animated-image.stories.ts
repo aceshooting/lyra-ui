@@ -89,6 +89,14 @@ export const AccessibleLabelOverride: Story = {
 
 export const CustomIcons: Story = {
   name: 'Custom play/pause icons via slots',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The icon slots are decorative visual overrides. They render in an inert, pointer-transparent layer over the named play/pause button, so use an SVG or glyph rather than a second interactive control.',
+      },
+    },
+  },
   render: () => html`
     <lr-animated-image src=${SAMPLE_GIF} alt="A Newton's cradle swinging" style="max-inline-size: 20rem;">
       <span slot="play-icon">▶</span>

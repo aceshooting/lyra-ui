@@ -68,11 +68,15 @@ export const styles = css`
     inset-inline-end: var(--lr-space-s);
     inline-size: var(--lr-animated-image-control-box-size);
     block-size: var(--lr-animated-image-control-box-size);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-grid;
+    place-items: center;
     border-radius: 50%;
     background: color-mix(in srgb, var(--lr-color-surface) 78%, transparent);
+  }
+
+  [part='control-box'] > [part='play-button'],
+  [part='control-box'] > .icon {
+    grid-area: 1 / 1;
   }
 
   [part='play-button'] {
@@ -109,6 +113,9 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='play-button']:disabled ~ .icon {
+    opacity: var(--lr-opacity-disabled);
+  }
   [part='play-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -118,9 +125,13 @@ export const styles = css`
   }
 
   .icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    z-index: var(--lr-layer-content);
+    display: inline-grid;
+    place-items: center;
+    color: var(--lr-color-text);
+    font-size: var(--lr-animated-image-icon-size);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
   }
   /* Both play-icon/pause-icon slots render persistently (see the class doc)
      and are toggled via the native hidden attribute; a plain .icon display

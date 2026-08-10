@@ -44,9 +44,10 @@ an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playin
 forces a freeze does emit `lr-pause`); internal `focus`/`blur` are re-dispatched as bubbling,
 composed host events.
 
-**Slots:** `play-icon`, `pause-icon` — custom glyphs on `[part="play-button"]` for the
-frozen/paused and playing states. Both are always rendered and toggled via the native `hidden`
-attribute, so slotted content for both stays mounted.
+**Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
+states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content
+renders in an inert, `aria-hidden`, pointer-transparent sibling layer over the named play/pause
+button, so do not use either slot for a second interactive control.
 
 **CSS parts:** `base` (positioning context), `image` (the live `<img>`), `canvas` (the
 frozen-frame `<canvas>`, shown in place of `image` while not playing), `control-box` (the
