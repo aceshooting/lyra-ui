@@ -42,6 +42,13 @@ export const styles = css`
     border-color: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
     color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
   }
+  [part='filter-toggle']:where([aria-pressed='true']):hover {
+    background: color-mix(
+      in oklab,
+      var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+  }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover rather than repeating it. It must stay after the [aria-pressed='true'] rule: the two

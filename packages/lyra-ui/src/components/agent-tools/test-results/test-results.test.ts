@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
 import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
-import { styles } from './test-results.styles.js';
 
 const suites: TestSuiteResult[] = [
   {
@@ -492,10 +492,39 @@ describe('lr-test-results', () => {
     expect(getComputedStyle(failure).color).to.equal('rgb(40, 50, 60)');
   });
 
-  it('gives filter-toggle, test-name, and test-expand-toggle a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='filter-toggle'\]:hover/);
-    expect(css).to.match(/\[part='test-name'\]:hover/);
-    expect(css).to.match(/\[part='test-expand-toggle'\]:hover/);
+  it('gives filter controls and test actions rendered hover feedback', async () => {
+    const el = (await fixture(
+      html`<lr-test-results .suites=${suites} .statusFilter=${['failed']}></lr-test-results>`,
+    )) as LyraTestResults;
+    await el.updateComplete;
+    el.style.setProperty('--lr-test-results-filter-active-bg', 'rgb(10, 20, 30)');
+    const selected = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="filter-toggle"][aria-pressed="true"]',
+    )!;
+    const unselected = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="filter-toggle"][aria-pressed="false"]',
+    )!;
+    const testName = el.shadowRoot!.querySelector<HTMLElement>('[part="test-name"]')!;
+    const expandToggle = el.shadowRoot!.querySelector<HTMLElement>('[part="test-expand-toggle"]')!;
+    const centre = (element: HTMLElement): [number, number] => {
+      const rect = element.getBoundingClientRect();
+      return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+    };
+    await resetMouse();
+    const targets = [
+      ['selected filter toggle', selected, getComputedStyle(selected).backgroundColor],
+      ['unselected filter toggle', unselected, getComputedStyle(unselected).backgroundColor],
+      ['test name', testName, getComputedStyle(testName).backgroundColor],
+      ['test expand toggle', expandToggle, getComputedStyle(expandToggle).backgroundColor],
+    ] as const;
+
+    try {
+      for (const [name, target, rest] of targets) {
+        await sendMouse({ type: 'move', position: centre(target) });
+        expect(getComputedStyle(target).backgroundColor, `${name} hover background`).not.to.equal(rest);
+      }
+    } finally {
+      await resetMouse();
+    }
   });
 });
