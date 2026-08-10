@@ -20,6 +20,47 @@ describe('lr-rag-answer', () => {
     expect(chrome.paddingTop).to.equal('0px');
   });
 
+  it('renders per-instance strings overrides on every localized answer surface', async () => {
+    const strings = {
+      ragAnswerLabel: 'Réponse étayée',
+      ragAnswerRetry: 'Réessayer la réponse',
+      ragAnswerCitations: 'Références',
+      ragAnswerSources: 'Documents',
+    };
+    const el = (await fixture(html`
+      <lr-rag-answer
+        error="Retrieval failed"
+        .citations=${[{ id: 'c1', sourceId: 'd1' }]}
+        .sources=${[{ id: 'd1', name: 'guide.md' }]}
+        .strings=${strings}
+      ></lr-rag-answer>
+    `)) as LyraRagAnswer;
+    const citations = el.shadowRoot!.querySelector('[part="citations"]') as HTMLElement | null;
+    const sources = el.shadowRoot!.querySelector('[part="sources"]') as HTMLElement | null;
+    const sourceList = el.shadowRoot!.querySelector('lr-source-list') as
+      | (HTMLElement & { label: string; updateComplete: Promise<unknown> })
+      | null;
+    await sourceList?.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Réponse étayée');
+    expect(el.shadowRoot!.querySelector('[part="retry"]')?.textContent?.trim()).to.equal('Réessayer la réponse');
+    expect(citations?.getAttribute('aria-label')).to.equal('Références');
+    expect(citations?.querySelector('[part="section-heading"]')?.textContent?.trim()).to.equal('Références');
+    expect(sources?.getAttribute('aria-label')).to.equal('Documents');
+    expect(sources?.querySelector('[part="section-heading"]')?.textContent?.trim()).to.equal('Documents');
+    expect(sourceList?.label).to.equal('Documents');
+
+    el.error = '';
+    el.loading = true;
+    await el.updateComplete;
+    const spinnerName = el.shadowRoot!
+      .querySelector('lr-spinner')
+      ?.shadowRoot?.querySelector('[role="progressbar"]')
+      ?.getAttribute('aria-label');
+    expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Réponse étayée');
+    expect(spinnerName).to.equal('Réponse étayée');
+  });
+
   it('renders a declarative sources slot without requiring a redundant sources property', async () => {
     const el = (await fixture(html`
       <lr-rag-answer answer="Answer">
