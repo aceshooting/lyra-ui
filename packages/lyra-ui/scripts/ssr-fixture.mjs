@@ -100,12 +100,15 @@ export async function renderSsrStateProbe(stateCase, elementRenderers) {
   const staticTag = unsafeStatic(stateCase.tag);
   const staticAttribute = unsafeStatic(stateCase.attribute);
   const caseLabel = `${stateCase.tag}[${stateCase.attribute}=${JSON.stringify(stateCase.value)}]`;
+  const lightDom = stateCase.slot
+    ? html`<span slot=${stateCase.slot} data-ssr-state-light=${caseLabel}>State probe</span>`
+    : html`<span data-ssr-state-light=${caseLabel}>State probe</span>`;
   return collectResult(
     render(
       html`<${staticTag}
         ${staticAttribute}=${stateCase.value}
         data-ssr-state-probe=${caseLabel}
-      ><span data-ssr-state-light=${caseLabel}>State probe</span></${staticTag}>`,
+      >${lightDom}</${staticTag}>`,
       { elementRenderers },
     ),
   );

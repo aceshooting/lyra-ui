@@ -98,6 +98,8 @@ export interface LyraFileInputEventMap {
  * @slot dropzone - Named equivalent of the default dropzone-content slot.
  * @slot label - Custom form-control label content.
  * @slot hint - Custom form-control hint content.
+ * @slot error - Custom validation error content. Use `with-error` when this slot is populated in
+ * server-rendered declarative shadow DOM before light-DOM slot assignment is observable.
  * @event lr-files - `detail: { files, rejected }`, fired on drop and manual selection.
  * @event {Event} input - Native event fired before `change` when user interaction changes `files`;
  * bubbling, composed, and non-cancelable.
@@ -110,10 +112,12 @@ export interface LyraFileInputEventMap {
  * @event lr-invalid - The file input failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the browser's
  * own validation bubble so an app can present the failure its own way.
- * @csspart file-input - The complete form-control wrapper.
+ * @csspart file-input - Compatibility name for the complete form-control wrapper.
+ * @csspart form-control - The complete label, dropzone, selected-file, error, and hint frame.
  * @csspart form-control-label - The form-control label.
  * @csspart label - Compatibility wrapper around the visible label content.
  * @csspart hint - The form-control hint.
+ * @csspart error - The visible validation message or authored error content.
  * @csspart dropzone - The drag/drop and paste target around the semantic button.
  * @csspart dropzone-icon - The default decorative file icon.
  * @csspart dropzone-text - Wrapper around dropzone slot/text content.
@@ -226,9 +230,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Form-control label. Empty leaves the localized dropzone instruction as the visible fallback. */
   @property() label = '';
   @property() hint = '';
-  /** SSR slot-presence hints for label and hint content. */
+  /** Plain-text validation error. A custom-validity message is shown when this is empty. */
+  @property({ attribute: 'error-text' }) errorText = '';
+  /** SSR slot-presence hint for label content. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** SSR slot-presence hint for hint content. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
+  /** SSR slot-presence hint for rich error content. */
+  @property({ type: Boolean, attribute: 'with-error' }) withError = false;
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Consumer-managed validator inventory retained for public-surface compatibility. */
   @property({ attribute: false }) validators: unknown[] = [];
@@ -550,11 +559,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.publishCustomStates();
+    this.requestUpdate();
   }
 
   resetValidity(): void {
     this.validityController.setCustomValidity('');
     this.updateValidity();
+    this.requestUpdate();
   }
 
   formResetCallback(): void {
@@ -954,8 +965,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const accessibleLabel = this.getAttribute('aria-label') || this.accessibleLabel || label;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || this.label.length > 0;
     const hasHint = this.withHint || this.slotPresence.has('hint') || this.hint.length > 0;
+    const renderedError = this.errorText || this.customError || (this.touched ? this.validationMessage : '');
+    const hasError = this.withError || this.slotPresence.has('error') || renderedError.length > 0;
+    const describedBy = [hasError ? 'file-input-error' : '', hasHint ? 'file-input-hint' : '']
+      .filter(Boolean)
+      .join(' ');
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`
-      <div part="file-input">
+      <div part="file-input form-control">
         <label part="form-control-label" ?hidden=${!hasLabel}>
           <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
@@ -976,7 +993,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
             tabindex=${this.effectiveDisabled ? '-1' : '0'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
             aria-label=${accessibleLabel}
-            aria-describedby=${hasHint ? 'file-input-hint' : nothing}
+            aria-describedby=${describedBy || nothing}
+            aria-invalid=${invalid ? 'true' : 'false'}
             data-drag-state=${this.dragState}
             ?disabled=${this.effectiveDisabled}
             @click=${this.openPicker}
@@ -992,6 +1010,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         ${this._files.length
           ? html`<div part="file-list">${this._files.map((file, index) => this.renderFile(file, index))}</div>`
           : nothing}
+        <div id="file-input-error" part="error" ?hidden=${!hasError}>
+          <slot name="error">${renderedError}</slot>
+        </div>
         <div id="file-input-hint" part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint"></slot>
         </div>

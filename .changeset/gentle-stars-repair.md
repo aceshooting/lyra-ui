@@ -9,6 +9,8 @@ Improve component reliability and public contracts across the library:
 - strip authored inline CSS from sanitized Markdown while preserving only strict Shiki palette
   colors, and paint-contain the explicit unsanitized escape hatch;
 - add standard error text, rich error-slot chrome, and handle descriptions to `lr-slider`;
+- add standard error text, rich error-slot chrome, SSR presence hints, and semantic descriptions
+  to `lr-file-input`;
 
 - complete standalone theme inputs and semantic contrast coverage;
 - export public component property and configuration types from the registration-free package root;

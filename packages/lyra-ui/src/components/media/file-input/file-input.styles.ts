@@ -8,7 +8,7 @@ export const styles = css`
     max-inline-size: 100%;
     --lr-file-input-font-size: var(--lr-form-control-font-size);
   }
-  [part='file-input'] {
+  [part~='file-input'] {
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -21,7 +21,8 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='form-control-label'][hidden],
-  [part='hint'][hidden] {
+  [part='hint'][hidden],
+  [part='error'][hidden] {
     display: none;
   }
   /* This control accepts a required attribute and renders a visible label like every other field
@@ -235,6 +236,13 @@ export const styles = css`
     min-inline-size: 0;
     margin-block-start: var(--lr-space-xs);
     color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  [part='error'] {
+    min-inline-size: 0;
+    margin-block-start: var(--lr-space-xs);
+    color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }

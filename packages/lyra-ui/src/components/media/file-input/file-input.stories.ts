@@ -48,6 +48,41 @@ export const FormAssociatedSurface: Story = {
   },
 };
 
+export const ErrorChrome: Story = {
+  render: () => html`
+    <lr-file-input
+      label="Supporting documents"
+      hint="PDF or image files only."
+      error-text="Choose at least one supported document."
+      required
+    ></lr-file-input>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Owned validation chrome: `error-text` is associated with the semantic dropzone. Rich application error content can use the named `error` slot instead.',
+      },
+    },
+  },
+};
+
+export const SlottedErrorSsr: Story = {
+  render: () => html`
+    <lr-file-input with-error label="Supporting documents" hint="PDF or image files only.">
+      <strong slot="error">Choose at least one supported document.</strong>
+    </lr-file-input>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`with-error` preserves initially populated rich `error` slot content through declarative-shadow-DOM SSR before hydration can observe slot assignment.',
+      },
+    },
+  },
+};
+
 export const CustomSlotContent: Story = {
   render: () =>
     html`<lr-file-input multiple accept=".csv,.xlsx" label="Upload spreadsheets">

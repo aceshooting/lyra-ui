@@ -591,6 +591,132 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('renders standard error chrome in the form-control frame and describes the semantic dropzone', async () => {
+  const el = (await fixture(html`
+    <lr-file-input
+      label="Supporting documents"
+      hint="PDF or image files only"
+      error-text="Choose at least one supported document."
+    ></lr-file-input>
+  `)) as LyraFileInput;
+  const root = el.shadowRoot!;
+  const frame = root.querySelector<HTMLElement>('[part~="form-control"]');
+  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const error = root.querySelector<HTMLElement>('[part~="error"]');
+
+  expect(frame?.getAttribute('part') ?? '').to.contain('form-control');
+  expect(error?.id ?? '').to.equal('file-input-error');
+  expect(error?.textContent ?? '').to.contain('Choose at least one supported document.');
+  expect(!(error?.hasAttribute('hidden') ?? true)).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+  await expect(el).to.be.accessible();
+});
+
+it('keeps the opt-in error chrome hidden and unassociated when no error source is supplied', async () => {
+  const el = (await fixture(html`<lr-file-input hint="PDF or image files only"></lr-file-input>`)) as LyraFileInput;
+  const root = el.shadowRoot!;
+  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const error = root.querySelector<HTMLElement>('[part~="error"]');
+
+  expect(el.withError).to.equal(false);
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('false');
+
+  el.errorText = 'Choose at least one supported document.';
+  await el.updateComplete;
+  expect(!(error?.hasAttribute('hidden') ?? true)).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+
+  el.errorText = '';
+  await el.updateComplete;
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('false');
+});
+
+it('updates a slotted error description when the authored error content is removed', async () => {
+  const el = (await fixture(html`<lr-file-input hint="PDF or image files only"></lr-file-input>`)) as LyraFileInput;
+  const root = el.shadowRoot!;
+  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const error = root.querySelector<HTMLElement>('[part~="error"]');
+  const errorSlot = root.querySelector<HTMLSlotElement>('slot[name="error"]');
+  expect(errorSlot?.name ?? '').to.equal('error');
+
+  const authoredError = document.createElement('strong');
+  authoredError.slot = 'error';
+  authoredError.textContent = 'The document service rejected this upload.';
+  const added = oneEvent(errorSlot!, 'slotchange');
+  el.append(authoredError);
+  await added;
+  await el.updateComplete;
+
+  expect(errorSlot!.assignedElements({ flatten: true }).map((element) => element.textContent)).to.deep.equal([
+    'The document service rejected this upload.',
+  ]);
+  expect(!(error?.hasAttribute('hidden') ?? true)).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+
+  const removed = oneEvent(errorSlot!, 'slotchange');
+  authoredError.remove();
+  await removed;
+  await el.updateComplete;
+
+  expect(errorSlot!.assignedElements({ flatten: true }).length).to.equal(0);
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('false');
+});
+
+it('renders intrinsic and custom validity errors, preserves a custom error through reset, and clears it explicitly', async () => {
+  const form = (await fixture(html`
+    <form><lr-file-input required hint="PDF or image files only"></lr-file-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector<LyraFileInput>('lr-file-input')!;
+  const root = el.shadowRoot!;
+  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const error = root.querySelector<HTMLElement>('[part~="error"]');
+
+  expect(el.reportValidity()).to.equal(false);
+  await el.updateComplete;
+  expect(error?.textContent ?? '').to.contain(el.validationMessage);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+
+  el.files = [makeFile('document.pdf', 'application/pdf')];
+  await el.updateComplete;
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('false');
+
+  form.reset();
+  await el.updateComplete;
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+
+  el.setCustomValidity('The document service rejected this upload.');
+  await el.updateComplete;
+  expect(error?.textContent ?? '').to.contain('The document service rejected this upload.');
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+
+  form.reset();
+  await el.updateComplete;
+  expect(el.validationMessage).to.equal('The document service rejected this upload.');
+  expect(error?.textContent ?? '').to.contain('The document service rejected this upload.');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+
+  el.resetValidity();
+  await el.updateComplete;
+  expect(el.validity.customError).to.equal(false);
+  expect(el.validity.valueMissing).to.equal(true);
+  expect(error?.hasAttribute('hidden') ?? false).to.equal(true);
+  expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-hint');
+  expect(base?.getAttribute('aria-invalid') ?? null).to.equal('false');
+});
+
 it('announces accept/reject drag state changes via the shared polite light-DOM region', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -974,6 +1100,7 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     expect(el.required).to.be.false;
     expect(el.size).to.equal('m');
     expect(el.validators).to.deep.equal([]);
+    expect(el.withError).to.be.false;
     expect(el.withHint).to.be.false;
     expect(el.withLabel).to.be.false;
     expect((el.validationTarget) === (el.shadowRoot!.querySelector('[part="base"]'))).to.equal(true);
@@ -1098,9 +1225,15 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     expect(events).to.deep.equal(['input', 'change']);
   });
 
-  it('renders label, hint, and dropzone slots on the first SSR-hinted render', async () => {
+  it('renders label, hint, error, and dropzone chrome on the first SSR-hinted render', async () => {
     const el = (await fixture(html`
-      <lr-file-input with-label with-hint label="Documents" hint="PDF only">
+      <lr-file-input
+        with-label
+        with-hint
+        label="Documents"
+        hint="PDF only"
+        error-text="Choose at least one document."
+      >
         <span slot="dropzone">Choose documents</span>
       </lr-file-input>
     `)) as LyraFileInput;
@@ -1108,8 +1241,32 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
 
     expect(el.shadowRoot!.querySelector('[part~="form-control-label"]')!.textContent).to.contain('Documents');
     expect(el.shadowRoot!.querySelector('[part~="hint"]')!.textContent).to.contain('PDF only');
+    expect(el.shadowRoot!.querySelector('[part~="error"]')!.textContent).to.contain('Choose at least one document.');
     expect(el.shadowRoot!.querySelector('slot[name="dropzone"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part~="label"]')).to.exist;
+  });
+
+  it('uses with-error to render and associate rich slotted error content on the first SSR-hinted render', async () => {
+    const el = (await fixture(html`
+      <lr-file-input with-error>
+        <strong slot="error">Choose at least one supporting document.</strong>
+      </lr-file-input>
+    `)) as LyraFileInput;
+    await el.updateComplete;
+
+    const root = el.shadowRoot!;
+    const error = root.querySelector<HTMLElement>('[part~="error"]');
+    const errorSlot = root.querySelector<HTMLSlotElement>('slot[name="error"]');
+    const base = root.querySelector<HTMLElement>('[part~="base"]');
+
+    expect(el.withError).to.equal(true);
+    expect(errorSlot?.assignedElements({ flatten: true }).map((element) => element.textContent)).to.deep.equal([
+      'Choose at least one supporting document.',
+    ]);
+    expect(error?.hasAttribute('hidden') ?? true).to.equal(false);
+    expect(base?.getAttribute('aria-describedby') ?? null).to.equal('file-input-error');
+    expect(base?.getAttribute('aria-invalid') ?? null).to.equal('true');
+    await expect(el).to.be.accessible();
   });
 
   it('reflects dragging while a drag session is active and resets it after drop', async () => {

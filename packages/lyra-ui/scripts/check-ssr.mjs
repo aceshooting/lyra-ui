@@ -255,7 +255,54 @@ assert.match(page.html, /part="base page"/, 'lr-page SSR output is missing its s
 // matrix traversal above.
 const fileInput = entries.find(({ tag }) => tag === 'lr-file-input');
 assert.equal(fileInput?.mode, 'render-and-hydrate', 'lr-file-input must remain in the SSR render tier');
-assert.match(fileInput.html, /part="file-input"/, 'lr-file-input did not complete its server render');
+assert.match(fileInput.html, /part="[^"]*\bfile-input\b[^"]*"/, 'lr-file-input did not complete its server render');
+assert.match(fileInput.html, /part="[^"]*\bform-control\b[^"]*"/, 'lr-file-input SSR output is missing form-control chrome');
+assert.match(fileInput.html, /part="error"/, 'lr-file-input SSR output is missing its error surface');
+const semanticDropzoneDescribesError =
+  /<button(?=[^>]*\bpart="base")(?=[^>]*\baria-describedby="file-input-error")[^>]*>/;
+
+const fileInputErrorHtml = await renderSsrStateProbe(
+  { tag: 'lr-file-input', attribute: 'error-text', value: 'Choose a supporting document.' },
+  animatedImageContext.elementRenderers,
+);
+assert.match(fileInputErrorHtml, /id="file-input-error"/, 'lr-file-input SSR error text is missing its owned id');
+assert.match(fileInputErrorHtml, /part="error"/, 'lr-file-input SSR error text is missing its public part');
+assert.match(fileInputErrorHtml, /Choose a supporting document\./, 'lr-file-input SSR error text did not render');
+assert.doesNotMatch(
+  fileInputErrorHtml,
+  /<div id="file-input-error"[^>]*\bhidden\b/,
+  'lr-file-input SSR error text must not leave its owned error surface hidden',
+);
+assert.match(
+  fileInputErrorHtml,
+  semanticDropzoneDescribesError,
+  'lr-file-input SSR error text is not associated with its semantic dropzone',
+);
+
+const fileInputSlottedErrorHtml = await renderSsrStateProbe(
+  { tag: 'lr-file-input', attribute: 'with-error', value: '', slot: 'error' },
+  animatedImageContext.elementRenderers,
+);
+assert.match(
+  fileInputSlottedErrorHtml,
+  /<span slot="error"[^>]*>State probe<\/span>/,
+  'lr-file-input SSR probe did not provide rich error slot content',
+);
+assert.doesNotMatch(
+  fileInputSlottedErrorHtml,
+  /<div id="file-input-error"[^>]*\bhidden\b/,
+  'lr-file-input SSR-hinted rich error content must not leave its error surface hidden',
+);
+assert.match(
+  fileInputSlottedErrorHtml,
+  /<div id="file-input-error"(?=[^>]*\bpart="error")(?![^>]*\bhidden\b)[^>]*>(?:(?!<\/div>)[\s\S])*?<slot name="error">/,
+  'lr-file-input SSR-hinted rich error content must project through the visible error frame',
+);
+assert.match(
+  fileInputSlottedErrorHtml,
+  semanticDropzoneDescribesError,
+  'lr-file-input SSR-hinted rich error content is not associated with its semantic dropzone',
+);
 
 assert.equal(globalThis.window, undefined, 'server rendering must not install a window shim');
 assert.equal(globalThis.document, undefined, 'server rendering must not install a document shim');
