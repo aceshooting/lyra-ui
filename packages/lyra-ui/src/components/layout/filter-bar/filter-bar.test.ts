@@ -323,6 +323,30 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     snapshot.status = "closed";
     expect(el.value.status).to.equal("open");
   });
+
+  it("clones string-array fields at setter, getter, and lr-input boundaries", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const assigned = ["urgent"];
+
+    el.value = { tags: assigned };
+    assigned.push("billing");
+    expect(el.value.tags).to.deep.equal(["urgent"]);
+
+    const snapshot = el.value;
+    (snapshot.tags as string[]).push("review");
+    expect(el.value.tags).to.deep.equal(["urgent"]);
+
+    const combo = control(el, "tags") as HTMLElement & { value: string[] };
+    const inputPromise = oneEvent(el, "lr-input");
+    combo.value = ["billing"];
+    combo.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+
+    (input.detail.value.tags as string[]).push("review");
+    expect(el.value.tags).to.deep.equal(["billing"]);
+  });
 });
 
 describe("lr-input (filter edits)", () => {

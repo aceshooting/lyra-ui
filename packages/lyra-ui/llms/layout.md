@@ -3034,7 +3034,7 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
 - `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
-  writes are shallow-copied.
+  writes clone the object and each string-array field independently.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
