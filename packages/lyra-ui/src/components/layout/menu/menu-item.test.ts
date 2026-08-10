@@ -214,15 +214,25 @@ it('renders aria-disabled="false" when enabled', async () => {
   expect(el.getAttribute('aria-disabled')).to.equal('false');
 });
 
-it('fires lr-menu-item-select on click', async () => {
+it('forwards host click() to the visual row and fires lr-menu-item-select exactly once', async () => {
   const el = (await fixture(html`<lr-menu-item value="rename">Rename</lr-menu-item>`)) as LyraMenuItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let baseClicks = 0;
+  const selections: CustomEvent<undefined>[] = [];
+  base.addEventListener('click', () => {
+    baseClicks += 1;
+  });
+  el.addEventListener('lr-menu-item-select', (event) => {
+    selections.push(event as CustomEvent<undefined>);
+  });
 
-  setTimeout(() => base.click());
-  const ev = await oneEvent(el, 'lr-menu-item-select');
+  el.click();
+
+  expect(baseClicks).to.equal(1);
+  expect(selections).to.have.lengthOf(1);
   // emit() forwards `detail` verbatim to the CustomEvent constructor; an
   // omitted detail resolves to `null` there, not `undefined`.
-  expect(ev.detail).to.be.null;
+  expect(selections[0]!.detail).to.be.null;
 });
 
 it('select() fires lr-menu-item-select directly, for a parent menu\'s own keyboard handling', async () => {
@@ -239,6 +249,37 @@ it('does not fire lr-menu-item-select on click or select() while disabled', asyn
   base.click();
   el.select();
   expect(fired).to.be.false;
+});
+
+it('leaves host click() inert while disabled or loading', async () => {
+  for (const state of ['disabled', 'loading'] as const) {
+    const el = (await fixture(
+      state === 'disabled'
+        ? html`<lr-menu-item type="checkbox" disabled value="wrap">Wrap text</lr-menu-item>`
+        : html`<lr-menu-item type="checkbox" loading value="wrap">Wrap text</lr-menu-item>`,
+    )) as LyraMenuItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    let baseClicks = 0;
+    let selections = 0;
+    let changes = 0;
+    base.addEventListener('click', () => {
+      baseClicks += 1;
+    });
+    el.addEventListener('lr-menu-item-select', () => {
+      selections += 1;
+    });
+    el.addEventListener('lr-menu-item-change', () => {
+      changes += 1;
+    });
+
+    expect(el.interactionDisabled, state).to.equal(true);
+    el.click();
+
+    expect(baseClicks, state).to.equal(0);
+    expect(selections, state).to.equal(0);
+    expect(changes, state).to.equal(0);
+    expect(el.checked, state).to.equal(false);
+  }
 });
 
 it('starts with tabIndex -1 before any parent menu manages roving focus', async () => {
@@ -279,25 +320,32 @@ it('type="checkbox" renders role="menuitemcheckbox" with aria-checked reflecting
   expect(el.getAttribute('aria-checked')).to.equal('true');
 });
 
-it('clicking a type="checkbox" item toggles checked and fires lr-menu-item-change with { value, checked }, in addition to lr-menu-item-select', async () => {
+it('host click() toggles a type="checkbox" item, with change before select', async () => {
   const el = (await fixture(
     html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
   )) as LyraMenuItem;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const order: string[] = [];
+  const changes: CustomEvent<{ value: string; checked: boolean }>[] = [];
+  el.addEventListener('lr-menu-item-change', (event) => {
+    order.push('change');
+    changes.push(event as CustomEvent<{ value: string; checked: boolean }>);
+  });
+  el.addEventListener('lr-menu-item-select', () => {
+    order.push('select');
+  });
 
-  let selectFired = false;
-  el.addEventListener('lr-menu-item-select', () => (selectFired = true));
+  el.click();
 
-  setTimeout(() => base.click());
-  const ev = await oneEvent(el, 'lr-menu-item-change');
-  expect(ev.detail).to.deep.equal({ value: 'wrap', checked: true });
+  expect(order).to.deep.equal(['change', 'select']);
+  expect(changes[0]!.detail).to.deep.equal({ value: 'wrap', checked: true });
   expect(el.checked).to.be.true;
+  await el.updateComplete;
   expect(el.getAttribute('aria-checked')).to.equal('true');
-  expect(selectFired).to.be.true;
 
-  setTimeout(() => base.click());
-  const ev2 = await oneEvent(el, 'lr-menu-item-change');
-  expect(ev2.detail).to.deep.equal({ value: 'wrap', checked: false });
+  el.click();
+
+  expect(order).to.deep.equal(['change', 'select', 'change', 'select']);
+  expect(changes[1]!.detail).to.deep.equal({ value: 'wrap', checked: false });
   expect(el.checked).to.be.false;
 });
 
@@ -654,8 +702,7 @@ describe('submenu parent', () => {
     item.addEventListener('lr-menu-item-select', () => {
       selects += 1;
     });
-    const base = item.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.click();
+    item.click();
     await item.updateComplete;
     expect(selects).to.equal(0);
     expect(panelOf(item).open).to.equal(true);

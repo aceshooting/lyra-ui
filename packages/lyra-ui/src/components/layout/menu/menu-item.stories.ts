@@ -7,6 +7,39 @@ const meta: Meta = { title: 'Navigation/Menu item', component: 'lr-menu-item', t
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-menu-item value="save">Save</lr-menu-item>` };
 
+export const HostClick: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Calling `click()` on the focusable menu-item host follows the same visual-row path as pointer activation. The host remains inert while disabled or loading; checkbox items toggle and submenu parents open their panel through that same path.',
+      },
+    },
+  },
+  render: () => html`
+    <div data-host-click-example style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;">
+      <div role="menu" aria-label="Programmatic activation">
+        <lr-menu-item
+          value="archive"
+          @lr-menu-item-select=${(event: Event) => {
+            const example = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-host-click-example]');
+            const status = example?.querySelector<HTMLOutputElement>('[data-host-click-status]');
+            if (status) status.value = 'Archive selected';
+          }}
+        >Archive</lr-menu-item>
+      </div>
+      <button
+        type="button"
+        @click=${(event: Event) => {
+          const example = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-host-click-example]');
+          example?.querySelector<HTMLElement>('lr-menu-item')?.click();
+        }}
+      >Call item.click()</button>
+      <output data-host-click-status aria-live="polite">Waiting for selection</output>
+    </div>
+  `,
+};
+
 export const VisualSlots: StoryObj = {
   parameters: {
     docs: {

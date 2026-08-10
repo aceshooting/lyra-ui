@@ -22,11 +22,8 @@ function menuItems(el: LyraAttachmentTrigger): LyraMenuItem[] {
   return [...menuEl(el).querySelectorAll('lr-menu-item')] as LyraMenuItem[];
 }
 
-// The item's real click listener lives on its own inner [part="base"] shadow
-// element, not the host -- calling .click() on the LyraMenuItem host itself
-// does nothing (see menu-item.ts's own render()/select() wiring).
 function clickItem(item: LyraMenuItem): void {
-  (item.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  item.click();
 }
 
 function hiddenInput(el: LyraAttachmentTrigger): HTMLInputElement | null {

@@ -37,6 +37,24 @@ describe('<lr-dropdown-item>', () => {
     expect(el.tabIndex).to.equal(-1);
   });
 
+  it('inherits host click() forwarding from lr-menu-item', async () => {
+    const el = await fixture<LyraDropdownItem>(html`<lr-dropdown-item value="archive">Archive</lr-dropdown-item>`);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    let baseClicks = 0;
+    let selections = 0;
+    base.addEventListener('click', () => {
+      baseClicks += 1;
+    });
+    el.addEventListener('lr-menu-item-select', () => {
+      selections += 1;
+    });
+
+    el.click();
+
+    expect(baseClicks).to.equal(1);
+    expect(selections).to.equal(1);
+  });
+
   it('reflects the pinned Web Awesome type property', async () => {
     const el = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
     el.type = 'checkbox';

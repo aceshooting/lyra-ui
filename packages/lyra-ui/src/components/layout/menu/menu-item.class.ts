@@ -91,9 +91,10 @@ export interface LyraMenuItemEventMap {
  * Enter/Space activation is handled by `<lr-menu>`'s own delegated
  * `keydown` listener calling `select()` on whichever item is currently
  * roving-focused (mirrors `<lr-tree>` calling `current.select()` from its
- * own keydown handler) — this element only wires a plain `click` listener
- * itself, so `select()` fires identically whether the item was reached by
- * mouse or keyboard.
+ * own keydown handler). The visual row wires the pointer `click` listener,
+ * and the host's `click()` forwards to that same row, so `select()` fires
+ * identically whether the item was reached by mouse, keyboard, or a
+ * programmatic host click.
  *
  * A `<lr-menu>` or one or more direct mapped items assigned to the `submenu` slot turns this row
  * into a submenu parent: the host gains `aria-haspopup="menu"` plus an `aria-expanded` that
@@ -181,6 +182,8 @@ export interface LyraMenuItemEventMap {
  * @csspart submenu - The submenu panel/wrapper.
  * @cssprop [--submenu-offset=-2px] - Final signed distance between a submenu and its parent row.
  * Negative values overlap the parent menu; positive values add separation. Mirrors under RTL.
+ * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
+ * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.
  * @method openSubmenu - Opens the submenu and resolves after its open state settles.
  * @method closeSubmenu - Closes the submenu and resolves after its closed state settles.
@@ -414,6 +417,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     if (changed.has('disabled') || changed.has('loading')) {
       this.emitStateChange();
     }
+  }
+
+  /** Activates the visual row, matching a consumer click on this focusable host. This preserves the
+   *  row's native click event path and its normal, checkbox, and submenu branches. Disabled and
+   *  loading items remain inert. */
+  override click(): void {
+    if (this.interactionDisabled) return;
+    this.renderRoot.querySelector<HTMLElement>('[part~="base"]')?.click();
   }
 
   /** Fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called by this element's own
