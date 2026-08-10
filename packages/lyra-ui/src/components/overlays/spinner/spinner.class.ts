@@ -1,10 +1,9 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
-  composedParentElement,
-  isAccessibilitySubtreeExcluded,
-  isAccessibilityVisibilityHidden,
-} from '../../../internal/a11y.js';
+  bindAccessibleTextObserver,
+  composedAccessibleVisibleText,
+} from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './spinner.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -83,37 +82,8 @@ export class LyraSpinner extends LyraElement {
     else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
   }
 
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
   private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      this.labelObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
-      ancestor = composedParentElement(ancestor);
-    }
-    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
+    bindAccessibleTextObserver(this.labelObserver, this);
   }
 
   override disconnectedCallback(): void {
@@ -121,25 +91,6 @@ export class LyraSpinner extends LyraElement {
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
     super.disconnectedCallback();
-  }
-
-  private accessibleVisibleText(node: Node): string {
-    if (node.nodeType === 3) return node.textContent ?? '';
-    if (node.nodeType !== 1) return '';
-
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-
-    const visibilityHidden = isAccessibilityVisibilityHidden(element);
-    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
-    if (accessibleLabel?.trim()) return accessibleLabel;
-    const childNodes =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : element.childNodes;
-    return Array.from(childNodes, (child) =>
-      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleVisibleText(child),
-    ).join(' ');
   }
 
   private computeVisibleLabelText(): string {
@@ -152,7 +103,7 @@ export class LyraSpinner extends LyraElement {
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
     return nodes
-      .map((node) => this.accessibleVisibleText(node))
+      .map(composedAccessibleVisibleText)
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();

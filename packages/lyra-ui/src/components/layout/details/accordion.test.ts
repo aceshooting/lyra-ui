@@ -337,6 +337,194 @@ describe('<lr-accordion>', () => {
     expect(buttonFor(items[1]!).tabIndex).to.equal(-1);
   });
 
+  it('skips inert direct items while assigning and moving the roving stop', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item id="inert-one" label="One" inert>One</lr-accordion-item>
+      <lr-accordion-item id="inert-two" label="Two">Two</lr-accordion-item>
+      <lr-accordion-item id="inert-three" label="Three" inert>Three</lr-accordion-item>
+      <lr-accordion-item id="inert-four" label="Four">Four</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, 0, -1, -1]);
+
+    buttonFor(items[1]!).focus();
+    buttonFor(items[1]!).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+    );
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('inert-four');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, -1, 0]);
+  });
+
+  it('skips hidden and aria-hidden direct items while moving the roving stop', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item id="available-one" label="One">One</lr-accordion-item>
+      <lr-accordion-item id="hidden-two" label="Two" hidden>Two</lr-accordion-item>
+      <lr-accordion-item id="aria-hidden-three" label="Three" aria-hidden="true">Three</lr-accordion-item>
+      <lr-accordion-item id="available-four" label="Four">Four</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    buttonFor(items[0]!).focus();
+    buttonFor(items[0]!).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+    );
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('available-four');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, -1, 0]);
+  });
+
+  it('rehomes focus after a focused direct item becomes inert', async () => {
+    const { items } = await renderAccordion();
+    buttonFor(items[1]!).focus();
+    items[1]!.inert = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('three');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, 0]);
+
+    buttonFor(items[2]!).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+    );
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('one');
+  });
+
+  it('rehomes focus after a focused direct item becomes disabled', async () => {
+    const { items } = await renderAccordion();
+    buttonFor(items[1]!).focus();
+    items[1]!.disabled = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('three');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, 0]);
+  });
+
+  it('does not reclaim foreign focus while a previous roving item becomes unavailable', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-accordion>
+        <lr-accordion-item id="external-one" label="One">One</lr-accordion-item>
+        <lr-accordion-item id="external-two" label="Two">Two</lr-accordion-item>
+        <lr-accordion-item id="external-three" label="Three">Three</lr-accordion-item>
+      </lr-accordion>
+      <button id="accordion-external-focus">Outside</button>
+    </div>`);
+    const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    const outside = wrapper.querySelector<HTMLButtonElement>('#accordion-external-focus')!;
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    buttonFor(items[1]!).focus();
+    outside.focus();
+    items[1]!.inert = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('accordion-external-focus');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, 0]);
+  });
+
+  it('does not reclaim focus from interactive content in an unavailable direct item', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item id="content-one" label="One" expanded>
+        <button id="accordion-content-focus">Nested control</button>
+      </lr-accordion-item>
+      <lr-accordion-item id="content-two" label="Two">Two</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    const nested = accordion.querySelector<HTMLButtonElement>('#accordion-content-focus')!;
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    nested.focus();
+    items[0]!.disabled = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('accordion-content-focus');
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, 0]);
+  });
+
+  it('removes roving stops under a composed inert ancestor and restores the prior stop', async () => {
+    const wrapper = await fixture(html`<div id="accordion-inert-ancestor"><div id="accordion-shadow-host"></div></div>`);
+    const host = wrapper.querySelector<HTMLElement>('#accordion-shadow-host')!;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const accordion = document.createElement('lr-accordion') as LyraAccordion;
+    const items = ['one', 'two', 'three'].map((name) => {
+      const item = document.createElement('lr-accordion-item') as LyraAccordionItem;
+      item.id = `ancestor-${name}`;
+      item.label = name;
+      item.isTabbable = name === 'one';
+      item.textContent = name;
+      return item;
+    });
+    accordion.append(...items);
+    shadow.append(accordion);
+    await accordion.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    buttonFor(items[1]!).focus();
+    wrapper.inert = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1, -1]);
+
+    wrapper.inert = false;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, 0, -1]);
+  });
+
+  it('rearms availability observation after document adoption', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-accordion>
+        <lr-accordion-item label="One">One</lr-accordion-item>
+        <lr-accordion-item label="Two">Two</lr-accordion-item>
+      </lr-accordion>
+    </div>`);
+    const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    try {
+      const foreignDocument = iframe.contentDocument!;
+      const foreignAncestor = foreignDocument.createElement('div');
+      foreignDocument.body.append(foreignAncestor);
+      foreignAncestor.append(accordion);
+      await new Promise<void>((resolve) => setTimeout(resolve));
+      await Promise.all(items.map((item) => item.updateComplete));
+
+      foreignAncestor.inert = true;
+      await new Promise<void>((resolve) => setTimeout(resolve));
+      await Promise.all(items.map((item) => item.updateComplete));
+      expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1]);
+
+      foreignAncestor.inert = false;
+      await new Promise<void>((resolve) => setTimeout(resolve));
+      await Promise.all(items.map((item) => item.updateComplete));
+      expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
+
+      wrapper.append(accordion);
+      await new Promise<void>((resolve) => setTimeout(resolve));
+      wrapper.inert = true;
+      await new Promise<void>((resolve) => setTimeout(resolve));
+      await Promise.all(items.map((item) => item.updateComplete));
+      expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1]);
+    } finally {
+      wrapper.inert = false;
+      if (accordion.ownerDocument !== document) wrapper.append(accordion);
+      iframe.remove();
+    }
+  });
+
   it('swaps horizontal previous/next keys in RTL', async () => {
     const wrapper = await fixture(html`<div dir="rtl">
       <lr-accordion>
@@ -370,18 +558,32 @@ describe('<lr-accordion>', () => {
     </lr-accordion>`)) as LyraAccordion;
     const innerOne = outer.querySelector('#inner-one') as LyraAccordionItem;
     const innerTwo = outer.querySelector('#inner-two') as LyraAccordionItem;
+    const outerOne = outer.querySelector('#outer-one') as LyraAccordionItem;
+    const outerTwo = outer.querySelector('#outer-two') as LyraAccordionItem;
+    const innerAccordion = innerOne.closest('lr-accordion') as LyraAccordion;
+    await Promise.all([outer, outerOne, outerTwo, innerAccordion, innerOne, innerTwo].map(
+      (element) => element.updateComplete,
+    ));
+    await new Promise<void>((resolve) => setTimeout(resolve));
     let outerOwnExpands = 0;
     outer.addEventListener('lr-expand', (event) => {
       if (event.target === outer) outerOwnExpands++;
     });
 
+    buttonFor(outerOne).focus();
+    buttonFor(outerOne).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+    );
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('outer-two');
+    await Promise.all([outerOne, outerTwo].map((item) => item.updateComplete));
     buttonFor(innerOne).focus();
+    expect([buttonFor(outerOne).tabIndex, buttonFor(outerTwo).tabIndex]).to.deep.equal([-1, 0]);
+
     buttonFor(innerOne).dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
     );
     expect((document.activeElement as HTMLElement | null)?.id).to.equal('inner-two');
 
-    const innerAccordion = innerOne.closest('lr-accordion') as LyraAccordion;
     const after = oneEvent(innerAccordion, 'lr-after-expand');
     buttonFor(innerOne).click();
     await after;
@@ -417,6 +619,14 @@ describe('<lr-accordion>', () => {
 
     expect(remaining.map((item) => item.appearance)).to.deep.equal(['filled', 'filled']);
     expect(remaining.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
+
+    buttonFor(remaining[0]!).focus();
+    remaining[0]!.inert = true;
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    await Promise.all(remaining.map((item) => item.updateComplete));
+
+    expect((document.activeElement as HTMLElement | null)?.id).to.equal('shrink-three');
+    expect(remaining.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, 0]);
     const expanded = oneEvent(accordion, 'lr-after-expand');
     buttonFor(remaining[1]!).click();
     await expanded;

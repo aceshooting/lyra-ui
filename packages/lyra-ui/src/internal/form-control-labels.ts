@@ -1,4 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { deepActiveElementIn } from './active-element.js';
 import { collectFocusableElements } from './overlay-manager.js';
 
 /**
@@ -188,15 +189,6 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): () => 
     current.observer?.disconnect();
     associationRootObservations.delete(root);
   };
-}
-
-/** The deepest focused element, following open shadow roots the way a user perceives focus. */
-function deepestActiveElement(rootDocument: Document): Element | null {
-  let active: Element | null = rootDocument.activeElement;
-  while (active?.shadowRoot?.activeElement) {
-    active = active.shadowRoot.activeElement;
-  }
-  return active;
 }
 
 /** Whether `candidate` sits inside `host`'s composed subtree (crossing open shadow boundaries). */
@@ -540,7 +532,7 @@ export class ExternalLabelController implements ReactiveController {
       this.activating = true;
       try {
         this.host.focus();
-        if (!isComposedDescendant(this.host, deepestActiveElement(this.host.ownerDocument))) {
+        if (!isComposedDescendant(this.host, deepActiveElementIn(this.host.ownerDocument))) {
           focusTarget?.focus();
         }
         if (activation === 'activate') focusTarget?.click();

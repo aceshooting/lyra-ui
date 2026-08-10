@@ -1,3 +1,7 @@
+import { composedParentElement } from './active-element.js';
+
+export { composedParentElement } from './active-element.js';
+
 /**
  * Whether an element's authored or rendered state prunes it and all descendants from accessibility.
  * `aria-hidden` is an ASCII case-insensitive token, and rendered styles always come from the
@@ -30,13 +34,55 @@ export function isAccessibilityExcluded(element: Element): boolean {
   return isAccessibilitySubtreeExcluded(element) || isAccessibilityVisibilityHidden(element);
 }
 
-/** Returns the next ancestor in the composed tree, crossing slots and open shadow roots. */
-export function composedParentElement(element: Element): Element | null {
-  if (element.assignedSlot) return element.assignedSlot;
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode() as Document | ShadowRoot;
-  const host = 'host' in root ? root.host : null;
-  return host?.nodeType === 1 ? host : null;
+function observeAccessibleTextNode(observer: MutationObserver, node: Node): void {
+  if (node.nodeType === 3) {
+    observer.observe(node, { characterData: true });
+    return;
+  }
+  if (node.nodeType !== 1) return;
+  observer.observe(node, {
+    attributes: true,
+    attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'],
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+}
+
+/** Observes a host's label content, assigned nodes, and composed ancestors for accessible text. */
+export function bindAccessibleTextObserver(observer: MutationObserver | undefined, host: Element): void {
+  if (!observer) return;
+  observer.disconnect();
+  observeAccessibleTextNode(observer, host);
+  let ancestor = composedParentElement(host);
+  while (ancestor) {
+    observer.observe(ancestor, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+    });
+    ancestor = composedParentElement(ancestor);
+  }
+  for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
+    for (const assigned of slot.assignedNodes({ flatten: true })) observeAccessibleTextNode(observer, assigned);
+  }
+}
+
+/** Extracts accessible, visible text through slots while respecting exclusion and visibility state. */
+export function composedAccessibleVisibleText(node: Node): string {
+  if (node.nodeType === 3) return node.textContent ?? '';
+  if (node.nodeType !== 1) return '';
+  const element = node as Element;
+  if (isAccessibilitySubtreeExcluded(element)) return '';
+  const visibilityHidden = isAccessibilityVisibilityHidden(element);
+  const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
+  if (accessibleLabel?.trim()) return accessibleLabel;
+  const childNodes =
+    element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
+      ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+      : element.childNodes;
+  return Array.from(childNodes, (child) =>
+    child.nodeType === 3 && visibilityHidden ? '' : composedAccessibleVisibleText(child),
+  ).join(' ');
 }
 
 /** Whether `branch` is pruned as non-summary content of a closed native details element. */
