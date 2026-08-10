@@ -1609,7 +1609,6 @@ export function migrateText(original, contract, options = {}) {
     const selectorStart = match.index;
     const bodyStart = match.index + match[0].indexOf(match.groups.body);
     for (const mapping of contract.mappings.values()) {
-      if (!AUTO_CLASSIFICATIONS.has(mapping.classification)) continue;
       const tagPattern = new RegExp(`(?<![a-z0-9-])${mapping.upstreamTag}(?![a-z0-9-])`, 'g');
       const selectorMatches = [...match.groups.selector.matchAll(tagPattern)].filter(
         (tagMatch) => !insideRanges(selectorStart + tagMatch.index, ignoredRanges),
@@ -1618,13 +1617,15 @@ export function migrateText(original, contract, options = {}) {
       if (!isAutomatic(mapping)) {
         usage[mapping.upstream].manual += selectorMatches.length;
         for (const tagMatch of selectorMatches) {
+          const offset = selectorStart + tagMatch.index;
+          noteRuntimeRequirements(mapping, offset);
           warn(
-            selectorStart + tagMatch.index,
+            offset,
             mapping.upstreamTag,
             null,
-            'MAPPING_REVIEW_BLOCKED',
+            isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
             mapping.targetTag,
-            blockedMessage(mapping),
+            isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
           );
         }
         continue;

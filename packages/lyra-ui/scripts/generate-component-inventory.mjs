@@ -1235,6 +1235,15 @@ const ACCORDION_EVENT_DETAIL_DRIFT = [
 
 const DECISION_OVERRIDES = new Map([
   [
+    'sl-checkbox',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra uses the checked attribute as the reset default while Shoelace reflects the live checked state; migration leaves the use unchanged and reports the reflection-sensitive CSS, observer, serialization, and property-write difference.',
+      expectedDrift: [],
+    },
+  ],
+  [
     'sl-carousel',
     {
       classification: 'warning-required',

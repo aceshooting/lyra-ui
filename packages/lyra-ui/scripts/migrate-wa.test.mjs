@@ -1153,6 +1153,65 @@ test('the checked-in inventory reports a warning-required tag and no peer requir
   );
 });
 
+test('the checked-in inventory leaves reflection-sensitive Shoelace checkbox usage unchanged with a warning', () => {
+  const input = [
+    '<style>sl-checkbox[checked] { color: rebeccapurple; }</style>',
+    '<sl-checkbox checked>Updates</sl-checkbox>',
+    '<script>',
+    "const checkbox = document.querySelector('sl-checkbox');",
+    'checkbox.checked = false;',
+    '</script>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'checkbox.html',
+  });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.ok(result.warnings.length > 0);
+  assert.ok(
+    result.warnings.every(
+      (entry) =>
+        entry.warningCode === 'WARNING_REQUIRED' &&
+        entry.upstreamTag === 'sl-checkbox' &&
+        entry.target === 'lr-checkbox',
+    ),
+  );
+});
+
+test('the checked-in inventory warns for a reflection-sensitive Shoelace checkbox CSS selector', () => {
+  const input = 'sl-checkbox[checked] { color: rebeccapurple; }\n';
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'checkbox.css',
+  });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(
+    result.warnings.map(({ action, column, file, line, target, upstreamTag, warningCode }) => ({
+      action,
+      column,
+      file,
+      line,
+      target,
+      upstreamTag,
+      warningCode,
+    })),
+    [
+      {
+        action: 'manual-review',
+        column: 1,
+        file: 'checkbox.css',
+        line: 1,
+        target: 'lr-checkbox',
+        upstreamTag: 'sl-checkbox',
+        warningCode: 'WARNING_REQUIRED',
+      },
+    ],
+  );
+});
+
 test('the checked-in inventory rewrites a Pro chart deep import with its granular registration and peer requirements', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [

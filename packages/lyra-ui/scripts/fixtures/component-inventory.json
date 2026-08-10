@@ -18711,7 +18711,7 @@
           "upstream": "shoelace",
           "tag": "sl-checkbox",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
@@ -170437,8 +170437,8 @@
       "upstreamTag": "sl-checkbox",
       "upstreamTier": "free",
       "targetTag": "lr-checkbox",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Lyra uses the checked attribute as the reset default while Shoelace reflects the live checked state; migration leaves the use unchanged and reports the reflection-sensitive CSS, observer, serialization, and property-write difference.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -170462,7 +170462,9 @@
           },
           "rationale": "sl-checkbox and lr-checkbox share the reviewed behavior profile: A labelled checkbox exposes checked, required, invalid, and disabled state."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],

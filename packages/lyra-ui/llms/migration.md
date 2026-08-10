@@ -68,8 +68,8 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Web Awesome | 37 | 43 | 7 | 0 | 0 | 80 | 7 |
-| Shoelace | 18 | 36 | 4 | 0 | 0 | 54 | 4 |
-| **Total** | **55** | **79** | **11** | **0** | **0** | **134** | **11** |
+| Shoelace | 18 | 35 | 5 | 0 | 0 | 53 | 5 |
+| **Total** | **55** | **78** | **12** | **0** | **0** | **133** | **12** |
 
 ## Web Awesome (87)
 
@@ -183,7 +183,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<sl-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |
 | `<sl-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
+| `<sl-checkbox>` | `<lr-checkbox>` | `warning-required` | Manual: Lyra uses the checked attribute as the reset default while Shoelace reflects the live checked state; migration leaves the use unchanged and reports the reflection-sensitive CSS, observer, serialization, and property-write difference. |
 | `<sl-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: sl-copy → lr-copy; events: sl-error → lr-error. |
 | `<sl-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
