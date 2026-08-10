@@ -112,6 +112,18 @@ assert.match(
   'lr-flow-node must render without an owner window for reduced-motion detection',
 );
 
+// Flow Canvas resolves edge reduced-motion from its current browser owner. Server rendering has
+// no owner document, so its empty surface must still complete the no-window render path.
+const flowCanvasHtml = await renderSsrProbe(
+  'lr-flow-canvas',
+  animatedImageContext.elementRenderers,
+);
+assert.match(
+  flowCanvasHtml,
+  /part="base"/,
+  'lr-flow-canvas must render edges without an owner document on the server',
+);
+
 // Tree Item's browser-only declarative-label sampling participates in its first-render state. The
 // server has neither a render root nor light-DOM collections, and must retain the fallback state.
 const treeItemHtml = await renderSsrProbe(

@@ -47,6 +47,22 @@ it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid
   expect(el.nodeGap).to.equal(24);
 });
 
+it('renders decorated edges without an owner document during SSR', () => {
+  const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  el.nodes = [{ id: 'source' }];
+  el.edges = [{ id: 'edge', source: 'source', target: 'source' }];
+  el.decorations = { edge: { status: 'running' } };
+  Object.defineProperty(el, 'ownerDocument', { configurable: true, value: undefined });
+
+  try {
+    expect(() => {
+      (el as unknown as { render(): unknown }).render();
+    }).not.to.throw();
+  } finally {
+    delete (el as unknown as { ownerDocument?: Document }).ownerDocument;
+  }
+});
+
 it('exports the FLOW_PALETTE_MIME_TYPE constant used by the drop/palette handshake', () => {
   expect(FLOW_PALETTE_MIME_TYPE).to.equal('application/lr-flow-node');
 });

@@ -1872,7 +1872,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private renderEdges(nodeIndex: Map<string, number>, edgeIndex: Map<string, number>): SVGTemplateResult {
     const resolvedById = new Map(this.nodes.map((n) => [n.id, this.resolvedNode(n)]));
     const items: SVGTemplateResult[] = [];
-    const ownerWindow = this.ownerDocument.defaultView;
+    const ownerWindow = this.ownerDocument?.defaultView;
     const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
     for (const edge of this.edges) {
       const sourceResolved = resolvedById.get(edge.source);
