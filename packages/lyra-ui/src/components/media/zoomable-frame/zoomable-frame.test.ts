@@ -150,6 +150,28 @@ describe('zoom controls and interaction', () => {
     expect(Number(value)).to.be.greaterThan(0);
   });
 
+  it('keeps every zoom level physically top-left aligned in LTR and RTL', async () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px;">
+          <lr-zoomable-frame without-controls .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+
+      for (const zoom of [0.25, 0.75, 1, 1.5]) {
+        el.zoom = zoom;
+        await el.updateComplete;
+        const host = el.getBoundingClientRect();
+        const frame = frameOf(el).getBoundingClientRect();
+        expect(frame.left, `${direction} ${zoom} left`).to.be.closeTo(host.left + el.clientLeft, 1);
+        expect(frame.top, `${direction} ${zoom} top`).to.be.closeTo(host.top + el.clientTop, 1);
+        expect(frame.width, `${direction} ${zoom} width`).to.be.closeTo(el.clientWidth, 1);
+        expect(frame.height, `${direction} ${zoom} height`).to.be.closeTo(el.clientHeight, 1);
+      }
+    }
+  });
+
   it('supports localized slotted icon controls and keyboard plus/minus shortcuts', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%">

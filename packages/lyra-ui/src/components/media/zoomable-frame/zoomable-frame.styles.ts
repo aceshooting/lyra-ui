@@ -17,7 +17,10 @@ export const styles = css`
 
   [part='iframe'] {
     position: absolute;
-    inset: 0;
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 0;
     display: block;
     inline-size: calc(100% / var(--lr-zoomable-frame-zoom, 1));
     block-size: calc(100% / var(--lr-zoomable-frame-zoom, 1));
