@@ -238,7 +238,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         this.deactivateFullscreenOverlay();
       }
     }
-    if (changed.has("views")) {
+    if (changed.has("views") || changed.has("activeView")) {
       const views = this.normalizedViews;
       if (!views.some((v) => v.id === this.activeView)) {
         this.activeView = views[0]?.id ?? "";

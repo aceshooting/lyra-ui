@@ -339,6 +339,40 @@ describe("views", () => {
     expect(el.activeView).to.equal("table");
   });
 
+  it("repairs an invalid controlled active view without emitting a user view change", async () => {
+    const el = (await fixture(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { id: "chart", label: "Chart" },
+          { id: "table", label: "Table" },
+        ]}
+      >
+        <div slot="view-chart">chart content</div>
+        <div slot="view-table">table content</div>
+      </lr-widget>
+    `)) as LyraWidget;
+    let viewChanges = 0;
+    el.addEventListener("lr-view-change", () => viewChanges++);
+
+    el.activeView = "missing";
+    await el.updateComplete;
+
+    const toggles = [
+      ...el.shadowRoot!.querySelectorAll('[part="view-toggle"]'),
+    ] as HTMLButtonElement[];
+    const bodies = [
+      ...el.shadowRoot!.querySelectorAll('[part="body"] > div'),
+    ] as HTMLElement[];
+    expect(el.activeView).to.equal("chart");
+    expect(toggles.map((toggle) => toggle.getAttribute("aria-pressed"))).to.deep.equal([
+      "true",
+      "false",
+    ]);
+    expect(bodies.map((body) => body.hidden)).to.deep.equal([false, true]);
+    expect(viewChanges).to.equal(0);
+  });
+
   it("keeps rendering a label-only view toggle with no aria-label (unchanged today)", async () => {
     const el = (await fixture(html`
       <lr-widget label="Usage" .views=${[{ id: "chart", label: "Chart" }]}>
