@@ -459,7 +459,10 @@ orientation, autoplay, loop, mouse dragging, slots, methods, parts, and custom p
 semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
 label) are added only to `<lr-carousel-item>` children. An arbitrary slotted element keeps its own
 native or authored semantics, and an explicit `role`, `aria-roledescription`, or `aria-label` on an
-`<lr-carousel-item>` wins over generated metadata.
+`<lr-carousel-item>` wins over generated metadata. Later author changes to those attributes and to
+`hidden`, `inert`, or `aria-hidden` remain in effect across carousel updates. The carousel
+temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
+when they become visible, are removed, or the carousel disconnects.
 
 **Properties:**
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
@@ -606,7 +609,10 @@ Optional semantic wrapper for one slide in `<lr-carousel>`. Mirrors `wa-carousel
 `sl-carousel-item`. The carousel also accepts arbitrary slotted elements, so this element is useful
 when a migration needs the explicit item tag — and it is the one slide shape whose contract lets the
 carousel generate group semantics and a localized "Slide N of M" name for it (see `<lr-carousel>`
-above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins.
+above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins,
+including a value added, changed, or removed after connection. The carousel temporarily controls
+`inert` and `aria-hidden` while an item is off page, then restores your retained values when it is
+visible, removed, or disconnected.
 
 **Slots:** default slide content.
 

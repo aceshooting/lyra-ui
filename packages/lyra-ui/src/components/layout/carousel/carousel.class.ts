@@ -70,6 +70,14 @@ const CAROUSEL_MANAGED_SLIDE_ATTRIBUTES = new Set([
   "inert",
   "role",
 ]);
+const SLIDE_SNAPSHOT_KEYS = [
+  "hidden",
+  "inert",
+  "role",
+  "ariaLabel",
+  "ariaRoleDescription",
+  "ariaHidden",
+] as const satisfies readonly (keyof SlideSnapshot)[];
 
 const falseDefaultBooleanFromAttributeConverter = {
   fromAttribute(value: string | null): boolean {
@@ -96,6 +104,10 @@ export interface LyraCarouselEventMap {
  * no direct assignment, even when an assignment is itself accessibility-hidden. The localized
  * `carouselSlideAnnouncement` and `carouselSlideAnnouncementSeparator` messages control the order,
  * punctuation, and separation of spoken position/content summaries.
+ * Assigned slide semantics remain author-owned after connection: later `role`, `aria-label`,
+ * `aria-roledescription`, `hidden`, `inert`, and `aria-hidden` changes persist through carousel
+ * updates. Off-page slides are temporarily inert and aria-hidden, then regain their retained
+ * author state when visible, unassigned, or disconnected.
  * Loop endcaps snapshot only side-effect-free plain HTML and stay synchronized with light-DOM
  * mutations. Slides containing custom elements, media/resources, form state, scripts, styles, or
  * non-HTML descendants use their original element for wrap alignment instead, so loop mode never
@@ -269,6 +281,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private mediaQuery?: MediaQueryList;
   private visibilityDocument?: Document;
   private readonly slideSnapshots = new Map<HTMLElement, SlideSnapshot>();
+  private readonly appliedSlideSnapshots = new WeakMap<
+    HTMLElement,
+    SlideSnapshot
+  >();
   private scrollSettleTimer?: number;
   private scrollSettleTimerWindow?: Window;
   private adoptingScrolledSlide = false;
@@ -414,9 +430,18 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const snapshotChanged = records.some((record) => {
         if (record.type !== "attributes") return true;
         if (record.target === this) return false;
-        return !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(
-          record.attributeName ?? ""
-        );
+        if (
+          !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(
+            record.attributeName ?? ""
+          )
+        ) {
+          return true;
+        }
+        const slide = record.target as HTMLElement;
+        const snapshot = this.slideSnapshots.get(slide);
+        return snapshot
+          ? this.adoptAuthorSlideChanges(slide, snapshot)
+          : false;
       });
       if (!snapshotChanged) return;
       this.loopClonesDirty = true;
@@ -627,6 +652,34 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     else slide.setAttribute(name, value);
   }
 
+  private snapshotSlide(slide: HTMLElement): SlideSnapshot {
+    return {
+      hidden: slide.hidden,
+      inert: slide.inert,
+      role: slide.getAttribute("role"),
+      ariaLabel: slide.getAttribute("aria-label"),
+      ariaRoleDescription: slide.getAttribute("aria-roledescription"),
+      ariaHidden: slide.getAttribute("aria-hidden"),
+    };
+  }
+
+  private adoptAuthorSlideChanges(
+    slide: HTMLElement,
+    snapshot: SlideSnapshot
+  ): boolean {
+    const applied = this.appliedSlideSnapshots.get(slide);
+    if (!applied) return false;
+    const current = this.snapshotSlide(slide);
+    let changed = false;
+    for (const key of SLIDE_SNAPSHOT_KEYS) {
+      if (current[key] !== applied[key]) {
+        (snapshot as Record<keyof SlideSnapshot, unknown>)[key] = current[key];
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   private restoreSlide(slide: HTMLElement, snapshot: SlideSnapshot): void {
     slide.hidden = snapshot.hidden;
     slide.inert = snapshot.inert;
@@ -641,8 +694,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private restoreSlides(): void {
-    for (const [slide, snapshot] of this.slideSnapshots)
+    for (const [slide, snapshot] of this.slideSnapshots) {
+      this.adoptAuthorSlideChanges(slide, snapshot);
       this.restoreSlide(slide, snapshot);
+    }
     this.slideSnapshots.clear();
   }
 
@@ -650,6 +705,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const slides = this.slideElements();
     const assigned = new Set(slides);
     for (const [slide, snapshot] of this.slideSnapshots) {
+      if (this.adoptAuthorSlideChanges(slide, snapshot)) {
+        this.loopClonesDirty = true;
+      }
       if (!assigned.has(slide)) {
         this.restoreSlide(slide, snapshot);
         this.slideSnapshots.delete(slide);
@@ -662,14 +720,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
     slides.forEach((slide, slideIndex) => {
       const existing = this.slideSnapshots.get(slide);
-      const snapshot: SlideSnapshot = existing ?? {
-        hidden: slide.hidden,
-        inert: slide.inert,
-        role: slide.getAttribute("role"),
-        ariaLabel: slide.getAttribute("aria-label"),
-        ariaRoleDescription: slide.getAttribute("aria-roledescription"),
-        ariaHidden: slide.getAttribute("aria-hidden"),
-      };
+      const snapshot = existing ?? this.snapshotSlide(slide);
       if (!existing) this.slideSnapshots.set(slide, snapshot);
 
       if (slide.localName === tag("carousel-item")) {
@@ -706,6 +757,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         slide.inert = true;
         slide.setAttribute("aria-hidden", "true");
       }
+      this.appliedSlideSnapshots.set(slide, this.snapshotSlide(slide));
     });
   };
 

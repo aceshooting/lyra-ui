@@ -21,7 +21,10 @@ orientation, autoplay, loop, mouse dragging, slots, methods, parts, and custom p
 semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
 label) are added only to `<lr-carousel-item>` children. An arbitrary slotted element keeps its own
 native or authored semantics, and an explicit `role`, `aria-roledescription`, or `aria-label` on an
-`<lr-carousel-item>` wins over generated metadata.
+`<lr-carousel-item>` wins over generated metadata. Later author changes to those attributes and to
+`hidden`, `inert`, or `aria-hidden` remain in effect across carousel updates. The carousel
+temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
+when they become visible, are removed, or the carousel disconnects.
 
 **Properties:**
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first

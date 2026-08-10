@@ -1344,6 +1344,132 @@ it("refreshes generated carousel-item metadata after a live strings change", asy
   expect(first.getAttribute("aria-label")).to.equal("Page 1/2");
 });
 
+it("retains late carousel-item semantics and falls back after author removal", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <lr-carousel-item>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const second = el.children[1] as HTMLElement;
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  )!;
+
+  second.setAttribute("role", "article");
+  second.setAttribute("aria-label", "Late author name");
+  second.setAttribute("aria-roledescription", "report");
+  el.strings = { carouselSlidePosition: "Page {index}/{total}" };
+  await el.updateComplete;
+
+  expect(second.getAttribute("role")).to.equal("article");
+  expect(second.getAttribute("aria-label")).to.equal("Late author name");
+  expect(second.getAttribute("aria-roledescription")).to.equal("report");
+
+  el.next("instant");
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal("Late author name");
+
+  second.setAttribute("aria-label", "");
+  second.setAttribute("aria-roledescription", "chapter");
+  el.strings = { carouselSlidePosition: "Position {index} of {total}" };
+  await el.updateComplete;
+  expect(second.getAttribute("aria-label")).to.equal("");
+  expect(second.getAttribute("aria-roledescription")).to.equal("chapter");
+
+  second.removeAttribute("role");
+  second.removeAttribute("aria-label");
+  second.removeAttribute("aria-roledescription");
+  el.strings = { carouselSlidePosition: "Slide {index} / {total}" };
+  await el.updateComplete;
+  expect(second.getAttribute("role")).to.equal("group");
+  expect(second.getAttribute("aria-label")).to.equal("Slide 2 / 2");
+  expect(second.getAttribute("aria-roledescription")).to.equal("slide");
+});
+
+it("retains late arbitrary-slide semantics and their later removal", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <section>Two</section>
+    </lr-carousel>
+  `);
+  const second = el.children[1] as HTMLElement;
+
+  second.setAttribute("role", "region");
+  second.setAttribute("aria-label", "Late arbitrary name");
+  second.setAttribute("aria-roledescription", "report");
+  el.strings = { carouselSlidePosition: "Page {index}/{total}" };
+  await el.updateComplete;
+  expect(second.getAttribute("role")).to.equal("region");
+  expect(second.getAttribute("aria-label")).to.equal("Late arbitrary name");
+  expect(second.getAttribute("aria-roledescription")).to.equal("report");
+
+  second.removeAttribute("role");
+  second.removeAttribute("aria-label");
+  second.removeAttribute("aria-roledescription");
+  el.strings = { carouselSlidePosition: "Slide {index} / {total}" };
+  await el.updateComplete;
+  expect(second.getAttribute("role")).to.equal(null);
+  expect(second.getAttribute("aria-label")).to.equal(null);
+  expect(second.getAttribute("aria-roledescription")).to.equal(null);
+});
+
+it("retains late off-page visibility metadata through activation and disconnect", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <lr-carousel-item>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const second = el.children[1] as HTMLElement;
+
+  second.hidden = true;
+  second.inert = false;
+  second.setAttribute("aria-hidden", "false");
+  el.strings = { carouselSlidePosition: "Page {index}/{total}" };
+  await el.updateComplete;
+  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.true;
+  expect(second.getAttribute("aria-hidden")).to.equal("true");
+
+  el.currentSlide = 1;
+  await el.updateComplete;
+  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.false;
+  expect(second.getAttribute("aria-hidden")).to.equal("false");
+
+  el.remove();
+  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.false;
+  expect(second.getAttribute("aria-hidden")).to.equal("false");
+});
+
+it("adopts author slide state changed immediately before disconnect", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <lr-carousel-item>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const second = el.children[1] as HTMLElement;
+
+  second.hidden = true;
+  second.inert = false;
+  second.setAttribute("role", "article");
+  second.setAttribute("aria-label", "Late disconnect name");
+  second.setAttribute("aria-roledescription", "report");
+  second.setAttribute("aria-hidden", "false");
+  el.remove();
+
+  expect(second.hidden).to.be.true;
+  expect(second.inert).to.be.false;
+  expect(second.getAttribute("role")).to.equal("article");
+  expect(second.getAttribute("aria-label")).to.equal("Late disconnect name");
+  expect(second.getAttribute("aria-roledescription")).to.equal("report");
+  expect(second.getAttribute("aria-hidden")).to.equal("false");
+});
+
 it("formats generated slide indices with the effective locale", async () => {
   const el = await carousel(html`
     <lr-carousel locale="ar-EG" pagination>
@@ -1974,6 +2100,48 @@ describe("touch scrolling and scroll-snap", () => {
         )
         ?.textContent?.trim()
     ).to.equal("One updated");
+  });
+
+  it("synchronizes loop snapshots after a standalone late slide visibility change", async () => {
+    const el = await carousel(html`
+      <lr-carousel loop>
+        <div data-slide="one">One</div>
+        <div>Two</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const original = el.querySelector<HTMLElement>('[data-slide="one"]')!;
+    const clone = () =>
+      el.shadowRoot!.querySelector<HTMLElement>(
+        '[data-clone-set="after"] [data-carousel-index="0"]'
+      );
+    expect(clone()?.hidden).to.be.false;
+
+    original.hidden = true;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+    expect(clone()?.hidden).to.be.true;
+  });
+
+  it("synchronizes loop snapshots after a late slide visibility change in the same update", async () => {
+    const el = await carousel(html`
+      <lr-carousel loop>
+        <div data-slide="one">One</div>
+        <div>Two</div>
+      </lr-carousel>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const original = el.querySelector<HTMLElement>('[data-slide="one"]')!;
+    const clone = () =>
+      el.shadowRoot!.querySelector<HTMLElement>(
+        '[data-clone-set="after"] [data-carousel-index="0"]'
+      );
+    expect(clone()?.hidden).to.be.false;
+
+    original.hidden = true;
+    el.strings = { carouselSlidePosition: "Page {index}/{total}" };
+    await el.updateComplete;
+    expect(clone()?.hidden).to.be.true;
   });
 });
 

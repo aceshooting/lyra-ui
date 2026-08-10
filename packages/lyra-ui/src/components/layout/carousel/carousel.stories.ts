@@ -114,7 +114,7 @@ export const LiveLoopSnapshots: Story = {
     docs: {
       description: {
         story:
-          'Safe plain-HTML loop snapshots follow live light-DOM mutations. Slides containing custom elements, media/resources, or stateful form content are never cloned; wrapping falls back to their original element.',
+          'Safe plain-HTML loop snapshots follow live light-DOM mutations. Slide role, name, and visibility metadata remains author-owned after live changes. Slides containing custom elements, media/resources, or stateful form content are never cloned; wrapping falls back to their original element.',
       },
     },
   },
@@ -126,7 +126,10 @@ export const LiveLoopSnapshots: Story = {
           const slide = document.querySelector<HTMLElement>(
             '#live-loop-carousel [data-live-slide]',
           );
-          if (slide) slide.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+          if (slide) {
+            slide.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+            slide.setAttribute('aria-label', 'Updated live slide');
+          }
         }}
       >
         Update first slide

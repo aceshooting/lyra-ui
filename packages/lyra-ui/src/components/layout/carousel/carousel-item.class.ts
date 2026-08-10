@@ -6,6 +6,8 @@ import { styles } from './carousel-item.styles.js';
  * `<lr-carousel-item>` — an optional semantic wrapper for one child of
  * `<lr-carousel>`. A carousel also accepts arbitrary slotted elements, so
  * this element is convenience syntax for migrations and for consistent item styling.
+ * Its author-supplied slide semantics remain in effect when changed after connection; an owning
+ * carousel only temporarily applies inertness and aria-hidden state while the item is off page.
  *
  * @customElement lr-carousel-item
  * @slot - Slide content.

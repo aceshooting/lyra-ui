@@ -1,5 +1,7 @@
 import { css } from "lit";
 
+/* no-pressed-state: the scroll port is not an activation target, and :active would also match
+   while a consumer presses interactive content inside an assigned slide. */
 export const styles = css`
   :host {
     display: block;
@@ -58,8 +60,6 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* no-pressed-state: the scroll port is not an activation target, and :active would also match
-     while a consumer presses interactive content inside an assigned slide. */
   [part~="scroll-container"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
     outline-offset: var(--lr-focus-ring-offset);

@@ -19,7 +19,10 @@ Optional semantic wrapper for one slide in `<lr-carousel>`. Mirrors `wa-carousel
 `sl-carousel-item`. The carousel also accepts arbitrary slotted elements, so this element is useful
 when a migration needs the explicit item tag — and it is the one slide shape whose contract lets the
 carousel generate group semantics and a localized "Slide N of M" name for it (see `<lr-carousel>`
-above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins.
+above). An explicit `role`, `aria-roledescription` or `aria-label` you set yourself always wins,
+including a value added, changed, or removed after connection. The carousel temporarily controls
+`inert` and `aria-hidden` while an item is off page, then restores your retained values when it is
+visible, removed, or disconnected.
 
 **Slots:** default slide content.
 
