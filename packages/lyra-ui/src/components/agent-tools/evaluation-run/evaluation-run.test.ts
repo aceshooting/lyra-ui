@@ -65,6 +65,17 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
   );
 });
 
+it('never reports an explicit total below the observed example count', async () => {
+  const el = (await fixture(
+    html`<lr-evaluation-run .examples=${examples} total="1"></lr-evaluation-run>`,
+  )) as LyraEvaluationRun;
+  const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
+  expect(progress.getAttribute('max')).to.equal('3');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
+    '2 of 3 examples complete',
+  );
+});
+
 it('formats generated example, progress, and status counts with the effective locale', async () => {
   const el = (await fixture(
     html`<lr-evaluation-run lang="ar-EG" .examples=${examples} total="4"></lr-evaluation-run>`,

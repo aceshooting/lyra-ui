@@ -206,7 +206,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   /** The batch's expected total example count. `null` (the default) derives it from
    *  `examples.length` instead -- the common case once every result has already arrived; set this
    *  explicitly while a batch is still streaming in and the eventual total is already known ahead
-   *  of every example actually completing. */
+   *  of every example actually completing. An explicit value below the current observed count is
+   *  raised to `examples.length`, so progress never reports an impossible total. */
   @property({ type: Number }) total: number | null = null;
 
   /** Header label and accessible-name source. Falls back to a localized "Evaluation run" when
@@ -412,7 +413,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   override render(): TemplateResult {
-    const resolvedTotal = this.total != null ? finiteCount(this.total, this.examples.length) : this.examples.length;
+    const configuredTotal = this.total != null
+      ? finiteCount(this.total, this.examples.length)
+      : this.examples.length;
+    const resolvedTotal = Math.max(configuredTotal, this.examples.length);
     const counts = this.statusCounts();
     const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;
     const headerLabel = this.getAttribute('aria-label') || this.label || this.localize('evaluationRunLabel');
