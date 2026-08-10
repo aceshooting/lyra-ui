@@ -98,11 +98,26 @@ it('gives a mouse user hover feedback on a clickable day cell, matching the keyb
   expect(css).to.match(/\[part='day'\]:hover/);
 });
 
-it("decouples the selected-day background from the shared --lr-color-brand-quiet token nav-hover/agenda-hover also consume, through its own scoped cssprop", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const selectedRule = /\[part='day'\]\[data-selected='true'\]\s*\{([^}]+)\}/.exec(css);
-  expect(selectedRule, "expected a [part='day'][data-selected='true'] rule").to.not.equal(null);
-  expect(selectedRule![1]).to.match(/background:\s*var\(--lr-calendar-day-selected-bg/);
+it('renders the selected-day paint hook and falls back to brand quiet only when the hook is unset', async () => {
+  const overriddenWrapper = (await fixture(html`
+    <div style="--lr-calendar-day-selected-bg: rgb(1, 2, 3); --lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
+      <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const overridden = overriddenWrapper.querySelector('lr-calendar') as LyraCalendar;
+  await overridden.updateComplete;
+  const overriddenSelected = overridden.shadowRoot!.querySelector<HTMLElement>('[data-selected="true"]')!;
+  expect(getComputedStyle(overriddenSelected).backgroundColor).to.equal('rgb(1, 2, 3)');
+
+  const fallbackWrapper = (await fixture(html`
+    <div style="--lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
+      <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const fallback = fallbackWrapper.querySelector('lr-calendar') as LyraCalendar;
+  await fallback.updateComplete;
+  const fallbackSelected = fallback.shadowRoot!.querySelector<HTMLElement>('[data-selected="true"]')!;
+  expect(getComputedStyle(fallbackSelected).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
 it('inherits independent selected, outside-month, and today paint hooks from a theme ancestor', async () => {
