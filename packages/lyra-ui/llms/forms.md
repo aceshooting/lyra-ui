@@ -4508,8 +4508,9 @@ extra host controls rendered in the footer beside Submit/Skip.
 
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
 fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
-(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed
-alias emitted when the complete rubric fails a native validity check.
+(`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
+cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
+suppresses the native event's default validation UI.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can

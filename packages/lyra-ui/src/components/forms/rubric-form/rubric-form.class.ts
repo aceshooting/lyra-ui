@@ -108,7 +108,8 @@ export interface LyraRubricFormEventMap {
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
  * @event lr-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
  * @event lr-skip - `detail: { itemId }` — Skip activated (`skippable` only); no validation.
- * @event lr-invalid - The complete rubric form failed a validity check.
+ * @event lr-invalid - The complete rubric form failed a validity check. Cancelable; preventing it
+ *   also prevents the native `invalid` event's default validation UI.
  * @csspart base - The outer wrapper around all fields.
  * @csspart form-control - Aggregate form-control wrapper around label, fields, hint, and error.
  * @csspart aggregate-label - Aggregate rubric label; separate from per-field `label` parts.
@@ -241,7 +242,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init) => this.emit('lr-invalid', undefined, init));
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
   }
