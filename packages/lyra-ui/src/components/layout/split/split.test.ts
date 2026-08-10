@@ -334,6 +334,90 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
+it("ends a horizontal drag when its live allocation collapses to zero without emitting NaN sizes", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  let width = 200;
+  Object.defineProperty(base, "clientWidth", {
+    get: () => width,
+    configurable: true,
+  });
+  divider.setPointerCapture = () => {};
+  let resizeEvents = 0;
+  el.addEventListener("lr-resize", () => resizeEvents++);
+
+  pointerDown(divider, 91, 100);
+  width = 0;
+  pointerMove(91, 100);
+  await el.updateComplete;
+
+  expect(el.sizes.every(Number.isFinite)).to.be.true;
+  expect(el.sizes).to.deep.equal([50, 50]);
+  expect(resizeEvents).to.equal(0);
+
+  width = 200;
+  pointerMove(91, 140);
+  expect(el.sizes).to.deep.equal([50, 50]);
+  expect(resizeEvents).to.equal(0);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 91 }));
+});
+
+it("ends a vertical drag when its live allocation collapses to zero without emitting NaN sizes", async () => {
+  const el = (await fixture(
+    html`<lr-split orientation="vertical"
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  let height = 200;
+  Object.defineProperty(base, "clientHeight", {
+    get: () => height,
+    configurable: true,
+  });
+  divider.setPointerCapture = () => {};
+  let resizeEvents = 0;
+  el.addEventListener("lr-resize", () => resizeEvents++);
+
+  divider.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 92,
+      clientY: 100,
+    })
+  );
+  height = 0;
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 92, clientY: 100 })
+  );
+  await el.updateComplete;
+
+  expect(el.sizes.every(Number.isFinite)).to.be.true;
+  expect(el.sizes).to.deep.equal([50, 50]);
+  expect(resizeEvents).to.equal(0);
+
+  height = 200;
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 92, clientY: 140 })
+  );
+  expect(el.sizes).to.deep.equal([50, 50]);
+  expect(resizeEvents).to.equal(0);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 92 }));
+});
+
 it("clamps panel sizes to the configured minimum", async () => {
   const el = (await fixture(
     html`<lr-split min="20"

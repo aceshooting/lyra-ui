@@ -1283,6 +1283,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       this.effectiveOrientation === "vertical"
         ? drag.base.clientHeight
         : drag.base.clientWidth;
+    if (!Number.isFinite(total) || total <= 0) {
+      this.endDragGestures();
+      return;
+    }
     const pos =
       this.effectiveOrientation === "vertical" ? e.clientY : e.clientX;
     let cumulativeDelta = ((pos - drag.startPos) / total) * 100;
