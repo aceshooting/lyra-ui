@@ -9,6 +9,8 @@ export const styles = css`
     position: relative;
     isolation: isolate;
     min-inline-size: 0;
+    block-size: 100%;
+    min-block-size: var(--lr-icon-button-size);
     overflow: hidden;
     background: var(--lr-color-surface-raised);
   }

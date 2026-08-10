@@ -86,6 +86,51 @@ it('renders the handle slot and resolves both upstream sizing properties', async
   expect(getComputedStyle(handleVisual).blockSize).to.equal('31px');
 });
 
+it('keeps the full-bleed range hit surface at the icon floor and fills an explicit host allocation', async () => {
+  const empty = (await fixture(html`
+    <lr-image-comparer style="inline-size: 320px" aria-label="Empty comparison"></lr-image-comparer>
+  `)) as LyraImageComparer;
+  const oneLine = (await fixture(html`
+    <lr-image-comparer style="inline-size: 320px" aria-label="Short comparison">
+      <div slot="before">Before</div>
+      <div slot="after">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  const fixedHeight = (await fixture(html`
+    <lr-image-comparer style="inline-size: 320px; block-size: 200px" aria-label="Fixed comparison">
+      <div slot="before">Before</div>
+      <div slot="after">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  await Promise.all([empty.updateComplete, oneLine.updateComplete, fixedHeight.updateComplete]);
+
+  const inputFor = (el: LyraImageComparer) => el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(inputFor(empty).getBoundingClientRect().height, 'an empty comparer keeps a usable drag surface').to.be.at.least(40);
+  expect(inputFor(oneLine).getBoundingClientRect().height, 'one-line content cannot shrink the drag surface').to.be.at.least(40);
+
+  const base = fixedHeight.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const input = inputFor(fixedHeight);
+  const hostRect = fixedHeight.getBoundingClientRect();
+  const baseRect = base.getBoundingClientRect();
+  const inputRect = input.getBoundingClientRect();
+  expect(hostRect.height).to.equal(200);
+  expect(baseRect.height, 'the comparison viewport fills an explicit host block size').to.equal(hostRect.height);
+  expect(inputRect.height, 'the native range fills the comparison viewport').to.equal(baseRect.height);
+
+  const clientX = Math.round(inputRect.left + inputRect.width / 2);
+  const clientY = Math.round(inputRect.bottom - 4);
+  const hit = fixedHeight.shadowRoot!.elementFromPoint(clientX, clientY) as HTMLElement | null;
+  expect(hit?.getAttribute('part'), 'the lower explicit allocation remains a real drag target').to.equal('input');
+  try {
+    await sendMouse({ type: 'move', position: [clientX, clientY] });
+    await sendMouse({ type: 'down' });
+    expect(fixedHeight.matches(':state(dragging)')).to.be.true;
+  } finally {
+    await resetMouse();
+  }
+  expect(fixedHeight.matches(':state(dragging)')).to.be.false;
+});
+
 it('keeps interactive descendants of the decorative handle slot out of focus and the accessibility tree', async () => {
   const el = (await fixture(html`<lr-image-comparer aria-label="Compare images">
     <div slot="before">Before</div>
