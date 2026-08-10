@@ -114,6 +114,36 @@ it('forwards aria-label to the focusable viewport and localizes visible zoom out
   expect(el.shadowRoot!.querySelector('[part="reset"]')!.textContent?.trim()).to.equal('100 pourcent');
 });
 
+it('contains unbroken localized reset labels inside 320px LTR and RTL allocations', async () => {
+  const longCurrentZoom = `${'Zoom'.repeat(120)} {percent}`;
+  for (const direction of ['ltr', 'rtl']) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+        <lr-pan-zoom .strings=${{ pdfViewerCurrentZoom: longCurrentZoom }}></lr-pan-zoom>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-pan-zoom') as LyraPanZoom;
+    await el.updateComplete;
+    const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+    const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+    const zoomOut = el.shadowRoot!.querySelector('[part="zoom-out"]') as HTMLButtonElement;
+    const zoomIn = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+    const allocation = wrapper.getBoundingClientRect();
+    const resetBounds = reset.getBoundingClientRect();
+    const resetStyle = getComputedStyle(reset);
+
+    expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(controls.scrollWidth, `${direction} controls scroll width`).to.be.at.most(controls.clientWidth);
+    expect(resetBounds.left, `${direction} reset start`).to.be.at.least(allocation.left);
+    expect(resetBounds.right, `${direction} reset end`).to.be.at.most(allocation.right);
+    expect(zoomOut.getBoundingClientRect().width, `${direction} zoom-out hit area`).to.be.at.least(40);
+    expect(zoomIn.getBoundingClientRect().width, `${direction} zoom-in hit area`).to.be.at.least(40);
+    expect(resetStyle.textOverflow, `${direction} reset label truncation`).to.equal('ellipsis');
+    expect(reset.textContent).to.contain('100');
+    wrapper.remove();
+  }
+});
+
 it('keeps the pan/zoom surface accessible in populated state', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="Diagram preview"><div>Diagram</div></lr-pan-zoom>

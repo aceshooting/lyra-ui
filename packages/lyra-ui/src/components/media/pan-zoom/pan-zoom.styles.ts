@@ -52,6 +52,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
   }
   [part='zoom-out'],
   [part='zoom-in'],
@@ -64,6 +65,12 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+  }
+  [part='reset'] {
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='zoom-out']:hover,
   [part='zoom-in']:hover,
