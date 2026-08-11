@@ -480,6 +480,77 @@ it('moves focus to the stable base when a controlled transition removes every re
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
 });
 
+it('recovers virtualized inspector focus from rendered rows when the controlled-ID cache is unavailable', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results grouping="source" sort="none" .selectable=${false} .chunks=${chunks}></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  await el.updateComplete;
+  const list = vlist(el);
+  await list.updateComplete;
+  await nextFrame();
+
+  const focusedInspector = list.shadowRoot!.querySelector(
+    'lr-chunk-inspector[data-chunk-id="c2"]',
+  ) as LyraChunkInspector;
+  await focusedInspector.updateComplete;
+  const focusedAction = focusedInspector.shadowRoot!.querySelector(
+    '[part="open-button"]',
+  ) as HTMLButtonElement;
+  focusedAction.focus();
+
+  // The previous-ID array is a cache. Its fallback must derive identities from the virtual list's
+  // shadow DOM, then restore focus to the nearest surviving inspector action.
+  (el as unknown as { previousProcessedChunkIds: string[] }).previousProcessedChunkIds = [];
+  el.chunks = [chunks[0]!, chunks[2]!];
+  await el.updateComplete;
+  await list.updateComplete;
+  await nextFrame();
+
+  const restoredInspector = list.shadowRoot!.querySelector(
+    'lr-chunk-inspector[data-chunk-id="c3"]',
+  ) as LyraChunkInspector;
+  await restoredInspector.updateComplete;
+  expect(restoredInspector.shadowRoot!.activeElement?.getAttribute('part')).to.equal('open-button');
+});
+
+it('keeps focus on a surviving virtualized inspector action through a controlled reorder', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results grouping="source" sort="none" .selectable=${false} .chunks=${chunks}></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  await el.updateComplete;
+  const list = vlist(el);
+  await list.updateComplete;
+  await nextFrame();
+
+  const inspector = list.shadowRoot!.querySelector(
+    'lr-chunk-inspector[data-chunk-id="c2"]',
+  ) as LyraChunkInspector;
+  await inspector.updateComplete;
+  (inspector.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).focus();
+
+  el.chunks = [chunks[2]!, chunks[1]!, chunks[0]!];
+  await el.updateComplete;
+  await list.updateComplete;
+  await nextFrame();
+
+  const survivingInspector = list.shadowRoot!.querySelector(
+    'lr-chunk-inspector[data-chunk-id="c2"]',
+  ) as LyraChunkInspector;
+  await survivingInspector.updateComplete;
+  expect(survivingInspector.shadowRoot!.activeElement?.getAttribute('part')).to.equal('open-button');
+});
+
+it('renders non-serializable metadata through a safe string fallback', async () => {
+  const cyclic: { self?: unknown } = {};
+  cyclic.self = cyclic;
+  const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+  el.chunks = [{ ...chunks[0]!, metadata: { diagnostic: cyclic } }];
+  await el.updateComplete;
+
+  const metadataValue = el.shadowRoot!.querySelector('[part="metadata-value"]');
+  expect(metadataValue?.textContent).to.equal('[object Object]');
+});
+
 it('is accessible while grouped and virtualized', async () => {
   const el = (await fixture(html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`)) as LyraRetrievalResults;
   el.chunks = chunks;

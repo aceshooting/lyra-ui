@@ -204,6 +204,17 @@ function fireCollapseResize(
   );
 }
 
+/** Older ResizeObserver implementations omit contentBoxSize. The component must still classify
+ * the allocation from its observed base element's rendered geometry. */
+function fireCollapseResizeWithoutContentBox(
+  callback: ResizeObserverCallback
+): void {
+  callback(
+    [{} as ResizeObserverEntry],
+    {} as ResizeObserver
+  );
+}
+
 it("splits children evenly by default", async () => {
   const el = (await fixture(
     html`<lr-split
@@ -817,6 +828,24 @@ it("resolves CSS-length defaultSizes entries against the measured container widt
   expect(el.sizes[1]).to.be.closeTo(60, 1);
 });
 
+it("resolves mixed numeric and percent-string defaultSizes against its measured allocation", async () => {
+  const el = await fixture<LyraSplit>(html`
+    <lr-split
+      style="display: block; inline-size: 400px;"
+      .defaultSizes=${[25, "75%"]}
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-split>
+  `);
+  await el.updateComplete;
+
+  // A bare number is a percentage of the measured container, while a `%` string is resolved as
+  // the same percentage in pixel space before the mixed list is normalized back to public sizes.
+  expect(el.sizes[0]).to.be.closeTo(25, 1e-6);
+  expect(el.sizes[1]).to.be.closeTo(75, 1e-6);
+});
+
 it("still accepts a pure-number defaultSizes array unchanged (unset-regression)", async () => {
   const el = await fixture<LyraSplit>(html`
     <lr-split
@@ -892,6 +921,32 @@ it("switches the resize axis from its own inline-size breakpoint and reports the
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
     expect(divider.getAttribute("aria-orientation")).to.equal("vertical");
+  } finally {
+    spy.restore();
+  }
+});
+
+it("falls back to observed base geometry when a ResizeObserver entry omits contentBoxSize", async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-split collapse="start" style="display: block; inline-size: 800px;"
+        ><div>A</div>
+        <div>B</div></lr-split
+      >`
+    )) as LyraSplit;
+    await elementUpdated(el);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    Object.defineProperty(base, "getBoundingClientRect", {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 500, 100),
+    });
+
+    // 500px is inside the default rail band (400px <= width < 640px). This deliberately omits
+    // contentBoxSize, as older ResizeObserver implementations do.
+    fireCollapseResizeWithoutContentBox(spy.callbacks[0]!);
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal("rail");
   } finally {
     spy.restore();
   }
@@ -1908,6 +1963,24 @@ it("renders a clamp()-based flex-basis for a panel with panelConstraints, leavin
   await elementUpdated(el);
   const [panelA, panelB] = [...el.children] as HTMLElement[];
   expect(panelA.style.flex).to.equal("0 1 clamp(40px, 30%, 200px)");
+  expect(panelB.style.flex).to.equal("0 1 70%");
+});
+
+it("applies a maxPercent-only constraint and gives its freed share to an unconstrained sibling", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div></lr-split
+    >`
+  )) as LyraSplit;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 500);
+  el.sizes = [50, 50];
+  el.panelConstraints = [{ maxPercent: 30 }, null];
+  await elementUpdated(el);
+
+  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  expect(panelA.style.flex).to.equal("0 1 clamp(0px, 50%, 30%)");
   expect(panelB.style.flex).to.equal("0 1 70%");
 });
 
