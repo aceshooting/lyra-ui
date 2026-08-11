@@ -187,6 +187,22 @@ it('leaving show-timer unset keeps the documented true default', async () => {
   expect(el.showTimer).to.be.true;
 });
 
+it('formats the elapsed timer with the effective locale’s digits and zero-padding', async () => {
+  const locale = 'fa-u-nu-arab';
+  const el = (await fixture(html`<lr-push-to-talk locale=${locale}></lr-push-to-talk>`)) as LyraPushToTalk;
+  const runtime = el as unknown as { _state: 'recording'; elapsedMs: number };
+  runtime._state = 'recording';
+  runtime.elapsedMs = 65_000;
+  el.requestUpdate();
+  await el.updateComplete;
+
+  const expected = `${new Intl.NumberFormat(locale, { useGrouping: false }).format(1)}:${new Intl.NumberFormat(
+    locale,
+    { minimumIntegerDigits: 2, useGrouping: false },
+  ).format(5)}`;
+  expect(el.shadowRoot!.querySelector('[part="timer"]')?.textContent).to.equal(expected);
+});
+
 it('forwards focus/blur to the trigger and keeps state read-only under assignment', async () => {
   const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
   const button = trigger(el);

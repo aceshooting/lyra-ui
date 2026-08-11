@@ -6,6 +6,24 @@ import './prompt-input.js';
 import type { LyraPromptInput, PromptInputAttachment } from './prompt-input.class.js';
 import { styles } from './prompt-input.styles.js';
 
+interface PromptInputEditingFacade {
+  readonly input: HTMLTextAreaElement | null;
+  spellcheck: boolean;
+  autocapitalize: string;
+  autoCorrect: string;
+  wrap: 'hard' | 'soft' | 'off';
+  autocomplete: string;
+  inputMode: string;
+  enterKeyHint: string;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  selectionDirection: 'forward' | 'backward' | 'none' | null;
+  select(): void;
+  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void;
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+}
+
 it('declares a fallback for --lr-control-width so an unset value never leaves the controls row sizing invalid (regression)', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/min-inline-size:\s*min\(100%,\s*var\(--lr-control-width,\s*[^)]+\)\)/);
@@ -551,4 +569,116 @@ it('delegates focus(), blur() and select() to the embedded composer', async () =
 
   el.blur();
   expect((composer.shadowRoot!.activeElement) !== (textarea)).to.equal(true);
+});
+
+it('forwards editing-assistance attributes to the nested native textarea', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      spellcheck="false"
+      autocapitalize="off"
+      autocorrect="off"
+      wrap="hard"
+      autocomplete="one-time-code"
+      inputmode="numeric"
+      enterkeyhint="send"
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const facade = el as LyraPromptInput & PromptInputEditingFacade;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  expect(facade.spellcheck).to.be.false;
+  expect(facade.autocapitalize).to.equal('off');
+  expect(facade.autoCorrect).to.equal('off');
+  expect(facade.wrap).to.equal('hard');
+  expect(facade.autocomplete).to.equal('one-time-code');
+  expect(facade.inputMode).to.equal('numeric');
+  expect(facade.enterKeyHint).to.equal('send');
+  expect(textarea.spellcheck).to.be.false;
+  expect(textarea.getAttribute('autocapitalize')).to.equal('off');
+  expect(textarea.getAttribute('autocorrect')).to.equal('off');
+  expect(textarea.getAttribute('wrap')).to.equal('hard');
+  expect(textarea.getAttribute('autocomplete')).to.equal('one-time-code');
+  expect(textarea.getAttribute('inputmode')).to.equal('numeric');
+  expect(textarea.getAttribute('enterkeyhint')).to.equal('send');
+});
+
+it('leaves native editing-assistance defaults unchanged when the new prompt properties are unset', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  const facade = el as LyraPromptInput & PromptInputEditingFacade;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  expect(facade.spellcheck).to.be.true;
+  expect(facade.autocapitalize).to.equal('');
+  expect(facade.autoCorrect).to.equal('');
+  expect(facade.wrap).to.equal('soft');
+  expect(facade.autocomplete).to.equal('');
+  expect(facade.inputMode).to.equal('');
+  expect(facade.enterKeyHint).to.equal('');
+  expect(textarea.spellcheck).to.be.true;
+  expect(textarea.getAttribute('wrap')).to.equal('soft');
+  expect(textarea.hasAttribute('autocapitalize')).to.be.false;
+  expect(textarea.hasAttribute('autocorrect')).to.be.false;
+  expect(textarea.hasAttribute('autocomplete')).to.be.false;
+  expect(textarea.hasAttribute('inputmode')).to.be.false;
+  expect(textarea.hasAttribute('enterkeyhint')).to.be.false;
+});
+
+it('forwards selection and silent range editing while synchronizing the outer prompt value', async () => {
+  const el = (await fixture(html`<lr-prompt-input value="hello world"></lr-prompt-input>`)) as LyraPromptInput;
+  const facade = el as LyraPromptInput & PromptInputEditingFacade;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  let inputEvents = 0;
+  el.addEventListener('lr-input', () => inputEvents++);
+
+  expect(facade.input === textarea).to.be.true;
+  facade.select();
+  expect(facade.selectionStart).to.equal(0);
+  expect(facade.selectionEnd).to.equal('hello world'.length);
+
+  facade.setSelectionRange(6, 11, 'forward');
+  expect(facade.selectionStart).to.equal(6);
+  expect(facade.selectionEnd).to.equal(11);
+  expect(facade.selectionDirection).to.equal('forward');
+
+  facade.selectionStart = 0;
+  facade.selectionEnd = textarea.value.length;
+  facade.selectionDirection = 'backward';
+  expect(textarea.selectionStart).to.equal(0);
+  expect(textarea.selectionEnd).to.equal('hello world'.length);
+  expect(textarea.selectionDirection).to.equal('backward');
+
+  facade.setRangeText('Lyra', 6, 11, 'select');
+  expect(el.value).to.equal('hello Lyra');
+  expect(composer.value).to.equal('hello Lyra');
+  expect(textarea.value).to.equal('hello Lyra');
+
+  facade.setSelectionRange(6, 10);
+  facade.setRangeText('world');
+  expect(el.value).to.equal('hello world');
+  expect(composer.value).to.equal('hello world');
+  expect(inputEvents).to.equal(0);
+});
+
+it('keeps the text editing facade inert before the composed textarea renders', () => {
+  const detached = document.createElement('lr-prompt-input') as LyraPromptInput & PromptInputEditingFacade;
+
+  expect(detached.input === null).to.be.true;
+  expect(detached.selectionStart).to.equal(null);
+  expect(detached.selectionEnd).to.equal(null);
+  expect(detached.selectionDirection).to.equal(null);
+  expect(() => {
+    detached.selectionStart = 0;
+    detached.selectionEnd = 0;
+    detached.selectionDirection = 'forward';
+    detached.select();
+    detached.setSelectionRange(0, 0);
+    detached.setRangeText('ignored');
+  }).to.not.throw();
+  expect(detached.value).to.equal('');
 });

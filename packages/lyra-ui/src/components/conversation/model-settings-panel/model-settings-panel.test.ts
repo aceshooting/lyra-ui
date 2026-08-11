@@ -64,6 +64,15 @@ it('suppresses the internal slider’s own value readout in favor of the panel�
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
 });
 
+it('formats the visible temperature readout through its effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel locale="de-DE" .temperature=${0.7}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const expected = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 20 }).format(0.7);
+
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal(expected);
+});
+
 it('hides the panel’s own temperature-value readout from the accessibility tree, mirroring the slider’s suppressed value span', async () => {
   const el = (await fixture(html`<lr-model-settings-panel></lr-model-settings-panel>`)) as LyraModelSettingsPanel;
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.getAttribute('aria-hidden')).to.equal('true');

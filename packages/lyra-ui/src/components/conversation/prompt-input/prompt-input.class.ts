@@ -6,7 +6,12 @@ import { LyraElement, type LyraEmitArgs } from '../../../internal/lyra-element.j
 import type { AttachmentCapability } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 import type { MentionItem, LyraMentionPopover } from '../../utility/mention-popover/mention-popover.class.js';
-import type { LyraChatComposer, ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
+import type {
+  ChatComposerSelectionDirection,
+  ChatComposerStatus,
+  ChatComposerWrap,
+  LyraChatComposer,
+} from '../chat-composer/chat-composer.class.js';
 import type { LyraModelCatalog } from '../model-select/model-select.class.js';
 import type { PromptQueueItem } from '../prompt-queue/prompt-queue.class.js';
 import type { PromptQueueChangeDetail } from '../prompt-queue/prompt-queue.class.js';
@@ -69,6 +74,10 @@ export interface LyraPromptInputEventMap {
  * string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the
  * submission request. `label` names the prompt section; it is not generic field chrome.
  *
+ * The composed text surface exposes the same native editing-assistance, selection, and range-edit
+ * APIs as `<lr-chat-composer>`. Silent `setRangeText()` calls keep this outer `value` synchronized
+ * without emitting `lr-input`; selection APIs are no-ops before the nested textarea renders.
+ *
  * @customElement lr-prompt-input
  * @slot controls - Replaces the data-driven model, voice, and source controls.
  * @slot leading - Replaces the default attachment trigger.
@@ -127,6 +136,24 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   submitOnEnter = true;
+  /** Forwarded to the composed native textarea. `spellcheck="false"` parses as `false`, matching
+   * the textarea's true default while remaining usable from plain HTML. */
+  @property({ converter: trueDefaultBooleanConverter }) override spellcheck = true;
+  /** Forwarded to the composed native textarea's own `autocapitalize`. Empty string omits the
+   * attribute and preserves the browser default. */
+  @property() override autocapitalize = '';
+  /** Forwarded to the composed native textarea's own `autocorrect` (Safari/WebKit-specific).
+   * `autoCorrect` preserves the lowercase `autocorrect` attribute without colliding with the DOM
+   * boolean IDL member. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Native wrapping behavior forwarded to the composed textarea. */
+  @property() wrap: ChatComposerWrap = 'soft';
+  /** Native autocomplete hint forwarded to the composed textarea. */
+  @property() autocomplete = '';
+  /** Virtual-keyboard input hint forwarded to the composed textarea. */
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  /** Virtual-keyboard enter-action hint forwarded to the composed textarea. */
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   @property({ attribute: false }) attachments: PromptInputAttachment[] = [];
   @property({ attribute: false }) attachmentCapabilities: AttachmentCapability[] = ['files', 'image', 'audio'];
   @property({ attribute: false }) mentionItems: PromptSuggestion[] = [];
@@ -160,8 +187,63 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.composer?.click();
   }
 
+  /** The composed native textarea, or `null` before it has rendered. */
+  get input(): HTMLTextAreaElement | null {
+    return this.composer?.input ?? null;
+  }
+
+  get selectionStart(): number | null {
+    return this.composer?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.composer) this.composer.selectionStart = value;
+  }
+
+  get selectionEnd(): number | null {
+    return this.composer?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.composer) this.composer.selectionEnd = value;
+  }
+
+  get selectionDirection(): ChatComposerSelectionDirection | null {
+    return this.composer?.selectionDirection ?? null;
+  }
+
+  set selectionDirection(value: ChatComposerSelectionDirection | null) {
+    if (this.composer) this.composer.selectionDirection = value;
+  }
+
   select(): void {
     this.composer?.select();
+  }
+
+  /** Forwards the native selection range to the composed textarea; a pre-render call is a no-op. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: ChatComposerSelectionDirection,
+  ): void {
+    this.composer?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  /**
+   * Applies a silent range edit to the composed textarea and synchronizes this outer `value`.
+   * Calls before render are no-ops and do not emit `lr-input`.
+   */
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const composer = this.composer;
+    if (!composer) return;
+    if (start === undefined || end === undefined) {
+      composer.setRangeText(replacement);
+    } else {
+      composer.setRangeText(replacement, start, end, selectMode);
+    }
+    this.value = composer.value;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -375,6 +457,13 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       <slot name="controls">${this.renderControls()}</slot>
       <lr-chat-composer
         part="composer"
+        .spellcheck=${this.spellcheck}
+        .autocapitalize=${this.autocapitalize}
+        .autoCorrect=${this.autoCorrect}
+        .wrap=${this.wrap}
+        .autocomplete=${this.autocomplete}
+        .inputMode=${this.inputMode}
+        .enterKeyHint=${this.enterKeyHint}
         .value=${this.value}
         .status=${this.status}
         .placeholder=${this.placeholder}

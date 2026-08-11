@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -109,7 +110,8 @@ export interface LyraPushToTalkEventMap {
  * @csspart icon - Wrapper around the `icon` slot / default mic glyph.
  * @csspart pulse - Wrapper around the `recording-icon` slot / default pulse glyph, rendered only
  *   while recording.
- * @csspart timer - The `M:SS` elapsed-time readout, rendered only while recording and `show-timer`.
+ * @csspart timer - The localized `M:SS` elapsed-time readout, rendered only while recording and
+ *   `show-timer`.
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
  * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Preferred inline and block size of the
  *   circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.
@@ -514,7 +516,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+    const locale = this.effectiveLocale;
+    const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
+    const secondText = getNumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(seconds);
+    return `${minuteText}:${secondText}`;
   }
 
   // -- Pointer (hold mode) ----------------------------------------------

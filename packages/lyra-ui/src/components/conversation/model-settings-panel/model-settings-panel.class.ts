@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange, decimalPlaces } from '../../../internal/numbers.js';
 import { styles } from './model-settings-panel.styles.js';
 import type { LyraModelCatalog } from '../model-select/model-select.class.js';
@@ -52,6 +53,8 @@ const DEFAULT_TEMPERATURE = 1;
  * `lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`
  * (snapped to `temperatureStep`) whenever those three properties change, so
  * it can never drift from what the nested `lr-slider` itself shows.
+ * The visible temperature readout uses the effective locale with up to 20 fractional digits,
+ * matching `<lr-slider>` rather than exposing JavaScript's raw number serialization.
  *
  * @customElement lr-model-settings-panel
  * @event lr-change - Either child control changed. `detail: { modelValue: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
@@ -142,6 +145,10 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     return Math.min(hi, Math.max(lo, stepped));
   }
 
+  private formatTemperature(value: number): string {
+    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
+  }
+
   private emitChange(): void {
     this.emit('lr-change', {
       modelValue: this.modelValue,
@@ -212,7 +219,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             @lr-input=${this.onTemperatureInput}
             @lr-change=${this.onTemperatureChange}
           ></lr-slider>
-          <span part="temperature-value" aria-hidden="true">${this.temperature}</span>
+          <span part="temperature-value" aria-hidden="true">${this.formatTemperature(this.temperature)}</span>
         </div>
       </div>
     `;

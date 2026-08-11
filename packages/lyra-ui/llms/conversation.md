@@ -1770,9 +1770,11 @@ internally (both imported unconditionally as side effects, not optional).
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
-which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
-shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
-panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
+which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
+to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
+under `locale="de-DE"` displays `0,7`.
+
+The panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
 the visible readout) tick continuously during a drag, but the panel's own `lr-change` event only
 fires once the slider's own `lr-change` commits (pointerup/keyup) or the model changes; reading
@@ -1952,6 +1954,9 @@ microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `
 default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
 `aria-pressed`. Escape cancels the in-progress take in either mode.
 
+While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
+grouping, and pads its seconds field to two locale-aware digits.
+
 **Properties:** `mode: 'hold' | 'toggle' = 'hold'` (reflected), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
 slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
@@ -1983,7 +1988,7 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
-`timer` (the `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+`timer` (the localized `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
@@ -2597,7 +2602,8 @@ description?: string; previewUrl?: string }` — `language`/`description` render
 `[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
 homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
 canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
-`LyraSize`.
+`LyraSize`. `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
+selection direction exposed in free-text mode.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
@@ -2645,6 +2651,13 @@ to the trigger `<button>`, whose own `@click` handler opens it; free-text mode i
 wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
 `<lr-button>`'s identical host `click()` forwarding.
 `focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
+In free-text mode, `input: HTMLInputElement | null`, `selectionStart: number | null`,
+`selectionEnd: number | null`, and `selectionDirection: LyraVoicePickerSelectionDirection | null`
+mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`, and overloaded
+`setRangeText(replacement[, start, end, selectMode])` likewise forward native editing operations;
+`setRangeText()` synchronizes the picker `value`, form entry, and validity without emitting user
+`input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
+before the input renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
@@ -2887,6 +2900,11 @@ request. `label` names the prompt section; it is not generic field chrome.
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected);
 `submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
+`autoCorrect: string = ''` (attribute `autocorrect`), `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
+`autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
+`enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
+textarea; empty string hints preserve the browser default.
 `attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
 ['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
 PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
@@ -2900,7 +2918,13 @@ mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, a
 `progress?`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
-`select()` selects its native text surface. `click()` is inert while disabled.
+`select()` selects its native text surface. `click()` is inert while disabled. `input:
+HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: number | null`, and
+`selectionDirection: ChatComposerSelectionDirection | null` mirror the composed textarea.
+`setSelectionRange(start, end, direction?)` and overloaded
+`setRangeText(replacement[, start, end, selectMode])` use the same native range-editing contract;
+`setRangeText()` synchronizes outer `value` without emitting `lr-input`. Selection and range calls
+are no-ops before the textarea has rendered.
 
 **Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
 `lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),

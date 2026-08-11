@@ -21,6 +21,16 @@ function trigger(el: LyraVoicePicker): HTMLButtonElement {
 function input(el: LyraVoicePicker): HTMLInputElement {
   return el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
 }
+interface VoicePickerEditingFacade {
+  readonly input: HTMLInputElement | null;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  selectionDirection: 'forward' | 'backward' | 'none' | null;
+  select(): void;
+  setSelectionRange(start: number | null, end: number | null, direction?: 'forward' | 'backward' | 'none'): void;
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+}
 function rows(el: LyraVoicePicker): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
@@ -75,6 +85,72 @@ it('renders a free-text input when catalog is empty/undefined or allow-custom is
     html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`
   )) as LyraVoicePicker;
   expect(input(el2) != null).to.equal(true);
+});
+
+it('forwards selection and range editing in free-text mode while synchronizing form state', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-voice-picker name="voice" required value="verse"></lr-voice-picker>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-voice-picker') as LyraVoicePicker;
+  const facade = el as unknown as LyraVoicePicker & VoicePickerEditingFacade;
+  const native = input(el);
+  const valueEvents: string[] = [];
+  el.addEventListener('input', (event) => valueEvents.push(event.type));
+  el.addEventListener('change', (event) => valueEvents.push(event.type));
+
+  expect(facade.input === native).to.be.true;
+  facade.select();
+  expect(facade.selectionStart).to.equal(0);
+  expect(facade.selectionEnd).to.equal('verse'.length);
+
+  facade.setSelectionRange(1, 4, 'forward');
+  expect(facade.selectionStart).to.equal(1);
+  expect(facade.selectionEnd).to.equal(4);
+  expect(facade.selectionDirection).to.equal('forward');
+
+  facade.selectionStart = 0;
+  facade.selectionEnd = native.value.length;
+  facade.selectionDirection = 'backward';
+  expect(native.selectionStart).to.equal(0);
+  expect(native.selectionEnd).to.equal('verse'.length);
+  expect(native.selectionDirection).to.equal('backward');
+
+  facade.setRangeText('', 0, native.value.length, 'end');
+  expect(el.value).to.equal('');
+  expect(el.validity.valueMissing).to.be.true;
+  expect(new FormData(form).get('voice')).to.equal('');
+
+  facade.setRangeText('custom-voice');
+  expect(el.value).to.equal('custom-voice');
+  expect(el.validity.valid).to.be.true;
+  expect(new FormData(form).get('voice')).to.equal('custom-voice');
+  expect(valueEvents).to.deep.equal([]);
+});
+
+it('keeps the free-text editing facade inert outside free-text mode and before render', async () => {
+  const closed = (await fixture(html`
+    <lr-voice-picker value="verse" .catalog=${CATALOG}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  const closedFacade = closed as unknown as LyraVoicePicker & VoicePickerEditingFacade;
+  const detached = document.createElement('lr-voice-picker') as LyraVoicePicker & VoicePickerEditingFacade;
+
+  for (const facade of [closedFacade, detached]) {
+    expect(facade.input === null).to.be.true;
+    expect(facade.selectionStart).to.equal(null);
+    expect(facade.selectionEnd).to.equal(null);
+    expect(facade.selectionDirection).to.equal(null);
+    expect(() => {
+      facade.selectionStart = 0;
+      facade.selectionEnd = 0;
+      facade.selectionDirection = 'forward';
+      facade.select();
+      facade.setSelectionRange(0, 0);
+      facade.setRangeText('ignored');
+    }).to.not.throw();
+  }
+  expect(closed.value).to.equal('verse');
 });
 
 it('renders object-catalog rows with a language/description second line', async () => {

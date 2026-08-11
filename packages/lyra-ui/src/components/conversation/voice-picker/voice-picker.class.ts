@@ -64,6 +64,9 @@ export type LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[];
  * {@linkcode LyraSize}. */
 export type LyraVoicePickerSize = LyraSizeStep;
 
+/** Direction reported by the free-text input's native selection APIs. */
+export type LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none';
+
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
 
@@ -94,6 +97,10 @@ export interface LyraVoicePickerEventMap {
  * TTS. Requesting the same voice while it is already playing internally stops it instead of
  * re-requesting; requesting a different voice switches. `lr-preview-change` reports internal
  * playback start/stop (`voiceId: null` on stop/end/error).
+ *
+ * In free-text mode, `input` and the native selection/range-editing APIs expose the editable
+ * combobox text. `setRangeText()` synchronizes `value`, form data, and validity without emitting
+ * user-input events. These APIs are no-ops in closed-dropdown mode and before render.
  *
  * @customElement lr-voice-picker
  * @slot label - Custom visible label content.
@@ -325,6 +332,68 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     (
       this.renderRoot.querySelector('[part="trigger"], [part="combobox-input"]') as HTMLElement | null
     )?.blur();
+  }
+
+  /** The native editable input in free-text mode, or `null` in closed-dropdown mode and before render. */
+  get input(): HTMLInputElement | null {
+    return this.renderRoot?.querySelector<HTMLInputElement>('[part="combobox-input"]') ?? null;
+  }
+
+  get selectionStart(): number | null {
+    return this.input?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.input) this.input.selectionStart = value;
+  }
+
+  get selectionEnd(): number | null {
+    return this.input?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.input) this.input.selectionEnd = value;
+  }
+
+  get selectionDirection(): LyraVoicePickerSelectionDirection | null {
+    return (this.input?.selectionDirection as LyraVoicePickerSelectionDirection | undefined) ?? null;
+  }
+
+  set selectionDirection(value: LyraVoicePickerSelectionDirection | null) {
+    if (this.input) this.input.selectionDirection = value;
+  }
+
+  /** Selects all editable text in free-text mode; otherwise a no-op. */
+  select(): void {
+    this.input?.select();
+  }
+
+  /** Forwards the native selection range in free-text mode; otherwise a no-op. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: LyraVoicePickerSelectionDirection,
+  ): void {
+    this.input?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  /**
+   * Applies a silent native range edit in free-text mode and synchronizes the committed value,
+   * form entry, and validity. Closed-dropdown mode and pre-render calls are no-ops.
+   */
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.input;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.query = input.value;
+    this.activeIndex = -1;
+    this.value = input.value;
   }
 
   override connectedCallback(): void {

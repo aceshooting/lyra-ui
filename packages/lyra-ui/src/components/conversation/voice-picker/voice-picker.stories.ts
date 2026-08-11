@@ -43,6 +43,30 @@ export const AllowCustom: Story = {
   `,
 };
 
+/** Free-text mode exposes the native selection facade while keeping the committed voice id in sync. */
+export const SelectionEditingFacade: Story = {
+  render: () => {
+    const pickerFor = (event: Event) =>
+      (event.currentTarget as HTMLElement).closest('[data-selection-demo]')?.querySelector<LyraVoicePicker>('lr-voice-picker');
+    return html`
+      <div data-selection-demo style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+        <lr-voice-picker name="voice" value="aria" allow-custom .catalog=${catalog}></lr-voice-picker>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs)">
+          <button type="button" @click=${(event: Event) => pickerFor(event)?.select()}>Select text</button>
+          <button
+            type="button"
+            @click=${(event: Event) => {
+              const picker = pickerFor(event);
+              if (!picker?.input) return;
+              picker.setRangeText('custom-voice', 0, picker.input.value.length, 'select');
+            }}
+          >Replace selection</button>
+        </div>
+      </div>
+    `;
+  },
+};
+
 /** No `catalog` at all falls back to plain free-text entry — any typed voice id commits on Enter. */
 export const FreeTextNoCatalog: Story = {
   render: () => html`<lr-voice-picker label="Voice" placeholder="Type a voice id…"></lr-voice-picker>`,
