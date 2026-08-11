@@ -3,11 +3,17 @@ import {
   loadChartJs,
   loadChartModule,
   loadChartAndZoom,
+  loadChartJsWithZoomResult,
   loadChartJsWithZoom,
+  loadChartJsWithDataLabelsResult,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
   type ChartJsModule,
 } from './chart-loader.js';
+import {
+  loadChartAndDataLabels,
+  loadChartAndRegisterZoom,
+} from './chart-feature-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
   'LineController',
@@ -282,8 +288,84 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
   });
 });
 
-describe('loadChartJsWithZoom (memoized zoom-plugin load)', () => {
-  it('serializes two concurrent callers behind the same in-flight promise, so the zoom plugin is only imported once', async () => {
+describe('tagged feature-load results', () => {
+  it('reports core-unavailable without attempting to import zoom', async () => {
+    let zoomImportCalled = false;
+    const result = await loadChartAndRegisterZoom(
+      () => Promise.resolve(null),
+      () => {
+        zoomImportCalled = true;
+        return import('chartjs-plugin-zoom');
+      },
+    );
+
+    expect(result.kind).to.equal('core-unavailable');
+    expect(zoomImportCalled).to.be.false;
+  });
+
+  it('retains the core module and reports zoom unavailable when its peer fails', async () => {
+    const peerError = new Error('zoom peer boom');
+    const chart = fakeChartModule();
+    const { result, warnings } = await captureWarnings(() =>
+      loadChartAndRegisterZoom(
+        () => Promise.resolve(chart),
+        () => Promise.reject(peerError),
+      ),
+    );
+
+    expect(result.kind).to.equal('feature-unavailable');
+    if (result.kind !== 'feature-unavailable') {
+      throw new Error('Expected the zoom feature to be unavailable.');
+    }
+    expect(result.mod).to.equal(chart);
+    expect(warnings.flat()).to.contain(peerError);
+  });
+
+  it('retains the core module and reports zoom unavailable when Chart.register throws', async () => {
+    const registrationError = new Error('zoom registration boom');
+    const chart = fakeChartModule();
+    chart.Chart.register = () => {
+      throw registrationError;
+    };
+    const zoomPlugin = { id: 'zoom-sentinel' };
+
+    const { result, warnings } = await captureWarnings(() =>
+      loadChartAndRegisterZoom(
+        () => Promise.resolve(chart),
+        () => Promise.resolve(zoomPlugin),
+      ),
+    );
+
+    expect(result.kind).to.equal('feature-unavailable');
+    if (result.kind !== 'feature-unavailable') {
+      throw new Error('Expected the zoom feature to be unavailable.');
+    }
+    expect(result.mod).to.equal(chart);
+    expect(warnings.flat()).to.contain(registrationError);
+    expect(warnings.flat().join(' ')).to.contain('lr-chart');
+  });
+
+  it('retains the core module and reports data-labels unavailable when its peer fails', async () => {
+    const peerError = new Error('data-labels peer boom');
+    const chart = fakeChartModule();
+    const { result, warnings } = await captureWarnings(() =>
+      loadChartAndDataLabels(
+        () => Promise.resolve(chart),
+        () => Promise.reject(peerError),
+      ),
+    );
+
+    expect(result.kind).to.equal('feature-unavailable');
+    if (result.kind !== 'feature-unavailable') {
+      throw new Error('Expected the data-labels feature to be unavailable.');
+    }
+    expect(result.mod).to.equal(chart);
+    expect(warnings.flat()).to.contain(peerError);
+  });
+});
+
+describe('loadChartJsWithZoomResult (memoized zoom-plugin load)', () => {
+  it('serializes two concurrent legacy callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
     let zoomImportCount = 0;
     const fakeZoomModule = await import('chartjs-plugin-zoom');
     const importZoom = () => {
@@ -304,13 +386,22 @@ describe('loadChartJsWithZoom (memoized zoom-plugin load)', () => {
     // Promise regardless of the internal guard's state.
     expect(p1).to.equal(p2);
 
-    await Promise.all([p1, p2]);
+    const [mod] = await Promise.all([p1, p2]);
+    const result1 = loadChartJsWithZoomResult();
+    const result2 = loadChartJsWithZoomResult();
+    expect(result1).to.equal(result2);
+    const result = await result1;
+    expect(result.kind).to.equal('available');
+    if (result.kind !== 'available') {
+      throw new Error('Expected zoom to be available.');
+    }
     expect(zoomImportCount).to.equal(1);
+    expect(mod).to.equal(result.mod);
   });
 });
 
-describe('loadChartJsWithDataLabels (memoized data-labels plugin load)', () => {
-  it('serializes two concurrent callers behind the same in-flight promise, so the plugin is only imported once', async () => {
+describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', () => {
+  it('serializes two concurrent legacy callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
     let importCount = 0;
     const fakeModule = await import('chartjs-plugin-datalabels');
     const importDataLabels = () => {
@@ -325,8 +416,18 @@ describe('loadChartJsWithDataLabels (memoized data-labels plugin load)', () => {
     const p2 = loadChartJsWithDataLabels(importDataLabels);
     expect(p1).to.equal(p2);
 
-    await Promise.all([p1, p2]);
+    const [legacy] = await Promise.all([p1, p2]);
+    const result1 = loadChartJsWithDataLabelsResult();
+    const result2 = loadChartJsWithDataLabelsResult();
+    expect(result1).to.equal(result2);
+    const result = await result1;
+    expect(result.kind).to.equal('available');
+    if (result.kind !== 'available') {
+      throw new Error('Expected data labels to be available.');
+    }
     expect(importCount).to.equal(1);
+    expect(legacy?.mod).to.equal(result.mod);
+    expect(legacy?.plugin).to.equal(result.plugin);
   });
 
   it('resolves undefined and warns (naming the component + package) when the data-labels plugin fails to load — a partial install must not break charts', async () => {

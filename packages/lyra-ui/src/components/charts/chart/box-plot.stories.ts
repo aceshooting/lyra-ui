@@ -34,6 +34,43 @@ export const Default: Story = {
 };
 
 /**
+ * Box plots share the chart legend's controlled/cancelable contract. The first series stays visible
+ * because its proposal is vetoed; the second begins hidden and emits its complete next snapshot on
+ * an accepted toggle.
+ */
+export const ControlledLegendVisibility: Story = {
+  render: () => {
+    const boxes: BoxPlotSeries[] = [
+      {
+        label: 'Production (vetoed)',
+        data: [{ min: 100, q1: 180, median: 240, q3: 330, max: 510 }],
+      },
+      {
+        label: 'Candidate (initially hidden)',
+        data: [{ min: 90, q1: 150, median: 210, q3: 300, max: 480 }],
+      },
+    ];
+    return html`
+      <lr-box-plot
+        height="16rem"
+        style="inline-size: 26rem; max-inline-size: 100%;"
+        legend
+        .hiddenDatasets=${[1]}
+        .labels=${['Request latency']}
+        .boxes=${boxes}
+        @lr-before-legend-visibility-change=${(
+          event: CustomEvent<{ datasetIndex: number }>,
+        ) => {
+          if (event.detail.datasetIndex === 0) event.preventDefault();
+        }}
+        @lr-legend-visibility-change=${(event: CustomEvent) =>
+          console.info('Committed box-plot legend visibility', event.detail)}
+      ></lr-box-plot>
+    `;
+  },
+};
+
+/**
  * Narrow-allocation and long-content evidence for box plots embedded in compact panels. Click the
  * legend item to inspect its persistent line-through state and `legend-item-hidden` part hook.
  */
@@ -97,7 +134,10 @@ export const ThemedTokensAndRefresh: Story = {
   },
 };
 
-/** Supplying the accessibility-table slot replaces, rather than duplicates, the generated table. */
+/**
+ * Supplying the accessibility-table slot replaces the generated table. Use it for a complete,
+ * paginated, or virtualized alternative when the built-in 1,000-record sample is insufficient.
+ */
 export const CustomDataTable: Story = {
   render: () => html`
     <lr-box-plot

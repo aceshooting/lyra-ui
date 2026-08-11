@@ -397,7 +397,12 @@ export type {
   LyraChartValueFormatter,
   LyraChartValueFormatterContext,
 } from './components/charts/chart/chart.class.js';
-export type { BoxPlotSeries, BoxPlotPoint } from './components/charts/chart/box-plot.class.js';
+export type { LyraChartLegendVisibilityChangeDetail } from './components/charts/chart/chart-legend-visibility.js';
+export type {
+  BoxPlotSeries,
+  BoxPlotPoint,
+  LyraBoxPlotEventMap,
+} from './components/charts/chart/box-plot.class.js';
 export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.class.js';
 export type {
   LegendEntry,

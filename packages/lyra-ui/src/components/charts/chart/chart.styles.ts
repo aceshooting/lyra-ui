@@ -6,7 +6,7 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    min-block-size: var(--lr-chart-height, var(--lr-size-280px));
+    min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     block-size: auto;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
@@ -31,6 +31,7 @@ export const styles = css`
     grid-template-areas:
       'plot'
       'legend'
+      'warning'
       'table';
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
@@ -42,7 +43,7 @@ export const styles = css`
     grid-area: plot;
     position: relative;
     inline-size: 100%;
-    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     min-inline-size: 0;
   }
   [part='data-table'] {
@@ -51,6 +52,19 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-x: auto;
     overflow-y: hidden;
+  }
+  [part='notices'] {
+    grid-area: warning;
+    display: grid;
+    gap: var(--lr-space-2xs);
+  }
+  [part='feature-warning'],
+  [part='data-truncation'] {
+    margin: 0;
+    padding: var(--lr-space-xs);
+    color: var(--lr-color-warning);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
   [part='data-table'] table {
     max-inline-size: 100%;
@@ -192,17 +206,20 @@ export const styles = css`
     grid-template-areas:
       'legend'
       'plot'
+      'warning'
       'table';
   }
   [part='base']:where([data-legend-position='left']) {
     grid-template-areas:
       'legend plot'
+      'warning warning'
       'table table';
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
   }
   [part='base']:where([data-legend-position='right']) {
     grid-template-areas:
       'plot legend'
+      'warning warning'
       'table table';
     grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   }
@@ -212,13 +229,14 @@ export const styles = css`
       grid-template-areas:
         'plot'
         'legend'
+        'warning'
         'table';
       grid-template-columns: minmax(0, 1fr);
     }
   }
   lr-skeleton {
     --lr-skeleton-w: 100%;
-    --lr-skeleton-h: var(--lr-chart-height, var(--lr-size-280px));
+    --lr-skeleton-h: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
   }
   canvas {
     inline-size: 100% !important;

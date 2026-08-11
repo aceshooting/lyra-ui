@@ -8,6 +8,7 @@ import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { resolveCanvasColor, seriesPalette } from './chart-colors.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
@@ -18,6 +19,12 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import {
+  legendVisibilityDetail,
+  normalizeHiddenDatasets,
+  type LyraChartLegendVisibilityChangeDetail,
+} from './chart-legend-visibility.js';
+import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
@@ -84,8 +91,14 @@ interface BoxPlotChartRuntime {
   options: Record<string, unknown>;
   destroy(): void;
   update(mode?: string): void;
+  getDatasetMeta?(index: number): { hidden: boolean | null };
   isDatasetVisible(index: number): boolean;
   setDatasetVisibility(index: number, visible: boolean): void;
+}
+
+export interface LyraBoxPlotEventMap {
+  'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+  'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
 }
 
 let boxPlotPlugin: Promise<BoxPlotModule | null> | undefined;
@@ -178,11 +191,17 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
  *   peer fails to load; its transition is announced through a shared light-DOM alert.
- * @slot data-table - An optional consumer-provided accessible table alternative.
+ * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
+ *   more than 1,000 records.
+ * @event lr-before-legend-visibility-change - Cancelable proposed DOM legend visibility change.
+ * @event lr-legend-visibility-change - Committed DOM legend visibility change.
+ * @slot data-table - An optional consumer-provided complete/paginated accessible table alternative.
+ * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
+ *   property supplies only a private fallback, so this public token always wins when set.
  * @status stable
  * @since 4.0.0
  */
-export class LyraBoxPlot extends LyraElement {
+export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -224,6 +243,8 @@ export class LyraBoxPlot extends LyraElement {
 
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) boxes: BoxPlotSeries[] = [];
+  /** Complete controlled legend visibility state. `undefined` keeps the default all-visible state. */
+  @property({ attribute: false }) hiddenDatasets?: readonly number[];
   @property({ type: Boolean }) legend = false;
   @property() height = '280px';
   @property({ attribute: 'y-label' }) yLabel = '';
@@ -253,11 +274,15 @@ export class LyraBoxPlot extends LyraElement {
   private descriptionId = nextId('box-plot-description');
   private lastDrawnDirection?: 'ltr' | 'rtl';
   private lastDrawnLocale?: string;
+  private politeAnnouncementSink?: AnnouncementSink;
   private assertiveAnnouncementSink?: AnnouncementSink;
+  private lastDataTruncationAnnouncement = '';
+  /** Gates the sampling notice so an initially supplied large dataset is described, not announced. */
+  private isMounting = true;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
+    this.syncAnnouncementSinks();
     const generation = ++this.loadGeneration;
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod, generation));
     const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
@@ -314,7 +339,9 @@ export class LyraBoxPlot extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
+    this.releaseAnnouncementSinks();
+    this.lastDataTruncationAnnouncement = '';
+    this.isMounting = true;
     this.loadGeneration += 1;
     this.chart?.destroy();
     this.chart = undefined;
@@ -323,21 +350,30 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   adoptedCallback(): void {
-    this.releaseAnnouncementSink();
-    this.syncAnnouncementSink();
+    this.releaseAnnouncementSinks();
+    this.syncAnnouncementSinks();
   }
 
-  private syncAnnouncementSink(): void {
+  private syncAnnouncementSinks(): void {
     if (!this.isConnected) return;
-    if (this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
+    if (
+      this.politeAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
+      this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument
+    ) return;
+    this.releaseAnnouncementSinks();
+    this.politeAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
     this.assertiveAnnouncementSink = acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
   }
 
-  private releaseAnnouncementSink(): void {
+  private releaseAnnouncementSinks(): void {
+    this.politeAnnouncementSink?.release();
+    this.politeAnnouncementSink = undefined;
     this.assertiveAnnouncementSink?.release();
     this.assertiveAnnouncementSink = undefined;
   }
@@ -346,9 +382,34 @@ export class LyraBoxPlot extends LyraElement {
     return (this.ownerDocument.defaultView as BrowserWindow | null) ?? undefined;
   }
 
+  private effectiveHiddenDatasetIndexes(): number[] {
+    return normalizeHiddenDatasets(this.hiddenDatasets, this.boxes.length) ?? [];
+  }
+
+  /** Synchronizes the public controlled visibility snapshot with Chart.js after data replacement. */
+  private applyDatasetVisibility(): boolean {
+    if (!this.chart) return false;
+    const datasetCount = this.chart.data.datasets?.length ?? 0;
+    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, datasetCount);
+    if (controlled === undefined) {
+      for (let index = 0; index < datasetCount; index++) {
+        const metadata = this.chart.getDatasetMeta?.(index);
+        if (metadata) metadata.hidden = null;
+      }
+      return datasetCount > 0;
+    }
+    const hidden = new Set(controlled);
+    for (let index = 0; index < datasetCount; index++) {
+      this.chart.setDatasetVisibility(index, !hidden.has(index));
+    }
+    return datasetCount > 0;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.isConnected) return;
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
     if (
       changed.has('loadFailed') &&
       changed.get('loadFailed') !== undefined &&
@@ -356,18 +417,24 @@ export class LyraBoxPlot extends LyraElement {
     ) {
       this.assertiveAnnouncementSink?.announce(this.localize('boxPlotMissingLibrary'));
     }
+    const dataTruncation = this.dataTruncationMessage();
+    if (wasMounting) this.lastDataTruncationAnnouncement = dataTruncation;
+    if (!this.loading && !this.loadFailed) {
+      if (!wasMounting && dataTruncation !== this.lastDataTruncationAnnouncement) {
+        this.lastDataTruncationAnnouncement = dataTruncation;
+        if (dataTruncation) this.politeAnnouncementSink?.announce(dataTruncation);
+      }
+    }
     this.setAttribute('aria-busy', String(this.loading));
 
-    // `--lr-chart-height` is read by the plot region and host minimum size in
-    // `box-plot.styles.ts`. Custom properties only
-    // cascade downward (host -> shadow tree), so this must be set on the
-    // host element itself, not on the `[part="base"]` div inside the shadow
-    // root.
+    // Keep the public CSS hook consumer-owned; the property is only a private fallback.
     if (changed.has('height')) {
-      this.style.setProperty('--lr-chart-height', this.height);
+      const height = sanitizeCssLength(this.height, 'height');
+      if (height) this.style.setProperty('--_lr-chart-height', height);
+      else this.style.removeProperty('--_lr-chart-height');
     }
     if (this.loading) return;
-    const contentChanged = ['labels', 'boxes', 'legend', 'height', 'yLabel', 'beginAtZero', 'locale', 'strings', 'loading'].some((name) =>
+    const contentChanged = ['labels', 'boxes', 'hiddenDatasets', 'legend', 'height', 'yLabel', 'beginAtZero', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
     const direction = this.effectiveDirection;
@@ -481,43 +548,20 @@ export class LyraBoxPlot extends LyraElement {
     if (!this.chartJsModule || !this.canvasEl) return;
     const config = this.buildConfig();
     if (this.chart) {
-      // Mirrors `LyraChart.draw()`'s identical priorVisibility snapshot/restore: Chart.js tracks
-      // per-dataset legend-toggled visibility by dataset INDEX against its own internal metadata,
-      // separate from `chart.data.datasets` itself -- a full reassignment of `chart.data` on every
-      // in-place `boxes` update would otherwise silently reset every hidden series back to visible.
-      // Only snapshot indices the chart already has metadata for -- `this.boxes` reflects the *new*
-      // series count, so mapping over it (instead of the chart's own prior dataset count) would
-      // query isDatasetVisible() for a not-yet-existing index, get back its "not explicitly
-      // visible" default, and then setDatasetVisibility(i, false) below would enforce that default
-      // as a real hidden state -- permanently hiding a series the moment it's added.
-      const priorDatasetCount = this.chart.data.datasets?.length ?? 0;
-      const priorVisibility = Array.from({ length: priorDatasetCount }, (_, i) => this.chart!.isDatasetVisible(i));
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
+      this.applyDatasetVisibility();
       this.chart.update('none');
-      // The mirror-image guard of the one above: a shrinking update can leave `priorVisibility`
-      // longer than the new dataset list, and Chart.js fabricates metadata for an out-of-range index
-      // instead of throwing -- skip any index the shrunk list no longer has instead of polluting
-      // internal per-dataset state for a series that's gone.
-      const currentDatasetCount = this.chart.data.datasets?.length ?? 0;
-      let restoredHiddenState = false;
-      priorVisibility.forEach((visible, i) => {
-        if (i >= currentDatasetCount) return;
-        if (!visible) {
-          this.chart!.setDatasetVisibility(i, false);
-          restoredHiddenState = true;
-        }
-      });
-      // setDatasetVisibility() only flips internal metadata -- it does not repaint on its own (unlike
-      // hide()/show()) -- so without a follow-up update() the canvas would keep showing the series as
-      // visible until some unrelated future draw() call happens to run.
-      if (restoredHiddenState) this.chart.update('none');
       return;
     }
     this.chart = new this.chartJsModule.Chart(
       this.canvasEl,
       config as never,
     ) as unknown as BoxPlotChartRuntime;
+    if (this.hiddenDatasets !== undefined) {
+      this.applyDatasetVisibility();
+      this.chart.update('none');
+    }
   }
 
   private drawIfVisible(): void {
@@ -533,17 +577,27 @@ export class LyraBoxPlot extends LyraElement {
 
   private boxPlotDescription(): string {
     if (this.accessibleDescription) return this.accessibleDescription;
-    const summaries = this.boxes.map((series) => {
-      const points = series.data.filter((point) => this.validPoint(point));
-      if (!points.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
-      const first = points[0]!.median;
-      const last = points[points.length - 1]!.median;
-      let min = first;
-      let max = first;
-      for (const point of points) {
+    const sample = this.dataTableSample();
+    const summaries = sample.seriesIndexes.map((index) => {
+      const series = this.boxes[index]!;
+      let count = 0;
+      let first = 0;
+      let last = 0;
+      let min = 0;
+      let max = 0;
+      for (const point of series.data) {
+        if (!this.validPoint(point)) continue;
+        if (count === 0) {
+          first = point.median;
+          min = point.median;
+          max = point.median;
+        }
+        last = point.median;
         min = Math.min(min, point.median);
         max = Math.max(max, point.median);
+        count++;
       }
+      if (count === 0) return this.localize('chartSeriesNoData', undefined, { label: series.label });
       const trend =
         last > first
           ? this.localize('chartTrendIncreasing')
@@ -552,7 +606,7 @@ export class LyraBoxPlot extends LyraElement {
             : this.localize('chartTrendFlat');
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
-        count: getNumberFormat(this.effectiveLocale).format(points.length),
+        count: getNumberFormat(this.effectiveLocale).format(count),
         min: getNumberFormat(this.effectiveLocale).format(min),
         max: getNumberFormat(this.effectiveLocale).format(max),
         trend,
@@ -574,8 +628,29 @@ export class LyraBoxPlot extends LyraElement {
     return this.getAttribute('aria-label') || this.accessibleLabel || fallback;
   }
 
+  private dataTableSample() {
+    // Avoid spreading an unbounded consumer-provided list into Math.max(); this
+    // table remains the bounded accessible fallback even for very wide data.
+    let rowCount = this.labels.length;
+    for (const series of this.boxes) rowCount = Math.max(rowCount, series.data.length);
+    const indexes = sampleChartTableIndexes(rowCount, this.boxes.length);
+    return { rowCount, seriesCount: this.boxes.length, ...indexes };
+  }
+
+  private generatedDataIsSampled(): boolean {
+    if (this.hasCustomDataTable()) return false;
+    const sample = this.dataTableSample();
+    if (sample.rowCount === 0 || sample.seriesCount === 0) return false;
+    return sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount;
+  }
+
+  private dataTruncationMessage(): string {
+    return this.generatedDataIsSampled() ? this.localize('chartDataSampled') : '';
+  }
+
   private renderDataTable(): TemplateResult {
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    const sample = this.dataTableSample();
     return html`
       <table class=${this.showDataTable ? '' : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('boxPlotData'))}</caption>
@@ -591,9 +666,12 @@ export class LyraBoxPlot extends LyraElement {
           </tr>
         </thead>
         <tbody>
-          ${this.boxes.flatMap((series) =>
-            series.data.map(
-              (point, index) => this.validPoint(point) ? html`
+          ${sample.seriesIndexes.flatMap((seriesIndex) => {
+            const series = this.boxes[seriesIndex]!;
+            return sample.rowIndexes.map(
+              (index) => {
+                const point = series.data[index];
+                return this.validPoint(point) ? html`
                 <tr>
                   <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
@@ -605,9 +683,10 @@ export class LyraBoxPlot extends LyraElement {
                   <td>${numberFormat.format(point.q3)}</td>
                   <td>${numberFormat.format(point.max)}</td>
                 </tr>
-              ` : nothing,
-            ),
-          )}
+              ` : nothing;
+              },
+            );
+          })}
         </tbody>
       </table>
     `;
@@ -619,18 +698,32 @@ export class LyraBoxPlot extends LyraElement {
 
   private toggleDataset(index: number): void {
     if (!this.chart) return;
-    const visible = this.chart.isDatasetVisible(index);
-    this.chart.setDatasetVisibility(index, !visible);
+    if (index < 0 || index >= this.boxes.length) return;
+    const hidden = this.effectiveHiddenDatasetIndexes();
+    const wasHidden = hidden.includes(index);
+    const nextHidden = wasHidden
+      ? hidden.filter((candidate) => candidate !== index)
+      : [...hidden, index].sort((left, right) => left - right);
+    // A currently hidden series becomes visible; a currently visible one becomes hidden.
+    const visible = wasHidden;
+    const proposed = this.emit(
+      'lr-before-legend-visibility-change',
+      legendVisibilityDetail(index, visible, nextHidden),
+      { cancelable: true },
+    );
+    if (proposed.defaultPrevented) return;
+    this.hiddenDatasets = nextHidden;
+    this.applyDatasetVisibility();
     this.chart.update('none');
     this.requestUpdate();
+    this.emit('lr-legend-visibility-change', legendVisibilityDetail(index, visible, nextHidden));
   }
 
   private legendDatasetVisible(index: number): boolean {
-    if (!this.chart) return true;
-    // render() runs before updated() replaces Chart.js's old data. Its out-of-range visibility
-    // answer is false, although a box series appended by this update will be visible after draw().
-    const renderedDatasetCount = this.chart.data.datasets?.length ?? 0;
-    return index >= renderedDatasetCount || this.chart.isDatasetVisible(index);
+    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, this.boxes.length);
+    if (controlled !== undefined) return !controlled.includes(index);
+    // As in `LyraChart`, public controlled state replaces unobservable Chart.js metadata.
+    return true;
   }
 
   private renderLegend(): TemplateResult | typeof nothing {
@@ -674,7 +767,7 @@ export class LyraBoxPlot extends LyraElement {
         </div>
       `;
     }
-    const boxLabels = this.boxes.map((box) => box.label);
+    const boxLabels = this.dataTableSample().seriesIndexes.map((index) => this.boxes[index]!.label);
     const label = this.accessibleName(
       (boxLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(boxLabels)
@@ -688,6 +781,9 @@ export class LyraBoxPlot extends LyraElement {
         </div>
         ${this.renderLegend()}
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
+        ${this.dataTruncationMessage()
+          ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
+          : nothing}
         <div part="data-table">
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${this.hasCustomDataTable() ? nothing : this.renderDataTable()}

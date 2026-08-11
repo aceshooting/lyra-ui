@@ -3,6 +3,7 @@ import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 it('provides hover feedback for keyboard-focusable bars and points', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -26,6 +27,11 @@ async function mount(tpl: ReturnType<typeof html>): Promise<LyraLiteChart> {
   return el;
 }
 
+function politeTexts(doc: Document = document): string[] {
+  const sink = doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+  return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
+
 const BAR_LABELS = ['Mon', 'Tue', 'Wed'];
 const BAR_DATASETS = [
   { label: 'A', data: [1, 2, 3] },
@@ -42,6 +48,7 @@ it('rejects unsafe public height and series paint values while preserving valid 
   const bar = el.shadowRoot!.querySelector('[part="bar"]')!;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
   expect(el.style.getPropertyValue('--lr-chart-height')).to.equal('');
+  expect(el.style.getPropertyValue('--_lr-chart-height')).to.equal('');
   expect(el.style.position).to.equal('');
   expect(bar.getAttribute('fill')).to.not.contain('url(');
   expect(swatch.style.background).to.not.contain('url(');
@@ -49,7 +56,8 @@ it('rejects unsafe public height and series paint values while preserving valid 
   el.height = 'calc(12rem + 2px)';
   el.datasets = [{ label: 'Series', data: [1], color: 'color-mix(in srgb, red 50%, blue)' }];
   await el.updateComplete;
-  expect(el.style.getPropertyValue('--lr-chart-height')).to.equal('calc(12rem + 2px)');
+  expect(el.style.getPropertyValue('--lr-chart-height')).to.equal('');
+  expect(el.style.getPropertyValue('--_lr-chart-height')).to.equal('calc(12rem + 2px)');
   expect(el.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('fill')).to.contain('color-mix');
 });
 
@@ -1021,6 +1029,22 @@ it('clamps a negative barWidth to 0 instead of a negative slot width, without th
   }
 });
 
+it('caps an extreme finite scroll barWidth before it reaches SVG viewBox or inline-size', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    layout="scroll"
+    .barWidth=${Number.MAX_VALUE}
+    .labels=${['first', 'last']}
+    .datasets=${[{ label: 'S', data: [1, 2] }]}
+  ></lr-lite-chart>`);
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  const viewBox = svg.getAttribute('viewBox')!;
+  const inlineSize = svg.getAttribute('style')!;
+  expect(viewBox).to.not.match(/(?:NaN|Infinity)/);
+  expect(inlineSize).to.not.match(/(?:NaN|Infinity)/);
+  expect(Number(viewBox.split(' ')[2])).to.be.at.most(1_000_000 + 36 + 8);
+});
+
 it('keeps bars and their axis labels aligned in layout="scroll" (no drift between the two width models)', async () => {
   const labels = ['x', 'y', 'z', 'w', 'v'];
   const el = await mount(html`<lr-lite-chart
@@ -1160,6 +1184,16 @@ it('does not crash and still keeps the first/last label for a negative maxLabels
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
 });
 
+it('caps an enormous finite maxLabels request at the shared 1,000-record ceiling', () => {
+  const el = document.createElement('lr-lite-chart') as LyraLiteChart;
+  el.maxLabels = 1_000_000;
+
+  const indexes = (el as any).visibleLabelIndexes(1_000_001) as Set<number>;
+  expect(indexes.size).to.equal(1_000);
+  expect(indexes.has(0)).to.equal(true);
+  expect(indexes.has(1_000_000)).to.equal(true);
+});
+
 it('keeps the single label of a one-category chart when maxLabels caps it below 2 slots', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
@@ -1214,6 +1248,40 @@ it('leaves bar/label x-position at the internal per-category formula when barX i
   ) as SVGTextElement;
   const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
   expect(Math.abs(firstBarCenter - Number(firstLabel.getAttribute('x')))).to.be.lessThan(1);
+});
+
+it('resolves a stateful barX callback once per rendered category and falls back from non-finite output', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${['first', 'last']}
+    .datasets=${[
+      { label: 'A', data: [1, 2] },
+      { label: 'B', data: [3, 4] },
+    ]}
+  ></lr-lite-chart>`);
+  let calls = 0;
+  el.barX = (index) => {
+    calls++;
+    return index === 0 ? Number.POSITIVE_INFINITY : 101;
+  };
+  await el.updateComplete;
+
+  const bars = [...el.shadowRoot!.querySelectorAll<SVGRectElement>('[part="bar"]')];
+  const labels = [...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]')];
+  expect(calls).to.equal(2);
+  expect([...bars, ...labels]
+    .flatMap((node) => ['x', 'y', 'width', 'height'].map((name) => node.getAttribute(name)))
+    .filter((value): value is string => value != null)
+    .join(' ')).to.not.match(/(?:NaN|Infinity)/);
+  const secondLabel = labels.find((label) => label.textContent === 'last')!;
+  const secondBars = bars.filter((bar) => bar.getAttribute('data-index') === '1');
+  // `barX` controls the category origin. A grouped category has one bar per series around that
+  // origin, so its axis label must align with the group's center rather than either individual bar.
+  const secondCenter = secondBars.reduce(
+    (sum, bar) => sum + Number(bar.getAttribute('x')) + Number(bar.getAttribute('width')) / 2,
+    0,
+  ) / secondBars.length;
+  expect(Number(secondLabel.getAttribute('x'))).to.be.closeTo(secondCenter, 1);
 });
 
 // --- pointText tooltip formatter -----------------------------------------------
@@ -1588,6 +1656,32 @@ describe('minBarHeight', () => {
     }
   });
 
+  it('caps an enormous finite minBarHeight before stacked cursors can overflow SVG geometry', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        stacked
+        .labels=${['a']}
+        .datasets=${[
+          { label: 'first', data: [1] },
+          { label: 'second', data: [1] },
+          { label: 'third', data: [1] },
+        ]}
+      ></lr-lite-chart>
+    `);
+    el.minBarHeight = Number.MAX_VALUE;
+    await el.updateComplete;
+
+    const geometry = [...el.shadowRoot!.querySelectorAll('[x], [y], [width], [height], [d]')]
+      .flatMap((node) =>
+        ['x', 'y', 'width', 'height', 'd']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+
   it('does not let a floored tiny segment get overdrawn by the next stacked segment (z-order/gap check)', async () => {
     const el = await mount(html`
       <lr-lite-chart
@@ -1824,6 +1918,47 @@ describe('multi-series screen-reader data table', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.exist;
     expect(el.shadowRoot!.querySelector('table[part="data-table"]')).to.not.exist;
+  });
+
+  it('caps generated marks and the single-series alternative at 1,000 endpoint-preserving records', async () => {
+    const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      .strings=${{ chartDataSampled: 'Sampled records; provide a custom table.' }}
+      .labels=${labels}
+      .datasets=${[{ label: 'Revenue', data: labels.map((_, index) => index + 1) }]}
+    ></lr-lite-chart>`);
+    const bars = [...el.shadowRoot!.querySelectorAll<SVGRectElement>('[part="bar"]')];
+    const listItems = el.shadowRoot!.querySelectorAll('[part="data-list"] li');
+    expect(bars).to.have.length(1000);
+    expect(listItems).to.have.length(1000);
+    expect(bars[0]!.getAttribute('data-index')).to.equal('0');
+    expect(bars.at(-1)!.getAttribute('data-index')).to.equal('1000');
+    expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain(
+      'Sampled records',
+    );
+  });
+
+  it('keeps an initially sampled chart silent, then announces a later sampling transition', async () => {
+    const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+    const sampledDatasets = [{ label: 'Revenue', data: sampledLabels.map((_, index) => index) }];
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      .strings=${{ chartDataSampled: 'Sampled records; provide a custom table.' }}
+      .labels=${sampledLabels}
+      .datasets=${sampledDatasets}
+    ></lr-lite-chart>`);
+
+    expect(politeTexts()).to.deep.equal([]);
+
+    el.labels = ['C0'];
+    el.datasets = [{ label: 'Revenue', data: [0] }];
+    await el.updateComplete;
+    el.labels = sampledLabels;
+    el.datasets = sampledDatasets;
+    await el.updateComplete;
+
+    expect(politeTexts()).to.deep.equal(['Sampled records; provide a custom table.']);
   });
 });
 
@@ -2312,7 +2447,7 @@ it('floors a tiny non-stacked bar to at least minBarHeight px (separate code pat
 
 // --- roundedBars: only the active mark carries tabindex=0 among several marks --------------------
 
-describe('review remediation regressions', () => {
+describe('lite-chart robustness regressions', () => {
   it('locale-formats default ticks, mark positions, and multi-series table cells', async () => {
     const el = await mount(html`
       <lr-lite-chart
@@ -2668,7 +2803,7 @@ describe('review remediation regressions', () => {
   });
 });
 
-describe('remediated lite-chart semantics and geometry', () => {
+describe('lite-chart semantics and geometry', () => {
   it('keeps each native SVG tooltip and explicit cross-engine command name in sync', async () => {
     const bars = await mount(html`
       <lr-lite-chart

@@ -351,7 +351,9 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
-  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+  (el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement).click();
+  await el.updateComplete;
+  expect(el.hiddenDatasets).to.deep.equal([1]);
 
   el.datasets = [
     { label: 'x', data: [5, 6] },
@@ -385,6 +387,61 @@ it('renders a persistent non-color legend state after hiding a dataset', async (
   expect(legendItem.getAttribute('aria-pressed')).to.equal('false');
   expect(legendItem.part.contains('legend-item-hidden')).to.be.true;
   expect(getComputedStyle(legendItem).textDecorationLine).to.contain('line-through');
+});
+
+it('exposes a cancellable controlled legend proposal before committing an observable snapshot', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  const originalUpdate = chart.update.bind(chart);
+  let updateCalls = 0;
+  chart.update = (...args: unknown[]) => {
+    updateCalls++;
+    return originalUpdate(...args);
+  };
+
+  const proposed: unknown[] = [];
+  const committed: unknown[] = [];
+  const veto = (event: Event) => {
+    proposed.push((event as CustomEvent).detail);
+    expect(el.hiddenDatasets).to.equal(undefined);
+    event.preventDefault();
+  };
+  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change', (event) =>
+    committed.push((event as CustomEvent).detail),
+  );
+
+  try {
+    button.click();
+    await el.updateComplete;
+    expect(proposed).to.deep.equal([{ datasetIndex: 0, visible: false, hiddenDatasets: [0] }]);
+    expect(committed).to.deep.equal([]);
+    expect(el.hiddenDatasets).to.equal(undefined);
+    expect(chart.isDatasetVisible(0)).to.be.true;
+    expect(updateCalls).to.equal(0);
+
+    el.removeEventListener('lr-before-legend-visibility-change', veto);
+    button.click();
+    await el.updateComplete;
+    expect(committed).to.deep.equal([{ datasetIndex: 0, visible: false, hiddenDatasets: [0] }]);
+    expect(el.hiddenDatasets).to.deep.equal([0]);
+    expect(chart.isDatasetVisible(0)).to.be.false;
+
+    // Host-controlled writes reconcile the chart but are notifications-free, including the
+    // explicit reset back to the configured visibility defaults.
+    const eventCount = proposed.length + committed.length;
+    el.hiddenDatasets = undefined;
+    await el.updateComplete;
+    expect(proposed.length + committed.length).to.equal(eventCount);
+    expect(chart.isDatasetVisible(0)).to.be.true;
+  } finally {
+    chart.update = originalUpdate;
+  }
 });
 
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
@@ -425,7 +482,9 @@ it('preserves an explicit legend show override for a configured-hidden dataset',
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
-  chart.setDatasetVisibility(0, true);
+  (el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement).click();
+  await el.updateComplete;
+  expect(el.hiddenDatasets).to.deep.equal([]);
 
   el.config = {
     data: {
@@ -452,13 +511,13 @@ it('repaints after restoring a legend-toggled hidden dataset, not just updating 
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
-  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+  (el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement).click();
+  await el.updateComplete;
 
-  // Track ordering between the restore-visibility call and update() calls: setDatasetVisibility()
-  // only flips internal metadata and does not itself repaint, so the fix must call update() again
-  // *after* restoring the hidden flag, not just once before it.
+  // A controlled snapshot applies the same hidden state to replacement data before the explicit
+  // no-animation repaint, rather than relying on private Chart.js metadata.
   let updateCallCount = 0;
-  let visibilityRestoredAtUpdateCount = -1;
+  let visibilityAppliedAtUpdateCount = -1;
   const originalUpdate = chart.update.bind(chart);
   const originalSetDatasetVisibility = chart.setDatasetVisibility.bind(chart);
   chart.update = (...args: unknown[]) => {
@@ -467,7 +526,7 @@ it('repaints after restoring a legend-toggled hidden dataset, not just updating 
   };
   chart.setDatasetVisibility = (datasetIndex: number, visible: boolean) => {
     if (datasetIndex === 1 && visible === false) {
-      visibilityRestoredAtUpdateCount = updateCallCount;
+      visibilityAppliedAtUpdateCount = updateCallCount;
     }
     return originalSetDatasetVisibility(datasetIndex, visible);
   };
@@ -478,8 +537,8 @@ it('repaints after restoring a legend-toggled hidden dataset, not just updating 
   ];
   await el.updateComplete;
 
-  expect(visibilityRestoredAtUpdateCount).to.be.greaterThan(-1);
-  expect(updateCallCount).to.be.greaterThan(visibilityRestoredAtUpdateCount);
+  expect(visibilityAppliedAtUpdateCount).to.be.greaterThan(-1);
+  expect(updateCallCount).to.be.greaterThan(visibilityAppliedAtUpdateCount);
 });
 
 it('keeps a newly-added series visible instead of inheriting a stale hidden default', async () => {
@@ -593,7 +652,8 @@ it('does not restore visibility for a dataset index removed by a shrinking updat
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
-  chart.setDatasetVisibility(2, false); // simulate a user hiding the series that's about to be removed
+  (el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[2] as HTMLElement).click();
+  await el.updateComplete;
 
   // Removing a series is the mirror-image regression of the "growing" case above: the prior-visibility
   // snapshot is taken against the chart's own PRIOR dataset count, which can be larger than the new,
@@ -645,10 +705,10 @@ it('derives legend state from effective data when a type change will rebuild the
   const rebuiltChart = (el as any).chart;
 
   expect(rebuiltChart).to.not.equal(oldChart);
-  expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
+  expect(rebuiltChart.isDatasetVisible(0)).to.be.false;
   expect(
     el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
-  ).to.equal('true');
+  ).to.equal('false');
 });
 
 it('resynchronizes the legend after a plugin change rebuilds the live chart', async () => {
@@ -678,10 +738,10 @@ it('resynchronizes the legend after a plugin change rebuilds the live chart', as
 
     const rebuiltChart = (el as any).chart;
     expect(rebuiltChart).to.not.equal(oldChart);
-    expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
+    expect(rebuiltChart.isDatasetVisible(0)).to.be.false;
     expect(
       el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed'),
-    ).to.equal('true');
+    ).to.equal('false');
   } finally {
     (el as any).updateChartArea = originalUpdateChartArea;
   }
@@ -1231,8 +1291,7 @@ it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => 
 });
 
 it('registers the zoom plugin from a bare module with no `default` export, mirroring `loadDataLabelsPlugin`', async () => {
-  // The reviewer's original patch for this read `.default` unconditionally
-  // off whatever `importZoom()` resolved to -- a bare (non-ESM-interop)
+  // A direct `.default` read would ignore a valid named module shape. A bare (non-ESM-interop)
   // module shape with no `.default` at all would silently resolve
   // `zoomPlugin` to `undefined`, leaving `zoom` inert instead of registering
   // it. `loadDataLabelsPlugin()` already handles this correctly via
@@ -1261,6 +1320,30 @@ it('configures the zoom plugin only when `zoom` is true', async () => {
   const config = (el as any).buildConfig();
   expect(config.options.plugins.zoom.zoom.wheel.enabled).to.equal(true);
   expect(config.options.plugins.zoom.zoom.drag.enabled).to.equal(true);
+});
+
+it('keeps the core chart usable and renders a localized warning when an optional zoom peer is unavailable', async () => {
+  const mod = await import('chart.js');
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.zoom = true;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  el.strings = { chartZoomUnavailable: 'Zoom add-on unavailable; chart remains usable.' };
+  (el as any).loadLibrary = () => Promise.resolve(mod);
+  (el as any).loadZoomFeature = () => Promise.resolve({ kind: 'feature-unavailable', mod });
+  const wrapper = await fixture(html`<div></div>`);
+  wrapper.append(el);
+  await waitUntil(() => (el as any).chart != null, 'core chart never initialized');
+  await waitUntil(
+    () => el.shadowRoot?.querySelector('[part="feature-warning"]') != null,
+    'optional feature warning never rendered',
+  );
+
+  expect((el as any).chart).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="feature-warning"]')!.textContent).to.contain(
+    'Zoom add-on unavailable',
+  );
+  expect((el as any).buildConfig().options.plugins.zoom).to.equal(undefined);
 });
 
 it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
@@ -1370,16 +1453,19 @@ it('does not let a `__proto__` key in the raw `config` passthrough pollute Objec
   expect((config.options as any).polluted).to.equal(undefined);
 });
 
-it('applies `height` as `--lr-chart-height` on the host, not on the shadow-tree [part=base] div', async () => {
+it('uses `height` as a private fallback without overwriting the public --lr-chart-height hook', async () => {
   const el = (await fixture(html`<lr-chart height="500px"></lr-chart>`)) as LyraChart;
   await el.updateComplete;
-  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('500px');
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('500px');
   expect(getComputedStyle(el).height).to.equal('500px');
 
+  el.style.setProperty('--lr-chart-height', '420px');
   el.height = '640px';
   await el.updateComplete;
-  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('640px');
-  expect(getComputedStyle(el).height).to.equal('640px');
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('640px');
+  expect(getComputedStyle(el).height).to.equal('420px');
 });
 
 it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like every other interactive control', () => {
@@ -2191,6 +2277,24 @@ it('legendValue returns undefined (not zero) for a whole-dataset legend item who
   expect(value).to.equal(undefined);
 });
 
+it('saturates stack-total and whole-series legend reductions instead of overflowing finite inputs', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.type = 'bar';
+  el.labels = ['Q1'];
+  el.datasets = [
+    { label: 'A', data: [Number.MAX_VALUE] },
+    { label: 'B', data: [Number.MAX_VALUE] },
+  ];
+
+  expect((el as any).computeStackTotals('y')).to.deep.equal([Number.MAX_VALUE]);
+  expect(
+    (el as any).legendValue(
+      { datasetIndex: 0 },
+      { data: { datasets: [{ label: 'A', data: [Number.MAX_VALUE, Number.MAX_VALUE] }] } },
+    ),
+  ).to.equal(Number.MAX_VALUE);
+});
+
 // --- legendLabels(): no datasets array, and a dataset with no explicit label ---------------------
 
 it('legendLabels falls back to an empty items array when chart.data.datasets is undefined, instead of throwing', () => {
@@ -2494,7 +2598,7 @@ it('returns a fresh array from the detached-host fallback branch too, so a calle
   }
 });
 
-describe('review remediation regressions', () => {
+describe('chart robustness regressions', () => {
   it('lets a focused canvas activate the same datum detail as pointer input', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.type = 'bar';
@@ -2546,7 +2650,49 @@ describe('review remediation regressions', () => {
     expect(el.querySelectorAll('table[slot="data-table"]')).to.have.length(1);
   });
 
-  it('locale-formats generated table values, row ordinals, and summary counts', async () => {
+it('caps the generated table at 1,000 endpoint-preserving records and announces the sampling alternative', async () => {
+    const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+    const el = (await fixture(html`<lr-chart
+      show-data-table
+      .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
+    ></lr-chart>`)) as LyraChart;
+    el.labels = labels;
+    el.datasets = [{ label: 'Revenue', data: labels.map((_, index) => index) }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr')];
+    expect(rows).to.have.length(1000);
+    expect(rows[0]!.querySelector('th')?.textContent).to.equal('C0');
+    expect(rows.at(-1)!.querySelector('th')?.textContent).to.equal('C1000');
+    expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain(
+      'Sampled records',
+  );
+});
+
+it('keeps an initially sampled dataset silent, then announces a later sampling transition', async () => {
+  const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+  const sampledDatasets = [{ label: 'Revenue', data: sampledLabels.map((_, index) => index) }];
+  const el = (await fixture(html`<lr-chart
+    .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
+    .labels=${sampledLabels}
+    .datasets=${sampledDatasets}
+  ></lr-chart>`)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(announcementTexts()).to.deep.equal([]);
+
+  el.labels = ['C0'];
+  el.datasets = [{ label: 'Revenue', data: [0] }];
+  await el.updateComplete;
+  el.labels = sampledLabels;
+  el.datasets = sampledDatasets;
+  await el.updateComplete;
+
+  expect(announcementTexts()).to.deep.equal(['Sampled records; use a custom table.']);
+});
+
+it('locale-formats generated table values, row ordinals, and summary counts', async () => {
     const el = (await fixture(html`<lr-chart locale="ar-EG" show-data-table></lr-chart>`)) as LyraChart;
     el.labels = [];
     el.datasets = [{ label: 'Revenue', data: [1234.5] }];
@@ -2912,7 +3058,7 @@ describe('data labels and stack totals', () => {
   });
 });
 
-describe('remediated effective chart contract', () => {
+describe('effective chart contract', () => {
   it('uses explicit config.data for mutation, export, naming, summary, and the fallback table', async () => {
     const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['Simplified'];
@@ -3904,6 +4050,22 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
       { datasetIndex: 0, index: 0, label: 'A', value: 10 },
       { datasetIndex: 0, index: 3, label: undefined, value: 40 },
     ]);
+  });
+
+  it('bounds generated point descriptions and keyboard datums to the shared 1,000-record sample', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const points = Array.from({ length: 1_001 }, (_, index) => ({ x: index, y: index }));
+    el.type = 'scatter';
+    el.datasets = [{ label: 'Points', points }];
+
+    const datums = (el as any).chartDatums();
+    const description = (el as any).chartDescription();
+    expect(datums).to.have.length(1_000);
+    expect(datums[0].index).to.equal(0);
+    expect(datums.at(-1).index).to.equal(1_000);
+    expect((description.match(/x=/g) ?? [])).to.have.length(1_000);
+    expect(description).to.contain((el as any).datumDisplayValue(points[0]));
+    expect(description).to.contain((el as any).datumDisplayValue(points.at(-1)));
   });
 
   it('datumDisplayValue() reads y/r/x off a non-point object value and falls back to the raw string when non-numeric', () => {

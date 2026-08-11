@@ -27,6 +27,38 @@ export const Default: Story = {
   },
 };
 
+/**
+ * `hiddenDatasets` is the complete controlled legend snapshot. The first series' proposal is
+ * vetoed below; toggling the second series emits the accepted commit with its next canonical
+ * snapshot, which a production host can persist and assign on a later render.
+ */
+export const ControlledLegendVisibility: Story = {
+  render: () => {
+    const series: Series[] = [
+      { label: 'Revenue (vetoed)', data: [12, 19, 14, 22] },
+      { label: 'Costs (initially hidden)', data: [7, 11, 9, 13] },
+    ];
+    return html`
+      <lr-chart
+        type="bar"
+        height="16rem"
+        style="inline-size: 26rem; max-inline-size: 100%;"
+        legend
+        .hiddenDatasets=${[1]}
+        .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+        .datasets=${series}
+        @lr-before-legend-visibility-change=${(
+          event: CustomEvent<{ datasetIndex: number }>,
+        ) => {
+          if (event.detail.datasetIndex === 0) event.preventDefault();
+        }}
+        @lr-legend-visibility-change=${(event: CustomEvent) =>
+          console.info('Committed legend visibility', event.detail)}
+      ></lr-chart>
+    `;
+  },
+};
+
 export const PreMountSeriesPalette: Story = {
   name: 'Pre-mount series palette',
   parameters: {
@@ -270,9 +302,24 @@ export const ThemedTokens: Story = {
   },
 };
 
+/** The public height token remains authoritative; the `height` property only supplies a fallback. */
+export const PublicHeightTokenPrecedence: Story = {
+  render: () => html`
+    <lr-chart
+      type="bar"
+      height="20rem"
+      style="inline-size: 22rem; --lr-chart-height: 12rem;"
+      .labels=${['Q1', 'Q2', 'Q3']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19, 14] }]}
+    ></lr-chart>
+  `,
+};
+
 /**
  * Hover and press the legend, generated-table values, and reset-zoom button after zooming. Each
- * surface has its own state hooks, so retheming one does not repaint the other two.
+ * surface has its own state hooks, so retheming one does not repaint the other two. If the optional
+ * zoom peer is unavailable, this remains a usable chart and exposes the documented localized
+ * nonfatal feature warning instead of failing the core canvas.
  */
 export const IndependentControlStateHooks: Story = {
   render: () => html`
@@ -371,7 +418,11 @@ export const PointClickAndRefreshTheme: Story = {
   },
 };
 
-/** Supplying the accessibility-table slot replaces, rather than duplicates, the generated table. */
+/**
+ * Supplying the accessibility-table slot replaces the generated table. It is the application escape
+ * hatch for a complete, paginated, or virtualized alternative when the built-in 1,000-record sample
+ * is insufficient.
+ */
 export const CustomDataTable: Story = {
   render: () => html`
     <lr-chart

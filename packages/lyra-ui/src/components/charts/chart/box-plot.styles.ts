@@ -11,7 +11,7 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    min-block-size: var(--lr-chart-height, var(--lr-size-280px));
+    min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     block-size: auto;
     /* Same theme tokens as chart.styles.ts's :host — Chart.js renders to
        canvas, not the DOM, so it can't consume CSS var() directly;
@@ -37,7 +37,7 @@ export const styles = css`
   [part='plot'] {
     position: relative;
     inline-size: 100%;
-    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     min-inline-size: 0;
   }
   [part='data-table'] {
@@ -48,6 +48,13 @@ export const styles = css`
   }
   [part='data-table'] table {
     max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='data-truncation'] {
+    margin: 0;
+    padding: var(--lr-space-xs);
+    color: var(--lr-color-warning);
+    font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
   [part='legend'] {
@@ -103,7 +110,7 @@ export const styles = css`
   }
   lr-skeleton {
     --lr-skeleton-w: 100%;
-    --lr-skeleton-h: var(--lr-chart-height, var(--lr-size-280px));
+    --lr-skeleton-h: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
   }
   canvas {
     inline-size: 100% !important;

@@ -16,6 +16,15 @@ function assertiveTexts(doc: Document = document): string[] {
   return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
 }
 
+function politeSink(doc: Document = document): HTMLElement | null {
+  return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+}
+
+function politeTexts(doc: Document = document): string[] {
+  const sink = politeSink(doc);
+  return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
+
 function fakeChartModule(register: (...items: unknown[]) => void): ChartJsModule {
   class FakeChart {
     static register(...items: unknown[]): void { register(...items); }
@@ -174,7 +183,13 @@ it('preserves a legend-toggled hidden dataset across an in-place boxes-only upda
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
-  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+  // The DOM legend is the public state transition: it materializes a controlled snapshot instead
+  // of relying on private Chart.js metadata.
+  el.legend = true;
+  await el.updateComplete;
+  (el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement).click();
+  await el.updateComplete;
+  expect(el.hiddenDatasets).to.deep.equal([1]);
 
   el.boxes = [
     { label: 'x', data: [{ min: 10, q1: 20, median: 30, q3: 40, max: 50 }] },
@@ -184,6 +199,36 @@ it('preserves a legend-toggled hidden dataset across an in-place boxes-only upda
 
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(chart.isDatasetVisible(1)).to.be.false;
+});
+
+it('uses the shared cancellable legend visibility contract instead of private Chart.js state', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [
+    { label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    { label: 'y', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  const button = el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement;
+  let commits = 0;
+  const veto = (event: Event) => event.preventDefault();
+  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+  expect(el.hiddenDatasets).to.equal(undefined);
+  expect(chart.isDatasetVisible(1)).to.be.true;
+  expect(commits).to.equal(0);
+
+  el.removeEventListener('lr-before-legend-visibility-change', veto);
+  button.click();
+  await el.updateComplete;
+  expect(el.hiddenDatasets).to.deep.equal([1]);
+  expect(chart.isDatasetVisible(1)).to.be.false;
+  expect(commits).to.equal(1);
 });
 
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
@@ -222,6 +267,21 @@ it('updates in place (same Chart instance) across a bare height change, instead 
   el.height = '400px';
   await el.updateComplete;
   expect((el as any).chart).to.equal(instance);
+});
+
+it('uses height as a private fallback without overwriting the public --lr-chart-height hook', async () => {
+  const el = (await fixture(html`<lr-box-plot height="500px"></lr-box-plot>`)) as LyraBoxPlot;
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('500px');
+  expect(getComputedStyle(el).height).to.equal('500px');
+
+  el.style.setProperty('--lr-chart-height', '420px');
+  el.height = '640px';
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('640px');
+  expect(getComputedStyle(el).height).to.equal('420px');
 });
 
 it('is accessible', async () => {
@@ -329,6 +389,63 @@ it('exposes a customizable accessible description and box-plot data table', asyn
   expect(table.querySelectorAll('tbody tr')).to.have.length(2);
   expect(table.querySelector('tbody tr td:nth-child(5)')!.textContent).to.equal('3');
   expect(table.classList.contains('sr-only')).to.be.false;
+});
+
+it('caps the generated box-plot alternative at 1,000 endpoint-preserving records', async () => {
+  const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+  const points = labels.map((_, index) => ({
+    min: index,
+    q1: index + 1,
+    median: index + 2,
+    q3: index + 3,
+    max: index + 4,
+  }));
+  const el = (await fixture(html`<lr-box-plot
+    .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
+  ></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = labels;
+  el.boxes = [{ label: 'Range', data: points }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const rows = [...el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr')];
+  expect(rows).to.have.length(1000);
+  expect(rows[0]!.querySelector('th')?.textContent).to.equal('C0');
+  expect(rows.at(-1)!.querySelector('th')?.textContent).to.equal('C1000');
+  expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain(
+    'Sampled records',
+  );
+});
+
+it('keeps an initially sampled box plot silent, then announces a later sampling transition', async () => {
+  const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+  const sampledBoxes = [{
+    label: 'Range',
+    data: sampledLabels.map((_, index) => ({
+      min: index,
+      q1: index + 1,
+      median: index + 2,
+      q3: index + 3,
+      max: index + 4,
+    })),
+  }];
+  const el = (await fixture(html`<lr-box-plot
+    .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
+    .labels=${sampledLabels}
+    .boxes=${sampledBoxes}
+  ></lr-box-plot>`)) as LyraBoxPlot;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  expect(politeTexts()).to.deep.equal([]);
+
+  el.labels = ['C0'];
+  el.boxes = [{ label: 'Range', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  await el.updateComplete;
+  el.labels = sampledLabels;
+  el.boxes = sampledBoxes;
+  await el.updateComplete;
+
+  expect(politeTexts()).to.deep.equal(['Sampled records; use a custom table.']);
 });
 
 it('does not wire up chart.js when the boxplot plugin fails to load, even though chart.js itself loaded fine', async () => {
@@ -648,7 +765,7 @@ it('skips redrawing when the content signature is unchanged', async () => {
   expect((el as any).chart.data).to.equal(dataRef);
 });
 
-describe('review remediation regressions', () => {
+describe('box-plot robustness regressions', () => {
   it('suppresses the generated fallback table when custom data-table content is supplied', async () => {
     const el = (await fixture(html`
       <lr-box-plot>
@@ -798,7 +915,7 @@ describe('review remediation regressions', () => {
   });
 });
 
-describe('remediated box-plot context and flow', () => {
+describe('box-plot context and flow', () => {
   it('redraws for live inherited lang and dir changes without another reactive property change', async () => {
     const wrapper = await fixture(html`<div lang="en-US" dir="ltr"><lr-box-plot></lr-box-plot></div>`);
     const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;

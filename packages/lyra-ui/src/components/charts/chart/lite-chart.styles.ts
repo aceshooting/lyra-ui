@@ -6,7 +6,7 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     /* Same token names/fallback chain as chart.ts's --lr-chart-* — a host
        already theming lr-chart gets lr-lite-chart themed for free, and
        vice versa. Unlike chart.ts (canvas-rendered, can't consume var()
@@ -140,5 +140,12 @@ export const styles = css`
   [part='legend-text'] {
     margin-inline-start: var(--lr-space-2xs);
     color: var(--lr-chart-tick-color);
+  }
+  [part='data-truncation'] {
+    margin: 0;
+    padding: var(--lr-space-xs);
+    color: var(--lr-color-warning);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
 `;

@@ -4,6 +4,7 @@ import {
   type ChartJsModule,
 } from './chart-core-loader.js';
 import type {
+  ChartFeatureLoadResult,
   ChartPluginCapability,
   DataLabelsPlugin,
   ZoomPlugin,
@@ -14,11 +15,20 @@ import type {
  * `chart-core-loader.ts` so optional chart features stay outside their graph.
  */
 export { loadChartJs, loadChartModule, type ChartJsModule };
-export type { ChartPluginCapability, DataLabelsPlugin, ZoomPlugin };
+export type {
+  ChartFeatureLoadResult,
+  ChartPluginCapability,
+  DataLabelsPlugin,
+  ZoomPlugin,
+};
 
 type ChartFeatureLoader = typeof import('./chart-feature-loader.js');
 
 let chartFeatureLoader: Promise<ChartFeatureLoader> | undefined;
+let zoomResultLoad: Promise<ChartFeatureLoadResult<ZoomPlugin>> | undefined;
+let dataLabelsResultLoad:
+  | Promise<ChartFeatureLoadResult<DataLabelsPlugin>>
+  | undefined;
 let zoomLoad: Promise<ChartJsModule | null> | undefined;
 let dataLabelsLoad:
   | Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null>
@@ -43,11 +53,20 @@ export function loadChartAndZoom(
 }
 
 /** Lazily loads Chart.js and registers the optional zoom plugin once per page. */
+export function loadChartJsWithZoomResult(
+  importZoom?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<ZoomPlugin>> {
+  return (zoomResultLoad ??= loadChartFeatureLoader().then(
+    ({ loadChartJsWithZoomResult: loadFeature }) => loadFeature(importZoom),
+  ));
+}
+
+/** Compatibility adapter retaining the established core-module return shape. */
 export function loadChartJsWithZoom(
   importZoom?: () => Promise<unknown>,
 ): Promise<ChartJsModule | null> {
-  return (zoomLoad ??= loadChartFeatureLoader().then(({ loadChartJsWithZoom: loadFeature }) =>
-    loadFeature(importZoom),
+  return (zoomLoad ??= loadChartJsWithZoomResult(importZoom).then((result) =>
+    result.kind === 'core-unavailable' ? null : result.mod,
   ));
 }
 
@@ -61,10 +80,23 @@ export function loadDataLabelsPlugin(
 }
 
 /** Lazily loads Chart.js with its optional per-instance data-labels plugin. */
+export function loadChartJsWithDataLabelsResult(
+  importDataLabels?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<DataLabelsPlugin>> {
+  return (dataLabelsResultLoad ??= loadChartFeatureLoader().then(
+    ({ loadChartJsWithDataLabelsResult: loadFeature }) => loadFeature(importDataLabels),
+  ));
+}
+
+/** Compatibility adapter retaining the established `{ mod, plugin }` shape. */
 export function loadChartJsWithDataLabels(
   importDataLabels?: () => Promise<unknown>,
 ): Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null> {
-  return (dataLabelsLoad ??= loadChartFeatureLoader().then(
-    ({ loadChartJsWithDataLabels: loadFeature }) => loadFeature(importDataLabels),
-  ));
+  return (dataLabelsLoad ??= loadChartJsWithDataLabelsResult(importDataLabels).then((result) => {
+    if (result.kind === 'core-unavailable') return null;
+    return {
+      mod: result.mod,
+      plugin: result.kind === 'available' ? result.plugin : undefined,
+    };
+  }));
 }

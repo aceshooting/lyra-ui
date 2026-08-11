@@ -130,6 +130,29 @@ export const AccessibleTableFormattingAndTotals: Story = {
   },
 };
 
+/**
+ * A slotted data table replaces the bounded generated alternative. Application code can provide a
+ * complete, paginated, or virtualized table when the chart's sampled 1,000-record fallback is not
+ * sufficient.
+ */
+export const CustomDataTable: Story = {
+  render: () => html`
+    <lr-lite-chart
+      type="bar"
+      height="16rem"
+      style="inline-size: 24rem; max-inline-size: 100%;"
+      .labels=${['Q1', 'Q2']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19] }]}
+    >
+      <table slot="data-table">
+        <caption>Quarterly revenue</caption>
+        <thead><tr><th>Quarter</th><th>Revenue</th></tr></thead>
+        <tbody><tr><th>Q1</th><td>12</td></tr><tr><th>Q2</th><td>19</td></tr></tbody>
+      </table>
+    </lr-lite-chart>
+  `,
+};
+
 export const Line: Story = {
   render: () => {
     const series: LiteSeries[] = [
@@ -203,7 +226,8 @@ export const CurrencyTickFormat: Story = {
 
 /** `layout="scroll"` gives every bar a fixed `bar-width` instead of squeezing them into the host
  *  width -- with a long category list the plot overflows the (deliberately narrow) host, which
- *  scrolls horizontally to reveal the rest, instead of cramming 40 skinny bars into one view. */
+ *  scrolls horizontally to reveal the rest, instead of cramming 40 skinny bars into one view. Its
+ *  plot content width is bounded to 1,000,000px even for hostile inputs. */
 export const ScrollLayout: Story = {
   render: () => {
     const labels = Array.from({ length: 40 }, (_, i) => `Day ${i + 1}`);
@@ -219,6 +243,29 @@ export const ScrollLayout: Story = {
         y-label="Signups"
         .labels=${labels}
         .datasets=${series}
+      ></lr-lite-chart>
+    `;
+  },
+};
+
+/**
+ * `barX` resolves once per rendered category. Its finite x-origin is shared by the category's bars
+ * and label; an invalid return would use normal slot placement instead of leaking invalid SVG
+ * geometry.
+ */
+export const SharedBarXAlignment: Story = {
+  render: () => {
+    const labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    return html`
+      <lr-lite-chart
+        type="bar"
+        layout="scroll"
+        bar-width="48"
+        height="16rem"
+        style="inline-size: 24rem; max-inline-size: 100%;"
+        .labels=${labels}
+        .datasets=${[{ label: 'Deployments', data: [5, 8, 6, 11] }]}
+        .barX=${(index: number) => 48 + index * 48}
       ></lr-lite-chart>
     `;
   },

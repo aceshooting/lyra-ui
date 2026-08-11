@@ -14,6 +14,16 @@ export interface ChartPluginCapability {
 export type ZoomPlugin = ChartPluginCapability;
 export type DataLabelsPlugin = ChartPluginCapability;
 
+/**
+ * The outcome of loading an opt-in Chart.js feature after attempting to load
+ * the core module. Callers can distinguish an unavailable core from an
+ * unavailable feature without throwing away a usable Chart.js module.
+ */
+export type ChartFeatureLoadResult<Plugin extends ChartPluginCapability> =
+  | { kind: 'core-unavailable' }
+  | { kind: 'available'; mod: ChartJsModule; plugin: Plugin }
+  | { kind: 'feature-unavailable'; mod: ChartJsModule };
+
 function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
   return (typeof value === 'object' || typeof value === 'function') && value !== null;
 }
@@ -34,6 +44,10 @@ function resolveChartPlugin(value: unknown, packageName: string): ChartPluginCap
   );
 }
 
+let zoomResultLoad: Promise<ChartFeatureLoadResult<ZoomPlugin>> | undefined;
+let dataLabelsResultLoad:
+  | Promise<ChartFeatureLoadResult<DataLabelsPlugin>>
+  | undefined;
 let zoomLoad: Promise<ChartJsModule | null> | undefined;
 let dataLabelsLoad:
   | Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null>
@@ -78,6 +92,41 @@ export async function loadChartAndZoom(
 }
 
 /**
+ * Loads Chart.js and attempts to register its zoom plugin. Unlike
+ * `loadChartAndZoom()`, this reports plugin registration failures as a tagged
+ * result so a caller can preserve the usable core chart while surfacing an
+ * opt-in feature warning.
+ *
+ * Un-memoized to keep the registration-failure path directly testable; callers
+ * that need the page-wide memoized load use `loadChartJsWithZoomResult()`.
+ */
+export async function loadChartAndRegisterZoom(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importZoom: () => Promise<unknown> = () => import('chartjs-plugin-zoom'),
+): Promise<ChartFeatureLoadResult<ZoomPlugin>> {
+  const mod = await loadChart();
+  if (!mod) return { kind: 'core-unavailable' };
+
+  const zoomPlugin = (
+    await loadChartAndZoom(() => Promise.resolve(mod), importZoom, true)
+  )?.zoomPlugin;
+  if (!zoomPlugin) return { kind: 'feature-unavailable', mod };
+
+  try {
+    mod.Chart.register(zoomPlugin);
+  } catch (err) {
+    console.warn(
+      '<lr-chart> zoom support could not be enabled — charts still render without it, but the ' +
+        '`zoom` attribute has no effect:',
+      err,
+    );
+    return { kind: 'feature-unavailable', mod };
+  }
+
+  return { kind: 'available', mod, plugin: zoomPlugin };
+}
+
+/**
  * Loads `chart.js` (reusing the cached core load) plus `chartjs-plugin-zoom`,
  * on first actual demand — most charts never set `zoom`, and the plugin has
  * a hard dependency on `hammerjs`. Registers the plugin at most once across
@@ -85,7 +134,7 @@ export async function loadChartAndZoom(
  * `zoom` set (at connect time, or later once `zoom` turns on).
  *
  * The whole operation (chart.js core + the zoom plugin import + its
- * registration) is memoized behind a single `zoomLoad` promise, assigned
+ * registration) is memoized behind a single `zoomResultLoad` promise, assigned
  * synchronously before any `await` — mirroring `loadChartJs()`'s own
  * `chartJs` memoization above. A plain boolean "already registered" guard
  * checked before an `await` and only set after would leave a check-then-act
@@ -94,27 +143,29 @@ export async function loadChartAndZoom(
  * the same time) could both pass the check before either sets the flag,
  * each independently re-importing the plugin and calling
  * `mod.Chart.register()`. A single promise assigned up front closes that
- * window — the second caller synchronously observes `zoomLoad` already set
+ * window — the second caller synchronously observes `zoomResultLoad` already set
  * and awaits the same in-flight load instead of starting its own.
  *
  * `importZoom` defaults to the real dynamic import; it's a parameter purely
  * so tests can instrument/count the underlying import without needing to
  * actually uninstall the package.
  */
+export function loadChartJsWithZoomResult(
+  importZoom: () => Promise<unknown> = () => import('chartjs-plugin-zoom'),
+): Promise<ChartFeatureLoadResult<ZoomPlugin>> {
+  return (zoomResultLoad ??= loadChartAndRegisterZoom(loadChartJs, importZoom));
+}
+
+/**
+ * Compatibility adapter for callers that only need a usable Chart.js module.
+ * Feature-unavailable results intentionally still resolve to that module.
+ */
 export function loadChartJsWithZoom(
   importZoom: () => Promise<unknown> = () => import('chartjs-plugin-zoom'),
 ): Promise<ChartJsModule | null> {
-  if (!zoomLoad) {
-    zoomLoad = loadChartJs().then(async (mod) => {
-      if (!mod) return null;
-      const result = await loadChartAndZoom(() => Promise.resolve(mod), importZoom, true);
-      if (result?.zoomPlugin) {
-        mod.Chart.register(result.zoomPlugin);
-      }
-      return mod;
-    });
-  }
-  return zoomLoad;
+  return (zoomLoad ??= loadChartJsWithZoomResult(importZoom).then((result) =>
+    result.kind === 'core-unavailable' ? null : result.mod,
+  ));
 }
 
 /**
@@ -148,32 +199,61 @@ export async function loadDataLabelsPlugin(
 }
 
 /**
+ * Loads Chart.js with its optional per-instance data-labels plugin and
+ * preserves a loaded core module when the feature peer is unavailable.
+ * Stack totals use this same plugin, so they share the same tagged state.
+ * Un-memoized for direct failure-path tests; use
+ * `loadChartJsWithDataLabelsResult()` for the page-wide cached load.
+ */
+export async function loadChartAndDataLabels(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importDataLabels: () => Promise<unknown> = () => import('chartjs-plugin-datalabels'),
+): Promise<ChartFeatureLoadResult<DataLabelsPlugin>> {
+  const mod = await loadChart();
+  if (!mod) return { kind: 'core-unavailable' };
+
+  const plugin = await loadDataLabelsPlugin(importDataLabels);
+  return plugin
+    ? { kind: 'available', mod, plugin }
+    : { kind: 'feature-unavailable', mod };
+}
+
+/**
  * Loads `chart.js` (reusing the cached core load) plus the `chartjs-plugin-datalabels`
  * plugin object, on first actual demand — most charts never set `data-labels`.
- * Returns `{ mod, plugin }` (or `null` if chart.js itself is absent; `plugin` is
- * `undefined` if only the data-labels peer is missing). The plugin is
+ * Returns a tagged result (or `core-unavailable` if chart.js itself is absent).
+ * The plugin is
  * **deliberately NOT registered globally** — unlike `chartjs-plugin-zoom` (inert
  * until given options), `chartjs-plugin-datalabels` draws on every dataset the
  * moment it is globally registered and, worse, breaks any chart constructed
  * before that global registration on its next update. So `chart.class.ts`
- * registers the returned `plugin` PER-INSTANCE via the chart's own
+ * registers an available returned `plugin` PER-INSTANCE via the chart's own
  * `config.plugins` array, touching only charts that set `data-labels`/
- * `stack-totals`. The load is memoized behind a single `dataLabelsLoad` promise
+ * `stack-totals`. The load is memoized behind a single `dataLabelsResultLoad` promise
  * assigned synchronously before any `await` — closing the same check-then-act
- * race across the `await` boundary that `loadChartJsWithZoom()`'s doc describes.
+ * race across the `await` boundary that `loadChartJsWithZoomResult()`'s doc describes.
  *
  * `importDataLabels` defaults to the real dynamic import; it's a parameter
  * purely so tests can instrument/count the underlying import.
  */
+export function loadChartJsWithDataLabelsResult(
+  importDataLabels: () => Promise<unknown> = () => import('chartjs-plugin-datalabels'),
+): Promise<ChartFeatureLoadResult<DataLabelsPlugin>> {
+  return (dataLabelsResultLoad ??= loadChartAndDataLabels(loadChartJs, importDataLabels));
+}
+
+/**
+ * Compatibility adapter retaining the established `{ mod, plugin }` shape.
+ * A missing feature peer remains represented by `plugin: undefined`.
+ */
 export function loadChartJsWithDataLabels(
   importDataLabels: () => Promise<unknown> = () => import('chartjs-plugin-datalabels'),
 ): Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null> {
-  if (!dataLabelsLoad) {
-    dataLabelsLoad = loadChartJs().then(async (mod) => {
-      if (!mod) return null;
-      const plugin = await loadDataLabelsPlugin(importDataLabels);
-      return { mod, plugin };
-    });
-  }
-  return dataLabelsLoad;
+  return (dataLabelsLoad ??= loadChartJsWithDataLabelsResult(importDataLabels).then((result) => {
+    if (result.kind === 'core-unavailable') return null;
+    return {
+      mod: result.mod,
+      plugin: result.kind === 'available' ? result.plugin : undefined,
+    };
+  }));
 }
