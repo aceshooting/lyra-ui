@@ -29,6 +29,59 @@ export const Vertical: Story = {
   `,
 };
 
+export const FixedHeightLongPanels: Story = {
+  name: 'Fixed-height long-panel scrolling (320px)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      <lr-split
+        style="inline-size: 320px; block-size: 200px; border: 1px solid var(--lr-color-border)"
+      >
+        <div style="padding: 0.5rem">
+          <strong>First pane</strong>
+          <p>
+            Long direct-panel content stays inside this fixed-height split.
+            Scroll this pane independently to read the rest of this repeated
+            explanatory content. Long direct-panel content stays inside this
+            fixed-height split. Scroll this pane independently to read the
+            rest of this repeated explanatory content.
+          </p>
+        </div>
+        <div style="padding: 0.5rem">
+          <strong>Second pane</strong>
+          <p>
+            Each direct panel owns its native overflow, so one long pane does
+            not spill into content below the split. Scroll this pane
+            independently to reach the rest of the repeated explanatory
+            content. Each direct panel owns its native overflow, so one long
+            pane does not spill into content below the split.
+          </p>
+        </div>
+      </lr-split>
+
+      <lr-split
+        dir="rtl"
+        style="inline-size: 320px; block-size: 200px; border: 1px solid var(--lr-color-border)"
+      >
+        <div style="padding: 0.5rem">
+          <strong>لوحة أولى</strong>
+          <p>
+            يبقى المحتوى الطويل داخل اللوحة ذات الارتفاع الثابت ويمكن تمرير
+            كل لوحة بشكل مستقل. يبقى المحتوى الطويل داخل اللوحة ذات الارتفاع
+            الثابت ويمكن تمرير كل لوحة بشكل مستقل.
+          </p>
+        </div>
+        <div style="padding: 0.5rem">
+          <strong>لوحة ثانية</strong>
+          <p>
+            لا ينسكب المحتوى إلى ما يلي التقسيم عند استخدام مساحة ثابتة.
+            لا ينسكب المحتوى إلى ما يلي التقسيم عند استخدام مساحة ثابتة.
+          </p>
+        </div>
+      </lr-split>
+    </div>
+  `,
+};
+
 export const FixedPixelRangePanel: Story = {
   render: () => html`
     <lr-split

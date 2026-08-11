@@ -33,6 +33,12 @@ export const styles = css`
   ::slotted(*) {
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* Direct panels own their overflow. The zero minimum lets a fixed-height
+       split shrink each flex item along the block axis instead of letting
+       long content expand the base and escape into following content. */
+    min-block-size: 0;
+    max-block-size: 100%;
+    overflow: auto;
     overflow-wrap: anywhere;
   }
   :host([orientation='vertical']) [part='base'] {

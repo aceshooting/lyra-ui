@@ -110,6 +110,10 @@ export interface LyraSplitEventMap {
 /**
  * `<lr-split>` — resizable panels for dashboard layouts. Direct light-DOM
  * children are the panels; a divider is auto-inserted between each pair.
+ * In a fixed block allocation, each direct panel is a scroll container
+ * (`min-block-size: 0; overflow: auto`) so long content stays within the
+ * split instead of escaping into following content. Set an individual
+ * panel's own `overflow` when it needs a different scrolling surface.
  *
  * Optionally, one pane can opt in to responsive collapse via `collapse`
  * (`"start"`/`"end"`, default `"none"` — no behavior change when unset): as

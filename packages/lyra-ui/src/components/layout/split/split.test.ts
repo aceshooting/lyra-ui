@@ -2317,6 +2317,35 @@ it("does not overflow its container by the dividers' own width in the default (u
   }
 });
 
+for (const direction of ["ltr", "rtl"] as const) {
+  it(`keeps long direct panels contained and independently scrollable in a fixed block allocation (${direction})`, async () => {
+    const wrapper = await fixture(html`
+      <div style="inline-size: 320px; block-size: 200px">
+        <lr-split dir=${direction} style="block-size: 100%">
+          <div data-panel="first"><div style="block-size: 40rem">First pane</div></div>
+          <div data-panel="second"><div style="block-size: 40rem">Second pane</div></div>
+        </lr-split>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-split") as LyraSplit;
+    await elementUpdated(el);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const panels = [...el.children] as HTMLElement[];
+    const baseRect = base.getBoundingClientRect();
+
+    expect(Math.round(base.scrollHeight)).to.equal(Math.round(base.clientHeight));
+    for (const panel of panels) {
+      const rect = panel.getBoundingClientRect();
+      expect(rect.top).to.be.at.least(baseRect.top);
+      expect(rect.bottom).to.be.at.most(baseRect.bottom);
+      expect(getComputedStyle(panel).overflowY).to.equal("auto");
+      expect(panel.scrollHeight).to.be.greaterThan(panel.clientHeight);
+      panel.scrollTop = 24;
+      expect(panel.scrollTop).to.be.greaterThan(0);
+    }
+  });
+}
+
 it("splits :hover and :focus-visible into separate divider rules with a token-driven outline", () => {
   const css = styles.cssText;
 

@@ -3,6 +3,11 @@
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair.
 
+With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
+`min-block-size: 0`, so long content stays inside the split rather than escaping into following
+content. Set `overflow` directly on an individual panel when its content needs a different scrolling
+surface.
+
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
