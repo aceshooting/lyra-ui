@@ -659,6 +659,10 @@ so a late event from an earlier document is ignored; detached frames do not noti
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale.
 
+**RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
+both directions. Its zoom controls remain logical interface chrome, so RTL places the toolbar at
+inline-end (the physical left edge).
+
 **Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default
 allows same-origin access but not scripts, forms, popups, downloads, or top navigation. Supplied
 sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` are requested, the

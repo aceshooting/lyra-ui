@@ -155,10 +155,19 @@ describe('zoom controls and interaction', () => {
     for (const direction of ['ltr', 'rtl'] as const) {
       const wrapper = await fixture<HTMLElement>(html`
         <div dir=${direction} style="inline-size: 320px;">
-          <lr-zoomable-frame without-controls .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+          <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
         </div>
       `);
       const el = wrapper.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+      const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+
+      if (direction === 'rtl') {
+        const host = el.getBoundingClientRect();
+        const toolbar = controls.getBoundingClientRect();
+        expect(toolbar.left - host.left, 'RTL toolbar inline-end gap').to.be.lessThan(
+          host.right - toolbar.right,
+        );
+      }
 
       for (const zoom of [0.25, 0.75, 1, 1.5]) {
         el.zoom = zoom;

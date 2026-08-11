@@ -119,6 +119,10 @@ export interface LyraZoomableFrameEventMap {
  * scripts, forms, popups, downloads, and top navigation remain blocked. Consumer-provided sandbox
  * tokens are allowlisted, and `allow-scripts` is never combined with `allow-same-origin`.
  *
+ * The scaled iframe is a physical pixel canvas, so its origin stays at physical top-left in both
+ * directions. The zoom toolbar remains logical interface chrome and therefore appears at inline-end
+ * (physical left in RTL).
+ *
  * @customElement lr-zoomable-frame
  * @slot zoom-in-icon - Override for the decorative zoom-in glyph. Its flattened subtree is inert
  *   and hidden from assistive technology; the native zoom-in button remains the sole action.

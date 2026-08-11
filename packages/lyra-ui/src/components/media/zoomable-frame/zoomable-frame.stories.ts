@@ -16,6 +16,12 @@ const previewDocument = `<!doctype html>
   <p>This document stays inside a sandboxed iframe while the outer controls scale it.</p>
 </body></html>`;
 
+const rtlPreviewDocument = `<!doctype html>
+<html dir="rtl" lang="ar"><body style="font-family:system-ui;margin:2rem">
+  <h1>معاينة مكوّن قابلة للتكبير</h1>
+  <p>يبقى هذا المستند الطويل داخل إطار معزول بينما تبقى عناصر التحكّم في الموضع المنطقي المناسب للواجهة.</p>
+</body></html>`;
+
 export const InlineDocument: Story = {
   render: () => html`<lr-zoomable-frame
     aria-label="Inline component preview"
@@ -39,6 +45,20 @@ export const DecorativeIconSlots: Story = {
     <span slot="zoom-in-icon">＋</span>
     <span slot="zoom-out-icon">−</span>
   </lr-zoomable-frame>`,
+};
+
+export const Narrow320Rtl: Story = {
+  name: '320px RTL zoom preview',
+  render: () => html`<div dir="rtl" lang="ar" style="inline-size: 320px;">
+    <lr-zoomable-frame
+      aria-label="معاينة قابلة للتكبير"
+      .srcdoc=${rtlPreviewDocument}
+      zoom="0.75"
+    >
+      <span slot="zoom-in-icon">＋</span>
+      <span slot="zoom-out-icon">−</span>
+    </lr-zoomable-frame>
+  </div>`,
 };
 
 export const NonInteractive: Story = {
