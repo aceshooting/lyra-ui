@@ -592,6 +592,75 @@ it('gives the enabled range slider a pointer cursor and rendered hover and press
   }
 });
 
+describe('play-button pressed paint', () => {
+  /** Resolves a declaration in the playback shadow root, where the design tokens are available. */
+  function resolvedInShadow(el: LyraPlayback, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function press(button: HTMLElement): Promise<void> {
+    const rect = button.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await sendMouse({ type: 'down' });
+  }
+
+  it('keeps the prior active play-button border and background defaults during a real mouse press', async () => {
+    const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
+    const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+
+    try {
+      await press(button);
+      const style = getComputedStyle(button);
+      expect(style.backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          'background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+          'background-color',
+        ),
+      );
+      expect(style.borderTopColor).to.equal(
+        resolvedInShadow(el, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
+      );
+    } finally {
+      await resetMouse();
+      el.pause();
+    }
+  });
+
+  it('inherits active play-button paint from an ancestor during a real mouse press', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="
+          --lr-playback-play-button-active-bg: rgb(7, 8, 9);
+          --lr-playback-play-button-active-border-color: rgb(10, 11, 12);
+        "
+      >
+        <lr-playback length="3"></lr-playback>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-playback') as LyraPlayback;
+    const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+
+    try {
+      await press(button);
+      const style = getComputedStyle(button);
+      expect(style.backgroundColor).to.equal('rgb(7, 8, 9)');
+      expect(style.borderTopColor).to.equal('rgb(10, 11, 12)');
+    } finally {
+      await resetMouse();
+      el.pause();
+    }
+  });
+});
+
 it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
   // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
   // live (rather than grepping source text for the call) is to patch the base-class hook itself --

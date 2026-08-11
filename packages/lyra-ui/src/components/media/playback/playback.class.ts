@@ -58,6 +58,10 @@ export interface LyraPlaybackEventMap {
  * @csspart slider - The playback position slider.
  * @cssprop [--lr-playback-icon-size=calc(var(--lr-icon-button-size) * 0.35)] - Font size of the
  *   play/pause glyph, derived from the shared icon-button hit-target size.
+ * @cssprop --lr-playback-play-button-active-bg - Pressed play/pause button background. Defaults
+ *   to the existing surface active mix; read as an inline fallback so an ancestor value inherits.
+ * @cssprop [--lr-playback-play-button-active-border-color=var(--lr-color-brand)] - Pressed
+ *   play/pause button border color; read as an inline fallback so an ancestor value inherits.
  * @status stable
  * @since 4.0.0
  */

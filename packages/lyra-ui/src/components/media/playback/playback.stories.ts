@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraPlayback } from './playback.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'Playback',
@@ -39,4 +40,26 @@ export const NoLoop: Story = {
 
 export const SingleFrame: Story = {
   render: () => html`<lr-playback length="1"></lr-playback>`,
+};
+
+export const ThemedActivePlayButton: Story = {
+  name: 'Themed active play button (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-playback-play-button-active-bg` and `--lr-playback-play-button-active-border-color` retint only the pressed play/pause button. They are read as inline fallbacks rather than declared on `:host`, so a theme set on an ancestor flows into the component.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-playback-play-button-active-bg: ${storyColor('successQuiet')};
+        --lr-playback-play-button-active-border-color: ${storyColor('success')};
+      "
+    >
+      <lr-playback length="10" interval-ms="500" loop></lr-playback>
+    </div>
+  `,
 };

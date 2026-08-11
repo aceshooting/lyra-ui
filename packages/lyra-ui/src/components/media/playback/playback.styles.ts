@@ -40,8 +40,11 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   [part='play-button']:active {
-    border-color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: var(--lr-playback-play-button-active-border-color, var(--lr-color-brand));
+    background: var(
+      --lr-playback-play-button-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='play-button']:disabled {
     opacity: var(--lr-opacity-disabled);
