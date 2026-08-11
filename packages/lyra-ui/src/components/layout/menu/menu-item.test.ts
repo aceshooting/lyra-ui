@@ -524,8 +524,14 @@ describe('submenu parent', () => {
     return item;
   };
 
-  const panelOf = (item: LyraMenuItem): HTMLElement & { open: boolean } =>
-    item.querySelector('#panel') as HTMLElement & { open: boolean };
+  type SubmenuPanelElement = HTMLElement & {
+    anchor: HTMLElement | null;
+    open: boolean;
+    hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
+  };
+
+  const panelOf = (item: LyraMenuItem): SubmenuPanelElement =>
+    item.querySelector('#panel') as SubmenuPanelElement;
 
   const popupOf = (item: LyraMenuItem): HTMLElement =>
     panelOf(item).shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
@@ -577,6 +583,97 @@ describe('submenu parent', () => {
     await closing;
     expect(item.submenuOpen).to.equal(false);
     expect(item.hasAttribute('submenu-open')).to.equal(false);
+  });
+
+  it('retires a replaced submenu while its show transition is still settling', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item id="share" value="share">
+          Share
+          <lr-menu id="old-panel" slot="submenu"><lr-menu-item value="old">Old</lr-menu-item></lr-menu>
+          <lr-menu id="replacement-panel" slot="retired"><lr-menu-item value="new">New</lr-menu-item></lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector<LyraMenuItem>('#share')!;
+    const oldPanel = wrapper.querySelector<SubmenuPanelElement>('#old-panel')!;
+    const replacement = wrapper.querySelector<SubmenuPanelElement>('#replacement-panel')!;
+    await item.updateComplete;
+
+    oldPanel.addEventListener('lr-show', () => {
+      oldPanel.slot = 'retired';
+      replacement.slot = 'submenu';
+    }, { once: true });
+
+    await item.openSubmenu('none');
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await item.updateComplete;
+
+    expect(oldPanel.isConnected).to.equal(true);
+    expect(oldPanel.open).to.equal(false);
+    expect(oldPanel.anchor === null).to.equal(true);
+    expect(replacement.anchor === item).to.equal(true);
+    expect(replacement.open).to.equal(false);
+    expect(item.submenuOpen).to.equal(false);
+    expect(item.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('keeps a replacement submenu open when a retired panel finishes hiding', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item id="share" value="share">
+          Share
+          <lr-menu id="old-panel" slot="submenu"><lr-menu-item value="old">Old</lr-menu-item></lr-menu>
+          <lr-menu id="replacement-panel" slot="retired"><lr-menu-item value="new">New</lr-menu-item></lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector<LyraMenuItem>('#share')!;
+    const oldPanel = wrapper.querySelector<SubmenuPanelElement>('#old-panel')!;
+    const replacement = wrapper.querySelector<SubmenuPanelElement>('#replacement-panel')!;
+    await item.updateComplete;
+    await item.openSubmenu('none');
+
+    const originalHide = oldPanel.hide.bind(oldPanel);
+    let resolveInitialHide!: () => void;
+    const initialHide = new Promise<void>((resolve) => {
+      resolveInitialHide = resolve;
+    });
+    let hideCalls = 0;
+    oldPanel.hide = (options) => {
+      hideCalls += 1;
+      return hideCalls === 1
+        ? initialHide.then(() => originalHide(options))
+        : originalHide(options);
+    };
+
+    let closing: Promise<void> | undefined;
+    try {
+      closing = item.closeSubmenu();
+      oldPanel.slot = 'retired';
+      replacement.slot = 'submenu';
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      await item.updateComplete;
+      await item.openSubmenu('none');
+
+      expect(oldPanel.isConnected).to.equal(true);
+      expect(oldPanel.open).to.equal(false);
+      expect(oldPanel.anchor === null).to.equal(true);
+      expect(replacement.open).to.equal(true);
+      expect(item.submenuOpen).to.equal(true);
+
+      resolveInitialHide();
+      await closing;
+      await item.updateComplete;
+
+      expect(replacement.open).to.equal(true);
+      expect(item.submenuOpen).to.equal(true);
+      expect(item.getAttribute('aria-expanded')).to.equal('true');
+    } finally {
+      resolveInitialHide();
+      await closing;
+      oldPanel.hide = originalHide;
+    }
   });
 
   it('renders the mapped --submenu-offset default and responds live to an override', async () => {

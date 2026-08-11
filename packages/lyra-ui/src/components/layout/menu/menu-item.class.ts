@@ -254,6 +254,9 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @state() private slottedLabel = '';
 
   private submenuPanel: SubmenuPanel | null = null;
+  /** Increments whenever the owned submenu identity becomes stale, so async show/hide continuations
+   * cannot write disclosure state or popup ownership back onto a replacement panel. */
+  private submenuPanelGeneration = 0;
   /** `hidden`/`inert`/`aria-hidden` are native attributes, not reactive properties: assigning
    *  `item.inert = true` schedules no Lit update, so `willUpdate()` can never announce them. This
    *  observer is what makes the item — rather than every parent that has to care — the authority on
@@ -339,6 +342,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.submenuPanelGeneration += 1;
     // Transient open state never survives a detach: the panel is a child, so it tears its own
     // `open` down at the same moment, and a reconnect must not resume with a stale aria-expanded.
     this.submenuExpanded = false;
@@ -455,15 +459,19 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  pointer opened a moment earlier. */
   async openSubmenu(focus: MenuFocusTarget = 'first'): Promise<void> {
     const panel = this.submenuPanel;
-    if (!panel || this.interactionDisabled) return;
+    const generation = this.submenuPanelGeneration;
+    if (!panel || this.interactionDisabled || !this.isCurrentSubmenuPanel(panel, generation)) return;
     this.applySubmenuOffset(panel);
     panel.anchor = this;
     const shown = panel.show(focus);
     // Read back rather than assume: `open` settles synchronously, so `aria-expanded` lands in
     // this same update instead of one tick behind the panel's own `lr-show`.
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     this.submenuExpanded = panel.open;
     await shown;
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     if (panel.updateComplete) await panel.updateComplete;
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     this.applySubmenuOffset(panel);
     this.submenuExpanded = panel.open;
     await this.updateComplete;
@@ -473,11 +481,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  one. Focus is left alone — the caller that moved it knows where it belongs. */
   async closeSubmenu(): Promise<void> {
     const panel = this.submenuPanel;
-    if (!panel) return;
+    const generation = this.submenuPanelGeneration;
+    if (!panel || !this.isCurrentSubmenuPanel(panel, generation)) return;
     const hidden = panel.hide();
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     this.submenuExpanded = panel.open;
     await hidden;
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     if (panel.updateComplete) await panel.updateComplete;
+    if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     this.submenuExpanded = panel.open;
     await this.updateComplete;
   }
@@ -667,9 +679,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   private connectSubmenuPanel(next: SubmenuPanel | null): void {
     if (next === this.submenuPanel) return;
+    const previous = this.submenuPanel;
+    const generation = ++this.submenuPanelGeneration;
     this.releaseSubmenuOffset();
-    this.submenuPanel?.removeEventListener('lr-show', this.onPanelShow);
-    this.submenuPanel?.removeEventListener('lr-hide', this.onPanelHide);
+    previous?.removeEventListener('lr-show', this.onPanelShow);
+    previous?.removeEventListener('lr-hide', this.onPanelHide);
+    if (previous) {
+      void previous.hide({ focusTrigger: false });
+      if (previous.anchor === this) previous.anchor = null;
+    }
     this.submenuPanel = next;
     this.ownsPanelAriaLabel = false;
     this.ownedPanelAriaLabelValue = null;
@@ -677,18 +695,28 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       this.submenuExpanded = false;
       return;
     }
-    this.submenuPanel.anchor = this;
-    this.submenuPanel.addEventListener('lr-show', this.onPanelShow);
-    this.submenuPanel.addEventListener('lr-hide', this.onPanelHide);
-    this.submenuExpanded = this.submenuPanel.open;
+    const panel = this.submenuPanel;
+    panel.anchor = this;
+    panel.addEventListener('lr-show', this.onPanelShow);
+    panel.addEventListener('lr-hide', this.onPanelHide);
+    this.submenuExpanded = panel.open;
     this.applyPanelName();
-    this.applySubmenuOffset(this.submenuPanel);
+    this.applySubmenuOffset(panel);
     // A generated menu can still be awaiting its first render during the
     // parent's updated() callback. Its update is already queued, so this runs
     // after it without creating an unhandled promise branch under strict WTR.
     queueMicrotask(() => {
-      if (this.isConnected && this.submenuPanel === next) this.applySubmenuOffset(next);
+      if (this.isCurrentSubmenuPanel(panel, generation)) this.applySubmenuOffset(panel);
     });
+  }
+
+  /** Whether an async submenu operation still owns this item after an awaited panel transition. */
+  private isCurrentSubmenuPanel(panel: SubmenuPanel, generation: number): boolean {
+    return (
+      this.isConnected &&
+      this.submenuPanel === panel &&
+      this.submenuPanelGeneration === generation
+    );
   }
 
   /** Bridges this item's inherited public CSS property into the actual floating
@@ -741,11 +769,13 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  `<lr-menu>` they read as *that* menu showing/hiding, which it is not. */
   private onPanelShow = (e: Event): void => {
     e.stopPropagation();
+    if (e.currentTarget !== this.submenuPanel) return;
     this.submenuExpanded = true;
   };
 
   private onPanelHide = (e: Event): void => {
     e.stopPropagation();
+    if (e.currentTarget !== this.submenuPanel) return;
     this.submenuExpanded = false;
   };
 
