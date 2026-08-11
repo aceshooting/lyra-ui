@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './schema-viewer.js';
-import type { LyraSchemaViewer } from './schema-viewer.js';
+import type { JsonSchemaNode, LyraSchemaViewer, SchemaValidationIssue } from './schema-viewer.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkTexts(): string[] {
@@ -48,6 +48,35 @@ it('fails closed for malformed/circular input and is accessible', async () => {
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('renders supported composition and item branches while safely ignoring malformed caller entries', async () => {
+  const composite: JsonSchemaNode = {
+    type: 'array',
+    title: 'Payload',
+    allOf: [{ type: 'object', properties: { stable: { type: 'string' } } }],
+    anyOf: [{ type: 'number' }],
+    oneOf: [undefined as unknown as JsonSchemaNode],
+    items: { type: 'string' },
+    enum: ['compact', 'full'],
+    $ref: '#/$defs/payload',
+  };
+  const issues = [
+    undefined as unknown as SchemaValidationIssue,
+    { path: '/items', message: 'Each item needs a name', severity: 'warning' as const },
+  ];
+  const el = (await fixture(html`
+    <lr-schema-viewer .schema=${composite} .issues=${issues}></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+
+  const paths = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-path]'),
+    (button) => button.dataset['path'],
+  );
+  expect(paths).to.include.members(['/allOf/0', '/anyOf/0', '/items']);
+  expect(el.shadowRoot!.textContent).to.contain('enum: compact, full');
+  expect(el.shadowRoot!.textContent).to.contain('$ref: #/$defs/payload');
+  expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(1);
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-schema-viewer
     .strings=${{ schemaViewerLabel: 'Localized schema browser' }}
@@ -68,6 +97,20 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   );
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
   expect(sinkTexts(), 'a schema that mounts already truncated is not a live change').to.deep.equal([]);
+});
+
+it('marks the limit when nested composition exhausts the remaining render budget during traversal', async () => {
+  const branches: JsonSchemaNode[] = Array.from({ length: 498 }, (_, index) =>
+    index === 0 ? { type: 'object', properties: { nested: { type: 'string' } } } : { type: 'string' },
+  );
+  const el = (await fixture(html`
+    <lr-schema-viewer .schema=${{ type: 'object', properties: { payload: { allOf: branches } } }}></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 schema nodes are shown.',
+  );
 });
 
 it('indexes validation issues once and bounds their rendered work independently of the node ceiling', async () => {

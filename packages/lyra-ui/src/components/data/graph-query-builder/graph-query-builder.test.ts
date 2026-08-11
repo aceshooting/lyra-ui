@@ -42,6 +42,17 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.querySelector('[part="saved-empty"]')!.textContent).to.equal('No data');
   });
 
+  it('forwards a host click to the first rendered field', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    el.click();
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('start-input');
+  });
+
   it('emits lr-input with the full value when the start-entity input changes', async () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
     await el.updateComplete;
@@ -1250,6 +1261,21 @@ describe('setCustomValidity()', () => {
     expect(el.validationMessage).to.equal('');
     form.requestSubmit();
     expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('treats an undefined runtime custom-validity message as clearing the prior error', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    el.value = query({ startId: 'node-1' });
+    await el.updateComplete;
+
+    el.setCustomValidity('No graph is loaded for that tenant.');
+    expect(el.validity.customError).to.be.true;
+
+    el.setCustomValidity(undefined as unknown as string);
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
   });
 
   it('keeps a custom error through an intrinsic revalidation', async () => {

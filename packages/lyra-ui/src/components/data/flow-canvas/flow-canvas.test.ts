@@ -928,6 +928,27 @@ describe('pan & zoom', () => {
     expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
   });
 
+  it('immediately retires an active background pan when locked before the next pointer event', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const bg = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    bg.setPointerCapture = () => {};
+    bg.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 56, clientX: 100, clientY: 100, bubbles: true,
+    }));
+
+    el.locked = true;
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 56, clientX: 140, clientY: 90 }));
+
+    expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
+    expect(viewportEl.hasAttribute('data-panning')).to.be.false;
+    await el.updateComplete;
+  });
+
   it('mirrors the pan/zoom surface under orientation="horizontal" + dir="rtl"', async () => {
     const el = (await fixture(
       html`<div dir="rtl"><lr-flow-canvas></lr-flow-canvas></div>`,
@@ -1340,6 +1361,29 @@ describe('node drag', () => {
     expect(moves).to.equal(0);
   });
 
+  it('immediately retires an active node drag when locked before the next pointer event', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas nodes-draggable></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    let moves = 0;
+    el.addEventListener('lr-node-move', () => moves++);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 57, clientX: 0, clientY: 0, bubbles: true,
+    }));
+
+    el.locked = true;
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 57, clientX: 40, clientY: 0 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 57, clientX: 40, clientY: 0 }));
+
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
+    expect(moves).to.equal(0);
+    await el.updateComplete;
+  });
+
   it('replacing the controlled node model rolls back and retires an active node drag', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
@@ -1530,6 +1574,35 @@ describe('connect gesture', () => {
     inputHandle.dispatchEvent(new PointerEvent('pointerup', {
       pointerId: 53, clientX: 200, clientY: 0, bubbles: true, composed: true,
     }));
+    expect(connects).to.equal(0);
+  });
+
+  it('immediately retires an active pointer connect when locked before the next pointer event', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas connectable></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.append(outputHandle);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 58, clientX: 0, clientY: 0, bubbles: true, composed: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
+
+    el.locked = true;
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 58, clientX: 100, clientY: 0 }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 58, clientX: 200, clientY: 0 }));
     expect(connects).to.equal(0);
   });
 
