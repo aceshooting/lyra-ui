@@ -210,6 +210,67 @@ it('uses the singular "tool" in the sr-only announcement for a single-tool categ
   expect(heading.querySelector('.sr-only')!.textContent).to.equal('1 tool');
 });
 
+it('contains unbroken public label, category, and tool content inside a 320px dialog', async () => {
+  const long = `ToolIdentifier${'WithoutNaturalBreaks'.repeat(40)}`;
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      open
+      style="inset-inline-end: auto; inline-size: 320px; block-size: 480px;"
+      .label=${long}
+      .tools=${[
+        {
+          id: 'long-tool',
+          name: long,
+          description: long,
+          category: long,
+          disabled: true,
+          disabledReason: long,
+        },
+      ]}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+
+  const assertContained = () => {
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const category = el.shadowRoot!.querySelector('[part="category"]') as HTMLElement;
+    const heading = el.shadowRoot!.querySelector('[part="category-heading"]') as HTMLElement;
+    const checkbox = checkboxFor(el, 'long-tool');
+    const row = checkbox.closest('[part="tool-row"]') as HTMLElement;
+    const disabledReason = row.querySelector('[part="tool-disabled-reason"]') as HTMLElement;
+    const count = heading.querySelector('[part="category-count"]') as HTMLElement;
+    const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(320);
+    for (const part of [panel, title, body, category, heading, row, checkbox, disabledReason]) {
+      expect(
+        part.scrollWidth,
+        `${part.getAttribute('part') ?? part.localName} must not create horizontal overflow`,
+      ).to.be.at.most(Math.ceil(part.clientWidth) + 1);
+    }
+    const panelRect = panel.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const headingRect = heading.getBoundingClientRect();
+    const countRect = count.getBoundingClientRect();
+    expect(count.textContent).to.equal('1');
+    expect(countRect.width).to.be.greaterThan(0);
+    expect(countRect.left).to.be.at.least(headingRect.left - 1);
+    expect(countRect.right).to.be.at.most(headingRect.right + 1);
+    for (const rect of [checkbox.getBoundingClientRect(), base.getBoundingClientRect()]) {
+      expect(rect.left).to.be.at.least(panelRect.left - 1);
+      expect(rect.right).to.be.at.most(panelRect.right + 1);
+      expect(rect.left).to.be.at.least(bodyRect.left - 1);
+      expect(rect.right).to.be.at.most(bodyRect.right + 1);
+    }
+  };
+
+  assertContained();
+  el.dir = 'rtl';
+  await el.updateComplete;
+  assertContained();
+});
+
 it('shows a disabled row with its disabledReason as supporting text, and a disabled checkbox', async () => {
   const el = (await fixture(
     html`<lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>`,

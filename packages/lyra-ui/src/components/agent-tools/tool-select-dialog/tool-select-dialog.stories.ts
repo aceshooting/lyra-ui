@@ -83,6 +83,8 @@ const TOOLS: ToolSelectDialogTool[] = [
   },
 ];
 
+const NARROW_UNBROKEN = `ToolIdentifier${'WithoutNaturalBreaks'.repeat(20)}`;
+
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
   const dialog = trigger.parentElement!.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog;
@@ -210,13 +212,16 @@ export const Narrow320: Story = {
   render: (_args, context) => html`
     <lr-tool-select-dialog
       .open=${context.viewMode !== 'docs'}
-      label="Select tools for the multilingual customer-support production assistant"
+      style="inset-inline-end: auto; inline-size: 320px; block-size: 480px;"
+      .label=${NARROW_UNBROKEN}
       .tools=${[
         {
           id: 'long-tool',
-          name: 'Query customer database using the production read-only connection',
-          description: 'Search every configured regional source while preserving customer privacy controls.',
-          category: 'Customer support production operations',
+          name: NARROW_UNBROKEN,
+          description: NARROW_UNBROKEN,
+          category: NARROW_UNBROKEN,
+          disabled: true,
+          disabledReason: NARROW_UNBROKEN,
         },
         ...TOOLS,
       ]}

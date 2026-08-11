@@ -32,6 +32,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lr-size-30rem), 100%);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     block-size: min(var(--lr-size-38rem), 100%);
     /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
        near-black and the dialog reads as a scrim with floating text instead of a panel. */
@@ -44,10 +46,15 @@ export const styles = css`
     overflow: hidden;
   }
   [part='header'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: var(--lr-space-l) var(--lr-space-l) 0;
   }
   [part='title'] {
     margin: 0;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-m);
     font-weight: var(--lr-font-weight-semibold);
   }
@@ -115,6 +122,8 @@ export const styles = css`
 
   [part='body'] {
     flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     min-block-size: 0;
     overflow: auto;
     padding: var(--lr-space-m) var(--lr-space-l) var(--lr-space-l);
@@ -128,6 +137,8 @@ export const styles = css`
   }
 
   [part='category'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin-block-end: var(--lr-space-l);
   }
   [part='category']:last-child {
@@ -135,14 +146,18 @@ export const styles = css`
   }
   [part='category-heading'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin: 0 0 var(--lr-space-s);
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-bold);
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-04em);
     color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
   [part='category-count'] {
     font-weight: var(--lr-font-weight-normal);
@@ -153,6 +168,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -162,9 +179,21 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='tool-checkbox'] {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='tool-checkbox']::part(base) {
     align-items: flex-start;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='tool-checkbox']::part(label) {
     display: flex;
@@ -179,14 +208,17 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
     min-inline-size: 0;
+    max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
   [part='tool-icon'] {
     line-height: var(--lr-line-height-none);
   }
   [part='tool-description'] {
-    overflow-wrap: anywhere;
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -196,8 +228,11 @@ export const styles = css`
        inherits its indent for free from ::part(label)'s column layout
        above instead of needing its own guessed padding. */
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-warning);
+    overflow-wrap: anywhere;
   }
 
   [part='footer'] {
