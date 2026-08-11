@@ -152,6 +152,70 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
   expect(el.value).to.equal('Hello @Ada ');
 });
 
+it('recognizes slash commands and clears suggestions after ordinary input', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  el.commandItems = [{ id: 'summarize', label: 'Summarize', insertText: 'summary' }];
+  await el.updateComplete;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+
+  composer.value = '/summ';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  await popover.updateComplete;
+  expect(popover.open).to.be.true;
+  expect(popover.query).to.equal('summ');
+
+  composer.value = 'ordinary text';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  await popover.updateComplete;
+  expect(popover.open).to.be.false;
+
+  composer.value = '/summ';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  await popover.updateComplete;
+  const selected = oneEvent(el, 'lr-mention-select');
+  popover.dispatchEvent(
+    new CustomEvent('lr-mention-select', {
+      bubbles: true,
+      composed: true,
+      detail: { id: 'summarize', label: 'Summarize' },
+    }),
+  );
+  expect((await selected as CustomEvent<{ id: string; label: string; trigger: '/' }>).detail).to.deep.equal({
+    id: 'summarize',
+    label: 'Summarize',
+    trigger: '/',
+  });
+  expect(el.value).to.equal('/summary ');
+});
+
 it('invalidates a suggestion session when the controlled value changes', async () => {
   const el = (await fixture(html`
     <lr-prompt-input .mentionItems=${[{ id: 'ada', label: 'Ada' }]}></lr-prompt-input>
@@ -385,12 +449,30 @@ it('gates every composed interaction while disabled and forwards host click to t
   ></lr-prompt-input>`)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
   const attachment = el.shadowRoot!.querySelector('lr-attachment-chip')!;
+  const attachmentTrigger = el.shadowRoot!.querySelector('lr-attachment-trigger')!;
   const sources = el.shadowRoot!.querySelector('details')!;
   const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  let additions = 0;
+  let removals = 0;
+  el.addEventListener('lr-attachments-add', () => additions++);
+  el.addEventListener('lr-attachment-remove', () => removals++);
 
   expect(attachment.removable).to.be.false;
   expect(sources.inert).to.be.true;
   expect(popover.open).to.be.false;
+
+  attachmentTrigger.dispatchEvent(new CustomEvent('lr-pick', {
+    bubbles: true,
+    composed: true,
+    detail: { capability: 'files', files: [] },
+  }));
+  attachment.dispatchEvent(new CustomEvent('lr-remove', {
+    bubbles: true,
+    composed: true,
+    detail: { id: 'doc-1' },
+  }));
+  expect(additions).to.equal(0);
+  expect(removals).to.equal(0);
 
   el.click();
   expect((composer.shadowRoot!.activeElement) == null).to.equal(true);

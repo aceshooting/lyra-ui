@@ -98,6 +98,27 @@ it('plain Enter submits and prevents the default newline insertion', async () =>
   expect(ev.defaultPrevented).to.be.true;
 });
 
+it('leaves non-Enter keys alone and rejects synthetic action clicks once disabled', async () => {
+  const el = (await fixture(html`<lr-chat-composer value="hello"></lr-chat-composer>`)) as LyraChatComposer;
+  let submissions = 0;
+  el.addEventListener('lr-submit', () => submissions++);
+
+  const escape = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
+  textareaOf(el).dispatchEvent(escape);
+  expect(escape.defaultPrevented).to.be.false;
+
+  el.disabled = true;
+  await el.updateComplete;
+  actionButtonOf(el)!.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, composed: true }),
+  );
+  expect(submissions).to.equal(0);
+});
+
 it('does not clear the value when submitting', async () => {
   const el = (await fixture(html`<lr-chat-composer value="hello"></lr-chat-composer>`)) as LyraChatComposer;
   const listening = oneEvent(el, 'lr-submit');
@@ -1018,6 +1039,11 @@ describe('native textarea surface', () => {
     el.setRangeText('there', 6, 11, 'select');
     expect(el.value).to.equal('hello there');
     expect(new FormData(form).get('message')).to.equal('hello there');
+
+    el.setSelectionRange(6, 11);
+    el.setRangeText('world');
+    expect(el.value).to.equal('hello world');
+    expect(new FormData(form).get('message')).to.equal('hello world');
 
     el.select();
     expect(el.selectionStart).to.equal(0);

@@ -59,6 +59,21 @@ describe("lr-widget-renderer", () => {
     );
   });
 
+  it("applies the documented row alignment and distribution values", async () => {
+    const el = (await fixture(
+      html`<lr-widget-renderer></lr-widget-renderer>`
+    )) as LyraWidgetRenderer;
+    el.tree = {
+      type: "row",
+      props: { align: "stretch", justify: "between" },
+    };
+    await el.updateComplete;
+
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    expect(getComputedStyle(row).alignItems).to.equal("stretch");
+    expect(getComputedStyle(row).justifyContent).to.equal("space-between");
+  });
+
   it("SECURITY: an unknown/disallowed type is silently skipped -- never rendered, never in the DOM", async () => {
     const el = (await fixture(
       html`<lr-widget-renderer></lr-widget-renderer>`
@@ -444,5 +459,114 @@ describe("lr-widget-renderer", () => {
       nodeId: "name",
       prop: "value",
     });
+  });
+
+  it("uses a controlled event detail value ahead of the mapped control property", async () => {
+    const registry = new Map();
+    registry.set("field", {
+      tag: "input",
+      props: { value: "string" as const },
+      bindings: { value: { event: "input" } },
+    });
+    const el = await fixture<LyraWidgetRenderer>(
+      html`<lr-widget-renderer></lr-widget-renderer>`
+    );
+    el.registry = registry;
+    el.state = { name: "Ada" };
+    el.tree = {
+      id: "name",
+      type: "field",
+      props: { value: { $bind: "/name" } },
+    };
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+    input.value = "stale property value";
+    const changed = oneEvent(el, "lr-widget-state-change");
+    input.dispatchEvent(
+      new CustomEvent("input", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "event value" },
+      })
+    );
+
+    const event = (await changed) as CustomEvent<{
+      path: string;
+      value: unknown;
+      nodeId: string;
+      prop: string;
+    }>;
+    expect(event.detail).to.deep.equal({
+      path: "/name",
+      value: "event value",
+      nodeId: "name",
+      prop: "value",
+    });
+  });
+
+  it("detaches obsolete controlled callbacks when streamed nodes change or disappear", async () => {
+    const registry = new Map();
+    registry.set("field", {
+      tag: "input",
+      props: { value: "string" as const },
+      bindings: { value: { event: "input" } },
+    });
+    registry.set("action", {
+      tag: "button",
+      action: { event: "click" },
+    });
+    const el = await fixture<LyraWidgetRenderer>(
+      html`<lr-widget-renderer></lr-widget-renderer>`
+    );
+    el.registry = registry;
+    el.state = { retained: "Ada", removed: "Bea" };
+    el.tree = {
+      type: "row",
+      children: [
+        {
+          id: "retained",
+          type: "field",
+          props: { value: { $bind: "/retained" } },
+        },
+        {
+          id: "removed",
+          type: "field",
+          props: { value: { $bind: "/removed" } },
+        },
+        { id: "action", type: "action", actionId: "remove-me" },
+      ],
+    };
+    await el.updateComplete;
+
+    const inputs = Array.from(
+      el.shadowRoot!.querySelectorAll("input")
+    ) as HTMLInputElement[];
+    const retained = inputs[0]!;
+    const removed = inputs[1]!;
+    const action = el.shadowRoot!.querySelector("button") as HTMLButtonElement;
+    let stateChanges = 0;
+    let actions = 0;
+    el.addEventListener("lr-widget-state-change", () => stateChanges++);
+    el.addEventListener("lr-widget-action", () => actions++);
+
+    el.tree = {
+      type: "row",
+      children: [
+        { id: "retained", type: "field", props: { value: "literal" } },
+      ],
+    };
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector("input") === retained).to.equal(true);
+    retained.dispatchEvent(
+      new Event("input", { bubbles: true, composed: true })
+    );
+    removed.dispatchEvent(
+      new Event("input", { bubbles: true, composed: true })
+    );
+    action.dispatchEvent(new Event("click", { bubbles: true, composed: true }));
+    expect(stateChanges).to.equal(0);
+    expect(actions).to.equal(0);
   });
 });
