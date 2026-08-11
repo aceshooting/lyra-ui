@@ -32,6 +32,8 @@ const images = [
   },
 ];
 
+const longAction = 'Download-the-original-image-with-an-intentionally-unbroken-action-label';
+
 export const Default: Story = {
   render: () => html`
     <button @click=${(event: Event) => {
@@ -75,19 +77,43 @@ export const CounterHidden: Story = {
   `,
 };
 
-/** The 320px narrow-allocation baseline for the toolbar row (counter + actions slot +
- *  close-button) -- exercises lightbox.styles.ts's own documented `@container (max-inline-size:
- *  20rem)` rule, which shrinks `[part="counter"]`. `:host` is normally `position: fixed; inset:
- *  0`, filling the viewport regardless of any wrapping container, so its `position`/`inset` are
- *  overridden inline here (an inline `style=""` attribute always wins over the component's own
- *  `:host` rule) to confine it to a narrow, in-flow box for this story only -- mirrors
- *  pagination.stories.ts's `NarrowAllocation` story, adapted for a fixed-position host. */
+/** An in-flow 320px allocation exercises the toolbar with a long unbroken slotted action while
+ * the built-in close control remains available. */
 export const NarrowAllocation: Story = {
+  name: 'Narrow long action (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'An exact 320px LTR allocation wraps a long unbroken slotted action without hiding or shrinking the close control.',
+      },
+    },
+  },
   render: (_args, context) => html`<lr-lightbox
     .images=${images}
     .open=${context.viewMode !== 'docs'}
-    style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 24rem;"
-  ></lr-lightbox>`,
+    style="position: static; inset: auto; display: flex; inline-size: 320px; block-size: 24rem;"
+  >
+    <button slot="actions">${longAction}</button>
+  </lr-lightbox>`,
+};
+
+export const NarrowRtlLongActions: Story = {
+  name: 'Narrow RTL long action (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'An exact 320px RTL allocation keeps a long unbroken slotted action contained while the close control remains reachable.',
+      },
+    },
+  },
+  render: (_args, context) => html`<lr-lightbox
+    dir="rtl"
+    .images=${images}
+    .open=${context.viewMode !== 'docs'}
+    style="position: static; inset: auto; display: flex; inline-size: 320px; block-size: 24rem;"
+  >
+    <button slot="actions">${longAction}</button>
+  </lr-lightbox>`,
 };
 
 export const NarrowLongCaptions: Story = {

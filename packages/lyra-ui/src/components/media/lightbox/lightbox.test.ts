@@ -418,6 +418,43 @@ it('does not hijack navigation keys from slotted editable actions', async () => 
   el.open = false;
 });
 
+it('wraps a long slotted action without overflowing a 320px toolbar or clipping the close target in LTR or RTL', async () => {
+  const longAction = `action-${'unbroken'.repeat(48)}`;
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = (await fixture(html`
+      <lr-lightbox
+        dir=${direction}
+        .images=${[image]}
+        open
+        style="position: static; inset: auto; display: flex; inline-size: 320px; block-size: 24rem;"
+      >
+        <button slot="actions">${longAction}</button>
+      </lr-lightbox>
+    `)) as LyraLightbox;
+    await el.updateComplete;
+
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+    const action = el.querySelector('button[slot="actions"]') as HTMLButtonElement;
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const closeRect = closeButton.getBoundingClientRect();
+    const iconButtonSize = Number.parseFloat(getComputedStyle(closeButton).minInlineSize);
+
+    expect(toolbar.scrollWidth, `${direction}: toolbar has no horizontal overflow`).to.be.at.most(toolbar.clientWidth + 1);
+    expect(actions.scrollWidth, `${direction}: slotted actions have no horizontal overflow`).to.be.at.most(actions.clientWidth + 1);
+    expect(action.scrollWidth, `${direction}: long action text wraps`).to.be.at.most(action.clientWidth + 1);
+    expect(closeRect.width, `${direction}: close control retains its minimum hit width`).to.be.at.least(iconButtonSize);
+    expect(closeRect.height, `${direction}: close control retains its minimum hit height`).to.be.at.least(iconButtonSize);
+    expect(closeRect.left, `${direction}: close control stays inside the toolbar`).to.be.at.least(toolbarRect.left - 1);
+    expect(closeRect.right, `${direction}: close control stays inside the toolbar`).to.be.at.most(toolbarRect.right + 1);
+
+    el.open = false;
+    await el.updateComplete;
+  }
+});
+
 it('does not hijack navigation keys from iframe-realm slotted controls after adoption', async () => {
   const iframe = document.createElement('iframe');
   document.body.append(iframe);

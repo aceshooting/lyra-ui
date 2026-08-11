@@ -63,8 +63,19 @@ export const styles = css`
   [part='actions'] {
     display: flex;
     align-items: center;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-xs);
     margin-inline-start: auto;
+  }
+  slot[name='actions']::slotted(*) {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='actions'][hidden] {
     display: none;
