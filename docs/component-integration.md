@@ -1903,7 +1903,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.3 KiB (38147 bytes; bundle SHA-256 `7cd1769224c348651aae4e4582d7d5cf77e81c44bd13ea649e6f35344506efa2`)
+- Standalone gzip: 37.3 KiB (38144 bytes; bundle SHA-256 `d4b9870aa33e6f896b306d2ed1d33284200c7d6056f2db6a49317d601209621f`)
 
 </details>
 
@@ -1915,7 +1915,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-model-select`, `lr-slider`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 47.8 KiB (48922 bytes; bundle SHA-256 `7db0053f90c7489aba90569aa3fa68d64df0e090cdd4ed62c2f384d57fcfc26c`)
+- Standalone gzip: 47.8 KiB (48920 bytes; bundle SHA-256 `31a52bffad2937b00ec65632b4b27ae55664dc2d76e8972d25d976c05cf6ba88`)
 
 </details>
 
@@ -2227,7 +2227,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-attachment-chip`, `lr-attachment-trigger`, `lr-chat-composer`, `lr-mention-popover`, `lr-model-select`, `lr-prompt-queue`, `lr-source-picker`, `lr-voice-picker`
 - Transitive Lyra dependencies: `lr-button`, `lr-dialog`, `lr-document-preview`, `lr-document-viewer`, `lr-empty`, `lr-file-icon`, `lr-input`, `lr-menu`, `lr-menu-item`, `lr-pan-zoom`, `lr-textarea`
-- Standalone gzip: 120.8 KiB (123722 bytes; bundle SHA-256 `2f102e2c678358a11bdf396f0c86af6968703bd580cfe97904bc995934ce7245`)
+- Standalone gzip: 120.8 KiB (123725 bytes; bundle SHA-256 `c07cc83107097dab12f46580a85149eae453eb7dfd87ec867e02862f4d871dab`)
 
 </details>
 
