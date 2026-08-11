@@ -156,6 +156,24 @@ it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
+it('applies an initial public hiddenDatasets snapshot when it creates the chart', async () => {
+  const el = (await fixture(html`<lr-box-plot
+    .hiddenDatasets=${[1]}
+    .labels=${['A']}
+    .boxes=${[
+      { label: 'Visible', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+      { label: 'Hidden', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+    ]}
+  ></lr-box-plot>`)) as LyraBoxPlot;
+  await waitUntil(() => (el as unknown as { chart?: unknown }).chart != null);
+
+  const chart = (el as unknown as {
+    chart: { isDatasetVisible(index: number): boolean };
+  }).chart;
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(chart.isDatasetVisible(1)).to.be.false;
+});
+
 it('updates in place (same Chart instance) when only boxes/labels change', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];

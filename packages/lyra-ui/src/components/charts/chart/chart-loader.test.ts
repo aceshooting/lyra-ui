@@ -13,6 +13,8 @@ import {
 import {
   loadChartAndDataLabels,
   loadChartAndRegisterZoom,
+  loadChartAndZoom as loadChartFeatureAndZoom,
+  loadDataLabelsPlugin as loadFeatureDataLabelsPlugin,
 } from './chart-feature-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
@@ -474,5 +476,51 @@ describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', (
       expect(error!.message).to.contain('chartjs-plugin-datalabels');
       expect(error!.message).to.contain('id');
     }
+  });
+});
+
+describe('chart feature loader default imports', () => {
+  it('loads installed peers through each un-memoized public default path', async () => {
+    const combined = await loadChartFeatureAndZoom(undefined, undefined, true);
+    expect(combined === null).to.be.false;
+    expect(typeof combined?.mod.Chart).to.equal('function');
+    expect(typeof combined?.zoomPlugin?.id).to.equal('string');
+
+    const registered = await loadChartAndRegisterZoom(() => Promise.resolve(fakeChartModule()));
+    expect(registered.kind).to.equal('available');
+    if (registered.kind !== 'available') {
+      throw new Error('Expected the installed zoom peer to be available.');
+    }
+    expect(typeof registered.plugin.id).to.equal('string');
+
+    const standalone = await loadFeatureDataLabelsPlugin();
+    expect(typeof standalone?.id).to.equal('string');
+
+    const dataLabels = await loadChartAndDataLabels(() => Promise.resolve(fakeChartModule()));
+    expect(dataLabels.kind).to.equal('available');
+    if (dataLabels.kind !== 'available') {
+      throw new Error('Expected the installed data-labels peer to be available.');
+    }
+    expect(typeof dataLabels.plugin.id).to.equal('string');
+
+    let attemptedPeerImport = false;
+    const unavailable = await loadChartAndDataLabels(
+      () => Promise.resolve(null),
+      () => {
+        attemptedPeerImport = true;
+        return Promise.resolve({ id: 'unused' });
+      },
+    );
+    expect(unavailable.kind).to.equal('core-unavailable');
+    expect(attemptedPeerImport).to.be.false;
+  });
+
+  it('keeps the legacy data-labels adapter independent of another test module cache', async () => {
+    const { loadChartJsWithDataLabels: loadInFreshRealm } = await import(
+      './chart-feature-loader.js?coverage-legacy-data-labels',
+    );
+    const legacy = await loadInFreshRealm();
+    expect(typeof legacy?.mod.Chart).to.equal('function');
+    expect(typeof legacy?.plugin?.id).to.equal('string');
   });
 });
