@@ -107,8 +107,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * than the mixin's default selection lookup resolves.
  *
  * The transcript virtualizes through `<lr-virtual-list>` the same way `pdf-viewer.class.ts`
- * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props, and the active cue's
- * scroll-into-view comes for free from `activeId` rather than any custom follow logic.
+ * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props. Playback follows its
+ * active cue through `activeId`; search navigation reveals its active match through the list's
+ * `scrollToIndex()` API without seeking the media.
  * `[part="base"]` remains a named `role="region"` in every render branch, including an unsafe
  * initial source and a later transition into the visible error state.
  *
@@ -278,6 +279,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   });
   private lastTimeChangeAt = 0;
   private searchLocale = '';
+  private transcriptLocale = '';
+  private searchMatchIndices = new Set<number>();
+  private cueKeys: string[] = [];
+  private readonly cueTokens = new WeakMap<LyraAvCue, number>();
+  private nextCueToken = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private resizeWindow?: Window;
 
@@ -309,6 +315,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const locale = this.effectiveLocale;
+    let refreshTranscript = false;
+    if (changed.has('cues')) this.rebuildCueKeys();
+    if (this.transcriptLocale !== locale) {
+      this.transcriptLocale = locale;
+      refreshTranscript = true;
+    }
     if (this.hasUpdated && changed.has('src') && this.src && !safeMediaSrc(this.src)) {
       this.announceRenderError();
     }
@@ -327,10 +340,12 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     }
     if (
       this.searchQuery &&
-      (changed.has('cues') || this.searchLocale !== this.effectiveLocale)
+      (changed.has('cues') || this.searchLocale !== locale)
     ) {
       this.reconcileSearchMatches(changed.get('cues') as LyraAvCue[] | undefined);
+      refreshTranscript = true;
     }
+    if (refreshTranscript) this.refreshTranscriptRenderItem();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -536,12 +551,15 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emitTimeChange(true);
   }
 
-  /** Case-insensitive substring match over cue text and speaker. Resolves the match count. */
+  /** Case-insensitive substring match over cue text and speaker. Reveals the active matching
+   *  transcript row without changing media playback, then resolves the match count. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.reconcileSearchMatches();
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
+    this.refreshTranscriptRenderItem();
     this.emitSearchChange();
+    await this.revealActiveSearchMatch();
     return this.searchMatches.length;
   }
 
@@ -564,6 +582,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           return acc;
         }, [])
       : [];
+    this.searchMatchIndices = new Set(this.searchMatches);
     this.searchLocale = locale;
     if (!this.searchMatches.length) {
       this.activeSearchIndex = -1;
@@ -578,23 +597,27 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         : Math.min(Math.max(0, this.activeSearchIndex), this.searchMatches.length - 1);
   }
 
-  /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
-   *  active match moved, `false` when there are no matches -- the shape the shared
+  /** Advances to the next match, wrapping to the first after the last and revealing it. Resolves
+   *  `true` once the active match moved, `false` when there are no matches -- the shape the shared
    *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
    *  searchable component through one typed surface. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
+    this.refreshTranscriptRenderItem();
     this.emitSearchChange();
+    await this.revealActiveSearchMatch();
     return true;
   }
 
-  /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
-   *  active match moved, `false` when there are no matches. */
+  /** Moves to the previous match, wrapping to the last before the first and revealing it. Resolves
+   *  `true` once the active match moved, `false` when there are no matches. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.refreshTranscriptRenderItem();
     this.emitSearchChange();
+    await this.revealActiveSearchMatch();
     return true;
   }
 
@@ -602,7 +625,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchIndices = new Set();
     this.activeSearchIndex = -1;
+    this.refreshTranscriptRenderItem();
     this.emitSearchChange();
   }
 
@@ -612,6 +637,24 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       matchCount: this.searchMatches.length,
       activeIndex: this.activeSearchIndex,
     });
+  }
+
+  private async revealActiveSearchMatch(): Promise<void> {
+    await this.updateComplete;
+    const list = this.renderRoot.querySelector('lr-virtual-list') as
+      | (HTMLElement & {
+        updateComplete: Promise<boolean>;
+        scrollToIndex(
+          index: number,
+          options?: { align?: 'start' | 'end' | 'auto'; behavior?: ScrollBehavior },
+        ): void;
+      })
+      | null;
+    if (!list) return;
+    await list.updateComplete;
+    const index = this.searchMatches[this.activeSearchIndex];
+    if (index === undefined) return;
+    list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
   }
 
   private drawWaveform(): void {
@@ -744,13 +787,34 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return finiteRange(cue.end, start, start, max);
   }
 
+  private rebuildCueKeys(): void {
+    // Allocate every cue object an opaque token, even while its public id is unique. Otherwise,
+    // adding or removing another cue with the same id would switch the first cue between an id-only
+    // key and a duplicate key, remounting its virtual row. Repeating the exact same object twice
+    // has no separately-addressable identity in LyraAvCue, so its final occurrence suffix is
+    // necessarily positional.
+    const objectOccurrences = new Map<LyraAvCue, number>();
+    this.cueKeys = this.cues.map((cue) => {
+      const idToken = `${cue.id.length}:${cue.id}`;
+      let objectToken = this.cueTokens.get(cue);
+      if (objectToken === undefined) {
+        objectToken = ++this.nextCueToken;
+        this.cueTokens.set(cue, objectToken);
+      }
+      const occurrence = objectOccurrences.get(cue) ?? 0;
+      objectOccurrences.set(cue, occurrence + 1);
+      return `cue:${idToken}:${objectToken}:${occurrence}`;
+    });
+  }
+
+  private cueKey = (_cue: unknown, index: number): string => this.cueKeys[index] ?? `index:${index}`;
+
   private renderCue = (cue: unknown, index: number): TemplateResult => {
     const c = cue as LyraAvCue;
     const start = this.safeCueStart(c);
     const isActive = this.activeCueIndex === index;
-    const matchPosition = this.searchMatches.indexOf(index);
-    const isMatch = matchPosition !== -1;
-    const isActiveMatch = isMatch && matchPosition === this.activeSearchIndex;
+    const isMatch = this.searchMatchIndices.has(index);
+    const isActiveMatch = index === this.searchMatches[this.activeSearchIndex];
     const part = ['cue', isActive ? 'cue-current' : '', isMatch ? 'cue-match' : '', isActiveMatch ? 'cue-active-match' : '']
       .filter(Boolean)
       .join(' ');
@@ -767,6 +831,16 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       <span part="cue-text">${c.text}</span>
     </button>`;
   };
+
+  private transcriptRenderItem = this.renderCue;
+
+  private refreshTranscriptRenderItem(): void {
+    // `renderItem` is the declarative invalidation boundary for a virtual list whose input array
+    // itself did not change. Refresh it only for transcript-visible state (search or locale), not
+    // on every playback-time render; unlike `keyFunction`, virtual-list deliberately does not
+    // rebuild offsets when this callback changes.
+    this.transcriptRenderItem = (cue, index) => this.renderCue(cue, index);
+  }
 
   private renderTracks(): unknown {
     return this.tracks.map((t) => {
@@ -854,10 +928,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             exportparts="cue:cue, cue-current:cue-current, cue-match:cue-match, cue-active-match:cue-active-match, cue-time:cue-time, cue-speaker:cue-speaker, cue-text:cue-text"
             aria-label=${this.localize('avPlayerTranscript')}
             .items=${this.cues}
-            .renderItem=${this.renderCue}
-            .keyFunction=${(item: unknown, index: number) => `${(item as LyraAvCue).id}\u0000${index}`}
+            .renderItem=${this.transcriptRenderItem}
+            .keyFunction=${this.cueKey}
             .activeId=${this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
-              ? `${this.cues[this.activeCueIndex]!.id}\u0000${this.activeCueIndex}`
+              ? this.cueKey(this.cues[this.activeCueIndex], this.activeCueIndex)
               : ''}
           ></lr-virtual-list>`
         : nothing}

@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './av-player.js';
-import type { LyraAvCue } from './av-player.class.js';
+import type { LyraAvCue, LyraAvPlayer } from './av-player.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
@@ -26,6 +26,12 @@ const CUES: LyraAvCue[] = [
   { id: 'c3', start: 1.4, end: 2, text: 'Thanks for having me.', speaker: 'Guest' },
 ];
 const PEAKS = Array.from({ length: 120 }, (_v, i) => Math.abs(Math.sin(i / 6)) * 0.9 + 0.05);
+const SEARCH_CUES = Array.from({ length: 72 }, (_v, index): LyraAvCue => ({
+  id: `search-cue-${index}`,
+  start: index * 4,
+  text: index === 58 ? 'Needle: search result beyond the initial transcript viewport.' : `Transcript cue ${index + 1}.`,
+  speaker: index % 2 === 0 ? 'Host' : 'Guest',
+}));
 const AUDIO_SRC = '/fixtures/sample-video.mp4';
 const VIDEO_SRC = '/fixtures/sample-video.mp4';
 
@@ -67,6 +73,27 @@ export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px">
     <lr-av-player src=${AUDIO_SRC} mime-type="audio/mp4" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>
   </div>`,
+};
+
+export const SearchResultReveal: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A find-in-page search highlights and reveals the active cue even when it begins outside the rendered transcript window. Search navigation never seeks the audio/video playhead.',
+      },
+    },
+  },
+  render: () => html`<lr-av-player
+    src=${AUDIO_SRC}
+    mime-type="audio/mp4"
+    name="Long searchable transcript"
+    .cues=${SEARCH_CUES}
+  ></lr-av-player>`,
+  play: async ({ canvasElement }) => {
+    const player = canvasElement.querySelector('lr-av-player') as LyraAvPlayer | null;
+    if (player) await player.search('needle');
+  },
 };
 
 export const ThemedActiveStates: Story = {

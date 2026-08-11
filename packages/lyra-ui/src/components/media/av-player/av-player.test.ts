@@ -55,6 +55,26 @@ function cueRows(el: LyraAvPlayer): HTMLButtonElement[] {
   return [...(list?.shadowRoot?.querySelectorAll('[part~="cue"]') ?? [])] as HTMLButtonElement[];
 }
 
+type TranscriptList = HTMLElement & {
+  activeId: string | number | '';
+  keyFunction?: (item: unknown, index: number) => string | number;
+  renderItem: (item: unknown, index: number) => unknown;
+  renderedRows: HTMLElement[];
+  scrollToIndex(
+    index: number,
+    options?: { align?: 'start' | 'end' | 'auto'; behavior?: ScrollBehavior },
+  ): void;
+  updateComplete: Promise<boolean>;
+};
+
+function transcriptList(el: LyraAvPlayer): TranscriptList {
+  return el.shadowRoot!.querySelector('lr-virtual-list') as TranscriptList;
+}
+
+function renderedTranscriptRow(list: TranscriptList, index: number): HTMLElement | undefined {
+  return list.renderedRows.find((row) => row.dataset.rowIndex === String(index));
+}
+
 describe('defaults', () => {
   it('defaults to empty src/name, metadata preload, playbackRate 1, empty cues/peaks/tracks', async () => {
     const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
@@ -316,10 +336,113 @@ describe('cues and transcript', () => {
     Object.defineProperty(media, 'currentTime', { value: 5, writable: true, configurable: true });
     media.dispatchEvent(new Event('timeupdate'));
     await el.updateComplete;
+    const list = transcriptList(el);
+    await list.updateComplete;
     const rows = cueRows(el);
     expect(rows.length).to.equal(2);
     expect(rows.filter((row) => row.getAttribute('aria-current') === 'true').length).to.equal(1);
     expect(rows[1].getAttribute('aria-current')).to.equal('true');
+    const activeRows = list.renderedRows.filter((row) => row.getAttribute('aria-current') === 'true');
+    expect(activeRows.length).to.equal(1);
+    expect(activeRows[0]?.dataset.rowIndex).to.equal('1');
+    expect(list.activeId).to.equal(list.keyFunction?.(cues[1]!, 1));
+  });
+});
+
+describe('transcript virtualization', () => {
+  it('keeps cue keys and retained row identity stable across unrelated updates and insertion', async () => {
+    const first: LyraAvCue = { id: 'first', start: 0, text: 'First' };
+    const retained: LyraAvCue = { id: 'retained', start: 5, text: 'Retained' };
+    const el = (await fixture(html`
+      <lr-av-player src=${MP3_SRC} .cues=${[first, retained]}></lr-av-player>
+    `)) as LyraAvPlayer;
+    const list = transcriptList(el);
+    await list.updateComplete;
+    const originalKeyFunction = list.keyFunction;
+    if (!originalKeyFunction) throw new Error('transcript should provide a key function');
+    const originalRenderItem = list.renderItem;
+    const retainedKey = originalKeyFunction(retained, 1);
+    const originalRow = renderedTranscriptRow(list, 1);
+    expect(originalRow !== undefined).to.be.true;
+
+    el.playbackRate = 1.5;
+    await el.updateComplete;
+    await list.updateComplete;
+    expect(list.keyFunction === originalKeyFunction).to.be.true;
+    expect(list.renderItem === originalRenderItem).to.be.true;
+
+    el.cues = [{ id: 'inserted', start: 0, text: 'Inserted' }, first, retained];
+    await el.updateComplete;
+    await list.updateComplete;
+    expect(list.keyFunction === originalKeyFunction).to.be.true;
+    expect(list.keyFunction?.(retained, 2)).to.equal(retainedKey);
+    const retainedRow = renderedTranscriptRow(list, 2);
+    expect(retainedRow === originalRow).to.be.true;
+  });
+
+  it('keeps same-id cue identities stable across duplicate insertion, removal, and reordering', async () => {
+    const first: LyraAvCue = { id: 'duplicate', start: 0, text: 'First duplicate' };
+    const second: LyraAvCue = { id: 'duplicate', start: 5, text: 'Second duplicate' };
+    const el = (await fixture(html`
+      <lr-av-player src=${MP3_SRC} .cues=${[first]}></lr-av-player>
+    `)) as LyraAvPlayer;
+    const list = transcriptList(el);
+    await list.updateComplete;
+    const keyFunction = list.keyFunction;
+    if (!keyFunction) throw new Error('transcript should provide a key function');
+    const firstKey = keyFunction(first, 0);
+    const firstRow = renderedTranscriptRow(list, 0);
+    expect(firstRow !== undefined).to.be.true;
+
+    el.cues = [first, second];
+    await el.updateComplete;
+    await list.updateComplete;
+    const secondKey = keyFunction(second, 1);
+    expect(keyFunction(first, 0)).to.equal(firstKey);
+    expect(secondKey).to.not.equal(firstKey);
+    expect(renderedTranscriptRow(list, 0) === firstRow).to.be.true;
+
+    el.cues = [second, first];
+    await el.updateComplete;
+    await list.updateComplete;
+    expect(keyFunction(second, 0)).to.equal(secondKey);
+    expect(keyFunction(first, 1)).to.equal(firstKey);
+    expect(renderedTranscriptRow(list, 1) === firstRow).to.be.true;
+
+    el.cues = [first];
+    await el.updateComplete;
+    await list.updateComplete;
+    expect(keyFunction(first, 0)).to.equal(firstKey);
+    expect(renderedTranscriptRow(list, 0) === firstRow).to.be.true;
+  });
+
+  it('refreshes rendered transcript cues for search state and locale changes without replacing its key function', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    const list = transcriptList(el);
+    await list.updateComplete;
+    const keyFunction = list.keyFunction;
+    const initialRenderItem = list.renderItem;
+
+    await el.search('host');
+    await list.updateComplete;
+    expect(list.keyFunction === keyFunction).to.be.true;
+    expect(list.renderItem === initialRenderItem).to.be.false;
+    expect(cueRows(el)[0]?.hasAttribute('data-active-match')).to.be.true;
+
+    const searchedRenderItem = list.renderItem;
+    expect(await el.searchNext()).to.be.true;
+    await list.updateComplete;
+    expect(list.keyFunction === keyFunction).to.be.true;
+    expect(list.renderItem === searchedRenderItem).to.be.false;
+    expect(cueRows(el)[1]?.hasAttribute('data-active-match')).to.be.true;
+
+    const beforeLocaleRenderItem = list.renderItem;
+    el.lang = 'ar-EG';
+    await el.updateComplete;
+    await list.updateComplete;
+    expect(list.keyFunction === keyFunction).to.be.true;
+    expect(list.renderItem === beforeLocaleRenderItem).to.be.false;
+    expect(cueRows(el)[0]?.querySelector('[part="cue-time"]')?.textContent).to.equal('٠:٠٠');
   });
 });
 
@@ -328,6 +451,42 @@ describe('search', () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
     const count = await el.search('HOST');
     expect(count).to.equal(2);
+  });
+
+  it('reveals each active search result in the transcript without seeking playback', async () => {
+    const cues = Array.from({ length: 80 }, (_unused, index): LyraAvCue => ({
+      id: `cue-${index}`,
+      start: index,
+      text: index === 21 || index === 67 ? `Needle ${index}` : `Cue ${index}`,
+    }));
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>`)) as LyraAvPlayer;
+    const list = transcriptList(el);
+    await list.updateComplete;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'currentTime', { value: 12, writable: true, configurable: true });
+    const calls: Array<{ index: number; align?: string; behavior?: ScrollBehavior }> = [];
+    const originalScrollToIndex = list.scrollToIndex;
+    list.scrollToIndex = (index, options) => {
+      calls.push({ index, align: options?.align, behavior: options?.behavior });
+    };
+    try {
+      expect(await el.search('needle')).to.equal(2);
+      expect(calls.map((call) => call.index)).to.deep.equal([21]);
+      expect(calls[0]?.align).to.equal('auto');
+      expect(calls[0]?.behavior).to.equal('auto');
+      expect(media.currentTime).to.equal(12);
+
+      expect(await el.searchNext()).to.be.true;
+      expect(calls.map((call) => call.index)).to.deep.equal([21, 67]);
+      expect(await el.searchPrevious()).to.be.true;
+      expect(calls.map((call) => call.index)).to.deep.equal([21, 67, 21]);
+
+      expect(await el.search('not-present')).to.equal(0);
+      expect(calls.length).to.equal(3);
+      expect(media.currentTime).to.equal(12);
+    } finally {
+      list.scrollToIndex = originalScrollToIndex;
+    }
   });
 
   it('uses locale-aware case folding for Turkish cue searches', async () => {
