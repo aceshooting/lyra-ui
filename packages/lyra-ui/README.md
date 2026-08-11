@@ -1066,7 +1066,7 @@ API details.
 |-----------|---------|-------|
 | `<lr-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'|'png')` — needs `chart.js`, plus `chartjs-plugin-zoom` when `zoom` is enabled and `chartjs-plugin-datalabels` when `data-labels`/`stack-totals` is enabled |
 | `<lr-bar-chart>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-doughnut-chart>`, `<lr-scatter-chart>`, `<lr-bubble-chart>`, `<lr-radar-chart>`, `<lr-polar-area-chart>` | `wa-bar-chart` / `wa-line-chart` / `wa-pie-chart` / `wa-doughnut-chart` / `wa-scatter-chart` / `wa-bubble-chart` / `wa-radar-chart` / `wa-polar-area-chart` | Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>` |
-| `<lr-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
+| `<lr-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js` and `@sgratzl/chartjs-chart-boxplot` |
 | `<lr-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lr-chart>` |
 | `<lr-lite-chart>` | — (extra) | Dependency-free bar/line chart (plain SVG/DOM) with bounded `appendData()` streaming and `exportData('csv'|'svg')` — **no optional peer deps**, for projects that forbid a charting dependency outright |
 

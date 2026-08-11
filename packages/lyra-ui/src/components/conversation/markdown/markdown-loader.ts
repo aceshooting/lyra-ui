@@ -123,7 +123,7 @@ let resolvedDeps: MarkdownDeps | undefined;
 
 /**
  * Independently loads the optional peer dependencies `marked` (Markdown
- * parsing) and `dompurify` (HTML sanitizing), mirroring `chart-loader.ts`'s
+ * parsing) and `dompurify` (HTML sanitizing), mirroring `chart-feature-loader.ts`'s
  * `loadChartAndZoom()` shape for two independent optional peers. A partial
  * install — most usefully `marked` alone, for a consumer who has explicitly
  * set `sanitize="false"` and doesn't need `dompurify` at all — degrades to

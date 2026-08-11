@@ -4,7 +4,7 @@ import './chart.js';
 import './doughnut-chart.js';
 import { seriesPalette, type LyraChart, type Series } from './chart.js';
 import { styles } from './chart.styles.js';
-import { loadChartAndZoom } from './chart-loader.js';
+import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 

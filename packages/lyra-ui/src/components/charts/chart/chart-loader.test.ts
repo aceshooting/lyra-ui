@@ -1,12 +1,11 @@
 import { expect } from '@open-wc/testing';
+import { loadChartJs, loadChartModule, type ChartJsModule } from './chart-loader.js';
 import {
-  loadChartJs,
   loadChartAndZoom,
   loadChartJsWithZoom,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
-  type ChartJsModule,
-} from './chart-loader.js';
+} from './chart-feature-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
   'LineController',
@@ -68,6 +67,25 @@ it('caches the module — a second call returns the same promise result', async 
   const a = await loadChartJs();
   const b = await loadChartJs();
   expect(a).to.equal(b);
+});
+
+describe('loadChartModule (independent Chart.js core loading)', () => {
+  it('normalizes a valid Chart.js default export', async () => {
+    const fallback = fakeChartModule();
+    expect(
+      await loadChartModule(() => Promise.resolve({ default: fallback } as never)),
+    ).to.equal(fallback);
+  });
+
+  it('fails closed and logs the real caught error when Chart.js cannot load', async () => {
+    const chartError = new Error('specific chart.js core failure reason');
+    const { result, warnings } = await captureWarnings(() =>
+      loadChartModule(() => Promise.reject(chartError)),
+    );
+    expect(result).to.equal(null);
+    expect(warnings.flat()).to.contain(chartError);
+    expect(warnings.flat().join(' ')).to.contain('pnpm add chart.js');
+  });
 });
 
 describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => {

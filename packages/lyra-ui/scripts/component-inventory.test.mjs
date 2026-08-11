@@ -22,6 +22,7 @@ import {
   assertAccessibilityProfilesReferenced,
   accessibilityProfileCatalog,
   migrationParityMetadata,
+  optionalPeersForComponent,
   reviewedAccessibilityMetadata,
   reviewedMigrationDecision,
   reviewedMappingNormalizations,
@@ -35,6 +36,7 @@ import cemConfig, {
   EVENT_RUNTIME_CONTRACTS,
   INHERITED_PUBLIC_MEMBER_CONTRACTS,
 } from '../custom-elements-manifest.config.js';
+import { htmlDataValues, readTypeAliases, webTypesValue } from './editor-type-values.mjs';
 import { generateManifest } from './generate-manifest.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { sourceEventTypeContracts } from './check-event-contracts.mjs';
@@ -602,7 +604,7 @@ test('the CEM default-value projection keeps the attribute public without publis
   }
 });
 
-test('the CEM chart projection reports each runtime-locked subclass type default', async () => {
+test('the CEM chart projection reports each runtime-locked subclass literal type contract', async () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-locked-chart-type-defaults');
   assert.ok(plugin?.packageLinkPhase, 'the locked chart type projection plugin is installed');
 
@@ -621,8 +623,14 @@ test('the CEM chart projection reports each runtime-locked subclass type default
     name: tagName,
     tagName,
     customElement: true,
-    members: [{ kind: 'field', name: 'type', default: "'bar'", inheritedFrom: { name: 'LyraChart' } }],
-    attributes: [{ name: 'type', fieldName: 'type', default: "'bar'" }],
+    members: [{
+      kind: 'field',
+      name: 'type',
+      type: { text: 'LyraChartType' },
+      default: "'bar'",
+      inheritedFrom: { name: 'LyraChart' },
+    }],
+    attributes: [{ name: 'type', fieldName: 'type', type: { text: 'LyraChartType' }, default: "'bar'" }],
   });
   const synthetic = {
     modules: [
@@ -638,15 +646,24 @@ test('the CEM chart projection reports each runtime-locked subclass type default
   };
 
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
+  const aliases = readTypeAliases(path.join(packageDir, 'src'));
   for (const [tagName, type] of lockedTypes) {
     const projected = synthetic.modules[0].declarations.find((candidate) => candidate.tagName === tagName);
-    assert.equal(projected.members.find(({ name }) => name === 'type').default, `'${type}'`, `${tagName} member`);
-    assert.equal(projected.attributes.find(({ name }) => name === 'type').default, `'${type}'`, `${tagName} attribute`);
+    const member = projected.members.find(({ name }) => name === 'type');
+    const attribute = projected.attributes.find(({ name }) => name === 'type');
+    assert.equal(member.default, `'${type}'`, `${tagName} member default`);
+    assert.equal(member.type.text, `'${type}'`, `${tagName} member type`);
+    assert.equal(attribute.default, `'${type}'`, `${tagName} attribute default`);
+    assert.equal(attribute.type.text, `'${type}'`, `${tagName} attribute type`);
+    assert.deepEqual(htmlDataValues(attribute.type.text, aliases), [{ name: type }], `${tagName} HTML editor value`);
+    assert.deepEqual(webTypesValue(attribute.type.text, aliases), { type: [`'${type}'`] }, `${tagName} web-types value`);
   }
   for (const tagName of ['lr-chart', 'lr-lite-chart']) {
     const untouched = synthetic.modules[0].declarations.find((candidate) => candidate.tagName === tagName);
     assert.equal(untouched.members.find(({ name }) => name === 'type').default, "'bar'");
+    assert.equal(untouched.members.find(({ name }) => name === 'type').type.text, 'LyraChartType');
     assert.equal(untouched.attributes.find(({ name }) => name === 'type').default, "'bar'");
+    assert.equal(untouched.attributes.find(({ name }) => name === 'type').type.text, 'LyraChartType');
   }
 
   const once = structuredClone(synthetic);
@@ -658,9 +675,29 @@ test('the CEM chart projection reports each runtime-locked subclass type default
     const projected = liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
       .find((candidate) => candidate.tagName === tagName);
-    assert.equal(projected.members.find(({ name }) => name === 'type').default, `'${type}'`, `${tagName} live member`);
-    assert.equal(projected.attributes.find(({ name }) => name === 'type').default, `'${type}'`, `${tagName} live attribute`);
+    const member = projected.members.find(({ name }) => name === 'type');
+    const attribute = projected.attributes.find(({ name }) => name === 'type');
+    assert.equal(member.default, `'${type}'`, `${tagName} live member default`);
+    assert.equal(member.type.text, `'${type}'`, `${tagName} live member type`);
+    assert.equal(attribute.default, `'${type}'`, `${tagName} live attribute default`);
+    assert.equal(attribute.type.text, `'${type}'`, `${tagName} live attribute type`);
   }
+});
+
+test('chart optional-peer attribution follows only reachable loader capabilities', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) => optionalPeersForComponent({ registrationModule }, packageJson);
+
+  assert.deepEqual(
+    peersFor('src/components/charts/chart/box-plot.ts'),
+    ['@sgratzl/chartjs-chart-boxplot', 'chart.js'],
+    'box plots load Chart.js core and their box-plot controller, not unrelated chart features',
+  );
+  assert.deepEqual(
+    peersFor('src/components/charts/chart/chart.ts'),
+    ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    'the configurable Chart.js wrapper retains its reachable feature peers',
+  );
 });
 
 test('the CEM accessor projection publishes only reviewed runtime defaults and reflection', () => {
@@ -2914,6 +2951,26 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
     hasTypeRule('wa-chart', 'attribute', 'type', 'ChartType', 'LyraChartType'),
     'the pinned Chart.js registry alias review is limited to the mirrored chart tags',
   );
+  for (const [upstreamTag, type] of [
+    ['wa-bar-chart', 'bar'],
+    ['wa-bubble-chart', 'bubble'],
+    ['wa-doughnut-chart', 'doughnut'],
+    ['wa-line-chart', 'line'],
+    ['wa-pie-chart', 'pie'],
+    ['wa-polar-area-chart', 'polarArea'],
+    ['wa-radar-chart', 'radar'],
+    ['wa-scatter-chart', 'scatter'],
+  ]) {
+    assert.ok(
+      hasTypeRule(upstreamTag, 'attribute', 'type', 'ChartType', `'${type}'`),
+      `${upstreamTag} maps Chart.js's controller union to its runtime-locked literal`,
+    );
+    assert.equal(
+      hasTypeRule(upstreamTag, 'attribute', 'type', 'ChartType', 'LyraChartType'),
+      false,
+      `${upstreamTag} must not widen a locked chart type back to the full union`,
+    );
+  }
   assert.ok(
     hasTypeRule(
       'wa-chart',

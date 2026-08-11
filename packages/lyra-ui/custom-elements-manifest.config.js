@@ -790,8 +790,8 @@ export default {
       // Typed chart subclasses lock their runtime `type` accessor through `lockChartType()` rather
       // than by shadowing LyraChart's reactive field. Inheritance therefore gives CEM the base
       // default (`bar`) for every subclass even though both property reads and the reflected
-      // attribute begin at the locked subtype. Correct only those inherited defaults here; the
-      // source stays on the single shared implementation and the manifest reports runtime truth.
+      // attribute begin at the locked subtype. Project the locked literal type and default here;
+      // the source stays on the single shared implementation and the manifest reports runtime truth.
       packageLinkPhase({ customElementsManifest }) {
         const LOCKED_TYPES = new Map([
           ['lr-bar-chart', 'bar'],
@@ -817,12 +817,15 @@ export default {
                 `${declaration.tagName}: locked chart projection requires inherited type member and attribute metadata`,
               );
             }
-            member.default = `'${lockedType}'`;
+            const literalType = `'${lockedType}'`;
+            member.type = { text: literalType };
+            member.default = literalType;
             // CEM labels syntax-level subclass overrides as inherited. This entry is now a
             // reviewed runtime projection for the locked subclass, so retain it during compacting
             // as the subclass's own effective default rather than falling back to LyraChart's.
             delete member.inheritedFrom;
-            attribute.default = `'${lockedType}'`;
+            attribute.type = { text: literalType };
+            attribute.default = literalType;
             delete attribute.inheritedFrom;
           }
         }

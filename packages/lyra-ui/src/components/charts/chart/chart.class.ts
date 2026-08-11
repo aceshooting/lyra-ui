@@ -7,13 +7,12 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
+import { loadChartJs, type ChartJsModule } from './chart-loader.js';
 import {
-  loadChartJs,
   loadChartJsWithZoom,
   loadChartJsWithDataLabels,
-  type ChartJsModule,
   type DataLabelsPlugin,
-} from './chart-loader.js';
+} from './chart-feature-loader.js';
 import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';

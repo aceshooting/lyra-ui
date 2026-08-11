@@ -80,7 +80,7 @@ export function rootRegistrationMetadata(previous, optionalPeers, tag = previous
   return { rootIncluded: false, rootExclusion: 'unreviewed' };
 }
 
-function optionalPeersForComponent(component, packageJson) {
+export function optionalPeersForComponent(component, packageJson) {
   const peers = Object.keys(packageJson.peerDependencies ?? {}).filter(
     (peer) => packageJson.peerDependenciesMeta?.[peer]?.optional === true,
   );
@@ -3301,19 +3301,20 @@ const NULLABLE_STRING_ATTRIBUTE_TYPE_EQUIVALENCE_MEMBERS = new Map([
 ]);
 
 // Chart.js 4.5.1's `ChartType = keyof ChartTypeRegistry` is the same eight built-in controller
-// names exposed by `LyraChartType`. Keep the nine mirrored chart tags explicit so a new chart
-// family or dependency type never inherits this review accidentally.
-const CHART_TYPE_EQUIVALENCE_TAGS = [
-  'wa-bar-chart',
-  'wa-bubble-chart',
-  'wa-chart',
-  'wa-doughnut-chart',
-  'wa-line-chart',
-  'wa-pie-chart',
-  'wa-polar-area-chart',
-  'wa-radar-chart',
-  'wa-scatter-chart',
-];
+// names exposed by `LyraChartType`. The generic wrapper retains that full union while each typed
+// wrapper exposes the literal its runtime accessor locks. Keep every mirrored tag explicit so a
+// new chart family or dependency type never inherits this review accidentally.
+const CHART_TYPE_EQUIVALENCE_TARGETS = new Map([
+  ['wa-bar-chart', "'bar'"],
+  ['wa-bubble-chart', "'bubble'"],
+  ['wa-chart', 'LyraChartType'],
+  ['wa-doughnut-chart', "'doughnut'"],
+  ['wa-line-chart', "'line'"],
+  ['wa-pie-chart', "'pie'"],
+  ['wa-polar-area-chart', "'polarArea'"],
+  ['wa-radar-chart', "'radar'"],
+  ['wa-scatter-chart', "'scatter'"],
+]);
 
 function reviewedTypeEquivalences(upstreamTag) {
   const groups = [
@@ -3328,8 +3329,9 @@ function reviewedTypeEquivalences(upstreamTag) {
   if (nullableStringMembers) {
     groups.push(['attribute', nullableStringMembers, 'string | null', 'string']);
   }
-  if (CHART_TYPE_EQUIVALENCE_TAGS.includes(upstreamTag)) {
-    groups.push(['attribute', ['type'], 'ChartType', 'LyraChartType']);
+  const chartTypeTarget = CHART_TYPE_EQUIVALENCE_TARGETS.get(upstreamTag);
+  if (chartTypeTarget) {
+    groups.push(['attribute', ['type'], 'ChartType', chartTypeTarget]);
   }
   return groups.flatMap(
     ([memberKind, members, upstream, target]) =>
