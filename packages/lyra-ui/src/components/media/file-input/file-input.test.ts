@@ -2041,6 +2041,43 @@ it('caps a folder walk before accepting a partial drop or reading another direct
   expect(el.files.map((file) => file.name)).to.deep.equal(['kept.csv']);
 });
 
+it('caps a root folder list before opening any folder reader or accepting a partial drop', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const prior = makeFile('kept.csv', 'text/csv');
+  el.files = [prior];
+  await el.updateComplete;
+
+  let readerCalls = 0;
+  let emissions = 0;
+  el.addEventListener('lr-files', () => emissions++);
+  const folder = {
+    isDirectory: true,
+    isFile: false,
+    name: 'root-folder',
+    createReader: () => {
+      readerCalls++;
+      return { readEntries: (success: (entries: unknown[]) => void) => success([]) };
+    },
+  };
+  const transfer = {
+    files: [] as unknown as FileList,
+    items: Array.from({ length: 10_001 }, () => ({
+      kind: 'file',
+      webkitGetAsEntry: () => folder,
+    })),
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  dropzone.dispatchEvent(event);
+  await Promise.resolve();
+
+  expect(event.defaultPrevented).to.be.true;
+  expect(readerCalls).to.equal(0);
+  expect(emissions).to.equal(0);
+  expect(el.files.map((file) => file.name)).to.deep.equal(['kept.csv']);
+});
+
 it('tolerates a drop event with no dataTransfer at all', async () => {
   const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
   const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
@@ -2096,6 +2133,56 @@ it('discards a dropped-folder resolution that arrives after the host became disa
   expect(fired).to.be.false;
   expect(readCalls).to.equal(1);
   expect(el.files).to.deep.equal([]);
+});
+
+it('discards a folder file that resolves after the host becomes disabled', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const nested = makeFile('late.csv', 'text/csv');
+  let resolveFile: ((file: File) => void) | undefined;
+  let readCalls = 0;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: 'folder',
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        readCalls++;
+        if (readCalls === 1) {
+          success([
+            {
+              isDirectory: false,
+              isFile: true,
+              name: nested.name,
+              file: (successFile: (file: File) => void) => {
+                resolveFile = successFile;
+              },
+            },
+          ]);
+          return;
+        }
+        success([]);
+      },
+    }),
+  };
+  const transfer = {
+    files: [] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  let emissions = 0;
+  el.addEventListener('lr-files', () => emissions++);
+  dropzone.dispatchEvent(event);
+  await waitUntil(() => resolveFile !== undefined, 'the folder file reader was never called', { timeout: 2000 });
+
+  el.disabled = true;
+  resolveFile!(nested);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(event.defaultPrevented).to.be.true;
+  expect(emissions).to.equal(0);
+  expect(el.files.length).to.equal(0);
 });
 
 it('falls back to globalThis.File for a folder-rejection placeholder when its owner realm has no File constructor', async () => {

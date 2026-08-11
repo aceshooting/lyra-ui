@@ -102,6 +102,26 @@ it('renders a free-text input when catalog is empty/undefined or allow-custom is
   expect(input(el2) != null).to.equal(true);
 });
 
+it('keeps focus and pristine invalid semantics through live mode changes', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker required .catalog=${CATALOG}></lr-voice-picker>`
+  )) as LyraVoicePicker;
+  trigger(el).focus();
+  expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+
+  el.allowCustom = true;
+  await el.updateComplete;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+  expect(input(el).getAttribute('aria-invalid')).to.equal('false');
+
+  el.allowCustom = false;
+  await el.updateComplete;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+  expect(trigger(el).getAttribute('aria-invalid')).to.equal('false');
+});
+
 it('keeps both picker modes inside an exact 320px RTL allocation with long unbroken content', async () => {
   const long = 'VoiceIdentifierWithoutNaturalBreaks'.repeat(12);
   const catalog = [{ id: long, label: long, language: long, description: long }];
@@ -332,6 +352,28 @@ it('selecting a closed-dropdown option commits value and emits lr-change with in
   const ev = await changePromise;
   expect(ev.detail).to.deep.equal({ value: 'verse', inCatalog: true });
   expect(el.value).to.equal('verse');
+});
+
+it('emits native input/change events after adoption into a document without a window', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  const detachedDocument = document.implementation.createHTMLDocument('detached');
+  detachedDocument.body.append(detachedDocument.adoptNode(el));
+  try {
+    expect(el.ownerDocument === detachedDocument).to.equal(true);
+    expect(detachedDocument.defaultView).to.equal(null);
+    const events: Event[] = [];
+    el.addEventListener('input', (event) => events.push(event));
+    el.addEventListener('change', (event) => events.push(event));
+
+    const changed = oneEvent(el, 'lr-change');
+    rows(el)[0]!.click();
+    await changed;
+
+    expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+    expect(events.every((event) => event.constructor === Event && event.bubbles && event.composed)).to.be.true;
+  } finally {
+    el.remove();
+  }
 });
 
 it('free-text filtering also matches language and description', async () => {
@@ -752,6 +794,20 @@ it('the name setter falls back to empty string for a nullish assignment and clea
   expect(el.hasAttribute('name')).to.be.false;
 });
 
+it('normalizes a nullish defaultValue write and clears the reflected default for a clean control', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker value="alloy" .catalog=${CATALOG}></lr-voice-picker>`
+  )) as LyraVoicePicker;
+  await el.updateComplete;
+
+  (el as unknown as { defaultValue: string | null }).defaultValue = null;
+  await el.updateComplete;
+
+  expect(el.defaultValue).to.equal('');
+  expect(el.value).to.equal('');
+  expect(el.hasAttribute('value')).to.be.false;
+});
+
 // -- disabled setter / effectiveDisabled guards -----------------------------
 
 it('the disabled setter toggles the attribute and closes an open dropdown', async () => {
@@ -960,6 +1016,32 @@ it("previewCandidateId (and the trigger's aria-activedescendant) tracks the high
   );
   await el.updateComplete;
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview verse');
+});
+
+it('uses the committed voice as the preview candidate when keyboard navigation has no matching row', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker allow-custom .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
+  )) as LyraVoicePicker;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'no matching voice';
+  inp.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  expect(rows(el).length).to.equal(0);
+
+  const navigation = new KeyboardEvent('keydown', {
+    key: 'ArrowUp',
+    bubbles: true,
+    cancelable: true,
+  });
+  inp.dispatchEvent(navigation);
+  await el.updateComplete;
+  expect(navigation.defaultPrevented).to.be.true;
+  expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview Aria');
+
+  const requested = oneEvent(el, 'lr-preview-request');
+  previewButton(el).click();
+  expect((await requested).detail.voiceId).to.equal('aria');
 });
 
 it('labelFor falls back to the raw id when there is no catalog to look up a label from', async () => {
@@ -1519,6 +1601,21 @@ it('a pointerdown outside the host closes an open listbox, while one inside it d
   expect(el.open).to.be.false;
 });
 
+it('keeps outside dismissal working after an open catalog refresh', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.catalog = ['alloy'];
+  await el.updateComplete;
+  expect(rows(el).length).to.equal(1);
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
 it('mousedown on the combobox shell focuses the input without letting the shell take selection', async () => {
   const el = (await fixture(
     html`<lr-voice-picker .catalog=${CATALOG} allow-custom></lr-voice-picker>`
@@ -1711,6 +1808,18 @@ describe('validity custom states', () => {
 });
 
 describe('setCustomValidity()', () => {
+  it('treats a nullish custom-validity message as a request to clear it', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker label="Voice" .catalog=${CATALOG}></lr-voice-picker>`
+    )) as LyraVoicePicker;
+    el.setCustomValidity('Rejected by the server.');
+    expect(el.validity.customError).to.be.true;
+
+    (el as unknown as { setCustomValidity(message: string | null | undefined): void }).setCustomValidity(undefined);
+    expect(el.validity.customError).to.be.false;
+    expect(el.validationMessage).to.equal('');
+  });
+
   it('blocks form submission with a consumer-supplied error, and reports it as validationMessage', async () => {
     const form = await fixture<HTMLFormElement>(
       html`<form>
