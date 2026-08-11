@@ -191,7 +191,12 @@ tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed
 
 **Themeable custom properties:** `--lr-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
-`font-size`, and the inline SVG renders at `1em`); plus shared tokens `--lr-space-s`,
+`font-size`, and the inline SVG renders at `1em`).
+`--lr-playback-play-button-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
+the pressed play/pause background; and `--lr-playback-play-button-active-border-color` (default
+`var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
+the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider
 dimming at `length <= 1`), `--lr-focus-ring-*`.
@@ -970,7 +975,14 @@ below).
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
-the `max-height` attribute instead of this property directly). Plus shared tokens
+the `max-height` attribute instead of this property directly).
+`--lr-media-card-active-border-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+and `--lr-media-card-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+independently retint only a pressed image/file action. Both are inline `var()` fallbacks in the
+pressed state, so values on a chat or attachment-list ancestor inherit into every card rather than
+being shadowed by host defaults. Plus shared tokens
 `--lr-space-xs`/`-s`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`/`-text-quiet`,
 `--lr-color-brand` (hover border), `--lr-radius`, `--lr-icon-button-size` (video's `open-button`
 sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
@@ -1609,7 +1621,13 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+carries. `--lr-image-viewer-highlight-active-border-width` (default
+`var(--lr-border-width-thick)`) controls the active highlight border width;
+`--lr-image-viewer-highlight-active-outline-width` (default `var(--lr-focus-ring-width)`) and
+`--lr-image-viewer-highlight-active-outline-offset` (default `var(--lr-focus-ring-offset)`) control
+its outline geometry. Like the existing active color hook, each is an inline `var()` fallback and
+can be set on the viewer or any ancestor. Highlight tone styling is exposed through
+`--lr-image-viewer-highlight-border`,
 `--lr-image-viewer-highlight-bg`, and the tone-specific
 `--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
 `--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
