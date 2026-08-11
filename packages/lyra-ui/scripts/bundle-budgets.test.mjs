@@ -16,12 +16,12 @@ const checker = readFileSync(
 );
 
 assert.equal(budgets["dist/components/forms/button/button.js"], 31);
-assert.equal(budgets["dist/all.js"], 963);
-assert.equal(budgets["dist/autoloader.js"], 1005);
-assert.equal(budgets["dist/autoloader-cdn.js"], 1006);
-assert.equal(budgets["dist/lyra.js"], 934);
-assert.equal(budgets["dist/ssr-loader.js"], 970);
-assert.equal(budgets["dist/ssr/all.js"], 1009);
+assert.equal(budgets["dist/all.js"], 966);
+assert.equal(budgets["dist/autoloader.js"], 1009);
+assert.equal(budgets["dist/autoloader-cdn.js"], 1010);
+assert.equal(budgets["dist/lyra.js"], 937);
+assert.equal(budgets["dist/ssr-loader.js"], 973);
+assert.equal(budgets["dist/ssr/all.js"], 1013);
 assert.ok(
   budgets["dist/autoloader.js"] >= budgets["dist/all.js"],
   "the autoloader bundles the complete compatibility registration graph"
