@@ -860,4 +860,127 @@ describe('ThemeWatcher', () => {
       disconnect();
     }
   });
+
+  it('keeps explicit invalidation working when a realm cannot store its shared hub', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as Window;
+    // An embedder may have made this shared registry slot immutable before Lyra loads. The
+    // public invalidation API must still find the fallback hub created for that realm.
+    Object.defineProperty(frameWindow, THEME_HUB_KEY, {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: null,
+    });
+    const watched = await makeHost(frameDocument);
+    let calls = 0;
+    new ThemeWatcher(watched.host, () => calls++);
+    try {
+      watched.connect();
+      invalidateLyraTheme(frameDocument);
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      watched.disconnect();
+      iframe.remove();
+    }
+  });
+
+  it('keeps DOM theme observation available when a realm locks CSSOM descriptors', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as Window & typeof globalThis;
+    const locks = [
+      [frameWindow.CSSStyleSheet.prototype, 'insertRule'],
+      [frameWindow.CSSStyleDeclaration.prototype, 'setProperty'],
+    ] as const;
+    for (const [target, key] of locks) {
+      const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
+      Object.defineProperty(target, key, { ...descriptor, configurable: false, writable: false });
+    }
+    const adoptedStyleSheets = Object.getOwnPropertyDescriptor(
+      frameWindow.Document.prototype,
+      'adoptedStyleSheets',
+    );
+    if (adoptedStyleSheets?.configurable) {
+      Object.defineProperty(frameWindow.Document.prototype, 'adoptedStyleSheets', {
+        ...adoptedStyleSheets,
+        configurable: false,
+      });
+    }
+
+    const watched = await makeHost(frameDocument);
+    let calls = 0;
+    new ThemeWatcher(watched.host, () => calls++);
+    try {
+      watched.connect();
+      watched.host.setAttribute('data-theme', 'locked-realm');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      watched.disconnect();
+      // The locked descriptors belong only to this disposable iframe realm.
+      iframe.remove();
+    }
+  });
+
+  it('preserves a later CSSOM integration while its watcher disconnects', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const stylesheetPrototype = (
+      iframe.contentWindow as Window & typeof globalThis
+    ).CSSStyleSheet.prototype;
+    const original = Object.getOwnPropertyDescriptor(stylesheetPrototype, 'insertRule')!;
+    const watched = await makeHost(frameDocument);
+    new ThemeWatcher(watched.host, () => {});
+    const replacement = () => 0;
+    try {
+      watched.connect();
+      const patched = Object.getOwnPropertyDescriptor(stylesheetPrototype, 'insertRule')!;
+      Object.defineProperty(stylesheetPrototype, 'insertRule', { ...patched, value: replacement });
+      watched.disconnect();
+      expect(Object.getOwnPropertyDescriptor(stylesheetPrototype, 'insertRule')?.value).to.equal(replacement);
+    } finally {
+      watched.disconnect();
+      Object.defineProperty(stylesheetPrototype, 'insertRule', original);
+      iframe.remove();
+    }
+  });
+
+  it('reacts to a browser media-query change event', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const events = new Map<string, EventTarget>();
+    window.matchMedia = ((query: string) => {
+      const target = new EventTarget();
+      events.set(query, target);
+      return {
+        media: query,
+        matches: false,
+        onchange: null,
+        addEventListener: target.addEventListener.bind(target),
+        removeEventListener: target.removeEventListener.bind(target),
+        addListener() {},
+        removeListener() {},
+        dispatchEvent: target.dispatchEvent.bind(target),
+      } as unknown as MediaQueryList;
+    }) as typeof matchMedia;
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      events.get('(prefers-color-scheme: dark)')?.dispatchEvent(new Event('change'));
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+
+      disconnect();
+      events.get('(prefers-color-scheme: dark)')?.dispatchEvent(new Event('change'));
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      disconnect();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });
