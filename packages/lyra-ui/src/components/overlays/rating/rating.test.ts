@@ -345,6 +345,20 @@ it('keeps the slider base at least 40px in both axes when max is zero or one', a
   }
 });
 
+it('keeps a zero-max rating keyboard-safe and inert', async () => {
+  const el = (await fixture(html`<lr-rating max="0" value="0"></lr-rating>`)) as LyraRating;
+  const base = baseOf(el);
+  const changes: string[] = [];
+  el.addEventListener('change', () => changes.push('change'));
+  el.addEventListener('lr-change', () => changes.push('lr-change'));
+
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+
+  expect(el.value).to.equal(0);
+  expect(changes).to.deep.equal([]);
+});
+
 // -- helpers --------------------------------------------------------------
 
 const baseOf = (el: LyraRating): HTMLElement =>
@@ -668,6 +682,22 @@ it('separates the live numeric value from the reflected current default', async 
   expect(el.value, 'after reset the live value is pristine again').to.equal(1);
 });
 
+it('treats a removed value attribute as the zero reset default without overwriting a dirty score', async () => {
+  const form = (await fixture(html`
+    <form><lr-rating name="score" value="2"></lr-rating></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-rating') as LyraRating;
+
+  el.value = 4;
+  el.removeAttribute('value');
+  await el.updateComplete;
+  expect(el.defaultValue).to.equal(0);
+  expect(el.value, 'a dirty live score is preserved until reset').to.equal(4);
+
+  form.reset();
+  expect(el.value).to.equal(0);
+});
+
 it('accepts default-value as a reset-default alias without overwriting a dirty live score', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form><lr-rating name="score" default-value="2"></lr-rating></form>
@@ -871,6 +901,36 @@ it('ends an interrupted hover on pointercancel and on disconnect', async () => {
     (starsOf(el)[0]!.querySelector('[part="star-fill"]') as HTMLElement).style.inlineSize,
     'reconnect must not resume a stale hover preview',
   ).to.equal('0%');
+});
+
+it('recovers a hover after a missed enter without inventing gap updates or duplicate ends', async () => {
+  const el = (await fixture(html`<lr-rating max="5" value="1"></lr-rating>`)) as LyraRating;
+  const phases: string[] = [];
+  const values: number[] = [];
+  el.addEventListener('lr-hover', (event) => {
+    const detail = (event as CustomEvent<{ phase: string; value: number }>).detail;
+    phases.push(detail.phase);
+    values.push(detail.value);
+  });
+  const star = starsOf(el)[2]!;
+  pinStar(star);
+
+  // The control's 40px hit area can receive a move outside an actual symbol.
+  pointer('pointermove', baseOf(el), 120);
+  await el.updateComplete;
+  expect(phases).to.deep.equal([]);
+
+  // A re-render or neighbouring gesture can make the first observed event a move, not enter.
+  pointer('pointermove', star, 120);
+  await el.updateComplete;
+  expect(phases).to.deep.equal(['start']);
+  expect(values).to.deep.equal([3]);
+
+  pointer('pointerleave', baseOf(el), 120);
+  pointer('pointerleave', baseOf(el), 120);
+  await el.updateComplete;
+  expect(phases).to.deep.equal(['start', 'end']);
+  expect(values).to.deep.equal([3, 3]);
 });
 
 it('stays silent and unpreviewed while readonly or disabled', async () => {

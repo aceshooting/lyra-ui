@@ -277,10 +277,25 @@ it('forwards the native draft selection and range-editing APIs without emitting 
   expect(inputs, 'programmatic range editing stays event-silent').to.equal(0);
   expect(changes).to.equal(0);
 
+  // The native optional-argument overload uses the current selection. Its null-capable
+  // selection properties also preserve the native input's safe zero/none fallbacks.
+  el.selectionStart = null;
+  el.selectionEnd = null;
+  el.selectionDirection = null;
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(0);
+  expect(el.selectionDirection).to.equal('none');
+
+  el.setSelectionRange(0, 5);
+  el.setRangeText('delta');
+  expect(input.value).to.equal('delta beta');
+  expect(inputs, 'the optional range-edit overload also stays event-silent').to.equal(0);
+  expect(changes).to.equal(0);
+
   press(input, 'Enter');
   await el.updateComplete;
   expect(el.value, 'the next draft commit must use the range-edited native value').to.deep.equal([
-    'gamma beta',
+    'delta beta',
   ]);
 });
 
@@ -845,6 +860,23 @@ it('separates its live token array from the reflected JSON current default', asy
   el.defaultValue = ['pristine'];
   expect(el.getAttribute('value')).to.equal('["pristine"]');
   expect(el.value, 'after reset the live value is pristine again').to.deep.equal(['pristine']);
+});
+
+it('treats malformed JSON reset defaults as an empty token list', async () => {
+  for (const serialized of ['not JSON', '["alpha", 2]']) {
+    const form = (await fixture(html`
+      <form><lr-token-input name="tags" value=${serialized}></lr-token-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+
+    expect(el.defaultValue, serialized).to.deep.equal([]);
+    expect(el.value, serialized).to.deep.equal([]);
+
+    el.value = ['draft'];
+    form.reset();
+    await el.updateComplete;
+    expect(el.value, `form reset after ${serialized}`).to.deep.equal([]);
+  }
 });
 
 it('updates validity synchronously when required changes, with no await', async () => {

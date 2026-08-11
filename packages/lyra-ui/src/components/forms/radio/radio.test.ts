@@ -245,6 +245,21 @@ it('accepts appearance="button" on lr-radio and exports both WA and Shoelace par
   await expect(el).to.be.accessible();
 });
 
+it('renders disabled and required button-radio states on its interactive surface', async () => {
+  const el = (await fixture(html`
+    <lr-radio appearance="button" disabled required>Pro</lr-radio>
+  `)) as LyraRadio & { appearance: 'default' | 'button' };
+  const button = el.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+
+  expect(button.getAttribute('part')!.split(/\s+/)).to.include.members([
+    'base', 'button', 'control', 'disabled',
+  ]);
+  expect(button.getAttribute('tabindex')).to.equal('-1');
+  expect(button.getAttribute('aria-checked')).to.equal('false');
+  expect(button.getAttribute('aria-disabled')).to.equal('true');
+  expect(button.getAttribute('aria-required')).to.equal('true');
+});
+
 it('exports control/checked-icon aliases in the default radio appearance', async () => {
   const el = (await fixture(html`<lr-radio checked>Choice</lr-radio>`)) as LyraRadio;
   const control = el.shadowRoot!.querySelector('[part~="control"]') as HTMLElement;
