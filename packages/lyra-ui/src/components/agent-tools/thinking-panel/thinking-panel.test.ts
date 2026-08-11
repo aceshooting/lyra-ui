@@ -165,6 +165,122 @@ describe('label localization', () => {
   });
 });
 
+describe('compact / frame escape hatches', () => {
+  function chrome(el: LyraThinkingPanel): {
+    base: {
+      borderTopWidth: string;
+      borderTopLeftRadius: string;
+      backgroundColor: string;
+    };
+    header: { padding: string; gap: string };
+    body: { padding: string; borderTopWidth: string };
+  } {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
+    const body = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement);
+    return {
+      base: {
+        borderTopWidth: base.borderTopWidth,
+        borderTopLeftRadius: base.borderTopLeftRadius,
+        backgroundColor: base.backgroundColor,
+      },
+      header: { padding: header.padding, gap: header.gap },
+      body: { padding: body.padding, borderTopWidth: body.borderTopWidth },
+    };
+  }
+
+  it('leaves the existing regular card treatment unchanged when compact and frame are unset', async () => {
+    const implicit = (await fixture(
+      html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const explicit = (await fixture(
+      html`<lr-thinking-panel .compact=${false} frame="card" expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+
+    expect(implicit.compact).to.be.false;
+    expect(implicit.frame).to.equal('card');
+    expect(implicit.hasAttribute('compact')).to.be.false;
+    expect(implicit.getAttribute('frame')).to.equal('card');
+    expect(chrome(implicit)).to.deep.equal(chrome(explicit));
+    expect(chrome(implicit).base.borderTopWidth).to.equal('1px');
+    expect(chrome(implicit).base.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('reflects compact and tightens header/body dimensions through dedicated cssprops', async () => {
+    const regular = (await fixture(
+      html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const compact = (await fixture(
+      html`<lr-thinking-panel compact expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const regularChrome = chrome(regular);
+    const compactChrome = chrome(compact);
+
+    expect(compact.compact).to.be.true;
+    expect(compact.hasAttribute('compact')).to.be.true;
+    expect(compactChrome.header.padding).to.not.equal(regularChrome.header.padding);
+    expect(compactChrome.header.gap).to.not.equal(regularChrome.header.gap);
+    expect(compactChrome.body.padding).to.not.equal(regularChrome.body.padding);
+    expect(compactChrome.base.borderTopWidth).to.equal('1px');
+    expect(compactChrome.base.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    compact.style.setProperty('--lr-thinking-panel-compact-header-padding', '1px 2px');
+    compact.style.setProperty('--lr-thinking-panel-compact-header-gap', '3px');
+    compact.style.setProperty('--lr-thinking-panel-compact-body-padding', '4px 5px 6px');
+    const retuned = chrome(compact);
+    expect(retuned.header.padding).to.equal('1px 2px');
+    expect(retuned.header.gap).to.equal('3px');
+    expect(retuned.body.padding).to.equal('4px 5px 6px');
+  });
+
+  it('drops only the outer chrome under frame="plain", retaining the collapse divider and density', async () => {
+    const plain = (await fixture(
+      html`<lr-thinking-panel compact frame="plain" expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const plainChrome = chrome(plain);
+
+    expect(plain.frame).to.equal('plain');
+    expect(plain.getAttribute('frame')).to.equal('plain');
+    expect(plainChrome.base.borderTopWidth).to.equal('0px');
+    expect(plainChrome.base.borderTopLeftRadius).to.equal('0px');
+    expect(plainChrome.base.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(plainChrome.body.borderTopWidth).to.equal('1px');
+    expect(plainChrome.header.padding).to.equal('2px 8px');
+    expect(plainChrome.body.padding).to.equal('8px');
+  });
+
+  it('re-renders the outer chrome when frame changes as a property', async () => {
+    const el = (await fixture(
+      html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    expect(chrome(el).base.borderTopWidth).to.equal('1px');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(el.getAttribute('frame')).to.equal('plain');
+    expect(chrome(el).base.borderTopWidth).to.equal('0px');
+
+    el.frame = 'card';
+    await el.updateComplete;
+    expect(chrome(el).base.borderTopWidth).to.equal('1px');
+  });
+
+  it('does not treat the fill-oriented appearance attribute as a frame alias', async () => {
+    const el = (await fixture(
+      html`<lr-thinking-panel appearance="plain" expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    expect(el.frame).to.equal('card');
+    expect(chrome(el).base.borderTopWidth).to.equal('1px');
+  });
+
+  it('is accessible with populated compact plain chrome', async () => {
+    const el = (await fixture(
+      html`<lr-thinking-panel compact frame="plain" expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('live-mode auto-scroll', () => {
   // Forces a tiny scrollable body so a handful of appended lines is enough
   // to produce real overflow, without depending on any specific viewport

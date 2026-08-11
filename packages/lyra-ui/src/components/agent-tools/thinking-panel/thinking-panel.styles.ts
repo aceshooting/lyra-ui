@@ -19,6 +19,23 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
+  /* Density escape for transcript rows. The values sit behind inline var() fallbacks so a
+     containing transcript can retune them without redeclaring the rules, while an unset panel
+     keeps the pre-existing regular dimensions. */
+  :host([compact]) [part='header'] {
+    padding: var(--lr-thinking-panel-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+    gap: var(--lr-thinking-panel-compact-header-gap, var(--lr-space-2xs));
+  }
+  :host([compact]) [part='body'] {
+    padding: var(--lr-thinking-panel-compact-body-padding, var(--lr-space-s));
+  }
+  /* Removes only the outer card treatment. The header/body divider remains because it explains
+     the expanded disclosure structure even when a surrounding message supplies the outer frame. */
+  :host([frame='plain']) [part='base'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='header'] {
     display: flex;
     flex-wrap: wrap;

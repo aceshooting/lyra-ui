@@ -71,6 +71,33 @@ export const Collapsed: Story = {
   `,
 };
 
+export const DensityAndChrome: Story = {
+  name: 'compact + frame="plain"',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:32rem;">
+      <lr-thinking-panel expanded>
+        Default card framing keeps this reasoning block visually distinct.
+      </lr-thinking-panel>
+      <lr-thinking-panel compact expanded>
+        Compact keeps the card while tightening the header and transcript padding.
+      </lr-thinking-panel>
+      <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
+        <lr-thinking-panel frame="plain" expanded>
+          Plain nests in existing message chrome without a second outer frame.
+        </lr-thinking-panel>
+      </div>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Top to bottom: the default card, `compact` (tighter header/body spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal disclosure divider.',
+      },
+    },
+  },
+};
+
 export const CustomLabel: Story = {
   render: () => html`
     <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="61500" expanded style="max-width: 32rem;">

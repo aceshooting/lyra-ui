@@ -595,6 +595,7 @@ export { LyraStreamingText, looksLikeMarkdown } from './components/conversation/
 export { LyraThinkingPanel } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 export type {
   ThinkingPanelMode,
+  ThinkingPanelAppearance,
   ThinkingPanelToggleDetail,
 } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 export { LyraGenerationStatus } from './components/conversation/generation-status/generation-status.class.js';

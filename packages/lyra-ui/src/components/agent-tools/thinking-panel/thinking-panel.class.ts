@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -13,6 +14,9 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
 
 
 export type ThinkingPanelMode = 'live' | 'post-hoc';
+
+/** Visual chrome for `<lr-thinking-panel>`'s root — the library's shared container-frame vocabulary. */
+export type ThinkingPanelAppearance = LyraFrame;
 
 export interface ThinkingPanelToggleDetail {
   expanded: boolean;
@@ -53,6 +57,11 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  * is entirely free-form (a consumer-composed `<lr-streaming-text>`,
  * `<lr-markdown>`, or plain text) — this component has no dependency on
  * either and imposes no structure on what's slotted.
+ *
+ * `compact` tightens the header and transcript-body padding for dense
+ * transcript rows. `frame="plain"` removes the outside card chrome when a
+ * containing message or panel already supplies it; the header/body divider
+ * and their layout remain, so the disclosure keeps its internal structure.
  *
  * `mode` (`'live'` while reasoning is actively streaming in, `'post-hoc'`
  * once it's complete and being reviewed after the fact) drives two concrete
@@ -124,6 +133,12 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  * @cssprop [--lr-thinking-panel-max-block-size=var(--lr-size-16rem)] - Cap on how tall the
  *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  * @cssprop [--lr-thinking-panel-pending-color=var(--lr-color-brand)] - Live pending-state color.
+ * @cssprop [--lr-thinking-panel-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="header"]` padding while `compact`.
+ * @cssprop [--lr-thinking-panel-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
+ *   toggle, label, and duration while `compact`.
+ * @cssprop [--lr-thinking-panel-compact-body-padding=var(--lr-space-s)] - `[part="body"]` padding
+ *   while `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -148,6 +163,17 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   /** Header text. Localized (`thinkingPanelLabel`) when left at its default
    *  `'Thinking'`; any other value is shown as-is. */
   @property() label = 'Thinking';
+
+  /** Tighter header/body padding and header gap for dense transcript contexts. Defaults to
+   *  `false`, preserving the regular-density treatment. This changes density only; the outer
+   *  border and surface remain, so use `frame="plain"` to remove card chrome. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
+   *  and corner radius so a thinking panel nested inside existing message chrome does not double
+   *  it. Plain preserves the header/body divider and whichever regular or compact padding applies. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Whether the reasoning transcript is currently shown. Starts collapsed,
    *  matching `<lr-source-list>`'s default -- a consumer running `'live'`
