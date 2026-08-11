@@ -404,6 +404,45 @@ it('emits one cancelable lr-select with the complete item and honors preventDefa
   expect(el.open).to.equal(true);
 });
 
+it('keeps parent selection ordering and close behavior when a checkbox change proposal is vetoed', async () => {
+  const el = (await fixture(html`
+    <lr-menu label="View options">
+      <button slot="trigger">View options</button>
+      <lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const item = items(el)[0]!;
+  const order: string[] = [];
+  let checkedDuringChange = true;
+  let checkedAtSelection = true;
+  let changeCancelable = false;
+  el.addEventListener('lr-menu-item-change', (event) => {
+    order.push('change');
+    checkedDuringChange = item.checked;
+    changeCancelable = event.cancelable;
+    event.preventDefault();
+  });
+  el.addEventListener('lr-select', (event) => {
+    order.push('select');
+    checkedAtSelection = event.detail.item.checked;
+  });
+  el.addEventListener('lr-menu-select', () => {
+    order.push('menu-select');
+  });
+
+  item.select();
+  await el.updateComplete;
+
+  expect(order).to.deep.equal(['change', 'select', 'menu-select']);
+  expect(changeCancelable).to.be.true;
+  expect(checkedDuringChange).to.be.false;
+  expect(checkedAtSelection).to.be.false;
+  expect(item.checked).to.be.false;
+  expect(el.open).to.be.false;
+});
+
 it("never leaks the item's own lr-menu-item-select past the menu alongside the consolidated lr-menu-select", async () => {
   const el = (await fixture(basic())) as LyraMenu;
   trigger(el).click();

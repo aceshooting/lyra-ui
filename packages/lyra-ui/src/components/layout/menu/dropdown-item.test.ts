@@ -55,6 +55,30 @@ describe('<lr-dropdown-item>', () => {
     expect(selections).to.equal(1);
   });
 
+  it('inherits the cancelable checkbox change proposal while preserving selection', async () => {
+    const item = await fixture<LyraDropdownItem>(
+      html`<lr-dropdown-item type="checkbox" value="wrap">Wrap text</lr-dropdown-item>`,
+    );
+    let checkedDuringChange = true;
+    let changeCancelable = false;
+    let selections = 0;
+    item.addEventListener('lr-menu-item-change', (event) => {
+      checkedDuringChange = item.checked;
+      changeCancelable = event.cancelable;
+      event.preventDefault();
+    });
+    item.addEventListener('lr-menu-item-select', () => {
+      selections += 1;
+    });
+
+    item.click();
+
+    expect(changeCancelable).to.be.true;
+    expect(checkedDuringChange).to.be.false;
+    expect(item.checked).to.be.false;
+    expect(selections).to.equal(1);
+  });
+
   it('inherits menu-item row chrome defaults and fallback hooks from an ancestor', async () => {
     const defaultItem = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
     const defaultBase = defaultItem.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;

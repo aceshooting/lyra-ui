@@ -40,6 +40,41 @@ export const HostClick: StoryObj = {
   `,
 };
 
+/** A listener can reject a proposed checkbox state while the menu action still proceeds. */
+export const CancelableCheckboxChange: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A checkbox activation first emits cancelable `lr-menu-item-change` with the proposed `checked` value. This example prevents the change to checked while retaining the usual `lr-menu-item-select` action.',
+      },
+    },
+  },
+  render: () => html`
+    <div data-checkbox-change-example style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;">
+      <div role="menu" aria-label="View options">
+        <lr-menu-item
+          type="checkbox"
+          value="wrap"
+          @lr-menu-item-change=${(event: Event) => {
+            const example = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-checkbox-change-example]');
+            const status = example?.querySelector<HTMLOutputElement>('[data-checkbox-change-status]');
+            const { checked } = (event as CustomEvent<{ checked: boolean }>).detail;
+            if (checked) event.preventDefault();
+            if (status) status.value = checked ? 'Proposed checked state was prevented' : 'Proposed unchecked state was accepted';
+          }}
+          @lr-menu-item-select=${(event: Event) => {
+            const example = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-checkbox-change-example]');
+            const status = example?.querySelector<HTMLOutputElement>('[data-checkbox-change-status]');
+            if (status) status.value = `${status.value} · Menu item selected`;
+          }}
+        >Wrap text</lr-menu-item>
+      </div>
+      <output data-checkbox-change-status aria-live="polite">Activate “Wrap text” to propose a checked state</output>
+    </div>
+  `,
+};
+
 export const VisualSlots: StoryObj = {
   parameters: {
     docs: {

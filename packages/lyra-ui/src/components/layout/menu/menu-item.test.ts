@@ -348,15 +348,19 @@ it('type="checkbox" renders role="menuitemcheckbox" with aria-checked reflecting
   expect(el.getAttribute('aria-checked')).to.equal('true');
 });
 
-it('host click() toggles a type="checkbox" item, with change before select', async () => {
+it('host click() emits a checkbox change proposal before mutating checked, then selects', async () => {
   const el = (await fixture(
     html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
   )) as LyraMenuItem;
   const order: string[] = [];
   const changes: CustomEvent<{ value: string; checked: boolean }>[] = [];
+  const checkedDuringChanges: boolean[] = [];
+  const changeCancelable: boolean[] = [];
   el.addEventListener('lr-menu-item-change', (event) => {
     order.push('change');
     changes.push(event as CustomEvent<{ value: string; checked: boolean }>);
+    checkedDuringChanges.push(el.checked);
+    changeCancelable.push(event.cancelable);
   });
   el.addEventListener('lr-menu-item-select', () => {
     order.push('select');
@@ -366,6 +370,8 @@ it('host click() toggles a type="checkbox" item, with change before select', asy
 
   expect(order).to.deep.equal(['change', 'select']);
   expect(changes[0]!.detail).to.deep.equal({ value: 'wrap', checked: true });
+  expect(checkedDuringChanges).to.deep.equal([false]);
+  expect(changeCancelable).to.deep.equal([true]);
   expect(el.checked).to.be.true;
   await el.updateComplete;
   expect(el.getAttribute('aria-checked')).to.equal('true');
@@ -374,7 +380,30 @@ it('host click() toggles a type="checkbox" item, with change before select', asy
 
   expect(order).to.deep.equal(['change', 'select', 'change', 'select']);
   expect(changes[1]!.detail).to.deep.equal({ value: 'wrap', checked: false });
+  expect(checkedDuringChanges).to.deep.equal([false, true]);
+  expect(changeCancelable).to.deep.equal([true, true]);
   expect(el.checked).to.be.false;
+});
+
+it('honors preventDefault on a checkbox change proposal without suppressing selection', async () => {
+  const el = (await fixture(
+    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
+  )) as LyraMenuItem;
+  let checkedDuringChange = true;
+  let selectionCount = 0;
+  el.addEventListener('lr-menu-item-change', (event) => {
+    checkedDuringChange = el.checked;
+    event.preventDefault();
+  });
+  el.addEventListener('lr-menu-item-select', () => {
+    selectionCount += 1;
+  });
+
+  el.select();
+
+  expect(checkedDuringChange).to.be.false;
+  expect(el.checked).to.be.false;
+  expect(selectionCount).to.equal(1);
 });
 
 it('select() toggles checked and fires lr-menu-item-change for type="checkbox" (Enter/Space, via a parent menu\'s own keydown handling)', async () => {

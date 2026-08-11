@@ -130,13 +130,14 @@ export interface LyraMenuItemEventMap {
  * renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with
  * `aria-checked` reflecting `checked` and a checkmark glyph shown once
  * `checked` is `true`. Activating a `checkbox`-type item (click, or the
- * parent's Enter/Space handling via `select()`) toggles `checked` and fires
- * `lr-menu-item-change` *in addition to* the usual `lr-menu-item-select`
- * — the latter is never suppressed, so a parent `<lr-menu>` still closes
- * and re-fires its consolidated `lr-menu-select` exactly as it does for a
- * `type="normal"` item. `type="normal"` (the default) renders and behaves
- * exactly as before this option existed — no role, rendering, or event
- * differences.
+ * parent's Enter/Space handling via `select()`) first fires a cancelable
+ * `lr-menu-item-change` with the proposed next `checked` value, then mutates
+ * `checked` unless a listener prevents that event. It fires
+ * `lr-menu-item-select` afterwards either way, so a parent `<lr-menu>` still
+ * closes and re-fires its consolidated `lr-menu-select` exactly as it does
+ * for a `type="normal"` item. `type="normal"` (the default) renders and
+ * behaves exactly as before this option existed — no role, rendering, or
+ * event differences.
  *
  * @customElement lr-menu-item
  * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive
@@ -158,10 +159,12 @@ export interface LyraMenuItemEventMap {
  * (`detail: { value }`) rather than requiring a consumer to listen on every
  * individual item — listen there instead unless you specifically need a
  * per-item handler.
- * @event lr-menu-item-change - A `type="checkbox"` item was activated and
- * its `checked` state toggled. `detail: { value, checked }` — the item's own
- * `value` and its new `checked` value. Fired in addition to (never instead
- * of) `lr-menu-item-select` above. Never fired for `type="normal"`.
+ * @event lr-menu-item-change - A `type="checkbox"` item was activated.
+ * `detail: { value, checked }` contains the item's own `value` and the
+ * proposed next `checked` value, before the property mutates. Cancelable:
+ * prevent it to retain the current `checked` value. The usual
+ * `lr-menu-item-select` still follows, so parent-menu selection and close
+ * behavior are unchanged. Never fired for `type="normal"`.
  * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
  *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
  *   where `disabled` is the effective `disabled || loading`. `<lr-menu>` consumes this to repair its
@@ -441,7 +444,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   /** Fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called by this element's own
    *  click handler, and by `<lr-menu>`'s Enter/Space keydown handling of the active item.
-   *  For `type="checkbox"`, also toggles `checked` and fires `lr-menu-item-change` first --
+   *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change`; it commits
+   *  that proposed `checked` state only when the event is not prevented, then fires selection --
    *  see the class doc.
    *
    *  A submenu parent is a disclosure rather than an action: it opens its submenu (without
@@ -454,8 +458,13 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       return;
     }
     if (this.type === 'checkbox') {
-      this.checked = !this.checked;
-      this.emit('lr-menu-item-change', { value: this.value, checked: this.checked });
+      const checked = !this.checked;
+      const changeEvent = this.emit(
+        'lr-menu-item-change',
+        { value: this.value, checked },
+        { cancelable: true },
+      );
+      if (!changeEvent.defaultPrevented) this.checked = checked;
     }
     this.emit('lr-menu-item-select');
   }
