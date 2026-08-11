@@ -844,6 +844,58 @@ it('clicking the track (not the thumb) jumps the thumb to that point and continu
   expect(changeDetail!.value).to.equal(50);
 });
 
+it('maps zero-area track geometry to stable domain endpoints', async () => {
+  const horizontal = (await fixture(
+    html`<lr-slider min="0" max="100" value="55" step="1"></lr-slider>`,
+  )) as LyraSlider;
+  const horizontalTrack = horizontal.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  stubPointerCapture(horizontal);
+  mockTrackWidth(horizontal, 0);
+  horizontalTrack.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, clientX: 999 }),
+  );
+  expect(horizontal.valueAsNumber, 'a zero-width LTR track resolves to its minimum').to.equal(0);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 31 }));
+
+  const vertical = (await fixture(
+    html`<lr-slider orientation="vertical" min="0" max="100" value="45" step="1"></lr-slider>`,
+  )) as LyraSlider;
+  const verticalTrack = vertical.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  stubPointerCapture(vertical);
+  mockTrackHeight(vertical, 0);
+  verticalTrack.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 32, clientY: 999 }),
+  );
+  expect(vertical.valueAsNumber, 'a zero-height vertical track resolves to its maximum').to.equal(100);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 32 }));
+});
+
+it('chooses the range handle that can travel toward an equidistant track click', async () => {
+  const towardMinimum = (await fixture(html`
+    <lr-slider range min="0" max="100" min-value="50" max-value="50"></lr-slider>
+  `)) as LyraSlider;
+  const minimumTrack = towardMinimum.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  stubPointerCapture(towardMinimum);
+  mockTrackWidth(towardMinimum, 200);
+  minimumTrack.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 33, clientX: 0 }),
+  );
+  expect([towardMinimum.minValue, towardMinimum.maxValue]).to.deep.equal([0, 50]);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 33 }));
+
+  const towardMaximum = (await fixture(html`
+    <lr-slider range min="0" max="100" min-value="50" max-value="50"></lr-slider>
+  `)) as LyraSlider;
+  const maximumTrack = towardMaximum.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  stubPointerCapture(towardMaximum);
+  mockTrackWidth(towardMaximum, 200);
+  maximumTrack.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 34, clientX: 200 }),
+  );
+  expect([towardMaximum.minValue, towardMaximum.maxValue]).to.deep.equal([50, 100]);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 34 }));
+});
+
 it('does not double-jump when the pointerdown originates on the thumb itself', async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`,
@@ -2178,6 +2230,35 @@ it('restores single and range values from persisted form state', async () => {
   await elementUpdated(ranged);
   expect(ranged.minValue).to.equal(25);
   expect(ranged.maxValue).to.equal(75);
+});
+
+it('normalizes restored range values and ignores a partial state containing a file', async () => {
+  const ranged = (await fixture(html`
+    <lr-slider
+      name="window"
+      range
+      min="10"
+      max="90"
+      step="10"
+      min-value="20"
+      max-value="80"
+    ></lr-slider>
+  `)) as LyraSlider;
+  const restored = new FormData();
+  restored.append('window', '-10');
+  restored.append('window', '85');
+  ranged.formStateRestoreCallback(restored, 'restore');
+  await elementUpdated(ranged);
+  expect([ranged.minValue, ranged.maxValue], 'restored values use the live domain and step grid')
+    .to.deep.equal([10, 90]);
+
+  const partial = new FormData();
+  partial.append('window', '30');
+  partial.append('window', new File(['state'], 'window-state.bin'));
+  ranged.formStateRestoreCallback(partial, 'autocomplete');
+  await elementUpdated(ranged);
+  expect([ranged.minValue, ranged.maxValue], 'a non-string partial state cannot move one handle')
+    .to.deep.equal([10, 90]);
 });
 
 it('restores range state supplied by its adopted iframe realm', async () => {

@@ -1684,14 +1684,19 @@ it('selectionStart/selectionEnd/selectionDirection setters operate on the intern
   el.selectionDirection = 'backward';
   expect(el.selectionDirection).to.equal('backward');
 
-  // Nullable IDL assignments use the same native defaults as a blank text input
-  // instead of leaving a stale selection behind.
+  // Nullable range endpoints use the native zero default instead of leaving a
+  // stale selection behind.
   el.selectionStart = null;
   el.selectionEnd = null;
-  el.selectionDirection = null;
   expect(el.input!.selectionStart).to.equal(0);
   expect(el.input!.selectionEnd).to.equal(0);
-  expect(el.selectionDirection).to.equal('none');
+
+  // Native text inputs normalize their nullable "none" direction assignment to
+  // their forward default. The important host contract is that the null write
+  // reaches the input and clears the previous backward direction.
+  el.selectionEnd = 2;
+  el.selectionDirection = null;
+  expect(el.selectionDirection).to.equal('forward');
 });
 
 it('setRangeText() with only a replacement string uses the single-argument native overload', async () => {

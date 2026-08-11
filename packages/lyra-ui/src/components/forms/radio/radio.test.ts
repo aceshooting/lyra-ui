@@ -624,6 +624,22 @@ it('exposes native form validity/focus APIs and restores serialized checked stat
   expect(el.checked).to.be.false;
 });
 
+it('leaves group-owned radio restoration to its owning group', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group name="choice">
+      <lr-radio value="a" checked>A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+  await Promise.all([group.updateComplete, a.updateComplete, b.updateComplete]);
+
+  b.formStateRestoreCallback('checked', 'restore');
+
+  expect(group.value, 'the aggregate group selection stays authoritative').to.equal('a');
+  expect([a.checked, b.checked]).to.deep.equal([true, false]);
+});
+
 it('temporarily disables a bare radio through an ancestor fieldset without overwriting the author disabled state', async () => {
   const form = (await fixture(html`
     <form>
@@ -1765,6 +1781,29 @@ describe('lr-radio-group orientation, focus, and compatibility aliases', () => {
     expect((b.shadowRoot!.activeElement) === (b.shadowRoot!.querySelector('[part~="base"]'))).to.equal(true);
   });
 
+  it('activates the selected or first enabled option through the group host click', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b" checked>B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await Promise.all([group.updateComplete, a.updateComplete, b.updateComplete]);
+
+    group.click();
+    expect([a.checked, b.checked], 'a selected option remains the activation target').to.deep.equal([false, true]);
+
+    group.value = '';
+    await group.updateComplete;
+    group.click();
+    expect([a.checked, b.checked], 'an empty group activates its first enabled option').to.deep.equal([true, false]);
+
+    group.disabled = true;
+    group.click();
+    expect([a.checked, b.checked], 'a disabled group host click is inert').to.deep.equal([true, false]);
+  });
+
   it('keeps the WA default name empty and exports WA/Shoelace form-control aliases', async () => {
     const group = (await fixture(html`
       <lr-radio-group label="Choice" help-text="Supporting text">
@@ -1875,6 +1914,17 @@ describe('lr-radio validity custom states', () => {
     expect(el.checked).to.be.true;
     expect(el.matches(':state(valid)')).to.be.true;
     expect(el.matches(':state(user-valid)'), 'user-valid after a real selection').to.be.true;
+  });
+
+  it('marks a required standalone radio user-invalid when reportValidity runs', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-radio required value="a">One</lr-radio>`)) as LyraRadio;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'pristine before reporting').to.be.false;
+
+    expect(el.reportValidity()).to.be.false;
+    await el.updateComplete;
+    expect(el.matches(':state(user-invalid)'), 'a validity report is user interaction').to.be.true;
   });
 
   it('does not turn a disabled blur into user interaction for either radio rendering', async function () {
