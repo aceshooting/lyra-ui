@@ -109,6 +109,31 @@ describe("lr-code-block-core", () => {
     ).to.be.at.least(pre.scrollWidth);
   });
 
+  it("keeps a populated header inside a 320px allocation while code scrolls in its own body", async () => {
+    const filename = `src/generated/${"very-long-directory-name/".repeat(12)}conversation-handler.ts`;
+    const code = `const endpoint = "https://example.test/${"unbroken-segment-".repeat(30)}";`;
+    const container = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-code-block-core
+          filename=${filename}
+          language="typescript"
+          line-numbers
+          .code=${code}
+        ></lr-code-block-core>
+      </div>
+    `)) as HTMLElement;
+    const el = container.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    await el2Ready(el);
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const filenamePart = el.shadowRoot!.querySelector('[part="filename"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(el.getBoundingClientRect().width).to.be.at.most(320);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+    expect(filenamePart.scrollWidth).to.be.greaterThan(filenamePart.clientWidth);
+    expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+  });
+
   it("forwards a host aria-label to the internal named code region and keeps it reactive", async () => {
     const el = (await fixture(
       html`<lr-code-block-core

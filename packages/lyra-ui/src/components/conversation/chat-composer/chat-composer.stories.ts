@@ -145,6 +145,34 @@ export const WithLeadingAndChips: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow (320px, populated long draft)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-chat-composer
+        min-rows="1"
+        max-rows="4"
+        .value=${'Please compare the deployment logs with the last successful release and summarize the rollback risk.'}
+      >
+        <button
+          slot="start"
+          type="button"
+          aria-label="Attach file"
+          style="font: inherit; background: none; border: none; cursor: pointer;"
+        >
+          Attach
+        </button>
+        <span
+          slot="chips"
+          style="display: inline-flex; max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: var(--lr-space-xs); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-pill);"
+        >
+          deployment-notes.md
+        </span>
+      </lr-chat-composer>
+    </div>
+  `,
+};
+
 export const CustomTrailingSlot: Story = {
   render: () => html`
     <lr-chat-composer placeholder="Send button fully replaced by trailing slot content…" style="max-width: 32rem; display: block;">

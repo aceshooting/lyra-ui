@@ -115,7 +115,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='confirm-button']:hover, [part='cancel-button']:hover {
+  [part='confirm-button']:hover {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='cancel-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
   [part='confirm-button']:active, [part='cancel-button']:active {

@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './checkpoint.js';
 import type { LyraCheckpoint } from './checkpoint.js';
-import { styles } from './checkpoint.styles.js';
 
 it('defaults to checkpointId="", label="", restorable=true, confirmRestore=true, restoring=false', async () => {
   const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
@@ -202,10 +202,30 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     expect((checkpoint.shadowRoot!.activeElement) !== (checkpoint.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
-  it('gives confirm-button and cancel-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='confirm-button'\]:hover/);
-    expect(css).to.match(/\[part='cancel-button'\]:hover/);
+  it('gives confirm-button and cancel-button a visible hover treatment', async () => {
+    const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const buttons = [
+      el.shadowRoot!.querySelector('[part="confirm-button"]') as HTMLButtonElement,
+      el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLButtonElement,
+    ];
+
+    try {
+      for (const button of buttons) {
+        await resetMouse();
+        const resting = getComputedStyle(button).backgroundColor;
+        const rect = button.getBoundingClientRect();
+        expect(rect.width, `${button.textContent!.trim()} has real geometry to point at`).to.be.greaterThan(0);
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(button).backgroundColor, `${button.textContent!.trim()} hover changes its fill`).to.not.equal(resting);
+      }
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

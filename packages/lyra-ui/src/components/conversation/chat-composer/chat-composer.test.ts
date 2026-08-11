@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './chat-composer.js';
 import type { LyraChatComposer } from './chat-composer.js';
 
@@ -629,6 +630,31 @@ it('re-arms the width-triggered auto-resize after a disconnect/reconnect (e.g. a
   expect(parseFloat(ta.style.height)).to.be.greaterThan(wideHeight);
 });
 
+it('keeps a populated long draft inside a 320px allocation', async () => {
+  const longDraft = 'Please compare the deployment logs with the last successful release and summarize the rollback risk. '.repeat(3);
+  const container = (await fixture(html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-chat-composer
+        min-rows="1"
+        max-rows="4"
+        .value=${longDraft}
+      >
+        <button slot="start" type="button" aria-label="Attach file">Attach</button>
+        <span slot="chips">deployment-notes.md</span>
+      </lr-chat-composer>
+    </div>
+  `)) as HTMLElement;
+  const el = container.querySelector('lr-chat-composer') as LyraChatComposer;
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const textarea = textareaOf(el);
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  expect(textarea.scrollWidth).to.be.at.most(textarea.clientWidth + 1);
+  expect(el.shadowRoot!.querySelector('[part="chips"]')?.hasAttribute('hidden')).to.be.false;
+});
+
 it('rebinds textarea observation and coalesced resize frames to the adopted owner realm', async () => {
   const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
   await el.updateComplete;
@@ -943,6 +969,36 @@ it('escalates the send button from resting to hover to pressed with the shared c
   // along with the fill -- and does nothing at all to a pure white or pure black brand colour.
   expect(renderedRuleFilter(el, "[part='action-button']:hover")).to.equal('none');
   expect(renderedRuleFilter(el, "[part='action-button']:active")).to.equal('none');
+});
+
+it('gives the busy Stop action distinct hover and pressed feedback', async () => {
+  const el = (await fixture(html`
+    <lr-chat-composer
+      status="streaming"
+      style="--lr-chat-composer-busy-bg: rgb(10, 20, 30); --lr-transition-fast: 0s"
+    ></lr-chat-composer>
+  `)) as LyraChatComposer;
+  const button = actionButtonOf(el)!;
+  const rect = button.getBoundingClientRect();
+  expect(rect.width, 'the busy Stop action has real geometry to point at').to.be.greaterThan(0);
+
+  try {
+    await resetMouse();
+    const resting = getComputedStyle(button).backgroundColor;
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    const hovered = getComputedStyle(button).backgroundColor;
+    expect(hovered, 'hover tints the busy Stop action').to.not.equal(resting);
+
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(button).backgroundColor;
+    expect(pressed, 'pressed deepens the busy Stop action beyond hover').to.not.equal(hovered);
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('recolors the busy action-button background via --lr-chat-composer-busy-bg without affecting the textarea placeholder color', async () => {

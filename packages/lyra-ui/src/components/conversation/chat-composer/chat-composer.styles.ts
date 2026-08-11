@@ -171,6 +171,22 @@ export const styles = css`
   :host([status='streaming']) [part='action-button'] {
     background: var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet));
   }
+  :host([status='sending']) [part='action-button']:hover,
+  :host([status='streaming']) [part='action-button']:hover {
+    background: color-mix(
+      in oklab,
+      var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+  }
+  :host([status='sending']) [part='action-button']:active,
+  :host([status='streaming']) [part='action-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
 
   @media (prefers-reduced-motion: reduce) {
     [part='base'],

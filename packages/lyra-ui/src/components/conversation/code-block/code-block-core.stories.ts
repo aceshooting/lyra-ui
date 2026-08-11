@@ -52,6 +52,21 @@ export const WithFilename: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: "Narrow (320px, long filename and code)",
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-code-block-core
+        filename=${`src/generated/${"very-long-directory-name/".repeat(8)}conversation-handler.ts`}
+        language="typescript"
+        line-numbers
+        .languages=${typescriptLanguages}
+        .code=${`const endpoint = "https://example.test/${"unbroken-segment-".repeat(16)}";`}
+      ></lr-code-block-core>
+    </div>
+  `,
+};
+
 export const LanguageNotInMap: Story = {
   name: "Language absent from the languages map (always plain text)",
   render: () => html`

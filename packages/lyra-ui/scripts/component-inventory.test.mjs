@@ -412,6 +412,29 @@ test('the live manifest resolves to the exact 34 runtime FACE tags', () => {
   ]);
 });
 
+test('the generated lean code-block CEM preserves the full code-block CSS custom-property surface', async () => {
+  const manifest = expandManifestInheritance((await generateManifest({ write: false })).manifest);
+  const cssPropertiesByTag = new Map(
+    normalizeManifest(manifest, { ecosystem: 'lyra' })
+      .filter(({ tag }) => tag === 'lr-code-block' || tag === 'lr-code-block-core')
+      .map(({ tag, surface }) => [tag, surface.cssProperties]),
+  );
+
+  assert.ok(
+    cssPropertiesByTag.has('lr-code-block'),
+    'the full code-block is present in the generated CEM',
+  );
+  assert.ok(
+    cssPropertiesByTag.has('lr-code-block-core'),
+    'the lean code-block is present in the generated CEM',
+  );
+  assert.deepEqual(
+    cssPropertiesByTag.get('lr-code-block-core'),
+    cssPropertiesByTag.get('lr-code-block'),
+    'the lean variant shares the full stylesheet, so its normalized CEM CSS custom-property surface must match',
+  );
+});
+
 test('the CEM FormAssociated projection is truthful, scoped, and idempotent', () => {
   const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-form-associated-mixin-members');
   assert.ok(plugin?.packageLinkPhase, 'the FormAssociated projection plugin is installed');

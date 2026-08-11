@@ -121,6 +121,10 @@ export interface LyraCodeBlockCoreEventMap {
  *   `highlights`.
  * @csspart line-button - A gutter line-number button, only rendered while `interactive-lines` and
  *   `line-numbers` are both set.
+ * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
+ *   attribute, when set, writes this same property inline on `body` and therefore wins.
+ * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
+ *   and `code`.
  * @cssprop [--lr-code-block-tab-size=2] - Tab width for the rendered code, applied to `pre`.
  *   Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and
  *   the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.
