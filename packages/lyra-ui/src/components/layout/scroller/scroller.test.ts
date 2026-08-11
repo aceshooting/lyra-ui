@@ -304,6 +304,94 @@ describe("<lr-scroller>", () => {
     expect(capturedLeft).to.equal(42);
   });
 
+  it("mirrors one-step previous/next controls under RTL", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls dir="rtl" scroll-step="42" style="inline-size: 100px;">
+        <div style="inline-size: 400px;">wide content</div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector(
+      '[part="viewport"]'
+    ) as HTMLElement;
+    Object.defineProperty(viewport, "scrollWidth", {
+      configurable: true,
+      value: 400,
+    });
+    Object.defineProperty(viewport, "clientWidth", {
+      configurable: true,
+      value: 100,
+    });
+    Object.defineProperty(viewport, "scrollLeft", {
+      configurable: true,
+      value: -20,
+      writable: true,
+    });
+    viewport.dispatchEvent(new Event("scroll"));
+    await el.updateComplete;
+    const calls: ScrollToOptions[] = [];
+    viewport.scrollBy = ((options: ScrollToOptions) => {
+      calls.push(options);
+    }) as typeof viewport.scrollBy;
+
+    (el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part~="previous"]') as HTMLButtonElement).click();
+
+    expect(calls).to.deep.equal([{ left: -42 }, { left: 42 }]);
+  });
+
+  it("moves and jumps controls along the block axis for a vertical scroller", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        controls
+        orientation="vertical"
+        scroll-step="42"
+        style="block-size: 100px;"
+      >
+        <div style="block-size: 400px;">tall content</div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector(
+      '[part="viewport"]'
+    ) as HTMLElement;
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 400,
+    });
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 100,
+    });
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 50,
+      writable: true,
+    });
+    viewport.dispatchEvent(new Event("scroll"));
+    await el.updateComplete;
+    const moveCalls: ScrollToOptions[] = [];
+    const edgeCalls: ScrollToOptions[] = [];
+    viewport.scrollBy = ((options: ScrollToOptions) => {
+      moveCalls.push(options);
+    }) as typeof viewport.scrollBy;
+    viewport.scrollTo = ((options: ScrollToOptions) => {
+      edgeCalls.push(options);
+    }) as typeof viewport.scrollTo;
+    const previous = el.shadowRoot!.querySelector(
+      '[part~="previous"]'
+    ) as HTMLButtonElement;
+    const next = el.shadowRoot!.querySelector(
+      '[part~="next"]'
+    ) as HTMLButtonElement;
+
+    next.click();
+    previous.click();
+    next.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    previous.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+
+    expect(moveCalls).to.deep.equal([{ top: 42 }, { top: -42 }]);
+    expect(edgeCalls).to.deep.equal([{ top: viewport.scrollHeight }, { top: 0 }]);
+  });
+
   it("gives control a hover state", () => {
     const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
     expect(css).to.match(/\[part='control'\]:hover/);

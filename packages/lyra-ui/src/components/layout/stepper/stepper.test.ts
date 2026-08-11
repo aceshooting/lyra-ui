@@ -457,6 +457,63 @@ describe("lr-stepper", () => {
     expect((document.activeElement === el || el.shadowRoot!.activeElement) != null).to.equal(true);
   });
 
+  it("uses Up and Down to skip disabled steps in a vertical stepper, then selects the focused step", async () => {
+    const el = (await fixture(html`
+      <lr-stepper
+        orientation="vertical"
+        .steps=${[
+          { id: "account", label: "Account", state: "completed" as const },
+          { id: "details", label: "Details", state: "current" as const },
+          { id: "locked", label: "Locked", state: "disabled" as const },
+          { id: "review", label: "Review", state: "pending" as const },
+        ]}
+      ></lr-stepper>
+    `)) as LyraStepper;
+    const buttons = stepButtons(el);
+
+    buttons[1]!.focus();
+    buttons[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true })
+    );
+    expect(el.shadowRoot!.activeElement === buttons[3]).to.equal(true);
+
+    buttons[3]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true })
+    );
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+
+    const selection = oneEvent(el, "lr-step-select");
+    buttons[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+    );
+    expect((await selection).detail).to.deep.equal({ index: 1, id: "details" });
+  });
+
+  it("mirrors horizontal arrow navigation under RTL", async () => {
+    const el = (await fixture(html`
+      <lr-stepper
+        dir="rtl"
+        .steps=${[
+          { id: "account", label: "Account", state: "current" as const },
+          { id: "details", label: "Details", state: "pending" as const },
+          { id: "review", label: "Review", state: "pending" as const },
+        ]}
+      ></lr-stepper>
+    `)) as LyraStepper;
+    const buttons = stepButtons(el);
+
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true })
+    );
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+
+    buttons[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })
+    );
+    expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(true);
+  });
+
   it("navigates to a step whose id contains characters that would break an unescaped CSS attribute selector", async () => {
     const el = (await fixture(
       html`<lr-stepper

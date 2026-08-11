@@ -675,6 +675,28 @@ it("rotates the collapse-toggle chevron toward the pinned edge when expanded, aw
   expect(chevron(startRtl).style.transform).to.equal("rotate(180deg)");
 });
 
+it("points top and bottom collapse toggles toward their pinned edge until collapsed", async () => {
+  for (const [edge, expanded, collapsed] of [
+    ["top", -90, 90],
+    ["bottom", 90, -90],
+  ] as const) {
+    const el = await dockedFixture("collapsible", edge);
+    await elementUpdated(el);
+    const chevron = el.shadowRoot!.querySelector(
+      '[part="collapse-toggle"] span'
+    ) as HTMLElement;
+
+    expect(chevron.style.transform, `${edge} while expanded`).to.equal(
+      `rotate(${expanded}deg)`
+    );
+    el.collapsed = true;
+    await elementUpdated(el);
+    expect(chevron.style.transform, `${edge} while collapsed`).to.equal(
+      `rotate(${collapsed}deg)`
+    );
+  }
+});
+
 it('flips the top/bottom collapse-toggle centering translate under dir="rtl"', async () => {
   const toggleTranslateX = async (dirAttr: string): Promise<number> => {
     const wrapper = (await fixture(
