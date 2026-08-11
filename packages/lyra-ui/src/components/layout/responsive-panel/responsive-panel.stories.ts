@@ -25,6 +25,15 @@ function openPanel(e: Event): void {
   panel.open = true;
 }
 
+function vetoPanelClose(event: Event): void {
+  event.preventDefault();
+  const panel = event.currentTarget as LyraResponsivePanel;
+  const status = panel.querySelector<HTMLOutputElement>('[data-close-veto-status]');
+  if (status) {
+    status.textContent = `Kept open: ${String((event as CustomEvent<string>).detail)} was vetoed.`;
+  }
+}
+
 export const DockedInline: Story = {
   name: 'mode="inline" (docked)',
   render: () => html`
@@ -80,6 +89,39 @@ export const ForcedOverlayBottomSheet: Story = {
         </div>
       </lr-responsive-panel>
     </div>
+  `,
+};
+
+export const CancelableClose: Story = {
+  name: 'Cancelable close veto',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The same cancelable `lr-close` event covers `close()`, Escape, and backdrop dismissal. This listener calls `preventDefault()`, so each attempt leaves the panel, focus trap, and scroll lock active.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-responsive-panel
+      mode="overlay"
+      variant="bottom-sheet"
+      open
+      label="Unsaved changes"
+      @lr-close=${vetoPanelClose}
+    >
+      <span slot="header" style="font-weight: 600;">Unsaved changes</span>
+      <p style="margin: 0;">Try the footer button, Escape, or the backdrop. Each close request is vetoed.</p>
+      <div slot="footer" style="display: grid; gap: var(--lr-space-s);">
+        <button
+          @click=${(event: Event) =>
+            ((event.currentTarget as HTMLElement).closest('lr-responsive-panel') as LyraResponsivePanel).close('footer')}
+        >
+          Try closing
+        </button>
+        <output data-close-veto-status role="status">No close request yet.</output>
+      </div>
+    </lr-responsive-panel>
   `,
 };
 

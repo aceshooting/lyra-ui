@@ -108,13 +108,14 @@ export function resolveEffectiveMode(
  * @slot - The panel body.
  * @slot header - Optional header content, rendered above the body.
  * @slot footer - Optional footer content (e.g. action buttons), rendered below the body.
- * @event lr-close - `detail: ResponsivePanelCloseReason`. Fired by the overlay presentation's
- *   built-in dismiss triggers (Escape, backdrop click) and by any `close()` call, in either
- *   presentation -- a plain `open = false` property write does not fire it (matching
- *   lr-dialog's own precedent: only going through `close()` counts as a dismissal), and this
- *   is deliberately the same event/semantics in both presentations, rather than only being
- *   meaningful for the overlay case, so a consumer only has to wire up one listener regardless
- *   of which presentation is currently active.
+ * @event lr-close - `detail: ResponsivePanelCloseReason`. Cancelable pre-close veto, fired by
+ *   the overlay presentation's built-in dismiss triggers (Escape, backdrop click) and by any
+ *   `close()` call, in either presentation. Calling `preventDefault()` keeps the panel open and
+ *   leaves any active overlay chrome/focus trap intact. A plain `open = false` property write
+ *   does not fire it (matching lr-dialog's own precedent: only going through `close()` counts as
+ *   a dismissal), and this is deliberately the same event/semantics in both presentations,
+ *   rather than only being meaningful for the overlay case, so a consumer only has to wire up one
+ *   listener regardless of which presentation is currently active.
  * @event lr-mode-change - `detail: ResponsivePanelModeChangeDetail`. Fired whenever the
  *   *effective* mode (not the `mode` prop's literal value, which may be `'auto'`) changes between
  *   `'inline'` and `'overlay'` -- crossing the breakpoint while `mode="auto"`, or the host
@@ -479,16 +480,20 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    * Close the panel. `reason` is forwarded as the `lr-close` detail --
    * built-in overlay triggers pass `'escape'`/`'backdrop'`; a consumer's own
    * close affordance (e.g. a footer button, or a docked panel's own toggle)
-   * should call this directly with its own reason string. Fires in both
-   * presentations (see the class doc's `lr-close` note) but only returns
-   * focus to the trigger that opened it when the overlay presentation is
-   * active, since the inline presentation never took focus away from
-   * anything to begin with.
+   * should call this directly with its own reason string. `lr-close` is a
+   * cancelable, pre-mutation veto point: a listener calling
+   * `preventDefault()` leaves the panel and any active overlay chrome open.
+   * It fires in both presentations (see the class doc's `lr-close` note) but
+   * only returns focus to the trigger that opened it when the overlay
+   * presentation is active, since the inline presentation never took focus
+   * away from anything to begin with.
    */
   close(reason: ResponsivePanelCloseReason = "api"): void {
     if (!this.open) return;
+    if (this.emit("lr-close", reason, { cancelable: true }).defaultPrevented) {
+      return;
+    }
     this.open = false;
-    this.emit("lr-close", reason);
   }
 
   private onBackdropClick = (): void => {

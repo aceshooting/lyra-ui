@@ -377,6 +377,109 @@ it('close() fires lr-close with reason "api" in the inline presentation too (doc
   expect(event.detail).to.equal("api");
 });
 
+it("makes lr-close a cancelable pre-mutation veto for close(), Escape, and backdrop dismissal", async () => {
+  const opener = document.createElement("button");
+  opener.textContent = "Open responsive panel";
+  document.body.appendChild(opener);
+  opener.focus();
+
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="overlay" label="Actions"
+      ><button>Inside panel</button></lr-responsive-panel
+    >`
+  )) as LyraResponsivePanel;
+  el.open = true;
+  await el.updateComplete;
+  const inside = el.querySelector("button") as HTMLButtonElement;
+  const closeEvents: Array<{
+    reason: string;
+    cancelable: boolean;
+    openDuringEvent: boolean;
+    openAttributeDuringEvent: boolean;
+    scrollLockDuringEvent: string;
+  }> = [];
+  el.addEventListener("lr-close", (event) => {
+    const closeEvent = event as CustomEvent<string>;
+    closeEvents.push({
+      reason: closeEvent.detail,
+      cancelable: closeEvent.cancelable,
+      openDuringEvent: el.open,
+      openAttributeDuringEvent: el.hasAttribute("open"),
+      scrollLockDuringEvent: document.documentElement.style.overflow,
+    });
+    closeEvent.preventDefault();
+  });
+
+  el.close();
+  await el.updateComplete;
+
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  await el.updateComplete;
+
+  (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+  await el.updateComplete;
+
+  expect(closeEvents.map(({ reason }) => reason)).to.deep.equal([
+    "api",
+    "escape",
+    "backdrop",
+  ]);
+  expect(
+    closeEvents.every(
+      ({
+        cancelable,
+        openDuringEvent,
+        openAttributeDuringEvent,
+        scrollLockDuringEvent,
+      }) =>
+        cancelable &&
+        openDuringEvent &&
+        openAttributeDuringEvent &&
+        scrollLockDuringEvent === "hidden"
+    )
+  ).to.be.true;
+  expect(el.open).to.be.true;
+  expect(document.documentElement.style.overflow).to.equal("hidden");
+  expect((document.activeElement) === (inside)).to.equal(true);
+
+  // Keep this vetoed overlay from leaking into the following test's document-level stack.
+  el.open = false;
+  await el.updateComplete;
+  opener.remove();
+});
+
+it("runs overlay cleanup and focus return after an allowed pre-mutation lr-close event", async () => {
+  const opener = document.createElement("button");
+  opener.textContent = "Open responsive panel";
+  document.body.appendChild(opener);
+  opener.focus();
+
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="overlay" label="Actions"
+      ><button>Inside panel</button></lr-responsive-panel
+    >`
+  )) as LyraResponsivePanel;
+  el.open = true;
+  await el.updateComplete;
+
+  let openDuringEvent = false;
+  el.addEventListener("lr-close", () => {
+    openDuringEvent = el.open;
+  });
+  const listener = oneEvent(el, "lr-close");
+  el.close();
+  const event = await listener;
+  await el.updateComplete;
+
+  expect((event as Event).cancelable).to.be.true;
+  expect(openDuringEvent).to.be.true;
+  expect(el.open).to.be.false;
+  expect(document.documentElement.style.overflow).to.equal("");
+  expect((document.activeElement) === (opener)).to.equal(true);
+
+  opener.remove();
+});
+
 it("close() is a no-op when already closed (no duplicate event, no error)", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel mode="overlay">body</lr-responsive-panel>`
