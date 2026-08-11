@@ -335,6 +335,36 @@ it('renders the same accessible error state instead of crashing when WebGL2 is u
   }
 });
 
+it('fails closed when the WebGL2 capability probe itself throws', async () => {
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  let webgl2ProbeCalls = 0;
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') {
+        webgl2ProbeCalls++;
+        throw new Error('WebGL2 probing is blocked');
+      }
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    };
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({});
+  document.body.append(el);
+  try {
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') != null,
+      'error state never rendered after a capability-probe failure',
+      { timeout: 2000 },
+    );
+    expect(webgl2ProbeCalls).to.be.greaterThan(0);
+    expect(el.map == null).to.be.true;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+  }
+});
+
 // Regression coverage for the lifecycle-super-call-omitted defect class -- no user-visible
 // symptom today, but a future shared updated() behavior on LyraElement would silently never run
 // for <lr-map> if its own override shadows the base hook instead of calling it. Scoped by
@@ -441,6 +471,10 @@ it('normalizes malformed and out-of-range center values before live map updates'
   el.center = ['bad', 25] as unknown as [number, number];
   await el.updateComplete;
   expect(centerArg).to.deep.equal([0, 25]);
+
+  el.center = { longitude: 3, latitude: 4 } as unknown as [number, number];
+  await el.updateComplete;
+  expect(centerArg).to.deep.equal([0, 0]);
 });
 
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async function () {
@@ -1505,6 +1539,67 @@ it('updates the reused marker popup when unsafeHtml changes for a persisting id'
   expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A2');
 });
 
+it('adds popup semantics when persisted plain markers later gain label or unsafeHtml content', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: 'text', lngLat: [10, 20] },
+    { id: 'html', lngLat: [11, 21] },
+  ];
+  await el.updateComplete;
+  const [initialTextMarker, initialHtmlMarker] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('.maplibregl-marker'),
+  ];
+  expect(Boolean(initialTextMarker)).to.be.true;
+  expect(Boolean(initialHtmlMarker)).to.be.true;
+
+  el.markers = [
+    { id: 'text', lngLat: [10, 20], label: 'Text marker' },
+    { id: 'html', lngLat: [11, 21], label: 'HTML marker', unsafeHtml: '<strong>Trusted HTML</strong>' },
+  ];
+  await el.updateComplete;
+
+  const markers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.maplibregl-marker')];
+  const textMarker = markers.find(marker => marker.getAttribute('aria-label') === 'Text marker');
+  const htmlMarker = markers.find(marker => marker.getAttribute('aria-label') === 'HTML marker');
+  expect(Boolean(textMarker)).to.be.true;
+  expect(Boolean(htmlMarker)).to.be.true;
+  expect(textMarker === initialTextMarker).to.be.true;
+  expect(htmlMarker === initialHtmlMarker).to.be.true;
+  expect(textMarker!.getAttribute('aria-controls')).to.be.a('string').and.not.equal('');
+  expect(htmlMarker!.getAttribute('aria-controls')).to.be.a('string').and.not.equal('');
+  expect(textMarker!.getAttribute('aria-expanded')).to.equal('false');
+  expect(htmlMarker!.getAttribute('aria-expanded')).to.equal('false');
+
+  textMarker!.click();
+  await waitUntil(
+    () => [...el.shadowRoot!.querySelectorAll('.maplibregl-popup-content')]
+      .some(popup => popup.textContent?.includes('Text marker') === true),
+    'text popup never opened after the persisted marker gained a label',
+  );
+  expect(textMarker!.getAttribute('aria-expanded')).to.equal('true');
+  htmlMarker!.click();
+  await waitUntil(
+    () => [...el.shadowRoot!.querySelectorAll('.maplibregl-popup-content')]
+      .some(popup => popup.querySelector('strong')?.textContent === 'Trusted HTML'),
+    'HTML popup never opened after the persisted marker gained unsafeHtml',
+  );
+  expect(htmlMarker!.getAttribute('aria-expanded')).to.equal('true');
+
+  el.markers = [
+    { id: 'text', lngLat: [10, 20], label: 'Text marker' },
+    { id: 'html', lngLat: [11, 21] },
+  ];
+  await el.updateComplete;
+  expect(htmlMarker!.getAttribute('aria-controls')).to.equal(null);
+  expect(htmlMarker!.getAttribute('aria-expanded')).to.equal(null);
+});
+
 it('attaches an openable popup when label or html is provided', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1636,6 +1731,7 @@ it('skips malformed/non-finite markers without aborting valid marker reconciliat
   el.map!.fire('load');
 
   el.markers = [
+    null,
     { id: 'missing', lngLat: undefined },
     { id: 'infinite', lngLat: [Number.POSITIVE_INFINITY, 20] },
     { id: 'bad-latitude', lngLat: [10, 91] },
@@ -1646,6 +1742,23 @@ it('skips malformed/non-finite markers without aborting valid marker reconciliat
   const markers = [...el.shadowRoot!.querySelectorAll('.maplibregl-marker')];
   expect(markers.length).to.equal(1);
   expect(markers[0]!.getAttribute('aria-label')).to.equal('Valid');
+});
+
+it('clears stale markers without throwing when a non-array runtime value is assigned', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'valid', lngLat: [10, 20], label: 'Valid marker' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(1);
+
+  el.markers = { entries: 'not an array' } as unknown as typeof el.markers;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(0);
 });
 
 it('keeps explicit marker ids separate from synthesized idless-coordinate identities', async function () {

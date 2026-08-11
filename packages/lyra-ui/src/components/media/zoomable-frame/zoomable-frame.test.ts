@@ -101,6 +101,17 @@ describe('mapped iframe surface', () => {
     expect(tokens.has('unknown-token')).to.be.false;
   });
 
+  it('keeps the sandbox attribute restrictive for a non-string runtime value', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    el.sandbox = null as unknown as string;
+    await el.updateComplete;
+    const frame = frameOf(el);
+    expect(frame.hasAttribute('sandbox')).to.be.true;
+    expect(frame.getAttribute('sandbox')).to.equal('');
+  });
+
   it('normalizes invalid loading/referrer values to non-widening fallbacks', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame loading="later" referrerpolicy="send-everything"></lr-zoomable-frame>
@@ -119,6 +130,30 @@ describe('mapped iframe surface', () => {
     expect(el.contentWindow === frame.contentWindow).to.be.true;
     expect(el.contentDocument === frame.contentDocument).to.be.true;
   });
+
+  it('returns null instead of exposing an opaque-frame contentDocument failure', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    const privateEl = el as unknown as {
+      iframe?: { readonly contentDocument: Document };
+    };
+    const previous = Object.getOwnPropertyDescriptor(privateEl, 'iframe');
+    Object.defineProperty(privateEl, 'iframe', {
+      configurable: true,
+      value: {
+        get contentDocument(): Document {
+          throw new DOMException('Cross-origin frame', 'SecurityError');
+        },
+      },
+    });
+    try {
+      expect(el.contentDocument === null).to.be.true;
+    } finally {
+      if (previous) Object.defineProperty(privateEl, 'iframe', previous);
+      else delete privateEl.iframe;
+    }
+  });
 });
 
 describe('zoom controls and interaction', () => {
@@ -134,6 +169,24 @@ describe('zoom controls and interaction', () => {
     expect(el.zoom).to.equal(0.25);
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="zoom-out-button"]') as HTMLButtonElement).disabled).to.be.true;
+  });
+
+  it('falls back to default zoom stops for blank, invalid, and non-string runtime levels', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom="1"></lr-zoomable-frame>`);
+    for (const zoomLevels of ['   ', 'invalid 0.001 1001', null] as Array<string | null>) {
+      el.zoom = 1;
+      el.zoomLevels = zoomLevels as unknown as string;
+      el.zoomIn();
+      expect(el.zoom, String(zoomLevels)).to.equal(1.25);
+    }
+  });
+
+  it('does not move below the lowest configured zoom stop', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame zoom="0.25" zoom-levels="25% 50% 100%"></lr-zoomable-frame>
+    `);
+    el.zoomOut();
+    expect(el.zoom).to.equal(0.25);
   });
 
   it('does not restrict a finite programmatic zoom to the available levels', async () => {
@@ -231,6 +284,27 @@ describe('zoom controls and interaction', () => {
     controls.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
     expect(el.zoom).to.equal(1.5);
     controls.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
+    expect(el.zoom).to.equal(1);
+  });
+
+  it('leaves zoom shortcuts alone when toolbar keydown has modifiers or an unrelated key', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%"></lr-zoomable-frame>
+    `);
+    const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+    const modified = new KeyboardEvent('keydown', {
+      key: '+',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    expect(controls.dispatchEvent(modified)).to.be.true;
+    expect(modified.defaultPrevented).to.be.false;
+    expect(el.zoom).to.equal(1);
+
+    const unrelated = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });
+    expect(controls.dispatchEvent(unrelated)).to.be.true;
+    expect(unrelated.defaultPrevented).to.be.false;
     expect(el.zoom).to.equal(1);
   });
 
@@ -443,6 +517,29 @@ describe('navigation lifecycle and theme sync', () => {
       else root.setAttribute('class', previousClass);
       if (previousTheme === null) root.removeAttribute('data-lr-theme');
       else root.setAttribute('data-lr-theme', previousTheme);
+    }
+  });
+
+  it('syncs and removes resolved --lr-theme properties from a same-origin frame', async () => {
+    const root = document.documentElement;
+    const property = '--lr-theme-zoomable-frame-coverage-probe';
+    const previousValue = root.style.getPropertyValue(property);
+    const previousPriority = root.style.getPropertyPriority(property);
+    try {
+      root.style.setProperty(property, 'rgb(12, 34, 56)');
+      const el = await fixture<LyraZoomableFrame>(html`
+        <lr-zoomable-frame with-theme-sync .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+      `);
+      const frame = frameOf(el);
+      frame.dispatchEvent(new Event('load'));
+      const childRoot = (): HTMLElement | null => frame.contentDocument?.documentElement ?? null;
+      await eventually(() => childRoot()?.style.getPropertyValue(property) === 'rgb(12, 34, 56)');
+
+      root.style.removeProperty(property);
+      await eventually(() => childRoot()?.style.getPropertyValue(property) === '');
+    } finally {
+      if (previousValue) root.style.setProperty(property, previousValue, previousPriority);
+      else root.style.removeProperty(property);
     }
   });
 });
