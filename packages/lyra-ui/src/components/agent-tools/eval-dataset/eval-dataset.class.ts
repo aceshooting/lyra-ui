@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInputEventMap } from '../../media/file-input/file-input.class.js';
@@ -74,7 +75,8 @@ export interface LyraEvalDatasetEventMap {
  *
  * @customElement lr-eval-dataset
  * @event lr-example-select - A row was activated. `detail: { id }` -- `id` is `null` once the
- *   previously-selected row no longer exists in `examples` (see `examples`' own doc).
+ *   previously-selected row no longer exists in `examples` or falls outside the active filters
+ *   (see `examples`' own doc).
  * @event lr-example-add-request - The "Add example" control was activated. No detail payload --
  *   this component has no opinion on what a new example's fields should be; the host implements
  *   its own creation flow (a dialog, a generated draft, etc.) and appends the result to `examples`.
@@ -127,14 +129,40 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
    *  mutates its own copy of it -- add/remove/import/export are all *requests*; the host performs
    *  the actual mutation (and any persistence/API call) and passes the updated array back in.
    *  Shrinking this out from under an in-progress selection or active tag filter is handled
-   *  gracefully: a `selectedId` that no longer matches any row resets to `null` (re-enabling the
-   *  "Add" button's inert Remove sibling), and an active tag filter that no longer matches any
-   *  row's `tags` is dropped rather than silently matching zero rows forever. */
+   *  gracefully: a `selectedId` that no longer matches any row or falls outside the filtered
+   *  result set resets to `null` (so Remove cannot act on a hidden row), and an active tag filter
+   *  that no longer matches any row's `tags` is dropped rather than silently matching zero rows
+   *  forever. */
   @property({ attribute: false }) examples: EvalExample[] = [];
 
   /** Shows the built-in free-text search field, filtering by a case-insensitive substring match
    *  against `input`, `expectedOutput`, and `tags`. */
   @property({ type: Boolean, reflect: true }) searchable = false;
+
+  /** Native autocomplete hint forwarded to the built-in search input while `searchable`. An empty
+   *  string (the default) leaves the browser default in effect. */
+  @property() autocomplete = '';
+
+  /** Whether the browser spellchecks the built-in search input. Defaults to `true`; the literal
+   *  `spellcheck="false"` attribute is deliberately parsed as false instead of as a presence-based
+   *  boolean. */
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
+
+  /** Native capitalization hint forwarded to the built-in search input while `searchable`. */
+  @property() override autocapitalize = '';
+
+  /** Native autocorrection hint forwarded to the built-in search input while `searchable`.
+   *  `autoCorrect` maps to the standard lowercase `autocorrect` attribute without colliding with
+   *  the incompatible inherited `HTMLElement.autocorrect` type. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+
+  /** Native virtual-keyboard input-mode hint forwarded to the built-in search input while
+   *  `searchable`. */
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+
+  /** Native virtual-keyboard enter-key hint forwarded to the built-in search input while
+   *  `searchable`. */
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   /** Forwarded to the internal `<lr-file-input>`'s own `accept` (native-file-input-style pattern,
    *  e.g. `'.json,.csv'`). Empty (the default) accepts any file type. */
@@ -159,21 +187,39 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     if (changed.has('searchable') && !this.searchable) {
       this.searchText = '';
     }
-    if (!changed.has('examples')) return;
-    // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
-    // can hand back an `examples` array that no longer contains the previously-selected id, or no
-    // longer carries every previously-active tag. Re-clamp both here rather than leaving stale
-    // state pointing at nothing: an unclamped `selectedId` would leave the Remove button enabled
-    // for an id that can't be removed again, and an unclamped tag filter would keep matching zero
-    // rows forever with no visible way back to "no filter".
-    if (this.selectedId !== null && !this.examples.some((example) => example.id === this.selectedId)) {
-      this.selectedId = null;
-      this.emit('lr-example-select', { id: null });
+    if (changed.has('examples')) {
+      // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
+      // can hand back an `examples` array that no longer contains the previously-selected id, or no
+      // longer carries every previously-active tag. Re-clamp both here rather than leaving stale
+      // state pointing at nothing: an unclamped `selectedId` would leave the Remove button enabled
+      // for an id that can't be removed again, and an unclamped tag filter would keep matching zero
+      // rows forever with no visible way back to "no filter".
+      if (this.selectedId !== null && !this.examples.some((example) => example.id === this.selectedId)) {
+        this.clearSelection();
+      }
+      const available = this.allTags();
+      if ([...this.activeTags].some((tag) => !available.includes(tag))) {
+        this.activeTags = new Set([...this.activeTags].filter((tag) => available.includes(tag)));
+      }
     }
-    const available = this.allTags();
-    if ([...this.activeTags].some((tag) => !available.includes(tag))) {
-      this.activeTags = new Set([...this.activeTags].filter((tag) => available.includes(tag)));
+
+    // A row can still exist in the controlled dataset but no longer be visible once a search or
+    // tag filter narrows the grid. Clear its selection at that same boundary: leaving it active
+    // would make Remove act on an invisible row with no way for the user to verify the target.
+    const filtersChanged =
+      changed.has('examples') || changed.has('searchText') || changed.has('activeTags') || changed.has('searchable');
+    if (
+      filtersChanged &&
+      this.selectedId !== null &&
+      !this.visibleExamples.some((example) => example.id === this.selectedId)
+    ) {
+      this.clearSelection();
     }
+  }
+
+  private clearSelection(): void {
+    this.selectedId = null;
+    this.emit('lr-example-select', { id: null });
   }
 
   private allTags(): string[] {
@@ -311,6 +357,12 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .value=${this.searchText}
           aria-label=${label}
           placeholder=${label}
+          autocomplete=${this.autocomplete || nothing}
+          .spellcheck=${this.spellcheck}
+          autocapitalize=${this.autocapitalize || nothing}
+          autocorrect=${this.autoCorrect || nothing}
+          inputmode=${this.inputMode || nothing}
+          enterkeyhint=${this.enterKeyHint || nothing}
           ?disabled=${this.disabled}
           @input=${this.onSearchInput}
           @focus=${this.onSearchFocus}

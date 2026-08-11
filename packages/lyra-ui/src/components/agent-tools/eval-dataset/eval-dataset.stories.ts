@@ -83,6 +83,23 @@ export const SingleExportFormat: Story = {
   `,
 };
 
+export const SearchEditingAssistance: Story = {
+  render: () => html`
+    <div style="inline-size: 40rem; max-inline-size: 100%;">
+      <lr-eval-dataset
+        searchable
+        autocomplete="off"
+        spellcheck="false"
+        autocapitalize="none"
+        autocorrect="off"
+        inputmode="search"
+        enterkeyhint="search"
+        .examples=${examples}
+      ></lr-eval-dataset>
+    </div>
+  `,
+};
+
 export const Narrow320px: Story = {
   render: () => html`
     <div style="max-inline-size: 320px; border: 1px dashed var(--lr-color-border); padding: 0.5rem;">

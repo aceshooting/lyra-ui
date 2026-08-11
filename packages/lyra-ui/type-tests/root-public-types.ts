@@ -18,6 +18,7 @@ import type {
   LyraDatePicker,
   LyraDatePickerFirstDayOfWeek,
   LyraEmojiPickerSize,
+  LyraEvalDataset,
   LyraFileInputCapture,
   LyraLiteChartScale,
   LyraMarkedParser,
@@ -108,3 +109,14 @@ declare const datePicker: LyraDatePicker;
 datePicker.firstDayOfWeek = 'mon';
 // @ts-expect-error The picker shares the closed weekday vocabulary with lr-date-input.
 datePicker.firstDayOfWeek = 'someday';
+
+declare const evalDataset: LyraEvalDataset;
+const evalDatasetSearchEditingProperties: [
+  typeof evalDataset.autocomplete,
+  typeof evalDataset.spellcheck,
+  typeof evalDataset.autocapitalize,
+  typeof evalDataset.autoCorrect,
+  typeof evalDataset.inputMode,
+  typeof evalDataset.enterKeyHint,
+] = ['off', false, 'none', 'off', 'search', 'search'];
+void evalDatasetSearchEditingProperties;

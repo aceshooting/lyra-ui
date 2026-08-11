@@ -104,6 +104,49 @@ it('clears a private search filter when searchable becomes false', async () => {
   expect(gridRowCount(el)).to.equal(3);
 });
 
+it('forwards native editing-assistance and virtual-keyboard hints to the search input', async () => {
+  const el = (await fixture(html`
+    <lr-eval-dataset
+      searchable
+      autocomplete="off"
+      spellcheck="false"
+      autocapitalize="none"
+      autocorrect="off"
+      inputmode="search"
+      enterkeyhint="search"
+    ></lr-eval-dataset>
+  `)) as LyraEvalDataset;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+
+  expect(search.getAttribute('autocomplete')).to.equal('off');
+  expect(search.spellcheck).to.be.false;
+  expect(search.getAttribute('autocapitalize')).to.equal('none');
+  expect(search.getAttribute('autocorrect')).to.equal('off');
+  expect(search.getAttribute('inputmode')).to.equal('search');
+  expect(search.getAttribute('enterkeyhint')).to.equal('search');
+});
+
+it('leaves optional search editing-assistance hints unset by default', async () => {
+  const el = (await fixture(html`<lr-eval-dataset searchable></lr-eval-dataset>`)) as LyraEvalDataset;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+
+  expect(search.spellcheck).to.be.true;
+  expect(search.getAttribute('autocomplete')).to.equal(null);
+  expect(search.getAttribute('autocapitalize')).to.equal(null);
+  expect(search.getAttribute('autocorrect')).to.equal(null);
+  expect(search.getAttribute('inputmode')).to.equal(null);
+  expect(search.getAttribute('enterkeyhint')).to.equal(null);
+});
+
+it('parses a literal spellcheck="false" attribute for the searchable input', async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable spellcheck="false"></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+
+  expect(el.spellcheck).to.be.false;
+  expect(el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!.spellcheck).to.be.false;
+});
+
 it('gates search, tags, and row selection while disabled', async () => {
   const el = (await fixture(
     html`<lr-eval-dataset disabled searchable .examples=${examples()}></lr-eval-dataset>`,
@@ -248,6 +291,47 @@ it('filters by the built-in search field across input, expected output, and tags
   search.dispatchEvent(new Event('input'));
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(1);
+});
+
+it('clears selection and emits null when a search filter hides the selected example', async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
+  (grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[0] as HTMLElement).click();
+  await el.updateComplete;
+  const removeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+  expect(removeButton.disabled).to.be.false;
+
+  const selectionCleared = oneEvent(el, 'lr-example-select');
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  search.value = 'summary';
+  search.dispatchEvent(new Event('input'));
+  const event = await selectionCleared;
+  await el.updateComplete;
+
+  expect(event.detail).to.deep.equal({ id: null });
+  expect(gridRowCount(el)).to.equal(1);
+  expect(removeButton.disabled).to.be.true;
+});
+
+it('clears selection and emits null when a tag filter hides the selected example', async () => {
+  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+  const grid = el.shadowRoot!.querySelector('lr-table')!;
+  (grid.shadowRoot!.querySelectorAll('tbody tr[part="row"]')[1] as HTMLElement).click();
+  await el.updateComplete;
+  const removeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+  expect(removeButton.disabled).to.be.false;
+
+  const selectionCleared = oneEvent(el, 'lr-example-select');
+  const mathChip = ([...el.shadowRoot!.querySelectorAll('lr-chip')] as LyraChip[]).find((chip) => chip.value === 'math')!;
+  mathChip.click();
+  const event = await selectionCleared;
+  await el.updateComplete;
+
+  expect(event.detail).to.deep.equal({ id: null });
+  expect(gridRowCount(el)).to.equal(2);
+  expect(removeButton.disabled).to.be.true;
 });
 
 it('shows the no-matches message (not the empty-dataset message) once a filter matches zero of a non-empty dataset', async () => {
