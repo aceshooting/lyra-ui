@@ -131,6 +131,128 @@ it('keeps the full-bleed range hit surface at the icon floor and fills an explic
   expect(fixedHeight.matches(':state(dragging)')).to.be.false;
 });
 
+it('contains long unbroken 320px comparisons in LTR and Arabic RTL and mirrors the handle', async () => {
+  const longLtr = `BeforeSurfaceWithoutAnyNaturalBreakOpportunity${'BeforeAfter'.repeat(14)}`;
+  const longArabic = `سطحقبلمقارنةدونفاصلطبيعي${'قبوبعد'.repeat(36)}`;
+  const root = await fixture<HTMLDivElement>(html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      <div data-case="ltr" style="inline-size: 320px; max-inline-size: 320px">
+        <lr-image-comparer
+          position="35"
+          aria-label="Before and after comparison"
+          style="block-size: var(--lr-size-10rem)"
+        >
+          <div slot="before" style="padding: var(--lr-space-m)">${longLtr}</div>
+          <div slot="after" style="padding: var(--lr-space-m)">${longLtr}</div>
+          <span slot="handle" aria-hidden="true">⇆</span>
+        </lr-image-comparer>
+      </div>
+      <div data-case="rtl" dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 320px">
+        <lr-image-comparer
+          position="35"
+          aria-label="مقارنة قبل وبعد"
+          style="block-size: var(--lr-size-10rem)"
+        >
+          <div slot="before" style="padding: var(--lr-space-m)">${longArabic}</div>
+          <div slot="after" style="padding: var(--lr-space-m)">${longArabic}</div>
+          <span slot="handle" aria-hidden="true">⇆</span>
+        </lr-image-comparer>
+      </div>
+    </div>
+  `);
+
+  const comparerFor = (direction: 'ltr' | 'rtl') => {
+    const wrapper = root.querySelector<HTMLElement>(`[data-case="${direction}"]`)!;
+    const el = wrapper.querySelector<LyraImageComparer>('lr-image-comparer')!;
+    return {
+      direction,
+      wrapper,
+      el,
+      base: el.shadowRoot!.querySelector<HTMLElement>("[part~='base'][part~='comparison']")!,
+      before: el.shadowRoot!.querySelector<HTMLElement>("[part='before']")!,
+      after: el.shadowRoot!.querySelector<HTMLElement>("[part='after']")!,
+      divider: el.shadowRoot!.querySelector<HTMLElement>("[part='divider']")!,
+      input: el.shadowRoot!.querySelector<HTMLInputElement>("[part='input']")!,
+      handle: el.shadowRoot!.querySelector<HTMLElement>('.handle-visual')!,
+      beforeContent: el.querySelector<HTMLElement>('[slot="before"]')!,
+      afterContent: el.querySelector<HTMLElement>('[slot="after"]')!,
+    };
+  };
+
+  const ltr = comparerFor('ltr');
+  const rtl = comparerFor('rtl');
+  await Promise.all([ltr.el.updateComplete, rtl.el.updateComplete]);
+
+  const expectContained = (inner: DOMRect, outer: DOMRect, label: string) => {
+    expect(inner.left, `${label} left edge`).to.be.at.least(outer.left - 2);
+    expect(inner.right, `${label} right edge`).to.be.at.most(outer.right + 2);
+    expect(inner.top, `${label} top edge`).to.be.at.least(outer.top - 2);
+    expect(inner.bottom, `${label} bottom edge`).to.be.at.most(outer.bottom + 2);
+  };
+
+  for (
+    const { direction, wrapper, el, base, before, after, input, beforeContent, afterContent } of [ltr, rtl]
+  ) {
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const hostRect = el.getBoundingClientRect();
+    const baseRect = base.getBoundingClientRect();
+    const beforeRect = before.getBoundingClientRect();
+    const afterRect = after.getBoundingClientRect();
+    const beforeContentRect = beforeContent.getBoundingClientRect();
+    const afterContentRect = afterContent.getBoundingClientRect();
+    const inputRect = input.getBoundingClientRect();
+
+    expect(wrapper.scrollWidth, `${direction} wrapper has no horizontal overflow`).to.be.at.most(
+      wrapper.clientWidth + 1,
+    );
+    for (const [name, element] of [
+      ['base', base],
+      ['before layer', before],
+      ['after layer', after],
+      ['before content', beforeContent],
+      ['after content', afterContent],
+    ] as const) {
+      expect(element.scrollWidth, `${direction} ${name} has no horizontal overflow`).to.be.at.most(
+        element.clientWidth + 1,
+      );
+    }
+    expectContained(hostRect, wrapperRect, `${direction} host`);
+    expectContained(baseRect, hostRect, `${direction} base/comparison`);
+    expectContained(beforeRect, baseRect, `${direction} before layer`);
+    expectContained(afterRect, baseRect, `${direction} after layer`);
+    expectContained(beforeContentRect, beforeRect, `${direction} before content`);
+    expectContained(afterContentRect, afterRect, `${direction} after content`);
+    expectContained(inputRect, baseRect, `${direction} native range`);
+    expect(inputRect.width, `${direction} native range keeps a 40px inline interaction floor`).to.be.at.least(
+      40,
+    );
+    expect(inputRect.height, `${direction} native range keeps a 40px block interaction floor`).to.be.at.least(
+      40,
+    );
+  }
+
+  const ltrBase = ltr.base.getBoundingClientRect();
+  const rtlBase = rtl.base.getBoundingClientRect();
+  const ltrDivider = ltr.divider.getBoundingClientRect();
+  const rtlDivider = rtl.divider.getBoundingClientRect();
+  const ltrHandle = ltr.handle.getBoundingClientRect();
+  const rtlHandle = rtl.handle.getBoundingClientRect();
+  const ltrCenter = ltrHandle.left + ltrHandle.width / 2;
+  const rtlCenter = rtlHandle.left + rtlHandle.width / 2;
+  const ltrDividerCenter = ltrDivider.left + ltrDivider.width / 2;
+  const rtlDividerCenter = rtlDivider.left + rtlDivider.width / 2;
+  expect(ltrDividerCenter, 'LTR divider and handle share a center').to.be.closeTo(ltrCenter, 1);
+  expect(rtlDividerCenter, 'RTL divider and handle share a center').to.be.closeTo(rtlCenter, 1);
+  expect(ltrCenter - ltrBase.left, 'LTR position 35 starts 35% from the physical left').to.be.closeTo(
+    ltrBase.width * 0.35,
+    1,
+  );
+  expect(rtlBase.right - rtlCenter, 'RTL position 35 mirrors to 35% from the physical right').to.be.closeTo(
+    rtlBase.width * 0.35,
+    1,
+  );
+});
+
 it('keeps interactive descendants of the decorative handle slot out of focus and the accessibility tree', async () => {
   const el = (await fixture(html`<lr-image-comparer aria-label="Compare images">
     <div slot="before">Before</div>

@@ -44,8 +44,11 @@ export const styles = css`
   [part='before'] ::slotted(*),
   [part='after'] ::slotted(*) {
     display: block;
+    box-sizing: border-box;
+    min-inline-size: 0;
     inline-size: 100%;
     max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='divider'] {
     position: absolute;

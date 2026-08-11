@@ -1,5 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
+
+const longLtrBefore = 'VorherVergleichsflächeOhneNatürlicheUmbruchmöglichkeit'.repeat(4);
+const longLtrAfter = 'NachherVergleichsflächeOhneNatürlicheUmbruchmöglichkeit'.repeat(4);
+const longArabicBefore = 'سطحقبلمقارنةدونفاصلطبيعي'.repeat(8);
+const longArabicAfter = 'سطحبعدمقارنةدونفاصلطبيعي'.repeat(8);
 
 const meta: Meta = {
   title: 'Image Comparer',
@@ -35,4 +41,37 @@ export const Vertical: Story = {
     <div slot="after" style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">Bottom</div>
     <span slot="handle" aria-hidden="true">↕</span>
   </lr-image-comparer>`,
+};
+
+export const NarrowLongContent: Story = {
+  name: '320px long content — LTR and Arabic RTL',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Both 320px examples intentionally use long, unbroken slotted content. The horizontal divider and custom handle stay contained, and position 35 mirrors from the physical left edge in LTR to the physical right edge in RTL.',
+      },
+    },
+  },
+  render: () =>
+    narrowStoryFrames((direction) => {
+      const rtl = direction === 'rtl';
+      return html`
+        <lr-image-comparer
+          position="35"
+          aria-label=${rtl ? 'مقارنة قبل وبعد' : 'Vorher-Nachher-Vergleich'}
+          style="block-size: var(--lr-size-10rem)"
+        >
+          <div
+            slot="before"
+            style="display: grid; min-block-size: var(--lr-size-10rem); padding: var(--lr-space-m); place-items: center; background: var(--lr-color-surface-raised);"
+          >${rtl ? longArabicBefore : longLtrBefore}</div>
+          <div
+            slot="after"
+            style="display: grid; min-block-size: var(--lr-size-10rem); padding: var(--lr-space-m); place-items: center; background: var(--lr-color-brand-quiet);"
+          >${rtl ? longArabicAfter : longLtrAfter}</div>
+          <span slot="handle" aria-hidden="true">⇆</span>
+        </lr-image-comparer>
+      `;
+    }),
 };
