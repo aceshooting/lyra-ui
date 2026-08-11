@@ -206,9 +206,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
-      // The accessor owns reflection so an explicit empty default can remove
-      // the attribute. Lit's generic reflection would recreate `value=""`.
-      reflect: false,
+      reflect: true,
       useDefault: true,
       noAccessor: true,
     },
@@ -473,13 +471,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (this.reflectingDefaultValue) return;
     const old = this._defaultValue;
     this._defaultValue = next ?? '';
-    this.reflectingDefaultValue = true;
-    try {
-      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
-      else this.removeAttribute('value');
-    } finally {
-      this.reflectingDefaultValue = false;
-    }
+    this.syncDefaultValueAttribute();
     if (!this._valueDirty) this.restoreLiveValueFromDefault();
     this.requestUpdate('defaultValue', old);
   }
@@ -711,6 +703,11 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    // `defaultValue` retains Lit reflection for the public manifest, while an
+    // explicit empty reset default follows native control semantics by removing
+    // `value` rather than leaving a misleading `value=""` attribute behind.
+    // This runs after Lit has reflected the changed property.
+    if (changed.has('defaultValue') && !this._defaultValue) this.syncDefaultValueAttribute();
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
       this.syncPopup();
@@ -729,6 +726,16 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       )?.focus();
     }
     this.suppressControlEvents = false;
+  }
+
+  private syncDefaultValueAttribute(): void {
+    this.reflectingDefaultValue = true;
+    try {
+      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
+      else this.removeAttribute('value');
+    } finally {
+      this.reflectingDefaultValue = false;
+    }
   }
 
   private commitValue(next: string): void {
