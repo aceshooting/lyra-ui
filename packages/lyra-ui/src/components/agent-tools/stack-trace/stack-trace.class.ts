@@ -18,11 +18,23 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_stackTraceHideFram
  *  `lr-copy-button`'s own confirmation duration. */
 const COPY_CONFIRM_MS = 1500;
 
+/** A parsed frame is navigable only when its complete location survived the parser's safe-integer
+ *  validation. This guard intentionally repeats at the event boundary so a future parser change
+ *  cannot turn an unsafe raw frame into an emitted navigation request. */
+function isSelectableFrame(frame: StackFrame): frame is StackFrame & { file: string; line: number; column?: number } {
+  return (
+    typeof frame.file === 'string'
+    && frame.file.length > 0
+    && Number.isSafeInteger(frame.line)
+    && (frame.column === undefined || Number.isSafeInteger(frame.column))
+  );
+}
+
 /** Visual chrome for `<lr-stack-trace>`'s root — the library's shared container-frame vocabulary. */
 export type StackTraceAppearance = LyraFrame;
 
 export interface LyraStackTraceEventMap {
-  'lr-frame-select': CustomEvent<{ file?: string; line?: number; column?: number; raw: string }>;
+  'lr-frame-select': CustomEvent<{ file: string; line: number; column?: number; raw: string }>;
   'lr-copy': CustomEvent<{ text: string }>;
 }
 
@@ -31,18 +43,22 @@ export interface LyraStackTraceEventMap {
  * leading message plus activatable frames, splitting chained/caused-by errors into separate
  * groups. Frames matching `internalPatterns` (`node_modules/`, `node:internal`,
  * `site-packages/`, ... by default) fold behind a count-labeled toggle. Falls back to verbatim
- * raw text when nothing parses. First-party invention (no Web Awesome equivalent).
+ * raw text when nothing parses. A malformed or unsafe numeric location remains visible as raw,
+ * non-activatable trace text rather than becoming an invalid navigation target. First-party
+ * invention (no Web Awesome equivalent).
  *
  * @customElement lr-stack-trace
- * @event lr-frame-select - `detail: { file?, line?, column?, raw }` — a frame was activated
- *   (`column` is always undefined for Python frames, which carry no column information).
+ * @event lr-frame-select - `detail: { file, line, column?, raw }` — a frame with a safe parsed
+ *   location was activated (`column` is always undefined for Python frames, which carry no column
+ *   information). Malformed or unsafe locations render as raw text and never emit this event.
  * @event lr-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
  *   whether the OS clipboard write actually succeeded.
  * @csspart base - The root wrapper; respects `max-height`. Drops its card chrome under
  *   `frame="plain"`.
  * @csspart message - The leading error message text for a group.
  * @csspart group - One chained-error group of frames.
- * @csspart frame - A single frame button; carries `data-internal` for internal frames.
+ * @csspart frame - A selectable frame button (carrying `data-internal` for internal frames), or a
+ *   non-activatable raw row when the source location is malformed or unsafe.
  * @csspart frame-function - The frame's function name.
  * @csspart frame-location - The frame's `file:line:col` text.
  * @csspart internal-toggle - The collapse/expand toggle for a run of internal frames.
@@ -159,6 +175,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   };
 
   private onFrameClick(frame: StackFrame): void {
+    if (!isSelectableFrame(frame)) return;
     this.emit('lr-frame-select', { file: frame.file, line: frame.line, column: frame.column, raw: frame.raw });
   }
 
@@ -170,13 +187,12 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   }
 
   private renderFrame(frame: StackFrame): TemplateResult {
-    const location = frame.file
-      ? `${frame.file}${frame.line !== undefined ? `:${frame.line}` : ''}${frame.column !== undefined ? `:${frame.column}` : ''}`
-      : '';
+    if (!isSelectableFrame(frame)) return html`<span part="frame" data-raw dir="ltr">${frame.raw}</span>`;
+    const location = `${frame.file}:${frame.line}${frame.column !== undefined ? `:${frame.column}` : ''}`;
     return html`
       <button part="frame" type="button" ?data-internal=${frame.internal} @click=${() => this.onFrameClick(frame)}>
         ${frame.functionName ? html`<span part="frame-function">${frame.functionName}</span>` : nothing}
-        <span part="frame-location" dir="ltr">${location || frame.raw}</span>
+        <span part="frame-location" dir="ltr">${location}</span>
       </button>
     `;
   }

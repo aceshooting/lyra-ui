@@ -1,6 +1,8 @@
 import { expect } from '@open-wc/testing';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './stack-trace-parse.js';
 
+const OVERFLOW_LOCATION = '9'.repeat(400);
+
 describe('parseStackTrace', () => {
   it('resets stateful global RegExp patterns before every frame test', () => {
     const groups = parseStackTrace(
@@ -117,5 +119,100 @@ describe('parseStackTrace', () => {
     expect(groups[0].frames).to.have.lengthOf(3);
     expect(groups[0].frames[1].file).to.be.undefined;
     expect(groups[0].frames[1].raw.trim()).to.equal('(some tool-injected note)');
+  });
+
+  it('preserves 400-digit V8 named, bare, and Firefox locations as raw frames instead of coercing them to Infinity', () => {
+    const named = `    at named (/app/named.js:${OVERFLOW_LOCATION}:${OVERFLOW_LOCATION})`;
+    const bare = `    at /app/bare.js:${OVERFLOW_LOCATION}:${OVERFLOW_LOCATION}`;
+    const firefox = `firefox@https://example.test/firefox.js:${OVERFLOW_LOCATION}:${OVERFLOW_LOCATION}`;
+    const groups = parseStackTrace(['Error: unsafe locations', '    at safe (/app/safe.js:1:1)', named, bare, firefox].join('\n'), []);
+    const frames = groups[0]!.frames;
+    const rawFrames = frames.filter((frame) => frame.file === undefined);
+
+    expect(frames[0]).to.deep.include({ file: '/app/safe.js', line: 1, column: 1 });
+    expect(rawFrames.map((frame) => frame.raw)).to.deep.equal([named, bare, firefox]);
+    expect(rawFrames.every((frame) => frame.line === undefined && frame.column === undefined)).to.equal(true);
+    expect(frames.some((frame) => frame.line === Infinity || frame.column === Infinity)).to.equal(false);
+  });
+
+  it('preserves a 400-digit Python location as a raw frame instead of coercing it to Infinity', () => {
+    const unsafe = `  File "/app/unsafe.py", line ${OVERFLOW_LOCATION}, in run`;
+    const groups = parseStackTrace(
+      [
+        'Traceback (most recent call last):',
+        '  File "/app/safe.py", line 1, in <module>',
+        unsafe,
+        'RuntimeError: unsafe location',
+      ].join('\n'),
+      [],
+    );
+    const frames = groups[0]!.frames;
+    const raw = frames.find((frame) => frame.raw.startsWith(unsafe));
+
+    expect((raw) != null).to.equal(true);
+    expect(raw!.file).to.be.undefined;
+    expect(raw!.line).to.be.undefined;
+    expect(frames.some((frame) => frame.line === Infinity)).to.equal(false);
+  });
+
+  it('keeps malformed V8, bare, Firefox, and Python location candidates raw', () => {
+    const named = '    at named (/app/named.js:line:column)';
+    const bare = '    at /app/bare.js:line:column';
+    const firefox = 'firefox@https://example.test/firefox.js:line:column';
+    const jsGroups = parseStackTrace(['Error: malformed locations', '    at safe (/app/safe.js:1:1)', named, bare, firefox].join('\n'), []);
+    const jsRaw = jsGroups[0]!.frames.filter((frame) => frame.file === undefined);
+
+    expect(jsRaw.map((frame) => frame.raw)).to.deep.equal([named, bare, firefox]);
+
+    const python = '  File "/app/unsafe.py", line not-a-number, in run';
+    const pythonGroups = parseStackTrace(
+      [
+        'Traceback (most recent call last):',
+        '  File "/app/safe.py", line 1, in <module>',
+        python,
+        'RuntimeError: malformed location',
+      ].join('\n'),
+      [],
+    );
+    const pythonRaw = pythonGroups[0]!.frames.find((frame) => frame.raw.startsWith(python));
+
+    expect(pythonRaw?.file).to.be.undefined;
+    expect(pythonRaw?.line).to.be.undefined;
+  });
+
+  it('does not mistake malformed Python-like prose in a JavaScript trace for a Python traceback', () => {
+    const trace = [
+      'Error: JavaScript stack',
+      '    at safe (/app/safe.js:1:1)',
+      'File "/note", line malformed, in prose',
+    ].join('\n');
+    const groups = parseStackTrace(trace, []);
+
+    expect(groups[0]!.frames[0]).to.deep.include({ file: '/app/safe.js', line: 1, column: 1 });
+    expect(groups[0]!.frames[1]).to.deep.include({ internal: false, raw: 'File "/note", line malformed, in prose' });
+  });
+
+  it('accepts the safe-integer boundary but preserves the next integer as raw', () => {
+    const safe = Number.MAX_SAFE_INTEGER.toString();
+    const unsafe = (Number.MAX_SAFE_INTEGER + 1).toString();
+    const trace = [
+      'Error: integer boundary',
+      `    at safe (/app/safe.js:${safe}:${safe})`,
+      `    at unsafe (/app/unsafe.js:${unsafe}:${unsafe})`,
+    ].join('\n');
+    const frames = parseStackTrace(trace, [])[0]!.frames;
+
+    expect(frames[0]).to.deep.include({ file: '/app/safe.js', line: Number.MAX_SAFE_INTEGER, column: Number.MAX_SAFE_INTEGER });
+    expect(frames[1]).to.deep.include({ internal: false, raw: `    at unsafe (/app/unsafe.js:${unsafe}:${unsafe})` });
+    expect(frames[1].file).to.be.undefined;
+  });
+
+  it('returns no structured groups when every location is unsafe, preserving the complete trace for verbatim fallback', () => {
+    const trace = [
+      'Traceback (most recent call last):',
+      `  File "/app/unsafe.py", line ${OVERFLOW_LOCATION}, in run`,
+      'RuntimeError: unsafe location',
+    ].join('\n');
+    expect(parseStackTrace(trace, [])).to.deep.equal([]);
   });
 });

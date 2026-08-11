@@ -34,15 +34,17 @@ const DIGITS_RE = /^\d+$/;
 // The function-name capture requires a non-whitespace first character (`\S.*`) so the preceding
 // `\s+` and the capture can't both claim the same run of spaces -- that ambiguity is what made the
 // original `(.+)` form polynomial-time on adversarial input (CodeQL js/polynomial-redos).
-const V8_FRAME_BARE = /^\s*at\s+(?:async\s+)?(\S.*):(\d+):(\d+)\s*$/;
-const FIREFOX_FRAME = /^([^\s@]*)@(.+):(\d+):(\d+)$/;
 const JS_CAUSE = /^\s*(?:Caused by:|\[cause\]:)(.*)$/;
 
 const PYTHON_HEADER = /^Traceback \(most recent call last\):\s*$/;
 // File-path capture excludes `"` (its own delimiter) so the boundary is unambiguous instead of
 // backtracking across every `"` in the line; the trailing function-name is trimmed in code below
 // rather than via a lazy `(.+?)\s*$`, which was the other polynomial-time spot CodeQL flagged.
-const PYTHON_FRAME = /^\s*File "([^"]+)", line (\d+), in (.+)$/;
+const PYTHON_FRAME = /^\s*File "([^"]+)", line ([^,]*), in (.+)$/;
+// Keep language detection strict. PYTHON_FRAME intentionally recognizes malformed coordinate
+// candidates after a traceback has already been identified, but prose resembling such a line must
+// not make a JavaScript trace skip its valid V8/Firefox frames.
+const PYTHON_FRAME_DETECTOR = /^\s*File "[^"]+", line \d+, in .+$/;
 const PYTHON_CHAIN_SEPARATOR = /direct cause|During handling/;
 // Equivalent to the original `\S+(\.\S+)*:\s` -- `\S` already matches `.`, so the `(\.\S+)*`
 // group added no coverage, only exponential backtracking (CodeQL js/redos) on input like many
@@ -54,6 +56,32 @@ interface V8FrameWithFn {
   file: string;
   line: string;
   col: string;
+}
+
+interface V8BareFrame {
+  file: string;
+  line: string;
+  col: string;
+}
+
+interface FirefoxFrame extends V8BareFrame {
+  fn?: string;
+}
+
+interface StackLocation {
+  line: number;
+  column?: number;
+}
+
+/** Parses a trace coordinate without silently rounding, overflowing, or accepting a partial
+ *  numeric token. Source locations are navigation targets, so an unsafe token becomes raw trace
+ *  text rather than a fabricated location that an application could try to open. */
+function parseSafeLocation(lineToken: string, columnToken?: string): StackLocation | null {
+  const line = DIGITS_RE.test(lineToken) ? Number(lineToken) : Number.NaN;
+  if (!Number.isSafeInteger(line)) return null;
+  if (columnToken === undefined) return { line };
+  const column = DIGITS_RE.test(columnToken) ? Number(columnToken) : Number.NaN;
+  return Number.isSafeInteger(column) ? { line, column } : null;
 }
 
 /** Matches a V8 "at <fn> (<file>:<line>:<col>)" frame without regex backtracking: the location's
@@ -74,8 +102,47 @@ function matchV8FrameWithFn(line: string): V8FrameWithFn | null {
   const file = inner.slice(0, secondLastColon);
   const lineStr = inner.slice(secondLastColon + 1, lastColon);
   const col = inner.slice(lastColon + 1);
-  if (!file || !DIGITS_RE.test(lineStr) || !DIGITS_RE.test(col)) return null;
+  if (!file) return null;
   return { fn, file, line: lineStr, col };
+}
+
+/** Parses `at /file:line:column` by splitting the final two colons, which keeps URLs and Windows
+ *  paths intact while leaving coordinate validation to parseSafeLocation(). */
+function matchV8BareFrame(line: string): V8BareFrame | null {
+  const prefixMatch = V8_FRAME_PREFIX.exec(line);
+  if (!prefixMatch) return null;
+  const rest = line.slice(prefixMatch[0].length).trimEnd();
+  const lastColon = rest.lastIndexOf(':');
+  const secondLastColon = lastColon === -1 ? -1 : rest.lastIndexOf(':', lastColon - 1);
+  if (secondLastColon === -1) return null;
+  const file = rest.slice(0, secondLastColon);
+  if (!file) return null;
+  return {
+    file,
+    line: rest.slice(secondLastColon + 1, lastColon),
+    col: rest.slice(lastColon + 1),
+  };
+}
+
+/** Parses Firefox/Safari's `fn@file:line:column` layout without imposing a numeric conversion
+ *  before the location helper has validated the exact tokens. */
+function matchFirefoxFrame(line: string): FirefoxFrame | null {
+  const at = line.indexOf('@');
+  if (at === -1) return null;
+  const fn = line.slice(0, at);
+  if (/\s/.test(fn)) return null;
+  const rest = line.slice(at + 1);
+  const lastColon = rest.lastIndexOf(':');
+  const secondLastColon = lastColon === -1 ? -1 : rest.lastIndexOf(':', lastColon - 1);
+  if (secondLastColon === -1) return null;
+  const file = rest.slice(0, secondLastColon);
+  if (!file) return null;
+  return {
+    ...(fn ? { fn } : {}),
+    file,
+    line: rest.slice(secondLastColon + 1, lastColon),
+    col: rest.slice(lastColon + 1),
+  };
 }
 
 function isInternal(file: string | undefined, patterns: (string | RegExp)[]): boolean {
@@ -89,6 +156,28 @@ function isInternal(file: string | undefined, patterns: (string | RegExp)[]): bo
     pattern.lastIndex = 0;
     return matches;
   });
+}
+
+/** Produces a selectable frame only when every supplied coordinate is a finite safe integer.
+ *  Invalid and overflowing locations deliberately retain only their original raw text: showing a
+ *  guessed file/function would invite a consumer to treat the row as a valid navigation target. */
+function makeFrame(
+  raw: string,
+  file: string,
+  lineToken: string,
+  columnToken: string | undefined,
+  functionName: string | undefined,
+  internalPatterns: (string | RegExp)[],
+): StackFrame {
+  const location = parseSafeLocation(lineToken, columnToken);
+  if (!location) return { internal: false, raw };
+  return {
+    ...(functionName ? { functionName } : {}),
+    file,
+    ...location,
+    internal: isInternal(file, internalPatterns),
+    raw,
+  };
 }
 
 function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackGroup[] {
@@ -110,40 +199,21 @@ function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackG
       continue;
     }
     const withFn = matchV8FrameWithFn(line);
-    const bare = !withFn ? V8_FRAME_BARE.exec(line) : null;
-    const firefox = !withFn && !bare ? FIREFOX_FRAME.exec(line) : null;
+    const bare = !withFn ? matchV8BareFrame(line) : null;
+    const firefox = !withFn && !bare ? matchFirefoxFrame(line) : null;
     if (withFn) {
       const { fn, file, line: ln, col } = withFn;
-      current.frames.push({
-        functionName: fn,
-        file,
-        line: Number(ln),
-        column: Number(col),
-        internal: isInternal(file, internalPatterns),
-        raw: line,
-      });
-      sawFrame = true;
+      const frame = makeFrame(line, file, ln, col, fn, internalPatterns);
+      current.frames.push(frame);
+      sawFrame ||= frame.file !== undefined;
     } else if (bare) {
-      const [, file, ln, col] = bare;
-      current.frames.push({
-        file,
-        line: Number(ln),
-        column: Number(col),
-        internal: isInternal(file, internalPatterns),
-        raw: line,
-      });
-      sawFrame = true;
-    } else if (firefox && /:\d+:\d+$/.test(line)) {
-      const [, fn, file, ln, col] = firefox;
-      current.frames.push({
-        functionName: fn || undefined,
-        file,
-        line: Number(ln),
-        column: Number(col),
-        internal: isInternal(file, internalPatterns),
-        raw: line,
-      });
-      sawFrame = true;
+      const frame = makeFrame(line, bare.file, bare.line, bare.col, undefined, internalPatterns);
+      current.frames.push(frame);
+      sawFrame ||= frame.file !== undefined;
+    } else if (firefox) {
+      const frame = makeFrame(line, firefox.file, firefox.line, firefox.col, firefox.fn, internalPatterns);
+      current.frames.push(frame);
+      sawFrame ||= frame.file !== undefined;
     } else if (sawFrame && line.trim() !== '') {
       current.frames.push({ internal: false, raw: line });
     } else if (!sawFrame) {
@@ -174,14 +244,9 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
     const frameMatch = PYTHON_FRAME.exec(line);
     if (frameMatch && current) {
       const [, file, ln, fn] = frameMatch;
-      const frame: StackFrame = {
-        file,
-        line: Number(ln),
-        // safe: PYTHON_FRAME group 3 `(.+)` is required, always present on exec success
-        functionName: fn!.trimEnd(),
-        internal: isInternal(file, internalPatterns),
-        raw: line,
-      };
+      // PYTHON_FRAME's function group is required on a structural match. Coordinate safety stays
+      // centralized in makeFrame(), which returns a raw frame when the line token is malformed.
+      const frame = makeFrame(line, file!, ln!, undefined, fn!.trimEnd(), internalPatterns);
       current.frames.push(frame);
       i++;
       const maybeSource = lines[i];
@@ -201,12 +266,14 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
     if (current) current.trailerLines.push(line);
     i++;
   }
-  return groups
+  const parsedGroups = groups
     .filter((g) => g.frames.length > 0 || g.trailerLines.some((l) => l.trim() !== ''))
     .map((g) => ({
       message: g.trailerLines.join('\n').trim(),
       frames: [...g.frames].reverse(),
     }));
+  const structuredCount = parsedGroups.reduce((n, group) => n + group.frames.filter((frame) => frame.file !== undefined).length, 0);
+  return structuredCount > 0 ? parsedGroups : [];
 }
 
 /**
@@ -216,6 +283,6 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
  */
 export function parseStackTrace(trace: string, internalPatterns: (string | RegExp)[]): StackGroup[] {
   const lines = trace.split(/\r\n|\r|\n/);
-  const isPython = lines.some((line) => PYTHON_HEADER.test(line) || PYTHON_FRAME.test(line));
+  const isPython = lines.some((line) => PYTHON_HEADER.test(line) || PYTHON_FRAME_DETECTOR.test(line));
   return isPython ? parsePython(lines, internalPatterns) : parseJs(lines, internalPatterns);
 }

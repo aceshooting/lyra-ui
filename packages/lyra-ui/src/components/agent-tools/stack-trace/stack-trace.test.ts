@@ -10,6 +10,8 @@ const trace = [
   '    at Module._extensions..js (node:internal/modules/cjs/loader:1179:10)',
 ].join('\n');
 
+const overflowLocation = '9'.repeat(400);
+
 describe('lr-stack-trace', () => {
   it('expands separate internal runs independently', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
@@ -95,6 +97,45 @@ describe('lr-stack-trace', () => {
     frame.click();
     const event = (await listener) as CustomEvent<{ file: string; line: number; column: number }>;
     expect(event.detail).to.deep.include({ file: '/app/src/util.js', line: 10, column: 5 });
+  });
+
+  it('renders overflow and malformed locations as raw non-activatable frames that cannot emit selection', async () => {
+    const overflow = `    at overflow (/app/overflow.js:${overflowLocation}:${overflowLocation})`;
+    const malformed = '    at malformed (/app/malformed.js:line:column)';
+    const el = (await fixture(html`
+      <lr-stack-trace
+        .collapseInternal=${false}
+        .trace=${['Error: untrusted stack', '    at safe (/app/safe.js:1:1)', overflow, malformed].join('\n')}
+      ></lr-stack-trace>
+    `)) as LyraStackTrace;
+    await el.updateComplete;
+    const selectableFrames = el.shadowRoot!.querySelectorAll('button[part="frame"]');
+    const rawFrames = [...el.shadowRoot!.querySelectorAll<HTMLElement>('span[part="frame"][data-raw]')];
+    let selectEvents = 0;
+    el.addEventListener('lr-frame-select', () => {
+      selectEvents += 1;
+    });
+
+    expect(selectableFrames.length).to.equal(1);
+    expect(rawFrames.map((frame) => frame.textContent)).to.deep.equal([overflow, malformed]);
+    expect(rawFrames.map((frame) => frame.getAttribute('tabindex'))).to.deep.equal([null, null]);
+    expect(rawFrames.map((frame) => frame.getAttribute('dir'))).to.deep.equal(['ltr', 'ltr']);
+    rawFrames.forEach((frame) => frame.click());
+    expect(selectEvents).to.equal(0);
+  });
+
+  it('falls back to the original raw trace when every location overflows', async () => {
+    const unsafeTrace = [
+      'Error: unsafe stack',
+      `    at overflow (/app/overflow.js:${overflowLocation}:${overflowLocation})`,
+    ].join('\n');
+    const el = (await fixture(html`<lr-stack-trace .trace=${unsafeTrace}></lr-stack-trace>`)) as LyraStackTrace;
+    await el.updateComplete;
+
+    const raw = el.shadowRoot!.querySelector<HTMLElement>('[part="raw"]');
+    expect((raw) != null).to.equal(true);
+    expect(raw!.textContent).to.equal(unsafeTrace);
+    expect(el.shadowRoot!.querySelectorAll('button[part="frame"]').length).to.equal(0);
   });
 
   it('renders verbatim raw output in part="raw" when nothing parses', async () => {
@@ -300,7 +341,7 @@ describe('lr-stack-trace chrome', () => {
     expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include(
-      "[part='frame']:hover, [part='frame']:focus-visible { color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand)); }",
+      "button[part='frame']:hover, button[part='frame']:focus-visible { color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand)); }",
     );
   });
 

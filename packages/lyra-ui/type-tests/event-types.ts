@@ -677,6 +677,16 @@ declare const preciseChange: LyraSelectEventMap['lr-change'];
 const preciseChangeValue: string | string[] = preciseChange.detail.value;
 void preciseChangeValue;
 
+// `lr-frame-select` only fires for source locations that passed safe-integer validation, so its
+// navigation target is fully present even though Python traces legitimately omit the column.
+declare const preciseFrameSelect: LyraStackTraceEventMap['lr-frame-select'];
+const preciseFrameFile: string = preciseFrameSelect.detail.file;
+const preciseFrameLine: number = preciseFrameSelect.detail.line;
+const preciseFrameColumn: number | undefined = preciseFrameSelect.detail.column;
+void preciseFrameFile;
+void preciseFrameLine;
+void preciseFrameColumn;
+
 // A detail property that does not exist must not typecheck. Before the global map existed this
 // line compiled fine, because `event` was a bare `Event` and `event.detail` was an error for a
 // different reason entirely -- so this is the assertion that proves the map is doing real work.

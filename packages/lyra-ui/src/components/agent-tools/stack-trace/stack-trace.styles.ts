@@ -50,22 +50,24 @@ export const styles = css`
     background: none;
     border: none;
     padding: var(--lr-space-2xs) 0;
+  }
+  button[part='frame'] {
     cursor: pointer;
   }
   [part='frame'][data-internal] {
     color: var(--lr-stack-trace-internal-frame-color, var(--lr-color-text-quiet));
   }
-  [part='frame']:hover,
-  [part='frame']:focus-visible {
+  button[part='frame']:hover,
+  button[part='frame']:focus-visible {
     color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
   }
   /* The hover recolours the label only, which leaves the pressed step nothing to deepen -- so
      pressed tints the frame's own (transparent) surface toward --lr-color-mix-partner, which
      follows the text colour and therefore darkens in a light theme and lightens in a dark one. */
-  [part='frame']:active {
+  button[part='frame']:active {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='frame']:focus-visible {
+  button[part='frame']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -75,6 +77,10 @@ export const styles = css`
   [part='frame-location'] {
     color: var(--lr-color-text-quiet);
     margin-inline-start: var(--lr-space-xs);
+    overflow-wrap: anywhere;
+  }
+  [part='frame'][data-raw] {
+    white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
   [part='internal-toggle'] {

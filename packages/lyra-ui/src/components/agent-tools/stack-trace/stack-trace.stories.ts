@@ -33,6 +33,13 @@ const pythonTrace = [
   'ValueError: bad',
 ].join('\n');
 
+const unsafeLocationTrace = [
+  'Error: untrusted stack location',
+  '    at safe (/app/safe.js:1:1)',
+  '    at overflow (/app/overflow.js:9007199254740992:1)',
+  '    at malformed (/app/malformed.js:line:column)',
+].join('\n');
+
 export const JavaScript: Story = {
   render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace}></lr-stack-trace>`,
 };
@@ -51,6 +58,18 @@ export const ExpandedFrames: Story = {
 
 export const UnparseableFallback: Story = {
   render: () => html`<lr-stack-trace style="max-width:40rem" trace="raw non-trace text from a weird tool"></lr-stack-trace>`,
+};
+
+export const UnsafeLocations: Story = {
+  name: 'Unsafe locations remain raw',
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${unsafeLocationTrace} .collapseInternal=${false}></lr-stack-trace>`,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Malformed and non-safe-integer locations remain visible but cannot be selected as source-navigation targets.',
+      },
+    },
+  },
 };
 
 export const MaxHeight: Story = {
