@@ -140,6 +140,28 @@ describe('lr-video-playlist public contract', () => {
     expect(el.repeat).to.equal('none');
   });
 
+  it('uses default and ancestor-themed current-item hooks for rendered playlist ink', async () => {
+    const defaults = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="First"></lr-video><lr-video title="Second"></lr-video></lr-video-playlist>
+    `);
+    await settle(defaults);
+    const [defaultCurrent, defaultInactive] = items(defaults);
+    expect(getComputedStyle(defaultCurrent!).borderColor === getComputedStyle(defaultInactive!).borderColor).to.be.false;
+
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="--lr-video-playlist-item-current-border-color: rgb(23, 24, 25); --lr-video-playlist-item-current-background: rgb(26, 27, 28)"
+      >
+        <lr-video-playlist><lr-video title="First"></lr-video></lr-video-playlist>
+      </div>
+    `);
+    const themed = wrapper.querySelector<LyraVideoPlaylist>('lr-video-playlist')!;
+    await settle(themed);
+    const themedCurrent = items(themed)[0]!;
+    expect(getComputedStyle(themedCurrent).borderColor).to.equal('rgb(23, 24, 25)');
+    expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
+  });
+
   it('uses only direct video children and skips disabled videos for activation and roving focus', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>

@@ -77,8 +77,14 @@ export const styles = css`
   }
 
   [part='playlist-item']:where([aria-current='true']) {
-    border-color: var(--lr-color-brand);
-    background: var(--lr-color-brand-fill-quiet);
+    border-color: var(
+      --lr-video-playlist-item-current-border-color,
+      var(--lr-color-brand)
+    );
+    background: var(
+      --lr-video-playlist-item-current-background,
+      var(--lr-color-brand-fill-quiet)
+    );
   }
 
   [part='playlist-item']:where(:disabled) {

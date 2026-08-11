@@ -182,6 +182,42 @@ describe('zoom controls and interaction', () => {
     }
   });
 
+  it('uses default and ancestor-themed hover backgrounds for zoom controls', async () => {
+    const defaults = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    const defaultButton = defaults.shadowRoot!.querySelector<HTMLElement>('[part="zoom-in-button"]')!;
+    const defaultBackground = getComputedStyle(defaultButton).backgroundColor;
+
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-zoomable-frame-control-hover-background: rgb(29, 30, 31)">
+        <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+      </div>
+    `);
+    const themedButton = wrapper.querySelector<LyraZoomableFrame>('lr-zoomable-frame')!.shadowRoot!
+      .querySelector<HTMLElement>('[part="zoom-in-button"]')!;
+    const moveTo = async (target: HTMLElement): Promise<void> => {
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      await aTimeout(0);
+      const rect = target.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await aTimeout(0);
+    };
+
+    try {
+      await resetMouse();
+      await moveTo(defaultButton);
+      expect(getComputedStyle(defaultButton).backgroundColor === defaultBackground).to.be.false;
+      await moveTo(themedButton);
+      expect(getComputedStyle(themedButton).backgroundColor).to.equal('rgb(29, 30, 31)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('supports localized slotted icon controls and keyboard plus/minus shortcuts', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%">

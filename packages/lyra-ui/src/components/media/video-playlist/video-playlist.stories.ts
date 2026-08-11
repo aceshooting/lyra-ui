@@ -54,6 +54,16 @@ export const RepeatAll: Story = {
   render: () => html`<lr-video-playlist repeat="all">${videos()}</lr-video-playlist>`,
 };
 
+export const CurrentItemTheme: Story = {
+  render: () => html`
+    <lr-video-playlist
+      style="--lr-video-playlist-item-current-border-color: var(--lr-color-success); --lr-video-playlist-item-current-background: var(--lr-color-success-quiet);"
+    >
+      ${videos()}
+    </lr-video-playlist>
+  `,
+};
+
 export const NarrowLongTitles: Story = {
   render: () => html`
     <div style="inline-size: var(--lr-size-20rem)">

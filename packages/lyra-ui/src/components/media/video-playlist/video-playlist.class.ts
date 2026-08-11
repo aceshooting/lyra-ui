@@ -155,6 +155,10 @@ function frozenTrack(
  * @csspart playlist-item - An individual playlist item button.
  * @csspart playlist-thumbnail - Thumbnail within a playlist item.
  * @csspart playlist-title - Title text within a playlist item.
+ * @cssprop [--lr-video-playlist-item-current-background=var(--lr-color-brand-fill-quiet)] - Current
+ *   playlist-item background.
+ * @cssprop [--lr-video-playlist-item-current-border-color=var(--lr-color-brand)] - Current
+ *   playlist-item border color.
  * @status experimental
  * @since 8.0.0
  */

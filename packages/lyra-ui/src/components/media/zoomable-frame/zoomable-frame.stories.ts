@@ -47,6 +47,14 @@ export const DecorativeIconSlots: Story = {
   </lr-zoomable-frame>`,
 };
 
+export const ControlHoverTheme: Story = {
+  render: () => html`<lr-zoomable-frame
+    aria-label="Themed zoom preview"
+    style="--lr-zoomable-frame-control-hover-background: var(--lr-color-success-quiet)"
+    .srcdoc=${previewDocument}
+  ></lr-zoomable-frame>`,
+};
+
 export const Narrow320Rtl: Story = {
   name: '320px RTL zoom preview',
   render: () => html`<div dir="rtl" lang="ar" style="inline-size: 320px;">

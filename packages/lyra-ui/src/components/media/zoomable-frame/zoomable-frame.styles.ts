@@ -71,14 +71,20 @@ export const styles = css`
 
   [part='zoom-in-button']:hover,
   [part='zoom-out-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(
+      --lr-zoomable-frame-control-hover-background,
+      var(--lr-color-brand-quiet)
+    );
   }
 
   [part='zoom-in-button']:active,
   [part='zoom-out-button']:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(
+        --lr-zoomable-frame-control-hover-background,
+        var(--lr-color-brand-quiet)
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

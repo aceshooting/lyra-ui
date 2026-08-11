@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { defaultReporter } from '@web/test-runner';
+import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
 import { playwrightLauncher } from '@web/test-runner-playwright';
 import { junitReporter } from '@web/test-runner-junit-reporter';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
@@ -225,6 +226,7 @@ export default {
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,
     echartsProcessInteropPlugin,
+    sendKeysPlugin(),
     mouseCommandPlugin,
     mediaCommandPlugin,
   ],

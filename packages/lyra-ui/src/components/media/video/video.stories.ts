@@ -33,7 +33,9 @@ export const Standard: Story = {
 
 export const FullControls: Story = {
   render: () => html`
-    <lr-video controls="full" src=${VIDEO_SRC} poster=${POSTER} title="Full controls"></lr-video>
+    <lr-video controls="full" src=${VIDEO_SRC} poster=${POSTER} title="Full controls">
+      <track src=${NARROW_CAPTION_TRACK} kind="captions" srclang="en" label="English" default>
+    </lr-video>
   `,
 };
 
@@ -92,6 +94,14 @@ export const Narrow320: Story = {
 };
 
 export const RightToLeft: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The surrounding controls follow RTL, while the elapsed-media axis remains physically left-to-right: ArrowRight advances and ArrowLeft rewinds the native timeline.',
+      },
+    },
+  },
   render: () => html`
     <div dir="rtl">
       <lr-video src=${VIDEO_SRC} poster=${POSTER} title="عرض فيديو"></lr-video>
@@ -102,11 +112,14 @@ export const RightToLeft: Story = {
 export const CustomControlTheme: Story = {
   render: () => html`
     <lr-video
-      style="--controls-background: color-mix(in oklab, var(--lr-color-brand), transparent 25%); --controls-color: var(--lr-color-on-brand); --poster-play-button-background: var(--lr-color-brand);"
+      controls="full"
+      style="--controls-background: color-mix(in oklab, var(--lr-color-brand), transparent 25%); --controls-color: var(--lr-color-on-brand); --poster-play-button-background: var(--lr-color-brand); --lr-video-poster-play-button-hover-background: var(--lr-color-success); --lr-video-poster-play-button-hover-border-color: var(--lr-color-success);"
       src=${VIDEO_SRC}
       poster=${POSTER}
       title="Custom control hooks"
-    ></lr-video>
+    >
+      <track src=${NARROW_CAPTION_TRACK} kind="captions" srclang="en" label="English" default>
+    </lr-video>
   `,
 };
 

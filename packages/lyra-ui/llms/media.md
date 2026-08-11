@@ -657,7 +657,9 @@ so a late event from an earlier document is ignored; detached frames do not noti
 **CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
-property and applied to the internal iframe scale.
+property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`
+(default `var(--lr-color-brand-quiet)`), which colors a zoom control on hover and supplies the base
+for its active color.
 
 **RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
 both directions. Its zoom controls remain logical interface chrome, so RTL places the toolbar at
@@ -1789,7 +1791,17 @@ composition slots and may intentionally contain interactive controls.
 **Themeable custom properties:** `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
-kept for mechanical Web Awesome migration.
+kept for mechanical Web Awesome migration. Lyra also supplies
+`--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+
+Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
+chevrons; their option foreground and background inherit `--controls-color` and
+`--controls-background`.
+
+**RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
+stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both
+LTR and RTL.
 
 **Thumbnail security and lifecycle:** `thumbnails` is validated before `fetch()`, read through a
 256 KiB byte ceiling, and parsed up to 2,000 cues. Cue image URLs are resolved relative to the VTT
@@ -1838,6 +1850,10 @@ are not playlist items.
 
 **CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
+
+**Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
+`var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

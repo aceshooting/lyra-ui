@@ -1,6 +1,8 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './video.js';
 import type { LyraVideo } from './video.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const VIDEO_SRC = 'https://example.test/video.mp4';
 
@@ -15,6 +17,17 @@ function button(el: LyraVideo, name: string): HTMLButtonElement | null {
 function restoreOwnProperty(target: object, name: PropertyKey, descriptor?: PropertyDescriptor): void {
   if (descriptor) Object.defineProperty(target, name, descriptor);
   else delete (target as Record<PropertyKey, unknown>)[name];
+}
+
+async function hover(target: HTMLElement): Promise<void> {
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  await aTimeout(0);
+  const rect = target.getBoundingClientRect();
+  await sendMouse({
+    type: 'move',
+    position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+  });
+  await aTimeout(0);
 }
 
 function stubPlayback(media: HTMLVideoElement, initialPaused = true) {
@@ -345,6 +358,36 @@ describe('lr-video public contract', () => {
     expect(getComputedStyle(controls).color).to.equal('rgb(4, 5, 6)');
     expect(getComputedStyle(overlay).backgroundImage).to.include('rgb(1, 2, 3)');
     expect(getComputedStyle(posterButton).backgroundColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('uses default and ancestor-themed poster hover hooks for rendered button ink', async () => {
+    const defaults = await fixture<LyraVideo>(html`
+      <lr-video poster="https://example.test/poster.jpg"></lr-video>
+    `);
+    const defaultButton = defaults.shadowRoot!.querySelector<HTMLElement>('[part="poster-play-button"]')!;
+    const defaultBorder = getComputedStyle(defaultButton).borderColor;
+
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="--lr-video-poster-play-button-hover-border-color: rgb(17, 18, 19); --lr-video-poster-play-button-hover-background: rgb(20, 21, 22)"
+      >
+        <lr-video poster="https://example.test/poster.jpg"></lr-video>
+      </div>
+    `);
+    const themedButton = wrapper.querySelector<LyraVideo>('lr-video')!.shadowRoot!
+      .querySelector<HTMLElement>('[part="poster-play-button"]')!;
+
+    try {
+      await resetMouse();
+      await hover(defaultButton);
+      expect(getComputedStyle(defaultButton).borderColor === defaultBorder).to.be.false;
+
+      await hover(themedButton);
+      expect(getComputedStyle(themedButton).borderColor).to.equal('rgb(17, 18, 19)');
+      expect(getComputedStyle(themedButton).backgroundColor).to.equal('rgb(20, 21, 22)');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('renders every documented icon/control slot', async () => {
@@ -834,6 +877,45 @@ describe('lr-video public contract', () => {
     expect(second.mode).to.equal('showing');
   });
 
+  it('renders caption and rate selects with themed decorative chevrons', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video
+        controls="full"
+        style="--controls-background: rgb(1, 2, 3); --controls-color: rgb(4, 5, 6); --lr-space-l: 37px"
+      ></lr-video>
+    `);
+    const media = nativeVideo(el);
+    const track = new EventTarget() as EventTarget & {
+      kind: string; label: string; language: string; mode: TextTrackMode; activeCues: null;
+    };
+    Object.assign(track, {
+      kind: 'captions', label: 'English', language: 'en', mode: 'showing', activeCues: null,
+    });
+    Object.defineProperty(media, 'textTracks', {
+      configurable: true,
+      value: { 0: track, length: 1 },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    const selects = [...el.shadowRoot!.querySelectorAll<HTMLSelectElement>(
+      '[data-control="captions"], [data-control="rate"]',
+    )];
+    expect(selects.length).to.equal(2);
+    for (const select of selects) {
+      const wrapper = select.closest<HTMLElement>('.select-control');
+      const chevron = wrapper?.querySelector<HTMLElement>('.select-control-icon');
+      expect(wrapper !== null).to.be.true;
+      expect(chevron !== null).to.be.true;
+      expect(chevron?.getAttribute('aria-hidden')).to.equal('true');
+      expect(getComputedStyle(chevron!).pointerEvents).to.equal('none');
+      expect(getComputedStyle(select).appearance).to.equal('none');
+      expect(getComputedStyle(select).paddingInlineEnd).to.equal('37px');
+      expect(getComputedStyle(select.options[0]!).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(select.options[0]!).color).to.equal('rgb(4, 5, 6)');
+    }
+  });
+
   it('pauses only visibility-owned playback and resumes it when visible again', async () => {
     const originalObserver = window.IntersectionObserver;
     let callback!: IntersectionObserverCallback;
@@ -1140,6 +1222,26 @@ describe('lr-video public contract', () => {
     expect(getComputedStyle(timeline).direction).to.equal('ltr');
     expect(getComputedStyle(play).animationName).to.equal('none');
     expect(getComputedStyle(play).transitionDuration).to.equal('0s');
+  });
+
+  it('uses native range ArrowRight/ArrowLeft behavior on the physical RTL timeline axis', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video dir="rtl"></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 60 },
+      currentTime: { configurable: true, value: 20, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const progress = el.shadowRoot!.querySelector<HTMLInputElement>('[part="progress"]')!;
+    progress.focus();
+    await sendKeys({ press: 'ArrowRight' });
+    await el.updateComplete;
+    const advanced = el.currentTime;
+    expect(advanced).to.be.greaterThan(20);
+    await sendKeys({ press: 'ArrowLeft' });
+    await el.updateComplete;
+    expect(el.currentTime).to.be.lessThan(advanced);
   });
 
   it('is accessible with controls disabled', async () => {

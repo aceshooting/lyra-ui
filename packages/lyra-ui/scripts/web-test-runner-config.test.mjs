@@ -18,6 +18,7 @@ function inspectConfig(coverage) {
       coverage: config.coverage,
       concurrency: config.concurrency ?? null,
       mediaCommand: config.plugins.some((plugin) => plugin.name === 'lyra-media-command'),
+      keyCommand: config.plugins.some((plugin) => plugin.name === 'send-keys-command'),
     }));
   `;
   const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
@@ -30,6 +31,16 @@ function inspectConfig(coverage) {
 }
 
 test('caps coverage browser sessions without changing ordinary test concurrency', () => {
-  assert.deepEqual(inspectConfig(true), { coverage: true, concurrency: 1, mediaCommand: true });
-  assert.deepEqual(inspectConfig(false), { coverage: false, concurrency: null, mediaCommand: true });
+  assert.deepEqual(inspectConfig(true), {
+    coverage: true,
+    concurrency: 1,
+    mediaCommand: true,
+    keyCommand: true,
+  });
+  assert.deepEqual(inspectConfig(false), {
+    coverage: false,
+    concurrency: null,
+    mediaCommand: true,
+    keyCommand: true,
+  });
 });

@@ -172,7 +172,9 @@ function unsupportedPromise(message: string): Promise<never> {
 /**
  * `<lr-video>` — a native, inline video player with three custom-control presets, selectable
  * captions, fullscreen and picture-in-picture capability gates, and bounded WebVTT thumbnail
- * previews. Mirrors the public `<wa-video>` surface under the `lr-` prefix.
+ * previews. Its elapsed-time timeline stays on a physical left-to-right axis in either text
+ * direction, so native ArrowRight advances and ArrowLeft rewinds. Mirrors the public `<wa-video>`
+ * surface under the `lr-` prefix.
  *
  * @customElement lr-video
  * @slot - Native `<source>` and `<track>` children. Consumer nodes remain in light DOM; safe
@@ -219,6 +221,10 @@ function unsupportedPromise(message: string): Promise<never> {
  * @cssprop [--controls-color=var(--lr-color-text)] - Custom-control foreground color.
  * @cssprop [--poster-play-button-background=var(--lr-color-surface-overlay)] - Poster play-button
  *   background.
+ * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Poster play-button
+ *   hover background.
+ * @cssprop [--lr-video-poster-play-button-hover-border-color=var(--lr-color-brand)] - Poster
+ *   play-button hover border color.
  * @status experimental
  * @since 8.0.0
  */
@@ -899,33 +905,43 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
             @input=${this.onVolumeInput}
           >
           ${this.captionTracks.length
-            ? html`<select
-                data-control="captions"
-                aria-label=${this.localize('videoCaptions')}
-                @change=${this.onCaptionChange}
-              >
-                <option value="-1">${this.localize('videoCaptionsOff')}</option>
-                ${this.captionTracks.map(({ track, label, language }, index) => html`
-                  <option
-                    value=${String(index)}
-                    lang=${language || nothing}
-                    ?selected=${track.mode === 'showing'}
-                  >${label}</option>
-                `)}
-              </select>`
+            ? html`<span class="select-control">
+                <select
+                  data-control="captions"
+                  aria-label=${this.localize('videoCaptions')}
+                  @change=${this.onCaptionChange}
+                >
+                  <option value="-1">${this.localize('videoCaptionsOff')}</option>
+                  ${this.captionTracks.map(({ track, label, language }, index) => html`
+                    <option
+                      value=${String(index)}
+                      lang=${language || nothing}
+                      ?selected=${track.mode === 'showing'}
+                    >${label}</option>
+                  `)}
+                </select>
+                <lr-icon class="select-control-icon" library=${this.iconLibrary} name="chevron-down" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5"></path>
+                </lr-icon>
+              </span>`
             : nothing}
           ${this.controls === 'full'
-            ? html`<select
-                data-control="rate"
-                aria-label=${this.localize('videoPlaybackSpeed')}
-                @change=${this.onRateChange}
-              >
-                ${PLAYBACK_RATES.map((rate) => html`
-                  <option value=${String(rate)} ?selected=${rate === this.playbackRate}>
-                    ${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}×
-                  </option>
-                `)}
-              </select>`
+            ? html`<span class="select-control">
+                <select
+                  data-control="rate"
+                  aria-label=${this.localize('videoPlaybackSpeed')}
+                  @change=${this.onRateChange}
+                >
+                  ${PLAYBACK_RATES.map((rate) => html`
+                    <option value=${String(rate)} ?selected=${rate === this.playbackRate}>
+                      ${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}×
+                    </option>
+                  `)}
+                </select>
+                <lr-icon class="select-control-icon" library=${this.iconLibrary} name="chevron-down" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5"></path>
+                </lr-icon>
+              </span>`
             : nothing}
           ${canPip
             ? html`<button

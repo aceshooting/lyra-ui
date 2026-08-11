@@ -91,11 +91,17 @@ export const styles = css`
   }
 
   [part='poster-play-button']:hover {
-    border-color: var(--lr-color-brand);
-    background: color-mix(
-      in oklab,
-      var(--poster-play-button-background, var(--lr-color-surface-overlay)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    border-color: var(
+      --lr-video-poster-play-button-hover-border-color,
+      var(--lr-color-brand)
+    );
+    background: var(
+      --lr-video-poster-play-button-hover-background,
+      color-mix(
+        in oklab,
+        var(--poster-play-button-background, var(--lr-color-surface-overlay)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
     );
   }
 
@@ -193,6 +199,31 @@ export const styles = css`
     place-items: center;
   }
 
+  .select-control {
+    position: relative;
+    display: inline-grid;
+    align-items: center;
+  }
+
+  .select-control > select {
+    appearance: none;
+    padding-inline-start: var(--lr-space-s);
+    padding-inline-end: var(--lr-space-l);
+  }
+
+  .select-control-icon {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    inline-size: var(--lr-font-size-sm);
+    block-size: var(--lr-font-size-sm);
+    pointer-events: none;
+  }
+
+  .select-control > select option {
+    background: var(--controls-background, var(--lr-color-overlay-strong));
+    color: var(--controls-color, var(--lr-color-text));
+  }
+
   [data-control='volume'] {
     min-block-size: var(--lr-icon-button-size);
     accent-color: var(--lr-color-brand);
@@ -227,6 +258,8 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     display: flex;
     align-items: center;
+    /* Elapsed time is a physical media axis, rather than reading-direction navigation: native
+       ArrowRight therefore advances and ArrowLeft rewinds in both LTR and RTL. */
     direction: ltr;
   }
 
