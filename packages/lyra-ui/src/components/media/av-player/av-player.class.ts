@@ -18,7 +18,7 @@ import {
   safeNativeMediaSource as safeMediaSrc,
 } from '../../../internal/media-controller.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -55,6 +55,36 @@ export interface LyraAvTrack {
 /** Throttle window for `lr-time-change` while playing -- at most 4/s, plus one extra emission per
  *  discrete `seek()` regardless of the window. */
 const TIME_CHANGE_THROTTLE_MS = 250;
+
+function positiveFinite(value: number): number {
+  const finite = finiteNumber(value, 1);
+  return finite > 0 ? finite : 1;
+}
+
+/** Builds only the bars a canvas can physically display without changing the public source array.
+ *  Each pre-endpoint bucket keeps its maximum so a narrow spike remains visible; the endpoint gets
+ *  its own final column so it remains an exact sample rather than an accidental bucket maximum. */
+function waveformPaintPeaks(peaks: readonly number[], maxBars: number): readonly number[] {
+  const barCount = Math.max(1, Math.floor(finiteNumber(maxBars, 1)));
+  if (peaks.length <= barCount) return peaks;
+
+  const finalIndex = peaks.length - 1;
+  if (barCount === 1) return [finiteRange(peaks[finalIndex]!, 0, 0, 1)];
+
+  const result = new Array<number>(barCount);
+  const preEndpointBars = barCount - 1;
+  for (let barIndex = 0; barIndex < preEndpointBars; barIndex += 1) {
+    const start = Math.floor((barIndex * finalIndex) / preEndpointBars);
+    const end = Math.floor(((barIndex + 1) * finalIndex) / preEndpointBars);
+    let peak = 0;
+    for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+      peak = Math.max(peak, finiteRange(peaks[sampleIndex]!, 0, 0, 1));
+    }
+    result[barIndex] = peak;
+  }
+  result[preEndpointBars] = finiteRange(peaks[finalIndex]!, 0, 0, 1);
+  return result;
+}
 
 function formatTime(seconds: number, locale: string): string {
   const total = Math.round(finiteRange(seconds, 0, 0));
@@ -662,23 +692,28 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (!canvas || !this.peaks.length) return;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow) return;
-    const dpr = ownerWindow.devicePixelRatio || 1;
-    const width = canvas.clientWidth || 1;
-    const height = canvas.clientHeight || 1;
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
+    const dpr = positiveFinite(ownerWindow.devicePixelRatio);
+    const width = positiveFinite(canvas.clientWidth);
+    const height = positiveFinite(canvas.clientHeight);
+    canvas.width = Math.max(1, Math.floor(finiteNumber(width * dpr, 1)));
+    canvas.height = Math.max(1, Math.floor(finiteNumber(height * dpr, 1)));
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const scaleX = finiteNumber(canvas.width / width, 1);
+    const scaleY = finiteNumber(canvas.height / height, 1);
+    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     ctx.clearRect(0, 0, width, height);
     const computed = ownerWindow.getComputedStyle(this);
     const tokenColor = computed.getPropertyValue('--lr-color-brand').trim();
     const color = ownerWindow.CSS.supports('color', tokenColor) ? tokenColor : computed.color;
     ctx.fillStyle = color;
-    const barWidth = width / this.peaks.length;
-    this.peaks.forEach((peak, i) => {
+    const peaks = waveformPaintPeaks(this.peaks, canvas.width);
+    const barWidth = width / peaks.length;
+    const physicalPixel = Math.min(barWidth, finiteNumber(1 / scaleX, barWidth));
+    const paintedBarWidth = Math.max(physicalPixel, barWidth - physicalPixel);
+    peaks.forEach((peak, i) => {
       const barHeight = Math.max(1, finiteRange(peak, 0, 0, 1) * height);
-      ctx.fillRect(i * barWidth, (height - barHeight) / 2, Math.max(1, barWidth - 1), barHeight);
+      ctx.fillRect(i * barWidth, (height - barHeight) / 2, paintedBarWidth, barHeight);
     });
   }
 

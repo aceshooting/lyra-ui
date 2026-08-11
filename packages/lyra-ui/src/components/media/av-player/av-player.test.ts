@@ -1037,6 +1037,68 @@ describe('waveform', () => {
     expect(() => window.dispatchEvent(new Event('resize'))).to.not.throw();
   });
 
+  it('decimates waveform painting to physical canvas columns without changing peaks', async () => {
+    const source = Array.from({ length: 41 }, () => 0);
+    source[9] = 1;
+    source[40] = 0.3;
+    const peaks = Object.freeze([...source]) as unknown as number[];
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${peaks}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const context = canvas.getContext('2d')!;
+    const originalFillRect = context.fillRect.bind(context);
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    const calls: Array<[number, number, number, number]> = [];
+
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true });
+    Object.defineProperty(canvas, 'clientWidth', { value: 4, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 10, configurable: true });
+    context.fillRect = (...args: [number, number, number, number]) => {
+      calls.push(args);
+    };
+    try {
+      window.dispatchEvent(new Event('resize'));
+
+      expect(canvas.width).to.equal(8);
+      expect(calls.length).to.equal(8);
+      expect(el.peaks).to.equal(peaks);
+      expect(el.peaks).to.deep.equal(source);
+      expect(calls.some(([, , , barHeight]) => barHeight === 10)).to.equal(true);
+      expect(calls[calls.length - 1]![3]).to.equal(3);
+      expect(calls.every((args) => args.every(Number.isFinite))).to.equal(true);
+    } finally {
+      context.fillRect = originalFillRect;
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
+
+  it('uses finite waveform geometry when canvas measurements or devicePixelRatio are non-finite', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6, 0.8]}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const context = canvas.getContext('2d')!;
+    const originalFillRect = context.fillRect.bind(context);
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    const calls: Array<[number, number, number, number]> = [];
+
+    Object.defineProperty(window, 'devicePixelRatio', { value: Number.POSITIVE_INFINITY, configurable: true });
+    Object.defineProperty(canvas, 'clientWidth', { value: Number.POSITIVE_INFINITY, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: Number.NaN, configurable: true });
+    context.fillRect = (...args: [number, number, number, number]) => {
+      calls.push(args);
+    };
+    try {
+      expect(() => window.dispatchEvent(new Event('resize'))).to.not.throw();
+      expect(canvas.width).to.equal(1);
+      expect(canvas.height).to.equal(1);
+      expect(calls.length).to.equal(1);
+      expect(calls.every((args) => args.every(Number.isFinite))).to.equal(true);
+    } finally {
+      context.fillRect = originalFillRect;
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
+
   it('keeps a stable canvas ref callback identity, so an unrelated re-render does not redraw the waveform (regression)', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.8]}></lr-av-player>`)) as LyraAvPlayer;
     let redraws = 0;
