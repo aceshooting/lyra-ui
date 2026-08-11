@@ -307,6 +307,33 @@ it("falls back to the first enabled tab when active points at a disabled or unkn
   expect(el.active).to.equal("input");
 });
 
+it("leaves an all-unavailable tablist without a roving target or keyboard side effects", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <div slot="disabled" label="Disabled" disabled>Disabled panel</div>
+      <div slot="inert" label="Inert" inert>Inert panel</div>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+  const tablist = el.shadowRoot!.querySelector<HTMLElement>('[part~="tablist"]')!;
+  const event = new KeyboardEvent("keydown", {
+    key: "ArrowRight",
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
+  let changes = 0;
+  el.addEventListener("lr-tab-show", () => changes++);
+
+  tablist.dispatchEvent(event);
+  await el.updateComplete;
+
+  expect(el.active).to.equal("");
+  expect(tabButtons(el).map((button) => button.tabIndex)).to.deep.equal([-1, -1]);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(changes).to.equal(0);
+});
+
 it("ArrowRight moves focus and selection to the next tab, wrapping from the last back to the first", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const buttons = tabButtons(el);
@@ -1040,6 +1067,23 @@ it("builds one tab per <lr-tab> and activates the first enabled one", async () =
   expect(buttons[0]!.getAttribute("aria-selected")).to.equal("true");
   expect(buttons[2]!.getAttribute("aria-disabled")).to.equal("true");
   await expect(el).to.be.accessible();
+});
+
+it("keeps the first element-model tab when duplicate panel names would share one panel", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Workspace tabs">
+      <lr-tab panel="general" active>General</lr-tab>
+      <lr-tab panel="general">Duplicate general</lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+
+  expect(tabButtons(el)).to.have.lengthOf(1);
+  expect(panels(el)).to.have.lengthOf(1);
+  expect(tabButtons(el)[0]!.dataset["slot"]).to.equal("general");
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("General");
+  expect(el.active).to.equal("general");
 });
 
 it('keeps a populated disabled active closable <lr-tab> accessible on its own tag', async () => {

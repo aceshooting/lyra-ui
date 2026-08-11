@@ -365,6 +365,39 @@ it('restores authored custom-toggle ARIA across replacement and preserves later 
   expect(replacement.getAttribute('aria-controls')).to.equal('consumer-late-target');
 });
 
+it('hands generated custom-toggle ARIA back to an author who changes it in place', async () => {
+  const page = (await fixture(html`
+    <lr-page disable-navigation-toggle>
+      <button slot="navigation-toggle">Sections</button>
+    </lr-page>
+  `)) as LyraPage;
+  await page.updateComplete;
+  const custom = page.querySelector<HTMLButtonElement>('[slot="navigation-toggle"]')!;
+  const generatedControls = custom.getAttribute('aria-controls');
+
+  custom.setAttribute('aria-expanded', 'mixed');
+  custom.setAttribute('aria-controls', 'author-navigation');
+  custom.setAttribute('aria-label', 'Author navigation');
+  page.showNavigation();
+  await page.updateComplete;
+
+  expect(generatedControls).to.equal(page.id);
+  expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
+  expect(custom.getAttribute('aria-controls')).to.equal('author-navigation');
+  expect(custom.getAttribute('aria-label')).to.equal('Author navigation');
+
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
+  expect(custom.getAttribute('aria-controls')).to.equal('author-navigation');
+  expect(custom.getAttribute('aria-label')).to.equal('Author navigation');
+
+  page.remove();
+  expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
+  expect(custom.getAttribute('aria-controls')).to.equal('author-navigation');
+  expect(custom.getAttribute('aria-label')).to.equal('Author navigation');
+});
+
 it('releases generated custom-toggle ARIA on disconnect and reapplies it on reconnect', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
@@ -465,6 +498,44 @@ it('disconnects and re-arms its allocation observer across reconnect', async () 
     expect(observeCalls).to.be.greaterThan(1);
   } finally {
     window.ResizeObserver = OriginalResizeObserver;
+  }
+});
+
+it('uses and tears down the window resize fallback when ResizeObserver is unavailable', async () => {
+  const originalResizeObserver = window.ResizeObserver;
+  let width = 900;
+  Reflect.set(window, 'ResizeObserver', undefined);
+  try {
+    const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+    page.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        right: width,
+        bottom: 100,
+        left: 0,
+        width,
+        height: 100,
+        x: 0,
+        y: 0,
+        toJSON() {},
+      }) as DOMRect;
+
+    page.mobileBreakpoint = '700px';
+    await page.updateComplete;
+    expect(page.view).to.equal('desktop');
+
+    width = 320;
+    window.dispatchEvent(new Event('resize'));
+    await page.updateComplete;
+    expect(page.view).to.equal('mobile');
+
+    page.remove();
+    width = 900;
+    window.dispatchEvent(new Event('resize'));
+    await aTimeout(0);
+    expect(page.view).to.equal('mobile');
+  } finally {
+    Reflect.set(window, 'ResizeObserver', originalResizeObserver);
   }
 });
 
@@ -675,6 +746,26 @@ it('visiblePixelsInViewport() always returns a finite, clamped vertical intersec
     }) as DOMRect;
   expect(page.visiblePixelsInViewport(element)).to.equal(0);
   expect(page.visiblePixelsInViewport(null)).to.equal(0);
+});
+
+it('treats an element in a detached document with no viewport as not visible', async () => {
+  const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+  const detachedDocument = document.implementation.createHTMLDocument('Detached page');
+  const element = detachedDocument.createElement('div');
+  element.getBoundingClientRect = () =>
+    ({
+      top: 0,
+      right: 100,
+      bottom: 100,
+      left: 0,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON() {},
+    }) as DOMRect;
+
+  expect(page.visiblePixelsInViewport(element)).to.equal(0);
 });
 
 it('contains long content within a 320px allocation', async () => {
