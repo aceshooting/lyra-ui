@@ -27,17 +27,19 @@ test('models the raw core ceiling as the reviewed baseline plus the named allowa
     stableRootRegistrationAllowanceBytes: 200_000,
     reviewedRemediationAllowanceBytes: 35_000,
     batchFourRemediationAllowanceBytes: 10_000,
+    fullReviewRecoveryAllowanceBytes: 10_000,
   });
   assert.equal(
       terms.reviewedBaselineBytes +
       terms.stableRootRegistrationAllowanceBytes +
       terms.reviewedRemediationAllowanceBytes +
-      terms.batchFourRemediationAllowanceBytes,
-    3_945_000,
+      terms.batchFourRemediationAllowanceBytes +
+      terms.fullReviewRecoveryAllowanceBytes,
+    3_955_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.reviewedRemediationAllowanceBytes\s*\+\s*coreRawBudget\.batchFourRemediationAllowanceBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.reviewedRemediationAllowanceBytes\s*\+\s*coreRawBudget\.batchFourRemediationAllowanceBytes\s*\+\s*coreRawBudget\.fullReviewRecoveryAllowanceBytes\s*,/u,
     'the core bundle entry must use every reviewed term instead of a second unexplained ceiling',
   );
 });
