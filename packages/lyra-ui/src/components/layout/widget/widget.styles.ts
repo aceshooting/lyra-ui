@@ -19,10 +19,15 @@ export const styles = css`
   [part="base"] {
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
+  }
+  :host(:not([fullscreen])) [part="base"] {
+    block-size: 100%;
+    min-block-size: 0;
   }
   [part="header"] {
     display: flex;
@@ -71,8 +76,13 @@ export const styles = css`
   }
   [part="actions"] {
     display: flex;
+    flex: 0 1 auto;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-xs);
+    overflow-x: auto;
+    overflow-y: hidden;
   }
   [part="actions"][hidden] {
     display: none;

@@ -610,6 +610,96 @@ it("contains long view labels in a narrow header and floors toggles at the share
   expect(toggle.getBoundingClientRect().height).to.be.at.least(40);
 });
 
+it("stretches the panel base to each CSS grid allocation", async () => {
+  const grid = await fixture(html`
+    <div
+      style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 12rem 16rem; inline-size: 24rem; gap: 1rem;"
+    >
+      <lr-widget label="Summary">Short body.</lr-widget>
+      <lr-widget label="Details">Another short body.</lr-widget>
+      <lr-widget label="Activity">Third short body.</lr-widget>
+      <lr-widget label="Notes">Fourth short body.</lr-widget>
+    </div>
+  `);
+  const widgets = [
+    ...grid.querySelectorAll<LyraWidget>("lr-widget"),
+  ];
+  const hostHeights = widgets.map(
+    (widget) => widget.getBoundingClientRect().height
+  );
+
+  expect(hostHeights[0]).to.be.lessThan(hostHeights[2]);
+  for (const widget of widgets) {
+    const base = widget.shadowRoot!.querySelector(
+      '[part="base"]'
+    ) as HTMLElement;
+    expect(
+      Math.abs(
+        base.getBoundingClientRect().height - widget.getBoundingClientRect().height
+      ),
+      "the panel base fills its stretched grid item"
+    ).to.be.lessThan(1);
+  }
+});
+
+it("contains unbroken header actions without hiding built-in controls in LTR or RTL", async () => {
+  const longActionLabel =
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(
+      8
+    );
+
+  for (const direction of ["ltr", "rtl"] as const) {
+    const root = await fixture(html`
+      <div dir=${direction} style="inline-size: 20rem;">
+        <lr-widget label="Usage" collapsible expandable>
+          <button slot="actions" style="white-space: nowrap;">
+            ${longActionLabel}
+          </button>
+          Panel body.
+        </lr-widget>
+      </div>
+    `);
+    const widget = root.querySelector("lr-widget") as LyraWidget;
+    const header = widget.shadowRoot!.querySelector(
+      '[part="header"]'
+    ) as HTMLElement;
+    const actions = widget.shadowRoot!.querySelector(
+      '[part="actions"]'
+    ) as HTMLElement;
+    const controls = [
+      widget.shadowRoot!.querySelector(
+        '[part="collapse-button"]'
+      ) as HTMLButtonElement,
+      widget.shadowRoot!.querySelector(
+        '[part="fullscreen-button"]'
+      ) as HTMLButtonElement,
+    ];
+    const headerBounds = header.getBoundingClientRect();
+    const actionBounds = actions.getBoundingClientRect();
+
+    expect(
+      header.scrollWidth,
+      `${direction} header remains within its inline allocation`
+    ).to.be.at.most(header.clientWidth + 1);
+    expect(
+      actions.scrollWidth,
+      `${direction} action strip has its own horizontal overflow boundary`
+    ).to.be.greaterThan(actions.clientWidth);
+    expect(actionBounds.width).to.be.at.most(headerBounds.width + 1);
+    for (const control of controls) {
+      const bounds = control.getBoundingClientRect();
+      expect(
+        bounds.left,
+        `${direction} built-in control begins inside the header`
+      ).to.be.at.least(headerBounds.left - 1);
+      expect(
+        bounds.right,
+        `${direction} built-in control ends inside the header`
+      ).to.be.at.most(headerBounds.right + 1);
+    }
+  }
+});
+
 it("truncates long label/sublabel text instead of wrapping and growing the header", async () => {
   const longText =
     "A very long widget title that is guaranteed to overflow a narrow fixed-width panel and get ellipsis-truncated";
