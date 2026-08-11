@@ -1272,6 +1272,21 @@ describe('validity custom states', () => {
     expect(el.matches(':state(invalid)'), 'invalid after reset').to.be.true;
   });
 
+  it('does not turn a disabled field focusout into user interaction after re-enabling', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} name="rubric"></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const field = el.shadowRoot!.querySelector('[data-key="accuracy"]') as HTMLElement;
+
+    el.disabled = true;
+    field.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    el.disabled = false;
+    await el.updateComplete;
+
+    expect(el.matches(':state(user-invalid)'), 'a disable-forced focusout leaves the rubric pristine').to.be
+      .false;
+  });
+
   it('publishes neither invalid nor user-invalid while disabled', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     // A native `<input required disabled>` matches neither `:valid` nor `:invalid`. Publishing

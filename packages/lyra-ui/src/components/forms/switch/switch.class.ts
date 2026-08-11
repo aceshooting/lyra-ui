@@ -553,9 +553,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // interaction: marking `touched` for it could reenter an in-flight Lit update and trip Lit's
     // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
     // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
-    if (!this.effectiveDisabled) this.touched = true;
-    this.hasInteracted = true;
-    this.reflectValidityStates();
+    if (!this.effectiveDisabled) {
+      this.touched = true;
+      this.hasInteracted = true;
+      this.reflectValidityStates();
+    }
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };

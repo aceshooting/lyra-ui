@@ -763,6 +763,19 @@ describe('touched state', () => {
     expect((el as unknown as { touched: boolean }).touched).to.be.false;
   });
 
+  it('does not turn disabled focusout into user-invalid after re-enabling', async () => {
+    const el = (await fixture(html`<lr-textarea required aria-label="Notes"></lr-textarea>`)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+    el.disabled = true;
+    ta.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    el.disabled = false;
+    await el.updateComplete;
+
+    expect(el.matches(':state(user-invalid)'), 'a disable-forced focusout leaves the control pristine').to.be
+      .false;
+  });
+
   it('still marks touched from a real (non-disabling) blur', async () => {
     const el = (await fixture(html`<lr-textarea required></lr-textarea>`)) as LyraTextarea;
     const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;

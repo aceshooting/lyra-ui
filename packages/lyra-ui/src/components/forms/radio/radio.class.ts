@@ -615,8 +615,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.emit('lr-focus');
   };
   protected onBlur = (event: FocusEvent): void => {
-    this.hasInteracted = true;
-    this.reflectValidityStates();
+    if (!this.effectiveDisabled) {
+      this.hasInteracted = true;
+      this.reflectValidityStates();
+    }
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };

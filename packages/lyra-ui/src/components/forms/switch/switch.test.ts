@@ -1406,6 +1406,20 @@ describe('lr-switch validity custom states', () => {
     expect(el.matches(':state(user-valid)'), 'user-valid after a real toggle').to.be.true;
   });
 
+  it('does not turn a disabled blur into user interaction after re-enabling', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`<lr-switch required>Notifications</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    el.disabled = true;
+    base.dispatchEvent(new FocusEvent('blur'));
+    el.disabled = false;
+    await el.updateComplete;
+
+    expect(el.matches(':state(user-invalid)'), 'a disable-forced blur leaves the control pristine').to.be
+      .false;
+  });
+
   it('counts a reportValidity() call -- what a submit attempt runs -- as interaction', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const el = (await fixture(html`<lr-switch required>Notifications</lr-switch>`)) as LyraSwitch;

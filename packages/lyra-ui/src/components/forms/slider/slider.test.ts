@@ -2477,3 +2477,24 @@ it('bars the validity custom states while readonly or disabled', async function 
   await elementUpdated(el);
   expect(el.matches(':state(invalid)'), 'a disabled control is barred too').to.be.false;
 });
+
+it('does not turn disabled focusout into user interaction after re-enabling', async function () {
+  let supported = false;
+  try {
+    supported = typeof CustomStateSet === 'function' && document.createElement('div').matches(':state(x)') === false;
+  } catch {
+    supported = false;
+  }
+  if (!supported) this.skip();
+
+  const el = (await fixture(html`<lr-slider required aria-label="Volume"></lr-slider>`)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+
+  el.disabled = true;
+  thumb.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  el.disabled = false;
+  await elementUpdated(el);
+
+  expect(el.matches(':state(user-valid)'), 'a disable-forced focusout leaves the control pristine').to.be
+    .false;
+});

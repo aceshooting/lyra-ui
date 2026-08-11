@@ -367,7 +367,7 @@ export class LyraSlider extends LyraSliderBase {
     this.internals.setFormValue('0', '0');
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);
-    this.addEventListener('focusout', this.markInteracted);
+    this.addEventListener('focusout', this.markFocusoutInteracted);
     this.syncValidityStates();
   }
 
@@ -881,6 +881,11 @@ export class LyraSlider extends LyraSliderBase {
     if (this._hasInteracted) return;
     this._hasInteracted = true;
     this.syncValidityStates();
+  };
+
+  private markFocusoutInteracted = (): void => {
+    if (this.effectiveDisabled) return;
+    this.markInteracted();
   };
 
   private syncInteractionStates(): void {

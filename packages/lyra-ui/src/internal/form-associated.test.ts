@@ -904,6 +904,18 @@ describe('validity custom states', () => {
     expect(ctl.internals.states.has('user-invalid')).to.be.true;
   });
 
+  it('does not treat focusout while disabled as interaction after re-enabling', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+
+    ctl.disabled = true;
+    host.dispatchEvent(new Event('focusout', { bubbles: true, composed: true }));
+    ctl.disabled = false;
+
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+  });
+
   it('reflects a custom error in the invalid state and matches :state() in CSS', async function () {
     if (!supportsCustomStates) this.skip();
     const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl;

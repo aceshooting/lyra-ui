@@ -635,7 +635,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   };
 
   private markTouched(key: string): void {
-    if (this.touchedFields.has(key)) return;
+    if (this.effectiveDisabled || this.touchedFields.has(key)) return;
     this.touchedFields = new Set(this.touchedFields).add(key);
     // The first visited field is what turns the `user-*` states on, and it has to happen
     // synchronously — `:state(user-invalid)` must be true the instant that field reports.

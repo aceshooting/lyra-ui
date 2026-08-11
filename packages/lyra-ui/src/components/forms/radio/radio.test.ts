@@ -1877,6 +1877,26 @@ describe('lr-radio validity custom states', () => {
     expect(el.matches(':state(user-valid)'), 'user-valid after a real selection').to.be.true;
   });
 
+  it('does not turn a disabled blur into user interaction for either radio rendering', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-radio required value="standard">Standard</lr-radio>
+        <lr-radio-button required value="button">Button</lr-radio-button>
+      </div>
+    `);
+    const radios = Array.from(wrapper.querySelectorAll('lr-radio, lr-radio-button')) as LyraRadio[];
+
+    for (const radio of radios) {
+      const base = radio.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      radio.disabled = true;
+      base.dispatchEvent(new FocusEvent('blur'));
+      radio.disabled = false;
+      await radio.updateComplete;
+      expect(radio.matches(':state(user-invalid)'), `${radio.localName} stays pristine`).to.be.false;
+    }
+  });
+
   it('goes pristine again after a form reset', async function () {
     if (!supportsCustomStates || !supportsStateSelector) this.skip();
     const form = await fixture<HTMLFormElement>(

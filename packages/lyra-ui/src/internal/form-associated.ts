@@ -584,7 +584,10 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       };
       this.addEventListener('input', markInteracted);
       this.addEventListener('change', markInteracted);
-      this.addEventListener('focusout', markInteracted);
+      this.addEventListener('focusout', () => {
+        if (this.effectiveDisabled) return;
+        markInteracted();
+      });
       this.syncValidityStates();
     }
 
