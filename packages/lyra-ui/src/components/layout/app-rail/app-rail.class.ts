@@ -718,8 +718,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.emit('lr-toggle', { open: next });
       return;
     }
+    const mode = this._mode;
+    const open = this.open;
     const event = this.emit('lr-toggle', { open: next }, { cancelable: true });
-    if (event.defaultPrevented) return;
+    // A listener can synchronously take ownership of mode or open while the
+    // proposal is dispatching. Do not overwrite that state after it returns.
+    if (event.defaultPrevented || this._mode !== mode || this.open !== open) return;
     this.open = next;
   }
 

@@ -546,6 +546,20 @@ it('fires lr-toggle as cancelable and keeps the overlay open when a host calls p
   expect(el.open).to.be.false;
 });
 
+it('keeps a re-entrant mode change from a cancelable lr-toggle listener closed', async () => {
+  const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  el.addEventListener('lr-toggle', () => {
+    el.mode = 'full';
+  });
+
+  toggle.click();
+  await el.updateComplete;
+
+  expect(el.mode).to.equal('full');
+  expect(el.open).to.be.false;
+});
+
 it('setting open directly does not emit lr-toggle (mirrors lr-dialog open/close split)', async () => {
   const el = (await fixture(html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   let fired = false;
