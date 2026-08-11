@@ -18,10 +18,11 @@ async function javascriptFiles(directory) {
   return nested.flat();
 }
 
-/** Removes comments and redundant whitespace from shipped JavaScript only. Declaration comments
- * remain intact for IDE documentation, class/property names remain readable, and no source map is
- * produced. Keeping the package as unbundled ESM preserves every granular export and tree-shaking
- * boundary while avoiding publishing the same authored prose in both `.js` and `.d.ts`. */
+/** Removes comments and redundant syntax/whitespace from shipped JavaScript only. Declaration
+ * comments remain intact for IDE documentation, class/property names remain readable, and no
+ * source map is produced. Keeping the package as unbundled ESM preserves every granular export
+ * and tree-shaking boundary while avoiding publishing the same authored prose in both `.js` and
+ * `.d.ts`. */
 export async function compactBuildJavaScript(directory) {
   const files = await javascriptFiles(directory);
   let beforeBytes = 0;
@@ -34,7 +35,7 @@ export async function compactBuildJavaScript(directory) {
       legalComments: 'none',
       loader: 'js',
       minifyIdentifiers: false,
-      minifySyntax: false,
+      minifySyntax: true,
       minifyWhitespace: true,
       sourcemap: false,
       sourcefile: path.relative(directory, file),

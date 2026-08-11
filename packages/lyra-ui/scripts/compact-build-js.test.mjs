@@ -10,7 +10,7 @@ try {
   await mkdir(nested);
   await writeFile(
     path.join(nested, 'entry.js'),
-    `// duplicate authored prose does not ship in JavaScript\nexport class ReadableName {\n  method(value) { return value + 1; }\n}\n`,
+    `// duplicate authored prose does not ship in JavaScript\nexport class ReadableName {\n  method(value) { return value + 1; }\n}\nexport const syntaxOnly = true ? 'kept' : 'discarded';\n`,
   );
   await writeFile(path.join(nested, 'entry.d.ts'), '/** IDE documentation stays. */\nexport class ReadableName {}\n');
   const result = await compactBuildJavaScript(fixture);
@@ -19,6 +19,9 @@ try {
   const output = await readFile(path.join(nested, 'entry.js'), 'utf8');
   assert.doesNotMatch(output, /duplicate authored prose|sourceMappingURL/);
   assert.match(output, /class ReadableName/);
+  assert.match(output, /kept/);
+  assert.doesNotMatch(output, /discarded/);
+  assert.doesNotMatch(output, /true\s*\?/);
   assert.match(await readFile(path.join(nested, 'entry.d.ts'), 'utf8'), /IDE documentation stays/);
 } finally {
   await rm(fixture, { recursive: true, force: true });
