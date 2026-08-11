@@ -6,6 +6,7 @@ import type { LyraTabGroup } from "./tab-group.js";
 import type { LyraTab } from "./tab.js";
 import type { LyraTabPanel } from "./tab-panel.js";
 import { styles } from "./tab-group.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const basic = () => html`
   <lr-tab-group>
@@ -44,6 +45,20 @@ function press(target: HTMLElement, key: string): void {
       composed: true,
     })
   );
+}
+
+async function moveMouseTo(target: HTMLElement): Promise<void> {
+  target.scrollIntoView({ block: "center", inline: "center" });
+  await nextFrames();
+  const rect = target.getBoundingClientRect();
+  await sendMouse({
+    type: "move",
+    position: [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ],
+  });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 it("never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar", async () => {
@@ -818,6 +833,7 @@ describe("selected/hover cssprops", () => {
       html`<div style=${style}>${basic()}</div>`
     )) as HTMLElement;
     const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+    el.style.setProperty("--lr-transition-fast", "0ms");
     await el.updateComplete;
     return el;
   }
@@ -893,6 +909,110 @@ describe("selected/hover cssprops", () => {
   it("is accessible with the selected-state props themed", async () => {
     const el = await themed(overrides);
     await expect(el).to.be.accessible();
+  });
+
+  it("inherits independent pressed-tab longhands without recoloring the selected sibling", async () => {
+    const el = await themed(
+      "--lr-tab-group-active-bg: rgb(1, 2, 3); --lr-tab-group-active-color: rgb(4, 5, 6);"
+    );
+    const [selected, pressed] = tabButtons(el);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(pressed!);
+      await sendMouse({ type: "down" });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(getComputedStyle(pressed!).backgroundColor).to.equal("rgb(1, 2, 3)");
+      expect(getComputedStyle(pressed!).color).to.equal("rgb(4, 5, 6)");
+      expect(getComputedStyle(selected!).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(selected!).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-brand)", "color")
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("retains the existing pressed-tab rendering when its new props are unset", async () => {
+    const el = await themed("");
+    const pressed = tabButtons(el)[1]!;
+
+    try {
+      await resetMouse();
+      await moveMouseTo(pressed);
+      await sendMouse({ type: "down" });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(getComputedStyle(pressed).backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+          "background-color"
+        )
+      );
+      expect(getComputedStyle(pressed).color).to.equal(
+        resolvedInShadow(
+          el,
+          "color: var(--lr-tab-group-hover-color, var(--lr-color-text))",
+          "color"
+        )
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("themes scroll-control hover and pressed longhands independently from tabs", async () => {
+    const el = await crowded(
+      "--lr-tab-group-scroll-button-hover-color: rgb(7, 8, 9);" +
+        "--lr-tab-group-scroll-button-active-bg: rgb(10, 11, 12);" +
+        "--lr-tab-group-scroll-button-active-color: rgb(13, 14, 15);"
+    );
+    const control = scrollControl(el, "end");
+    const tab = tabButtons(el)[0]!;
+
+    try {
+      await resetMouse();
+      await moveMouseTo(control);
+      expect(getComputedStyle(control).color).to.equal("rgb(7, 8, 9)");
+      await sendMouse({ type: "down" });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(control.hasAttribute("data-pressed")).to.equal(true);
+      expect(getComputedStyle(control).backgroundColor).to.equal("rgb(10, 11, 12)");
+      expect(getComputedStyle(control).color).to.equal("rgb(13, 14, 15)");
+      expect(getComputedStyle(tab).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-brand)", "color")
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("retains the existing scroll-control hover and pressed rendering when the new props are unset", async () => {
+    const el = await crowded();
+    const control = scrollControl(el, "end");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(control);
+      expect(getComputedStyle(control).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+      await sendMouse({ type: "down" });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(control.hasAttribute("data-pressed")).to.equal(true);
+      expect(getComputedStyle(control).backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+          "background-color"
+        )
+      );
+      expect(getComputedStyle(control).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });
 
@@ -1315,6 +1435,49 @@ it("bounds and ellipsizes long vertical labels at an exact 320px allocation in L
   }
 });
 
+it("contains unbroken element-model tab labels and panel content at an exact 320px allocation in LTR and RTL", async () => {
+  const longTab =
+    "AnExtremelyLongUnbrokenElementModelTabLabelThatMustRemainContained".repeat(4);
+  const longPanel =
+    "AnExtremelyLongUnbrokenElementModelTabPanelValueThatMustRemainContained".repeat(4);
+
+  for (const { direction, placement } of [
+    { direction: "ltr", placement: "start" },
+    { direction: "rtl", placement: "end" },
+  ] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-tab-group placement=${placement} style="inline-size: 100%;">
+          <lr-tab panel="details" active>${longTab}</lr-tab>
+          <lr-tab panel="history">History</lr-tab>
+          <lr-tab-panel name="details" active>${longPanel}</lr-tab-panel>
+          <lr-tab-panel name="history">History panel.</lr-tab-panel>
+        </lr-tab-group>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+    await el.updateComplete;
+    const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
+    const panel = panels(el)[0]!;
+    const groupBounds = el.getBoundingClientRect();
+    const navBounds = nav.getBoundingClientRect();
+    const panelBounds = panel.getBoundingClientRect();
+    const activeTab = tabButtons(el)[0]!;
+
+    expect(Math.round(groupBounds.width), `${direction} group width`).to.equal(320);
+    expect(navBounds.left, `${direction} nav start`).to.be.at.least(groupBounds.left - 1);
+    expect(navBounds.right, `${direction} nav end`).to.be.at.most(groupBounds.right + 1);
+    expect(activeTab.scrollWidth, `${direction} long tab clipping`).to.be.greaterThan(
+      activeTab.clientWidth
+    );
+    expect(panel.scrollWidth, `${direction} panel horizontal overflow`).to.be.at.most(
+      panel.clientWidth + 1
+    );
+    expect(panelBounds.left, `${direction} panel start`).to.be.at.least(groupBounds.left - 1);
+    expect(panelBounds.right, `${direction} panel end`).to.be.at.most(groupBounds.right + 1);
+  }
+});
+
 it("inherits the vertical nav maximum from an ancestor", async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
@@ -1425,15 +1588,19 @@ const crowdedTabs = () =>
     ([id, label]) => html`<div slot=${id} label=${label}>${label} panel</div>`
   );
 
-async function crowded(): Promise<LyraTabGroup> {
+async function crowded(style = ""): Promise<LyraTabGroup> {
   const el = (await fixture(html`
-    <lr-tab-group style="display: block; max-inline-size: 220px">
-      ${crowdedTabs()}
-    </lr-tab-group>
+    <div style=${style}>
+      <lr-tab-group style="display: block; max-inline-size: 220px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    </div>
   `)) as LyraTabGroup;
+  const group = el.querySelector("lr-tab-group") as LyraTabGroup;
+  group.style.setProperty("--lr-transition-fast", "0ms");
   await nextFrames();
-  await el.updateComplete;
-  return el;
+  await group.updateComplete;
+  return group;
 }
 
 function scrollControls(el: LyraTabGroup): HTMLButtonElement[] {

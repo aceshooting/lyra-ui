@@ -109,19 +109,25 @@ export const styles = css`
      -- (0,1,0) total, so a consumer's own ::part(step):hover override ((0,1,1)) always wins
      without needing !important (mirrors lr-attachment-trigger's identical fix). */
   :where([part="step"]):hover:where(:not([aria-disabled="true"])) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-text);
+    background: var(
+      --lr-stepper-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
+    color: var(--lr-stepper-hover-color, var(--lr-color-text));
   }
   /* The same brand-quiet fill, mixed further toward --lr-color-mix-partner: a step being pressed
      is a visible tier past the one the pointer is only resting on. Same :not() guard and the same
      zeroed specificity as the hover rule above. */
   :where([part="step"]):active:where(:not([aria-disabled="true"])) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-stepper-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-text);
+    color: var(--lr-stepper-active-color, var(--lr-color-text));
   }
   [part="step"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

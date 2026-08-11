@@ -8,6 +8,7 @@ import {
 import "./stepper.js";
 import type { LyraStepper } from "./stepper.js";
 import { styles } from "./stepper.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const steps = () => [
   { id: "basics", label: "Basics", state: "completed" as const },
@@ -526,6 +527,47 @@ describe("lr-stepper", () => {
     await el.updateComplete;
     expect(el.effectiveOrientation).to.equal("horizontal");
     expect(getComputedStyle(label).whiteSpace).to.equal("nowrap");
+  });
+
+  it("contains long unbroken vertical labels at an exact 320px allocation in LTR and RTL", async () => {
+    const longLabel =
+      "AnExtremelyLongUnbrokenLocalizedStepperLabelThatMustRemainContained".repeat(
+        4
+      );
+
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-stepper
+            orientation="vertical"
+            wrap-labels
+            style="inline-size: 100%;"
+            .steps=${[
+              { id: "account", label: longLabel, state: "completed" as const },
+              { id: "review", label: longLabel, state: "current" as const },
+            ]}
+          ></lr-stepper>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const baseBounds = base.getBoundingClientRect();
+
+      expect(Math.round(el.getBoundingClientRect().width), `${direction} host width`).to.equal(320);
+      expect(base.scrollWidth, `${direction} base horizontal overflow`).to.be.at.most(
+        base.clientWidth + 1
+      );
+      for (const step of stepButtons(el)) {
+        const label = step.querySelector('[part="step-label"]') as HTMLElement;
+        const bounds = label.getBoundingClientRect();
+        expect(label.scrollWidth, `${direction} label horizontal overflow`).to.be.at.most(
+          label.clientWidth + 1
+        );
+        expect(bounds.left, `${direction} label start`).to.be.at.least(baseBounds.left - 1);
+        expect(bounds.right, `${direction} label end`).to.be.at.most(baseBounds.right + 1);
+      }
+    }
   });
 
   it('forwards a host aria-label to the role="list" element, and omits the attribute when unset', async () => {
@@ -1211,6 +1253,84 @@ describe("state-styling cssprops", () => {
     expect(getComputedStyle(currentIndex).color).to.equal(
       resolvedInShadow(el, "color: var(--lr-color-on-brand)", "color")
     );
+  });
+
+  it("inherits independent hover and active longhands from an ancestor without recoloring stateful siblings", async () => {
+    const el = await themed(
+      "--lr-stepper-hover-bg: rgb(1, 2, 3);" +
+        "--lr-stepper-hover-color: rgb(4, 5, 6);" +
+        "--lr-stepper-active-bg: rgb(7, 8, 9);" +
+        "--lr-stepper-active-color: rgb(10, 11, 12);"
+    );
+    const hovered = stepEl(el, "completed");
+    const current = stepEl(el, "current");
+    const error = stepEl(el, "error");
+
+    hovered.scrollIntoView();
+    const rect = hovered.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      expect(getComputedStyle(hovered).backgroundColor).to.equal("rgb(1, 2, 3)");
+      expect(getComputedStyle(hovered).color).to.equal("rgb(4, 5, 6)");
+
+      await sendMouse({ type: "down" });
+      expect(getComputedStyle(hovered).backgroundColor).to.equal("rgb(7, 8, 9)");
+      expect(getComputedStyle(hovered).color).to.equal("rgb(10, 11, 12)");
+      expect(getComputedStyle(current).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(current).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+      expect(getComputedStyle(error).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-danger)", "color")
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("retains the existing hover and active renderings when the new props are unset", async () => {
+    const el = await themed("");
+    const interactive = stepEl(el, "completed");
+
+    interactive.scrollIntoView();
+    const rect = interactive.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      expect(getComputedStyle(interactive).backgroundColor).to.equal(
+        resolvedInShadow(el, "background: var(--lr-color-brand-quiet)", "background-color")
+      );
+      expect(getComputedStyle(interactive).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+
+      await sendMouse({ type: "down" });
+      expect(getComputedStyle(interactive).backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          "background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+          "background-color"
+        )
+      );
+      expect(getComputedStyle(interactive).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("is accessible with the state-styling props themed", async () => {

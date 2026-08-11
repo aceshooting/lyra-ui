@@ -98,6 +98,8 @@ export interface LyraWidgetEventMap {
  *   `[part="view-toggle"]`.
  * @cssprop [--lr-widget-view-toggle-active-color=var(--lr-color-brand)] - Text color of the pressed
  *   view toggle.
+ * @cssprop [--lr-widget-view-toggle-active-border-color=transparent] - Border color of the pressed
+ *   view toggle. Like the active background and text hooks, it is an inline inherited fallback.
  * @cssprop [--lr-widget-fullscreen-inset=max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))] - The `inset` applied to `[part="base"]` while `fullscreen`. Also set inline from the `fullscreen-inset` attribute.
  * @cssprop [--lr-widget-backdrop-inset=var(--lr-widget-fullscreen-inset)] - The `inset` applied to
  *   `[part="backdrop"]`, so the scrim can be pulled back independently of the panel. Also set

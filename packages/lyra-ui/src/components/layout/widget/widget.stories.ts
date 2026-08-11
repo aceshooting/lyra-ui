@@ -121,6 +121,46 @@ export const NarrowLongActions: Story = {
 const barChartIcon = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="18" y1="20" x2="18" y2="14"></line></svg>`;
 const tableIcon = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="9" y1="4" x2="9" y2="20"></line></svg>`;
 
+export const NarrowLongHeaderContent: Story = {
+  name: 'Long unbroken header content at 320px (LTR / RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'At an exact 320px allocation, long title and view labels ellipsize while a long action stays reachable through its own scroll strip in both text directions.',
+      },
+    },
+  },
+  render: () => {
+    const longTitle =
+      'AnExtremelyLongUnbrokenLocalizedWidgetTitleThatMustRemainContained'.repeat(4);
+    const longView =
+      'AnExtremelyLongUnbrokenLocalizedViewLabelThatMustRemainContained'.repeat(4);
+    const longAction =
+      'AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable'.repeat(4);
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l);">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+              <lr-widget
+                style="inline-size: 100%;"
+                label=${longTitle}
+                collapsible
+                expandable
+                .views=${[{ id: 'long', label: longView }]}
+              >
+                <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+                Panel body.
+              </lr-widget>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
+};
+
 export const IconOnlyViewToggles: Story = {
   render: () => html`
     <lr-widget
@@ -138,17 +178,18 @@ export const IconOnlyViewToggles: Story = {
   `,
 };
 
-/** The pressed view toggle's background and text color are themeable through
- *  `--lr-widget-view-toggle-active-bg` and `--lr-widget-view-toggle-active-color`. Neither is
- *  declared on `:host`, so setting them on an ancestor recolors only the active toggle — not
- *  everything else reading `--lr-color-brand-quiet`/`--lr-color-brand`. */
+/** The pressed view toggle's background, text, and border are themeable through
+ *  `--lr-widget-view-toggle-active-bg`, `--lr-widget-view-toggle-active-color`, and
+ *  `--lr-widget-view-toggle-active-border-color`. None is declared on `:host`, so setting
+ *  them on an ancestor recolors only the active toggle — not everything else reading the shared
+ *  brand tokens. */
 export const ThemedViewToggle: Story = {
   name: 'Themed view toggle (cssprops)',
   parameters: {
     docs: {
       description: {
         story:
-          'Set `--lr-widget-view-toggle-active-bg` and `--lr-widget-view-toggle-active-color` on the element or any ancestor to recolor the active view toggle without hijacking the library-wide brand tokens.',
+          'Set --lr-widget-view-toggle-active-bg, --lr-widget-view-toggle-active-color, and --lr-widget-view-toggle-active-border-color on the element or any ancestor to recolor the active view toggle without hijacking the library-wide brand tokens.',
       },
     },
   },
@@ -156,7 +197,9 @@ export const ThemedViewToggle: Story = {
     <div
       style="max-width: 28rem; --lr-widget-view-toggle-active-bg: ${storyColor(
         'successQuiet',
-      )}; --lr-widget-view-toggle-active-color: ${storyColor('success')};"
+      )}; --lr-widget-view-toggle-active-color: ${storyColor('success')}; --lr-widget-view-toggle-active-border-color: ${storyColor(
+        'success',
+      )};"
     >
       <lr-widget label="Usage" sublabel="Last 7 days" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
         <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>

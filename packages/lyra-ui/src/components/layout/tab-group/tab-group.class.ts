@@ -214,6 +214,16 @@ export interface LyraTabGroupEventMap {
  *   underline, themeable independently of its text color.
  * @cssprop [--lr-tab-group-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
  *   Independent of the selected-state props above.
+ * Pressed-tab and scroll-control hooks use inline `var()` fallbacks rather than a `:host`
+ * declaration, so they inherit from the group or any ancestor without retheming the other states.
+ * @cssprop [--lr-tab-group-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of a pressed, non-disabled tab.
+ * @cssprop [--lr-tab-group-active-color=var(--lr-tab-group-hover-color, var(--lr-color-text))] - Text
+ *   color of a pressed, non-disabled tab.
+ * @cssprop [--lr-tab-group-scroll-button-hover-color=var(--lr-color-text)] - Text color of a
+ *   hovered overflow scroll control.
+ * @cssprop [--lr-tab-group-scroll-button-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of a pressed overflow scroll control.
+ * @cssprop [--lr-tab-group-scroll-button-active-color=var(--lr-color-text)] - Text color of a
+ *   pressed overflow scroll control.
  * @cssprop [--lr-tab-group-vertical-nav-max-inline-size=var(--lr-size-12rem)] - Maximum logical
  *   inline size of a vertical `start`/`end` nav. Long labels ellipsize inside that bound so the
  *   panel remains usable at narrow allocations.
@@ -901,6 +911,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       tabindex="-1"
       aria-hidden="true"
       aria-label=${edge === 'start' ? this.localize('scrollPrevious') : this.localize('scrollNext')}
+      @pointerdown=${this.onScrollControlPointerDown}
+      @pointerup=${this.onScrollControlPointerEnd}
+      @pointercancel=${this.onScrollControlPointerEnd}
+      @lostpointercapture=${this.onScrollControlPointerEnd}
       @mousedown=${this.onScrollControlMouseDown}
       @click=${() => this.scrollTabs(edge)}
     ><span part="scroll-button-glyph" aria-hidden="true">${chevronIcon()}</span></button>`;
@@ -912,6 +926,25 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  click still fires. */
   private onScrollControlMouseDown = (event: MouseEvent): void => {
     event.preventDefault();
+  };
+
+  /** Firefox suppresses the native `:active` pseudo-class when the mouse-down default is
+   * prevented to retain the tab's roving focus. Mirror that short-lived state on the control so
+   * its pressed affordance remains visible in every supported engine. */
+  private onScrollControlPointerDown = (event: PointerEvent): void => {
+    const control = event.currentTarget;
+    if (!(control instanceof HTMLElement)) return;
+    control.setAttribute('data-pressed', '');
+    control.setPointerCapture(event.pointerId);
+  };
+
+  private onScrollControlPointerEnd = (event: PointerEvent): void => {
+    const control = event.currentTarget;
+    if (!(control instanceof HTMLElement)) return;
+    control.removeAttribute('data-pressed');
+    if (control.hasPointerCapture(event.pointerId)) {
+      control.releasePointerCapture(event.pointerId);
+    }
   };
 
   private renderTab(tab: TabDef): TemplateResult {

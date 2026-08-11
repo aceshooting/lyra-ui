@@ -610,6 +610,62 @@ it("contains long view labels in a narrow header and floors toggles at the share
   expect(toggle.getBoundingClientRect().height).to.be.at.least(40);
 });
 
+it("contains unbroken title, view-label, and action content at an exact 320px allocation in LTR and RTL", async () => {
+  const longTitle =
+    "AnExtremelyLongUnbrokenLocalizedWidgetTitleThatMustRemainContained".repeat(4);
+  const longView =
+    "AnExtremelyLongUnbrokenLocalizedViewLabelThatMustRemainContained".repeat(4);
+  const longAction =
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-widget
+          style="inline-size: 100%;"
+          label=${longTitle}
+          collapsible
+          expandable
+          .views=${[{ id: "long", label: longView }]}
+        >
+          <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+          Panel body.
+        </lr-widget>
+      </div>
+    `);
+    const widget = wrapper.querySelector("lr-widget") as LyraWidget;
+    await widget.updateComplete;
+    const header = widget.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const label = widget.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const actions = widget.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const viewLabel = widget.shadowRoot!.querySelector('[part="view-label"]') as HTMLElement;
+    const headerBounds = header.getBoundingClientRect();
+    const controls = [
+      widget.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement,
+      widget.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement,
+      widget.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement,
+    ];
+
+    expect(Math.round(widget.getBoundingClientRect().width), `${direction} widget width`).to.equal(320);
+    expect(header.scrollWidth, `${direction} header horizontal overflow`).to.be.at.most(
+      header.clientWidth + 1
+    );
+    expect(label.scrollWidth, `${direction} title clipping`).to.be.greaterThan(label.clientWidth);
+    expect(viewLabel.scrollWidth, `${direction} view label clipping`).to.be.greaterThan(
+      viewLabel.clientWidth
+    );
+    expect(actions.scrollWidth, `${direction} action-strip scroll boundary`).to.be.greaterThan(
+      actions.clientWidth
+    );
+    for (const control of controls) {
+      const bounds = control.getBoundingClientRect();
+      expect(bounds.left, `${direction} control start`).to.be.at.least(headerBounds.left - 1);
+      expect(bounds.right, `${direction} control end`).to.be.at.most(headerBounds.right + 1);
+      expect(bounds.height, `${direction} control hit area`).to.be.at.least(40);
+    }
+  }
+});
+
 it("stretches the panel base to each CSS grid allocation", async () => {
   const grid = await fixture(html`
     <div
@@ -1729,7 +1785,7 @@ describe("view-toggle active-state cssprops", () => {
   }
 
   const overrides =
-    "--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-active-color: rgb(255, 255, 255);";
+    "--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-active-color: rgb(255, 255, 255); --lr-widget-view-toggle-active-border-color: rgb(10, 20, 30);";
 
   async function themed(style: string): Promise<LyraWidget> {
     const wrapper = (await fixture(html`
@@ -1761,6 +1817,7 @@ describe("view-toggle active-state cssprops", () => {
       "rgb(0, 51, 102)"
     );
     expect(getComputedStyle(pressed).color).to.equal("rgb(255, 255, 255)");
+    expect(getComputedStyle(pressed).borderTopColor).to.equal("rgb(10, 20, 30)");
     // The unpressed toggle keeps its transparent resting treatment -- the props are scoped to
     // [aria-pressed='true'] only.
     const unpressed = el.shadowRoot!.querySelector(
@@ -1768,6 +1825,9 @@ describe("view-toggle active-state cssprops", () => {
     ) as HTMLElement;
     expect(getComputedStyle(unpressed).backgroundColor).to.equal(
       "rgba(0, 0, 0, 0)"
+    );
+    expect(getComputedStyle(unpressed).borderTopColor).to.equal(
+      resolvedInShadow(el, "border-color: var(--lr-color-border)", "border-top-color")
     );
   });
 
@@ -1785,6 +1845,9 @@ describe("view-toggle active-state cssprops", () => {
     );
     expect(getComputedStyle(pressed).color).to.equal(
       resolvedInShadow(el, "color: var(--lr-color-brand)", "color")
+    );
+    expect(getComputedStyle(pressed).borderTopColor).to.equal(
+      resolvedInShadow(el, "border-color: transparent", "border-top-color")
     );
   });
 

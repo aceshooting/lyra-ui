@@ -1074,23 +1074,6 @@ it('gives the always-focusable [part="base"] scroll region a :hover state, match
   expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
 });
 
-it("routes each hover outline longhand through a scoped custom property with the existing defaults", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  const rule = css.match(/\[part='base'\]:hover\s*\{([^}]+)\}/)?.[1] ?? "";
-  expect(rule).to.include(
-    "outline-width: var(--lr-virtual-list-hover-outline-width, var(--lr-border-width-thin))"
-  );
-  expect(rule).to.include(
-    "outline-style: var(--lr-virtual-list-hover-outline-style, solid)"
-  );
-  expect(rule).to.include(
-    "outline-color: var(--lr-virtual-list-hover-outline-color, var(--lr-color-border-strong))"
-  );
-  expect(rule).to.include(
-    "outline-offset: var(--lr-virtual-list-hover-outline-offset, calc(-1 * var(--lr-border-width-thin)))"
-  );
-});
-
 describe("hover-outline cssprops", () => {
   async function themed(style = ""): Promise<{
     el: LyraVirtualList;

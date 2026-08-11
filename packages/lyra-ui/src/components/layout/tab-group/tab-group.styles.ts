@@ -29,7 +29,7 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
-  [part~="scroll-button"] {
+  :where([part~='scroll-button']) {
     /* Never shrinks: at the narrow allocations that produce overflow in the first place, a
        shrinkable control would be squeezed straight through the WCAG 2.5.8 floor. */
     flex: 0 0 auto;
@@ -64,16 +64,42 @@ export const styles = css`
   }
   /* Same treatment as [part="tab"], so the controls read as part of the strip rather than as two
      foreign buttons bolted to its ends. */
-  :where([part~="scroll-button"]):hover {
-    color: var(--lr-color-text);
-  }
-  :where([part~="scroll-button"]):active {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+  :where([part~='scroll-button']):where(:hover) {
+    color: var(
+      --lr-tab-group-scroll-button-hover-color,
+      var(--lr-color-text)
     );
-    color: var(--lr-color-text);
+  }
+  :where([part~='scroll-button']):where(:active) {
+    background: var(
+      --lr-tab-group-scroll-button-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(
+      --lr-tab-group-scroll-button-active-color,
+      var(--lr-color-text)
+    );
+  }
+  /* Firefox suppresses native :active when the control's mousedown keeps focus on the tab. The
+     short-lived attribute mirrors that state there. The base and each state selector are wrapped
+     in :where(), so source order applies the state without blocking a consumer part override. */
+  :where([part~='scroll-button']):where([data-pressed]) {
+    background: var(
+      --lr-tab-group-scroll-button-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(
+      --lr-tab-group-scroll-button-active-color,
+      var(--lr-color-text)
+    );
   }
   /* Reachable only by script (the controls are tabindex="-1"), but a consumer that focuses one must
      still see where focus went. */
@@ -162,12 +188,18 @@ export const styles = css`
      as the partner colour at --lr-color-mix-active alpha over whatever the tablist sits on. A
      disabled tab has pointer-events: none and never reaches it. */
   :where([part="tab"]):active:where(:not([aria-disabled="true"])) {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-tab-group-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-tab-group-hover-color, var(--lr-color-text));
+    color: var(
+      --lr-tab-group-active-color,
+      var(--lr-tab-group-hover-color, var(--lr-color-text))
+    );
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
@@ -200,7 +232,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   [part="panel"] {
+    min-inline-size: 0;
     padding-block-start: var(--lr-space-xs);
+    overflow-wrap: anywhere;
   }
   [part="body"] {
     flex: 1 1 auto;

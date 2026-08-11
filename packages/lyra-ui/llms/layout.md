@@ -399,11 +399,12 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
-Two further properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
+Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-widget-view-toggle-active-color` (default
-`var(--lr-color-brand)`) — the background and text color of the `aria-pressed="true"` toggle. Both
+`var(--lr-color-brand)`), plus `--lr-widget-view-toggle-active-border-color` (default
+`transparent`) — the background, text, and border color of the `aria-pressed="true"` toggle. All three
 are **state hooks**: declared as inline `var()` fallbacks at the point of use and never on `:host`,
-so setting either on the element *or on any ancestor* reaches the toggle. That shape exists because
+so setting any of them on the element *or on any ancestor* reaches the toggle. That shape exists because
 `::part(view-toggle)[aria-pressed='true']` is not valid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so before these hooks the only way to recolor an active toggle was to
 override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other
@@ -881,9 +882,23 @@ first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max
 (default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
 it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
 an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
-starving the panel. Otherwise shared tokens —
-`--lr-space-xs/-s/-m`, `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`,
-`--lr-radius`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+starving the panel.
+
+`--lr-tab-group-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+`--lr-tab-group-active-color` (default
+`var(--lr-tab-group-hover-color, var(--lr-color-text))`) style a pressed, non-disabled tab.
+The overflowing row's controls have their own hooks:
+`--lr-tab-group-scroll-button-hover-color` (default `var(--lr-color-text)`),
+`--lr-tab-group-scroll-button-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-tab-group-scroll-button-active-color` (default `var(--lr-color-text)`). Each is an
+inline fallback, so a wrapper can retheme the interaction state without affecting ordinary tabs,
+selection, or the other control state.
+
+Otherwise shared tokens — `--lr-space-xs/-s/-m`,
+`--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
+`--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -1003,7 +1018,12 @@ rendered when the step has one, additionally to — never instead of — `step-i
 (the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
 (the step's label text).
 
-**Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
+**Themeable custom properties:** `--lr-stepper-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-stepper-hover-color` (default
+`var(--lr-color-text)`) style a hovered non-disabled step. `--lr-stepper-active-bg` (default
+`color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner)
+var(--lr-color-mix-active))`) and `--lr-stepper-active-color` (default `var(--lr-color-text)`)
+style a pressed non-disabled step. `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
 text color of the `current` step. `--lr-stepper-current-font-weight` (default
 `var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
 `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
@@ -1338,13 +1358,20 @@ when a label is a single character and the track ends up taller than its nominal
 thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
-bleeds onto hover. All five are inline `var()` fallbacks at the
+bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element *or on any
 ancestor*; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left hijacking the library-wide
 `--lr-color-surface`/`--lr-color-text` tokens as the only way to restyle a selected segment,
 repainting every other element that read them.
+
+`--lr-segmented-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+`--lr-segmented-active-color` (default
+`var(--lr-segmented-hover-color, var(--lr-color-text))`) style a pressed unchecked segment.
+They use the same inline-fallback inheritance, leaving checked and merely hovered siblings
+independent.
 
 Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,
@@ -1530,7 +1557,13 @@ so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` al
 mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
 always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
 `--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
-`transparent` to opt out of the hover treatment entirely.
+`transparent` to opt out of the hover treatment entirely. Its remaining longhands are independently
+themeable with `--lr-virtual-list-hover-outline-width` (default
+`var(--lr-border-width-thin)`), `--lr-virtual-list-hover-outline-style` (default `solid`), and
+`--lr-virtual-list-hover-outline-offset` (default
+`calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
+there is intentionally no pressed state: the list viewport is a scroll surface rather than an
+activation target.
 
 **Optional peer deps:** none.
 

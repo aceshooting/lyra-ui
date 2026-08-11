@@ -190,6 +190,35 @@ export const ThemedSelection: Story = {
   `,
 };
 
+/** The tab and overflow-control interaction states use separate inherited hooks, so pressing a
+ *  tab or a scroll control does not require changing the selected or hover colors. */
+export const ThemedInteractionStates: Story = {
+  name: 'Themed interaction states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Press an unselected tab or either visible overflow control. The tab and scroll-control hover/pressed hooks inherit from this wrapper while the selected tab keeps its normal treatment.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="inline-size: 220px; max-inline-size: 100%; --lr-tab-group-active-bg: ${storyColor(
+        'warningQuiet',
+      )}; --lr-tab-group-active-color: ${storyColor(
+        'warning',
+      )}; --lr-tab-group-scroll-button-hover-color: ${storyColor(
+        'success',
+      )}; --lr-tab-group-scroll-button-active-bg: ${storyColor(
+        'successQuiet',
+      )}; --lr-tab-group-scroll-button-active-color: ${storyColor('success')};"
+    >
+      <lr-tab-group>${crowdedPanels()}</lr-tab-group>
+    </div>
+  `,
+};
+
 export const ElementModel: StoryObj = {
   name: 'Upstream child model (lr-tab / lr-tab-panel)',
   parameters: {
@@ -353,6 +382,43 @@ export const VerticalLongLabelsNarrow: StoryObj = {
       </div>
     </div>
   `,
+};
+
+export const ElementModelLongContentNarrow: StoryObj = {
+  name: 'Element-model long content at 320px (LTR / RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The upstream lr-tab and lr-tab-panel child model keeps both an unbroken tab label and active panel content within an exact 320px allocation in LTR and RTL.',
+      },
+    },
+  },
+  render: () => {
+    const longTab =
+      'AnExtremelyLongUnbrokenElementModelTabLabelThatMustRemainContained'.repeat(4);
+    const longPanel =
+      'AnExtremelyLongUnbrokenElementModelTabPanelValueThatMustRemainContained'.repeat(4);
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l);">
+        ${([
+          { direction: 'ltr', placement: 'start' },
+          { direction: 'rtl', placement: 'end' },
+        ] as const).map(
+          ({ direction, placement }) => html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+              <lr-tab-group placement=${placement} style="inline-size: 100%;">
+                <lr-tab panel="details" active>${longTab}</lr-tab>
+                <lr-tab panel="history">History</lr-tab>
+                <lr-tab-panel name="details" active>${longPanel}</lr-tab-panel>
+                <lr-tab-panel name="history">History panel.</lr-tab-panel>
+              </lr-tab-group>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
 };
 
 export const ManualActivation: StoryObj = {

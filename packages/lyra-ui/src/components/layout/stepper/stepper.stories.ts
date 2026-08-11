@@ -98,27 +98,66 @@ export const WrappedVerticalLabels: Story = {
   },
 };
 
+export const NarrowLongLabels: Story = {
+  name: 'Long unbroken labels at 320px (LTR / RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'At an exact 320px allocation, vertical wrap-labels steppers break long unbroken labels without widening their container in either text direction.',
+      },
+    },
+  },
+  render: () => {
+    const longLabel =
+      'AnExtremelyLongUnbrokenLocalizedStepperLabelThatMustRemainContained'.repeat(4);
+    const narrowSteps: StepItem[] = [
+      { id: 'account', label: longLabel, state: 'completed' },
+      { id: 'review', label: longLabel, state: 'current' },
+    ];
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l);">
+        ${(['ltr', 'rtl'] as const).map(
+          (direction) => html`
+            <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+              <lr-stepper
+                orientation="vertical"
+                wrap-labels
+                style="inline-size: 100%;"
+                .steps=${narrowSteps}
+              ></lr-stepper>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  },
+};
+
 export const WithError: Story = {
   render: () => html`<lr-stepper .steps=${errorSteps}></lr-stepper>`,
 };
 
-/** The `current` and `error` state treatments — and the current step's index chip — are themeable
- *  through `--lr-stepper-current-color`, `--lr-stepper-error-color`, `--lr-stepper-current-index-bg`
- *  and `--lr-stepper-current-index-color`. None is declared on `:host`, so setting them on an
- *  ancestor recolors only those states without hijacking the library-wide brand/danger tokens. */
+/** Hovered, pressed, current, and error step treatments — plus the current index chip — each have
+ *  their own inherited CSS hook. None is declared on the host, so a wrapper can recolor one state
+ *  without hijacking shared brand, text, or danger tokens. */
 export const ThemedStates: Story = {
   name: 'Themed states (cssprops)',
   parameters: {
     docs: {
       description: {
         story:
-          'Set `--lr-stepper-current-color`, `--lr-stepper-error-color`, `--lr-stepper-current-index-bg` and `--lr-stepper-current-index-color` on the element or any ancestor to recolor the current/error states without touching the shared tokens.',
+          'Set the --lr-stepper-hover-* and --lr-stepper-active-* hooks alongside the current/error hooks on the element or any ancestor. Hover or press a completed step to see those interaction states remain independent.',
       },
     },
   },
   render: () => html`
     <div
-      style="--lr-stepper-current-color: ${storyColor('success')}; --lr-stepper-current-index-bg: ${storyColor(
+      style="--lr-stepper-hover-bg: ${storyColor('warningQuiet')}; --lr-stepper-hover-color: ${storyColor(
+        'warning',
+      )}; --lr-stepper-active-bg: ${storyColor('successQuiet')}; --lr-stepper-active-color: ${storyColor(
+        'success',
+      )}; --lr-stepper-current-color: ${storyColor('success')}; --lr-stepper-current-index-bg: ${storyColor(
         'success',
       )}; --lr-stepper-current-index-color: ${storyColor('onBrand')}; --lr-stepper-error-color: ${storyColor(
         'warning',

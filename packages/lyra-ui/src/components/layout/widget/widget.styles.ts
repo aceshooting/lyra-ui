@@ -164,7 +164,10 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
     color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
-    border-color: transparent;
+    border-color: var(
+      --lr-widget-view-toggle-active-border-color,
+      transparent
+    );
   }
   [part="view-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

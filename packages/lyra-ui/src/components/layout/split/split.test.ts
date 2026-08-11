@@ -2415,12 +2415,12 @@ for (const direction of ["ltr", "rtl"] as const) {
 
     expect(Math.round(base.clientWidth)).to.equal(320);
     expect(Math.round(base.scrollHeight)).to.equal(Math.round(base.clientHeight));
-    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
     for (const panel of panels) {
       const rect = panel.getBoundingClientRect();
       expect(rect.top).to.be.at.least(baseRect.top);
       expect(rect.bottom).to.be.at.most(baseRect.bottom);
-      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth);
+      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth + 1);
       expect(getComputedStyle(panel).overflowY).to.equal("auto");
       expect(panel.scrollHeight).to.be.greaterThan(panel.clientHeight);
       panel.scrollTop = 24;

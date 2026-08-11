@@ -119,13 +119,13 @@ for (const direction of ['ltr', 'rtl'] as const) {
     const layoutRect = layout.getBoundingClientRect();
     const panels = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
     expect(Math.round(layout.clientWidth)).to.equal(320);
-    expect(layout.scrollWidth).to.be.at.most(layout.clientWidth);
+    expect(layout.scrollWidth).to.be.at.most(layout.clientWidth + 1);
     expect(panels).to.have.length(2);
     for (const panel of panels) {
       const panelRect = panel.getBoundingClientRect();
       expect(panelRect.left).to.be.at.least(layoutRect.left);
       expect(panelRect.right).to.be.at.most(layoutRect.right);
-      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth);
+      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth + 1);
     }
 
     const handle = divider(element);

@@ -103,6 +103,15 @@ function checkmarkGlyph() {
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
  * @csspart step-check - The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.
  * @csspart step-label - The step's label text.
+ * Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they
+ * inherit from the stepper or any ancestor without retheming another state.
+ * @cssprop [--lr-stepper-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered,
+ *   non-disabled step.
+ * @cssprop [--lr-stepper-hover-color=var(--lr-color-text)] - Text color of a hovered,
+ *   non-disabled step.
+ * @cssprop [--lr-stepper-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of a pressed, non-disabled step.
+ * @cssprop [--lr-stepper-active-color=var(--lr-color-text)] - Text color of a pressed,
+ *   non-disabled step.
  * @cssprop [--lr-stepper-current-color=var(--lr-color-text)] - Text color of the `current` step.
  *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an
  *   ancestor recolors only the current step without hijacking the library-wide `--lr-color-text` token.
