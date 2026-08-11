@@ -158,6 +158,25 @@ describe('lr-approval-queue', () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Nothing requires review');
   });
 
+  it('formats the pending count for the effective locale inside a localized label', async () => {
+    const count = 12;
+    const pendingRequests: ToolApprovalRequest[] = Array.from({ length: count }, (_, index) => ({
+      id: `call-${index}`,
+      toolName: 'web_search',
+      args: {},
+    }));
+    const el = (await fixture(html`
+      <lr-approval-queue
+        lang="ar-EG"
+        .requests=${pendingRequests}
+        .strings=${{ approvalQueuePendingCount: 'Pending: {count}' }}
+      ></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent!.trim()).to.equal(
+      `Pending: ${new Intl.NumberFormat('ar-EG').format(count)}`,
+    );
+  });
+
   it('marks the selected request row with aria-current, not just data-selected', async () => {
     const el = (await fixture(html`
       <lr-approval-queue selected-id="call-1" .requests=${requests}></lr-approval-queue>
@@ -180,5 +199,29 @@ describe('lr-approval-queue', () => {
     `)) as LyraApprovalQueue;
     const selected = el.shadowRoot!.querySelector('[part="request"][data-selected="true"]') as HTMLElement;
     expect(getComputedStyle(selected).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('contains long queue labels, tool names, and request ids at 320px', async () => {
+    const token = 'unbroken'.repeat(80);
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-approval-queue
+          label=${token}
+          .requests=${[{ id: token, toolName: token, args: {} }]}
+        ></lr-approval-queue>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-approval-queue') as LyraApprovalQueue;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    const request = el.shadowRoot!.querySelector('[part="request"]') as HTMLElement;
+    const toolName = el.shadowRoot!.querySelector('[part="tool-name"]') as HTMLElement;
+    const requestId = el.shadowRoot!.querySelector('[part="request-id"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(heading.scrollWidth).to.be.at.most(Math.ceil(heading.getBoundingClientRect().width) + 1);
+    expect(request.scrollWidth).to.be.at.most(Math.ceil(request.getBoundingClientRect().width) + 1);
+    expect(toolName.scrollWidth).to.be.at.most(Math.ceil(toolName.getBoundingClientRect().width) + 1);
+    expect(requestId.scrollWidth).to.be.at.most(Math.ceil(requestId.getBoundingClientRect().width) + 1);
   });
 });

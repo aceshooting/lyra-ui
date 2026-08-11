@@ -3,18 +3,24 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   [part='base'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     gap: var(--lr-space-s);
   }
 
   [part='heading-row'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
     align-items: baseline;
@@ -23,6 +29,9 @@ export const styles = css`
 
   [part='heading'] {
     margin: 0;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-lg);
     font-weight: var(--lr-font-weight-semibold);
   }
@@ -34,11 +43,14 @@ export const styles = css`
 
   [part='list'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     gap: var(--lr-space-2xs);
   }
 
   [part='request'] {
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--lr-space-xs);
@@ -76,16 +88,19 @@ export const styles = css`
 
   [part='request-info'] {
     min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   [part='tool-name'] {
     display: block;
+    max-inline-size: 100%;
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
 
   [part='request-id'] {
     display: block;
+    max-inline-size: 100%;
     color: var(--lr-color-text-quiet);
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-xs);

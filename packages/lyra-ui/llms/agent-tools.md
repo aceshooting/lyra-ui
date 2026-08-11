@@ -1189,8 +1189,9 @@ internal vote-announcement live region).
 cap on each pane's scroll region before it scrolls internally;
 `--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
 `--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
-`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`) style the selected vote
-button without changing shared brand tokens.
+`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`), and
+`--lr-compare-panel-selected-font-weight` (default `var(--lr-font-weight-semibold)`) style the
+selected vote button without changing shared brand tokens.
 
 ## `lr-span-waterfall`
 

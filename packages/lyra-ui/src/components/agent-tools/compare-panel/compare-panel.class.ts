@@ -42,6 +42,8 @@ export interface LyraComparePanelEventMap {
  *   button border color.
  * @cssprop [--lr-compare-panel-selected-color=var(--lr-color-brand)] - Selected vote button text
  *   color.
+ * @cssprop [--lr-compare-panel-selected-font-weight=var(--lr-font-weight-semibold)] - Selected
+ *   vote button font weight.
  * @status stable
  * @since 4.0.0
  */

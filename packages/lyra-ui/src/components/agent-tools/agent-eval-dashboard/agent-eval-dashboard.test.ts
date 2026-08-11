@@ -88,4 +88,29 @@ describe('lr-agent-eval-dashboard', () => {
     const metric = el.shadowRoot!.querySelector('[part="metric"]') as HTMLElement;
     expect(getComputedStyle(metric).borderTopColor).to.equal('rgb(1, 2, 3)');
   });
+
+  it('contains long public dashboard, metric, and run labels at 320px', async () => {
+    const token = 'unbroken'.repeat(80);
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-agent-eval-dashboard
+          label=${token}
+          .metrics=${[{ id: 'metric', label: token, value: 1 }]}
+          .runs=${[{ id: 'run', label: token, status: 'done', metrics: { metric: 1 } }]}
+        ></lr-agent-eval-dashboard>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-agent-eval-dashboard') as LyraAgentEvalDashboard;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    const metric = el.shadowRoot!.querySelector('[part="metric"]') as HTMLElement;
+    const run = el.shadowRoot!.querySelector('[part="run"]') as HTMLElement;
+    const runLabel = el.shadowRoot!.querySelector('[part="run-label"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(heading.scrollWidth).to.be.at.most(Math.ceil(heading.getBoundingClientRect().width) + 1);
+    expect(metric.scrollWidth).to.be.at.most(Math.ceil(metric.getBoundingClientRect().width) + 1);
+    expect(run.scrollWidth).to.be.at.most(Math.ceil(run.getBoundingClientRect().width) + 1);
+    expect(runLabel.scrollWidth).to.be.at.most(Math.ceil(runLabel.getBoundingClientRect().width) + 1);
+  });
 });

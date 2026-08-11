@@ -94,6 +94,17 @@ it('shows a localized "Completed N steps" summary in the header while mode="post
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Completed 14 steps');
 });
 
+it('formats the completed count for the effective locale while retaining the raw count for plural selection', async () => {
+  const count = 12;
+  const el = (await fixture(
+    html`<lr-activity-feed lang="ar-EG" mode="post-hoc" .entries=${makeEntries(count)}></lr-activity-feed>`,
+  )) as LyraActivityFeed;
+  const formattedCount = new Intl.NumberFormat('ar-EG').format(count);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
+    `Completed ${formattedCount} steps`,
+  );
+});
+
 it('uses the singular form for exactly one completed step', async () => {
   const el = (await fixture(
     html`<lr-activity-feed mode="post-hoc" .entries=${makeEntries(1)}></lr-activity-feed>`,

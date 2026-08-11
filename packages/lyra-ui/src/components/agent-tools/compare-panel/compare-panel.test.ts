@@ -339,14 +339,50 @@ describe('lr-compare-panel', () => {
           --lr-compare-panel-selected-background: rgb(1, 2, 3);
           --lr-compare-panel-selected-border-color: rgb(4, 5, 6);
           --lr-compare-panel-selected-color: rgb(7, 8, 9);
+          --lr-compare-panel-selected-font-weight: 700;
         "
       ></lr-compare-panel>
     `)) as LyraComparePanel;
     const selected = el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLButtonElement;
+    const unselected = el.shadowRoot!.querySelector('[part="vote-button"]:not([data-selected])') as HTMLButtonElement;
     const computed = getComputedStyle(selected);
     expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(computed.borderColor).to.equal('rgb(4, 5, 6)');
     expect(computed.color).to.equal('rgb(7, 8, 9)');
+    expect(computed.fontWeight).to.equal('700');
+    expect(getComputedStyle(unselected).fontWeight).to.not.equal('700');
+  });
+
+  it('contains long public labels at 320px while panes keep their vertical scroll ownership', async () => {
+    const token = 'unbroken'.repeat(80);
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-compare-panel
+          label-a=${token}
+          label-b=${token}
+          vote="a"
+          style="--lr-compare-panel-max-height: 48px"
+        >
+          <div slot="a" style="block-size: 320px">A</div>
+          <div slot="b" style="block-size: 320px">B</div>
+        </lr-compare-panel>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-compare-panel') as LyraComparePanel;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const panes = el.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+    const paneA = el.shadowRoot!.querySelector('[part="pane-a"]') as HTMLElement;
+    const paneHeader = el.shadowRoot!.querySelector('[part="pane-header"]') as HTMLElement;
+    const voteButton = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(panes.scrollWidth).to.be.at.most(Math.ceil(panes.getBoundingClientRect().width) + 1);
+    expect(paneA.scrollWidth).to.be.at.most(paneA.clientWidth + 1);
+    expect(paneHeader.scrollWidth).to.be.at.most(Math.ceil(paneHeader.getBoundingClientRect().width) + 1);
+    expect(voteButton.scrollWidth).to.be.at.most(Math.ceil(voteButton.getBoundingClientRect().width) + 1);
+    expect(getComputedStyle(paneA).overflowX).to.equal('hidden');
+    expect(getComputedStyle(paneA).overflowY).to.equal('auto');
+    expect(paneA.scrollHeight).to.be.greaterThan(paneA.clientHeight);
   });
 
   it('is accessible', async () => {

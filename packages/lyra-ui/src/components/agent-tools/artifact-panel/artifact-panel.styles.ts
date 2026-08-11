@@ -3,9 +3,14 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: flex;
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     border: var(--lr-size-1px) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -14,6 +19,9 @@ export const styles = css`
   }
   [part='header'] {
     display: flex;
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
@@ -21,9 +29,15 @@ export const styles = css`
     border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
   }
   [part='label'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='kind'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
     border: var(--lr-size-1px) solid var(--lr-color-border);

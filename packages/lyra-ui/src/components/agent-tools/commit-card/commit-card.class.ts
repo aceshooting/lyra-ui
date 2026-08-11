@@ -253,12 +253,12 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
             ? html`<span
                 part="diffstat"
                 aria-label=${this.localize('commitCardDiffSummary', undefined, {
-                  additions,
-                  deletions,
+                  additions: this.formatCount(additions),
+                  deletions: this.formatCount(deletions),
                   files: this.formatCount(this.files.length),
                 })}
               >
-                <span part="additions">+${additions}</span> <span part="deletions">-${deletions}</span>
+                <span part="additions">+${this.formatCount(additions)}</span> <span part="deletions">-${this.formatCount(deletions)}</span>
               </span>`
             : nothing}
           ${this.copyable && this.hash
@@ -302,8 +302,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                             : ''}${f.path}</span
                         >
                         <span class="file-stats">
-                          <span part="file-additions">+${f.additions}</span>
-                          <span part="file-deletions">-${f.deletions}</span>
+                          <span part="file-additions">+${this.formatCount(f.additions)}</span>
+                          <span part="file-deletions">-${this.formatCount(f.deletions)}</span>
                         </span>
                       </button>
                     `,

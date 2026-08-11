@@ -5,7 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { getDateTimeFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
@@ -409,7 +409,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
       getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'activityFeedCompletedStep'
         : 'activityFeedCompletedSteps';
-    return this.localize(key, undefined, { count });
+    return this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) });
   }
 
   private toggle = (): void => {

@@ -4,6 +4,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './approval-queue.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -89,6 +90,10 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     return this.requests.filter((request) => (request.status ?? 'pending') === 'pending').length;
   }
 
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
+
   private statusLabel(status: ApprovalRequestStatus): string {
     if (status === 'approved') return this.localize('confirmApproved');
     if (status === 'denied') return this.localize('confirmDenied');
@@ -154,10 +159,11 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   override render(): TemplateResult {
     const label = this.label || this.localize('approvalQueueLabel');
     const request = this.selectedRequest;
+    const pendingCount = this.pendingCount();
     return html`<section part="base" aria-label=${this.getAttribute('aria-label') || label}>
       <div part="heading-row">
         <h2 part="heading">${label}</h2>
-        <span part="count">${this.localize('approvalQueuePendingCount', undefined, { count: this.pendingCount() })}</span>
+        <span part="count">${this.localize('approvalQueuePendingCount', undefined, { count: this.formatCount(pendingCount) })}</span>
       </div>
       ${this.requests.length > 0
         ? html`<div part="list" role="list">${this.requests.map((item) => this.renderRequest(item))}</div>`

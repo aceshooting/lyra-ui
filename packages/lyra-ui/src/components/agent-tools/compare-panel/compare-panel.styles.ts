@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     --lr-compare-panel-max-height: var(--lr-size-24rem);
@@ -10,6 +12,8 @@ export const styles = css`
 
   [part='base'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     gap: var(--lr-space-m);
     color: var(--lr-color-text);
@@ -27,6 +31,8 @@ export const styles = css`
 
   [part='panes'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-m);
     align-items: stretch;
   }
@@ -42,6 +48,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
     max-block-size: var(--lr-compare-panel-max-height);
+    overflow-x: hidden;
     overflow-y: auto;
   }
   [part='pane-a']:focus-visible,
@@ -51,6 +58,9 @@ export const styles = css`
   }
 
   [part='pane-header'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
@@ -60,11 +70,16 @@ export const styles = css`
 
   [part='vote-bar'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
   }
 
   [part='vote-button'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font: inherit;
     font-size: var(--lr-font-size-sm);
     border-radius: var(--lr-radius-pill);
@@ -90,7 +105,7 @@ export const styles = css`
     background: var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet));
     border-color: var(--lr-compare-panel-selected-border-color, var(--lr-color-brand));
     color: var(--lr-compare-panel-selected-color, var(--lr-color-brand));
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-compare-panel-selected-font-weight, var(--lr-font-weight-semibold));
   }
   [part='vote-button']:disabled {
     opacity: var(--lr-opacity-disabled);

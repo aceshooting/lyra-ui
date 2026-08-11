@@ -30,9 +30,15 @@ export const styles = css`
     border-radius: 0;
   }
   [part='subject'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='body'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     white-space: pre-wrap;
     color: var(--lr-color-text-quiet);
     margin-block-start: var(--lr-space-xs);
@@ -40,6 +46,8 @@ export const styles = css`
   }
   [part='meta'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
     align-items: center;
@@ -49,6 +57,11 @@ export const styles = css`
   }
   [part='hash'] {
     font-family: var(--lr-font-mono);
+  }
+  [part='author'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='additions'] {
     color: var(--lr-color-success);

@@ -315,4 +315,23 @@ describe('lr-artifact-panel', () => {
     expect(css).to.match(/\[part='view-button'\]:hover/);
     expect(css).to.match(/\[part='view-button'\]:focus-visible[^{]*\{[^}]*outline:/);
   });
+
+  it('contains long public label and kind values at 320px', async () => {
+    const token = 'unbroken'.repeat(80);
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-artifact-panel label=${token} kind=${token}></lr-artifact-panel>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-artifact-panel') as LyraArtifactPanel;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const kind = el.shadowRoot!.querySelector('[part="kind"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(header.scrollWidth).to.be.at.most(Math.ceil(header.getBoundingClientRect().width) + 1);
+    expect(label.scrollWidth).to.be.at.most(Math.ceil(label.getBoundingClientRect().width) + 1);
+    expect(kind.scrollWidth).to.be.at.most(Math.ceil(kind.getBoundingClientRect().width) + 1);
+  });
 });

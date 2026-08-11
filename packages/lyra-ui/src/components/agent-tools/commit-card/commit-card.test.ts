@@ -204,6 +204,29 @@ describe('lr-commit-card', () => {
     expect(diffstat.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
   });
 
+  it('formats aggregate and per-file diff counts for the effective locale', async () => {
+    const additions = 1234;
+    const deletions = 56;
+    const el = (await fixture(html`
+      <lr-commit-card
+        lang="ar-EG"
+        files-collapsed="false"
+        .files=${[{ path: 'src/file.ts', additions, deletions }]}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    const format = new Intl.NumberFormat('ar-EG');
+    const expectedAdditions = `+${format.format(additions)}`;
+    const expectedDeletions = `-${format.format(deletions)}`;
+    expect(el.shadowRoot!.querySelector('[part="diffstat"] [part="additions"]')!.textContent).to.equal(
+      expectedAdditions,
+    );
+    expect(el.shadowRoot!.querySelector('[part="diffstat"] [part="deletions"]')!.textContent).to.equal(
+      expectedDeletions,
+    );
+    expect(el.shadowRoot!.querySelector('[part="file-additions"]')!.textContent).to.equal(expectedAdditions);
+    expect(el.shadowRoot!.querySelector('[part="file-deletions"]')!.textContent).to.equal(expectedDeletions);
+  });
+
   it('files list starts collapsed and toggles via files-toggle, emitting lr-toggle', async () => {
     const el = (await fixture(html`
       <lr-commit-card .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}></lr-commit-card>
@@ -423,5 +446,26 @@ describe('lr-commit-card', () => {
     expect(filePath.scrollWidth).to.be.at.most(Math.ceil(filePath.getBoundingClientRect().width) + 1);
     expect(el.shadowRoot!.querySelector('[part="file-additions"]')!.textContent).to.equal('+123');
     expect(el.shadowRoot!.querySelector('[part="file-deletions"]')!.textContent).to.equal('-45');
+  });
+
+  it('contains long public message and author values at 320px', async () => {
+    const token = 'unbroken'.repeat(80);
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-commit-card message="${token}\n${token}" author=${token}></lr-commit-card>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-commit-card') as LyraCommitCard;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const subject = el.shadowRoot!.querySelector('[part="subject"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    const author = el.shadowRoot!.querySelector('[part="author"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(subject.scrollWidth).to.be.at.most(Math.ceil(subject.getBoundingClientRect().width) + 1);
+    expect(body.scrollWidth).to.be.at.most(Math.ceil(body.getBoundingClientRect().width) + 1);
+    expect(meta.scrollWidth).to.be.at.most(Math.ceil(meta.getBoundingClientRect().width) + 1);
+    expect(author.scrollWidth).to.be.at.most(Math.ceil(author.getBoundingClientRect().width) + 1);
   });
 });
