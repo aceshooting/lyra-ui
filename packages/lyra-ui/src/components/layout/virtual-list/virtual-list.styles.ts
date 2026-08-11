@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
     /* Consumer-tunable viewport height, same pattern as --lr-chart-height --
        a virtualized list is meaningless without a bounded scroll extent, so
        this ships a sane default rather than collapsing to 0 when a caller
@@ -11,8 +12,12 @@ export const styles = css`
   }
   [part='base'] {
     position: relative;
+    min-inline-size: 0;
     block-size: var(--lr-virtual-list-height);
-    overflow-x: hidden;
+    /* Ordinary row content inherits overflow-wrap: anywhere below, while
+       consumer content that explicitly opts out with white-space: nowrap
+       remains reachable through this scrollport. */
+    overflow-x: auto;
     overflow-y: auto;
     /* A fast fling shouldn't also scroll the page behind this list once it
        hits either end. */
@@ -41,14 +46,22 @@ export const styles = css`
   }
   [part='spacer'] {
     position: relative;
+    min-inline-size: 0;
     inline-size: 100%;
   }
   [part='row'] {
     position: absolute;
     inset-inline-start: 0;
     inset-block-start: 0;
+    min-inline-size: 0;
     inline-size: 100%;
     box-sizing: border-box;
+    /* renderItem content is caller supplied. Default to a real wrapping
+       opportunity so a long unbroken value neither widens the list nor stays
+       at the fallback auto-row estimate. A consumer can still set
+       white-space: nowrap on its own content when horizontal scrolling is
+       the intended interaction. */
+    overflow-wrap: anywhere;
     /* Every row's position updates via this transform on every scroll-driven
        re-render -- hinting the compositor avoids a full repaint per frame. */
     will-change: transform;

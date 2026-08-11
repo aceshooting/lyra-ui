@@ -22,6 +22,19 @@ function buildMessages(count: number): DemoMessage[] {
 
 const messages = buildMessages(2000);
 
+const narrowMessages: DemoMessage[] = [
+  {
+    id: 'narrow-long',
+    author: 'Alex',
+    text: `This deliberately unbroken value wraps in an ordinary auto-height row: ${'x'.repeat(160)}`,
+  },
+  {
+    id: 'narrow-following',
+    author: 'Assistant',
+    text: 'The measured first row leaves this following item at its correct offset.',
+  },
+];
+
 const renderMessage = (item: unknown, index: number) => {
   const m = item as DemoMessage;
   return html`
@@ -91,6 +104,53 @@ export const Empty: Story = {
       style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       .items=${[]}
       .renderItem=${renderMessage}
+      .keyFunction=${keyFunction}
+    ></lr-virtual-list>
+  `,
+};
+
+/**
+ * At a 320px allocation, ordinary long row content wraps and the default auto-height measurement
+ * follows the resulting height in both text directions. Consumer content that intentionally sets
+ * `white-space: nowrap` instead retains a horizontal scrollport on the list.
+ */
+export const NarrowLongRows: Story = {
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-l);">
+      <section>
+        <h3>LTR</h3>
+        <lr-virtual-list
+          aria-label="Narrow long rows, left-to-right"
+          style="inline-size:320px; max-inline-size:100%; --lr-virtual-list-height:12rem;"
+          .items=${narrowMessages}
+          .renderItem=${renderMessage}
+          .keyFunction=${keyFunction}
+        ></lr-virtual-list>
+      </section>
+      <section dir="rtl">
+        <h3>RTL</h3>
+        <lr-virtual-list
+          aria-label="Narrow long rows, right-to-left"
+          style="inline-size:320px; max-inline-size:100%; --lr-virtual-list-height:12rem;"
+          .items=${narrowMessages}
+          .renderItem=${renderMessage}
+          .keyFunction=${keyFunction}
+        ></lr-virtual-list>
+      </section>
+    </div>
+  `,
+};
+
+/** A consumer can keep intentionally unbroken content on one horizontal scrollport. */
+export const NarrowNoWrapOptOut: Story = {
+  render: () => html`
+    <lr-virtual-list
+      aria-label="Narrow no-wrap row"
+      style="inline-size:320px; max-inline-size:100%; --lr-virtual-list-height:8rem;"
+      .items=${[narrowMessages[0]]}
+      .renderItem=${(item: unknown) => html`
+        <span style="white-space:nowrap">${(item as DemoMessage).text}</span>
+      `}
       .keyFunction=${keyFunction}
     ></lr-virtual-list>
   `,

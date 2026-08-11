@@ -283,6 +283,66 @@ it("measures each row's real height via ResizeObserver in row-height='auto' mode
   expect(measuredTotal).to.be.greaterThan(400);
 });
 
+it("wraps ordinary long row content and measures its auto height at 320px in LTR and RTL", async () => {
+  const longToken = "x".repeat(128);
+
+  for (const direction of ["ltr", "rtl"] as const) {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        dir=${direction}
+        style="inline-size:320px; --lr-virtual-list-height:200px"
+        .items=${[longToken]}
+        .renderItem=${(item: unknown) => html`<div style="display:flex"><span>${String(item)}</span></div>`}
+        .keyFunction=${stringKey}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    const base = el.scrollContainer!;
+    const row = el.renderedRows[0]!;
+    const spacer = el.shadowRoot!.querySelector<HTMLElement>("[part='spacer']")!;
+
+    expect(row.scrollWidth, `${direction} row content stays contained`).to.be.at.most(
+      row.clientWidth
+    );
+    expect(
+      row.getBoundingClientRect().height,
+      `${direction} row wraps onto more than one line`
+    ).to.be.greaterThan(48);
+    expect(
+      parseFloat(spacer.style.height),
+      `${direction} auto-height measurement catches the wrapped row`
+    ).to.be.greaterThan(48);
+    expect(base.clientWidth, `${direction} list has a real narrow allocation`).to.be.at.most(320);
+  }
+});
+
+it("keeps an explicit consumer nowrap row horizontally scrollable", async () => {
+  const longToken = "x".repeat(128);
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="inline-size:320px; --lr-virtual-list-height:200px"
+      .items=${[longToken]}
+      .renderItem=${(item: unknown) => html`<span style="white-space:nowrap">${String(item)}</span>`}
+      .keyFunction=${stringKey}
+    ></lr-virtual-list>`
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.scrollContainer!;
+  const row = el.renderedRows[0]!;
+  expect(getComputedStyle(base).overflowX).to.equal("auto");
+  expect(row.scrollWidth).to.be.greaterThan(row.clientWidth);
+  expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+
+  base.scrollLeft = 24;
+  expect(base.scrollLeft).to.equal(24);
+});
+
 it('marks the row matching active-id with aria-current="true", not aria-selected', async () => {
   const el = (await fixture(
     html`<lr-virtual-list

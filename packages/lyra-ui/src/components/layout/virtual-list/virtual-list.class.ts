@@ -93,6 +93,13 @@ export interface LyraVirtualListEventMap {
  * any per-row state (e.g. an `<audio>` element's playback position) survive
  * an `items` mutation instead of every row remounting from scratch.
  *
+ * **Narrow allocations.** Row wrappers allow their content to shrink and use
+ * `overflow-wrap: anywhere` by default, so a normal long value wraps inside
+ * the list rather than widening a narrow panel; its resulting height is what
+ * `row-height="auto"` measures. A consumer that deliberately needs an
+ * unbroken value can set `white-space: nowrap` on its own rendered content:
+ * the scroll container remains horizontally scrollable for that opt-out.
+ *
  * **Windowing math.** Every row — in both `row-height` modes — is positioned
  * by a `transform: translateY(offset)` computed from a single cumulative
  * `offsets` array (`offsets[i]` = the pixel top of row `i`), rather than by
@@ -210,7 +217,8 @@ export interface LyraVirtualListEventMap {
  * A host `aria-label` attribute on this element is forwarded onto the internal `role="list"`
  * container, since `aria-label` set on a custom-element host does not by itself name a role living
  * on an internal shadow element. Used by `<lr-activity-feed>`'s virtualized mode.
- * @csspart base - The scrollable container (`role="list"`).
+ * @csspart base - The scrollable container (`role="list"`), including the horizontal scrollport
+ *   used when consumer-rendered row content explicitly opts out of wrapping.
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
  * @csspart group - A positioned group label. Not rendered for a `groups` entry whose `label` is the
@@ -221,7 +229,8 @@ export interface LyraVirtualListEventMap {
  *   `pointer-events: none` by default — style this part with `pointer-events: auto` to make copied
  *   interactive content clickable again.
  * @csspart row - One rendered row's absolutely-positioned wrapper
- *   (`role="listitem"`); `renderItem`'s return value renders inside it.
+ *   (`role="listitem"`); `renderItem`'s return value renders inside it. Normal content wraps
+ *   within the row; consumer content can opt out with `white-space: nowrap`.
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
  *   virtualized list needs a bounded scroll extent, so this ships a default rather than
  *   collapsing to zero when a caller does not size the host.
